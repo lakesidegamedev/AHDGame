@@ -2,7 +2,7 @@ export const ukOverviewContent = `# United Kingdom
 
 Nobody in the United Kingdom is elected Prime Minister. You win seats, then you win a confidence vote among the MPs, and you keep the job only as long as the Commons lets you. The UK is a **constitutional monarchy and parliamentary democracy** across four nations, with a 650-seat House of Commons, early elections at the PM's call, and governments that can fall mid-term.
 
-## Getting to 326: forming a government
+## Forming a government: 326 seats or a minority bid
 
 There is no direct vote for Prime Minister. Instead:
 
@@ -91,7 +91,7 @@ The **House of Commons** (650 elected MPs, 625 in the 1953 preset) is the primar
 
 The annual Budget bundles real tax rates and statutory programme levels (the NHS included) into one Commons vote, and a defeated Budget badly damages the government's confidence standing. It shares a single fiscal ledger with ordinary legislation, so a later Act or a later Budget controls each setting. The Treasury page shows a forecast of revenue, spending, balance and the tax phase-in before the package is tabled. If no Chancellor is appointed, the Prime Minister may act until the vacancy is filled.
 
-A world that opens before the 1997 independence grant starts with the Treasury setting Bank Rate and no rate committee; Parliament can legislate the transfer either way. There is no FOMC-style committee here in any era: the Governor sets the rate alone once the bank is independent.
+A world that opens before the 1997 independence grant starts with the Treasury setting Bank Rate and no rate committee; Parliament can legislate the transfer either way. Granting independence seats a rate-setting committee, like the MPC the 1997 Act created. The Governor sets the rate directly only while the bank is government-controlled or the committee has no seated members.
 
 | Item | Detail |
 | --- | --- |

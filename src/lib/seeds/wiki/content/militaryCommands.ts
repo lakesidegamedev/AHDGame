@@ -6,7 +6,7 @@ Get this wrong and your war is run by one overworked minister; get it right and 
 
 ## Who holds which job
 
-The defence seat holder builds Commands and commissions the generals who fill them. Each Command has a Commanding General who posts generals to wars. Each war can have one Theater Commander who runs its offensives. Authority moves down the chain: once a layer is given a job, the layer above cannot do it.
+The defence seat holder builds Commands and commissions the generals who fill them. Each Command can have a Commanding General who posts generals to wars. Each war can have one Theater Commander who runs its offensives. Authority moves down the chain: once a layer is given a job, the layer above cannot do it.
 
 ### The numbers
 
@@ -53,7 +53,7 @@ Theater Commander  (one per conflict)
 
 ## Building a Command
 
-Defence office → **Commands** tab → *Create command*. A confirmed or acting defence seat holder may build and reorganise commands and commission or dismiss the generals that fill them.
+Defence office → **Commands** tab → *Create command*. A confirmed or acting defence seat holder may build and reorganise commands. Only a confirmed defence seat holder may commission or dismiss the generals that fill them.
 
 A Command has:
 
@@ -64,7 +64,7 @@ A Command has:
 | **Regions** | Which strategic regions it is responsible for. Up to **3** for every command type, Logistics included. |
 | **Posture** | One of twelve standing postures. |
 | **Supply priority** | Normal, High, or Emergency. |
-| **Commanders** | Which of your commissioned generals belong to it. A general may sit on several rosters. |
+| **Commanders** | Which of your commissioned generals belong to it. A general can sit on only one roster. |
 | **Commanding General** | Which one of them leads it. A general can lead only one Command. |
 
 ### The three types
@@ -133,7 +133,7 @@ The practical reading: **more Commands with reasonable loads beat one giant Comm
 
 ## Commanding Generals
 
-Every Command has one **Commanding General**, chosen from its own commanders (generals fill the rosters, and a general's rank and traits set command fit; see [Generals & the Officer Corps](/wiki/generals)). If you do not pick one at creation, the first commander you selected takes the role by default.
+A Command can have one **Commanding General**, chosen from its own commanders (generals fill the rosters, and a general's rank and traits set command fit; see [Generals & the Officer Corps](/wiki/generals)). If you do not pick one at creation, the first commander you selected takes the role by default.
 
 The CG gets their own page at \`/country/<code>/general/commands\`, reachable by a **"Manage your command →"** link on their profile's Military tab. The link only appears for actual CGs.
 
@@ -157,7 +157,7 @@ A TC gets two things:
 
 **1. A front-wide command bonus.** A Theater Commander's own training carries, at a fraction of its strength, to *every* friendly unit at that front, not just the ones they personally lead. The fraction is deliberate: a single outstanding TC can never substitute for putting good generals on the units themselves. **Being in charge is worth less than being present.**
 
-**2. Exclusive authority over offensives at that front.** That covers declaring and withdrawing offensives, and the front's **standing order** to join allied offensives automatically (see [Fighting a Battle](/wiki/fighting-a-battle)). The standing order is national policy rather than the commander's own setting, so it survives a change of Theater Commander the way the deployment does.
+**2. Exclusive authority over offensives at that front.** That covers declaring and withdrawing offensives. The front's **standing order** to join allied offensives automatically (see [Fighting a Battle](/wiki/fighting-a-battle)) is not part of it: it is national policy rather than the commander's own setting, so it survives a change of Theater Commander the way the deployment does.
 
 That second point is the one that catches people out.
 
@@ -212,7 +212,7 @@ At that point the Secretary of Defense is doing what a defence minister should (
 
 **Do not overload one Command.** Over-capacity penalties scale. Two Commands at capacity beat one at double.
 
-**Cover your own home region first.** Coverage itself does not change a battle, but the coverage view is the quickest check that your structure has no gaps, and a Logistics Command only supplies fronts in the regions it covers.
+**Cover your own home region first.** Logistics coverage changes the supply a front gets, and the coverage view is the quickest check that your structure has no gaps, and a Logistics Command only supplies fronts in the regions it covers.
 
 **Do not name a Theater Commander until you mean it.** You are handing away your own ability to declare offensives there. Name one when you have a general who deserves the front and a player who will actually log in and run it.
 
@@ -232,5 +232,5 @@ At that point the Secretary of Defense is doing what a defence minister should (
 
 - [National Doctrine](/wiki/national-doctrine): what makes them better at it.
 
-Works in every world and era for every country with a defence seat; Scotland and Wales have none and so no Commands. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Commands and Theater command
+Works in every world and era for every country with a defence seat. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Commands and Theater command
 `;

@@ -1,14 +1,14 @@
 export const lineOfCreditContent = `# Line of Credit
 
-One missed payment and your pay stops reaching your wallet. A line of credit lets you borrow cash straight from a central bank, based on your income, your wealth and your credit score. It is revolving: draw when you need cash, repay when you can. Interest builds up every turn and a small payment is taken automatically. If you cannot make that payment, the line freezes and your income is redirected to the loan until it catches up. Use it to bridge a short gap without selling assets at a bad price, and keep enough cash on hand to avoid the freeze.
+One missed payment and your pay stops reaching your wallet. A line of credit lets you borrow cash straight from a central bank, with a limit based on your income and your wealth, and a rate based on your credit score. It is revolving: draw when you need cash, repay when you can. Interest builds up every turn and a small payment is taken automatically. If you cannot make that payment, the line freezes and your income is redirected to the loan until it catches up. Use it to bridge a short gap without selling assets at a bad price, and keep enough cash on hand to avoid the freeze.
 
 ## Opening a line and borrowing
 
-Go to the Central Bank page for the currency you want to borrow, then the Line of credit tab, then Open account. Each currency has its own account, and you can borrow another country's currency, but one personal limit covers everything you owe across all of them. Enter an amount under Borrow to wallet. The cash lands in your wallet and the loan is recorded as new money (draws create money and repayments retire it, and interest goes to bank reserves, see [Central Banks](/wiki/central-banks)). Under Repay you can pay from your wallet in that currency at any time, to clear debt early or to unfreeze.
+Go to the Central Bank page for the currency you want to borrow, then the Line of credit tab, then Open account. Each currency has its own account, and you can borrow another country's currency, but one personal limit covers everything you owe across all of them. Enter an amount in the Amount field, then press Borrow to wallet. The cash lands in your wallet and the loan is recorded as new money (draws create money and repayments retire it, and interest goes to bank reserves, see [Central Banks](/wiki/central-banks)). Under Repay you can pay from your wallet in that currency at any time, to clear debt early or to unfreeze.
 
 ![Line of credit tab showing the rate breakdown, credit limit, arrears and the Borrow and Repay panels](/wiki-images/screens/line-of-credit-credit-tab.webp)
 
-The tab shows both limit caps and your limit is the lower one. With no income history yet, only the equity cap applies, and it grows as income builds up over 48 turns. Assets bought with borrowed money do not raise your limit, since the equity cap counts net worth after debt. The system as a whole lends at most 70% of a currency's savings deposits and bank reserves, so the [Savings & Interest](/wiki/savings-interest) pool caps lending for everyone.
+The tab shows both limit caps and your limit is the lower one. With no income history yet, only the equity cap applies, and the income cap grows as income builds up over 48 turns. Assets bought with borrowed money do not raise your limit, since the equity cap counts net worth after debt. The system as a whole lends at most 70% of a currency's savings deposits and bank reserves, so the [Savings & Interest](/wiki/savings-interest) pool caps lending for everyone.
 
 ## What your credit score decides
 
@@ -41,7 +41,7 @@ spread = 5 - (score / 100) x 6
 
 The score is built from:
 
-- **Income score.** Your average income per turn, times 48, run through a curve that climbs quickly then levels off. The tab and your limit use your average over the last 48 turns; the rate charged each turn scores only that turn's CEO salary and dividends. Income of 2,500,000 a year scores about 63, and 7,500,000 about 95. Income here means recurring pay: CEO salary and dividends from [Corporations](/wiki/corporations), bond coupons from [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds), and interest, after income tax.
+- **Income score.** Your average income per turn, times 48, run through a curve that climbs quickly then levels off. The tab, your limit and the rate charged each turn all use your average over the last 48 turns. Income of 2,500,000 a year scores about 63, and 7,500,000 about 95. Income here means recurring pay: CEO salary and dividends from [Corporations](/wiki/corporations), bond coupons from [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds), and interest, after income tax.
 - **Net worth score.** The same kind of curve on your wealth in ₳ (the game's internal reference currency, used to compare currencies). 4,000,000 scores about 63.
 - **Blend.** Without a company: half income, half net worth. If you are a CEO with a company credit rating: 75% company rating and 25% income.
 - **Leverage penalty.** The more of your assets are already borrowed, the lower your score, up to a 30 point hit.

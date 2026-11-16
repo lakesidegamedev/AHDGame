@@ -44,7 +44,7 @@ The moment the posting saves, **every unit assigned to that general is at that f
 Two consequences worth internalising:
 
 - **A unit with no general can never fight.** General Staff means reserve, permanently, until somebody assigns it.
-- **Un-posting a general is a full withdrawal.** It is the only way to pull forces out, and it pulls *all* of them.
+- **Un-posting a general is a full withdrawal.** It pulls *all* of that general's units at once. To pull out single units, assign them to another general or to General Staff.
 
 ⚠️ **Newly built units cannot fight.** A unit is excluded from battle entirely until its build time elapses: 6 turns for most types, 10 for a Carrier Strike Group (see [Units, Recruitment & Procurement](/wiki/military-units)). It will not appear in a forecast and will not fight if you declare. Check before you commit.
 
@@ -98,14 +98,14 @@ What the projection cannot know is what changes before the tick. Your opponent h
 
 ## Declaring the offensive
 
-Press **Declare offensive**, pick the enemy nation.
+Pick the enemy nation, then press **Declare offensive**.
 
 Every check must pass:
 
 1. **The conflict must be live when the turn ticks**: an offensive declared at a war that has been resolved, or already won and waiting for the victor to name terms, fizzles at resolution.
 2. **You must have authority here**: the Theater Commander if one is designated, otherwise the defence seat holder.
 3. **Your nation must have a side** in this conflict. You can be on it by roster, or by your bloc backing one of the sides. In a proxy war only nations already on a roster can declare.
-4. **Your target must be an actual belligerent**: by roster only. You cannot drag a bystander in, even a bloc rival. *(Note the asymmetry: your own side may resolve through your bloc, your target's may not.)*
+4. **Your target must be an actual belligerent**: by roster, or in a proxy war the enemy faction itself. You cannot drag a bystander in, even a bloc rival. *(Note the asymmetry: your own side may resolve through your bloc, your target's may not.)*
 5. **Your target must not be on your own side.**
 6. **You must have at least one unit at this front.** No forces, no offensive.
 7. **You must not already have a pending offensive here.** One at a time.
@@ -120,7 +120,7 @@ The conflict page now offers a **standing order** per front: *join allied offens
 
 - It needs troops already posted to that front, exactly like automatic defence. A standing order never moves an army and never pulls you onto a side you are not on.
 - It is national policy, set by whoever holds offensive authority at the front, and it survives a change of Theater Commander.
-- An ally that joins this way appears in the war log under its own flag with its own casualties. Withdrawing your forces from the front is the way to stop supporting an offensive.
+- An ally that joins this way appears in the war log under its own flag with its own casualties. Switching the standing order off for that front is the way to stop supporting an offensive.
 - The war room's odds already count allies who will join, whether by their own declaration or by standing order, and its "They attack" row counts every nation with troops on your side.
 
 ## The defender's window
@@ -175,10 +175,10 @@ A side whose cohesion collapses partway through can **break off** rather than fi
 A declaration can resolve into nothing:
 
 - The conflict was **resolved** before the tick.
-- The matchup **could not be placed** on opposing sides.
-- Nobody was home **and** no ground could move.
+- The offensive was **withdrawn** or had no forces to send.
+- An earlier offensive in the same tick **ended the war**, so nothing was left to resolve.
 
-A fizzled declaration costs you the turn. Only the last case, an empty front with no ground to take, writes a "no contact" report; the other two leave no report.
+A fizzled declaration costs you the turn and leaves no report. An empty front is not a fizzle: it resolves as a "no contact" report, or as an unopposed advance if ground can move. A matchup that could not be placed on opposing sides also resolves: it fights the named target but moves no ground.
 
 ## Reading the report
 
@@ -205,7 +205,7 @@ The resolution model is deliberately not published in detail: knowing the exact 
 - **Technology tier.** Real but modest, smaller than veterancy, and it costs upkeep forever.
 - **Equipment.** A small, steady bonus.
 - **Readiness.** A tired army fights worse, and a battle costs a worn formation far more readiness than a fresh one. Readiness climbs back toward its posture baseline at eight points a turn, so pressing every turn keeps a force exhausted while a few turns of rest bring it back. The pace you fight at is a real choice.
-- **Frontage.** A front has finite width. Only so much force can be in contact at once; the rest sits in depth, where it neither fights nor bleeds this turn. Frontline and flank units take their places in the line first, then support, then anything held back. Terrain widens or narrows the line: open plain and desert hold the most, mountains and jungle the least.
+- **Frontage.** A front has finite width. Only so much force can be in contact at once; the rest sits in depth, where it fights and takes losses at a much reduced rate. Frontline and flank units take their places in the line first, then support, then anything held back. Terrain widens or narrows the line: open desert holds the most, then open plain, and mountains and jungle the least.
 - **Naval reach.** Fleets from [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes) contribute to a coastal front. A carrier's air wing keeps its full effect on a coastal front and much of it inland. Escorts, submarines and amphibious groups give well under half their value on a coastal front and very little inland. Whether a front touches the sea is worked out from the host country.
 - **Posture.** Higher postures fight better and cost more.
 
@@ -237,11 +237,11 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 **Know what feeds supply.** Supply is what the front can haul against what your formations there draw. Hauling comes from the ground's infrastructure, your logistics doctrine and generals, a Logistics command covering the region (worth more the larger the force it covers), depth formations feeding the line, and fighting on your own soil.
 
-Drawing comes from every formation you have posted there. Ground and marine formations in the line draw in full, formations held in depth draw less, and air, naval, rocket and space formations draw a quarter. Air superiority and sea control do not feed your own supply; they only let you cut the enemy's. If the readout says CUT OFF while you own the sky, you have too much posted at one front.
+Drawing comes from every formation you have posted there. Ground and marine formations in the line draw in full, formations held in depth draw less, and air, naval, rocket and space formations draw a quarter. Air superiority does not feed your own supply; it only lets you cut the enemy's. Sea control also supplies your marines across the water, and it can cut the enemy's supply. If the readout says CUT OFF while you own the sky, you have too much posted at one front.
 
 **Rotate veterans out before they are gutted.** Losses on an elite formation are far more expensive than on a green one, because rebuilding dilutes experience in proportion to how many replacements arrive. Casualties and rebuilds draw on the pool in [Manpower & Conscription](/wiki/manpower-conscription), which decides how fast losses are replaced. Top up early.
 
-**Set roles deliberately.** Putting your best formations on Rear Area protects them and wastes them. Putting fragile specialists on Frontline gets them killed.
+**Set roles deliberately.** Putting your best formations on Rear Area wastes them and does not protect them from losses. Putting fragile specialists on Frontline gets them killed.
 
 **Withdrawal is a real option.** Un-posting a general before an attack lands costs you ground but saves the army. An army that exists can retake ground; one that has been destroyed cannot.
 
@@ -260,5 +260,5 @@ Drawing comes from every formation you have posted there. Ground and marine form
 - [Peace, Indemnities & Truces](/wiki/peace-and-truces): how it ends.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): all of this in sequence.
 
-Works in every world and era; which units you can field depends on the year, and a country with no defence seat cannot declare offensives. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Battle resolution maths is intentionally left out of the wiki.
+Works in any era, in worlds where living conflicts are switched on; which units you can field depends on the year, and a country with no defence seat cannot declare offensives. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Battle resolution maths is intentionally left out of the wiki.
 `;

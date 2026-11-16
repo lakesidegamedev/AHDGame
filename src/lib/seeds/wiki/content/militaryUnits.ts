@@ -1,6 +1,6 @@
 export const militaryUnitsContent = `# Units, Recruitment & Procurement
 
-Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade, a posture, and (once you have generals) a commander. These are the units a war has to fight with (see [Conflicts & the Military System](/wiki/conflicts-overview)), and the reserve you hold decides how many open a new war (see [Declaring War](/wiki/declaring-war)). This page covers how you get them, what they cost, and how you improve them.
+Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade and a posture. These are the units a war has to fight with (see [Conflicts & the Military System](/wiki/conflicts-overview)), and the reserve you hold decides how many open a new war (see [Declaring War](/wiki/declaring-war)). This page covers how you get them, what they cost, and how you improve them.
 
 Everything here is done by the **defence seat holder** from their cabinet office → **Military** tab. An **acting** secretary seated without confirmation has the same departmental powers as a confirmed holder, including military operations, generals, doctrine, the nuclear programme and defence contracts. The acting appointment expires after 24 turns.
 
@@ -55,7 +55,7 @@ Some consequences worth knowing before you plan a build:
 
 Naval hulls are bought here and then ordered at sea; see [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes).
 
-Unit *types* are gated the same way. **Drone Commands** require 1995. **Every space archetype** requires 2019. You cannot invent a Predator in a Cold War game.
+Unit *types* are gated the same way. **Drone Commands** require 1995. **Most space archetypes** require 2019, and the Space Sensing Constellation requires 2030. You cannot invent a Predator in a Cold War game.
 
 ## The unit catalogue
 
@@ -116,7 +116,7 @@ Costs below are **catalogue values**, not what you pay: see pricing below. \`Est
 | Orbital Surveillance Delta | 700 | 3,800 | 160 |
 | Launch Operations Delta | 500 | 2,900 | 120 |
 
-Read those tables in pairs. A **Special Forces Group** is a formidable unit for 1,400 people; an **Infantry Division** is a modest one for 12,000. If manpower is your binding constraint, the small elite formations are efficient. If money is, infantry is by far the cheapest power you can buy.
+Read those tables in pairs. A **Special Forces Group** is a formidable unit for 1,400 people; an **Infantry Division** is a modest one for 12,000. If manpower is your binding constraint, the small elite formations are efficient. If money is, infantry is among the cheapest power you can buy.
 
 ## What a unit actually costs you
 
@@ -193,7 +193,7 @@ Two rules:
 1. A unit at a conflict cannot be on Garrison. It floors up to Standard automatically.
 2. Posture only forces up. A unit returning to reserve keeps its posture and does not drop back to Garrison.
 
-A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) do not change this upkeep or readiness: a doctrine's supply-draw bonus only changes what a formation draws from a front's supply.
+A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) do not change this upkeep or readiness: a doctrine's supply bonus only adds to a side's supply throughput at a front.
 
 ## Technology tiers
 
@@ -208,7 +208,7 @@ military-tech-tier-power-vs-upkeep
 
 That second point is the design. A Cutting-Edge division is better than a Legacy one and worse value than two Legacy ones. Cheap old kit is a legitimate strategy for a nation that needs mass.
 
-Upkeep is derived on read, so a modernisation pass raises your whole running cost at once, including on units you upgraded long ago. Check your appropriation before a mass refit.
+Upkeep is derived on read, so each upgrade raises that unit's own upkeep straight away. Check your appropriation before a mass refit.
 
 ## Veterancy and strength
 
@@ -241,11 +241,11 @@ Equipment is bought separately from units. The defence seat publishes tenders, c
 3. **Build infantry for mass, specialists for edge.** Cheap divisions hold ground; special forces and armour break it.
 4. **Build early and steadily.** One action every six turns plus six turns of build time means a serious army takes real weeks.
 5. **Modernise selectively.** Upgrade the formations you intend to keep and fight with.
-6. **Leave postures low in peacetime.** High Alert on a peacetime army burns money and erodes cohesion for nothing.
+6. **Leave postures low in peacetime.** High Alert on a peacetime army burns money for nothing.
 
 ## Running it from the Military tab
 
-All of it is in the defence office, **Military** tab, held by the defence seat holder (or an acting holder):
+Unit controls are in the defence office, **Military** tab, held by the defence seat holder (or an acting holder):
 
 ![Defence office Military tab with the Recruit unit panel listing unit types, build cost, personnel and the authorize button](/wiki-images/screens/military-units-recruit-panel.webp)
 
@@ -263,5 +263,5 @@ All of it is in the defence office, **Military** tab, held by the defence seat h
 - [Generals & the Officer Corps](/wiki/generals): how to get a commander for these units.
 - [Fighting a Battle](/wiki/fighting-a-battle): how to actually use them.
 
-Applies in every world and era, but the catalogue narrows by year: Drone Commands need 1995 or later, space units 2019 or later, and the Soviet Union and East Germany draw state arsenal output instead of contract output. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Applies in every world, but the catalogue narrows by year: Drone Commands need 1995 or later, space units 2019 or later, and the Soviet Union and East Germany draw state arsenal output instead of contract output. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

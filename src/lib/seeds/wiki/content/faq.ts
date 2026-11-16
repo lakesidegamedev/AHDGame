@@ -84,7 +84,7 @@ The year counter increments (e.g., year 1 to year 2) and the week of the year st
 
 **When does the next turn fire?**
 
-Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer in the status bar at the top of every page. In fast mode turns fire every 30 minutes instead, but each one is still a single turn (one game week).
+Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer in the bottom status bar. In fast mode turns fire every 30 minutes instead, but each one is still a single turn (one game week).
 
 ---
 
@@ -98,7 +98,7 @@ Go to the Congress or legislature page for your country and use the **Propose** 
 
 **Why is my bill not moving?**
 
-There is no committee stage: a bill goes straight to a 24-hour floor vote in its origin chamber (see [Committees](/wiki/committees)). If it is sitting still, the usual causes are a pending parliamentary government (bill votes pause until a PM is seated) or a filibuster in the US Senate (it adds 12 hours to the vote and raises the bar to 3/5 of votes cast). If it keeps failing, the NPP cross-pressure in the chamber is probably running against your policy option: check the chamber's ideology breakdown and adjust the bill's policy direction, or use whip directives if you control party leadership.
+There is no committee stage: a bill goes straight to a 24-hour floor vote in its origin chamber (see [Committees](/wiki/committees)). If it is sitting still, the usual causes are a pending parliamentary government (new legislation is frozen until a PM is seated) or a filibuster in the US Senate (it adds 12 hours to the vote and raises the bar to 3/5 of votes cast). If it keeps failing, the NPP cross-pressure in the chamber is probably running against your policy option: check the chamber's ideology breakdown and adjust the bill's policy direction, or use whip directives if you control party leadership.
 
 ---
 

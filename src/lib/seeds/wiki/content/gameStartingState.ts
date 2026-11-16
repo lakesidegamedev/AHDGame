@@ -8,12 +8,12 @@ When a world is created, the game seeds one **era preset**. The preset sets the 
 
 | Start date | What it opens for players | Notes |
 | --- | --- | --- |
-| 1953, early Cold War | United States, United Kingdom, Soviet Union, East Germany | The year Stalin died. Japan, China, West Germany, Brazil, Ireland and others run as economies. Legislatures start vacant, the one-party chambers included, and a founding election fills them. |
-| 1979, Cold War | United States, United Kingdom, Soviet Union, East Germany | China, Japan, West Germany, Brazil and Nigeria run as economies. Legislatures start vacant and a founding election fills them. |
+| 1953, early Cold War | United States, United Kingdom, Soviet Union, East Germany | The year Stalin died. Japan, China, West Germany, Brazil, Ireland and others run as economies. Democratic legislatures start vacant and a founding election fills them. One-party chambers start seated. |
+| 1979, Cold War | United States, United Kingdom, Soviet Union | China, Japan, West Germany, Brazil and Nigeria run as economies. East Germany and the rest of the Warsaw Pact are run by NPPs. Legislatures start vacant and a founding election fills them. |
 | 1991 | United States, United Kingdom, Japan | US 102nd Congress, the UK Commons elected in 1987, Japan after the 1990 election, Germany's 12th Bundestag. |
 | 2019 | United States, United Kingdom, Japan | US 116th Congress, UK after the 2019 election, Germany, China and Ireland seated. Variants exist with no NPPs or no starting parties. |
-| 2023 | United States, United Kingdom, Japan | US state data, budget and policies from January 2023, though the seated Congress is still the 2020 roster. Other countries use their 2019 data. |
-| 2027 | United States, United Kingdom, Germany, Japan, China | A projection with the latest completed elections. |
+| 2023 | United States, United Kingdom, Japan | US state data, budget and policies from January 2023, and the seated Congress is the 118th, seated in January 2023. Other countries use their 2019 data. |
+| 2027 | United States, Canada | A projection with the latest completed elections. The United Kingdom, Germany, Japan and China run as NPP-run full simulations. |
 
 This is the roster at the start of a world. More countries can be opened to players later in a world's life, and the country picker in game is the authority. The era decides which countries and parties you can pick in [Create a Character](/wiki/create-a-character).
 
@@ -49,7 +49,7 @@ The seeded sector markets and specialties are what [corporations](/wiki/corporat
 
 Examples of the shape of the seeded markets in a 2019 world. The 1979, 1991, 2023 and 2027 openings apply one national sector mix to every region of a country, so regions differ there only by size:
 
-- California leans heavily to technology and lightly to extraction. West Virginia is the reverse.
+- California leans heavily to technology and lightly to media. West Virginia leans to extraction.
 - New York is strongest in financial services. Bavaria has a strong manufacturing seed.
 - Tokyo and Kanto lean toward finance more than manufacturing.
 - China's northwest opens around energy and extraction, while the east and south lean toward technology and manufacturing.
@@ -61,7 +61,7 @@ You found an extraction corporation in West Virginia, where extraction is the pr
 
 ## Default parties and empty legislatures
 
-- **Default parties cannot be deleted.** They exist in every world that starts with parties and survive any treasury or membership. Player-founded parties are removed at turn time once they have no members and no sitting officials.
+- **Default parties are protected from cleanup.** They exist in every world that starts with parties and survive any treasury or membership. Only a reseed for a different era or a world reset can remove them. Player-founded parties are removed at turn time once they have no members, no sitting officials and no ratified or migrated charter.
 - **Treasuries refill through party taxes.** Each turn, national and state parties take their tax rate from members' income, NPP members included. State parties with no players default to a small tax on their NPPs. A low-treasury party can still compete if players fund it.
 - **Where a legislature starts empty,** the first elections fill it.
 

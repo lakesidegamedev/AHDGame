@@ -20,7 +20,7 @@ Open **Nation > Elections**. The board covers the country you opened it from. Us
 
 Before entering, confirm:
 
-- the office matches your home state or region;
+- for a state or regional office, it matches your home state or region (national offices such as president are open to any character from the country);
 - declarations are still open;
 - you are not already an active candidate elsewhere;
 - you have enough time and campaign resources for both phases.
@@ -98,7 +98,7 @@ You also receive the highest position bonus you qualify for:
 | --- | ---: |
 | National head of government or executive head of state | +2.5 |
 | Vice president or deputy head of government, presiding officer (Speaker of the House, Bundestag President, NPC Standing Committee chair, Nigerian Speaker and Senate President, President pro tempore), House or Senate majority leader, national party chair | +2.0 |
-| Confirmed cabinet member, governor or minister-president, Supreme Court justice, central bank chair, House or Senate minority leader, CPPCC chair, party vice chair or treasurer | +1.5 |
+| Confirmed cabinet member, governor or minister-president, Supreme Court justice, central bank chair, House or Senate minority leader, CPPCC chair, party vice chair | +1.5 |
 | National legislator, ceremonial head of state | +1.0 |
 | Acting cabinet member | +0.75 |
 | State or regional legislator, state party chair | +0.5 |
@@ -209,5 +209,5 @@ It depends on the race.
 - [Demographics & Targeting](/wiki/demographics-targeting): appeal by voter group.
 - [Campaign Strategy](/wiki/campaign-strategy): advanced spending and timing.
 
-Applies in every era and country with elections. Last checked 2026-10-29, version 1.18.0
+Some elections only run in certain eras and countries. Last checked 2026-10-29, version 1.18.0
 `;

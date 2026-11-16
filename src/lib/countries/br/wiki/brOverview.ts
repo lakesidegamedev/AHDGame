@@ -77,7 +77,7 @@ The social axis runs from libertarian (−5) to authoritarian (+5). Brazil start
 
 ## Four starting economies
 
-Brazil appears in every preset, with **four authored metric baselines**: 1953, 1979, 1991, and 2019 (the default). Each authors its own national baseline and per-region tilts for Brazil's tracked economic, education, healthcare, infrastructure, and social metrics, so the starting economy looks materially different depending on which era you launch into:
+Brazil appears in every preset, with **four authored metric baselines**: 1953, 1979, 1991, and 2019 (the default). Each authors its own national baseline and per-region tilts for Brazil's tracked metrics across all ten categories (economic, education, healthcare, infrastructure, public safety, environment, social, governance, population, and media and info), so the starting economy looks materially different depending on which era you launch into:
 
 \`\`\`wiki-chart
 br-monetary-targets-by-era

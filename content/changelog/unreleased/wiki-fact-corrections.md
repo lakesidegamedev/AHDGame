@@ -1,0 +1,1 @@
+Wiki: corrected 527 out-of-date or wrong statements across 105 guide pages after checking each one against the game's current rules, including impeachment voting windows (now 24 turns), commodity counts, crisis response steps and several country guides.

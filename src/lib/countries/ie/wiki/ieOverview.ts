@@ -1,6 +1,6 @@
 export const ieOverviewContent = `# Ireland
 
-Ireland comes down to one number: **81**, a bare majority of the 160-seat Dáil Éireann. A **parliamentary republic** and a small open economy on the Atlantic edge of Europe, it has no single-party majority tradition, so whoever wants to be Taoiseach has to assemble 81 votes out of a fragmented chamber. The live allocator uses Hare-quota proportional representation with largest remainders; ranked STV transfers are not yet simulated.
+Ireland comes down to one number: **81**, a bare majority of the 160-seat Dáil Éireann. A **parliamentary republic** and a small open economy on the Atlantic edge of Europe, it has no single-party majority tradition, so whoever wants to be Taoiseach has to assemble 81 votes out of a fragmented chamber. The count uses ranked-ballot PR-STV with a Droop quota, surplus transfers and eliminations.
 
 ## Finding 81 votes
 
@@ -14,15 +14,15 @@ After an election, picture Fine Gael on 60 seats, Fianna Fáil on 45, Labour on 
 
 **Coalition government is the norm.** The two major parties are **Fine Gael** and **Fianna Fáil**, but neither typically governs alone. Coalitions (Fine Gael + Labour, Fianna Fáil + Greens, and so on) typically include one of the major parties plus smaller partners (Labour, Greens, independents). The 81-seat threshold decides whether a government counts as a majority, and the 25-seat bar decides who may bid at all.
 
-If the government loses Dáil confidence, the Taoiseach falls and formation restarts (see [No-Confidence Votes](/wiki/no-confidence-votes)). The Taoiseach can also dissolve the Dáil and call an early election, mechanically similar to UK, JP and DE snap elections (see [Snap Elections](/wiki/snap-elections)). The [Cabinet Guide](/wiki/cabinet-guide) lists every post the winning coalition fills.
+If the government loses Dáil confidence, the Taoiseach falls and formation restarts (see [No-Confidence Votes](/wiki/no-confidence-votes)). Unlike the UK, JP and DE, Ireland has no snap election type, and the Dáil runs on a fixed cycle (see [Snap Elections](/wiki/snap-elections)). The [Cabinet Guide](/wiki/cabinet-guide) lists every post the winning coalition fills.
 
 ## How Dáil seats are won
 
-Dáil elections currently use a generic **Hare-quota largest-remainder** allocator, the same proportional allocator used by several multi-seat chambers. It approximates proportional multi-seat results, but it does not model ranked ballots, surplus transfers, or eliminations. Wiki references to STV describe the real institution, not the live resolver; a future true-STV implementation would need ranked ballots and transfer rounds that the current resolver does not perform.
+Dáil elections use **PR-STV**. Voters rank candidates, and the count uses a Droop quota, weighted Gregory transfers of surplus votes, and eliminations of the lowest candidate, round by round until every seat is filled.
 
 - **A party needs at least 10% of the pooled vote in a region** to win any seats there. Parties under the line get none.
 - **Primaries advance the top 3 candidates** per party per region (same as the UK / JP / DE rule, not the US top-1 rule).
-- **All Dáil seats are contested** in each cycle: no staggered classes. The Dáil term is 5 years (240 turns, 10 real days), and an election window is 48 turns (48 real hours: 24 for the primary, 24 for the general).
+- **All Dáil seats are contested** in each cycle: no staggered classes. The Dáil term is 4 years (192 turns, 8 real days), and an election window is 48 turns (48 real hours: 24 for the primary, 24 for the general).
 
 See [Election Mechanics](/wiki/election-mechanics) for the shared primary and general rules, and [Multi-Country Play](/wiki/multi-country-play) for proportional versus FPTP systems and cross-border investments.
 
@@ -31,10 +31,10 @@ See [Election Mechanics](/wiki/election-mechanics) for the shared primary and ge
 | Taoiseach (head of government) | Confidence vote of Dáil members | No fixed term | 1 |
 | Tánaiste (deputy head of government) | Appointed by Taoiseach | No fixed term | 1 |
 | Uachtarán na hÉireann (President, head of state) | Direct election | 7 years | 1 |
-| Teachta Dála (TD) | Hare-quota multi-seat election | 5 years | 160 |
+| Teachta Dála (TD) | PR-STV multi-seat election | 4 years | 160 |
 | Cathaoirleach (regional executive) | FPTP regional election | 5 years | 1 per region |
 | Local Councillor | Multi-seat local election | 5 years | 200 total |
-| Governor of the Central Bank of Ireland | Nominated by the Taoiseach, then drawn | 4 years | 1 |
+| Governor of the Central Bank of Ireland | Nominated by the Taoiseach, then drawn | 7 years | 1 |
 
 ## Why the Seanad doesn't matter for bills
 
@@ -55,7 +55,7 @@ The President does not introduce legislation and has no veto. The office is a st
 
 **Local government.** Ireland has a **Local Council** tier: 200 elected councillors representing NUTS-III planning regions (the EU's standard statistical regions, used here as Ireland's regions). A councillor earns +1 action per turn and is the cheapest entry rung. Councillors exercise delegated local-government functions and vote on regional legislation, and bills passed at the local level have regional policy effects.
 
-Each region has a regional executive, the **Cathaoirleach**, using the same office as a Governor in other countries. The display label diverges per region: Lord Mayor of Dublin (DUB), Lord Mayor of Cork (COR), Mayor of Limerick (LIM), Mayor of Galway (GAL), and Cathaoirleach elsewhere.
+Each region has a regional executive, called the **Cathaoirleach** in most regions, using the same office as a Governor in other countries. The display label diverges per region: Lord Mayor of Dublin (DUB), Lord Mayor of Cork (COR), Mayor of Limerick (LIM), Mayor of Galway (GAL), and Cathaoirleach elsewhere.
 
 ## Career: from council to Taoiseach
 

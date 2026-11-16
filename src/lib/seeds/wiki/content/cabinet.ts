@@ -1,6 +1,6 @@
 export const cabinetContent = `# Cabinet
 
-A cabinet seat is the difference between voting on policy and running a department. Each seat gives its holder ministerial orders, standing policy settings, buildings to construct and a national influence tier, and an empty cabinet costs the government approval. In the US each seat is nominated by the President and confirmed by the Senate.
+A cabinet seat is the difference between voting on policy and running a department. Each seat gives its holder ministerial orders, standing policy settings and a national influence tier, and some seats can also construct buildings, and an empty cabinet costs the government approval. In the US most seats are nominated by the President and confirmed by the Senate.
 
 ## Getting a seat
 

@@ -4,7 +4,7 @@ Eighteen things want your attention this turn, and three of them have a deadline
 
 ## Reading the inbox
 
-The inbox is at \`/notifications\`. It reads like a mail client, with a list of items on one side and the open item on the other. Each item links to the page it is about. Items come in two kinds:
+The inbox is at \`/notifications\`. It reads like a mail client, with a list of items on one side and the open item on the other. Most notification items link to the page they are about. Mail threads do not. Items come in two kinds:
 
 - **Notifications.** System events: your bill passed a chamber, you were named Commanding General, your corporation's credit rating changed, an opponent attacked your character. [Player Random Events](/wiki/player-events) post each offer and outcome here, [Crisis Interaction](/wiki/crisis-interaction) posts crisis alerts and decisions, [Coalitions](/wiki/coalitions) send invites, join requests and votes, and [News](/wiki/news) notifies subscribers when an author posts.
 - **Mail.** Direct messages from other players, plus game messages such as forex fills. A mail thread can be archived but not snoozed. See [Mail](/wiki/mail).
@@ -36,7 +36,7 @@ Busy views show a working set of 24 items, with unread items that need action fi
 
 ![Notification settings with per-type switches grouped by category and a direct-message alerts switch](/wiki-images/screens/notifications-settings-panel.webp)
 
-Measured on live play, routine reports were over 90% of all alerts and almost none were opened. So the game pushes only what needs a decision, keeps everything else in the inbox, and lets you mute whole types rather than clearing items one at a time.
+Measured on live play, routine reports were over 90% of all alerts and almost none were opened. So the game pushes only what needs a decision or is a result you would want to hear at once, keeps everything else in the inbox, and lets you mute whole types rather than clearing items one at a time.
 
 Be careful what you mute. If a type "stopped arriving", check whether you muted it, since muted types are hidden, not deleted. Muting a type that needs action, such as bill votes, also takes it out of Needs action. You can still miss the deadline.
 
@@ -55,5 +55,5 @@ If you use the mobile or desktop app and have allowed notifications on your devi
 
 A push shows the newest alert's own title and text, and opens the page it is about. It follows the same mutes and snoozes as the inbox, and does not fire for items you have already read or archived. In Settings, alert types that can push are tagged "Phone and desktop".
 
-Available to every player in every world. Native push needs the mobile or desktop app with device notifications allowed. Last checked 2026-10-29, version 1.18.0. This is a reading and settings guide, so there is no separate rules page; the alert types, categories and delivery rules are listed in **Settings > Notifications**.
+The inbox is available to every player in every world. Native push is only on when the server has it enabled, is off in single-player, and needs the mobile or desktop app with device notifications allowed. Last checked 2026-10-29, version 1.18.0. This is a reading and settings guide, so there is no separate rules page; the alert types, categories and delivery rules are listed in **Settings > Notifications**.
 `;
