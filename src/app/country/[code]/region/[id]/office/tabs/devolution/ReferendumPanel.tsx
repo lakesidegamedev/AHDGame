@@ -6,7 +6,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
-import { getSovereigntyGovernmentNames } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  getSovereigntyGovernmentNames,
+  usesSovereigntyWording,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 
 /** Server-serialized summary of a region's current/most-recent referendum. */
 export interface ReferendumSummary {
@@ -35,7 +38,7 @@ interface Props {
 function kindNoun(stateId: string): string {
   const id = stateId.toUpperCase();
   if (id === "NIR") return "Reunification";
-  if (id === "CA_QC") return "Sovereignty";
+  if (usesSovereigntyWording(id)) return "Sovereignty";
   return "Independence";
 }
 

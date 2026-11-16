@@ -41,6 +41,11 @@ export interface SovereigntyRegion {
    * nothing can pass into a country that does not exist.
    */
   readonly actuates: boolean;
+  /**
+   * How the office surfaces name the region's mood and policy: "sovereignty"
+   * (a Sovereignty tab and desire) or the UK's "devolution".
+   */
+  readonly wording: "sovereignty" | "devolution";
 }
 
 export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
@@ -58,6 +63,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_snp"], rivals: ["uk_conservative"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "UK",
@@ -73,6 +79,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_plaid"], rivals: ["uk_conservative"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "UK",
@@ -88,6 +95,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "CA",
@@ -106,6 +114,27 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
       rivals: ["ca_federal_unity", "ca_national_prosperity"],
     },
     actuates: true,
+    wording: "sovereignty",
+  },
+  {
+    countryId: "CA",
+    regionId: "CA_AB",
+    kind: "independence",
+    targetCountryId: null,
+    // Set to "AB" once the Alberta country exists; until then nothing can actuate.
+    successorCountryId: null,
+    executiveTitle: "Premier",
+    nationalGovernmentName: "Ottawa",
+    parentName: "Canada",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
+    consentSponsor: "Government of Canada",
+    electionParties: {
+      separatist: ["ca_alberta_sovereignty"],
+      rivals: ["ca_federal_unity", "ca_national_prosperity"],
+    },
+    actuates: false,
+    wording: "sovereignty",
   },
   {
     countryId: "US",
@@ -124,6 +153,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
       rivals: ["us_republican", "us_democratic"],
     },
     actuates: false,
+    wording: "sovereignty",
   },
 ];
 
@@ -142,6 +172,11 @@ export function sovereigntyRegionIn(countryId: string, regionId: string): Sovere
 
 export function isSovereigntyRegion(regionId: string): boolean {
   return BY_REGION.has(regionId.toUpperCase());
+}
+
+/** True when the region's office names its mood as sovereignty rather than devolution. */
+export function usesSovereigntyWording(regionId: string): boolean {
+  return sovereigntyRegion(regionId)?.wording === "sovereignty";
 }
 
 /** Region ids for one country, in registry order. */

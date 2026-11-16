@@ -10,6 +10,7 @@ import {
   sovereigntyRegion,
   sovereigntyRegionIds,
   sovereigntyRegionIn,
+  usesSovereigntyWording,
   independenceCopy,
 } from "./sovereigntyRegions";
 
@@ -51,12 +52,24 @@ describe("sovereignty registry", () => {
     for (const regionId of sovereigntyRegionIds("CA")) expect(seeded.has(regionId)).toBe(true);
   });
 
-  it("seeds Quebec's opening sovereignty mood and no other province's", () => {
+  it("registers Alberta as a Canadian region whose successor is not built yet", () => {
+    expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
+      kind: "independence",
+      successorCountryId: null,
+      executiveTitle: "Premier",
+      nationalGovernmentName: "Ottawa",
+      actuates: false,
+    });
+  });
+
+  it("seeds Quebec's and Alberta's opening sovereignty mood and no other province's", () => {
     const desire = new Map(
       caStateMetrics.map((m) => [m._id, m.governance?.independenceDesire?.value])
     );
     expect(desire.get("CA_QC")).toBe(35);
-    for (const [regionId, value] of desire) if (regionId !== "CA_QC") expect(value).toBeUndefined();
+    expect(desire.get("CA_AB")).toBe(24);
+    for (const [regionId, value] of desire)
+      if (regionId !== "CA_QC" && regionId !== "CA_AB") expect(value).toBeUndefined();
   });
 });
 
@@ -123,5 +136,14 @@ describe("getSovereigntyGovernmentNames", () => {
       decisionMaker: "President",
     });
     expect(getSovereigntyGovernmentNames("SCO").decisionMaker).toBe("Prime Minister");
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
   });
 });

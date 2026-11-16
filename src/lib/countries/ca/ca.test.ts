@@ -108,20 +108,21 @@ describe("Canada regions", () => {
 });
 
 describe("Canada parties", () => {
-  it("authors five real parties valid for 2027 only", () => {
+  it("authors six parties valid for 2027 only", () => {
     expect(caParties.map((p) => [p.name, p.abbreviation])).toEqual([
       ["Liberal Party of Canada", "LIB"],
       ["Conservative Party of Canada", "CON"],
       ["New Democratic Party", "NDP"],
       ["Bloc Québécois", "BQ"],
       ["Green Party of Canada", "GRN"],
+      ["Alberta Sovereignty Party", "ASP"],
     ]);
-    expect(caParties).toHaveLength(5);
+    expect(caParties).toHaveLength(6);
     for (const party of caParties) {
       expect(party.countryId).toBe("CA");
       expect(party.validForPresets).toEqual(["2027-default"]);
     }
-    expect(new Set(caParties.map((p) => p.abbreviation)).size).toBe(5);
+    expect(new Set(caParties.map((p) => p.abbreviation)).size).toBe(6);
   });
 
   it("retains the Bloc's historical Quebec vote shares without inventing support elsewhere", () => {
