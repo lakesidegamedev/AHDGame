@@ -29,6 +29,8 @@ export interface DefenceContractAvailability extends DefenceContractLotCaps {
   supplierUsed: number;
   countryRemaining: number;
   supplierRemaining: number;
+  countryRemainingAmount: number;
+  supplierRemainingAmount: number;
   maxLots: number;
 }
 
@@ -91,6 +93,8 @@ export async function getDefenceContractAvailability(
     supplierUsed,
     countryRemaining,
     supplierRemaining,
+    countryRemainingAmount,
+    supplierRemainingAmount,
     maxLots: Math.min(countryRemaining, supplierRemaining),
   };
 }
