@@ -8,7 +8,7 @@
  */
 
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { isCanadianSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
+import { usesSovereigntyWording } from "@/lib/referendum/rules/sovereigntyRegions";
 
 // ─── Region eligibility ───────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ const CANADIAN_POLICY_LABELS: Record<DevolutionPolicy, string> = {
 export function getIndependenceMetricLabel(stateId: string): string {
   const id = stateId.toUpperCase();
   if (id === "NIR") return "Reunification Desire";
-  if (isCanadianSovereigntyRegion(id)) return "Sovereignty Desire";
+  if (usesSovereigntyWording(id)) return "Sovereignty Desire";
   return "Independence Desire";
 }
 
@@ -127,7 +127,7 @@ export function getIndependenceMetricLabel(stateId: string): string {
  */
 export function getDevolutionPolicyLabel(stateId: string, policy: DevolutionPolicy): string {
   const id = stateId.toUpperCase();
-  if (isCanadianSovereigntyRegion(id)) return CANADIAN_POLICY_LABELS[policy];
+  if (usesSovereigntyWording(id)) return CANADIAN_POLICY_LABELS[policy];
   switch (policy) {
     case "anti":
       return "Anti-Devolution";

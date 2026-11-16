@@ -5,8 +5,8 @@ summary: >-
   Alberta's Premier can now request a sovereignty referendum. If Ottawa agrees
   and the vote carries, Alberta becomes its own country.
 tags: [canada, referendums]
-badges: [feature]
-areas: [engine, elections]
+badges: [minor]
+areas: [engine]
 ---
 
 ## What changed

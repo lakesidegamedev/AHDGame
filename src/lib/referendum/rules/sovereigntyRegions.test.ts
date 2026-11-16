@@ -12,6 +12,7 @@ import {
   sovereigntyRegion,
   sovereigntyRegionIds,
   sovereigntyRegionIn,
+  usesSovereigntyWording,
   independenceCopy,
 } from "./sovereigntyRegions";
 
@@ -128,5 +129,14 @@ describe("getSovereigntyGovernmentNames", () => {
       national: "Ottawa",
       sponsor: "Government of Canada",
     });
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
   });
 });
