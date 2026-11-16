@@ -62,8 +62,14 @@ import caClient from "./ca/data/clientConfig.json";
 import caOffices from "./ca/data/officesClient.json";
 import qcClient from "./qc/data/clientConfig.json";
 import abClient from "./ab/data/clientConfig.json";
+import rtxClient from "./rtx/data/clientConfig.json";
+import nenClient from "./nen/data/clientConfig.json";
+import rcaClient from "./rca/data/clientConfig.json";
 import qcOffices from "./qc/data/officesClient.json";
 import abOffices from "./ab/data/officesClient.json";
+import rtxOffices from "./rtx/data/officesClient.json";
+import nenOffices from "./nen/data/officesClient.json";
+import rcaOffices from "./rca/data/officesClient.json";
 
 /**
  * Every configured country, in registry order. Includes the latent secession
@@ -102,6 +108,9 @@ export const CLIENT_COUNTRY_IDS: readonly CountryId[] = [
   "CA",
   "QC",
   "AB",
+  "RTX",
+  "NEN",
+  "RCA",
 ];
 
 function restoreClearedValue(value: unknown): unknown {
@@ -151,6 +160,9 @@ export const CLIENT_FILES = {
   CA: caClient,
   QC: qcClient,
   AB: abClient,
+  RTX: rtxClient,
+  NEN: nenClient,
+  RCA: rcaClient,
 } as Record<CountryId, CountryClientFile>;
 
 export const OFFICE_FILES = {
@@ -186,4 +198,7 @@ export const OFFICE_FILES = {
   CA: caOffices,
   QC: qcOffices,
   AB: abOffices,
+  RTX: rtxOffices,
+  NEN: nenOffices,
+  RCA: rcaOffices,
 } as Record<CountryId, CountryOfficesFile>;

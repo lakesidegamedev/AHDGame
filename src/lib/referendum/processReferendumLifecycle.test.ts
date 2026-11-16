@@ -481,21 +481,24 @@ describe("peace agreement public ballot", () => {
   );
 });
 
+vi.mock("./nppDecisionMaker", () => ({ countriesWithNppDecisionMaker: vi.fn() }));
 vi.mock("./grantReferendum", () => ({
   grantReferendum: vi.fn().mockResolvedValue({ status: 200 }),
 }));
 import { grantReferendum } from "./grantReferendum";
+import { countriesWithNppDecisionMaker } from "./nppDecisionMaker";
 describe("request and snapshot lifecycle edge cases", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(countriesWithNppDecisionMaker).mockResolvedValue(new Set());
+  });
   it.each([
     [123, null],
     [124, "grant"],
   ] as const)("handles an NPP request at turn %i", async (turn, expected) => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested", requestedTurn: 100 })]);
-    db.collection("governmentFormations").find.mockReturnValue(
-      cursorOf([{ _id: "UK", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null }])
-    );
+    vi.mocked(countriesWithNppDecisionMaker).mockResolvedValue(new Set(["UK"]));
     db.collection("governorOfficeState").find.mockReturnValue(
       cursorOf([{ countryId: "UK", westminsterStances: { SCO: { policy: "pro" } } }])
     );
@@ -510,9 +513,7 @@ describe("request and snapshot lifecycle edge cases", () => {
   it("leaves a human PM's request for their decision", async () => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested" })]);
-    db.collection("governmentFormations").find.mockReturnValue(
-      cursorOf([{ _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() }])
-    );
+    vi.mocked(countriesWithNppDecisionMaker).mockResolvedValue(new Set());
     await processReferendumLifecycle(db as unknown as Db, 200);
     expect(grantReferendum).not.toHaveBeenCalled();
   });
@@ -521,12 +522,7 @@ describe("request and snapshot lifecycle edge cases", () => {
     setup(db, [
       refDoc({ status: "requested", requestedTurn: 100, countryId: "CA", regionId: "CA_QC" }),
     ]);
-    db.collection("governmentFormations").find.mockReturnValue(
-      cursorOf([
-        { _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() },
-        { _id: "CA", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null },
-      ])
-    );
+    vi.mocked(countriesWithNppDecisionMaker).mockResolvedValue(new Set(["CA"]));
     db.collection("governorOfficeState").find.mockReturnValue(cursorOf([]));
     await processReferendumLifecycle(db as unknown as Db, 124);
     expect(grantReferendum).toHaveBeenCalledWith(

@@ -14,6 +14,12 @@ import { admittedStateIdsAsOf } from "./statehoodAdmission";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  departedRegions,
+  successorCountryIds,
+  departedStateIds as stateIdsOfDeparted,
+} from "@/lib/legislature/rules/departedRegions";
 
 /** US senators per state (the +2 in EV = houseSeats + senators). */
 const SENATORS_PER_STATE = 2;
@@ -134,9 +140,13 @@ export function buildApportionment(
   liveSeatsByState: Record<string, number>,
   preset: string | undefined,
   year?: number | null,
-  admittedStateIds?: Iterable<string>
+  admittedStateIds?: Iterable<string>,
+  departedStateIds?: Iterable<string>
 ): Apportionment {
   const seats: Record<string, number> = { ...getHouseSeats(preset) };
+  // A state that seceded keeps its row in the preset's frozen map; it must not
+  // keep its seats or electors.
+  for (const id of departedStateIds ?? []) delete seats[id];
   // States admitted mid-game are absent from the preset's frozen apportionment
   // map — that absence is exactly what "not a state yet" means here — so they
   // must be let into the map before the override loop, or the guard below drops
@@ -173,13 +183,26 @@ export async function loadApportionment(
   year?: number | null,
   houseSeatsOverride?: Readonly<Record<string, number>>
 ): Promise<Apportionment> {
-  const usStates = (await statesCollection<Document>(db)
-    .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
+  // One read covers the US states and any successor country that has seceded.
+  const successors = successorCountryIds(SOVEREIGNTY_REGIONS, "US");
+  const rows = (await statesCollection<Document>(db)
+    .find(
+      { countryId: { $in: ["US", ...successors] } },
+      { projection: { _id: 1, countryId: 1, houseDistricts: 1, admittedYear: 1 } }
+    )
     .toArray()) as unknown as Array<{
     _id: string;
+    countryId?: string;
     houseDistricts?: number;
     admittedYear?: number;
   }>;
+  const successorSet: ReadonlySet<string> = new Set(successors);
+  const usStates = rows.filter((row) => !successorSet.has(row.countryId ?? ""));
+  const seated = new Set(
+    rows.flatMap((row) =>
+      row.countryId != null && successorSet.has(row.countryId) ? [row.countryId] : []
+    )
+  );
   const live: Record<string, number> = houseSeatsOverride ? { ...houseSeatsOverride } : {};
   if (!houseSeatsOverride) {
     for (const s of usStates) {
@@ -189,7 +212,8 @@ export async function loadApportionment(
   // A future-dated admission must not count yet — the year gate is what keeps
   // this consistent with the DC/ME-NE gates above.
   const admitted = admittedStateIdsAsOf(usStates, resolveApportionmentYear(preset, year));
-  return buildApportionment(live, preset, year, admitted);
+  const departed = stateIdsOfDeparted(departedRegions(SOVEREIGNTY_REGIONS, "US", seated));
+  return buildApportionment(live, preset, year, admitted, departed);
 }
 
 /**
@@ -223,4 +247,21 @@ export function apportionHouseSeats(
     remaining -= 1;
   }
   return seats;
+}
+
+/** Successor countries of `countryId` that already hold regions, i.e. that have seceded. */
+export async function seatedSuccessors(
+  db: import("mongodb").Db,
+  countryId: string
+): Promise<Set<string>> {
+  const successors = successorCountryIds(SOVEREIGNTY_REGIONS, countryId);
+  if (successors.length === 0) return new Set();
+  const rows = await statesCollection(db)
+    .find({ countryId: { $in: successors } }, { projection: { countryId: 1 } })
+    .toArray();
+  return new Set(
+    rows.flatMap((row) =>
+      typeof row.countryId === "string" && successors.includes(row.countryId) ? [row.countryId] : []
+    )
+  );
 }

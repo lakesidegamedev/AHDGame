@@ -13,7 +13,21 @@ import { getCountryFlagUrl } from "@/lib/constants";
 
 /** Countries that use the parliamentary direct-appointment cabinet pattern. */
 export type ParliamentaryCabinetCountryId =
-  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL" | "CA" | "QC" | "AB";
+  | "UK"
+  | "DE"
+  | "JP"
+  | "IE"
+  | "CN"
+  | "RU"
+  | "DD"
+  | "SCO"
+  | "WAL"
+  | "CA"
+  | "QC"
+  | "AB"
+  | "RTX"
+  | "RCA"
+  | "NEN";
 
 export interface ParliamentaryCabinetHero {
   src: string;
@@ -226,6 +240,51 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
       alt: "The Legislature Building, Edmonton",
       tagline: "Legislature Building · Ministers appointed by the Premier",
       titleFor: () => "Executive Council of Alberta",
+    },
+  },
+  RTX: {
+    countryId: "RTX",
+    positions: getCabinetPositions("RTX"),
+    governmentLinkPath: "/country/rtx/executive",
+    chamberMemberLabel: "Representative",
+    chamberName: "House of Representatives",
+    description:
+      "The Chief Minister appoints ministers to the Executive Council of an independent Texas without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through a House of Representatives majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/texas-capitol",
+      alt: "The State Capitol, Austin",
+      tagline: "State House · Ministers appointed by the Chief Minister",
+      titleFor: () => "Executive Council of Texas",
+    },
+  },
+  NEN: {
+    countryId: "NEN",
+    positions: getCabinetPositions("NEN"),
+    governmentLinkPath: "/country/nen/executive",
+    chamberMemberLabel: "Representative",
+    chamberName: "Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent New England without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through an Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/new-england-statehouse",
+      alt: "The State House, Boston",
+      tagline: "State House · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of New England",
+    },
+  },
+  RCA: {
+    countryId: "RCA",
+    positions: getCabinetPositions("RCA"),
+    governmentLinkPath: "/country/rca/executive",
+    chamberMemberLabel: "Representative",
+    chamberName: "Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent California without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through an Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/california-capitol",
+      alt: "The State Capitol, Sacramento",
+      tagline: "State House · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of California",
     },
   },
 };

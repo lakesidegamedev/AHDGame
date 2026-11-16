@@ -51,6 +51,9 @@ export type StartingCountryId = Exclude<
   | "CA"
   | "QC"
   | "AB"
+  | "RTX"
+  | "NEN"
+  | "RCA"
 >;
 
 interface StartingEconomyFacts {

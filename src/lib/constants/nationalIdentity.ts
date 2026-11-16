@@ -31,6 +31,9 @@ import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 import { AB_IDENTITY } from "@/lib/countries/ab/identity";
+import { RTX_IDENTITY } from "@/lib/countries/rtx/identity";
+import { NEN_IDENTITY } from "@/lib/countries/nen/identity";
+import { RCA_IDENTITY } from "@/lib/countries/rca/identity";
 
 /**
  * National-identity layer for state-owned / National Corporation surfaces.
@@ -129,6 +132,9 @@ export const NATIONAL_IDENTITY: Record<CountryId, NationalIdentity> = {
   CA: CA_IDENTITY.national,
   QC: QC_IDENTITY.national,
   AB: AB_IDENTITY.national,
+  RTX: RTX_IDENTITY.national,
+  NEN: NEN_IDENTITY.national,
+  RCA: RCA_IDENTITY.national,
 };
 
 export function getNationalIdentity(countryId: CountryId): NationalIdentity {

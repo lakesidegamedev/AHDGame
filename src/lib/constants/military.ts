@@ -52,6 +52,9 @@ import {
 import { CA_CABINET_SEAT_IDS, CA_MILITARY_BRANCHES } from "@/lib/countries/ca/institutionsFacts";
 import { QC_CABINET_SEAT_IDS, QC_MILITARY_BRANCHES } from "@/lib/countries/qc/institutionsFacts";
 import { AB_CABINET_SEAT_IDS, AB_MILITARY_BRANCHES } from "@/lib/countries/ab/institutionsFacts";
+import { RTX_CABINET_SEAT_IDS, RTX_MILITARY_BRANCHES } from "@/lib/countries/rtx/institutionsFacts";
+import { NEN_CABINET_SEAT_IDS, NEN_MILITARY_BRANCHES } from "@/lib/countries/nen/institutionsFacts";
+import { RCA_CABINET_SEAT_IDS, RCA_MILITARY_BRANCHES } from "@/lib/countries/rca/institutionsFacts";
 
 export {
   MILITARY_COUNTRY_SCALE,
@@ -146,6 +149,9 @@ export const MILITARY_BRANCHES_BY_COUNTRY: Record<CountryId, Branch[]> = {
   CA: CA_MILITARY_BRANCHES,
   QC: QC_MILITARY_BRANCHES,
   AB: AB_MILITARY_BRANCHES,
+  RTX: RTX_MILITARY_BRANCHES,
+  NEN: NEN_MILITARY_BRANCHES,
+  RCA: RCA_MILITARY_BRANCHES,
 };
 
 /**
@@ -189,6 +195,9 @@ export const DEFENSE_POSITION_BY_COUNTRY: Record<CountryId, string | null> = {
   CA: CA_CABINET_SEAT_IDS.defense,
   QC: QC_CABINET_SEAT_IDS.defense,
   AB: AB_CABINET_SEAT_IDS.defense,
+  RTX: RTX_CABINET_SEAT_IDS.defense,
+  NEN: NEN_CABINET_SEAT_IDS.defense,
+  RCA: RCA_CABINET_SEAT_IDS.defense,
 };
 
 /** National readiness tier → global force modifier. */

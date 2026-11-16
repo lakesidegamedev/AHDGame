@@ -11,6 +11,9 @@ import { BR_ECONOMY } from "@/lib/countries/br/economy";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { AB_ECONOMY } from "@/lib/countries/ab/economy";
+import { RTX_ECONOMY } from "@/lib/countries/rtx/economy";
+import { NEN_ECONOMY } from "@/lib/countries/nen/economy";
+import { RCA_ECONOMY } from "@/lib/countries/rca/economy";
 
 /**
  * Per-country default strategic sectors (spec §6.3). Designating a sector type
@@ -27,6 +30,9 @@ export const DEFAULT_STRATEGIC_SECTORS: Partial<Record<CountryId, OperatingSecto
   CA: CA_ECONOMY.strategicSectors,
   QC: QC_ECONOMY.strategicSectors,
   AB: AB_ECONOMY.strategicSectors,
+  RTX: RTX_ECONOMY.strategicSectors,
+  NEN: NEN_ECONOMY.strategicSectors,
+  RCA: RCA_ECONOMY.strategicSectors,
   BR: BR_ECONOMY.strategicSectors,
   NG: NG_ECONOMY.strategicSectors,
 };

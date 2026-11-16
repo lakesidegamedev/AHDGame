@@ -31,6 +31,9 @@ import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 import { AB_IDENTITY } from "@/lib/countries/ab/identity";
+import { RTX_IDENTITY } from "@/lib/countries/rtx/identity";
+import { NEN_IDENTITY } from "@/lib/countries/nen/identity";
+import { RCA_IDENTITY } from "@/lib/countries/rca/identity";
 
 /**
  * Per-country configuration for the shared executive shell (instrument strip
@@ -100,6 +103,9 @@ export const EXECUTIVE_SURFACE: Record<CountryId, ExecutiveSurfaceConfig> = {
   CA: CA_IDENTITY.executiveSurface,
   QC: QC_IDENTITY.executiveSurface,
   AB: AB_IDENTITY.executiveSurface,
+  RTX: RTX_IDENTITY.executiveSurface,
+  NEN: NEN_IDENTITY.executiveSurface,
+  RCA: RCA_IDENTITY.executiveSurface,
 };
 
 export function getExecutiveSurface(countryId: CountryId): ExecutiveSurfaceConfig {

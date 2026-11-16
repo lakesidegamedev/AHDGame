@@ -100,6 +100,9 @@ import {
 } from "@/lib/countries/ca/institutionsFacts";
 import { QC_CONFIG } from "@/lib/countries/qc/institutionsFacts";
 import { AB_CONFIG } from "@/lib/countries/ab/institutionsFacts";
+import { RTX_CONFIG } from "@/lib/countries/rtx/institutionsFacts";
+import { NEN_CONFIG } from "@/lib/countries/nen/institutionsFacts";
+import { RCA_CONFIG } from "@/lib/countries/rca/institutionsFacts";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface ChamberConfig {
@@ -859,6 +862,9 @@ export const COUNTRY_CONFIGS: Record<CountryId, CountryConfig> = {
   // Latent successor: Quebec exists only after a sovereignty referendum carries.
   QC: QC_CONFIG,
   AB: AB_CONFIG,
+  RTX: RTX_CONFIG,
+  NEN: NEN_CONFIG,
+  RCA: RCA_CONFIG,
 };
 
 /**

@@ -20,6 +20,10 @@ interface Props {
   campaignCloseTurn: number | null;
   currentTurn: number;
   isPM: boolean;
+  /** Who decides the request: "Prime Minister" (default) or "President". */
+  decisionMaker?: string;
+  /** The national government the region leaves, as written in copy. */
+  nationalGovernment?: string;
   isAdmin: boolean;
   /** The admin "Viewing as" role (from `?as=`); non-admins always see "auto". */
   role: RailRole;
@@ -40,6 +44,8 @@ interface Props {
  * which module renders — the backend still authorizes every action.
  */
 export function CampaignRail(props: Props) {
+  const decisionMaker = props.decisionMaker ?? "Prime Minister";
+  const nationalGovernment = props.nationalGovernment ?? "Westminster";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +95,7 @@ export function CampaignRail(props: Props) {
             style={{ borderColor: "color-mix(in srgb, var(--ref-amber) 40%, var(--card-border))" }}
           >
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ref-amber)]">
-              Prime Minister&apos;s decision
+              {decisionMaker}&apos;s decision
             </div>
             <p className="mb-4 text-[12.5px] leading-relaxed text-muted">
               Grant the referendum to open a public campaign and ballot, or decline the request.
@@ -122,10 +128,10 @@ export function CampaignRail(props: Props) {
             }}
           >
             <div className="mb-1.5 text-[13px] font-bold text-[var(--ref-amber)]">
-              Awaiting Westminster
+              Awaiting {nationalGovernment}
             </div>
             <p className="text-[12.5px] leading-relaxed text-muted">
-              The campaign cannot open until the Prime Minister grants this referendum.
+              The campaign cannot open until the {decisionMaker} grants this referendum.
             </p>
           </div>
         ))}

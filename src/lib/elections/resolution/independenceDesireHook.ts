@@ -19,6 +19,7 @@ import { getRegionalExecutiveOfficeKey, type CountryId } from "@/lib/constants/c
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 import { sovereigntyRegion, sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { CA_PARTY_SLUG_BY_ABBREVIATION } from "@/lib/countries/ca/data/caParties";
+import { US_PARTY_SLUG_BY_ABBREVIATION } from "@/lib/countries/us/data/usParties";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -247,6 +248,7 @@ export async function buildPartySlugMap(
 /** Abbreviation-keyed slugs for countries whose default parties carry stable abbreviations. */
 const PARTY_SLUGS_BY_COUNTRY: Partial<Record<CountryId, Readonly<Record<string, string>>>> = {
   CA: CA_PARTY_SLUG_BY_ABBREVIATION,
+  US: US_PARTY_SLUG_BY_ABBREVIATION,
 };
 
 /** UK slugs derive from name as well as abbreviation, covering older seeds. */
