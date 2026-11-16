@@ -214,7 +214,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     status: "plants-gated",
     reason: "NPP corp spawn; plants-aware sector creation.",
   },
-  "src/lib/nationalization/ownershipTransition.ts": {
+  "src/lib/nationalization/siteAbsorption.ts": {
     writeSites: 2,
     status: "plants-gated",
     reason: "Nationalization ownership transfer; plants-aware.",
@@ -343,7 +343,7 @@ const MUST_BE_PLANTS_AWARE = [
   "src/lib/corporations/subsidiaries/commands/spinOff.ts",
   "src/lib/corporations/repairDuplicateSectors.ts",
   "src/lib/nationalization/seedToNatCorp.ts",
-  "src/lib/nationalization/ownershipTransition.ts",
+  "src/lib/nationalization/siteAbsorption.ts",
   // Surfaced only when the detector stopped being a regex — both were writing
   // the field in shapes the old pattern could not see.
   "src/lib/corporations/convertCorpCurrency.ts",

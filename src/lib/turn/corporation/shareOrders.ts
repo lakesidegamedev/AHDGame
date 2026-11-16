@@ -1,3 +1,4 @@
+import type { ShareDelta, PendingHistoryEmit } from "@/lib/turn/corporation/shareOrderTypes";
 import {
   loadStockWithholdingContexts,
   withholdStockReceipt,
@@ -51,35 +52,6 @@ import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
-
-/** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
-interface ShareDelta {
-  holdingTerms?: ShareHoldingTerms;
-  delta: number;
-  /**
-   * Per-share fill price (₳). Set when this delta *increases* a holding (buy fill)
-   * so we can stamp `avgCostPerShare` on a brand-new pushed entry and match the
-   * convention used by the direct-buy route. Not tracked for sells (decrement only).
-   */
-  pricePerShare?: number;
-}
-
-/**
- * One queued trade-history emission collected during fill resolution.
- * Names are resolved in a batch lookup after all fills are applied.
- */
-interface PendingHistoryEmit {
-  taxCreditId?: string;
-  sellerHoldingTerms?: ShareHoldingTerms;
-  corporationId: ObjectId;
-  kind: "limit_fill";
-  shares: number;
-  pricePerShareAnchor: number;
-  corpCurrencyCode?: CurrencyCode;
-  /** Populated with a resolved name before insert. */
-  fromPartyRef?: { characterId?: ObjectId; corporationId?: ObjectId };
-  toPartyRef?: { characterId?: ObjectId; corporationId?: ObjectId };
-}
 
 /**
  * Check all open share orders and fill any that match the current market price.

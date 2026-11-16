@@ -1,0 +1,375 @@
+import {
+  isCanadianCommons,
+  isCanada,
+  canadianRidingNotice,
+} from "@/lib/countries/ca/rules/localGeography";
+import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
+import {
+  SUBDIVISION_REGION_PATTERN,
+  subdivisionRegionMatchesCountry,
+} from "@/lib/maps/rules/region";
+import { hasPopulationSubdivisionReference } from "@/lib/counties/subdivisionReference";
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/mongodb";
+import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { getSubdivisionMode } from "@/lib/maps/subdivisionConfig";
+import { loadSubdivisionFile } from "@/lib/maps/subdivisionData";
+import {
+  distributeSubdivisionVotes,
+  assignSeatConsistentWinners,
+  assignByLeanOrdering,
+  type CandidateDistributionInfo,
+} from "@/lib/utils/subdivisionResults";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import type { ElectionVoteTally } from "@/lib/db/types";
+import { getPartyHex } from "@/lib/utils/politics";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+
+// GET /api/elections/[id]/state/[stateId]/subdivision-results — sub-region
+// vote distribution + seat-consistent winners for a region in an election.
+// Optional `?turn=N` (concluded presidential races only): the counties as of
+// that turn, from the tally's per-turn state snapshot, for the race replay. A
+// live race is refused so its past weeks cannot be read ahead of the screen.
+// Auth: public
+// Errors: 400, 404
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; stateId: string }> }
+) {
+  try {
+    const { id, stateId } = await params;
+    const regionId = stateId.toUpperCase();
+    // regionId feeds a filesystem path — reject anything but region-code shapes.
+    if (!SUBDIVISION_REGION_PATTERN.test(regionId)) {
+      return errorResponse(400, "Invalid region ID");
+    }
+    const layer = req.nextUrl.searchParams.get("layer");
+    if (layer && layer !== "census-divisions") return errorResponse(400, "Invalid map layer");
+    const turnParam = req.nextUrl.searchParams.get("turn");
+    const atTurn = turnParam == null ? null : Number(turnParam);
+    if (atTurn != null && (!Number.isInteger(atTurn) || atTurn < 0)) {
+      return errorResponse(400, "Invalid turn");
+    }
+
+    const db = await getDb();
+    const resolved = await resolveElectionRouteParam(db, id);
+    if (!resolved.ok) {
+      if (resolved.reason === "invalid_id") {
+        return errorResponse(400, "Invalid election ID");
+      }
+      return errorResponse(404, "Election not found");
+    }
+    const election = resolved.election;
+    if (!subdivisionRegionMatchesCountry(election.countryId, regionId))
+      return errorResponse(400, "Region country mismatch");
+
+    if (isCanada(election.countryId) && (await getGameStatePresetOrDefault(db)) !== "2027-default")
+      return errorResponse(404, "Canadian local maps are qualified only for the 2027 preset");
+
+    if (
+      isCanada(election.countryId) &&
+      isCanadianCommons(election.electionType) &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null) return errorResponse(400, "Riding turn replay is unavailable");
+      if (layer)
+        return errorResponse(
+          404,
+          "Historical census-division projections were not recorded for this election"
+        );
+      const tally = await electionVoteTalliesCollection(db).findOne(
+        { electionId: election._id },
+        { projection: { canadianRidingResult: 1 } }
+      );
+      const result = tally?.canadianRidingResult;
+      if (
+        !result ||
+        result.version !== 1 ||
+        result.electionId !== String(election._id) ||
+        !isCanada(result.countryId) ||
+        result.stateId !== regionId
+      ) {
+        return NextResponse.json({
+          viewBox: "0 0 1 1",
+          mode: "seatConsistent",
+          resultStatus: "unsupported",
+          unitLabel: "Federal riding",
+          unitLabelPlural: "Federal ridings",
+          geometryAvailable: false,
+          notice:
+            "Riding results unavailable: no placement was recorded. Resolution may still be pending, or this election predates recorded Canadian riding results.",
+          subdivisions: [],
+          candidateNames: {},
+          candidateParties: {},
+          partyColors: {},
+        });
+      }
+      return NextResponse.json({
+        ...result,
+        mode: "seatConsistent",
+        resultStatus: "frozen",
+        geometryAvailable: true,
+        unitLabel: "Federal riding",
+        unitLabelPlural: "Federal ridings",
+      });
+    }
+
+    // Completed House races use only their frozen receipt, never today's holders or geometry.
+    if (
+      election.countryId === COUNTRY_CONFIGS.US.id &&
+      election.electionType === "house" &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null)
+        return errorResponse(
+          400,
+          "Turn replay is only available for a concluded presidential race"
+        );
+      const tally = await electionVoteTalliesCollection<ElectionVoteTally>(db).findOne(
+        { electionId: election._id },
+        { projection: { houseDistrictResult: 1, candidateNames: 1, candidateParties: 1 } }
+      );
+      const result = tally?.houseDistrictResult;
+      const supported =
+        result?.version === 1 &&
+        result.electionId === election._id.toString() &&
+        result.countryId === election.countryId &&
+        result.stateId === regionId;
+      return NextResponse.json({
+        viewBox: supported ? result.viewBox : "0 0 1 1",
+        mode: "seatOrdered",
+        resultStatus: supported ? "frozen" : "unsupported",
+        geometryAvailable: supported && result.geometryAvailable,
+        notice: !supported
+          ? "District results unavailable: this election has no recorded district winners."
+          : !result.geometryAvailable
+            ? "District winners are recorded, but map geometry was unavailable for this election."
+            : undefined,
+        subdivisions: supported ? result.districts : [],
+        candidateNames: tally?.candidateNames ?? {},
+        candidateParties: tally?.candidateParties ?? {},
+        partyColors: supported ? result.partyColors : {},
+      });
+    }
+
+    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType), layer);
+    if (!modeEntry) {
+      return errorResponse(404, "Subdivision map data is not available for this election");
+    }
+
+    if (
+      modeEntry.config.populationCountryId &&
+      !hasPopulationSubdivisionReference(regionId, modeEntry.config.populationCountryId)
+    )
+      return errorResponse(404, "Subdivision data not available for this region");
+
+    // County leans follow the world's era (a 1991 world starts from 1984/1988).
+    const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
+      preset: await getGameStatePresetOrDefault(db),
+      ...(modeEntry.config.populationCountryId &&
+      (election.status === "active" ||
+        (isCanada(election.countryId) && election.status === "upcoming"))
+        ? {
+            countyPopulations: await loadCountyPopulationMap(
+              db,
+              regionId,
+              modeEntry.config.populationCountryId
+            ),
+          }
+        : {}),
+    });
+    if (!data) {
+      return errorResponse(404, "Subdivision data not available for this region");
+    }
+
+    // Projected: a presidential tally carries per-turn snapshots for every
+    // state and runs to megabytes; this route needs one state's slice. The map
+    // requests a state at a time as the reader zooms, so the full read made
+    // every county load crawl.
+    const tally = await electionVoteTalliesCollection(db).findOne(
+      { electionId: election._id },
+      {
+        projection: {
+          state: 1,
+          totalVotes: 1,
+          [`totalVotesByUnit.${regionId}`]: 1,
+          candidateNames: 1,
+          candidateParties: 1,
+          seatsEstimate: 1,
+          ...(atTurn != null ? { [`unitTurnSnapshots.${regionId}`]: 1 } : {}),
+        },
+      }
+    );
+    if (!tally) return errorResponse(404, "No tally found");
+    // Presidential tallies span all regions (aggregated below); everything else
+    // must be the requested region's own tally — legacy county-results behavior.
+    const isPresident = String(election.electionType) === "president";
+    if (!isPresident && tally.state !== regionId) {
+      return errorResponse(400, "Tally state mismatch");
+    }
+
+    let regionVotes = isPresident
+      ? (tally.totalVotesByUnit?.[regionId] ?? tally.totalVotes)
+      : tally.totalVotes;
+    if (atTurn != null) {
+      if (!isPresident || !["resolved", "completed"].includes(String(election.status))) {
+        return errorResponse(
+          400,
+          "Turn replay is only available for a concluded presidential race"
+        );
+      }
+      // The state's last snapshot at or before the turn.
+      const snap = (tally.unitTurnSnapshots?.[regionId] ?? [])
+        .filter((s) => s.turn <= atTurn)
+        .sort((a, b) => b.turn - a.turn)[0];
+      if (!snap) return errorResponse(404, "No result for this state at that turn");
+      regionVotes = snap.cumulativeVotes;
+    }
+
+    // Party docs: colors, economic positions, and abbreviations for baselines.
+    const uniquePartySeqIds = [...new Set(Object.values(tally.candidateParties ?? {}))]
+      .map(Number)
+      .filter(Boolean);
+    const partyDocs = await politicalPartiesCollection(db)
+      .find({ sequentialId: { $in: uniquePartySeqIds }, countryId: election.countryId })
+      .toArray();
+    const partyBySeqId = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));
+
+    const partyColors: Record<string, string> = {};
+    const partyEconPositions: Record<string, number> = {};
+    for (const party of partyDocs) {
+      const partyId = String(party.sequentialId);
+      partyColors[partyId] = getPartyHex(partyId, party.color);
+      partyEconPositions[partyId] = party.economicPosition;
+    }
+
+    // seatOrdered (US house): no vote distribution — seats assigned to
+    // subdivisions by lean ordering, exactly the legacy cd-results behavior.
+    if (modeEntry.mode === "seatOrdered") {
+      const seatResults = assignByLeanOrdering(
+        data.subdivisions,
+        tally.seatsEstimate ?? {},
+        tally.candidateParties ?? {},
+        partyEconPositions
+      );
+      const cdById = new Map(data.subdivisions.map((s) => [s.id, s]));
+      return NextResponse.json({
+        viewBox: data.viewBox,
+        mode: modeEntry.mode,
+        resultStatus: "projection",
+        geometryAvailable: true,
+        notice: "Modeled district projection; not final district results.",
+        unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
+        unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
+        subdivisions: seatResults.map((r) => {
+          const src = cdById.get(r.id);
+          return {
+            ...r,
+            name: src?.name ?? r.id,
+            path: src?.path ?? "",
+            leanScalar: src?.leanScalar,
+            leanStatus: src?.leanStatus,
+            partyLabel:
+              partyBySeqId.get(r.party)?.abbreviation ??
+              (r.party === "independent" ? "IND" : "Unknown party"),
+            marginAvailable: false,
+          };
+        }),
+        candidateNames: tally.candidateNames,
+        candidateParties: tally.candidateParties,
+        partyColors,
+      });
+    }
+
+    // Which abbreviations actually have baselines in this region's data?
+    const baselineKeys = new Set<string>();
+    for (const sub of data.subdivisions) {
+      for (const key of Object.keys(sub.partyShares ?? {})) baselineKeys.add(key);
+    }
+
+    const candidates: Record<string, CandidateDistributionInfo> = {};
+    for (const cid of Object.keys(regionVotes)) {
+      const party = partyBySeqId.get(tally.candidateParties?.[cid] ?? "");
+      const abbr = party?.abbreviation;
+      candidates[cid] = {
+        baselineKey: abbr && baselineKeys.has(abbr) ? abbr : undefined,
+        econPosition: party?.economicPosition ?? 0,
+      };
+    }
+
+    const distributed = distributeSubdivisionVotes(data.subdivisions, regionVotes, candidates);
+
+    // Seat-consistent modes force winners to match the actual seat allocation:
+    // stored allocation first (what resolution actually seated), else recompute
+    // with the exact rules the resolver uses. Distributed mode (US statewide
+    // races) has no seats — winners are pure vote leaders.
+    let seatsByCandidate: Record<string, number> | undefined;
+    let results = distributed;
+    if (modeEntry.mode === "seatConsistent") {
+      seatsByCandidate = tally.seatsEstimate;
+      if (!seatsByCandidate || Object.keys(seatsByCandidate).length === 0) {
+        const ranked = Object.entries(regionVotes)
+          .map(([cid, votes]) => ({ id: cid, votes, party: tally.candidateParties?.[cid] }))
+          .sort((a, b) => b.votes - a.votes);
+        const totalVotesCast = ranked.reduce((s, r) => s + r.votes, 0);
+        seatsByCandidate = allocateSeats(
+          String(election.electionType),
+          regionId,
+          election.totalSeats ?? data.subdivisions.length,
+          ranked,
+          totalVotesCast,
+          undefined
+        ).seatsEstimate;
+      }
+      results = isCanada(election.countryId)
+        ? projectCanadianRidings({
+            subdivisions: data.subdivisions,
+            votes: regionVotes,
+            candidateParties: tally.candidateParties,
+            seats: seatsByCandidate,
+            partyAbbreviations: Object.fromEntries(
+              partyDocs.map((p) => [String(p.sequentialId), p.abbreviation])
+            ),
+            boosts: election.districtCampaignBoosts,
+          })
+        : assignSeatConsistentWinners(distributed, seatsByCandidate);
+    }
+
+    const subById = new Map(data.subdivisions.map((s) => [s.id, s]));
+    return NextResponse.json({
+      viewBox: data.viewBox,
+      notice: isCanada(election.countryId)
+        ? canadianRidingNotice(election.electionType, data.notice)
+        : data.notice,
+      mode: modeEntry.mode,
+      unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
+      unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
+      subdivisions: results.map((r) => {
+        const src = subById.get(r.id);
+        // The party that led the sub-unit's baseline result, so a map can read a
+        // projected winner as a hold or a gain.
+        const baseline = Object.entries(src?.partyShares ?? {}).sort(([, a], [, b]) => b - a)[0];
+        return {
+          ...r,
+          path: src?.path ?? "",
+          leanScalar: src?.leanScalar,
+          electorate: src?.electorate,
+          ...(baseline ? { baselineLeader: baseline[0] } : {}),
+        };
+      }),
+      candidateNames: tally.candidateNames,
+      candidateParties: tally.candidateParties,
+      partyColors,
+      ...(seatsByCandidate ? { seatsByCandidate } : {}),
+    });
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

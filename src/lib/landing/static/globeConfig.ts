@@ -4,7 +4,7 @@ import {
   economicPowerFeatureIdsForEra,
 } from "@/components/landing/countryTierRosters";
 import { LANDING_MARKERS } from "@/components/landing/landingMarkers";
-import { ISO_TO_COUNTRY_ID } from "@/app/world/worldMetricHighlight";
+import { WORLD_COUNTRY_ISO_TO_ID as ISO_TO_COUNTRY_ID } from "@/lib/worldCountryRegistry";
 import { WORLD_MAPPED_COUNTRIES } from "@/lib/worldCountryRegistry";
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
 import type { CountryId } from "@/lib/constants/countriesCore";

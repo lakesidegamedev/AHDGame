@@ -41,7 +41,7 @@ import { GlobePoster } from "./GlobePoster";
 import { useGlobeActivation } from "./useGlobeActivation";
 import { LaunchCountdown } from "./LaunchCountdown";
 import type { LaunchSchedule } from "@/lib/landing/rules/launchSchedule";
-import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
+import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "@/lib/landing/publicLinks";
 import type { GovernmentType } from "@/lib/constants/countriesCore";
 import type { EraNation, EraTileKey } from "@/components/landing/eraThemes";
 import type { DiscordInviteStats } from "@/lib/discord/inviteStats";

@@ -1,12 +1,13 @@
-import { finishedPrimaryResults } from "./finishedPrimaryResults";
+import { enrichElectionResults } from "@/lib/elections/enrichElectionResults";
+
 /**
  * Election details show registered candidates, primary results and counted votes.
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
-import { resolveElectionYear } from "@/lib/utils/formatters";
+
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
+
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
 import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
@@ -26,6 +27,7 @@ import { usesLegacyPresidentialCampaign } from "@/lib/countries/ru/rules/preside
  * @param db         - Database connection (needed for full-view tally operations)
  * @param adjacentElections - For nav; pass null/undefined in summary mode
  */
+
 import { applyStandingAds } from "@/lib/campaignTargeting/standingAds";
 
 import { PRIMARY_SHARE_SOFTMAX_TEMPERATURE } from "@/lib/primaryScore";
@@ -40,8 +42,7 @@ import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocL
 import { getCountryState } from "@/lib/countryState";
 import { allocateBlocListSeats } from "@/lib/elections/resolution/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
-import { eraYearContextFromGameState } from "@/lib/era/context";
-import { censusMedianVoter } from "./censusMedianVoter";
+
 import { ObjectId } from "mongodb";
 import type {
   Election,
@@ -54,28 +55,11 @@ import type {
   Campaign,
   StatePartyOrg,
   State,
-  StateDemographics,
 } from "@/lib/db/types";
-import {
-  getPrimaryWinnersForElection,
-  getRegionalExecutiveOfficeKey,
-  type CountryId,
-} from "@/lib/constants/countries";
-import {
-  isHeadOfGovernmentRace,
-  resolvePresidentApproval,
-  buildPresidentialModifierByParty,
-  presidentialModifierToPct,
-} from "@/lib/elections/engine/presidentialCoattail";
-import {
-  buildGovModifierByParty,
-  govModifierToPct,
-  resolveGovExecutiveApproval,
-  isCoattailEligibleRace,
-  isOwnRegionalExecutiveRace,
-} from "@/lib/elections/engine/govCoattail";
+import { getPrimaryWinnersForElection, type CountryId } from "@/lib/constants/countries";
+
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { applyFactorLedgerFogOfWar } from "@/lib/elections/factorLedgerFog";
+
 import { type GameTimeContext } from "@/lib/time/gameTime";
 import { computeElectionPhase } from "@/lib/elections/phases";
 import {
@@ -84,27 +68,14 @@ import {
   type EnrichedCandidate,
   type PrimaryCalendarWave,
 } from "@/lib/elections/candidateEnrichment";
-import { getOrCreateVoteTally } from "@/lib/elections/voteTallyService";
+
 import { projectDistrictedSeats } from "@/lib/redistricting/districtedHouseResolution";
 import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResolutionHelpers";
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
 import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhaseCandidates";
-import { computeElectoralVotes } from "@/lib/elections/electoralVoteService";
-import { getFundsByPartyForElection } from "@/lib/elections/engine/fundsByParty";
-import { getIncumbentSeatShareByParty } from "@/lib/elections/engine/incumbentSeatShare";
-import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
-import {
-  resolveSingleSeatLegislativeIncumbent,
-  isSingleSeatLegislativeRace,
-} from "@/lib/elections/engine/singleSeatIncumbency";
-import { usesEvWeightedNationalMedian } from "@/lib/elections/engine/medianVoter";
+
 import { loadApportionment } from "@/lib/elections/apportionment";
-import {
-  buildMidtermOppositionModifierByParty,
-  isMidtermOppositionBoostEligible,
-  midtermOppositionModifierToPct,
-} from "@/lib/elections/engine/midtermOppositionBoost";
-import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
+
 import type {
   ElectionResponse,
   ResolveElectionOptions,
@@ -115,9 +86,9 @@ import type {
 import { buildPollingData, computeSeatEstimates } from "./buildPollingData";
 import { resolvedSeatsEstimate } from "./resolvedSeatsEstimate";
 import { appendHistoricalTallyCandidates } from "./historicalTallyCandidates";
-import { seatEstimateForVoteTotals } from "./snapshotSeats";
+
 import { getPartyHex } from "@/lib/utils/politics";
-import { findViewerRaceCampaignId } from "@/lib/campaigns/queries/viewerRaceCampaign";
+
 import { getPrimaryWaveSchedule } from "@/lib/constants/primaryCalendar";
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
@@ -126,16 +97,11 @@ import {
   ELECTION_SUMMARY_NPP_PROJECTION,
 } from "./electionSummaryProjections";
 import { parseSeatId } from "@/lib/seats/seatId";
-import { buildPartyDisplayById, buildPresidentialRegByStateInput } from "./presidentialRegByState";
+
 import { ballotSharesWithinParty } from "@/lib/turn/primaryBallots";
-import { resolveElectionDisplayParty } from "./resolveElectionParty";
+
 import { applyPresidentialPrimaryDisplay } from "./enrichPresidentialPrimaryDisplay";
-import { projectContingentElection } from "./contingentProjection";
-import {
-  PRESIDENTIAL_EV_NEEDED,
-  collegeSizeFromEvByState,
-  electoralMajorityFor,
-} from "./presidentialResolutionDisplay";
+
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -145,15 +111,14 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
-import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+
 import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
-import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
-import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
-export async function _enrichElection(
+async function prepare_enrichElection(
   election: Election,
   deps: ElectionDeps,
   options: ResolveElectionOptions,
@@ -161,7 +126,7 @@ export async function _enrichElection(
   gameState: GameState | null,
   db: Db,
   adjacentElections?: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null
-): Promise<ElectionResponse> {
+) {
   const { view, userId, isAdmin = false, activeCharacterId } = options;
   const isFull = view === "full";
   const {
@@ -674,691 +639,124 @@ export async function _enrichElection(
     displayCandidates = projectedDisplay.displayCandidates;
     primaryCalendar = projectedDisplay.primaryCalendar;
   }
-
-  if (isFull) {
-    // Prev/next navigation
-    if (adjacentElections && adjacentElections.length > 0) {
-      const idx = adjacentElections.findIndex((e) => e._id.equals(electionOid));
-      if (idx > 0) {
-        const prev = adjacentElections[idx - 1];
-        prevElectionId = prev.seatId ? `${prev.seatId}?cycle=${prev.cycle}` : prev._id.toString();
-      }
-      if (idx >= 0 && idx < adjacentElections.length - 1) {
-        const next = adjacentElections[idx + 1];
-        nextElectionId = next.seatId ? `${next.seatId}?cycle=${next.cycle}` : next._id.toString();
-      }
-    }
-
-    // Snapshot history
-    snapshotHistory = snapshots.map((s) => ({
-      recordedAt: s.recordedAt,
-      byParty: s.byParty,
-    }));
-
-    // User endorsement
-    if (myCharId) {
-      myEndorsedCandidateId =
-        playerEndorsements
-          .find((e) => e.characterId.toString() === myCharId)
-          ?.candidateId.toString() ?? null;
-    }
-
-    // The reader's own campaign in a presidential race (candidate, manager or
-    // running mate), so the race page can open it in Campaign mode.
-    if (userId && isPresident) {
-      myCampaignId = await findViewerRaceCampaignId(db, electionOid, userId);
-    }
-
-    // The reader's party, so a primary screen offers endorsement only for
-    // own-party candidates. Presidential primaries only.
-    if (myCharId && isPresident && inPrimary && ObjectId.isValid(myCharId)) {
-      const me = await charactersCollection(db).findOne(
-        { _id: new ObjectId(myCharId) },
-        { projection: { party: 1 } }
-      );
-      myPartyId = me?.party ?? null;
-    }
-
-    // Vote tally
-    const resolvedTally = await getOrCreateVoteTally(
-      db,
-      electionOid,
-      election,
-      candidates,
-      displayCandidates,
-      inPrimary,
-      isEnded
-    );
-
-    if (resolvedTally) {
-      // National Mood gauge input. Pass-through of what the presidential engine
-      // recorded on its last accumulation turn; the shift is already inside the
-      // vote totals, so nothing here re-applies it. Party name/colour are the
-      // only additions, resolved for display.
-      const referendumSnapshot = resolvedTally.economicReferendum ?? tally?.economicReferendum;
-      if (isPresident && referendumSnapshot) {
-        const referendumParty = referendumSnapshot.incumbentPartyId
-          ? partyMap.get(String(referendumSnapshot.incumbentPartyId))
-          : undefined;
-        economicReferendum = {
-          miseryIndex: referendumSnapshot.miseryIndex,
-          sharePts: referendumSnapshot.sharePts,
-          components: referendumSnapshot.components.map((c) => ({
-            key: c.key,
-            label: c.label,
-            contributionPts: c.contributionPts,
-          })),
-          fatigueMultiplier: referendumSnapshot.fatigueMultiplier,
-          recordedTurn: referendumSnapshot.recordedTurn,
-          ...(referendumSnapshot.forgivenessFrac
-            ? {
-                forgivenessFrac: referendumSnapshot.forgivenessFrac,
-                creditedBills: (referendumSnapshot.creditedBills ?? []).map((b) => ({
-                  key: b.key,
-                  title: b.title,
-                  component: b.component,
-                  weight: b.weight,
-                })),
-              }
-            : {}),
-          ...(referendumSnapshot.incumbentPartyId
-            ? { incumbentPartyId: referendumSnapshot.incumbentPartyId }
-            : {}),
-          ...(referendumParty?.name ? { incumbentPartyName: referendumParty.name } : {}),
-          ...(referendumParty?.color ? { incumbentPartyColor: referendumParty.color } : {}),
-        };
-      }
-
-      const democraticHealthSnapshot = resolvedTally.democraticHealth ?? tally?.democraticHealth;
-      if (isPresident && democraticHealthSnapshot) {
-        const rulingParty = democraticHealthSnapshot.rulingPartyId
-          ? partyMap.get(String(democraticHealthSnapshot.rulingPartyId))
-          : undefined;
-        democraticHealth = {
-          ...democraticHealthSnapshot,
-          ...(rulingParty?.name ? { rulingPartyName: rulingParty.name } : {}),
-          ...(rulingParty?.color ? { rulingPartyColor: rulingParty.color } : {}),
-        };
-      }
-
-      // Factor Ledger card input. Read straight off the tally (never recomputed).
-      // Fog-of-war: the national factor waterfall is public for every candidate,
-      // but per-candidate `bucketAppeal` (where a candidate's appeal comes from)
-      // and the per-unit breakdown are stripped for candidates the viewer does
-      // not own, matching the Support fog on the persuasion card. Admins see all.
-      const factorLedgerSnapshot = resolvedTally.factorLedger ?? tally?.factorLedger;
-      if (isPresident && factorLedgerSnapshot) {
-        const ownedCandidateIds = new Set(
-          isAdmin
-            ? factorLedgerSnapshot.byCandidateNational.map((c) => c.candidateId)
-            : enrichedWithIsYou.filter((c) => c.isYou).map((c) => c.id)
-        );
-        factorLedger = applyFactorLedgerFogOfWar(factorLedgerSnapshot, ownedCandidateIds);
-      }
-
-      const filterRecord = <T>(rec: Record<string, T>): Record<string, T> => {
-        const out: Record<string, T> = {};
-        for (const [k, v] of Object.entries(rec)) {
-          if (activeCandidateIdSet.has(k)) out[k] = v;
-        }
-        return out;
-      };
-
-      // Electoral votes (president only). For historical races, overlay
-      // ballot-time parties onto the tally so EV map colours never fall back
-      // to a missing snapshot key while the battleground map uses ballot party.
-      let electoralVotesResult = {};
-      if (isPresident) {
-        const candidateNameMap = new Map(enrichedWithYou.map((c) => [c.id, c.characterName]));
-        const preferElectionTimeParty = isEnded || resolvedTally.finalized === true;
-        let tallyForEv: typeof resolvedTally = resolvedTally;
-        if (preferElectionTimeParty) {
-          const mergedParties: Record<string, string> = {
-            ...(resolvedTally.candidateParties ?? {}),
-          };
-          for (const c of candidates) {
-            const cid = c._id.toString();
-            if (!mergedParties[cid]) mergedParties[cid] = c.party;
-          }
-          tallyForEv = { ...resolvedTally, candidateParties: mergedParties };
-        }
-        electoralVotesResult = await computeElectoralVotes(
-          db,
-          tallyForEv,
-          candidateNameMap,
-          partyMap,
-          evUnits
-        );
-      }
-
-      // Candidate names/parties/colours must cover ALL candidates that appear in
-      // state-level or historical data, not just active display candidates.
-      // Presidential unit-level tallies may retain votes from withdrawn/primary
-      // candidates, and those candidates must still render with a name.
-      const referencedCandidateIds = new Set<string>(activeCandidateIdSet);
-      for (const cid of Object.keys(resolvedTally.candidateNames ?? {})) {
-        referencedCandidateIds.add(cid);
-      }
-      if (isPresident) {
-        const evr = electoralVotesResult as {
-          stateVoteData?: Record<
-            string,
-            { votesByCandidate: Record<string, number>; evByCandidate: Record<string, number> }
-          >;
-          stateVotesOverTime?: Record<string, Array<{ cumulativeVotes: Record<string, number> }>>;
-          evByTurn?: Array<{ electoralVotesByCandidate: Record<string, number> }>;
-        };
-        if (evr.stateVoteData) {
-          for (const data of Object.values(evr.stateVoteData)) {
-            for (const cid of Object.keys(data.votesByCandidate)) referencedCandidateIds.add(cid);
-            for (const cid of Object.keys(data.evByCandidate)) referencedCandidateIds.add(cid);
-          }
-        }
-        if (evr.stateVotesOverTime) {
-          for (const snaps of Object.values(evr.stateVotesOverTime)) {
-            for (const snap of snaps) {
-              for (const cid of Object.keys(snap.cumulativeVotes)) referencedCandidateIds.add(cid);
-            }
-          }
-        }
-        if (evr.evByTurn) {
-          for (const point of evr.evByTurn) {
-            for (const cid of Object.keys(point.electoralVotesByCandidate))
-              referencedCandidateIds.add(cid);
-          }
-        }
-      }
-
-      const fullCandidateNames: Record<string, string> = {};
-      const fullCandidateParties: Record<string, string> = {};
-      const candidateIsNPP = {
-        ...Object.fromEntries(
-          candidates.map((candidate) => [candidate._id.toString(), Boolean(candidate.isNPP)])
-        ),
-        ...resolvedTally.candidateIsNPP,
-      };
-      // For ended elections, prefer the tally snapshot, then the
-      // candidacy-row party, never the live character.party, so historical
-      // maps keep election-time colours. In-progress races use live party.
-      const preferElectionTimeParty = isEnded || resolvedTally.finalized === true;
-      const ballotPartyById = new Map(candidates.map((c) => [c._id.toString(), c.party]));
-      for (const cid of referencedCandidateIds) {
-        const enriched = enrichedWithYou.find((c) => c.id === cid);
-        fullCandidateNames[cid] =
-          enriched?.characterName ?? resolvedTally.candidateNames?.[cid] ?? "Unknown";
-        fullCandidateParties[cid] = resolveElectionDisplayParty({
-          preferElectionTimeParty,
-          snapshotParty: resolvedTally.candidateParties?.[cid],
-          ballotParty: ballotPartyById.get(cid),
-          liveParty: enriched?.party,
-        });
-      }
-      const fullCandidateColors: Record<string, string> = {};
-      for (const [cid, pid] of Object.entries(fullCandidateParties)) {
-        const partyObj = partyMap.get(pid);
-        fullCandidateColors[cid] = getPartyHex(pid, partyObj?.color);
-      }
-
-      generalVotes = {
-        totalVotes: filterRecord(resolvedTally.totalVotes),
-        candidateNames: fullCandidateNames,
-        candidateParties: fullCandidateParties,
-        candidateColors: fullCandidateColors,
-        finalized: resolvedTally.finalized,
-        seatsEstimate,
-        ...(seatMargins ? { seatMargins } : {}),
-        turnSnapshots: resolvedTally.turnSnapshots.slice(-96).map((t) => {
-          const persisted =
-            t.seatsEstimate && Object.keys(t.seatsEstimate).length > 0
-              ? t.seatsEstimate
-              : undefined;
-          const seatsEstimateSnapshot =
-            isBgOrdinary || isHu1991Pending
-              ? undefined
-              : (persisted ??
-                seatEstimateForVoteTotals(
-                  election.electionType,
-                  election.state,
-                  election.totalSeats,
-                  t.cumulativeVotes,
-                  houseSeats,
-                  fullCandidateParties,
-                  election.countryId ?? "US",
-                  election.allocationMethod,
-                  candidateIsNPP
-                ));
-          return {
-            turn: t.turn,
-            recordedAt: t.recordedAt,
-            cumulativeVotes: t.cumulativeVotes,
-            sharesPct: t.sharesPct,
-            ...(seatsEstimateSnapshot ? { seatsEstimate: seatsEstimateSnapshot } : {}),
-            ...(t.participation ? { participation: t.participation } : {}),
-          };
-        }),
-        ...electoralVotesResult,
-        ...(resolvedTally.russianPresidentialResult
-          ? { russianPresidentialResult: resolvedTally.russianPresidentialResult }
-          : {}),
-        // Per-state EV totals for the active preset (president display surfaces
-        // read this instead of the 2020-census constant directly).
-        ...(isPresident ? { evByState } : {}),
-        ...(isPresident && resolvedTally.resolutionMode
-          ? { resolutionMode: resolvedTally.resolutionMode }
-          : {}),
-        ...(isPresident && resolvedTally.contingentResult
-          ? { contingentResult: resolvedTally.contingentResult }
-          : {}),
-        ...(isPresident && resolvedTally.contingentResolutionPending
-          ? { contingentResolutionPending: true }
-          : {}),
-        ...(isPresident && resolvedTally.executiveSeatingPending
-          ? { executiveSeatingPending: true }
-          : {}),
-      };
-
-      // No projected EV majority: run the contingent ballot against the
-      // Congress that would cast it, so the risk banner names who wins it.
-      if (isPresident && !isEnded && generalVotes.electoralVotesByCandidate) {
-        const college = collegeSizeFromEvByState(evByState);
-        const contingentProjection = await projectContingentElection(
-          db,
-          election,
-          generalVotes.electoralVotesByCandidate,
-          college > 0 ? electoralMajorityFor(college) : PRESIDENTIAL_EV_NEEDED,
-          gameState
-        );
-        if (contingentProjection) generalVotes.contingentProjection = contingentProjection;
-      }
-    }
-  }
-
-  // Resolve incumbent display info from raw partyId → party name + color
-  let incumbentDisplay: { name: string; party: string; partyColor: string | null } | null = null;
-  if (deps.incumbent) {
-    const incumbentParty = partyMap.get(deps.incumbent.partyId);
-    incumbentDisplay = {
-      name: deps.incumbent.name,
-      party:
-        incumbentParty?.name ??
-        (deps.incumbent.partyId === "independent" ? "Independent" : deps.incumbent.partyId),
-      partyColor: incumbentParty?.color ?? null,
-    };
-  }
-
-  // Phase B follow-up — driver inputs for the PersuasionDrivers card.
-  // Computed only in full-view, general phase (the card only renders for
-  // active general elections). The card consumer (`computePersuasionDriverDisplay`)
-  // treats missing maps as "neutral / no data" so primaries / summary views
-  // omit cleanly.
-  let fundsByPartyMap: Record<string, number> | undefined;
-  let incumbentSeatShareByPartyMap: Record<string, number> | undefined;
-  let persuasionRegByPartyMap: Record<string, number> | undefined;
-  let medianVoter: { ep: number; sp: number } | undefined;
-  let presidentialCoattailPctByParty: Record<string, number> | undefined;
-  let gubernatorialCoattailPctByParty: Record<string, number> | undefined;
-  let midtermOppositionBoostPctByParty: Record<string, number> | undefined;
-  let incumbentApprovalForDisplay: number | undefined;
-  let incumbentPartyIdForDisplay: string | undefined;
-  let legislativeIncumbentPartyIdForDisplay: string | undefined;
-  let legislativeIncumbentTenureTermsForDisplay: number | undefined;
-  if (isFull && inGeneral) {
-    // M5 — feed the policy-distance driver with a real reference point
-    // instead of the engine's `(0, 0)` fallback. State-scoped races use
-    // the seat's own state median; US presidential uses an EV-weighted
-    // national aggregate so the card reflects what candidates actually
-    // court on the EV map. See `medianVoter.ts` for the math.
-    const useEvWeightedMedian = usesEvWeightedNationalMedian(
-      election.electionType,
-      countryId as CountryId
-    );
-    const demographicsQueryStateIds: string[] = useEvWeightedMedian
-      ? Object.keys(evByState)
-      : election.state
-        ? [election.state]
-        : [];
-
-    const [fundsMap, seatShareMap, allDemographics, allDefaults] = await Promise.all([
-      getFundsByPartyForElection(electionOid, db),
-      getIncumbentSeatShareByParty(election, db),
-      demographicsQueryStateIds.length > 0
-        ? stateDemographicsCollection(db)
-            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
-            .toArray()
-        : Promise.resolve([] as StateDemographics[]),
-      demographicsQueryStateIds.length > 0
-        ? demographicDefaultsCollection(db)
-            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
-            .toArray()
-        : Promise.resolve([] as StateDemographics[]),
-    ]);
-    if (fundsMap.size > 0) {
-      fundsByPartyMap = Object.fromEntries(fundsMap);
-    }
-    // `getIncumbentSeatShareByParty` already returns an empty map for every
-    // single-winner race (US Senate + executives), so the card can never show
-    // a prior vote split as an "Incumbency" row on a vacant seat.
-    if (seatShareMap.size > 0) {
-      // Same ratchet cap the vote engine applies under party renewal.
-      incumbentSeatShareByPartyMap = Object.fromEntries(
-        gameState?.nppPartyRenewalEnabled === true
-          ? capIncumbentSeatShares(seatShareMap)
-          : seatShareMap
-      );
-    }
-
-    // Per-party registration for the race's state so the driver card can
-    // scale its rows by the engine's effective peelable fraction (mirrors
-    // the `regByParty` map the swing-flow engine consumes). State-scoped
-    // races only; rows without seeded `registration` are omitted so the
-    // display falls back to the engine's no-Reg baseline.
-    if (election.state) {
-      const regEntries: Record<string, number> = {};
-      for (const po of statePartyOrgs) {
-        if (
-          po.stateId === election.state &&
-          (po.countryId ?? "US") === countryId &&
-          typeof po.registration === "number"
-        ) {
-          regEntries[po.partyId] = po.registration;
-        }
-      }
-      if (Object.keys(regEntries).length > 0) {
-        persuasionRegByPartyMap = regEntries;
-      }
-    }
-
-    medianVoter = censusMedianVoter({
-      countryId,
-      preset: gameState?.preset,
-      eraYear: eraYearContextFromGameState(gameState),
-      demographics: allDemographics,
-      defaults: allDefaults,
-      evByState: useEvWeightedMedian ? evByState : null,
-      stateId: election.state ?? undefined,
-    });
-
-    // Coattails inputs for the persuasion-drivers card (mirrors the turn
-    // engine; display values here). Both are nominal-share multipliers
-    // converted to a percentage tilt: presidential is the sitting President's
-    // party nationwide; gubernatorial is the sitting governor's party in-state.
-    const cid = countryId as CountryId;
-    const partyIdsInRace = new Set(enrichedWithYou.map((c) => c.party));
-    const isPresidentialRace = isHeadOfGovernmentRace(election.electionType, cid);
-    if (!isPresidentialRace) {
-      const president = await resolvePresidentApproval(db, cid);
-      const presMod = buildPresidentialModifierByParty(president, partyIdsInRace);
-      if (presMod.size > 0) presidentialCoattailPctByParty = presidentialModifierToPct(presMod);
-    }
-    if (isMidtermOppositionBoostEligible(election)) {
-      const governingPartyIds = await resolveGoverningPartyIds(db, cid);
-      const midtermMod = buildMidtermOppositionModifierByParty(governingPartyIds, partyIdsInRace);
-      if (midtermMod.size > 0) {
-        midtermOppositionBoostPctByParty = midtermOppositionModifierToPct(midtermMod);
-      }
-    }
-    if (
-      election.state &&
-      isCoattailEligibleRace({
-        isGeneralElection: inGeneral,
-        electionType: election.electionType,
-        regionalExecOfficeType: getRegionalExecutiveOfficeKey(cid),
-        isOwnHeadOfGovernmentRace: isPresidentialRace,
-      })
-    ) {
-      const exec = await resolveGovExecutiveApproval(db, cid, election.state);
-      const partyIdsInState = new Set(enrichedWithYou.map((c) => c.party));
-      const govMod = buildGovModifierByParty(exec, partyIdsInState);
-      if (govMod.size > 0) gubernatorialCoattailPctByParty = govModifierToPct(govMod);
-    }
-
-    // Approval-scaled incumbency for the governor's OWN race (the gov coattail
-    // block above skips it). Mirrors the turn engine so the card matches.
-    if (
-      election.state &&
-      isOwnRegionalExecutiveRace({
-        isGeneralElection: inGeneral,
-        electionType: election.electionType,
-        regionalExecOfficeType: getRegionalExecutiveOfficeKey(cid),
-        hasState: Boolean(election.state),
-      })
-    ) {
-      const exec = await resolveGovExecutiveApproval(db, cid, election.state);
-      if (exec) {
-        incumbentPartyIdForDisplay = exec.partyId;
-        incumbentApprovalForDisplay = exec.approval;
-      }
-    }
-
-    // Approval-scaled incumbency for the President's own race, matching the
-    // turn engine. Sourced from the sitting President, not the live tally, so
-    // the card matches the engine's shield/drag (VP rides the same ticket).
-    if (isPresidentialRace) {
-      const president = await resolvePresidentApproval(db, cid);
-      if (president) {
-        incumbentPartyIdForDisplay = president.partyId;
-        incumbentApprovalForDisplay = president.approval;
-      }
-    }
-
-    // Single-seat legislative own-race (US Senate): flat incumbency shield for
-    // the sitting senator, matching the turn engine. Open seats / non-senate
-    // races leave these undefined (card falls back to neutral).
-    if (isSingleSeatLegislativeRace(election)) {
-      const runningIdentities = new Set(
-        candidates
-          .map((c) => (c.characterId ?? c.nppId)?.toString())
-          .filter((id): id is string => Boolean(id))
-      );
-      const legInc = await resolveSingleSeatLegislativeIncumbent(election, runningIdentities, db);
-      if (legInc) {
-        legislativeIncumbentPartyIdForDisplay = legInc.incumbentPartyId;
-        legislativeIncumbentTenureTermsForDisplay = legInc.tenureTerms;
-      }
-    }
-  }
-
-  // Registration Influence card — per-state party-lean breakdown for the US
-  // presidential shell. `statePartyOrgs` already holds every state's rows for
-  // the presidential full view (fetchDepsForElection); pair them with the
-  // non-party pool buckets so the card can render real lean data instead of
-  // the "no data tracked" placeholder. States without seeded registration are
-  // omitted by the builder, preserving the honest placeholder per-state.
-  // partyDisplayById is always attached for the presidential shell so the
-  // battleground hover cards can resolve abbreviations (not raw sequentialIds).
-  let regByState: ElectionResponse["regByState"];
-  let partyDisplayById: ElectionResponse["partyDisplayById"];
-  // Attached to every full view, not just the presidential shell. `parties` is
-  // already loaded above for this country, so this costs nothing extra, and
-  // without it a non-presidential detail page has no way to print a party
-  // ABBREVIATION — it would have to fall back to the full registered name
-  // ("Sozialdemokratische Partei Deutschlands takes 9 of 19").
-  if (isFull) {
-    partyDisplayById = buildPartyDisplayById(parties);
-  }
-
-  // The seat's own region electorate, for the detail page's turnout figure.
-  // `statesForEnrichment` already holds this region's doc, so this costs no
-  // extra query. Prefer the voting-eligible count; fall back to total
-  // population and SAY so, because the two differ by roughly a quarter and a
-  // population figure passed off as an electorate understates turnout.
-  let regionElectorate: ElectionResponse["regionElectorate"];
-  let regionName: string | undefined;
-  if (isFull) {
-    const seatRegion = election.seatId ? parseSeatId(election.seatId).localRegionId : null;
-    const stateDoc = seatRegion ? statesForEnrichment.get(seatRegion) : undefined;
-    if (stateDoc?.name) regionName = stateDoc.name;
-    if (stateDoc?.votingEligiblePopulation) {
-      regionElectorate = { count: stateDoc.votingEligiblePopulation, basis: "eligible" };
-    } else if (stateDoc?.population) {
-      regionElectorate = { count: stateDoc.population, basis: "residents" };
-    }
-  }
-  // General OR ended — the presidential shell (and this card) renders for both
-  // (`!inPrimary && !isUpcoming`), and registration is a phase-agnostic
-  // baseline, so populate it wherever the card is shown rather than only mid-race.
-  if (isFull && isPresident && (inGeneral || isEnded)) {
-    const pools = await stateRegistrationPoolCollection(db).find({ countryId }).toArray();
-    // The presidential deps load every country's statePartyOrg rows
-    // (`fetchDepsForElection` uses `find({})`); scope to this election's
-    // country so foreign states never leak into the US breakdown. Legacy
-    // rows without `countryId` are treated as US, matching the rest of the file.
-    const countryStatePartyOrgs = statePartyOrgs.filter(
-      (po) => (po.countryId ?? "US") === countryId
-    );
-    const built = buildPresidentialRegByStateInput(countryStatePartyOrgs, pools);
-    if (Object.keys(built).length > 0) {
-      regByState = built;
-    }
-  }
-
   return {
-    // Identity
-    id: election._id.toString(),
-    seatId: election.seatId ?? null,
-    electionType: election.electionType,
-    allocationMethod: election.allocationMethod,
-    state: election.state,
-    countryId,
-    ...(election.bulgarianFoundingRound
-      ? {
-          bulgarianFoundingRound: {
-            ruleVersion: election.bulgarianFoundingRound.ruleVersion,
-            round: election.bulgarianFoundingRound.round,
-            newNominationDistrictIds: election.bulgarianFoundingRound.newNominationDistrictIds,
-          },
-        }
-      : {}),
-    ...(election.hungarianAssemblyRound
-      ? {
-          hungarianAssemblyRound: {
-            ruleVersion: election.hungarianAssemblyRound.ruleVersion,
-            round: election.hungarianAssemblyRound.round,
-            ...(election.hungarianAssemblyRound.byElection
-              ? { vacancyDistrictIds: election.hungarianAssemblyRound.byElection.districtIds }
-              : {}),
-          },
-        }
-      : {}),
-    ...(election.hungarianModernAssembly
-      ? { hungarianModernAssembly: { ruleVersion: election.hungarianModernAssembly.ruleVersion } }
-      : {}),
-    ...(election.japanShugiinRules
-      ? {
-          japanShugiinRules: {
-            ruleVersion: election.japanShugiinRules.ruleVersion,
-            districtSeats: election.japanShugiinRules.districtSeats,
-            listSeats: election.japanShugiinRules.listSeats,
-          },
-        }
-      : {}),
-    ...(election.hungarianModernByElection
-      ? { hungarianModernByElection: { districtId: election.hungarianModernByElection.districtId } }
-      : {}),
-    ...(election.russianDumaRound
-      ? {
-          russianDumaRound: {
-            cohortId: election.russianDumaRound.cohortId.toHexString(),
-            mandateSinceTurn: election.russianDumaRound.mandateSinceTurn,
-            tier: election.russianDumaRound.tier,
-          },
-        }
-      : {}),
-    senateClass: election.senateClass ?? null,
-    chamberClass: election.chamberClass ?? null,
-    cycle: election.cycle,
-    electionYear: election.electionYear ?? null,
-    resolvedYear: resolveElectionYear(election, cycleAnchorContextFromGameState(gameState)),
-    status: election.status,
-    totalSeats: election.totalSeats ?? null,
-
-    // Timing
-    startTime: election.startTime ?? null,
-    endTime: election.endTime ?? null,
-    primaryEndTime: election.primaryEndTime ?? null,
-    // Turn-based deadlines for drift-free countdowns (see ElectionResponse).
-    startTurn: election.startTurn ?? null,
-    endTurn: election.endTurn ?? null,
-    primaryEndTurn: election.primaryEndTurn ?? null,
-    durationHours: election.durationHours ?? null,
-    primaryDurationHours: election.primaryDurationHours ?? null,
-
-    // Phase
-    inPrimary,
-    isEnded,
-    isUpcoming,
-    inGeneral,
-    primaryAdvanceCount,
-    ...(primaryCalendar ? { primaryCalendar } : {}),
-
-    // Core data
-    candidates: displayCandidates,
-    byParty,
-    polling,
-    seatsEstimate,
-    seatsDecidedByDistrict: isFull ? seatsDecidedByDistrict : false,
-    incumbent: incumbentDisplay,
-
-    // Full-view fields
-    prevElectionId: isFull ? prevElectionId : null,
-    nextElectionId: isFull ? nextElectionId : null,
-    allCandidates: isFull ? primaryCandidates : null,
-    snapshotHistory: isFull ? snapshotHistory : null,
-    generalVotes: isFull ? generalVotes : null,
-    myCharId: isFull ? myCharId : null,
-    myEndorsedCandidateId: isFull ? myEndorsedCandidateId : null,
-    myPartyId: isFull ? myPartyId : null,
-    myCampaignId: isFull ? myCampaignId : null,
-    isAdmin: isFull ? isAdmin : false,
-    gameState:
-      isFull && gameState
-        ? {
-            isActive: gameState.isActive,
-            pausedAt: gameState.pausedAt ?? null,
-            lastTurnProcessed: gameState.lastTurnProcessed ?? null,
-            currentTurn: gameState.currentTurn,
-            effectiveNow: gameTime.effectiveNow.toISOString(),
-          }
-        : null,
-
-    // Phase B follow-up — driver inputs (general phase only).
-    ...(fundsByPartyMap ? { fundsByParty: fundsByPartyMap } : {}),
-    ...(incumbentSeatShareByPartyMap
-      ? { incumbentSeatShareByParty: incumbentSeatShareByPartyMap }
-      : {}),
-    ...(persuasionRegByPartyMap ? { persuasionRegByParty: persuasionRegByPartyMap } : {}),
-    ...(medianVoter ? { medianVoter } : {}),
-    ...(presidentialCoattailPctByParty ? { presidentialCoattailPctByParty } : {}),
-    ...(gubernatorialCoattailPctByParty ? { gubernatorialCoattailPctByParty } : {}),
-    ...(midtermOppositionBoostPctByParty ? { midtermOppositionBoostPctByParty } : {}),
-    ...(incumbentApprovalForDisplay != null
-      ? { incumbentApproval: incumbentApprovalForDisplay }
-      : {}),
-    ...(incumbentPartyIdForDisplay != null ? { incumbentPartyId: incumbentPartyIdForDisplay } : {}),
-    ...(legislativeIncumbentPartyIdForDisplay != null
-      ? {
-          legislativeIncumbentPartyId: legislativeIncumbentPartyIdForDisplay,
-          legislativeIncumbentTenureTerms: legislativeIncumbentTenureTermsForDisplay,
-        }
-      : {}),
-
-    // National Mood gauge input (president only, when the engine recorded one).
-    ...(economicReferendum ? { economicReferendum } : {}),
-    ...(democraticHealth ? { democraticHealth } : {}),
-    ...(factorLedger ? { factorLedger } : {}),
-
-    // Registration Influence card inputs (US presidential general only).
-    ...(regByState ? { regByState } : {}),
-    ...(partyDisplayById ? { partyDisplayById } : {}),
-    ...(regionElectorate ? { regionElectorate } : {}),
-    ...(regionName ? { regionName } : {}),
-    ...(tally?.primaryVotes ? { primaryVotes: tally.primaryVotes } : {}),
-    // Finished primaries: once a race is past its primary (general running,
-    // or the whole race over), the stored primary result is history.
-    ...((isEnded || inGeneral) && tally?.primaryResults
-      ? { primaryResults: finishedPrimaryResults(tally.primaryResults) }
-      : {}),
+    kind: "context" as const,
+    context: {
+      activeCandidateIdSet,
+      adjacentElections,
+      candidates,
+      countryId,
+      db,
+      get democraticHealth() {
+        return democraticHealth;
+      },
+      set democraticHealth(value: typeof democraticHealth) {
+        democraticHealth = value;
+      },
+      deps,
+      displayCandidates,
+      get economicReferendum() {
+        return economicReferendum;
+      },
+      set economicReferendum(value: typeof economicReferendum) {
+        economicReferendum = value;
+      },
+      election,
+      electionOid,
+      enrichedWithIsYou,
+      enrichedWithYou,
+      evByState,
+      evUnits,
+      get factorLedger() {
+        return factorLedger;
+      },
+      set factorLedger(value: typeof factorLedger) {
+        factorLedger = value;
+      },
+      gameState,
+      gameTime,
+      get generalVotes() {
+        return generalVotes;
+      },
+      set generalVotes(value: typeof generalVotes) {
+        generalVotes = value;
+      },
+      houseSeats,
+      inGeneral,
+      inPrimary,
+      isAdmin,
+      isBgOrdinary,
+      isEnded,
+      isFull,
+      isHu1991Pending,
+      isPresident,
+      get myCampaignId() {
+        return myCampaignId;
+      },
+      set myCampaignId(value: typeof myCampaignId) {
+        myCampaignId = value;
+      },
+      myCharId,
+      get myEndorsedCandidateId() {
+        return myEndorsedCandidateId;
+      },
+      set myEndorsedCandidateId(value: typeof myEndorsedCandidateId) {
+        myEndorsedCandidateId = value;
+      },
+      get myPartyId() {
+        return myPartyId;
+      },
+      set myPartyId(value: typeof myPartyId) {
+        myPartyId = value;
+      },
+      get nextElectionId() {
+        return nextElectionId;
+      },
+      set nextElectionId(value: typeof nextElectionId) {
+        nextElectionId = value;
+      },
+      parties,
+      partyMap,
+      playerEndorsements,
+      get prevElectionId() {
+        return prevElectionId;
+      },
+      set prevElectionId(value: typeof prevElectionId) {
+        prevElectionId = value;
+      },
+      primaryCalendar,
+      primaryCandidates,
+      seatMargins,
+      seatsDecidedByDistrict,
+      get snapshotHistory() {
+        return snapshotHistory;
+      },
+      set snapshotHistory(value: typeof snapshotHistory) {
+        snapshotHistory = value;
+      },
+      snapshots,
+      statePartyOrgs,
+      statesForEnrichment,
+      tally,
+      userId,
+      seatsEstimate,
+      isUpcoming,
+      primaryAdvanceCount,
+      byParty,
+      polling,
+    },
   };
+}
+export type _enrichElectionStageContext = Extract<
+  Awaited<ReturnType<typeof prepare_enrichElection>>,
+  { kind: "context" }
+>["context"];
+
+export async function _enrichElection(
+  ...args: Parameters<typeof prepare_enrichElection>
+): Promise<ElectionResponse> {
+  const prepared = await prepare_enrichElection(...args);
+  return enrichElectionResults(prepared.context);
 }
 
 // ---------------------------------------------------------------------------

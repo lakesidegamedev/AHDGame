@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildSyncRoleTokens, officeLabel } from "./buildSyncRoles";
+import {
+  buildSyncRoleTokens,
+  officeLabel,
+} from "@/lib/api/commands/discord-bot/sync-roles/buildSyncRoles";
 
 const base = {
   partyName: "Independent",

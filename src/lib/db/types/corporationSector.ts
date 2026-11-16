@@ -93,6 +93,10 @@ export interface NationalizationTaking {
 }
 
 export interface CorporateSector {
+  /** Physical state-owned site identity; private holdings leave this absent. */
+  nationalizationSiteKey?: string;
+  /** Physical ownership receipt for replay safety. */
+  ownershipTransferKey?: string;
   /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
   /**

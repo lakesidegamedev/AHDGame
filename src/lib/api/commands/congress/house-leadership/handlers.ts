@@ -1,0 +1,423 @@
+/**
+ * GET  /api/congress/house-leadership — current Majority/Minority Leader, elections, candidacies
+ * POST /api/congress/house-leadership — start_election (admin) | declare | withdraw | vote
+ *
+ * Same as Speaker: 24-hour window and plurality wins.
+ * House Majority Leader is restricted to the single majority party; Minority Leader remains open to non-majority parties.
+ */
+import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { getPartyMap } from "@/lib/db/partyMap";
+import { requireBasicAuth } from "@/lib/api/requireAuth";
+import { getAuthUser } from "@/lib/auth";
+import { parseJsonBody } from "@/lib/api/validate";
+import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { houseLeadershipActionSchema } from "@/lib/api/schemas/congress";
+import { parseObjectId } from "@/lib/utils/objectId";
+import { getGameTime } from "@/lib/time/gameTime";
+import { isLeadershipElectionClosed } from "@/lib/congress/leadershipElections";
+import { clearWhippedFromVote } from "@/lib/congress/clearWhippedVote";
+import { getHouseComposition } from "@/lib/congress/houseComposition";
+import {
+  describeLeadershipConflict,
+  failNominationIfLeadershipConflict,
+} from "@/lib/congress/leadershipRaceGuard";
+import { castLeadershipVoteBallot } from "@/lib/congress/leadershipVoteBallots";
+import {
+  vacateLeadershipForLostSeats,
+  resolveLeadershipElection,
+  clearIneligibleHouseLeadershipNominations,
+} from "@/lib/congress/leadershipElections";
+import {
+  buildLeadershipElectionStates,
+  type LeaderDisplay,
+  type CandidacyDisplay,
+} from "@/lib/congress/leadershipState";
+import {
+  buildChamberLeadershipContext,
+  describeEligibility,
+  eligiblePartySlugsFor,
+  isPartyEligible,
+  POLICY_BY_ROLE,
+} from "@/lib/congress/leadership/rolePolicy";
+import { houseElectionRoleToLeader } from "@/lib/congress/leadership/electionRoleMap";
+import { openCongressLeadershipElection } from "@/lib/congress/leadership/openElection";
+import { reconcileLeadershipPartyEligibility } from "@/lib/congress/leadership/reconcilePartyEligibility";
+import type { HouseLeadershipResponse } from "@/lib/api/commands/congress/house-leadership/lib/leadership";
+import type { HouseLeadershipElectionRole } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { influenceHistoryCollection } from "@/lib/db/repositories/influenceHistory";
+import type { Document } from "mongodb";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
+import { houseLeadershipElectionsCollection } from "@/lib/db/repositories/houseLeadershipElections";
+
+const ROLE_TO_LABEL: Record<HouseLeadershipElectionRole, string> = {
+  majority_leader: "Majority Leader",
+  minority_leader: "Minority Leader",
+  majority_whip: "Majority Whip",
+  minority_whip: "Minority Whip",
+};
+
+export type HouseLeaderDisplay = LeaderDisplay;
+export type HouseLeaderCandidacyDisplay = CandidacyDisplay;
+export type {
+  HouseLeaderElectionState,
+  HouseLeadershipResponse,
+} from "@/lib/api/commands/congress/house-leadership/lib/leadership";
+
+// GET /api/congress/house-leadership — Returns current House Majority and Minority Leaders with election state and composition.
+// Auth: public
+// Errors: 400
+export async function GET() {
+  try {
+    const db = await getDb();
+    const partyMap = await getPartyMap(db, "US");
+    const house = await getHouseComposition(db, partyMap);
+    const chamberCtx = buildChamberLeadershipContext({
+      composition: house.composition,
+      majorityParty: house.majorityParty,
+      majorityBloc: house.majorityBloc,
+    });
+    const majorityPartySeats =
+      house.composition.find((entry) => entry.party === house.majorityParty)?.seats ?? 0;
+    const authUser = await getAuthUser().catch(() => null);
+
+    let myCharacterId: string | null = null;
+    let myParty: string | null = null;
+    let isHouseMember = false;
+    if (authUser) {
+      const char = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
+      myCharacterId = char?._id?.toString() ?? null;
+      myParty = char?.party ?? null;
+      if (myCharacterId) {
+        const off = await electedOfficialsCollection(db).findOne({
+          characterId: new ObjectId(myCharacterId),
+          officeType: "house",
+        });
+        isHouseMember = !!off;
+      }
+    }
+
+    // The same sweep the turn runs, so a chair emptied here gets its election
+    // exactly as one emptied on the turn does. The page-load path fires far
+    // more often than the turn and would otherwise win the race and leave
+    // the seat with nothing to refill it.
+    await vacateLeadershipForLostSeats(db);
+
+    // Sits beside the seat-loss sweep because it is the same kind of check —
+    // "does the holder still qualify?" — just keyed on party rather than seat.
+    // Running it here as well as in the turn phase means a defection shows up
+    // the moment the page is opened instead of up to an hour later.
+    await reconcileLeadershipPartyEligibility(db, "house", chamberCtx, new Date());
+
+    await clearIneligibleHouseLeadershipNominations(db, chamberCtx, new Date());
+
+    const roles: Array<{ role: HouseLeadershipElectionRole; partyLabel: string }> = [
+      { role: "majority_leader", partyLabel: "Majority Party" },
+      { role: "minority_leader", partyLabel: "Non-Majority Parties" },
+      { role: "majority_whip", partyLabel: "Majority Party" },
+      { role: "minority_whip", partyLabel: "Non-Majority Parties" },
+    ];
+    const [majorityLeader, minorityLeader, majorityWhip, minorityWhip] =
+      await buildLeadershipElectionStates(
+        db,
+        "house",
+        roles.map(({ role, partyLabel }) => {
+          const leaderRole = houseElectionRoleToLeader(role);
+          const policy = POLICY_BY_ROLE[leaderRole];
+          return {
+            role,
+            leaderRole,
+            eligiblePartySlugs: eligiblePartySlugsFor(policy, chamberCtx),
+            partySeats:
+              policy.kind === "any-seated"
+                ? house.totalSeats
+                : policy.kind === "largest-single-party"
+                  ? majorityPartySeats
+                  : Math.max(0, house.totalSeats - house.majoritySeats),
+            partyLabel,
+          };
+        }),
+        { partyMap, myCharacterId, myParty, isMember: isHouseMember }
+      );
+
+    return NextResponse.json({
+      majorityLeader,
+      minorityLeader,
+      majorityWhip,
+      minorityWhip,
+      houseComposition: house.composition,
+      isAdmin: authUser?.isAdmin ?? false,
+    } satisfies HouseLeadershipResponse);
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+// POST /api/congress/house-leadership — Handles House leadership election actions: start_election, reset_election, force_end, declare, withdraw, or vote.
+// Auth: requireBasicAuth
+// Errors: 400, 401, 403, 404, 409, 429
+export async function POST(request: Request) {
+  try {
+    const auth = await requireBasicAuth();
+    if (!auth.ok) return auth.response;
+    const authUser = auth.user;
+
+    const rateLimit = checkRateLimit(`api/congress/house-leadership:${authUser.userId}`, 30, 60000);
+    if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+
+    const db = await getDb();
+    const partyMap = await getPartyMap(db, "US");
+    const house = await getHouseComposition(db, partyMap);
+    const chamberCtx = buildChamberLeadershipContext({
+      composition: house.composition,
+      majorityParty: house.majorityParty,
+      majorityBloc: house.majorityBloc,
+    });
+
+    const parsed = await parseJsonBody(request, houseLeadershipActionSchema);
+    if (!parsed.success) {
+      return errorResponse(parsed.status, parsed.error);
+    }
+    const { action, role, nominationId } = parsed.data;
+
+    // ── ADMIN: Start / Reset (no need to be a House member) ─────────────────────
+    const roleLabel = ROLE_TO_LABEL[role];
+    const leaderRole = houseElectionRoleToLeader(role);
+    const policy = POLICY_BY_ROLE[leaderRole];
+    const electorateLabel = describeEligibility(policy, chamberCtx);
+
+    if (action === "start_election") {
+      if (!authUser.isAdmin) return errorResponse(403, "Admin only");
+      const opened = await openCongressLeadershipElection(db, {
+        role,
+        chamber: "house",
+        ctx: chamberCtx,
+        now: new Date(),
+      });
+      if (!opened) {
+        return errorResponse(409, `A ${roleLabel} election is already in progress.`);
+      }
+      return NextResponse.json({
+        message: `${roleLabel} election started. Voting ends in 24 hours. Only ${electorateLabel} may run and vote. Plurality wins.`,
+      });
+    }
+
+    if (action === "reset_election") {
+      if (!authUser.isAdmin) return errorResponse(403, "Admin only");
+      const now = new Date();
+      await houseLeadershipNominationsCollection(db).updateMany(
+        { role, status: { $in: ["open", "voting"] } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
+      // Drop both window anchors along with the status. A reset doc that kept a
+      // stale `endsOnTurn` would make the NEXT election look closed the instant
+      // it opened, which is the bug the shared opener exists to prevent.
+      await houseLeadershipElectionsCollection(db).updateOne(
+        { _id: role },
+        {
+          $set: { status: "closed", updatedAt: now },
+          $unset: { endsAt: "", endsOnTurn: "" },
+        },
+        { upsert: true }
+      );
+      return NextResponse.json({
+        message: `${roleLabel} election reset. You can start a new 24-hour election.`,
+      });
+    }
+
+    if (action === "force_end") {
+      if (!authUser.isAdmin) return errorResponse(403, "Admin only");
+      const resolved = await resolveLeadershipElection(db, role, leaderRole, "house", true);
+      return statusResponse(
+        resolved ? 200 : 409,
+        resolved
+          ? { message: `${roleLabel} election ended. Winner or vacancy is set.` }
+          : { error: "No active election to end." }
+      );
+    }
+
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(authUser.userId),
+    });
+    if (!character) return errorResponse(400, "No character");
+
+    const myOfficial = await electedOfficialsCollection(db).findOne({
+      characterId: character._id,
+      officeType: "house",
+    });
+    if (!myOfficial) {
+      return errorResponse(403, "Only House members may participate.");
+    }
+
+    const myParty = character.party ?? "";
+    const isEligibleParty = isPartyEligible(policy, myParty, chamberCtx);
+
+    const election = await houseLeadershipElectionsCollection(db).findOne({ _id: role });
+    const gameTimeForVoting = await getGameTime();
+    const isVoting =
+      election?.status === "voting" &&
+      !isLeadershipElectionClosed(
+        election,
+        gameTimeForVoting.currentTurn,
+        gameTimeForVoting.effectiveNow
+      );
+
+    if (action === "declare") {
+      if (!isVoting) return errorResponse(409, "No election open for candidacies.");
+      if (!isEligibleParty) {
+        return errorResponse(403, `Only ${electorateLabel} may run.`);
+      }
+      const existing = await houseLeadershipNominationsCollection(db).findOne({
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
+      if (existing)
+        return errorResponse(
+          409,
+          "You already have an active candidacy for a House leadership role."
+        );
+      const hasSpeaker = await speakerNominationsCollection(db).findOne({
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
+      if (hasSpeaker)
+        return errorResponse(
+          409,
+          "You can only run for one leadership position at a time. Withdraw from Speaker first."
+        );
+      const hasSenate = await senateLeadershipNominationsCollection(db).findOne({
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
+      if (hasSenate)
+        return errorResponse(
+          409,
+          "You can only run for one leadership position at a time. Withdraw from the Senate race first."
+        );
+      const now = new Date();
+      const nomineeState = myOfficial.state ?? character.homeState ?? undefined;
+      const insertedId = new ObjectId();
+      await houseLeadershipNominationsCollection(db).insertOne({
+        _id: insertedId,
+        role,
+        nomineeId: character._id,
+        nomineeName: character.name,
+        nomineeParty: character.party ?? undefined,
+        nomineeState,
+        nominatedById: character._id,
+        nominatedByName: character.name,
+        status: "open",
+        votesFor: 0,
+        votesAgainst: 0,
+        votes: {},
+        createdAt: now,
+        updatedAt: now,
+      });
+      const conflict = await failNominationIfLeadershipConflict(db, {
+        collectionName: "houseLeadershipNominations",
+        nominationId: insertedId,
+        nomineeId: character._id,
+        now,
+      });
+      if (conflict) {
+        return errorResponse(409, describeLeadershipConflict(conflict));
+      }
+      return NextResponse.json(
+        {
+          message: `${character.name} has declared for ${roleLabel}. Plurality wins when voting ends.`,
+        },
+        { status: 201 }
+      );
+    }
+
+    if (action === "withdraw") {
+      if (!isVoting) return errorResponse(409, "No active election.");
+      const cand = await houseLeadershipNominationsCollection(db).findOne({
+        role,
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
+      if (!cand) return errorResponse(404, "No active candidacy to withdraw.");
+
+      // Check if user has enough NPI
+      if ((character.politicalInfluence || 0) < 3) {
+        return errorResponse(403, "Not enough NPI to withdraw (cost: 3 NPI).");
+      }
+
+      const now = new Date();
+      // Deduct 3 NPI
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $inc: { politicalInfluence: -3 } }
+      );
+
+      // Log transaction
+      await influenceHistoryCollection<Document>(db).insertOne({
+        characterId: character._id,
+        amount: -3,
+        reason: `Withdrew from ${roleLabel} election`,
+        createdAt: now,
+      });
+
+      await houseLeadershipNominationsCollection(db).updateOne(
+        { _id: cand._id },
+        { $set: { status: "failed", updatedAt: now } }
+      );
+      return NextResponse.json({ message: "Candidacy withdrawn. 3 NPI deducted." });
+    }
+
+    if (action === "vote") {
+      if (!isVoting) return errorResponse(409, "Voting is not open or has ended.");
+      if (!isEligibleParty) {
+        return errorResponse(403, `Only ${electorateLabel} may vote.`);
+      }
+      const nomId = nominationId;
+      if (!nomId) return errorResponse(400, "nominationId required");
+      const nominationOid = parseObjectId(nomId);
+      if (!nominationOid) return errorResponse(400, "Invalid nomination ID");
+      const nomination = await houseLeadershipNominationsCollection(db).findOne({
+        _id: nominationOid,
+        role,
+        status: { $in: ["open", "voting"] },
+      });
+      if (!nomination) return errorResponse(404, "Candidacy not found or not active.");
+
+      const now = new Date();
+      const { previousNominationId } = await castLeadershipVoteBallot(db, {
+        ballotCollectionName: "houseLeadershipBallots",
+        nominationCollectionName: "houseLeadershipNominations",
+        nominationId: nomination._id,
+        voterCharacterId: character._id,
+        role,
+        now,
+      });
+
+      // Clear the Player Whip snapshot on both the new nomination and any prior one.
+      await clearWhippedFromVote(db, "houseLeadershipNominations", nomination._id, character._id);
+      if (previousNominationId && !previousNominationId.equals(nomination._id)) {
+        await clearWhippedFromVote(
+          db,
+          "houseLeadershipNominations",
+          previousNominationId,
+          character._id
+        );
+      }
+
+      return NextResponse.json({
+        message: `Vote recorded for ${nomination.nomineeName}. Plurality wins.`,
+      });
+    }
+
+    return errorResponse(400, "Invalid action");
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

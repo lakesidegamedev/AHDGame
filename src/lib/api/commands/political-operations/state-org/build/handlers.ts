@@ -1,0 +1,391 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getDb } from "@/lib/mongodb";
+import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
+import { parseJsonBody } from "@/lib/api/validate";
+import { handleRouteError, forbidden, badRequest } from "@/lib/api/errors";
+import { ELECTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
+import {
+  STATE_ORG_COST_ACTIONS,
+  STATE_ORG_PER_STATE_TURN_CAP,
+  stateOrgLevelCost,
+} from "@/lib/elections/engine/constants";
+import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
+import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { getGameTime } from "@/lib/time/gameTime";
+import {
+  loadUsPoliticalStateIds,
+  unplayableTerritoryHomeError,
+} from "@/lib/elections/usPoliticalHome";
+import { isUsResidentPoliticalRegion } from "@/lib/elections/statehoodAdmission";
+import {
+  resolvePresenceSubject,
+  type PresenceCampaign,
+  type PresenceCandidate,
+} from "@/lib/campaigns/statePresenceAccess";
+
+import { MongoServerError, ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
+
+const VALID_US_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
+
+/**
+ * The characterStateOrg upsert filter (below) carries throttle + level
+ * conditions beyond the unique-index key { characterId, stateId }. When a doc
+ * already exists but no longer matches those conditions (e.g. it was updated
+ * within the throttle window), `upsert: true` attempts an INSERT, which the
+ * unique index rejects with E11000. That is the throttle/race loser — surface
+ * it as ORG_RACE_OR_THROTTLE (clean 409) rather than an unhandled 500.
+ */
+function isStateOrgDuplicateKey(error: unknown): error is MongoServerError {
+  return (
+    error instanceof MongoServerError &&
+    error.code === 11000 &&
+    (!!error.keyPattern?.characterId ||
+      !!error.keyPattern?.stateId ||
+      /\bcharacterStateOrg\b/.test(error.message))
+  );
+}
+
+const schema = z.object({
+  // Modern 50-state alphabet check only; era political gate runs after parse.
+  stateId: z.string().refine((s) => VALID_US_STATES.has(s), {
+    message: "Invalid US state code",
+  }),
+  // Build for the ticket of this campaign (candidate or appointed manager).
+  // Absent, the caller builds for their own campaign as a candidate.
+  campaignId: z.string().optional(),
+});
+
+/**
+ * POST /api/political-operations/state-org/build
+ *
+ * Increments the campaign's Campaign Presence level for the given state by +1.
+ * The level ladder is unbounded; escalating price (`stateOrgLevelCost`) against
+ * a flattening bonus curve (`stateOrgBonusFraction`) makes marginal levels
+ * worse value.
+ *
+ * Paid from the CAMPAIGN's pools (`campaigns.actions` / `campaigns.funds`),
+ * not the player's personal ones. Presence is campaign infrastructure and
+ * competes with the media / ground-game / opposition-research trees for one
+ * budget.
+ *
+ * With `campaignId`, the campaign's candidate or an appointed campaign manager
+ * builds for that campaign's candidate: the level is written under the
+ * candidate's character, priced in the candidate's home currency, and paid from
+ * that campaign. Running mates and everyone else are refused. Without it, the
+ * caller builds for their own campaign.
+ *
+ * Auth: requireAuthWithCharacter (US character with a campaign, or the
+ *       candidate / a manager of the named campaign)
+ * Errors: 400 (bad input / no campaign / insufficient campaign actions or
+ *         funds / throttled), 403 (non-US), 401, 409 (race), 500
+ */
+export async function POST(request: Request) {
+  try {
+    const auth = await requireAuthWithCharacter();
+    if (!auth.ok) return auth.response;
+
+    const limit = checkRateLimit(
+      `election:${auth.user.userId}`,
+      ELECTION_LIMITS.maxRequests,
+      ELECTION_LIMITS.windowMs
+    );
+    if (!limit.ok) return rateLimitResponse(limit.retryAfter);
+
+    const character = auth.user.character;
+
+    const parsed = await parseJsonBody(request, schema);
+    if (!parsed.success) {
+      return NextResponse.json(badRequest(parsed.error).toJson(), { status: parsed.status });
+    }
+    const { stateId, campaignId } = parsed.data;
+
+    if (!campaignId && !countryHasFeature("stateOrganisations", character.countryId)) {
+      return NextResponse.json(
+        forbidden("Campaign Presence is currently a US-only feature").toJson(),
+        { status: 403 }
+      );
+    }
+
+    const db = await getDb();
+    const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
+    if (!isUsResidentPoliticalRegion(stateId, preset, admittedIds)) {
+      return NextResponse.json(badRequest(unplayableTerritoryHomeError(stateId)).toJson(), {
+        status: 400,
+      });
+    }
+
+    // Whose presence this is. Without a campaign id it is the caller's own;
+    // with one it is the campaign's candidate, once the caller is shown to be
+    // that candidate or one of the campaign's managers.
+    let ownerId: ObjectId;
+    let freshChar: Pick<PresenceCandidate, "countryId"> | null;
+    let campaign: Pick<PresenceCampaign, "_id" | "actions" | "funds"> | null;
+    if (campaignId) {
+      const subject = await resolvePresenceSubject(db, {
+        campaignId,
+        userId: auth.user.userId,
+        activeCharacterId: character._id,
+      });
+      ownerId = subject.campaign.candidateId;
+      freshChar = subject.candidate;
+      campaign = subject.campaign;
+    } else {
+      ownerId = character._id;
+      freshChar = await charactersCollection(db).findOne(
+        { _id: character._id },
+        { projection: { countryId: 1 } }
+      );
+      if (!freshChar) {
+        return NextResponse.json(badRequest("Character not found").toJson(), { status: 404 });
+      }
+
+      // Campaign Presence is campaign infrastructure and is paid for out of the
+      // campaign's own pools. A character with no active campaign has nothing to
+      // build presence FOR, so this is a clean 400 rather than a silent fallback
+      // onto personal action points.
+      campaign = await campaignsCollection(db).findOne(
+        { candidateId: character._id, status: { $ne: "archived" } },
+        { projection: { actions: 1, funds: 1 } }
+      );
+    }
+    if (!campaign) {
+      return NextResponse.json(
+        badRequest(
+          "You need an active campaign to build Campaign Presence — it is funded by the campaign, not by you personally."
+        ).toJson(),
+        { status: 400 }
+      );
+    }
+    if ((campaign.actions ?? 0) < STATE_ORG_COST_ACTIONS) {
+      return NextResponse.json(
+        badRequest(
+          `Not enough campaign actions — building presence costs ${STATE_ORG_COST_ACTIONS} (campaign has ${campaign.actions ?? 0})`
+        ).toJson(),
+        { status: 400 }
+      );
+    }
+
+    // Price the NEXT level off the current one — presence escalates, so the
+    // cost is read before the gate and re-asserted inside the atomic update so
+    // a racing build cannot buy a level at a stale (cheaper) price.
+    const existing = await characterStateOrgCollection(db).findOne(
+      { characterId: ownerId, stateId },
+      { projection: { level: 1 } }
+    );
+    const currentLevel = existing?.level ?? 0;
+    const costFundsAnchor = stateOrgLevelCost(currentLevel);
+
+    // Anchor-denominated cost → the campaign treasury's own currency, at the
+    // same frozen basis campaign income uses.
+    const costFundsLocal = costFundsAnchor * (await loadCampaignFxRate(db, freshChar));
+    if ((campaign.funds ?? 0) < costFundsLocal) {
+      return NextResponse.json(
+        badRequest(
+          `Not enough campaign funds — level ${currentLevel + 1} in ${stateId} costs $${Math.round(costFundsAnchor).toLocaleString()} (campaign has $${Math.floor(campaign.funds ?? 0).toLocaleString()})`
+        ).toJson(),
+        { status: 400 }
+      );
+    }
+    const now = new Date();
+    // The throttle is turn-based, not wall-clock. The current turn started at
+    // the most recently processed turn boundary; a build that happened in the
+    // current turn (updatedAt >= lastTurnProcessed) must wait until the next turn
+    // advances lastTurnProcessed. This enforces "at most +1 per state per turn"
+    // instead of the old 60-minute wall-clock window that locked players out for
+    // the remainder of the current turn and part of the next one.
+    const { lastTurnProcessed, currentTurn } = await getGameTime();
+    const throttleCutoff = lastTurnProcessed;
+
+    // Atomic guard: the upsert filter requires the doc to be absent OR at a
+    // level < MAX AND last-updated before the start of the current turn. Combined
+    // with the unique index on { characterId, stateId } seeded in core.ts, this
+    // eliminates the read-then-write TOCTOU window — two parallel requests
+    // serialize through the upsert and only one increments the level. A racing
+    // partner whose filter no longer matches (because the first request just
+    // updated the doc) returns null from findOneAndUpdate → we refund and 409.
+    try {
+      await runWithOptionalTransaction(
+        async (session) => {
+          const debitResult = await campaignsCollection(db).updateOne(
+            {
+              _id: campaign._id,
+              actions: { $gte: STATE_ORG_COST_ACTIONS },
+              funds: { $gte: costFundsLocal },
+            },
+            {
+              $inc: {
+                actions: -STATE_ORG_COST_ACTIONS,
+                funds: -costFundsLocal,
+              },
+              $set: { updatedAt: now },
+            },
+            { session }
+          );
+          if (debitResult.modifiedCount === 0) throw new Error("INSUFFICIENT_RESOURCES");
+
+          let orgUpdate;
+          try {
+            orgUpdate = await characterStateOrgCollection(db).findOneAndUpdate(
+              {
+                characterId: ownerId,
+                stateId,
+                $or: [{ updatedAt: { $exists: false } }, { updatedAt: { $lt: throttleCutoff } }],
+                // No level ceiling. This asserts the level is still the one
+                // we priced, so a racing build cannot buy a level at a stale
+                // (cheaper) price on the escalating cost curve.
+                $and: [
+                  {
+                    $or: [{ level: { $exists: false } }, { level: currentLevel }],
+                  },
+                ],
+              },
+              {
+                $inc: { level: 1, totalInvested: STATE_ORG_COST_ACTIONS },
+                $set: { updatedAt: now, lastBuildAt: now, lastBuildFunds: costFundsLocal },
+                $setOnInsert: { characterId: ownerId, stateId },
+              },
+              { upsert: true, returnDocument: "after", session }
+            );
+          } catch (error) {
+            if (isStateOrgDuplicateKey(error)) throw new Error("ORG_RACE_OR_THROTTLE");
+            throw error;
+          }
+          if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
+        },
+        async () => {
+          const debitResult = await campaignsCollection(db).updateOne(
+            {
+              _id: campaign._id,
+              actions: { $gte: STATE_ORG_COST_ACTIONS },
+              funds: { $gte: costFundsLocal },
+            },
+            {
+              $inc: {
+                actions: -STATE_ORG_COST_ACTIONS,
+                funds: -costFundsLocal,
+              },
+              $set: { updatedAt: now },
+            }
+          );
+          if (debitResult.modifiedCount === 0) throw new Error("INSUFFICIENT_RESOURCES");
+
+          try {
+            const orgUpdate = await characterStateOrgCollection(db).findOneAndUpdate(
+              {
+                characterId: ownerId,
+                stateId,
+                $or: [{ updatedAt: { $exists: false } }, { updatedAt: { $lt: throttleCutoff } }],
+                // No level ceiling. This asserts the level is still the one
+                // we priced, so a racing build cannot buy a level at a stale
+                // (cheaper) price on the escalating cost curve.
+                $and: [
+                  {
+                    $or: [{ level: { $exists: false } }, { level: currentLevel }],
+                  },
+                ],
+              },
+              {
+                $inc: { level: 1, totalInvested: STATE_ORG_COST_ACTIONS },
+                $set: { updatedAt: now, lastBuildAt: now, lastBuildFunds: costFundsLocal },
+                $setOnInsert: { characterId: ownerId, stateId },
+              },
+              { upsert: true, returnDocument: "after" }
+            );
+            if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
+          } catch (error) {
+            await campaignsCollection(db).updateOne(
+              { _id: campaign._id },
+              {
+                $inc: {
+                  actions: STATE_ORG_COST_ACTIONS,
+                  funds: costFundsLocal,
+                },
+                $set: { updatedAt: new Date() },
+              }
+            );
+            if (isStateOrgDuplicateKey(error)) throw new Error("ORG_RACE_OR_THROTTLE");
+            throw error;
+          }
+        }
+      );
+    } catch (error) {
+      const msg = (error as Error).message;
+      if (msg === "INSUFFICIENT_RESOURCES") {
+        return NextResponse.json(
+          badRequest("Your campaign's actions or funds changed. Please try again.").toJson(),
+          { status: 409 }
+        );
+      }
+      if (msg === "ORG_RACE_OR_THROTTLE") {
+        return NextResponse.json(
+          badRequest(
+            `Already built ${stateId} this turn (cap ${STATE_ORG_PER_STATE_TURN_CAP} per state per turn), or another build landed first — reload for the current price`
+          ).toJson(),
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
+
+    // A manager spends the candidate's campaign money, so the audit log says who
+    // pressed the button. Best effort: the build has already landed and been
+    // paid for, and a log failure must not turn that into an error.
+    if (!ownerId.equals(character._id)) {
+      try {
+        await activityLogCollection<Document>(db).insertOne({
+          type: "game_action",
+          timestamp: now,
+          userId: new ObjectId(auth.user.userId),
+          characterId: character._id,
+          characterName: character.name,
+          username: auth.user.username,
+          countryId: character.countryId,
+          actionType: "state_org_build",
+          actionCost: STATE_ORG_COST_ACTIONS,
+          turn: currentTurn,
+          targetId: campaign._id,
+          targetType: "campaign",
+          result: {
+            success: true,
+            fundsChange: -costFundsLocal,
+            message: `Built Campaign Presence in ${stateId} for the campaign`,
+          },
+          summary: `state_org_build - ${character.name} built Campaign Presence in ${stateId}`,
+          details: {
+            campaignId: campaign._id.toString(),
+            candidateId: ownerId.toString(),
+            stateId,
+            builtByManager: true,
+          },
+        });
+      } catch {
+        // Audit row only; the build itself stands.
+      }
+    }
+
+    // Re-read the post-image after both paths complete. We can't reliably
+    // close-over the value from inside runWithOptionalTransaction, so the
+    // returned shape is sourced from a fresh findOne — single round trip
+    // and avoids transaction-vs-callback bookkeeping.
+    const final = await characterStateOrgCollection(db).findOne(
+      { characterId: ownerId, stateId },
+      { projection: { level: 1, totalInvested: 1 } }
+    );
+    return NextResponse.json({
+      level: final?.level ?? 1,
+      totalInvested: final?.totalInvested ?? STATE_ORG_COST_ACTIONS,
+      stateId,
+      spentThisTurn: costFundsLocal,
+    });
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

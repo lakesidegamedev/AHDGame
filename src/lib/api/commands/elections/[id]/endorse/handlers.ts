@@ -1,0 +1,349 @@
+import { NextResponse } from "next/server";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { parseJsonBody, schemas } from "@/lib/api/validate";
+import { z } from "zod";
+import { ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { recordAudit } from "@/lib/audit/recordAudit";
+import { claimPlayerEndorsementLock } from "@/lib/elections/playerEndorsementLock";
+import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
+import type { PlayerEndorsement } from "@/lib/db/types";
+import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
+import { isPrimaryPhaseOpen } from "@/lib/elections/playerEndorsements";
+import { getGameTime } from "@/lib/time/gameTime";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { isActivePlayerEndorsementDuplicateKey } from "@/lib/elections/duplicateKey";
+import { assertSameCountry } from "@/lib/api/sameCountry";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+// POST /api/elections/[id]/endorse: Endorse a candidate in a presidential election, replacing any prior endorsement.
+// Auth: requireHumanSessionWithCharacter (bot tokens rejected)
+// Errors: 400, 401, 403, 404, 429
+export async function POST(request: Request, { params }: RouteParams) {
+  try {
+    const auth = await requireHumanSessionWithCharacter(request);
+    if (!auth.ok) return auth.response;
+
+    const rateLimit = checkRateLimit(`api/elections/[id]/endorse:${auth.user.userId}`, 20, 60000);
+    if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+    const character = auth.user.character;
+
+    const { id: electionId } = await params;
+
+    const parsed = await parseJsonBody(request, z.object({ candidateId: schemas.objectId }));
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+    const { candidateId } = parsed.data;
+
+    const db = await getDb();
+    const resolved = await resolveElectionRouteParam(db, electionId);
+    if (!resolved.ok) {
+      if (resolved.reason === "invalid_id") {
+        return errorResponse(400, "Invalid election ID");
+      }
+      return errorResponse(404, "Election not found");
+    }
+
+    const election = resolved.election;
+    const electionObjectId = election._id;
+    const candidateObjectId = new ObjectId(candidateId);
+    if (election.electionType !== "president") {
+      return errorResponse(400, "Endorsements are only available for presidential elections");
+    }
+    if (election.status === "completed" || election.status === "resolved") {
+      return errorResponse(400, "This election has ended");
+    }
+    assertSameCountry(character, election, {
+      message: "You cannot endorse candidates in elections from other countries",
+    });
+
+    // Verify candidate exists in this election
+    const candidate = await electionCandidatesCollection(db).findOne({
+      _id: candidateObjectId,
+      electionId: electionObjectId,
+      status: "active",
+    });
+    if (!candidate) {
+      return errorResponse(404, "Candidate not found in this election");
+    }
+
+    // Cannot endorse yourself
+    if (candidate.characterId?.equals(character._id)) {
+      return errorResponse(400, "You cannot endorse yourself");
+    }
+
+    // Primaries are intra-party contests: only allow same-party endorsements
+    // while the primary phase is open. Cross-party endorsements open in the
+    // general phase.
+    const { effectiveNow, currentTurn } = await getGameTime();
+    const inPrimary = isPrimaryPhaseOpen(election, { currentTurn, now: effectiveNow });
+    if (inPrimary && candidate.party && candidate.party !== character.party) {
+      return errorResponse(
+        403,
+        "You can only endorse candidates in your own party while the primary is running"
+      );
+    }
+
+    const ownCandidacy = await electionCandidatesCollection(db).findOne({
+      electionId: electionObjectId,
+      characterId: character._id,
+      status: "active",
+    });
+    if (ownCandidacy?.campaignSuspended) {
+      return errorResponse(
+        400,
+        "Suspended presidential candidates cannot issue player endorsements"
+      );
+    }
+
+    const releaseEndorsementLock = await claimPlayerEndorsementLock(
+      db,
+      character._id,
+      electionObjectId
+    );
+    if (!releaseEndorsementLock) {
+      return errorResponse(409, "Your endorsement is already being updated. Try again.");
+    }
+
+    try {
+      // Reverse the Support bump of any endorsement being replaced; the bump is
+      // non-idempotent, so re-POSTing would otherwise stack
+      // +SUPPORT_ENDORSEMENT_BUMP with no reversal. Skip NPP candidates (never bumped).
+      const priorEndorsements = await playerEndorsementsCollection(db)
+        .find({ characterId: character._id, electionId: electionObjectId, isActive: true })
+        .toArray();
+      for (const prior of priorEndorsements) {
+        const priorCandidate = await electionCandidatesCollection(db).findOne({
+          _id: prior.candidateId,
+        });
+        if (priorCandidate && !priorCandidate.isNPP && priorCandidate.characterId) {
+          await applyEndorsementSupportBump(db, priorCandidate.characterId, true);
+        }
+      }
+
+      // Withdraw any existing active endorsement for this election
+      await playerEndorsementsCollection(db).updateMany(
+        {
+          characterId: character._id,
+          electionId: electionObjectId,
+          isActive: true,
+        },
+        {
+          $set: { isActive: false, withdrawnAt: new Date() },
+        }
+      );
+
+      // Create new endorsement. Key by the candidate row id so consumers can
+      // join to electionCandidates without guessing the underlying character.
+      const endorsement: PlayerEndorsement = {
+        _id: new ObjectId(),
+        characterId: character._id,
+        characterName: character.name,
+        electionId: electionObjectId,
+        candidateId: candidate._id,
+        candidateName: candidate.characterName,
+        isActive: true,
+        createdAt: new Date(),
+      };
+
+      try {
+        await playerEndorsementsCollection(db).insertOne(endorsement);
+      } catch (error) {
+        if (isActivePlayerEndorsementDuplicateKey(error)) {
+          const activeEndorsement = await playerEndorsementsCollection(db).findOne({
+            characterId: character._id,
+            electionId: electionObjectId,
+            isActive: true,
+          });
+
+          if (activeEndorsement) {
+            return NextResponse.json({
+              success: true,
+              electionType: election.electionType,
+              phase: inPrimary ? "primary" : "general",
+              endorsement: {
+                id: activeEndorsement._id.toString(),
+                candidateId: activeEndorsement.candidateId.toString(),
+                candidateName: activeEndorsement.candidateName,
+              },
+            });
+          }
+        }
+
+        throw error;
+      }
+
+      // B3: endorsement landing bumps Support on the endorsed candidate.
+      // One-shot; revocation in DELETE applies the negative form. Skip
+      // for NPP candidates. applySupportDelta is keyed by characterId
+      // which doesn't map for NPPs, and NPP "support" isn't a meaningful
+      // game-state field.
+      if (!candidate.isNPP) {
+        await applyEndorsementSupportBump(db, candidate.characterId);
+      }
+
+      recordAudit({
+        source: "api",
+        action: "election.endorse",
+        category: "election",
+        subject: { type: "election", id: electionObjectId, name: `president: ${election.state}` },
+        counterparty: {
+          type: "character",
+          id: candidate.characterId ?? candidateObjectId,
+          name: candidate.characterName,
+        },
+        refs: { electionId: electionObjectId },
+        meta: { candidateId: candidateObjectId.toString() },
+        outcome: "ok",
+      });
+
+      return NextResponse.json({
+        success: true,
+        electionType: election.electionType,
+        phase: inPrimary ? "primary" : "general",
+        endorsement: {
+          id: endorsement._id.toString(),
+          candidateId: candidate._id.toString(),
+          candidateName: candidate.characterName,
+        },
+      });
+    } finally {
+      await releaseEndorsementLock();
+    }
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+// DELETE /api/elections/[id]/endorse: Withdraw the authenticated character's active endorsement from a presidential election.
+// Auth: requireHumanSessionWithCharacter
+// Errors: 400, 401, 403, 404, 429
+export async function DELETE(request: Request, { params }: RouteParams) {
+  try {
+    const auth = await requireHumanSessionWithCharacter(request);
+    if (!auth.ok) return auth.response;
+
+    const rateLimitDel = checkRateLimit(
+      `api/elections/[id]/endorse:${auth.user.userId}`,
+      20,
+      60000
+    );
+    if (!rateLimitDel.ok) return rateLimitResponse(rateLimitDel.retryAfter);
+    const character = auth.user.character;
+
+    const { id: electionId } = await params;
+
+    const db = await getDb();
+    const resolved = await resolveElectionRouteParam(db, electionId);
+    if (!resolved.ok) {
+      if (resolved.reason === "invalid_id") {
+        return errorResponse(400, "Invalid election ID");
+      }
+      return errorResponse(404, "Election not found");
+    }
+
+    const election = resolved.election;
+    const electionObjectId = election._id;
+
+    const releaseEndorsementLock = await claimPlayerEndorsementLock(
+      db,
+      character._id,
+      electionObjectId
+    );
+    if (!releaseEndorsementLock) {
+      return errorResponse(409, "Your endorsement is already being updated. Try again.");
+    }
+
+    try {
+      // B3: capture endorsed candidates before deactivating so we can
+      // reverse their Support bump. Only player-character candidates need
+      // the reverse. NPP endorsement candidates were skipped on the POST
+      // path so their revocation is a no-op too.
+      const activeEndorsements = await playerEndorsementsCollection(db)
+        .find({
+          characterId: character._id,
+          electionId: electionObjectId,
+          isActive: true,
+        })
+        .project<{ candidateId: ObjectId }>({ candidateId: 1 })
+        .toArray();
+
+      // Resolve candidate rows so we can filter NPPs from the bump reversal.
+      // playerEndorsements.candidateId is the candidate row id, not the
+      // character id, so join by _id.
+      const candidateIds: ObjectId[] = activeEndorsements.map((e) => e.candidateId);
+      const candidateRows =
+        candidateIds.length > 0
+          ? await electionCandidatesCollection(db)
+              .find({
+                electionId: electionObjectId,
+                _id: { $in: candidateIds },
+              })
+              .project<{ _id: ObjectId; characterId: ObjectId; isNPP?: boolean }>({
+                _id: 1,
+                characterId: 1,
+                isNPP: 1,
+              })
+              .toArray()
+          : [];
+      const isNppByCandidateId = new Map<string, boolean>(
+        candidateRows.map((c) => [c._id.toString(), c.isNPP === true])
+      );
+      const characterIdByCandidateId = new Map<string, ObjectId>(
+        candidateRows.map((c) => [c._id.toString(), c.characterId])
+      );
+
+      const result = await playerEndorsementsCollection(db).updateMany(
+        {
+          characterId: character._id,
+          electionId: electionObjectId,
+          isActive: true,
+        },
+        {
+          $set: { isActive: false, withdrawnAt: new Date() },
+        }
+      );
+
+      // Apply the revocation Support penalty to each previously-endorsed
+      // player-character candidate. Symmetric with the landing bump in POST.
+      for (const e of activeEndorsements) {
+        const candidateId = e.candidateId.toString();
+        if (isNppByCandidateId.get(candidateId)) continue;
+        const candidateCharacterId = characterIdByCandidateId.get(candidateId);
+        if (!candidateCharacterId) continue;
+        await applyEndorsementSupportBump(db, candidateCharacterId, true);
+      }
+
+      if (result.modifiedCount > 0) {
+        recordAudit({
+          source: "api",
+          action: "election.endorse_withdraw",
+          category: "election",
+          subject: { type: "election", id: electionObjectId },
+          refs: { electionId: electionObjectId },
+          meta: {
+            withdrawnCount: result.modifiedCount,
+            candidateIds: activeEndorsements.map((e) => e.candidateId.toString()),
+          },
+          outcome: "ok",
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        withdrawn: result.modifiedCount,
+        electionType: election.electionType,
+        phase: "unknown",
+      });
+    } finally {
+      await releaseEndorsementLock();
+    }
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

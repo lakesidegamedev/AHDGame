@@ -66,7 +66,7 @@ import { terminationBasis, terminationFee } from "@/lib/military/defenceTerminat
 import { DEFENCE_FACTORY_SLOTS_PER_PLANT } from "@/lib/military/defenceLotEconomics";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
 import type { NationalArsenal } from "@/lib/db/types/nationalArsenal";
-import type { DefenceContractView } from "@/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice";
+import type { DefenceContractView } from "@/lib/cabinet/defenceContractView";
 import { accrualPerTurn, upkeepPerTurn } from "@/lib/military/appropriation";
 import { resolveSeedRosterUpkeep } from "@/lib/military/seedRosterUpkeepPin";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -104,9 +104,9 @@ import { resolveFinancePosition } from "@/lib/constants/cabinetMonetary";
 import { getSovereignConfidencePremium } from "@/lib/budget/debt";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { getTreasuryOperationsCollection } from "@/lib/db/collections/treasuryOperations";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { StateMetrics, PoliticalParty } from "@/lib/db/types";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+
+import type { StateMetrics } from "@/lib/db/types";
+
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { resolveNationalMetricValue } from "@/lib/cabinet/nationalMetricSource";
@@ -130,7 +130,7 @@ import {
   resolveDepartmentDefinitionName,
   type DepartmentCountryId,
 } from "@/lib/governmentFinance/departmentCatalog";
-import type { LegislationType } from "@/lib/db/types/legislation";
+
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";

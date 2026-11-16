@@ -21,7 +21,7 @@ import type { EraConfig, EraNation, EraTileKey } from "@/components/landing/eraT
 import type { LaunchSchedule } from "@/lib/landing/rules/launchSchedule";
 import type { MarketedWorld } from "@/lib/marketing/marketedWorld";
 import { COMMUNITY_DISCORD_URL, COMMUNITY_PATREON_URL } from "@/lib/communityLinks";
-import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "@/app/_landing-v2/publicLinks";
+import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "@/lib/landing/publicLinks";
 
 export type Translate = (key: string, values?: Record<string, string | number>) => string;
 

@@ -6,7 +6,7 @@ import type { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import type { NppCorpDecision, NppCorpDecisionContext } from "@/lib/turn/npp/corpDecisionTypes";
-import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
+import type { OperatorPermissions } from "@/lib/corporations/rules/operatorPolicy";
 import { inManualRestartGrace } from "@/lib/turn/npp/nppCorporationTuning";
 import { AI_ZERO_SALES_MOTHBALL_TURNS } from "@/lib/turn/npp/rules/transitionConversion";
 
