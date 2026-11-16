@@ -24,6 +24,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
+import { loadChamberResult } from "@/lib/wiki/chamberElectionResult";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -277,6 +278,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           }))
         : undefined;
 
+    const chamber = await loadChamberResult(
+      db,
+      election,
+      new Map(
+        parties.map((p) => [
+          String(p.sequentialId),
+          { name: p.name, abbreviation: p.abbreviation ?? "", color: p.color ?? "#888888" },
+        ])
+      ),
+      cycleAnchorContextFromGameState(gameState)
+    );
+
     return NextResponse.json(
       {
         id: election._id.toString(),
@@ -292,6 +305,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         primaryResults,
         primarySnapshotHistory,
         generalResults,
+        chamber,
         candidateCount: candidates.length,
       },
       // cache policy: game-state — election results update during active turns; short CDN TTL
