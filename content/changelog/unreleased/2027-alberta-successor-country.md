@@ -6,8 +6,8 @@ summary: >-
   Assembly, a Premier and cabinet, six regions, and the Canadian dollar. It
   stays dormant until the referendum is switched on.
 tags: [canada, referendums, countries]
-badges: [feature]
-areas: [engine, elections]
+badges: [minor]
+areas: [engine]
 ---
 
 ## What changed
