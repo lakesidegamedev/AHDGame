@@ -137,7 +137,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
   const hasTrend = snapshotHistory && snapshotHistory.length >= 2;
 
   return (
-    <section className="mb-10 rounded-xl border border-card-border bg-card/40 p-6 shadow-panel">
+    <section className="mb-10 ">
       <div className="flex items-center justify-between mb-1">
         <SectionLabel as="h3">Primary results by party</SectionLabel>
         {hasTrend && (
@@ -157,7 +157,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
       </p>
       <div className="space-y-6">
         {primaryResults.map((party) => (
-          <div key={party.partyId} className="rounded-lg border border-card-border bg-card/60 p-4">
+          <div key={party.partyId} className="border-b border-card-border/60 py-2.5">
             <h3 className="mb-3 font-medium" style={{ color: party.partyColor }}>
               {party.partyName}
             </h3>
@@ -181,7 +181,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                     <span className="truncate font-medium text-foreground">
                       {candidate.characterName}
                     </span>
-                    <span className="font-mono text-muted">{formatPct(candidate.sharePct)}</span>
+                    <span className="tabular-nums text-muted">{formatPct(candidate.sharePct)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-card-elevated">
                     <div
@@ -199,15 +199,25 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
             {/* Detail table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-card-elevated">
+                <thead>
                   <tr className="border-b border-card-border text-left">
-                    <th className="pb-2 pr-4 font-medium text-foreground">Candidate</th>
-                    <th className="pb-2 pr-4 font-medium text-foreground">Primary score</th>
-                    <th className="pb-2 pr-4 font-medium text-foreground">Share</th>
+                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      Candidate
+                    </th>
+                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      Primary score
+                    </th>
+                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      Share
+                    </th>
                     {party.candidates.some((c) => c.delegates != null) && (
-                      <th className="pb-2 pr-4 font-medium text-foreground">Delegates</th>
+                      <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                        Delegates
+                      </th>
                     )}
-                    <th className="pb-2 font-medium text-foreground">Result</th>
+                    <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      Result
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -216,11 +226,19 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                       key={c.characterName}
                       className="border-b border-card-border/50 last:border-0 hover:bg-card-elevated/30 transition-colors"
                     >
-                      <td className="py-2 pr-4 font-medium text-foreground">{c.characterName}</td>
-                      <td className="py-2 pr-4 text-muted">{c.primaryScore.toFixed(1)}</td>
-                      <td className="py-2 pr-4 text-muted">{formatPct(c.sharePct)}</td>
+                      <td className="border-b border-card-border/60 py-2 pr-4 font-medium text-foreground">
+                        {c.characterName}
+                      </td>
+                      <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
+                        {c.primaryScore.toFixed(1)}
+                      </td>
+                      <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
+                        {formatPct(c.sharePct)}
+                      </td>
                       {party.candidates.some((cand) => cand.delegates != null) && (
-                        <td className="py-2 pr-4 text-muted">{c.delegates ?? 0}</td>
+                        <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
+                          {c.delegates ?? 0}
+                        </td>
                       )}
                       <td className="py-2">
                         {c.won ? (

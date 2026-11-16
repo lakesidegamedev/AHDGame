@@ -51,7 +51,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           const href = rawHref ? toRelativeWikiHref(rawHref) : rawHref;
           if (href && (href.startsWith("/") || WIKI_LINK.test(href))) {
             return (
-              <Link href={href} className="text-primary hover:underline" {...noGlossary}>
+              <Link href={href} className="text-[var(--wiki-link)] hover:underline" {...noGlossary}>
                 {children}
               </Link>
             );
@@ -61,7 +61,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-[var(--wiki-link)] hover:underline"
               {...noGlossary}
             >
               {children}
@@ -70,7 +70,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
         },
         h1: ({ children }) => (
           <h1
-            className="mb-4 mt-8 border-b border-card-border pb-2 text-2xl font-bold text-foreground first:mt-0"
+            className="mb-3 mt-8 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground first:mt-0"
             {...noGlossary}
           >
             {children}
@@ -87,7 +87,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           return (
             <h2
               id={id}
-              className="mb-3 mt-6 scroll-mt-24 text-xl font-semibold text-foreground"
+              className="mb-3 mt-8 scroll-mt-24 text-[21px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground"
               {...noGlossary}
             >
               {children}
@@ -105,37 +105,56 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           return (
             <h3
               id={id}
-              className="mb-2 mt-4 scroll-mt-24 text-lg font-medium text-foreground"
+              className="mb-2 mt-5 scroll-mt-24 text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-foreground"
               {...noGlossary}
             >
               {children}
             </h3>
           );
         },
-        p: ({ children }) => <p className="mb-3 leading-relaxed text-muted">{wrap(children)}</p>,
+        p: ({ children }) => (
+          <p className="mb-3 text-[14px] leading-[1.6] text-foreground/80">{wrap(children)}</p>
+        ),
         ul: ({ children }) => (
-          <ul className="mb-4 ml-6 list-disc space-y-1 text-muted">{children}</ul>
+          <ul className="mb-3 ml-5 list-disc space-y-1.5 text-[14px] text-foreground/80">
+            {children}
+          </ul>
         ),
         ol: ({ children }) => (
-          <ol className="mb-4 ml-6 list-decimal space-y-1 text-muted">{children}</ol>
+          <ol className="mb-3 ml-5 list-decimal space-y-1.5 text-[14px] text-foreground/80">
+            {children}
+          </ol>
         ),
-        li: ({ children }) => <li className="leading-relaxed">{wrap(children)}</li>,
+        li: ({ children }) => <li className="leading-[1.6]">{wrap(children)}</li>,
         table: ({ children }) => (
-          <div className="mb-6 overflow-x-auto rounded-lg border border-card-border">
-            <table className="w-full min-w-[400px] border-collapse text-sm">{children}</table>
+          <div className="mb-5 overflow-x-auto">
+            <table className="w-full min-w-[360px] border-collapse text-[13px]">{children}</table>
           </div>
         ),
-        thead: ({ children }) => <thead className="bg-card-elevated">{children}</thead>,
+        thead: ({ children }) => <thead>{children}</thead>,
         tbody: ({ children }) => <tbody>{children}</tbody>,
-        tr: ({ children }) => (
-          <tr className="border-b border-card-border last:border-b-0">{children}</tr>
+        tr: ({ children }) => <tr>{children}</tr>,
+        th: ({ children, style }) => (
+          <th
+            style={style}
+            className="border-b border-card-border py-1.5 pr-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted"
+          >
+            {wrap(children)}
+          </th>
         ),
-        th: ({ children }) => (
-          <th className="px-4 py-3 text-left font-medium text-foreground">{wrap(children)}</th>
+        td: ({ children, style }) => (
+          <td
+            style={style}
+            className="border-b border-card-border/60 py-2 pr-2.5 align-top tabular-nums text-foreground/80 first:font-medium first:text-foreground"
+          >
+            {wrap(children)}
+          </td>
         ),
-        td: ({ children }) => <td className="px-4 py-3 text-muted">{wrap(children)}</td>,
         blockquote: ({ children }) => (
-          <blockquote className="border-l-4 border-primary/50 bg-card/50 py-1 pl-4 italic text-muted">
+          <blockquote
+            className="mb-3 rounded-md px-3.5 py-2 text-foreground/80"
+            style={{ background: "var(--card-muted)" }}
+          >
             {wrap(children)}
           </blockquote>
         ),
@@ -146,7 +165,8 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           }
           return (
             <pre
-              className="mb-4 overflow-x-auto rounded-lg border border-card-border bg-card-elevated p-4 text-sm"
+              className="mb-3.5 overflow-x-auto rounded-md px-3.5 py-3 font-mono text-[12.5px] leading-[1.7] text-foreground"
+              style={{ background: "var(--card-muted)" }}
               {...noGlossary}
             >
               {children}
@@ -173,7 +193,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           }
           return (
             <code
-              className="rounded bg-card-elevated px-1.5 py-0.5 font-mono text-sm text-foreground"
+              className="rounded bg-card px-1 py-0.5 font-mono text-[12.5px] text-foreground"
               {...noGlossary}
               {...props}
             >
@@ -198,7 +218,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
               alt={alt ?? ""}
               title={title}
               loading="lazy"
-              className="my-4 max-w-full h-auto rounded-lg border border-card-border"
+              className="my-4 h-auto max-w-full rounded-md"
             />
           );
         },

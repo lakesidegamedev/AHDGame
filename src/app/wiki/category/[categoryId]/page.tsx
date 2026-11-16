@@ -39,7 +39,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       : allPages.filter((p) => p.category === categoryId);
 
   return (
-    <div className="mx-auto max-w-4xl min-w-0 overflow-x-hidden px-4 py-8">
+    <div className="mx-auto max-w-[860px] min-w-0 px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground transition-colors">
           Wiki
@@ -49,27 +49,31 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       </nav>
 
       <div className="mb-8">
-        <p className="section-label mb-3">Category</p>
-        <h1 className="mb-2 text-3xl font-bold text-foreground">{category.name}</h1>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-3">
+          Category
+        </p>
+        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          {category.name}
+        </h1>
         <p className="text-lg text-muted">{category.description}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div>
         {categoryPages.map((page) => {
           const diff = page.difficulty ? DIFFICULTY_LABELS[page.difficulty] : null;
           return (
             <Link
               key={page.slug}
               href={`/wiki/${page.slug}`}
-              className="group flex flex-col rounded-xl border border-card-border bg-card/40 p-4 transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card/60 hover:shadow-md"
+              className="group block border-b border-card-border/60 py-3"
             >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="font-medium text-foreground transition-colors group-hover:text-primary">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[14px] font-semibold text-[var(--wiki-link)] group-hover:underline">
                   {page.title}
                 </span>
-                {diff && <span className="shrink-0 text-xs font-medium text-muted">{diff}</span>}
+                {diff && <span className="shrink-0 text-[11px] text-muted">{diff}</span>}
               </div>
-              <p className="text-sm text-muted">{page.description}</p>
+              <p className="mt-0.5 text-[13px] text-muted">{page.description}</p>
             </Link>
           );
         })}

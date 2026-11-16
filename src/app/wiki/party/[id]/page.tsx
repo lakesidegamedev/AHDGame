@@ -44,7 +44,7 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
   const flavor = getPartyFlavor(data.id, data.name, data.abbreviation);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
@@ -64,7 +64,9 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
             style={{ backgroundColor: data.color + "40", border: `2px solid ${data.color}` }}
           />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{data.name}</h1>
+            <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+              {data.name}
+            </h1>
             <p className="mt-1 text-muted">
               {data.abbreviation} • {data.memberCount} member{data.memberCount !== 1 ? "s" : ""}
             </p>
@@ -72,7 +74,7 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
         </div>
       </header>
 
-      <section className="mb-8 rounded-xl border border-card-border bg-card/60 p-6 shadow-card">
+      <section className="mb-8 ">
         <h2 className="mb-3 text-lg font-semibold text-foreground">About</h2>
         <p className="text-muted leading-relaxed">{flavor.blurb}</p>
         <h3 className="mt-4 mb-2 text-sm font-medium text-foreground">In the game</h3>
@@ -84,7 +86,9 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Political positions</h2>
+        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Political positions
+        </h2>
         <PolicyAlignmentCard
           economic={data.economicPosition}
           social={data.socialPosition}
@@ -92,22 +96,24 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
         />
       </section>
 
-      <section className="mb-8 rounded-xl border border-card-border bg-card/60 p-6 shadow-card">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Seats held</h2>
+      <section className="mb-8 ">
+        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Seats held
+        </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="rounded-lg border border-card-border bg-card/40 p-4 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <div className="text-2xl font-bold text-foreground">{data.seatCounts.senate}</div>
             <div className="text-sm text-muted">
               {COUNTRY_CONFIGS[data.countryId]?.legislature.upperChamber?.shortName ?? "Senate"}
             </div>
           </div>
-          <div className="rounded-lg border border-card-border bg-card/40 p-4 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <div className="text-2xl font-bold text-foreground">{data.seatCounts.house}</div>
             <div className="text-sm text-muted">
               {COUNTRY_CONFIGS[data.countryId]?.legislature.lowerChamber.shortName ?? "House"}
             </div>
           </div>
-          <div className="rounded-lg border border-card-border bg-card/40 p-4 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <div className="text-2xl font-bold text-foreground">{data.seatCounts.governor}</div>
             <div className="text-sm text-muted">
               {COUNTRY_CONFIGS[data.countryId]?.officeTypes.find(
@@ -115,13 +121,13 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
               )?.labelPlural ?? "Governors"}
             </div>
           </div>
-          <div className="rounded-lg border border-card-border bg-card/40 p-4 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <div className="text-2xl font-bold text-foreground">{data.seatCounts.president}</div>
             <div className="text-sm text-muted">
               {COUNTRY_CONFIGS[data.countryId]?.executiveTitle ?? "President"}
             </div>
           </div>
-          <div className="rounded-lg border border-card-border bg-card/40 p-4 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <div className="text-2xl font-bold text-foreground">
               {data.seatCounts.vicePresident}
             </div>
