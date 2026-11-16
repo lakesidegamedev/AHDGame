@@ -18,6 +18,13 @@ export interface PublicBuyerBudget {
   plannedEconomy: boolean;
   /** Relative state weights (e.g. GDP) for local-service purchases. */
   stateWeights: ReadonlyMap<string, number>;
+  /**
+   * Plant economy's share of the country's GDP (0 to 1). Budgets are sized for
+   * the whole national economy; the plant market is a slice of it, so only that
+   * slice of each line is spent here. Without it a budget buys millions of
+   * times what the plants can make.
+   */
+  plantShare: number;
 }
 
 export interface PublicPurchaseLine {
@@ -37,13 +44,19 @@ export function publicBuyerFunding(
     .sort((a, b) => (a.countryId < b.countryId ? -1 : 1))
     .map((b) => {
       const lines: PublicPurchaseLine[] = [];
-      for (const { category, commodity, rate, plannedOnly } of GOVERNMENT_COMMODITY_DEMAND) {
+      const share = Number.isFinite(b.plantShare) ? Math.min(1, Math.max(0, b.plantShare)) : 0;
+      for (const {
+        category,
+        commodity,
+        plantSliceFraction,
+        plannedOnly,
+      } of GOVERNMENT_COMMODITY_DEMAND) {
         if (plannedOnly && !b.plannedEconomy) continue;
         const annual = govtSpendForCategory(
           b.byCategory,
           GOVT_SPEND_CATEGORY_ALIASES[category] ?? [category]
         );
-        const perTurn = (annual / turnsPerYear) * rate;
+        const perTurn = (annual / turnsPerYear) * share * plantSliceFraction;
         if (!(perTurn > 0)) continue;
         if (!isStateScopedCommodity(commodity)) {
           lines.push({ commodity, book: "world", amountLocal: perTurn });
