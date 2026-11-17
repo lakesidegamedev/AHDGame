@@ -402,6 +402,7 @@ export default function BuildCapacityDialog({
           </p>
           <p id="build-count-help" className="mt-2 text-body-xs text-muted">
             {t("quantityHelp")}
+            <span className="hidden pointer-fine:inline"> {t("quantityKeys")}</span>
           </p>
           <p className="mt-1 text-body-xs text-muted">
             {t("currentFacilities", {
@@ -447,11 +448,7 @@ export default function BuildCapacityDialog({
           </p>
         )}
 
-        <FundedBuildDemand
-          rows={plants.buildDemand}
-          turn={plants.buildDemandTurn}
-          unitsPerFacility={unitsPerFacility}
-        />
+        <FundedBuildDemand rows={plants.buildDemand} unitsPerFacility={unitsPerFacility} />
         {/* Demand warnings remain visible, including markets with no room. */}
         <div
           className={`flex gap-2 rounded-lg border p-3 ${
