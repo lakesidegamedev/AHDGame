@@ -62,13 +62,13 @@ export const ENERGY_STRATEGIES: SectorStrategy[] = [
     // Matches SECTOR_SUPPLY/SECTOR_DEMAND in commodities.ts (energy output 0.65, oil 0.07, rare_earth 0.04; rare_earth covers copper).
     supply: { energy: 0.65 },
     demand: {
-      steel: 0.22,
-      coal: 0.15,
-      oil: 0.07,
-      vehicles: 0.03,
-      construction_services: 0.05,
-      rare_earth: 0.04,
-      natural_gas: 0.12,
+      steel: 0.158,
+      coal: 0.107,
+      natural_gas: 0.086,
+      oil: 0.05,
+      construction_services: 0.036,
+      rare_earth: 0.029,
+      vehicles: 0.021,
     },
   },
   {
@@ -139,11 +139,11 @@ export const ENERGY_STRATEGIES: SectorStrategy[] = [
     // added iron 0.08 for structural fabrication as a more targeted input.
     supply: { energy: 0.7 },
     demand: {
-      steel: 0.2,
-      iron: 0.08,
-      chemicals: 0.15,
-      consulting_services: 0.1,
-      construction_services: 0.1,
+      steel: 0.155,
+      chemicals: 0.116,
+      consulting_services: 0.077,
+      construction_services: 0.077,
+      iron: 0.062,
     },
   },
   {

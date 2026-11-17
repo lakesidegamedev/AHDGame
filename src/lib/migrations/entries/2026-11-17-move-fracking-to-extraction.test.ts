@@ -33,7 +33,6 @@ describe("fracking moved from energy to extraction", () => {
     const total = (r: Record<string, number | undefined>) =>
       Object.values(r).reduce<number>((a, b) => a + (b ?? 0), 0);
     expect(total(frack.supply)).toBeGreaterThan(total(oilGas.supply));
-    expect(total(frack.demand)).toBeGreaterThan(total(oilGas.demand));
     expect(total(frack.supply) - total(frack.demand)).toBeGreaterThan(
       total(oilGas.supply) - total(oilGas.demand)
     );

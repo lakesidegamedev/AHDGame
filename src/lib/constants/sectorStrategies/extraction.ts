@@ -39,7 +39,7 @@ export const EXTRACTION_STRATEGIES: SectorStrategy[] = [
       "Focused iron ore extraction and processing. Sole output: iron ore at maximum volume.",
     // Buffed 0.65→0.78 to significantly address iron shortage (D/S ~3.38×).
     supply: { iron: 0.78 },
-    demand: { energy: 0.25, vehicles: 0.15, freight: 0.12, steel: 0.05, ordnance: 0.08 },
+    demand: { energy: 0.195, vehicles: 0.117, freight: 0.094, ordnance: 0.063, steel: 0.039 },
   },
   {
     id: "oil_gas",
@@ -73,12 +73,12 @@ export const EXTRACTION_STRATEGIES: SectorStrategy[] = [
     // capacity. Building materials stand in for frac sand; there is no water commodity.
     supply: { oil: 0.64, natural_gas: 0.4 },
     demand: {
-      steel: 0.16,
-      chemicals: 0.16,
-      energy: 0.12,
-      freight: 0.06,
-      construction_services: 0.06,
-      building_materials: 0.06,
+      steel: 0.132,
+      chemicals: 0.131,
+      energy: 0.098,
+      freight: 0.049,
+      construction_services: 0.049,
+      building_materials: 0.049,
     },
   },
   {
