@@ -781,7 +781,7 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
   financial: [
     { commodity: "software", rate: 0.2 },
     { commodity: "electronics", rate: 0.05 },
-    { commodity: "consulting_services", rate: 0.1 },
+    { commodity: "consulting_services", rate: 0.05 },
     { commodity: "real_estate_services", rate: 0.04 },
     { commodity: "network_services", rate: 0.06 },
   ],
