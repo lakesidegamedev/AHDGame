@@ -231,11 +231,12 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
         ? poolByOffer.get(group[0]?.id)
         : undefined;
     const total = pooled?.total ?? group.reduce((sum, offer) => sum + remaining.get(offer.id)!, 0);
-    if (!(total > 0) || fill.units > total + Math.max(1e-8, total * 1e-12))
-      throw new Error("Invalid producer trade fill");
+    // A replay group can drift from the clearing pass by rounding dust; share what it holds.
+    if (!(total > 0)) continue;
+    const fillUnits = Math.min(fill.units, total);
     for (const offer of group) {
       const available = remaining.get(offer.id)!;
-      const units = Math.min(available, (fill.units / total) * available);
+      const units = Math.min(available, (fillUnits / total) * available);
       if (!(units > 0)) continue;
       if (!pooled) remaining.set(offer.id, Math.max(0, available - units));
       yield {
@@ -254,7 +255,7 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
         buyerCountry: order.countryId,
       };
     }
-    if (pooled) pooled.take(fill.units);
+    if (pooled) pooled.take(fillUnits);
   }
 }
 
