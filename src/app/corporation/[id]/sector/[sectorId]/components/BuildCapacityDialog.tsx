@@ -7,7 +7,7 @@ import {
 } from "@/lib/corporations/rules/commodityDominanceRamp";
 import { useTranslations } from "next-intl";
 import InvestmentForecast from "./InvestmentForecast";
-import { investmentForecastInput } from "../lib/investment";
+import { buildReturnSummary, investmentForecastInput } from "../lib/investment";
 import {
   OPERATING_RESERVE_TURNS,
   runAfterBuild,
@@ -25,7 +25,7 @@ import type {
 import { useMemo, useState } from "react";
 import { Modal, Button } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { AlertTriangle, ChevronDown, Info, TrendingUp } from "lucide-react";
+import { AlertTriangle, ChevronDown, Info } from "lucide-react";
 import type { PlantsData } from "../types";
 import { fmtUnits, fmtMult, fmtPct } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
@@ -261,6 +261,13 @@ export default function BuildCapacityDialog({
           revenuePerTurn: q.runRevenueAnchor ?? 0,
         })
       : null;
+  const sizingNote = resourceSizingUnavailable
+    ? t("sizingResources")
+    : automaticSizingBlocked
+      ? t("sizingFinance")
+      : sizing.reason
+        ? t(`sizingReasons.${sizing.reason}`)
+        : t("sizingReserve", { amount: money(sizing.reserveAnchor ?? 0) });
   const canSubmit =
     !q.financing?.pendingRequest &&
     !submitting &&
@@ -269,30 +276,34 @@ export default function BuildCapacityDialog({
     affordable &&
     (!financingChoice || !!financingChoice.request);
 
+  const returns = buildReturnSummary(plants, preview.safeUnits);
+  const firstIncomeTurns = arrivals?.firstInTurns ?? plants.buildTurns;
+  const marketRoomKnown = sectorType !== "logistics" && plants.measuredDemandGapUnits != null;
+  const roomLeftFacilities = Math.max(0, headroomFacilities - preview.safeCount);
+  const staffShort = workersDesired > 0 && plants.workers < workersDesired;
+  const poolShort = !!stateLabourMarket && poolOversubscribed(stateLabourMarket);
+  const reserveRisk =
+    afterBuild !== null &&
+    (afterBuild.cutPercent > 0 ||
+      afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0));
+  const loanPending = financingChoice !== null && !financingChoice.request;
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       scrollable
-      maxWidthClass="max-w-2xl max-h-[calc(100dvh-4rem)] flex flex-col overflow-hidden"
+      maxWidthClass="max-w-xl max-h-[calc(100dvh-4rem)] flex flex-col overflow-hidden"
       bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-      title={t("expansionTitle")}
+      title={`${t("expansionTitle")} · ${sectorLabel}`}
     >
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pb-5">
-        <p className="text-body-sm text-muted">
-          {t("rampSubtitle", { sector: sectorLabel, turns: plants.buildTurns })}
-        </p>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 pb-4">
         {blockedByMothball && (
-          <div className="flex gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
-            <p className="text-body-sm text-foreground">
-              {capitalizeFacility(sites)} here are mothballed. Turn them back on before you add
-              more. New capacity would sit cold too.
-            </p>
-          </div>
+          <Warning>
+            {capitalizeFacility(sites)} here are mothballed. Turn them back on before you add more.
+          </Warning>
         )}
 
-        {/* Quantity shortcuts use whole facilities; submission uses units. */}
         <div>
           <label htmlFor="build-count" className="text-body-sm font-medium text-muted">
             {capitalizeFacility(sites)} to {vocab.buildVerb}
@@ -352,7 +363,6 @@ export default function BuildCapacityDialog({
                     nudge(-10, e);
                   }
                 }}
-                aria-describedby="build-count-help"
                 className="w-full bg-transparent text-center text-heading font-bold tabular-nums text-foreground focus:outline-none"
               />
               <p className="text-body-xs text-muted">{count === 1 ? site : sites}</p>
@@ -373,246 +383,163 @@ export default function BuildCapacityDialog({
               +10
             </StepButton>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {sectorType !== "logistics" && (
-              <button
-                type="button"
-                onClick={() => commitCount(sizing.demandFacilities)}
-                disabled={
-                  resourceSizingUnavailable || automaticSizingBlocked || sizing.demandFacilities < 1
-                }
-                className="rounded-lg border border-card-border px-3 py-2 text-body-xs font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
-              >
-                {t("matchDemand", {
-                  count: resourceSizingUnavailable
-                    ? 0
-                    : Math.min(MAX_FACILITIES, sizing.demandFacilities),
-                })}
-              </button>
-            )}
-          </div>
-          <p className="mt-2 text-body-xs text-muted">
-            {resourceSizingUnavailable
-              ? t("sizingResources")
-              : automaticSizingBlocked
-                ? t("sizingFinance")
-                : sizing.reason
-                  ? t(`sizingReasons.${sizing.reason}`)
-                  : t("sizingReserve", { amount: money(sizing.reserveAnchor ?? 0) })}
-          </p>
-          <p id="build-count-help" className="mt-2 text-body-xs text-muted">
-            {t("quantityHelp")}
-            <span className="hidden pointer-fine:inline"> {t("quantityKeys")}</span>
-          </p>
-          <p className="mt-1 text-body-xs text-muted">
-            {t("currentFacilities", {
-              count: ownedFacilities,
-              facilities: ownedFacilities === 1 ? site : sites,
-              units: plants.capacityUnits ?? 0,
+          {sectorType !== "logistics" && (
+            <button
+              type="button"
+              onClick={() => commitCount(sizing.demandFacilities)}
+              disabled={
+                resourceSizingUnavailable || automaticSizingBlocked || sizing.demandFacilities < 1
+              }
+              title={sizingNote}
+              className="mt-2 rounded-lg border border-card-border px-3 py-1.5 text-body-xs font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
+            >
+              {t("matchDemand", {
+                count: resourceSizingUnavailable
+                  ? 0
+                  : Math.min(MAX_FACILITIES, sizing.demandFacilities),
+              })}
+            </button>
+          )}
+        </div>
+
+        <dl className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-4">
+          <Stat
+            label={t("buildTotal")}
+            value={money(preview.total)}
+            tone={affordable ? "default" : "error"}
+          />
+          <Stat label={t("firstIncome")} value={t("inTurns", { turns: firstIncomeTurns })} />
+          <Stat
+            label={t("profitPerTurn")}
+            value={returns ? money(returns.profitPerTurn) : t("notAvailable")}
+            tone={returns && returns.profitPerTurn <= 0 ? "warning" : "default"}
+          />
+          <Stat
+            label={t("payback")}
+            value={
+              !returns
+                ? t("notAvailable")
+                : returns.paybackTurn != null
+                  ? t("inTurns", { turns: returns.paybackTurn })
+                  : t("noPayback")
+            }
+            tone={returns && returns.paybackTurn == null ? "warning" : "default"}
+          />
+        </dl>
+
+        <p className="text-body-sm text-muted" data-testid="build-room">
+          {sectorType === "logistics"
+            ? t("roomFreight")
+            : marketRoomKnown
+              ? t("roomLeft", {
+                  count: roomLeftFacilities,
+                  facility: site,
+                  facilities: sites,
+                })
+              : t("roomUnknown")}
+        </p>
+
+        {marketRoomKnown && preview.overHeadroom && (
+          <Warning>{plants.roomHeldByOwnIdle ? t("warnOwnIdle") : t("warnOverRoom")}</Warning>
+        )}
+        {staffShort && (
+          <Warning>
+            {poolShort
+              ? t("warnLabourPool", { state: stateName ?? "This state" })
+              : t("warnLabour", { percent: fmtPct(labourStaffingFactor) })}
+          </Warning>
+        )}
+        {reserveRisk && afterBuild && (
+          <Warning testId="run-after-build">
+            {runAfterBuildMessage({
+              cashAfterText: money(afterBuild.cashAfter),
+              cutPercent: afterBuild.cutPercent,
+              belowReserve:
+                afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0),
             })}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <Tile
-            label={`${capitalizeFacility(sites)} when done`}
-            value={fmtUnits(ownedFacilities + preview.safeCount)}
-            unit={`+${fmtUnits(preview.safeCount)}`}
-            help={`${capitalizeFacility(sites)} you will run once this order is fully built. The new ${preview.safeCount === 1 ? site : sites} add about ${fmtUnits(preview.safeUnits)} units of output a day.`}
-          />
-          <Tile
-            label={t("rampTitle")}
-            value={`${plants.buildTurns}`}
-            unit={t("turnsUnit")}
-            help={t("rampHelp")}
-          />
-          <Tile
-            label={t("staffNeeded")}
-            value={fmtUnits(preview.workersNeeded)}
-            unit={t("workersUnit")}
-            help={t("staffNeededHelp")}
-          />
-        </div>
-
-        {arrivals && (
-          <p className="text-body-sm text-muted" data-testid="build-arrival">
-            {preview.safeCount === 1
-              ? t("arrivalOne", { turns: arrivals.lastInTurns })
-              : arrivals.firstInTurns === arrivals.lastInTurns
-                ? t("arrivalAllTogether", { turns: arrivals.lastInTurns })
-                : t("arrivalMany", {
-                    first: arrivals.firstInTurns,
-                    last: arrivals.lastInTurns,
-                    count: preview.safeCount,
-                  })}
-          </p>
+          </Warning>
+        )}
+        {!affordable && !financingChoice && (
+          <Warning tone="error">
+            You hold {money(q.corpCapitalAnchor)}.{" "}
+            {maxAffordableFacilities > 0
+              ? `${capitalizeFacility(vocab.buildVerb)} ${fmtUnits(maxAffordableFacilities)} ${
+                  maxAffordableFacilities === 1 ? site : sites
+                } or fewer.`
+              : `You cannot afford a ${site} here right now.`}
+          </Warning>
         )}
 
-        <FundedBuildDemand rows={plants.buildDemand} unitsPerFacility={unitsPerFacility} />
-        {/* Demand warnings remain visible, including markets with no room. */}
-        <div
-          className={`flex gap-2 rounded-lg border p-3 ${
-            preview.overHeadroom ? "border-warning/30 bg-warning/10" : "border-info/30 bg-info/10"
-          }`}
+        {errorMessage && (
+          <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
+            {errorMessage}
+          </p>
+        )}
+        {errorMessage && onOverrideReserve && (
+          <Button
+            variant="secondary"
+            onClick={onOverrideReserve}
+            disabled={submitting}
+            isLoading={submitting}
+          >
+            {t("buildPastReserve")}
+          </Button>
+        )}
+
+        <details
+          className="group rounded-lg border border-card-border p-3"
+          open={q.financing?.pendingRequest ? true : undefined}
         >
-          {preview.overHeadroom ? (
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
-          ) : (
-            <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden />
-          )}
-          <div className="min-w-0">
-            <h3 className="mb-1 text-body-sm font-semibold text-foreground">
-              {plants.buildDemand
-                ? t("fundedAdvice.limits")
-                : t(
-                    sectorType === "logistics"
-                      ? "freightDemand"
-                      : plants.measuredDemandGapUnits == null
-                        ? "measuredDemandTitle"
-                        : preview.overHeadroom
-                          ? "beyondDemand"
-                          : "withinDemand"
-                  )}
-            </h3>
-            <p className="text-body-sm text-foreground">
-              {plants.buildDemand ? (
-                <>
-                  {plants.buildDemand.some((row) => (row.unmet ?? 0) > 0)
-                    ? t("fundedAdvice.someUnfilled")
-                    : plants.buildDemand.some((row) => row.unmet == null)
-                      ? t("fundedAdvice.someUnknown")
-                      : t("fundedAdvice.noneUnfilled")}
-                </>
-              ) : sectorType === "logistics" ? (
-                <>
-                  Freight demand is the state&apos;s combined bulk and special cargo load. Both draw
-                  from one shared fleet, and special cargo uses three times as much TEU per unit.
-                  Check this state&apos;s combined load in the Logistics map before expanding.
-                </>
-              ) : plants.measuredDemandGapUnits == null ? (
-                <>{t("measuredDemandUnavailable")}</>
-              ) : preview.overHeadroom ? (
-                buyersRoomUnits >= 1 ? (
-                  <>
-                    {t("buildRoomOver", {
-                      count: headroomFacilities,
-                      facility: site,
-                      facilities: sites,
-                      units: fmtUnits(buyersRoomUnits),
-                      ordered: fmtUnits(preview.safeCount),
-                    })}
-                  </>
-                ) : (plants.demandGapUnits ?? 0) > 0 && !plants.roomHeldByOwnIdle ? (
-                  <>{t("mixedOrQueuedDemand")}</>
-                ) : plants.roomHeldByOwnIdle ? (
-                  // The plant is held below capacity by its own sales, so the
-                  // market gap is not room for new capacity yet (ticket 1370).
-                  <>{t("ownIdleCapacity")}</>
-                ) : (
-                  <>
-                    The market for what this sector makes is oversupplied: buyers are already taking
-                    all they need. Expect extra output to go unsold unless you win share from a
-                    rival on price.
-                  </>
-                )
-              ) : (
-                <>
-                  {t("buildRoomFits", {
-                    count: headroomFacilities,
-                    facility: site,
-                    facilities: sites,
-                    units: fmtUnits(buyersRoomUnits),
-                  })}
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-body-sm">
-          <p className="font-semibold text-warning">{t("buildRiskTitle")}</p>
-          <p className="mt-2 text-muted">{t("buildRisk")}</p>
-          <p className="mt-2 text-body-xs text-muted">{t("demandEstimate")}</p>
-        </div>
-
-        {/* The charge remains visible; price modifiers are available on demand. */}
-        <div className="rounded-lg border border-card-border bg-card-muted/60 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <p className="text-body-sm font-semibold text-foreground">{t("buildTotal")}</p>
-              <p className="mt-1 text-body-xs text-muted">
-                {t("priceEach", {
-                  amount: money(q.perUnitAnchor * unitsPerFacility),
-                  facility: site,
-                })}
-              </p>
-            </div>
-            <p
-              className={`text-heading font-bold tabular-nums ${affordable ? "text-foreground" : "text-error"}`}
-            >
-              {money(preview.total)}
-            </p>
-          </div>
-          {foundingDiscountPercent > 0 && (
-            <p className="mt-2 text-body-xs text-muted" data-testid="founding-note">
-              {t("foundingPriceNote", { percent: foundingDiscountPercent })}
-            </p>
-          )}
-          {preview.transferFee > 0 && (
-            <p className="mt-2 text-body-xs text-muted">
-              {t("includedTransferFee", { amount: money(preview.transferFee) })}
-            </p>
-          )}
-          <details className="group mt-3 border-t border-card-border pt-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded text-body-sm text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              {t("priceBreakdown")}
-              <ChevronDown
-                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
-                aria-hidden
-              />
-            </summary>
-            <dl className="mt-3 space-y-2 text-body-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded text-body-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            {t("details")}
+            <ChevronDown
+              className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="mt-3 space-y-4">
+            <dl className="space-y-2 text-body-sm">
               <CostLeg
                 label={`Base price per ${site}`}
                 value={money(q.unitPriceAnchor * unitsPerFacility)}
-                help={`The standing price of one ${site} in this industry, at this point in history. One ${site} makes about ${fmtUnits(unitsPerFacility)} units a day.`}
+                help={`One ${site} makes about ${fmtUnits(unitsPerFacility)} units a day.`}
               />
               <CostLeg
                 label="Your market share"
                 value={fmtMult(q.localDominanceMultiplier ?? q.dominanceMultiplier)}
-                help="Growing a sector you already dominate costs more. Sites, staff and permits get harder to come by."
+                help="Growing a sector you already dominate costs more."
                 muted={(q.localDominanceMultiplier ?? q.dominanceMultiplier) === 1}
               />
               {q.commodityToll && (
                 <CostLeg
                   label="Share of world demand"
                   value={fmtMult(commodityDominanceMultiplier(preview.tollRatio))}
-                  help={`With this order your companies could make about ${Math.round(preview.tollRatio * 100)}% of everything the world wants of ${preview.tollLabel ?? "this good"}. Building past half of world demand costs sharply more, and far more again past 100%.`}
+                  help={`With this order you could make about ${Math.round(preview.tollRatio * 100)}% of world demand for ${preview.tollLabel ?? "this good"}. Past half costs sharply more.`}
                   muted={commodityDominanceMultiplier(preview.tollRatio) === 1}
                 />
               )}
               <CostLeg
                 label="Borrowing rates"
                 value={fmtMult(q.rateMultiplier)}
-                help="Building is financed. When the country's prime rate is high, building costs more."
+                help="A high prime rate makes building cost more."
                 muted={q.rateMultiplier === 1}
               />
               <CostLeg
                 label="CEO business sense"
                 value={fmtMult(q.acumenMultiplier)}
-                help="A sharper CEO negotiates a better build price and is less exposed to rates."
+                help="A sharper CEO negotiates a better price."
                 muted={q.acumenMultiplier === 1}
               />
               <CostLeg
                 label="Local prices"
                 value={fmtMult(q.hostPriceMultiplier)}
-                help={`Where you build changes what it costs. An expensive region charges more for the same ${site}.`}
+                help="An expensive region charges more for the same build."
                 muted={q.hostPriceMultiplier === 1}
               />
               <CostLeg
                 label="Your technology"
                 value={fmtMult(q.techMultiplier)}
-                help="Unlocked technology lowers what you pay to build."
+                help="Unlocked technology lowers the build price."
                 muted={q.techMultiplier === 1}
               />
               {(q.expansionMultiplier ?? 1) !== 1 && (
@@ -632,124 +559,61 @@ export default function BuildCapacityDialog({
                 <CostLeg
                   label="Of this order, extra for your size"
                   value={money(preview.sizeSurcharge)}
-                  help="What this order costs above the same build for a company without your market share and share of world demand. Subsidiaries count with their parent."
+                  help="Cost above the same build for a company without your market share. Subsidiaries count with their parent."
                 />
               )}
               {preview.transferFee > 0 && (
                 <CostLeg
                   label="Foreign transfer fee"
                   value={money(preview.transferFee)}
-                  help="This sector is in a country that uses a different currency. Moving the money there costs a small fee on top of the build."
+                  help="Moving money into a country with a different currency costs a small fee."
                 />
               )}
             </dl>
-          </details>
-          {!q.financing && (
-            <p className="mt-3 text-body-sm text-muted">
+            {foundingDiscountPercent > 0 && (
+              <p className="text-body-xs text-muted" data-testid="founding-note">
+                {t("foundingPriceNote", { percent: foundingDiscountPercent })}
+              </p>
+            )}
+            <p className="text-body-xs text-muted">
+              {t("currentFacilities", {
+                count: ownedFacilities,
+                facilities: ownedFacilities === 1 ? site : sites,
+                units: plants.capacityUnits ?? 0,
+              })}
+              {" · "}
+              {t("staffNeeded")}: {fmtUnits(preview.workersNeeded)}
+              {" · "}
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
             </p>
-          )}
-          {afterBuild && (
-            <p
-              className={`mt-2 text-body-sm ${afterBuild.cutPercent > 0 ? "text-warning" : "text-muted"}`}
-              data-testid="run-after-build"
-            >
-              {runAfterBuildMessage({
-                cashAfterText: money(afterBuild.cashAfter),
-                cutPercent: afterBuild.cutPercent,
-                belowReserve:
-                  afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0),
-              })}
-            </p>
-          )}
-          {!affordable && !financingChoice && (
-            <p className="mt-2 flex gap-2 rounded-md border border-error/30 bg-error/10 p-2 text-body-sm text-error">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>
-                You do not have enough money. You hold {money(q.corpCapitalAnchor)}.{" "}
-                {maxAffordableFacilities > 0
-                  ? `${capitalizeFacility(vocab.buildVerb)} ${fmtUnits(maxAffordableFacilities)} ${
-                      maxAffordableFacilities === 1 ? site : sites
-                    } or fewer.`
-                  : `You cannot afford a ${site} here right now.`}
-              </span>
-            </p>
-          )}
-        </div>
-
-        {workersDesired > 0 && plants.workers < workersDesired && (
-          <p className="flex gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-body-sm text-foreground">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
-            <span>
-              This sector currently fills {fmtPct(labourStaffingFactor)} of its jobs. Building this
-              adds {fmtUnits(preview.workersNeeded)} wanted workers, but those jobs may remain
-              vacant unless you raise pay or the local workforce grows.
-              {stateLabourMarket && poolOversubscribed(stateLabourMarket) && (
-                <>
-                  {" "}
-                  {stateName ?? "This state"} has {fmtUnits(stateLabourMarket.labourForce)} workers
-                  and its employers already want {fmtUnits(stateLabourMarket.labourDemand)}. Pay
-                  only moves your share of that pool.
-                </>
-              )}
-            </span>
-          </p>
-        )}
-
-        {open && q.financing && (
-          <ConstructionFinanceControls
-            view={q.financing}
-            totalAnchor={preview.total}
-            constructionAnchor={preview.construction}
-            cashAnchor={q.corpCapitalAnchor}
-            onChange={setFinancingChoice}
-            busy={submitting}
-            onWithdraw={onWithdrawFinancing}
-          />
-        )}
-
-        {plants.investment ? (
-          <InvestmentForecast plants={plants} units={preview.safeUnits} />
-        ) : (
-          <details className="group rounded-lg border border-card-border p-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded text-body-sm text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              {t("noForecastShort")}
-              <ChevronDown
-                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
-                aria-hidden
+            <p className="text-body-xs text-muted">{sizingNote}</p>
+            {arrivals && arrivals.firstInTurns !== arrivals.lastInTurns && (
+              <p className="text-body-xs text-muted" data-testid="build-arrival">
+                {t("arrivalMany", {
+                  first: arrivals.firstInTurns,
+                  last: arrivals.lastInTurns,
+                  count: preview.safeCount,
+                })}
+              </p>
+            )}
+            {open && q.financing && (
+              <ConstructionFinanceControls
+                view={q.financing}
+                totalAnchor={preview.total}
+                constructionAnchor={preview.construction}
+                cashAnchor={q.corpCapitalAnchor}
+                onChange={setFinancingChoice}
+                busy={submitting}
+                onWithdraw={onWithdrawFinancing}
               />
-            </summary>
-            <p className="mt-2 text-body-sm text-muted">{t("noForecast")}</p>
-          </details>
-        )}
-
-        {errorMessage && (
-          <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
-            {errorMessage}
-          </p>
-        )}
-        {errorMessage && onOverrideReserve && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
-            <p className="text-body-sm text-foreground">{t("reserveOverrideHelp")}</p>
-            <Button
-              variant="secondary"
-              onClick={onOverrideReserve}
-              disabled={submitting}
-              isLoading={submitting}
-            >
-              {t("buildPastReserve")}
-            </Button>
+            )}
+            <InvestmentForecast plants={plants} units={preview.safeUnits} />
+            <FundedBuildDemand rows={plants.buildDemand} unitsPerFacility={unitsPerFacility} />
           </div>
-        )}
+        </details>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-4">
-        <div>
-          <p className="text-body-xs text-muted">{t("buildTotal")}</p>
-          <p className="text-body font-bold tabular-nums text-foreground">{money(preview.total)}</p>
-        </div>
-        {financingChoice && !financingChoice.request && (
-          <p className="w-full text-body-xs text-muted">{t("reviewLoan")}</p>
-        )}
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-3">
+        {loanPending && <p className="mr-auto text-body-xs text-muted">{t("reviewLoan")}</p>}
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             {t("cancelBuild")}
@@ -766,6 +630,52 @@ export default function BuildCapacityDialog({
         </div>
       </div>
     </Modal>
+  );
+}
+
+function Warning({
+  children,
+  tone = "warning",
+  testId,
+}: {
+  children: React.ReactNode;
+  tone?: "warning" | "error";
+  testId?: string;
+}) {
+  const palette =
+    tone === "error"
+      ? "border-error/30 bg-error/10 text-error"
+      : "border-warning/30 bg-warning/10 text-foreground";
+  return (
+    <p
+      className={`flex items-start gap-2 rounded-md border px-2 py-1.5 text-body-sm ${palette}`}
+      data-testid={testId}
+    >
+      <AlertTriangle
+        className={`mt-0.5 h-4 w-4 shrink-0 ${tone === "error" ? "" : "text-warning"}`}
+        aria-hidden
+      />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "warning" | "error";
+}) {
+  const toneClass =
+    tone === "error" ? "text-error" : tone === "warning" ? "text-warning" : "text-foreground";
+  return (
+    <div className="min-w-0 rounded-lg border border-card-border bg-background/40 px-3 py-2">
+      <dt className="text-body-xs text-muted">{label}</dt>
+      <dd className={`text-body font-bold tabular-nums ${toneClass}`}>{value}</dd>
+    </div>
   );
 }
 
@@ -830,43 +740,6 @@ function CostLeg({
       >
         {value}
       </dd>
-    </div>
-  );
-}
-
-function Tile({
-  label,
-  value,
-  unit,
-  help,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  unit: string;
-  help: string;
-  tone?: "default" | "success" | "warning" | "muted";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "text-success"
-      : tone === "warning"
-        ? "text-warning"
-        : tone === "muted"
-          ? "text-muted"
-          : "text-foreground";
-  // Column layout with the value pushed to the bottom: the three labels wrap to
-  // different line counts ("Staff needed" and "Pays back in" wrap where "Ready
-  // in" does not, and all three wrap at 375px), and without this the numbers
-  // sat at three different heights across the row.
-  return (
-    <div
-      className="flex h-full min-w-0 flex-col rounded-lg border border-card-border bg-background/40 p-3"
-      title={help}
-    >
-      <p className="text-body-sm font-medium leading-tight text-muted">{label}</p>
-      <p className={`mt-auto pt-0.5 text-body-lg font-bold tabular-nums ${toneClass}`}>{value}</p>
-      <p className="text-body-xs text-muted">{unit}</p>
     </div>
   );
 }

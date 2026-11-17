@@ -171,7 +171,6 @@ export default function ConstructionFinanceControls({
         />
         <span>
           <span className="block font-medium text-foreground">{t("financeToggle")}</span>
-          <span className="mt-1 block text-body-xs text-muted">{t("financeHelp")}</span>
         </span>
       </label>
       {!enabled ? (
@@ -250,9 +249,6 @@ export default function ConstructionFinanceControls({
                   setConsent(false);
                 }}
               />
-              <span className="mt-1.5 block text-body-xs font-normal text-muted">
-                {t("termHelp")}
-              </span>
             </label>
           </div>
           <dl className="space-y-2 rounded-lg bg-background/60 p-3 text-body-sm">

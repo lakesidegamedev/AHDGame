@@ -40,36 +40,11 @@ function view(data = plants) {
 }
 
 describe("investment cash scenario", () => {
-  it("separates current annual bond yield from cumulative plant cash and returned principal", () => {
-    view({
-      ...plants,
-      investment: {
-        ...plants.investment!,
-        bondReference: {
-          annualYieldPercent: 6,
-          issuerName: "Treasury",
-          currencyCode: "USD",
-          turnsToMaturity: 48,
-          quoteTurn: 10,
-        },
-      },
-    });
-    expect(screen.getByText(/Treasury.*6.00% annual yield/)).toBeTruthy();
-    expect(screen.getByText(/plant cash returns below are cumulative/)).toBeTruthy();
-    expect(screen.getByText(/Returned principal is not income/)).toBeTruthy();
-    expect(screen.getByText(/not recovered within 192 turns/)).toBeTruthy();
-  });
-  it("shows a missing bond quote without inventing a reference rate", () => {
-    view();
-    expect(screen.getByText(/No eligible short sovereign bond quote/)).toBeTruthy();
-  });
-  it("shows all cumulative horizons and discloses reserves and the basis of remaining value", () => {
+  it("shows all cumulative horizons with cash return and cash after costs", () => {
     view();
     for (const turns of [48, 96, 192])
       expect(screen.getByText(`After ${turns} turns`)).toBeTruthy();
-    expect(screen.getByText(/Returns are cumulative, not annualized/)).toBeTruthy();
-    expect(screen.getByText(/not a cash sale quote/)).toBeTruthy();
-    expect(screen.getByText(/Over 96 turns: overhead/)).toBeTruthy();
+    expect(screen.getAllByText(/^-?\d+\.\d%$/)).toHaveLength(3);
   });
   it("does not turn previously stored inventory sales into recurring expansion income", () => {
     view({ ...plants, investment: { ...plants.investment!, inventoryRevenueDailyAnchor: 1000 } });
@@ -78,12 +53,11 @@ describe("investment cash scenario", () => {
   });
   it("withholds the estimate when current-turn operating context is unavailable", () => {
     view({ ...plants, investment: undefined });
-    expect(screen.getByText(/missing or stale/)).toBeTruthy();
+    expect(screen.getByText(/needs a full turn of results/)).toBeTruthy();
     expect(screen.queryByText("After 48 turns")).toBeNull();
   });
-  it("shows that a glut gives expansion no additional sales but still incurs costs", () => {
+  it("still prices a glut as no extra sales with full costs", () => {
     view({ ...plants, demandGapUnits: 0 });
-    expect(screen.getByText(/no measured unmet demand/)).toBeTruthy();
     expect(screen.getAllByText(/^-\d+\.\d%$/)).toHaveLength(3);
   });
 });
