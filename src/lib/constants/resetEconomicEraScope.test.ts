@@ -9,7 +9,7 @@ import { getStrategy, getEffectiveStrategyRates, getSectorStrategies } from "./s
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
-// Release 1.12 recipe values before the 1991 reset calibration. These fixtures
+// Pre-1991-calibration recipe values (retail standard carries the current shared trim). These fixtures
 // deliberately do not derive their expectations from the current recipe table.
 const LEGACY_INPUTS = {
   manufacturing: {
@@ -52,23 +52,16 @@ const LEGACY_INPUTS = {
     plastics: 0.06,
   },
   retail: {
-    food: 0.1,
-    electronics: 0.06,
-    energy: 0.05,
-    vehicles: 0.04,
-    freight: 0.06,
-    advertising: 0.08,
-    software: 0.05,
-    chemicals: 0.025,
-    pharmaceuticals: 0.025,
-    financial_services: 0.04,
-    consulting_services: 0.025,
-    building_materials: 0.03,
-    steel: 0.025,
-    oil: 0.025,
-    healthcare_services: 0.03,
-    real_estate_services: 0.035,
-    plastics: 0.035,
+    food: 0.081,
+    electronics: 0.049,
+    energy: 0.041,
+    vehicles: 0.033,
+    freight: 0.049,
+    advertising: 0.065,
+    software: 0.041,
+    financial_services: 0.033,
+    real_estate_services: 0.029,
+    plastics: 0.029,
   },
 };
 
