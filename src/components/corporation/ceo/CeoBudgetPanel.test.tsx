@@ -281,3 +281,27 @@ describe("CeoBudgetPanel: group payment disclosure (#1669)", () => {
     expect(document.body.textContent).not.toMatch(/hands strength to/);
   });
 });
+
+describe("CeoBudgetPanel: tax line wording for a pass-through", () => {
+  it("names the owners' tax rather than corporate tax", () => {
+    renderBudget({
+      corporation: { passThroughTaxPhase: 1 },
+      financials: { federalTax: 620, passThroughOwnerTax: 620 },
+    });
+    expect(screen.getByText("Owner tax on pass-through profit")).toBeTruthy();
+    expect(screen.queryByText("Corporate tax")).toBeNull();
+  });
+
+  it("says how far the owners' tax has phased in", () => {
+    renderBudget({
+      corporation: { passThroughTaxPhase: 0.5 },
+      financials: { federalTax: 310, passThroughOwnerTax: 310 },
+    });
+    expect(screen.getByText("Owner tax on pass-through profit (50% phased in)")).toBeTruthy();
+  });
+
+  it("keeps Corporate tax for a company that pays its own tax", () => {
+    renderBudget({ financials: { federalTax: 620 } });
+    expect(screen.getByText("Corporate tax")).toBeTruthy();
+  });
+});

@@ -267,6 +267,17 @@ export default function CeoBudgetPanel({
     financials.growthCosts -
     (financials.freightCosts ?? 0);
   const tax = financials.federalTax + financials.stateTax;
+  // A pass-through (US LLC, S-Corp, UK LLP) pays no corporate income tax of its
+  // own: the tax line is the owners' tax on its profit, collected at source, so
+  // the "Corporate tax" heading reads as the company being taxed.
+  const passThroughOwnerTax = financials.passThroughOwnerTax ?? 0;
+  const passThroughPhase = corporation.passThroughTaxPhase ?? 1;
+  const taxLabel =
+    passThroughOwnerTax > 0
+      ? passThroughPhase < 1
+        ? `Owner tax on pass-through profit (${Math.round(passThroughPhase * 100)}% phased in)`
+        : "Owner tax on pass-through profit"
+      : "Corporate tax";
 
   return (
     <DenseSection
@@ -479,7 +490,17 @@ export default function CeoBudgetPanel({
           title="Earnings before interest and tax, at the saved budgets."
         />
         {tax > 0 && (
-          <StatementLine indent label="Corporate tax" amount={cost(tax)} pct={pctOfRevenue(tax)} />
+          <StatementLine
+            indent
+            label={taxLabel}
+            amount={cost(tax)}
+            pct={pctOfRevenue(tax)}
+            title={
+              passThroughOwnerTax > 0
+                ? "The company pays no corporate income tax of its own. This is the owners' tax on its profit, at their personal rate, taken from the company as the profit is earned."
+                : undefined
+            }
+          />
         )}
         {financials.bondInterestCost > 0 && (
           <StatementLine indent label="Bond interest" amount={cost(financials.bondInterestCost)} />
