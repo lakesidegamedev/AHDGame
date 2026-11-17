@@ -15,6 +15,7 @@
  */
 
 import { RESEARCH_TELEMETRY_RETENTION_TURNS } from "@/lib/telemetry/research/rules";
+import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
 
 export enum RetentionMode {
   /** Archive old rows to R2, then delete them. No reader depends on them. */
@@ -57,21 +58,21 @@ export const RETENTION_POLICIES: RetentionPolicy[] = [
   {
     collection: "financialTxLog",
     timeKey: "turn",
-    windowTurns: 168,
+    windowTurns: TX_TTL_TURNS,
     mode: RetentionMode.ARCHIVE_DELETE,
-    note: "Forensic money trail. Already TTL'd at 168 turns; archive-before-expire.",
+    note: "Forensic money trail. TTL'd at TX_TTL_TURNS; archive-before-expire.",
   },
   {
     collection: "treasuryTransactions",
     timeKey: "turn",
-    windowTurns: 168,
+    windowTurns: TX_TTL_TURNS,
     mode: RetentionMode.ARCHIVE_DELETE,
     note: "Party-treasury audit log. Balance lives on the treasury doc, not summed here.",
   },
   {
     collection: "indexFundTransactions",
     timeKey: "turn",
-    windowTurns: 168,
+    windowTurns: TX_TTL_TURNS,
     mode: RetentionMode.ARCHIVE_DELETE,
     createdAtFallback: true,
     note: "Fund tx ledger (turn often null → createdAt fallback). Holdings live on position docs.",
