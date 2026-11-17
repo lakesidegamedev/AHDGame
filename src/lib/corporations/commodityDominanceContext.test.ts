@@ -132,3 +132,32 @@ describe("commodity dominance context for freight", () => {
     expect(freightModel?.demandUnits).toBe(1_000_000);
   });
 });
+
+describe("commodity dominance context with capped demand", () => {
+  it("restores demand the ledger cap removed before measuring a clinic", async () => {
+    const flId = new ObjectId();
+    await db.collection("corporateSectors").insertOne({
+      _id: flId,
+      corporationId: corpId,
+      countryId: "US",
+      stateId: "FL",
+      sectorType: "healthcare",
+      strategyId: "standard",
+      capitalStock: 0,
+      buildQueue: [],
+    });
+    await db.collection("commodityPrices").insertMany([
+      {
+        commodity: "healthcare_services",
+        globalDemand: 200,
+        demandTruncatedUnits: 100_000,
+        stateDemand: { FL: 0.2 },
+      },
+    ]);
+    const ctx = await contextFor(flId);
+    expect(ctx.demand.healthcare_services).toBeCloseTo(100_200);
+    expect(ctx.stateDemand?.healthcare_services).toBeCloseTo(0.2 + 100_000 * (0.2 / 200));
+    const toll = commodityDominanceFor(ctx, 5);
+    expect(commodityDominanceMultiplier(toll.ratio)).toBe(1);
+  });
+});
