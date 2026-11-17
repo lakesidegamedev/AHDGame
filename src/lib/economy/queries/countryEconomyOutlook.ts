@@ -46,6 +46,7 @@ import {
   HOUSEHOLD_PRICE_INDEX_BASELINE,
 } from "@/lib/economy/householdPriceIndex";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { buildDebtOutlook, type DebtOutlook } from "@/lib/economy/debtOutlook";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
@@ -113,6 +114,8 @@ export interface CountryEconomyOutlook {
    * Command / dual-track shortage-economy readouts. Null for market economies
    * and when the feature flag is off with no persisted fields (byte-identical UI).
    */
+  /** Compact debt read for the comparison panel; null without a stored budget. */
+  debt: DebtOutlook | null;
   plannedEconomy: PlannedEconomyView | null;
   /** Calendar year used for marketization / regime banding. */
   currentYear: number | null;
@@ -245,6 +248,24 @@ export async function buildCountryEconomyOutlook(
   // page. See lib/budget/federalSurplus.
   const surplus = budget ? federalSurplus(budget) : null;
   const ratioGdp = budget ? resolveRatioGdp(budget) : 0;
+  // Same inputs the budget page uses: debt stock over the ratio's GDP basis,
+  // and a primary balance that puts debt interest back on the other side.
+  const debtPrincipal = budget?.debt?.principal ?? 0;
+  const storedDebtRate = budget?.debt?.interestRate ?? 0;
+  const primaryBalance = surplus === null ? null : surplus + debtPrincipal * storedDebtRate;
+  const debtToGdpRatio = ratioGdp > 0 ? debtPrincipal / ratioGdp : 0;
+  const debtOutlook =
+    budget && primaryBalance !== null && debtToGdpRatio > 0
+      ? buildDebtOutlook({
+          debtToGdpRatio,
+          primaryBalanceToGdp: primaryBalance / ratioGdp,
+          realGrowthPct: budget.economicFactors?.gdpGrowth,
+          inflationPct: budget.economicFactors?.inflationRate,
+          investorConfidence: budget.investorConfidence,
+          imfBailoutActive: budget.imfSovereignBailoutActive,
+          sovereignRiskAnchor: budget.sovereignRiskAnchor,
+        })
+      : null;
 
   const publishedBoard = await readResetMetricBoard(db, countryId);
   const publishedObservations =
@@ -321,6 +342,15 @@ export async function buildCountryEconomyOutlook(
       concentration: clampConcentration(budget?.stateOwnershipConcentration ?? 0),
       status: concentrationStatus(budget?.stateOwnershipConcentration ?? 0),
     },
+    debt: debtOutlook
+      ? {
+          ...debtOutlook,
+          effectiveRatePct: round2(debtOutlook.effectiveRatePct),
+          projectedDebtToGdpPct: round2(debtOutlook.projectedDebtToGdpPct),
+          stabilisingPrimaryBalancePct: round2(debtOutlook.stabilisingPrimaryBalancePct),
+          basisRatePct: round2(debtOutlook.basisRatePct),
+        }
+      : null,
     plannedEconomy,
     currentYear,
     commandEconomyEnabled,
