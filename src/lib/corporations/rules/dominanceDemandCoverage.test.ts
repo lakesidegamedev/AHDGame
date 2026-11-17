@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { demandAdjustedSharePercent, demandCoverage } from "./dominanceDemandCoverage";
+import {
+  demandAdjustedSharePercent,
+  demandCoverage,
+  shareCoverages,
+} from "./dominanceDemandCoverage";
 import type { BuildDemandRow } from "./fundedBuildDemand";
 
 const row = (
@@ -42,5 +46,21 @@ describe("demandAdjustedSharePercent", () => {
   });
   it("leaves a fully served market unchanged", () => {
     expect(demandAdjustedSharePercent(80, 1)).toBe(80);
+  });
+});
+
+describe("shareCoverages", () => {
+  it("relieves the local share when imports fill the state but the country is short", () => {
+    const c = shareCoverages([row("regional", 21, 21), row("national", 38358, 1322)]);
+    expect(c.national).toBeCloseTo(1322 / 38358);
+    expect(c.local).toBeCloseTo(1322 / 38358);
+  });
+  it("uses the state book alone for goods with no national book", () => {
+    expect(shareCoverages([row("regional", 100, 40)])).toEqual({ local: 0.4, national: 0.4 });
+  });
+  it("keeps the state coverage when the state is the tighter market", () => {
+    const c = shareCoverages([row("regional", 100, 5), row("national", 100, 90)]);
+    expect(c.local).toBeCloseTo(0.05);
+    expect(c.national).toBeCloseTo(0.9);
   });
 });

@@ -38,12 +38,17 @@ export function demandAdjustedSharePercent(sharePercent: number, coverage: numbe
 /**
  * Coverage for the local and national share. A commodity sold only in-state has
  * no national book, so its national share is measured against the state's.
+ * A commodity traded nationally can show a fully served state book (imports
+ * fill local buyers) while the country is badly short; a plant there sells into
+ * the national shortage, so its local share takes the lower of the two.
  */
 export function shareCoverages(rows: readonly BuildDemandRow[] | null | undefined): {
   local: number;
   national: number;
 } {
-  const local = demandCoverage(rows, "regional");
+  const regional = demandCoverage(rows, "regional");
   const hasNational = (rows ?? []).some((r) => r.scope === "national");
-  return { local, national: hasNational ? demandCoverage(rows, "national") : local };
+  if (!hasNational) return { local: regional, national: regional };
+  const national = demandCoverage(rows, "national");
+  return { local: Math.min(regional, national), national };
 }
