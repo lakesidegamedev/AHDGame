@@ -2,6 +2,8 @@ import type { ProducerGameConfig } from "./producerGameConfig";
 import type { EconomicInterventionPlan } from "@/lib/economy/interventionGovernance";
 
 export interface GameConfig extends ProducerGameConfig {
+  /** Shadow records a counterfactual; only Enforced changes electricity clearing. */
+  electricityNetworkMode?: import("@/lib/electricityNetwork/rules/types").ElectricityNetworkMode;
   _id: string;
   /**
    * Which turn engine processes a new turn: "v1" (default when absent) or "v2".

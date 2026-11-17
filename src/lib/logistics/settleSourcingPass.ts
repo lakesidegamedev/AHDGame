@@ -47,12 +47,19 @@ import {
 } from "@/lib/logistics/freightClass";
 import type { RunSourcingPassStageContext } from "@/lib/logistics/sourcing";
 
+import { gridZone } from "@/lib/electricityNetwork/rules/network";
+import { createGridLedger } from "@/lib/electricityNetwork/rules/paths";
+
 export function settleSourcingPass(context: RunSourcingPassStageContext): SourcingResult {
   for (const commodity of SHIPPED_COMMODITIES) {
     const freightClass = FREIGHT_CLASS_BY_COMMODITY[commodity]!;
     const teuPerUnitHop = freightTeuPerUnitHop(freightClass, context.eraUnitScale);
     const priceTeuPerUnitHop = freightPriceTeuPerUnitHop(freightClass, context.eraUnitScale);
     const isGrid = freightClass === "grid";
+    const network =
+      commodity === "energy" && context.electricityNetwork?.mode === "enforced"
+        ? createGridLedger(context.electricityNetwork)
+        : undefined;
     // Haulage legs are priced off the freight market; grid legs are wheeled at
     // a fraction of the ask, because a trucking price spike has no business
     // moving the cost of electricity.
@@ -177,11 +184,32 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
     // Foreign national spare (a country's own interstate flows already use the
     // state-level spare above; the national pool is only offered abroad).
     const spareByCountry = new Map<CountryId, number>();
+    // A national export quote originates on the main grid. Named island links
+    // are accounted separately by the funded market, never a pooled shortcut.
+    const exportStatesByCountry = new Map(
+      context.countryIds.map((cid) => [
+        cid,
+        (context.statesByCountry.get(cid) ?? []).filter(
+          (stateId) =>
+            !network || gridZone({ countryId: cid, stateId }) === gridZone({ countryId: cid })
+        ),
+      ])
+    );
+    const foreignSpareFor = (cid: CountryId) => {
+      const pool = spareByCountry.get(cid) ?? 0;
+      if (!network || !context.statesByCountry.get(cid)?.length) return pool;
+      return Math.min(
+        pool,
+        (exportStatesByCountry.get(cid) ?? []).reduce((n, id) => n + (spareByState.get(id) ?? 0), 0)
+      );
+    };
     for (const cid of context.countryIds) {
       const bal = context.byCountry.get(cid)?.get(commodity);
       const spare = Math.max(0, (bal?.supply ?? 0) - (bal?.demand ?? 0));
       spareByCountry.set(cid, spare);
-      if (spare > 0) destinationFor(cid).foreignOfferUnits = spare;
+      const exportable = foreignSpareFor(cid);
+      spareByCountry.set(cid, exportable);
+      if (exportable > 0) destinationFor(cid).foreignOfferUnits = exportable;
     }
 
     const buyerTerms = (buyer: { stateId: string; countryId: CountryId }) => {
@@ -204,8 +232,13 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
       cid: CountryId
     ): SourcingCandidate | null => {
       if (cid === buyer.countryId) return null;
-      if ((spareByCountry.get(cid) ?? 0) <= 0) return null;
+      if (foreignSpareFor(cid) <= 0) return null;
       if ((0, context.isBlocked)(commodity, cid, buyer.countryId)) return null;
+      const gridPath = network?.path(
+        { countryId: cid },
+        { countryId: buyer.countryId, stateId: buyer.stateId }
+      );
+      if (network && !gridPath) return null;
       const ask = nationalPrices[cid] ?? basePrice;
       const shippingPerUnit = isGrid
         ? gridWheelingPerHop(ask) * SEA_FREIGHT_HOP_EQUIV
@@ -224,9 +257,10 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
           shippingMaxAskShare: isGrid ? 0 : FREIGHT_SHIPPING_MAX_ASK_SHARE,
         });
       return {
+        ...(gridPath ? { gridPath } : {}),
         originType: "country",
         originId: cid,
-        landed: ask + shippingPerUnit + tariffPerUnit,
+        landed: (ask + shippingPerUnit + tariffPerUnit) / (gridPath?.retention ?? 1),
         ask,
         shippingPerUnit,
         tariffRatePct: ratePct,
@@ -246,7 +280,7 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
     // the states hold.
     const drawExportFromStates = (countryId: string, units: number) => {
       if (!(units > 0)) return;
-      const exporters = context.statesByCountry.get(countryId) ?? [];
+      const exporters = exportStatesByCountry.get(countryId as CountryId) ?? [];
       let total = 0;
       for (const stateId of exporters) total += spareByState.get(stateId) ?? 0;
       if (!(total > 0)) return;
@@ -271,7 +305,8 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
         if (!candidate) continue;
         const { ceiling } = buyerTerms(otherBuyer);
         if (!isGrid && candidate.landed > ceiling) continue;
-        const deliveryFactor = gridDeliveryFactor(candidate.hopCount);
+        const deliveryFactor =
+          candidate.gridPath?.retention ?? gridDeliveryFactor(candidate.hopCount);
         if (!(deliveryFactor > 0)) continue;
         const key = (0, context.foreignBudgetKey)(exporter, otherBuyer.stateId);
         demands.push({
@@ -316,6 +351,11 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
         if (seller.stateId === buyer.stateId) continue;
         const hopCount = (0, context.hops)(buyer.countryId, seller.stateId, buyer.stateId);
         if (hopCount == null || hopCount <= 0) continue;
+        const gridPath = network?.path(
+          { countryId: seller.countryId, stateId: seller.stateId },
+          { countryId: buyer.countryId, stateId: buyer.stateId }
+        );
+        if (network && !gridPath) continue;
         const ask = statePrices[seller.stateId] ?? basePrice;
         const routeMultiplier = context.shippingCostMultiplier
           ? Math.max(
@@ -329,9 +369,10 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
         );
         const legs = byDest.get(buyer.stateId) ?? [];
         legs.push({
+          ...(gridPath ? { gridPath } : {}),
           originType: "state",
           originId: seller.stateId,
-          landed: ask + shippingPerUnit,
+          landed: (ask + shippingPerUnit) / (gridPath?.retention ?? 1),
           ask,
           shippingPerUnit,
           tariffRatePct: 0,
@@ -376,6 +417,11 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
             (0, context.hops)(buyer.countryId, seller.stateId, buyer.stateId) ??
             UNREACHABLE_HOP_EQUIV;
           if (hopCount <= 0) continue;
+          const gridPath = network?.path(
+            { countryId: seller.countryId, stateId: seller.stateId },
+            { countryId: buyer.countryId, stateId: buyer.stateId }
+          );
+          if (network && !gridPath) continue;
           const ask = statePrices[seller.stateId] ?? basePrice;
           const routeMultiplier = context.shippingCostMultiplier
             ? Math.max(
@@ -387,9 +433,10 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
             ? gridWheelingPerHop(ask) * hopCount * routeMultiplier
             : boundedShippingPerUnit(shippingPerUnitPerHop * hopCount * routeMultiplier, ask);
           candidates.push({
+            ...(gridPath ? { gridPath } : {}),
             originType: "state",
             originId: seller.stateId,
-            landed: ask + shippingPerUnit,
+            landed: (ask + shippingPerUnit) / (gridPath?.retention ?? 1),
             ask,
             shippingPerUnit,
             tariffRatePct: 0,
@@ -439,17 +486,18 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
                   localFillByState.get(cand.originId) ?? 0,
                   cand.ownRoute?.ownFirstAcrossStates === true
                 )
-              : spareByCountry.get(cand.originId as CountryId)!;
+              : foreignSpareFor(cand.originId as CountryId);
           if (spare <= 0) continue;
 
           // Grid legs lose a share of what they dispatch, so the buyer's fill and
           // the seller's drawdown are two different numbers. `deliver` is what
           // lands, `dispatch` is what leaves.
-          const deliveryFactor = gridDeliveryFactor(cand.hopCount);
+          const deliveryFactor = cand.gridPath?.retention ?? gridDeliveryFactor(cand.hopCount);
           const ownSupplyKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "origin");
           const ownDemandKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "destination");
           let deliver = Math.min(
             unmet,
+            network && cand.gridPath ? network.capacity(cand.gridPath) : Infinity,
             cand.ownRoute?.units ?? Infinity,
             spare * deliveryFactor,
             ownSupplyKey ? (context.ownBudgets.supply.get(ownSupplyKey) ?? Infinity) : Infinity,
@@ -569,6 +617,8 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
             }
           }
           if (deliver <= 0) continue;
+          if (network && cand.gridPath && deliver > 0)
+            dispatch = network.take(cand.gridPath, deliver);
           const take = deliver;
           // Spend company budgets after capacity gates, using actual dispatch.
           // Unshipped surplus remains in the ordinary market pass below.
@@ -776,7 +826,7 @@ export function settleSourcingPass(context: RunSourcingPassStageContext): Sourci
       let anyOffer = false;
       for (const cid of context.countryIds) {
         let held = 0;
-        for (const stateId of context.statesByCountry.get(cid) ?? [])
+        for (const stateId of exportStatesByCountry.get(cid) ?? [])
           held += spareByState.get(stateId) ?? 0;
         const unusedPool = spareByCountry.get(cid) ?? 0;
         const displaced = Math.max(0, held - unusedPool);

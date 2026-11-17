@@ -415,6 +415,7 @@ export async function settleCommodityPrices(
   const { freightSettlement, freightRampFraction } = await runFreightSettlementPhase(
     context.db,
     {
+      worldEpoch: context.presetState?.worldEpochId,
       marketSystemMode: context.marketSystemMode,
       allStates: context.allStates,
       stateToCountry: context.stateToCountry,
