@@ -311,6 +311,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(target, request.url));
   }
 
+  // /corporations is a redirect-only legacy path. Answering it here turns the
+  // old footer and guide links into a single hop to the market hub, instead of
+  // rendering a page whose only job is to redirect through the
+  // /stockmarket/[country] shim and pay for a second server render.
+  if (pathname === "/corporations") {
+    return NextResponse.redirect(new URL("/market?tab=stocks", request.url));
+  }
+
   const stockMarketMatch = pathname.match(/^\/country\/([a-z]{2,3})\/stockmarket$/i);
   if (stockMarketMatch) {
     const search = Object.fromEntries(request.nextUrl.searchParams.entries());
