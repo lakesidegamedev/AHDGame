@@ -1,15 +1,10 @@
 /**
  * Encode the globe's view for a shared link.
  *
- * A comparison is read through a filter: the same two nations look like a
- * bloc story under blocs and a trend story under a metric. Carrying only the
- * country ids reopened the receiver on whatever filter their page defaulted
- * to, so the link no longer showed what the sender saw.
- *
- * The value is a compact token rather than JSON so links stay readable. Unknown
- * categories and metrics parse to null and the caller keeps its own default;
- * links written before filters were encoded have no `filter` value at all and
- * land on the default view, which is the old behaviour.
+ * The same two nations read as a bloc story under blocs and a trend story under
+ * a metric, so the link carries the view itself: ids alone reopened the receiver
+ * on their own default. Unknown or absent values parse to null and the caller
+ * keeps its default, which is what links written before this work get.
  */
 
 import { CATEGORY_LABELS, getMetricDefinition } from "@/lib/constants/metricDefinitions";

@@ -28,7 +28,7 @@ import {
   parseCompareShareParam,
   toggleComparePair,
 } from "@/lib/world/countryCompare";
-import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
+import { ALL_COUNTRY_IDS } from "@/lib/constants/countryClientConfig";
 
 /** Countries a shared comparison link may name. */
 const SHAREABLE_COUNTRY_IDS = new Set<string>(ALL_COUNTRY_IDS);
@@ -205,13 +205,13 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
     if (shared.length > 0) {
       setCompareCountryIds(shared as CountryId[]);
       setCompareMode(true);
+      // The view only rides along with a comparison; on its own it would
+      // override this world's own default. Older links carry no view at all.
+      const sharedFilter = parseMetricFilterParam(params.get("filter"));
+      if (sharedFilter) setMetricFilter(sharedFilter);
+      const sharedCategory = parseCompareCategoryParam(params.get("cat"));
+      if (sharedCategory) setCompareCategory(sharedCategory);
     }
-    // The filter and category are what make the shared comparison readable;
-    // links written before they were encoded simply keep the page defaults.
-    const sharedFilter = parseMetricFilterParam(params.get("filter"));
-    if (sharedFilter) setMetricFilter(sharedFilter);
-    const sharedCategory = parseCompareCategoryParam(params.get("cat"));
-    if (sharedCategory) setCompareCategory(sharedCategory);
     setLinkRead(true);
   }, []);
 
@@ -220,13 +220,13 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
     const url = new URL(window.location.href);
     if (compareMode && compareCountryIds.length > 0) {
       url.searchParams.set("compare", compareShareParam(compareCountryIds));
+      url.searchParams.set("filter", metricFilterParam(metricFilter));
+      const category = compareCategoryParam(compareCategory);
+      if (category) url.searchParams.set("cat", category);
+      else url.searchParams.delete("cat");
     } else {
-      url.searchParams.delete("compare");
+      for (const key of ["compare", "filter", "cat"]) url.searchParams.delete(key);
     }
-    url.searchParams.set("filter", metricFilterParam(metricFilter));
-    const category = compareCategoryParam(compareCategory);
-    if (category) url.searchParams.set("cat", category);
-    else url.searchParams.delete("cat");
     if (url.toString() !== window.location.href) {
       window.history.replaceState(null, "", url.toString());
     }
