@@ -5,8 +5,6 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
-import type { ElectedOfficial } from "@/lib/db/types";
-import type { NPP } from "@/lib/db/types/npp";
 import { getHouseComposition } from "@/lib/congress/houseComposition";
 import { getPartyMap } from "@/lib/db/partyMap";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
@@ -191,7 +189,9 @@ async function snapshotForCountry(
   /** World preset, threaded in so each country does not re-read gameState. */
   preset?: string,
   /** Lower-chamber seats by party for this country, when the caller tallied them in bulk. */
-  seatsByPartyOverride?: Record<string, number>
+  seatsByPartyOverride?: Record<string, number>,
+  /** This country's government formation when the caller read them in bulk (null: none). */
+  govOverride?: GovernmentFormation | null
 ): Promise<NationWorldSnapshot> {
   const config = COUNTRY_CONFIGS[countryId];
   const usId = COUNTRY_CONFIGS.US.id;
@@ -211,7 +211,10 @@ async function snapshotForCountry(
   }
 
   if (isParliamentarySystem(config)) {
-    const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
+    const gov =
+      govOverride !== undefined
+        ? govOverride
+        : await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
     const [executive, seatsByParty] = await Promise.all([
       resolveParliamentaryExecutive(db, countryId, gov),
       seatsByPartyOverride ?? tallySeatsByParty(db, countryId, preset),
@@ -253,11 +256,22 @@ export async function getNationWorldSnapshots(
   const parliamentaryIds = ids.filter(
     (id) => id !== COUNTRY_CONFIGS.US.id && isParliamentarySystem(COUNTRY_CONFIGS[id])
   );
-  const seatsByCountry = await tallySeatsByPartyForCountries(db, parliamentaryIds, preset);
+  // One read each for seats and government formations across every
+  // parliamentary country, instead of one per country.
+  const [seatsByCountry, formations] = await Promise.all([
+    tallySeatsByPartyForCountries(db, parliamentaryIds, preset),
+    parliamentaryIds.length > 0
+      ? getGovernmentFormationsCollection(db)
+          .find({ _id: { $in: parliamentaryIds } })
+          .toArray()
+      : Promise.resolve([] as GovernmentFormation[]),
+  ]);
+  const formationByCountry = new Map(formations.map((f) => [f._id as string, f]));
   const entries = await Promise.all(
-    ids.map(
-      async (id) => [id, await snapshotForCountry(db, id, preset, seatsByCountry[id])] as const
-    )
+    ids.map(async (id) => {
+      const gov = parliamentaryIds.includes(id) ? (formationByCountry.get(id) ?? null) : undefined;
+      return [id, await snapshotForCountry(db, id, preset, seatsByCountry[id], gov)] as const;
+    })
   );
   return Object.fromEntries(entries) as Record<CountryId, NationWorldSnapshot>;
 }
