@@ -31,6 +31,12 @@ const DISPLAY_PATHS = [
   "src/lib/world/legacyLeaderboard.ts",
   // Ranks corps by revenue for the player info panel.
   "src/app/api/pip/corp/route.ts",
+  // Cross-border sector money is stored in the host's era currency (FRF, ITL,
+  // ...), which has no live row. These readers restate it for people, so they
+  // need the authored fallback the engine uses or they show it 4.2x / 833x high.
+  "src/lib/corporations/commands/capitalOperations/updateCorporationSettings.ts",
+  "src/app/api/discord-bot/sectors/route.ts",
+  "src/app/api/discord-bot/marketshare/route.ts",
 ];
 
 /**

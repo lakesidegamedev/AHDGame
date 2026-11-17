@@ -1,3 +1,4 @@
+import { electricityMarketAdapter } from "@/lib/electricityNetwork/rules/marketAdapter";
 import type { ProducerMarketResult } from "@/lib/market/producerMarket/rules";
 import type { ProducerOffer, PurchaseOrder } from "@/lib/market/producerMarket/producerQuotes";
 import { eligibleSetOf, compareId } from "@/lib/market/producerMarket/producerQuotes";
@@ -14,6 +15,19 @@ import type {
 export function settleProducerOrders(
   context: SettleProducerMarketStageContext
 ): ProducerMarketResult {
+  const electricity = electricityMarketAdapter(context);
+  if (electricity && context.input.ownSitesFirst)
+    electricity.clear(
+      context.orders.filter(
+        (o) =>
+          o.commodity === "energy" &&
+          !o.supplierOfferId &&
+          o.contractUnitPrice == null &&
+          !o.quantityGroup &&
+          !context.marketFirst.has(o.accountId)
+      ),
+      true
+    );
   const clearFairGroup = (group: readonly PurchaseOrder[]): void => {
     const members = group.map((order) => {
       const quantityGroup =
@@ -214,6 +228,10 @@ export function settleProducerOrders(
   const clearOrder = (order: PurchaseOrder): void => {
     context.input.checkBudget?.();
     const fairGroup = context.fairGroupOf.get(order.id);
+    if (electricity && order.commodity === "energy") {
+      if (!fairGroup || fairGroup[0] === order) electricity.clear(fairGroup ?? [order]);
+      return;
+    }
     if (fairGroup) {
       // The whole group clears at its first member's place in the queue.
       if (fairGroup[0] === order) clearFairGroup(fairGroup);
@@ -363,6 +381,7 @@ export function settleProducerOrders(
   // Spill pass: after every order has cleared its own book, what a buyer still
   // wants is offered to leftover supply in its neighbouring states' books.
   for (const order of context.orders) {
+    if (electricity && order.commodity === "energy") continue;
     if (!order.spillBooks?.length) continue;
     if (order.supplierOfferId || order.contractUnitPrice != null) continue;
     if (order.quantityGroup || order.eligibleOfferIds) continue;
@@ -422,6 +441,7 @@ export function settleProducerOrders(
     }
   }
   return {
+    ...(electricity ? { electricity: electricity.summary() } : {}),
     accounts: [...context.cash]
       .sort(([a], [b]) => compareId(a, b))
       .map(([id, value]) => ({ id, cash: value })),

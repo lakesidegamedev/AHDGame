@@ -1,3 +1,4 @@
+import type { ElectricityNetwork, GridMarketSummary } from "@/lib/electricityNetwork/rules/types";
 export type RoutedPool = {
   stock: ProducerSupplyPool;
   total: number;
@@ -71,6 +72,7 @@ export function producerFillSpend(receipt: ProducerTradeReceipt): ProducerFillSp
 }
 
 export interface ProducerMarketResult {
+  electricity?: GridMarketSummary;
   accounts: MarketAccount[];
   tradeReceipt: ProducerTradeReceipt;
   offers: Array<{
@@ -123,6 +125,7 @@ function unique<T extends { id: string }>(rows: readonly T[], label: string): vo
 function prepareSettleProducerMarket(input: {
   /** Host-owned deadline, checked within a clearing before any persistent writes. */
   checkBudget?: () => void;
+  electricityNetwork?: ElectricityNetwork;
   turn: number;
   accounts: readonly MarketAccount[];
   offers: readonly ProducerOffer[];
@@ -593,6 +596,7 @@ function prepareSettleProducerMarket(input: {
   const marketFirst = new Set(input.marketFirstAccounts ?? []);
   if (input.ownSitesFirst) {
     for (const order of orders) {
+      if (input.electricityNetwork?.mode === "enforced" && order.commodity === "energy") continue;
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
       if (marketFirst.has(order.accountId)) continue;
       const eligible = eligibleSetOf(order) ?? null;
@@ -661,6 +665,7 @@ function prepareSettleProducerMarket(input: {
   // contracts keep their ordinary pass.
   if (homeByCountry.size > 0) {
     for (const order of orders) {
+      if (input.electricityNetwork?.mode === "enforced" && order.commodity === "energy") continue;
       if (!order.homeCountryFirst || !order.countryId) continue;
       if (order.supplierOfferId || order.contractUnitPrice != null) continue;
       const byPrice = homeByCountry.get(bookKey(order.commodity, order.book))?.get(order.countryId);

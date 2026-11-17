@@ -149,6 +149,7 @@ export type FinancialTxType =
   // Admin / system
   | "admin_transfer"
   | "onboarding_reward" // one-time new-player checklist completion payout
+  | "starting_capital" // endowment written onto a newly created character
   | "contest_prize" // weekly contest winner's cash prize
   | "casino_wager" // stake paid into the Discord casino house or a shared pot
   | "casino_payout" // winnings or a refunded stake paid out by the Discord casino

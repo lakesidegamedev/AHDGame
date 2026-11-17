@@ -8,7 +8,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { evaluateCeoSalaryVote, openCeoSalaryVote } from "@/lib/corporations/ceoSalaryVote";
-import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { buildSectorCurrencyRestatement } from "@/lib/corporations/queries/corporationDetail/currencyRestatement";
 import { computeRevenueRealizationRatio } from "@/lib/corporations/queries/corporationDetail/realizationRatio";
 import { sectorDailyRevenueBasis } from "@/lib/corporations/dailyRevenueBasis";
@@ -111,7 +111,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
             }
           )
           .toArray(),
-        loadFxRatesByCurrency(db),
+        loadValuationFxRates(db),
       ]);
       const restatement = buildSectorCurrencyRestatement(corporation, fxByCurrency);
       const revenueRealizationRatio = await computeRevenueRealizationRatio(
