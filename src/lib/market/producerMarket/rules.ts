@@ -519,13 +519,15 @@ function prepareSettleProducerMarket(input: {
     openingWanted: number,
     openingBudget: number,
     byPrice: ReadonlyMap<number, readonly ProducerOffer[]>,
-    tag: { sellerState: string } | { homeCountry: true },
+    tag: { sellerState: string } | { homeCountry: true } | { spillBook: string },
     eligible: ReadonlySet<string> | null = null
   ): { wanted: number; orderBudget: number } => {
     let wanted = openingWanted;
     let orderBudget = openingBudget;
     const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
-    const key = bookKey(order.commodity, order.book);
+    // A spill fill is a sale in the seller's book, so price discovery stays per book.
+    const tradeBook = "spillBook" in tag ? tag.spillBook : order.book;
+    const key = bookKey(order.commodity, tradeBook);
     for (const [price, offers] of [...byPrice].sort(([a], [b]) => a - b)) {
       if (!(wanted > 0) || price > order.maximumUnitPrice) break;
       const rows = offers.filter(
@@ -546,7 +548,7 @@ function prepareSettleProducerMarket(input: {
       );
       const observed = prices.get(key) ?? {
         commodity: order.commodity,
-        book: order.book,
+        book: tradeBook,
         units: 0,
         value: 0,
         unitPrice: 0,
@@ -844,6 +846,7 @@ function prepareSettleProducerMarket(input: {
       fairGroupOf,
       filledByCountry,
       fillOwnStock,
+      fillLocalOffers,
       fills,
       fillsWithCountries,
       groupBudget,
