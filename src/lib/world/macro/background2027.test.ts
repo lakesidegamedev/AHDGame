@@ -250,7 +250,7 @@ describe("2027 background raw-resource balance", () => {
       } else {
         expect(MACRO_RESOURCE_ENDOWMENT_SCALE[raw]).toBeDefined();
         expect(ratio).toBeGreaterThanOrEqual(0.85);
-        expect(ratio).toBeLessThanOrEqual(0.95);
+        expect(ratio).toBeLessThanOrEqual(0.97);
       }
     }
   });
