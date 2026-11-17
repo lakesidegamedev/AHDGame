@@ -13,6 +13,23 @@ afterEach(() => {
 });
 
 describe("Discord unlink requirement", () => {
+  it("binds the Discord link to the account displayed by settings", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({ discordLinkRequired: false }) }))
+    );
+    render(
+      <IdentitySection expectedUserId="account-a" character={{}} onCharacterUpdate={vi.fn()} />
+    );
+    const form = screen
+      .getAllByRole("button")
+      .find((button) => button.closest("form")?.getAttribute("action") === "/api/auth/discord")
+      ?.closest("form");
+    expect(form).toBeTruthy();
+    expect(form?.querySelector<HTMLInputElement>('input[name="expectedUserId"]')?.value).toBe(
+      "account-a"
+    );
+  });
   it("has account messages in both supported translations", () => {
     for (const messages of [en, de]) {
       expect(messages.settings.identity.discordUnlinkRequired).toBeTruthy();

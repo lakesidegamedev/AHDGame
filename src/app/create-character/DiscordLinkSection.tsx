@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
+import {
+  ACCOUNT_CHANGED_MESSAGE,
+  providerLinkSessionStatus,
+} from "@/lib/auth/rules/providerLinkSession";
 
 interface DiscordLinkSectionProps {
   required?: boolean;
   onLinked?: () => void;
   onBeforeLink?: () => void;
+  expectedUserId: string | null;
+  onAccountChanged?: () => void;
+  accountChanged?: boolean;
   /** Initial linked state from auth data. */
   initialLinked: boolean;
   /** Current user data to show linked status. */
@@ -34,6 +41,9 @@ export function DiscordLinkSection({
   required = false,
   onLinked,
   onBeforeLink,
+  expectedUserId,
+  onAccountChanged,
+  accountChanged: parentAccountChanged = false,
   discordId,
   discordUsername,
   discordAvatar,
@@ -41,29 +51,46 @@ export function DiscordLinkSection({
   const [oauthLinked, setLinked] = useState(false);
   const linked = initialLinked || oauthLinked;
   const [polling, setPolling] = useState(false);
+  const [accountChanged, setAccountChanged] = useState(false);
+  const stopped = useRef(false);
+  const checking = useRef(false);
 
   const checkLinked = useCallback(async () => {
+    if (parentAccountChanged || stopped.current || checking.current || !expectedUserId) return;
+    checking.current = true;
     try {
       const res = await fetch("/api/auth/me", { cache: "no-store" });
-      if (res.ok && (await res.json()).user?.discordId) {
+      if (!res.ok) return;
+      const user = (await res.json()).user;
+      if (providerLinkSessionStatus(expectedUserId, user?.id) === "changed") {
+        stopped.current = true;
+        setAccountChanged(true);
+        setLinked(false);
+        setPolling(false);
+        onAccountChanged?.();
+        return;
+      }
+      if (providerLinkSessionStatus(expectedUserId, user?.id) === "same" && user.discordId) {
         setLinked(true);
         setPolling(false);
-        onLinked?.();
+        if (!linked) onLinked?.();
       }
     } catch {
       /* Temporary connection failures can be retried. */
+    } finally {
+      checking.current = false;
     }
-  }, [onLinked]);
+  }, [expectedUserId, onAccountChanged, onLinked, parentAccountChanged, linked]);
   useEffect(() => {
-    if (linked) return;
+    if (parentAccountChanged || accountChanged) return;
     const onFocus = () => {
       void checkLinked();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [linked, checkLinked]);
+  }, [linked, checkLinked, parentAccountChanged, accountChanged]);
   useEffect(() => {
-    if (!polling || linked) return;
+    if (!polling || linked || parentAccountChanged || accountChanged) return;
     const interval = setInterval(() => {
       void checkLinked();
     }, 1000);
@@ -72,16 +99,17 @@ export function DiscordLinkSection({
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [polling, linked, checkLinked]);
+  }, [polling, linked, checkLinked, parentAccountChanged, accountChanged]);
 
   const handleLink = () => {
+    if (!expectedUserId || stopped.current || parentAccountChanged) return;
     onBeforeLink?.();
     const returnUrl = window.location.pathname + window.location.search;
-    const linkUrl = `/api/auth/discord?returnUrl=${encodeURIComponent(returnUrl)}`;
+    const linkUrl = `/api/auth/discord?returnUrl=${encodeURIComponent(returnUrl)}&expectedUserId=${encodeURIComponent(expectedUserId)}`;
     // Open in a new tab so the user doesn't lose their form progress
     const popup = window.open(linkUrl, "discord-account-link");
     if (!popup) {
-      window.location.assign(linkUrl);
+      window.location.assign(new URL(linkUrl, window.location.origin).href);
       return;
     }
     setPolling(true);
@@ -89,6 +117,17 @@ export function DiscordLinkSection({
 
   const avatarUrl =
     linked && discordId ? getDiscordAvatarUrl(discordId, discordAvatar ?? undefined) : null;
+
+  if (accountChanged || parentAccountChanged) {
+    return (
+      <div role="alert" className="rounded-xl border border-error/30 p-4">
+        <p>{ACCOUNT_CHANGED_MESSAGE}</p>
+        <button type="button" onClick={() => window.location.reload()}>
+          Reload account
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border border-card-border bg-card shadow-card">
@@ -137,7 +176,7 @@ export function DiscordLinkSection({
             <button
               type="button"
               onClick={handleLink}
-              disabled={polling}
+              disabled={polling || !expectedUserId}
               className="inline-flex items-center gap-2 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-wait"
             >
               {DiscordIcon}

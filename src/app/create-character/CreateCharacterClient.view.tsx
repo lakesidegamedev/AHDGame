@@ -68,6 +68,8 @@ export function renderCreateCharacterClientView(
     majorParties,
     noPartiesAvailable,
     onDiscordLinked,
+    onDiscordAccountChanged,
+    discordAccountChanged,
     parties,
     partySelectorVisible,
     partyTouched,
@@ -397,6 +399,9 @@ export function renderCreateCharacterClientView(
 
   const discordPanel = (
     <DiscordLinkSection
+      expectedUserId={userId}
+      accountChanged={discordAccountChanged}
+      onAccountChanged={onDiscordAccountChanged}
       initialLinked={discordLinked}
       required={discordRequired}
       onLinked={onDiscordLinked}
