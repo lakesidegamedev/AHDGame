@@ -168,3 +168,44 @@ describe("owned producer capacity", () => {
     ).toThrow("schedule");
   });
 });
+
+describe("whole plants: the delivered part of a plant under construction produces", () => {
+  const SIZE = 250;
+  const wholeState = (): ProducerCapacityState => ({
+    completedTurn: 10,
+    ownedDailyUnits: SIZE,
+    paidBookAnchor: 500,
+    buildQueue: [
+      { unitsOrdered: SIZE, costPaidAnchor: 1000, startTurn: 10, onlineTurn: 14, smooth: true },
+    ],
+    wholePlants: { plantUnits: SIZE, creditUnits: 0, wearUnits: 0 },
+  });
+
+  it("a one-plant order delivers a quarter of a plant next turn and runs it", () => {
+    const next = advance(wholeState());
+    expect(next.deliveredDailyUnits).toBeCloseTo(SIZE / 4, 9);
+    expect(next.state.ownedDailyUnits).toBe(SIZE);
+    expect(next.state.wholePlants?.creditUnits).toBeCloseTo(SIZE / 4, 9);
+    expect(next.capacityUnits).toBeCloseTo((SIZE + SIZE / 4) / TURNS_PER_DAY, 9);
+  });
+
+  it("telescopes into the whole plant with no capacity lost or counted twice", () => {
+    let state = wholeState();
+    for (let i = 0; i < 4; i++) {
+      const next = advance(state);
+      expect(next.capacityUnits).toBeCloseTo(
+        (next.state.ownedDailyUnits + (next.state.wholePlants?.creditUnits ?? 0)) / TURNS_PER_DAY,
+        9
+      );
+      state = next.state;
+    }
+    expect(state.ownedDailyUnits).toBe(2 * SIZE);
+    expect(state.wholePlants?.creditUnits ?? 0).toBeCloseTo(0, 9);
+    expect(state.buildQueue).toEqual([]);
+  });
+
+  it("still scales the part-plant by the active fraction", () => {
+    const next = advance(wholeState(), 0.5);
+    expect(next.activeUnits).toBeCloseTo((next.capacityUnits * 1) / 2, 12);
+  });
+});
