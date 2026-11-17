@@ -253,6 +253,35 @@ describe("TechTab input efficiency cap warnings", () => {
   });
 });
 
+describe("TechTab era baseline", () => {
+  it("shows the era baseline on one line while the researched part still has room", async () => {
+    const tree = responseWithTree();
+    tree.inputEfficiencyPct = 4;
+    tree.inputEfficiencyCapPct = 30;
+    Object.assign(tree, { eraBaseline: { plantOutputPct: 12, inputEfficiencyPct: 30 } });
+    Object.assign(tree.decades[1].lanes.generic[0], {
+      inputEfficiencyContributionPct: 6,
+      effects: [{ category: "input", label: "−6% plant inputs" }],
+    });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+    renderTechTab();
+    await screen.findByRole("heading", { name: "Corporate track" });
+    expect(screen.getByText("Era baseline")).toBeTruthy();
+    expect(screen.getByText("+12% output, −30% inputs")).toBeTruthy();
+    expect(screen.getByText("−4%")).toBeTruthy();
+    expect(screen.queryByText(/adds nothing/)).toBeNull();
+  });
+
+  it("hides the era baseline line when the world does not count it", async () => {
+    const tree = responseWithTree();
+    Object.assign(tree, { eraBaseline: { plantOutputPct: 0, inputEfficiencyPct: 0 } });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+    renderTechTab();
+    await screen.findByRole("heading", { name: "Corporate track" });
+    expect(screen.queryByText("Era baseline")).toBeNull();
+  });
+});
+
 describe("TechTab research tree", () => {
   it("restores tech illustrations and explains baseline grants, prerequisites, and funding gaps", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
