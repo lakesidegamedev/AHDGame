@@ -72,6 +72,12 @@ export interface PurchaseOrder {
    * order takes the level whole when it comes up in id order.
    */
   fairShare?: boolean;
+  /**
+   * Books of neighbouring states whose leftover supply this order may buy once
+   * every order has cleared its own book (one hop, same country). Absent = the
+   * order meets only its own book.
+   */
+  spillBooks?: readonly string[];
 }
 
 export interface ProducerTrade {
@@ -110,6 +116,8 @@ export interface ProducerTradeReceipt {
     sellerState?: string;
     /** A home-country-first fill: every seller is in the buyer's `countryId`. */
     homeCountry?: true;
+    /** A neighbour-spill fill: every seller is in this other book, not the order's own. */
+    spillBook?: string;
     /**
      * Own-sites-first tier of an internal transfer: 0 the buyer's state, 1 the
      * buyer's country outside that state, 2 anywhere else. Absent = all own offers.
@@ -197,7 +205,7 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     const eligible = eligibleSetOf(order);
     const suppliers = fill.supplierOfferIds && new Set(fill.supplierOfferIds);
     const internal = fill.kind === "internalTransfer";
-    const book = bookKey(order.commodity, order.book);
+    const book = bookKey(order.commodity, fill.spillBook ?? order.book);
     const matchesOrder = (offer: ProducerOffer) =>
       (offer.accountId === order.accountId) === internal &&
       (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
@@ -205,13 +213,17 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
       (!eligible || eligible.has(offer.id)) &&
       (!fill.sellerState || offer.stateId === fill.sellerState) &&
       (!fill.homeCountry || offer.countryId === order.countryId) &&
+      (!fill.spillBook || offer.countryId === order.countryId) &&
       (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier) &&
       !(fill.skipOutsideFirst && offer.sellOutsideFirst);
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
     const group =
-      !internal && order.supplierOfferId == null && order.contractUnitPrice == null
+      !internal &&
+      !fill.spillBook &&
+      order.supplierOfferId == null &&
+      order.contractUnitPrice == null
         ? (priceBuckets.get(book)?.get(fill.unitPrice) ?? []).filter(matchesOrder)
         : (books.get(book) ?? []).filter(
             (offer) =>
@@ -224,6 +236,7 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
       !internal &&
       !fill.sellerState &&
       !fill.homeCountry &&
+      !fill.spillBook &&
       !fill.supplierOfferIds &&
       !order.eligibleOfferIds &&
       !order.supplierOfferId &&
