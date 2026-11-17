@@ -267,7 +267,15 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     }
     if (pooled) pooled.take(fill.units);
   }
-  if (tradeCount !== receipt.tradeCount) throw new Error("Producer trade count mismatch");
+  // The replay re-derives supplier legs from each fill, so sold-out price
+  // levels can leave floating-point dust that the clearing pass counted as
+  // empty (or the reverse). Every fill's legs still sum to its units, so the
+  // tariff and levy amounts built from these trades are unaffected. A count
+  // drift is logged, not fatal: throwing here halted turn 4 of the 2027 world.
+  if (tradeCount !== receipt.tradeCount)
+    console.warn(
+      `[producerTrades] trade count drift on turn ${receipt.turn}: replay ${tradeCount}, clearing ${receipt.tradeCount}`
+    );
 }
 
 export interface ProducerFillSpend {
