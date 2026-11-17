@@ -15,7 +15,7 @@ describe("linear build delivery re-anchor", () => {
     const o = order({ smooth: true, plantUnits: 100 });
     const next = reanchoredOrder(o, 4)!;
     expect(next).toEqual({ startTurn: 4, deliveryBaseFraction: 0 });
-    const moved = { ...o, ...next } as SectorBuildOrder;
+    const moved = { ...(o as object), ...next } as SectorBuildOrder;
     expect(deliveredFraction(moved, 4)).toBe(0);
     expect(deliveredFraction(moved, 5)).toBeCloseTo(1 / 6, 9);
     expect(deliveredFraction(moved, 10)).toBe(1);
@@ -25,7 +25,7 @@ describe("linear build delivery re-anchor", () => {
     const o = order({ smooth: true, plantUnits: 25 });
     const next = reanchoredOrder(o, 5)!;
     expect(next.deliveryBaseFraction).toBe(0.5);
-    const moved = { ...o, ...next } as SectorBuildOrder;
+    const moved = { ...(o as object), ...next } as SectorBuildOrder;
     expect(deliveredFraction(moved, 5)).toBe(0.5);
     expect(deliveredFraction(moved, 6)).toBeCloseTo(0.6, 9);
     expect(deliveredFraction(moved, 10)).toBe(1);

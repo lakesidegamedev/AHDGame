@@ -27,7 +27,7 @@ function hasWindow(order: SectorBuildOrder): boolean {
 
 /**
  * An order is on linear delivery once it carries `deliveryBaseFraction` (new
- * orders are placed with 0; the 2026-11-17 migration stamps in-flight ones).
+ * orders are placed with 0; the linear-build-delivery migration stamps in-flight ones).
  * Unstamped orders keep their original lump or whole-plant curve, so a turn
  * that runs before the migration never loses or repeats delivered capacity.
  */
