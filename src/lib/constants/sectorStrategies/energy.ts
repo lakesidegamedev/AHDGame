@@ -52,22 +52,6 @@ export const ENERGY_STRATEGIES: SectorStrategy[] = [
     },
   },
   {
-    id: "fracking",
-    requiresTechUnlock: true,
-    minDecade: "2009",
-    name: "Hydraulic Fracturing",
-    description:
-      "Maximal hydrocarbon output: energy, oil and gas all flow, at the cost of heavy steel, chemical, water-handling and sand inputs.",
-    supply: { energy: 0.6, oil: 0.14, natural_gas: 0.14 },
-    demand: {
-      steel: 0.2,
-      chemicals: 0.18,
-      iron: 0.08,
-      freight: 0.1,
-      construction_services: 0.1,
-    },
-  },
-  {
     id: "standard",
     name: "Conventional",
     description: "Traditional fossil-fuel energy generation with established infrastructure.",
