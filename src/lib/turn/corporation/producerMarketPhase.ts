@@ -1,8 +1,7 @@
 /** The corporation host loads real operating cash and settles one complete funded market. */
 import { ObjectId, type Db } from "mongodb";
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
+import type { Corporation } from "@/lib/db/types";
 import type { ProducerCashBinding } from "@/lib/market/producerMarket/cashSettlementRules";
 import {
   assertProducerTurnFence,
@@ -100,6 +99,7 @@ export async function runCorporationProducerMarket(
     rates: ReadonlyMap<CurrencyCode, number>;
     demand?: Pick<
       TurnInput["production"],
+      | "electricityNetwork"
       | "households"
       | "externalOrders"
       | "externalOffers"

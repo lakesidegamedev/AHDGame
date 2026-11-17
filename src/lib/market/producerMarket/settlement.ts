@@ -1,3 +1,6 @@
+import { compareElectricity } from "@/lib/electricityNetwork/comparison";
+import type { ElectricityReport } from "@/lib/electricityNetwork/rules/report";
+import type { ElectricityNetwork } from "@/lib/electricityNetwork/rules/types";
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { recordPhaseSubstep, substepMarker } from "@/lib/observability/phaseSubsteps";
@@ -57,6 +60,8 @@ interface FrozenProducerTurn {
 }
 
 interface ProducerTurnRecord {
+  electricityNetwork?: ElectricityNetwork;
+  electricityReport?: ElectricityReport;
   _id: string;
   worldEpoch: string;
   turn: number;
@@ -654,6 +659,7 @@ export async function settleProducerTurn(
       })),
     };
     clock.lap("capacityMs");
+    const electricityPassLimit = production.maximumPlanningPasses;
     const payload: FrozenProducerTurn = {
       version: 1,
       createdAt: new Date().toISOString(),
@@ -691,6 +697,13 @@ export async function settleProducerTurn(
       })(),
     };
     clock.lap("closeMs");
+    const electricityReport = compareElectricity(
+      production,
+      payload.result,
+      input.targets,
+      electricityPassLimit
+    );
+    clock.lap("electricityComparisonMs");
     validateTargets(payload);
     clock.lap("validateTargetsMs");
     // The market is fully computed here. The execution deadline guards the
@@ -705,6 +718,10 @@ export async function settleProducerTurn(
       worldEpoch: input.worldEpoch,
       turn,
       status: "frozen",
+      ...(production.electricityNetwork
+        ? { electricityNetwork: production.electricityNetwork }
+        : {}),
+      ...(electricityReport ? { electricityReport } : {}),
       digest: encoded.digest,
       payload: encoded.payload,
     };

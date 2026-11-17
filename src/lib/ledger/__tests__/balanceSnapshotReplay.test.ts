@@ -68,7 +68,7 @@ it("includes withheld operating cash in the corporation balance until settlement
   expect((stored?.balances as Record<string, number>)[`corporation:${id}:USD`]).toBe(100);
 });
 
-it("snapshots a legacy-currency producer wallet at 1:1 instead of dropping the snapshot", async () => {
+it("values a legacy-currency producer wallet at the authored era rate instead of dropping the snapshot", async () => {
   const memory = createInMemoryDb();
   const legacyWalletId = JSON.stringify(["epoch-1", "households", "FR", "FR_IDF", "FRF"]);
   const usdWalletId = JSON.stringify(["epoch-1", "households", "US", "DC", "USD"]);
@@ -89,6 +89,6 @@ it("snapshots a legacy-currency producer wallet at 1:1 instead of dropping the s
   expect(written).toBeGreaterThan(0);
   expect(balances[`corporation:${corpId}:USD`]).toBe(50);
   expect(balances[`economy_wallet:${usdWalletId}:USD`]).toBe(100);
-  // No observed FRF rate: the emit-side fallback values it 1:1.
-  expect(balances[`economy_wallet:${legacyWalletId}:FRF`]).toBeCloseTo(3261.39);
+  // No live FRF row: the same authored rate the settlement legs use (4.2 FRF per anchor).
+  expect(balances[`economy_wallet:${legacyWalletId}:FRF`]).toBeCloseTo(3261.39 / 4.2, 4);
 });

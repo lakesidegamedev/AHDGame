@@ -1,3 +1,4 @@
+import type { GridDelivery } from "@/lib/electricityNetwork/rules/types";
 import { ProducerSupplyPool } from "@/lib/market/producerMarket/supplyPoolRules";
 import { bookKey } from "@/lib/market/producerMarket/bookKey";
 
@@ -81,6 +82,8 @@ export interface PurchaseOrder {
 }
 
 export interface ProducerTrade {
+  dispatchedUnits?: number;
+  gridPath?: readonly string[];
   id: string;
   kind: "sale" | "internalTransfer";
   offerId: string;
@@ -104,6 +107,7 @@ export interface ProducerTradeReceipt {
   offers: readonly ProducerOffer[];
   orders: readonly PurchaseOrder[];
   fills: Array<{
+    grid?: GridDelivery;
     orderId: string;
     kind: "sale" | "internalTransfer";
     unitPrice: number;
@@ -202,7 +206,56 @@ export function* producerTrades(
     }
     priceBuckets.set(key, byPrice);
   }
+  const offersById = new Map(receipt.offers.map((o) => [o.id, o]));
+  let fillIndex = 0;
   for (const fill of receipt.fills) {
+    const index = fillIndex++;
+    if (fill.grid) {
+      const offer = offersById.get(fill.grid.offerId),
+        order = orders.get(fill.orderId);
+      if (
+        !offer ||
+        !order ||
+        offer.commodity !== "energy" ||
+        order.commodity !== "energy" ||
+        !Number.isFinite(fill.units) ||
+        fill.units < 0 ||
+        !Number.isFinite(fill.grid.dispatchedUnits) ||
+        fill.grid.dispatchedUnits < fill.units - 1e-9 ||
+        !Number.isFinite(fill.unitPrice) ||
+        fill.unitPrice < 0 ||
+        !Number.isFinite(fill.units * fill.unitPrice) ||
+        bookKey(order.commodity, order.book) !== bookKey(offer.commodity, offer.book) ||
+        (fill.kind === "internalTransfer") !== (order.accountId === offer.accountId) ||
+        (fill.kind === "internalTransfer" && fill.unitPrice !== 0) ||
+        (order.supplierOfferId != null && order.supplierOfferId !== offer.id) ||
+        (eligibleSetOf(order) != null && !eligibleSetOf(order)!.has(offer.id))
+      )
+        throw Error("Invalid electricity receipt");
+      const available = remaining.get(offer.id)!;
+      if (fill.grid.dispatchedUnits > available + Math.max(1e-8, available * 1e-10))
+        throw Error("Electricity receipt exceeds supply");
+      remaining.set(offer.id, Math.max(0, available - fill.grid.dispatchedUnits));
+      if (!accountId || order.accountId === accountId || offer.accountId === accountId)
+        yield {
+          id: JSON.stringify([receipt.turn, order.id, offer.id, "grid", index]),
+          kind: fill.kind,
+          offerId: offer.id,
+          orderId: order.id,
+          sellerAccountId: offer.accountId,
+          buyerAccountId: order.accountId,
+          commodity: order.commodity,
+          book: order.book,
+          units: fill.units,
+          unitPrice: fill.unitPrice,
+          amount: fill.units * fill.unitPrice,
+          sellerCountry: offer.countryId,
+          buyerCountry: order.countryId,
+          dispatchedUnits: fill.grid.dispatchedUnits,
+          gridPath: fill.grid.path,
+        };
+      continue;
+    }
     const order = orders.get(fill.orderId);
     if (!order) throw new Error("Missing producer trade order");
     const eligible = eligibleSetOf(order);

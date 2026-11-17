@@ -123,7 +123,16 @@ const CommandEconomyAdminPanel = dynamic(
   { ssr: false }
 );
 
+const ElectricityNetworkAdminPanel = dynamic(
+  () =>
+    import("@/components/admin/economy/ElectricityNetworkAdminPanel").then((m) => ({
+      default: m.ElectricityNetworkAdminPanel,
+    })),
+  { ssr: false }
+);
+
 export type EconomySubTab =
+  | "electricity-network"
   | "central-banks"
   | "inflation"
   | "stock-market"
@@ -158,6 +167,7 @@ export function AdminEconomyTab({ activeSub }: AdminEconomyTabProps) {
         {activeSub === "labour" && <LabourAdminPanel />}
         {activeSub === "market" && <MarketAdminPanel />}
         {activeSub === "bonds" && <BondsAdminPanel />}
+        {activeSub === "electricity-network" && <ElectricityNetworkAdminPanel />}
         {activeSub === "commodities" && <CommoditiesAdminPanel />}
         {activeSub === "resource-capacity" && <ResourceCapacityAdminPanel />}
         {activeSub === "extraction" && <ExtractionAdminPanel />}

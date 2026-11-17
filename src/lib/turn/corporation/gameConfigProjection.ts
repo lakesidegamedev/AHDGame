@@ -4,6 +4,7 @@
  * architecture size limit.
  */
 export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
+  electricityNetworkMode: 1,
   marketSystemMode: 1,
   turnResilienceStage: 1,
   nppDividendAfterTaxStage: 1,

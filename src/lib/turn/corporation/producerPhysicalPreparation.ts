@@ -125,6 +125,7 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** gameConfig.producerOwnSitesFirstStage >= 1: own sites take own output first, nearest first. */
   ownSitesFirst?: boolean;
+  electricityNetworkMode?: import("@/lib/electricityNetwork/rules/types").ElectricityNetworkMode;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
   /** gameConfig.producerPublicCarryReleaseStage >= 1: release carry over several turns. */

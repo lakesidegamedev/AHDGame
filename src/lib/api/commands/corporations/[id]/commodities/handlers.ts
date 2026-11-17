@@ -21,8 +21,8 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
   fxRateForSectorHostFromMap,
   resolveSectorHostCurrencyCode,
+  withAuthoredEraRates,
 } from "@/lib/currency/corporationCapital";
-import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import type { CorporateSector } from "@/lib/db/types";
@@ -340,11 +340,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // units. Falling back to 1.0 inflates them 13.5x to 27x, so fill only the
     // absent ones from the authored preset — exactly what the turn path does
     // in `buildLookups`. Live rates are never overwritten.
-    for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
-      if (fxByCurrency.has(code)) continue;
-      const authoredRate = eraRateForCurrency(code, worldPreset);
-      if (authoredRate !== undefined) fxByCurrency.set(code, authoredRate);
-    }
+    withAuthoredEraRates(fxByCurrency, worldPreset);
     const flowSectors = sectors.map((sector) => ({
       ...sector,
       revenueAnchor: readCorpEconomicAnchor(

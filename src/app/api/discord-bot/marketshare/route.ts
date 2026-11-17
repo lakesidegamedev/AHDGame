@@ -16,7 +16,7 @@ import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currenc
 import {
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   resolveSectorHostCurrencyCode,
   type CorpCapitalCurrencyInfo,
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
           stateId: { $in: [...scopedStateIds] },
         })
         .toArray(),
-      loadFxRatesByCurrency(db),
+      loadValuationFxRates(db),
     ]);
 
     const corpIds = [...new Set(sectorsInScope.map((sec) => sec.corporationId.toString()))]

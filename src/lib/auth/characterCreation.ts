@@ -23,7 +23,8 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getCountryAccess } from "@/lib/countryAccess";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
+import { emitStartingCapital } from "@/lib/financialTxLog/startingCapital";
+import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { getSeedCurrencyCode } from "@/lib/constants/currencies";
@@ -460,6 +461,17 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
       }
     }
     const characterId = result.insertedId;
+
+    // The endowment enters with the insert, so it needs a mint entry or the
+    // shadow ledger sees a new account appear with no cause.
+    await emitStartingCapital(db, {
+      characterId,
+      characterName: name,
+      turn: gameTime.currentTurn,
+      personalCurrency: homeCurrency,
+      campaignCurrency: getHomeCurrency({ countryId }),
+      endowment: character.currencyBalances,
+    });
 
     // Point the account at the new character before any best-effort follow-up
     // work. If a later step throws, the player still lands on this character
