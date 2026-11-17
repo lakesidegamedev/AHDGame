@@ -14,11 +14,11 @@ import {
   type CompareRow,
   type RankedNation,
 } from "@/lib/world/rankings";
+import { comparePairReady, compareShareParam } from "@/lib/world/countryCompare";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useWorldMetricFilter, type WorldMetricsCountry } from "../WorldMetricFilterContext";
 
 const SLOT_COUNT = 2;
-const DEFAULT_CATEGORY: MetricCategoryId = "economic";
 
 /**
  * Side-by-side reading of two nations picked on the globe.
@@ -33,12 +33,33 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
     compareMode,
     setCompareMode,
     compareCountryIds,
+    compareCategory,
+    setCompareCategory,
     toggleCompareCountry,
     clearCompare,
     worldMetrics,
   } = useWorldMetricFilter();
   const countryName = useCountryDisplayName();
-  const [chosenCategory, setChosenCategory] = useState<MetricCategoryId>(DEFAULT_CATEGORY);
+
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+
+  // Built at click time from the live address, so the link carries the current
+  // origin and any other world parameters already in the URL.
+  const shareComparison = async () => {
+    if (!navigator.clipboard) {
+      setCopyState("failed");
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("compare", compareShareParam(compareCountryIds));
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    window.setTimeout(() => setCopyState("idle"), 2200);
+  };
 
   // Every national document, keyed by country id. The ISO-keyed map is a subset
   // and only fills gaps in the by-id payload.
@@ -57,7 +78,7 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   if (!compareMode) return null;
 
   const categories = worldMetrics?.availableCategories ?? [];
-  const category = categories.includes(chosenCategory) ? chosenCategory : categories[0];
+  const category = categories.includes(compareCategory) ? compareCategory : categories[0];
 
   const sides = Array.from({ length: SLOT_COUNT }, (_, index) => {
     const id = compareCountryIds[index] ?? null;
@@ -111,6 +132,20 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {comparePairReady(compareCountryIds) && (
+            <button
+              type="button"
+              onClick={shareComparison}
+              aria-live="polite"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            >
+              {copyState === "copied"
+                ? "Link copied"
+                : copyState === "failed"
+                  ? "Copy failed"
+                  : "Copy link"}
+            </button>
+          )}
           {compareCountryIds.length > 0 && (
             <button
               type="button"
@@ -170,7 +205,7 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
             <button
               key={entry}
               type="button"
-              onClick={() => setChosenCategory(entry)}
+              onClick={() => setCompareCategory(entry)}
               className={`rounded-md px-2 py-0.5 text-body-sm font-medium transition-colors ${
                 entry === category
                   ? "bg-primary/20 text-primary border border-primary/30"
