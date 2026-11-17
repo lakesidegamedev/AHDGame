@@ -87,7 +87,7 @@ describe("climate laws", () => {
     const coal = carbonPriceInputPenalty(3, "energy", "standard");
     expect(coal).toBeGreaterThan(0);
     expect(carbonPriceInputPenalty(4, "energy", "standard")).toBeGreaterThan(coal);
-    expect(carbonPriceInputPenalty(3, "energy", "fracking")).toBeLessThan(coal);
+    expect(carbonPriceInputPenalty(3, "energy", "gas_fired")).toBeLessThan(coal);
     expect(carbonPriceInputPenalty(3, "chemical_industries", "standard")).toBeGreaterThan(0);
     expect(carbonPriceInputPenalty(4, "energy", "wind")).toBe(0);
     expect(carbonPriceInputPenalty(4, "energy", "nuclear")).toBe(0);
