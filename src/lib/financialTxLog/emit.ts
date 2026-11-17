@@ -193,6 +193,7 @@ const TX_TYPE_TO_AUDIT_ACTION: Partial<Record<FinancialTxType, string>> = {
   // Admin / system
   admin_transfer: "admin.transfer",
   onboarding_reward: "money.onboarding_reward",
+  starting_capital: "money.starting_capital",
   contest_prize: "money.contest_prize",
   casino_wager: "casino.wager",
   casino_payout: "casino.payout",

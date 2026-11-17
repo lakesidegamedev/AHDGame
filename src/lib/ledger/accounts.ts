@@ -14,6 +14,7 @@ import type {
  * colon-delimited string whose LAST segment is always the currency code:
  *
  *   character:<id>:<currency>          personal wallet (currencyBalances.personal.X / cashOnHand)
+ *   character_campaign:<id>:<currency> campaign wallet (currencyBalances.campaign, home currency)
  *   character_savings:<id>:<currency>  savings balance
  *   corporation:<id>:<currency>        corp liquidCapital
  *   party:<id>:<currency>              party treasury
@@ -29,11 +30,13 @@ import type {
 
 export type LedgerAccountKind =
   | "character"
+  | "character_campaign"
   | "character_savings"
   | "corporation"
   | "economy_wallet"
   | "party"
   | "state_party"
+  | "campaign_fund"
   | "bond_pool"
   | "government"
   | "government_cash"
@@ -60,9 +63,15 @@ export type LedgerAccountKind =
  *
  * `org` is backed by organizationFunds.balanceLocal, keyed by organizationId
  * and the stored/founding country currency.
+ *
+ * `character_campaign` is the campaign wallet (`currencyBalances.campaign`). It
+ * is its own account so campaign money neither pollutes the personal wallet's
+ * stock check nor household money statistics. `campaign_fund` (an election
+ * campaign's war chest) has no stock-checked backing yet, so it is not real.
  */
 const REAL_ACCOUNT_KINDS: readonly LedgerAccountKind[] = [
   "character",
+  "character_campaign",
   "character_savings",
   "corporation",
   "economy_wallet",
@@ -95,6 +104,29 @@ export function accountKind(account: string): string {
 
 export function isRealAccount(account: string): boolean {
   return (REAL_ACCOUNT_KINDS as readonly string[]).includes(accountKind(account));
+}
+
+/**
+ * Tx rows that move the campaign wallet rather than the personal one. They are
+ * emitted with a plain `character` subject, so the account is re-pointed here.
+ */
+export function isCampaignWalletTx(tx: {
+  type: string;
+  meta?: Record<string, unknown> | null;
+}): boolean {
+  if (tx.type === "starting_capital") return tx.meta?.wallet === "campaign";
+  return (
+    tx.type === "office_income" ||
+    tx.type === "onboarding_reward" ||
+    tx.type === "campaign_donation"
+  );
+}
+
+/** Re-point a `character:` account at the same character's campaign wallet. */
+export function toCampaignWalletAccount(account: string): string {
+  return accountKind(account) === "character"
+    ? `character_campaign:${account.slice("character:".length)}`
+    : account;
 }
 
 /** Map a financialTxLog subject to a real account id. Returns null when unmappable. */

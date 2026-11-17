@@ -7,6 +7,7 @@ import { ObjectId, type Db } from "mongodb";
 import {
   COUNTRY_CURRENCY_MAP,
   ZOD_CURRENCY_ENUM,
+  eraRateForCurrency,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -66,6 +67,24 @@ function toAnchor(local: number, currency: string, rates: Map<string, number>): 
   return local / rate;
 }
 
+/**
+ * Like {@link toAnchor}, but a currency with no live row is valued at the
+ * preset's authored rate. Producer settlement books its wallet legs at that
+ * rate, so a household wallet held in a pre-euro code must be read the same way
+ * or the stock check sees the local balance as anchor value.
+ */
+function toAnchorWithEraFallback(
+  local: number,
+  currency: CurrencyCode,
+  rates: Map<string, number>,
+  preset: string | undefined
+): number {
+  const live = rates.get(currency);
+  if (live && live > 0) return local / live;
+  const authored = eraRateForCurrency(currency, preset);
+  return authored && authored > 0 ? local / authored : local;
+}
+
 function add(balances: Record<string, number>, account: string, anchor: number): void {
   if (!Number.isFinite(anchor) || anchor === 0) return;
   balances[account] = (balances[account] ?? 0) + anchor;
@@ -102,15 +121,25 @@ async function collectBalanceState(
   // --- Characters: personal + savings wallets --------------------------------
   const characters = charactersCollection<{
     _id: ObjectId;
+    countryId?: string;
     cashOnHand?: number;
     currencyBalances?: {
       personal?: Partial<Record<CurrencyCode, number>>;
       savings?: Partial<Record<CurrencyCode, number>>;
+      campaign?: number;
     };
   }>(db);
   const charCursor = characters.find(
     {},
-    { projection: { cashOnHand: 1, "currencyBalances.personal": 1, "currencyBalances.savings": 1 } }
+    {
+      projection: {
+        countryId: 1,
+        cashOnHand: 1,
+        "currencyBalances.personal": 1,
+        "currencyBalances.savings": 1,
+        "currencyBalances.campaign": 1,
+      },
+    }
   );
   for await (const c of charCursor) {
     const id = c._id.toString();
@@ -124,6 +153,13 @@ async function collectBalanceState(
     } else if (typeof c.cashOnHand === "number") {
       // Pre-forex character: cashOnHand is home currency; anchor 1:1 (USD-ish).
       add(balances, accountId("character", id, "USD"), c.cashOnHand);
+    }
+    // The campaign wallet is one unlabelled scalar in the character's home
+    // currency; income rows are emitted in the same era-blind home currency.
+    const campaign = c.currencyBalances?.campaign;
+    if (typeof campaign === "number") {
+      const cur = mapCurrency(c.countryId);
+      add(balances, accountId("character_campaign", id, cur), toAnchor(campaign, cur, rates));
     }
     const savings = c.currencyBalances?.savings;
     if (savings) {
@@ -221,18 +257,22 @@ async function collectBalanceState(
     { worldEpoch: gameState?.worldEpochId ?? "" },
     { projection: { currency: 1, cash: 1 } }
   );
-  // A wallet in a currency with no observed rate still snapshots at 1:1, the
-  // same fallback financialTxLog uses for its anchor legs, so one legacy wallet
-  // (for example a pre-euro balance left in a euro-zone world) cannot abort the
-  // whole snapshot. A wallet whose currency is not a ledger currency has no
-  // legs to reconcile and is skipped rather than thrown.
+  // A wallet in a currency with no live rate is valued at the authored era rate
+  // its settlement legs use, and at 1:1 only when none exists, so one legacy
+  // wallet cannot abort the whole snapshot. A wallet whose currency is not a
+  // ledger currency has no legs to reconcile and is skipped rather than thrown.
   for await (const wallet of producerWalletCursor) {
     const currency = ZOD_CURRENCY_ENUM.find((code) => code === wallet.currency);
     if (!currency || !Number.isFinite(wallet.cash)) continue;
     add(
       balances,
       accountId("economy_wallet", wallet._id, currency),
-      toAnchor(wallet.cash, currency, rates)
+      toAnchorWithEraFallback(
+        wallet.cash,
+        currency,
+        rates,
+        gameState?.preset ?? DEFAULT_SEED_PRESET
+      )
     );
   }
   const accountValuations: NonNullable<BalanceSnapshot["accountValuations"]> = {};
