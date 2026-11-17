@@ -671,7 +671,7 @@ describe("buildCapacity — cancel", () => {
   const outstanding = {
     unitsOrdered: 1_000,
     costPaidAnchor: 400_000,
-    startTurn: 990,
+    startTurn: CURRENT_TURN,
     onlineTurn: CURRENT_TURN + 50,
   };
 

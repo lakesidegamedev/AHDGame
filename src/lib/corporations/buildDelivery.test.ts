@@ -68,24 +68,47 @@ describe("buildDelivery — smooth orders ramp linearly", () => {
   });
 });
 
-describe("buildDelivery — legacy orders keep all-at-once landing", () => {
-  it("delivers zero until the online turn, then the whole order", () => {
+describe("buildDelivery — legacy orders with a window also ramp linearly", () => {
+  it("delivers a slice every turn instead of waiting for the online turn", () => {
     const o = legacy({ onlineTurn: 100 });
-    expect(unitsDeliveredThisTurn(o, 50)).toBe(0);
-    expect(unitsDeliveredThisTurn(o, 100)).toBe(100);
-    expect(costReleasedThisTurn(o, 100)).toBe(1_000);
+    expect(unitsDeliveredThisTurn(o, 50)).toBeCloseTo(1, 9);
+    expect(unitsDeliveredThisTurn(o, 100)).toBeCloseTo(1, 9);
+    expect(costReleasedThisTurn(o, 100)).toBeCloseTo(10, 9);
   });
 
-  it("holds full cost in CIP until it lands", () => {
+  it("releases CIP a slice at a time", () => {
     const o = legacy({ onlineTurn: 100 });
-    expect(undeliveredCost(o, 99)).toBe(1_000);
-    expect(undeliveredUnits(o, 99)).toBe(100);
+    expect(undeliveredCost(o, 50)).toBeCloseTo(500, 9);
     expect(undeliveredCost(o, 100)).toBe(0);
   });
 
-  it("a degenerate zero-window smooth order falls back to all-at-once", () => {
+  it("a degenerate zero-window order falls back to all-at-once", () => {
     const o = smooth({ startTurn: 100, onlineTurn: 100 });
     expect(unitsDeliveredThisTurn(o, 100)).toBe(100);
+  });
+});
+
+describe("buildDelivery — whole-plant orders deliver every turn", () => {
+  it("a one-plant order adds capacity from the first turn and telescopes to the plant", () => {
+    const o = smooth({ unitsOrdered: 25, plantUnits: 25, startTurn: 0, onlineTurn: 17 });
+    expect(unitsDeliveredThisTurn(o, 1)).toBeCloseTo(25 / 17, 9);
+    expect(unitsDeliveredSince(o, 0, 17)).toBeCloseTo(25, 9);
+    expect(costReleasedSince(o, 0, 17)).toBeCloseTo(1_000, 9);
+  });
+
+  it("a multi-plant order is no longer stepped", () => {
+    const o = smooth({ unitsOrdered: 300, plantUnits: 100, startTurn: 0, onlineTurn: 6 });
+    for (let t = 1; t <= 6; t++) expect(unitsDeliveredThisTurn(o, t)).toBeCloseTo(50, 9);
+  });
+});
+
+describe("buildDelivery — re-anchored in-flight orders", () => {
+  it("ramps the remainder from the recorded base without repeating it", () => {
+    const o = smooth({ startTurn: 4, onlineTurn: 10, deliveryBaseFraction: 0.5 });
+    expect(deliveredFraction(o, 4)).toBe(0.5);
+    expect(deliveredFraction(o, 7)).toBeCloseTo(0.75, 9);
+    expect(unitsDeliveredSince(o, 4, 10)).toBeCloseTo(50, 9);
+    expect(steadyUnitsPerTurn(o, 5)).toBeCloseTo(50 / 6, 9);
   });
 });
 
@@ -93,70 +116,47 @@ describe("buildDelivery — queueUndeliveredCost", () => {
   it("sums the undelivered cost across mixed orders", () => {
     const q = [
       smooth({ costPaidAnchor: 1_000, startTurn: 0, onlineTurn: 100 }), // 25% done → 750 left
-      legacy({ costPaidAnchor: 500, onlineTurn: 200 }), // not landed → 500 left
+      legacy({ costPaidAnchor: 500, onlineTurn: 200 }), // 12.5% done → 437.5 left
     ];
-    expect(queueUndeliveredCost(q, 25)).toBeCloseTo(750 + 500, 6);
+    expect(queueUndeliveredCost(q, 25)).toBeCloseTo(750 + 437.5, 6);
   });
 });
 
 describe("steadyUnitsPerTurn", () => {
-  it("is the linear slice for a smooth order still ramping", () => {
+  it("is the linear slice for an order still ramping", () => {
     expect(steadyUnitsPerTurn(smooth(), 10)).toBeCloseTo(1, 9);
+    expect(steadyUnitsPerTurn(legacy(), 10)).toBeCloseTo(1, 9);
   });
 
-  it("is zero for a legacy order and once an order has landed", () => {
-    expect(steadyUnitsPerTurn(legacy(), 10)).toBe(0);
+  it("is zero once an order has landed", () => {
     expect(steadyUnitsPerTurn(smooth(), 100)).toBe(0);
   });
 
-  it("is zero for a whole-plant order under one plant, which lands whole (ticket 1753)", () => {
-    // About 193 units against a 250-unit mine: nothing arrives until the online turn.
+  it("is the same slice for a sub-plant or one-plant whole-plant order", () => {
     const o = smooth({ unitsOrdered: 193, plantUnits: 250, startTurn: 606, onlineTurn: 614 });
-    expect(steadyUnitsPerTurn(o, 608)).toBe(0);
-    expect(unitsDeliveredThisTurn(o, 609)).toBe(0);
-    expect(unitsDeliveredThisTurn(o, 614)).toBeCloseTo(193, 9);
-  });
-
-  it("is zero when whole plants land less often than every turn", () => {
-    const o = smooth({ unitsOrdered: 300, plantUnits: 100, startTurn: 0, onlineTurn: 10 });
-    expect(steadyUnitsPerTurn(o, 1)).toBe(0);
-  });
-
-  it("keeps the rate when at least one whole plant lands every turn", () => {
-    const o = smooth({ unitsOrdered: 2_000, plantUnits: 100, startTurn: 0, onlineTurn: 10 });
-    expect(steadyUnitsPerTurn(o, 1)).toBeCloseTo(200, 9);
-    for (let turn = 1; turn <= 10; turn++) {
-      expect(unitsDeliveredThisTurn(o, turn)).toBeGreaterThanOrEqual(100);
-    }
+    expect(steadyUnitsPerTurn(o, 608)).toBeCloseTo(193 / 8, 9);
+    expect(unitsDeliveredThisTurn(o, 609)).toBeCloseTo(193 / 8, 9);
   });
 });
 
 describe("nextArrivalTurn", () => {
-  it("is the online turn for a legacy order and for an order under one plant", () => {
-    expect(nextArrivalTurn(legacy({ onlineTurn: 40 }), 10)).toBe(40);
-    const subPlant = smooth({
+  it("is the next turn for any ramping order", () => {
+    expect(nextArrivalTurn(legacy({ onlineTurn: 40 }), 10)).toBe(11);
+    const onePlant = smooth({
       unitsOrdered: 193,
       plantUnits: 250,
       startTurn: 606,
       onlineTurn: 614,
     });
-    expect(nextArrivalTurn(subPlant, 608)).toBe(614);
-  });
-
-  it("finds a mid-build plant: two plants over six turns land at the midpoint and the end", () => {
-    const o = smooth({ unitsOrdered: 200, plantUnits: 100, startTurn: 0, onlineTurn: 6 });
-    expect(nextArrivalTurn(o, 0)).toBe(3);
-    expect(nextArrivalTurn(o, 3)).toBe(6);
-  });
-
-  it("finds the next of several plants landing on most turns", () => {
-    const o = smooth({ unitsOrdered: 500, plantUnits: 100, startTurn: 0, onlineTurn: 6 });
-    expect(nextArrivalTurn(o, 0)).toBe(2);
-    expect(steadyUnitsPerTurn(o, 0)).toBe(0);
-  });
-
-  it("is the next turn for a linear order and null once an order has landed", () => {
+    expect(nextArrivalTurn(onePlant, 608)).toBe(609);
     expect(nextArrivalTurn(smooth(), 10)).toBe(11);
+  });
+
+  it("is the turn after the start for an order that has not started", () => {
+    expect(nextArrivalTurn(smooth({ startTurn: 20 }), 10)).toBe(21);
+  });
+
+  it("is null once an order has landed", () => {
     expect(nextArrivalTurn(smooth(), 100)).toBeNull();
   });
 });
@@ -204,19 +204,19 @@ describe("buildDelivery: catching up turns the build step did not run (#5169)", 
     expect(unitsDeliveredSince(o, 2, 9)).toBeCloseTo(perTurn, 9);
   });
 
-  it("still lands a legacy order once it has come due", () => {
-    expect(unitsDeliveredSince(legacy(), 90, 130)).toBe(100);
-    expect(unitsDeliveredSince(legacy(), 90, 99)).toBe(0);
+  it("ramps a legacy order with a window and lands the rest after it is due", () => {
+    expect(unitsDeliveredSince(legacy(), 90, 99)).toBeCloseTo(9, 9);
+    expect(unitsDeliveredSince(legacy(), 90, 130)).toBeCloseTo(10, 9);
   });
 });
 
 describe("plannedArrivalTurns", () => {
-  it("makes a one-plant order wait the full window", () => {
-    expect(plannedArrivalTurns(100, 100, 6)).toEqual({ firstInTurns: 6, lastInTurns: 6 });
+  it("starts next turn even for a one-plant order", () => {
+    expect(plannedArrivalTurns(100, 100, 6)).toEqual({ firstInTurns: 1, lastInTurns: 6 });
   });
 
-  it("lands the first of several plants before the last", () => {
-    expect(plannedArrivalTurns(300, 100, 6)).toEqual({ firstInTurns: 2, lastInTurns: 6 });
+  it("starts next turn for several plants too", () => {
+    expect(plannedArrivalTurns(300, 100, 6)).toEqual({ firstInTurns: 1, lastInTurns: 6 });
   });
 
   it("agrees with the delivery the turn applies", () => {

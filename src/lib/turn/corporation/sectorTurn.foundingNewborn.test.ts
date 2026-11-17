@@ -148,9 +148,11 @@ function run(sector: CorporateSector, currentTurn: number) {
 }
 
 describe("plants — a newly founded, zero-capacity sector", () => {
-  it("produces no revenue while its founding build is still under way", () => {
+  it("earns only on the capacity its founding build has delivered so far", () => {
     const { update } = run(newbornSector(), FOUNDED_TURN + 1);
-    expect(update.revenue as number).toBe(0);
+    expect(update.revenue as number).toBeGreaterThan(0);
+    // One slice in, nowhere near the legacy nameplate the founding flow writes.
+    expect(update.revenue as number).toBeLessThan(1_000_000 / 2);
   });
 
   it("does not explode: every written number stays finite", () => {
@@ -169,7 +171,7 @@ describe("plants — a newly founded, zero-capacity sector", () => {
     const queue = doc.buildQueue as SectorBuildOrder[];
     expect(queue).toHaveLength(1);
     expect(queue[0].unitsOrdered).toBe(5_000);
-    expect(doc.constructionInProgressAnchor).toBe(300_000);
+    expect(doc.constructionInProgressAnchor).toBeCloseTo(300_000 * (1 - 1 / BUILD_TURNS), 0);
   });
 
   it("turns the founding order into real capacity on its online turn", () => {
@@ -219,9 +221,9 @@ describe("plants, a newborn survives its own build window", () => {
   }
 
   it("prices its output even while its nameplate sits at zero", () => {
-    // One turn in, capacity is still 0 so the nameplate is legitimately 0.
+    // One turn in, the first slice of capacity has landed and is already priced.
     const { doc } = runForward(FOUNDED_TURN + 1, FOUNDED_TURN + 1);
-    expect(doc.revenue as number).toBe(0);
+    expect(doc.revenue as number).toBeGreaterThan(0);
     // Two turns in, reading revenue 0 back, the mix price must NOT collapse.
     // With capacity still 0 the nameplate stays 0, but the sector must not have
     // lost the ability to price anything, which is what the next case proves.

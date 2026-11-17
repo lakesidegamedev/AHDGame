@@ -587,13 +587,9 @@ export default function BuildCapacityDialog({
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
             </p>
             <p className="text-body-xs text-muted">{sizingNote}</p>
-            {arrivals && arrivals.firstInTurns !== arrivals.lastInTurns && (
+            {arrivals && (
               <p className="text-body-xs text-muted" data-testid="build-arrival">
-                {t("arrivalMany", {
-                  first: arrivals.firstInTurns,
-                  last: arrivals.lastInTurns,
-                  count: preview.safeCount,
-                })}
+                {t("arrivalLinear", { turns: arrivals.lastInTurns })}
               </p>
             )}
             {open && q.financing && (

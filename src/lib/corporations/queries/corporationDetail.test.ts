@@ -999,7 +999,8 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
     expect(row.plantCount).toBe(200);
     expect(row.producedUnits).toBe(4_000);
     expect(row.soldUnits).toBe(1_200);
-    expect(row.constructionInProgressAnchor).toBe(250_000);
+    // Three quarters of the 48-turn window has passed, so a quarter of the cost is still in construction.
+    expect(row.constructionInProgressAnchor).toBe(62_500);
     expect(row.mothballed).toBe(true);
     expect(row.workers).toBe(10);
     expect(row.workersDesired).toBe(40);
@@ -1012,20 +1013,20 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
     expect(row.buildQueueSummary).toEqual({
       orders: 1,
       unitsOrdered: 800,
-      unitsRemaining: 800,
-      unitsPerTurn: 0,
+      unitsRemaining: 200,
+      unitsPerTurn: 800 / 48,
       lastOnlineTurn: 52,
       nextOnlineTurn: 52,
-      // A legacy all-at-once order next adds capacity on its online turn.
-      nextArrivalTurn: 52,
+      // An order with a window adds capacity every turn.
+      nextArrivalTurn: 41,
       turnsRemaining: 12,
     });
   });
 
   it("derives displayed CIP from the loaded queue", async () => {
     const result = await load("plants", 9_000_000);
-    expect(result.sectors[0]?.constructionInProgressAnchor).toBe(250_000);
-    expect(result.corporation.physical?.constructionInProgressAnchor).toBe(250_000);
+    expect(result.sectors[0]?.constructionInProgressAnchor).toBe(62_500);
+    expect(result.corporation.physical?.constructionInProgressAnchor).toBe(62_500);
   });
 
   it("rolls the physicals up to corp level, with fill as a ratio of totals", async () => {
@@ -1035,7 +1036,7 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       producedUnits: 4_000,
       soldUnits: 1_200,
       fillRate: 0.3,
-      constructionInProgressAnchor: 250_000,
+      constructionInProgressAnchor: 62_500,
       unitsOnOrder: 800,
       buildingSectorCount: 1,
       mothballedSectorCount: 1,
