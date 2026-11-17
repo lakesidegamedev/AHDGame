@@ -28,6 +28,11 @@ import {
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
+import { loadFundedCountryBooks } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import {
+  fundedCountryMarketsByCommodity,
+  priceRowsTurn,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
 import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
@@ -227,6 +232,7 @@ export async function loadCommodityDominanceContext(
           projection: {
             commodity: 1,
             globalDemand: 1,
+            turn: 1,
             demandTruncatedUnits: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
             ...Object.fromEntries(countryStateIds.map((id) => [`stateDemand.${id}`, 1])),
@@ -234,6 +240,16 @@ export async function loadCommodityDominanceContext(
         }
       )
       .toArray();
+    // Country-booked services are measured against the funded country book, the
+    // same demand the country market page shows. The price rows' state demand
+    // is a different, far smaller figure for these commodities (a few crew-days
+    // against thousands), so it is only a fallback when no book was published.
+    const fundedMarkets =
+      targetCountryId && countryStateIds.length > 0
+        ? fundedCountryMarketsByCommodity(
+            (await loadFundedCountryBooks(db, priceRowsTurn(priceDocs) ?? args.turn))?.rows ?? []
+          )
+        : null;
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
     const countryDemand: Partial<Record<CommodityType, number>> = {};
@@ -249,6 +265,13 @@ export async function loadCommodityDominanceContext(
       if (typeof local === "number")
         stateDemand[doc.commodity] = local + latentDemandTopUp(local, worldCapped, truncated);
       if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity)) {
+        const fundedDemand = targetCountryId
+          ? fundedMarkets?.get(doc.commodity)?.[targetCountryId]?.demand
+          : undefined;
+        if (typeof fundedDemand === "number" && fundedDemand > 0) {
+          countryDemand[doc.commodity] = fundedDemand;
+          continue;
+        }
         const capped = countryStateIds.reduce(
           (sum, id) => sum + (Number(doc.stateDemand?.[id]) || 0),
           0
