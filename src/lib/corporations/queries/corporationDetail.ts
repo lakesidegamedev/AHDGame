@@ -21,6 +21,8 @@ import {
 } from "@/lib/corporations/reservedCorporateHoldings";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { withAuthoredEraRates } from "@/lib/currency/corporationCapital";
 import type { CountryId } from "@/lib/constants/countries";
 import { getTurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
@@ -121,8 +123,13 @@ export async function loadCorporationDetailView(args: {
   const { states, stateNameMap, stateCountryMap, uniqueStateIds, federalBudgets, gameState } =
     stateCtx;
 
-  const fxByCurrency = new Map<CurrencyCode, number>(
-    exchangeRateDocs.map((r) => [r.currencyCode as CurrencyCode, r.rate])
+  // Live rates plus the engine's authored fallback: cross-border sector money
+  // is stored in the host's era currency (FRF, ITL, ...), which has no live row.
+  const fxByCurrency = withAuthoredEraRates(
+    new Map<CurrencyCode, number>(
+      exchangeRateDocs.map((r) => [r.currencyCode as CurrencyCode, r.rate])
+    ),
+    gameState?.preset ?? DEFAULT_SEED_PRESET
   );
   if (!fxByCurrency.has("USD")) fxByCurrency.set("USD", 1.0);
 

@@ -17,13 +17,13 @@ import type { Corporation, CentralBank, ExchangeRate } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
-  eraRateForCurrency,
   getRuntimeInitialRates,
 } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
+  withAuthoredEraRates,
 } from "@/lib/currency/corporationCapital";
 import {
   eraScaledBasePrices,
@@ -407,11 +407,7 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
   // calibrated demand and `applyDemandCalibration` applies it (ticket 1370).
   const demandCalibration = demandCalibrationFor(activePreset);
   const ledgerCurrentYear = presetState?.currentYear ?? null;
-  for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
-    if (fxByCurrency.has(code)) continue;
-    const authoredRate = eraRateForCurrency(code, activePreset);
-    if (authoredRate !== undefined) fxByCurrency.set(code, authoredRate);
-  }
+  withAuthoredEraRates(fxByCurrency, activePreset);
   // Resolved here, above the supply ledger, because a command economy's media
   // produces state information rather than sold advertising. Safe to add: every
   // positional cursor the turn tests stub is already consumed by the parallel
