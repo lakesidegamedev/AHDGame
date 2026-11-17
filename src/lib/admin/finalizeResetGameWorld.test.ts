@@ -159,6 +159,8 @@ describe("finalizeResetGameWorld", () => {
     const doc = imfInsert![0] as Record<string, unknown>;
     expect(doc.name).toBe("International Monetary Fund");
     expect(doc.shareholders).toEqual([]);
+    // No holders and no float, so no shares may be recorded (share_accounting).
+    expect(doc.totalShares).toBe(0);
     expect(doc.ceoVacant).toBe(true);
     expect(doc.imfInstitution).toBe(true);
     // budgetSeedLog should mention the placeholder so admin sees the hint.
