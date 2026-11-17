@@ -3,20 +3,20 @@
   "sectorOps": 420,
   "corpOps": 60,
   "totalRevenueGenerated": 6460696.071294792,
-  "totalIncomeGenerated": 909633.4889322119,
+  "totalIncomeGenerated": 1086650.6548300975,
   "sectorsProcessed": 420,
-  "sha256": "f096f95499b3a2b39dfbbf447fbff781dd274995474548f67a1d3d24745e3603",
+  "sha256": "8e716d1ee06dec0d7946ec3cf7afc20d385b03d25048dde1b5404f8485abad45",
   "shadow": {
     "plants": 420,
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1294108.236182763,
+    "householdSpend": 1309872.0706675085,
     "publicSpend": 301.32424721597914,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "7f19825472deb5f9fc2098d969fdbfffa2a765214a4c6d108b40d65a32aa6a3e"
+    "sha256": "c853b3fbde823775f1107ab1673d49bad8abffa0b610ebea98fee64bfdf17551"
   },
   "clearing": {
     "sectorsWithClearing": 420,
@@ -28,7 +28,7 @@
     "contractTargets": 0,
     "brandLoyaltyUpdates": 60,
     "invariantBreaches": 0,
-    "sha256": "585c3e048d86c982e678f8fb35e6cf8deac9e5b19aad651f0c0e51cdc31e0fb2"
+    "sha256": "f2710d5889baced08fcc95b9a3e8055a160c1a3411146b2e294c61f131ba8faa"
   },
   "lookups": {
     "corporations": 60,
@@ -43,11 +43,11 @@
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1294108.2361827632,
+    "householdSpend": 1309872.0706675088,
     "publicSpend": 301.32424721597914,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "1c5661c063b4be0d08f300924c9f9d2d4bccd3c18cbce288c3bdf5476dca291b"
+    "sha256": "af140f96d8cab8a03c42cf9c8f65cde4bcd28660025ad3a8de43291a08d2a4ed"
   }
 }

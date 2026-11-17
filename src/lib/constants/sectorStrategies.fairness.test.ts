@@ -21,6 +21,19 @@ describe("input-heavy strategy fairness", () => {
     expect(demandRate(sector, strategy)).toBeCloseTo(expected, 10);
   });
 
+  it.each([
+    ["standard", 0.45],
+    ["brick_mortar", 0.4],
+    ["ecommerce", 0.35],
+    ["ecommerce_fulfillment", 0.38],
+  ] as const)("keeps modern retail/%s input rates at the audited ceiling", (strategy, expected) => {
+    const sum = Object.values(getStrategy("retail", strategy, "2027-default").demand).reduce(
+      (total, rate) => total + (rate ?? 0),
+      0
+    );
+    expect(sum).toBeCloseTo(expected, 10);
+  });
+
   it("does not change already-healthy benchmark recipes", () => {
     expect(demandRate("technology", "software")).toBeCloseTo(0.25, 10);
     expect(demandRate("financial", "standard")).toBeCloseTo(0.34, 10);
