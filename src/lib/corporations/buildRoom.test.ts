@@ -4,11 +4,24 @@ import { buildRoomUnits, queuedUndeliveredUnits } from "./buildRoom";
 describe("room to build", () => {
   it("counts only capacity still to be delivered", () => {
     const queue = [
-      { unitsOrdered: 100, costPaidAnchor: 1, startTurn: 10, onlineTurn: 20, smooth: true },
-      { unitsOrdered: 50, costPaidAnchor: 1, startTurn: 10, onlineTurn: 20 },
+      {
+        unitsOrdered: 100,
+        costPaidAnchor: 1,
+        startTurn: 10,
+        onlineTurn: 20,
+        smooth: true,
+        deliveryBaseFraction: 0,
+      },
+      {
+        unitsOrdered: 50,
+        costPaidAnchor: 1,
+        startTurn: 10,
+        onlineTurn: 20,
+        deliveryBaseFraction: 0,
+      },
     ];
-    // Smooth order half delivered at turn 15; all-at-once order not landed yet.
-    expect(queuedUndeliveredUnits(queue, 15)).toBeCloseTo(50 + 50);
+    // Both orders are half delivered at turn 15.
+    expect(queuedUndeliveredUnits(queue, 15)).toBeCloseTo(50 + 25);
     expect(queuedUndeliveredUnits(queue, 20)).toBe(0);
     expect(queuedUndeliveredUnits(undefined, 15)).toBe(0);
   });

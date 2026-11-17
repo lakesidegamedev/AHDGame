@@ -1045,6 +1045,7 @@ async function applyStateCapexGrowth(
         startTurn: turn,
         onlineTurn: turn + Math.max(1, CAPACITY_BUILD_TURNS(sector.sectorType)),
         smooth: true,
+        deliveryBaseFraction: 0,
         ...(wholePlantsGrowth ? { plantUnits } : {}),
       };
       return {

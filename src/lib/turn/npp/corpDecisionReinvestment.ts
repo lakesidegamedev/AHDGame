@@ -651,6 +651,7 @@ export function decideNppCapacityReinvestment({
         startTurn: ctx.turn,
         onlineTurn: ctx.turn + buildTurns,
         smooth: true,
+        deliveryBaseFraction: 0,
         ...(plants?.wholePlants ? { plantUnits: plantSizeForSector(sector) } : {}),
       };
       if (!affordable) {

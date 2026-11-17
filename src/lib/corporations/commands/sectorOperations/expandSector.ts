@@ -372,6 +372,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         startTurn: currentTurn,
         onlineTurn: starterOnlineTurn,
         smooth: true,
+        deliveryBaseFraction: 0,
         ...(wholePlants ? { plantUnits: starterUnits } : {}),
       };
       // capitalStock 0 + a queued order: the sector exists, owns nothing yet, and

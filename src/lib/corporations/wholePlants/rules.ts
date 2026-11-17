@@ -135,9 +135,9 @@ export function applyPlantChange(
 }
 
 /**
- * Plant steps for a build order. An order stamped with `plantUnits` delivers
- * whole plants: plant k of p lands on the first turn the linear ramp passes
- * k/p, the last on `onlineTurn`. Returns the stepped delivered fraction.
+ * The whole-plant step curve: plant k of p lands on the first turn the linear
+ * ramp passes k/p. Live delivery is linear; this only reconstructs what an
+ * in-flight order had already delivered under the step curve.
  */
 export function steppedDeliveredFraction(
   linearFraction: number,
