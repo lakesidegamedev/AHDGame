@@ -6,7 +6,7 @@ summary: >-
   pass instead of one country at a time.
 tags: [performance]
 badges: [patch]
-areas: [web]
+areas: [backend]
 ---
 
 ## What changed
