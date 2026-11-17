@@ -598,6 +598,9 @@ export async function buildProducerTurnDemand(
   });
   const backgroundOffers = background.offers;
   const backgroundOrders = background.orders;
+  // Background buyers share scarce world supply like public buyers; in id order
+  // the country code decided who got any (publicFairShareRules).
+  if (publicFairShareOn(env.publicFairShareStage)) markPublicFairShare(backgroundOrders);
   const routes = lookups.tradeRoutes;
   const worldRouteOffers = (): RouteOffer[] => [
     ...producers.flatMap((p) =>
