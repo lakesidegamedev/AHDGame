@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
+import { recordProviderLinkAudit } from "@/lib/auth/providerLinkAudit";
+vi.mock("@/lib/auth/providerLinkAudit", () => ({ recordProviderLinkAudit: vi.fn() }));
 
 const mocks = vi.hoisted(() => {
   const map = new Map<string, string>();
@@ -410,6 +412,25 @@ describe("google link context binding", () => {
 });
 
 describe("discord link", () => {
+  it("logs an already-owned Discord rejection without changing the session", async () => {
+    mocks.findOne.mockResolvedValueOnce(account()).mockResolvedValueOnce({ _id: new ObjectId() });
+    const res = await discordGet();
+    expect(res.headers.get("location")).toContain("reason=already_linked");
+    expect(mocks.updateOne).not.toHaveBeenCalled();
+    expect(mocks.cookieState.set).not.toHaveBeenCalledWith(
+      expect.stringMatching(/auth/),
+      expect.anything(),
+      expect.anything()
+    );
+    expect(recordProviderLinkAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "discord",
+        stage: "result",
+        reason: "already_linked",
+        userId,
+      })
+    );
+  });
   it("binds the write to the full credential snapshot and revokes sessions", async () => {
     freshReads(account({ googleId: "g1" }));
     const res = await discordGet();
@@ -429,6 +450,9 @@ describe("discord link", () => {
       authRevokedAt: cutoff,
       authMigrationFence: { $exists: false },
     });
+    expect(recordProviderLinkAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "completed", userId })
+    );
     expect(update.$set.discordId).toBe("discord-1");
     expect(update.$max.authRevokedAt).toBeInstanceOf(Date);
     expect(mocks.invalidateCachedUser).toHaveBeenCalledTimes(2);
@@ -518,6 +542,12 @@ describe("discord link context binding", () => {
     expect(location).toContain("reason=session_expired");
     expect(location).not.toContain("status=success");
     expect(mocks.updateOne).not.toHaveBeenCalled();
+    expect(recordProviderLinkAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: _label === "swapped browser account" ? "account_mismatch" : "context_invalid",
+        userId,
+      })
+    );
   });
 
   it("rejects a missing envelope with a retryable error and no write", async () => {

@@ -1,3 +1,4 @@
+import { recordProviderLinkAudit } from "@/lib/auth/providerLinkAudit";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/mongodb";
@@ -50,7 +51,13 @@ export async function GET(request: Request) {
     return response;
   };
 
+  const audit = (reason: Parameters<typeof recordProviderLinkAudit>[0]["reason"]) => {
+    if (mode !== "login")
+      recordProviderLinkAudit({ provider: "discord", stage: "callback", reason, state });
+  };
+
   if (isRateLimited) {
+    audit("rate_limited");
     return linkRedirect(resultUrl("error", "rate_limited"));
   }
 
@@ -60,6 +67,7 @@ export async function GET(request: Request) {
     if (shouldHandBackToApp(state, code, request.headers.get("user-agent"))) {
       return appHandbackPage(new URL(`${url.pathname}${url.search}`, baseUrl));
     }
+    audit("missing_mode");
     return linkRedirect(resultUrl("error", "session_expired"));
   }
 
@@ -73,11 +81,13 @@ export async function GET(request: Request) {
     "server_error",
   ];
   if (error) {
+    audit("provider_denied");
     const safeReason = KNOWN_DISCORD_ERRORS.includes(error) ? error : "exchange_failed";
     return linkRedirect(resultUrl("error", safeReason));
   }
 
   if (!code || !state) {
+    audit("missing_params");
     return linkRedirect(resultUrl("error", "missing_params", isLoginMode ? "/login" : "/settings"));
   }
 
@@ -85,6 +95,7 @@ export async function GET(request: Request) {
   const storedState = cookieStore.get("discord_oauth_state")?.value;
 
   if (!storedState || storedState !== state) {
+    audit("invalid_state");
     return linkRedirect(resultUrl("error", "invalid_state"));
   }
 
@@ -95,6 +106,7 @@ export async function GET(request: Request) {
   const redirectUri = discordRedirectUri();
 
   if (!clientId || !clientSecret || !redirectUri) {
+    audit("not_configured");
     return linkRedirect(resultUrl("error", "not_configured"));
   }
 
@@ -130,6 +142,7 @@ export async function GET(request: Request) {
       );
     }
   } catch (err) {
+    audit("exchange_failed");
     if (isLoginMode) console.error("Discord OAuth error:", err);
     else console.error("Discord account link is temporarily unavailable");
     const failed = NextResponse.redirect(resultUrl("error", "exchange_failed"));

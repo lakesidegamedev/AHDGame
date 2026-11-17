@@ -55,6 +55,7 @@ import {
 } from "./createCharacterDraft";
 
 import { discordGateReducer, initialDiscordGateState } from "./discordGateState";
+import { ACCOUNT_CHANGED_MESSAGE } from "@/lib/auth/rules/providerLinkSession";
 
 const JP_REGION_ID_SET = new Set(JP_REGIONS.map((r) => r.id));
 
@@ -135,6 +136,12 @@ function useCreateCharacterClientContext() {
   ] = useReducer(discordGateReducer, initialDiscordGateState);
   const onDiscordLinked = useCallback(() => {
     dispatchDiscord({ type: "linked" });
+  }, []);
+  const [discordAccountChanged, setDiscordAccountChanged] = useState(false);
+  const onDiscordAccountChanged = useCallback(() => {
+    setDiscordAccountChanged(true);
+    dispatchDiscord({ type: "dismiss" });
+    setError(ACCOUNT_CHANGED_MESSAGE);
   }, []);
   useEffect(() => {
     let mounted = true;
@@ -519,6 +526,10 @@ function useCreateCharacterClientContext() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (discordAccountChanged || !userId) {
+      setError(ACCOUNT_CHANGED_MESSAGE);
+      return;
+    }
     setIsLoading(true);
     setError("");
     // Save what is being filed right now, ahead of the debounced autosave, so
@@ -582,6 +593,7 @@ function useCreateCharacterClientContext() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          expectedUserId: userId,
           analyticsConsent: getStoredConsent() === "accepted",
           name: formData.characterName,
           homeState: formData.homeState,
@@ -598,6 +610,7 @@ function useCreateCharacterClientContext() {
 
       const characterData = await characterRes.json().catch(() => ({}));
       if (!characterRes.ok) {
+        if (characterData.code === "ACCOUNT_CHANGED") onDiscordAccountChanged();
         if (characterData.code === "DISCORD_LINK_REQUIRED") {
           dispatchDiscord({ type: "server-required" });
         }
@@ -745,6 +758,9 @@ function useCreateCharacterClientContext() {
 
   const statPointsLeft = pointsRemaining(stats);
   const requirements: CandidateFileRequirement[] = [
+    ...(discordAccountChanged
+      ? [{ key: "account", label: "Reload your signed-in account", met: false }]
+      : []),
     { key: "country", label: "Choose a country", met: Boolean(country) },
     { key: "name", label: "Name your politician", met: formData.characterName.trim().length >= 2 },
     { key: "background", label: "Complete the background", met: backgroundComplete },
@@ -819,6 +835,8 @@ function useCreateCharacterClientContext() {
       majorParties,
       noPartiesAvailable,
       onDiscordLinked,
+      onDiscordAccountChanged,
+      discordAccountChanged,
       parties,
       partySelectorVisible,
       partyTouched,
