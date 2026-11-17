@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { State } from "@/lib/db/types";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createCharacterSchema } from "@/lib/api/schemas/settings";
@@ -13,6 +12,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { ACCOUNT_CHANGED_MESSAGE } from "@/lib/auth/rules/providerLinkSession";
+import { recordAudit } from "@/lib/audit/recordAudit";
 
 // POST /api/auth/character — Creates a new character for the authenticated user with starting stats and referral bonuses.
 // Auth: requireBasicAuth
@@ -29,6 +30,18 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, createCharacterSchema);
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
+    }
+    if (parsed.data.expectedUserId && parsed.data.expectedUserId !== userId) {
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.character_create.account_mismatch",
+        actor: { kind: "player", userId: new ObjectId(userId) },
+        subject: { type: "account", id: userId },
+        outcome: "rejected",
+        reason: "account_mismatch",
+      });
+      return errorResponse(409, ACCOUNT_CHANGED_MESSAGE, { code: "ACCOUNT_CHANGED" });
     }
     return await createCharacterForAccount(userId, parsed.data);
   } catch (error) {

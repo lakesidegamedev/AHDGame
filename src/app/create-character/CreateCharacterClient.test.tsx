@@ -362,6 +362,41 @@ describe("Creation resilience", () => {
     );
     expect(localStorage.getItem("ahd:create-character-draft:u1")).not.toBeNull();
   });
+  it("blocks further submissions after the server detects an account switch", async () => {
+    characterResponse = {
+      ok: false,
+      status: 409,
+      body: { error: "Your signed-in account changed.", code: "ACCOUNT_CHANGED" },
+    };
+    render(<CreateCharacterPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /United States/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Eleanor Vance"), {
+      target: { value: "Switched Candidate" },
+    });
+    for (const label of ["Gender", "Race", "Education", "Wealth"])
+      fireEvent.click(
+        within(screen.getByRole("group", { name: new RegExp(`^${label}`) })).getAllByRole(
+          "button"
+        )[0]
+      );
+    fireEvent.click(await screen.findByRole("radio", { name: /California/ }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Party" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Spread evenly" }));
+    fireEvent.click(screen.getByRole("button", { name: /File|Create|Enter/ }));
+    await waitFor(() =>
+      expect(screen.getAllByText(/signed-in account changed/).length).toBeGreaterThan(0)
+    );
+    const requests = () =>
+      vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/auth/character");
+    expect(requests()).toHaveLength(1);
+    expect(
+      (screen.getByRole("button", { name: /File|Create|Enter/ }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect(JSON.parse(String(requests()[0][1]?.body))).toMatchObject({ expectedUserId: "u1" });
+    fireEvent.click(screen.getByRole("button", { name: /File|Create|Enter/ }));
+    expect(requests()).toHaveLength(1);
+    expect(localStorage.getItem("ahd:create-character-draft:u1")).not.toBeNull();
+  });
 });
 
 describe("required Discord linking", () => {

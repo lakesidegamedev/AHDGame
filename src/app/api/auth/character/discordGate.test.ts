@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
+vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
@@ -27,6 +28,25 @@ const data = {
 };
 beforeEach(() => vi.clearAllMocks());
 describe("character POST Discord requirement", () => {
+  it("rejects a stale account before any character creation work", async () => {
+    const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: new ObjectId().toHexString() },
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/auth/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, expectedUserId: new ObjectId().toHexString() }),
+      })
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: "ACCOUNT_CHANGED" });
+    expect(getDb).not.toHaveBeenCalled();
+  });
   it.each([false, true])(
     "blocks an unlinked account from creating a new character, admin=%s",
     async (isAdmin) => {

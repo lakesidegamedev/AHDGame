@@ -506,7 +506,7 @@ function useSettingsPageContentContext() {
         ),
         label: t("recommendations.linkDiscord"),
         action: "link",
-        href: "/api/auth/discord",
+        href: `/api/auth/discord?expectedUserId=${encodeURIComponent(userId)}`,
       });
     }
     if (corporation && !corporation.logoUrl) {
@@ -573,7 +573,13 @@ function useSettingsPageContentContext() {
           </div>
         );
       case "identity":
-        return <IdentitySection character={oauthData} onCharacterUpdate={onOauthUpdate} />;
+        return (
+          <IdentitySection
+            character={oauthData}
+            onCharacterUpdate={onOauthUpdate}
+            expectedUserId={userId}
+          />
+        );
       case "appearance":
         return (
           <div className="space-y-6">
