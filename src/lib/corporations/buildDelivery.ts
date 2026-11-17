@@ -18,10 +18,30 @@
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
+import { steppedDeliveredFraction } from "@/lib/corporations/wholePlants/rules";
 
 /** True when the order ramps in across a real window. */
 function hasWindow(order: SectorBuildOrder): boolean {
   return order.onlineTurn - order.startTurn > 0;
+}
+
+/**
+ * An order is on linear delivery once it carries `deliveryBaseFraction` (new
+ * orders are placed with 0; the 2026-11-17 migration stamps in-flight ones).
+ * Unstamped orders keep their original lump or whole-plant curve, so a turn
+ * that runs before the migration never loses or repeats delivered capacity.
+ */
+function isLinear(order: SectorBuildOrder): boolean {
+  return typeof order.deliveryBaseFraction === "number";
+}
+
+function legacyFraction(order: SectorBuildOrder, turn: number): number {
+  if (!(order.smooth === true && hasWindow(order))) return turn >= order.onlineTurn ? 1 : 0;
+  const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
+  const linear = f <= 0 ? 0 : f >= 1 ? 1 : f;
+  return order.plantUnits != null && order.plantUnits > 0
+    ? steppedDeliveredFraction(linear, order.unitsOrdered, order.plantUnits)
+    : linear;
 }
 
 function baseFraction(order: SectorBuildOrder): number {
@@ -35,6 +55,7 @@ function baseFraction(order: SectorBuildOrder): number {
  * orders. A degenerate window is a step at `onlineTurn`.
  */
 export function deliveredFraction(order: SectorBuildOrder, turn: number): number {
+  if (!isLinear(order)) return legacyFraction(order, turn);
   if (!hasWindow(order)) return turn >= order.onlineTurn ? 1 : 0;
   const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
   const linear = f <= 0 ? 0 : f >= 1 ? 1 : f;
@@ -83,7 +104,8 @@ export function resolveBuildSettledTurn(
 /** Share of the order delivered after `settledTurn` up to `currentTurn`. */
 function deliveredSlice(order: SectorBuildOrder, settledTurn: number, currentTurn: number): number {
   if (settledTurn >= currentTurn) return 0;
-  if (!hasWindow(order)) return currentTurn >= order.onlineTurn ? 1 : 0;
+  if (!hasWindow(order) || (!isLinear(order) && order.smooth !== true))
+    return currentTurn >= order.onlineTurn ? 1 : 0;
   const slice = deliveredFraction(order, currentTurn) - deliveredFraction(order, settledTurn);
   return slice > 0 ? slice : 0;
 }
@@ -129,6 +151,7 @@ export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: numbe
 export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number): number {
   const units = safeUnits(order);
   if (units === 0 || !hasWindow(order) || currentTurn >= order.onlineTurn) return 0;
+  if (!isLinear(order)) return 0;
   return (units * (1 - baseFraction(order))) / (order.onlineTurn - order.startTurn);
 }
 
@@ -140,6 +163,12 @@ export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number)
 export function nextArrivalTurn(order: SectorBuildOrder, currentTurn: number): number | null {
   if (safeUnits(order) === 0 || currentTurn >= order.onlineTurn) return null;
   if (!hasWindow(order)) return order.onlineTurn;
+  if (!isLinear(order)) {
+    for (let turn = Math.max(order.startTurn, currentTurn) + 1; turn < order.onlineTurn; turn++) {
+      if (legacyFraction(order, turn) > legacyFraction(order, turn - 1)) return turn;
+    }
+    return order.onlineTurn;
+  }
   return Math.min(order.onlineTurn, Math.max(order.startTurn, currentTurn) + 1);
 }
 
