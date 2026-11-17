@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { COMMODITY_BASE_PRICES, dollarsToUnits } from "@/lib/constants/commodities";
+import { MACRO_MEDIA_OUTPUT_SCALE, MACRO_RETAIL_OUTPUT_SCALE } from "./kernel";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
   AFRICA_AMERICAS_1953_MACRO_ENTITY_IDS,
@@ -771,5 +773,33 @@ describe("African / American 1953 Tier-2 roster (#3721)", () => {
         AFRICA_AMERICAS_1953_MACRO_ENTITY_IDS.length
     );
     expect(listAll1953MacroCountries()).toHaveLength(ALL_1953_MACRO_ENTITY_IDS.length);
+  });
+});
+
+describe("background retail and media balance", () => {
+  const sector = { capacity: 1_000_000, productivity: 1, domesticDemand: 500_000 };
+  const state = {
+    sectors: { retail: sector, media: sector },
+    resources: {},
+    stability: 1,
+    tradeExposure: 1,
+    shockModifier: 1,
+    population: 1_000_000,
+    economicSystem: "market" as const,
+  };
+
+  it("adds household retail demand and scales retail and media supply down", () => {
+    const result = computeMacroContribution(state, 1);
+    expect(result.byCommodity.retail?.demand ?? 0).toBeGreaterThan(0);
+    const unscaledRetail = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.retail);
+    expect(result.byCommodity.retail?.supply).toBeCloseTo(
+      unscaledRetail * MACRO_RETAIL_OUTPUT_SCALE,
+      0
+    );
+    const unscaledAds = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.advertising);
+    expect(result.byCommodity.advertising?.supply).toBeCloseTo(
+      unscaledAds * MACRO_MEDIA_OUTPUT_SCALE,
+      0
+    );
   });
 });
