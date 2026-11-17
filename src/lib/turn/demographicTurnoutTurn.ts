@@ -192,6 +192,7 @@ export async function processPartyGOTV(
       ? Promise.resolve<
           Array<{
             _id: string;
+            countryId?: string;
             population: number;
             gdp?: number;
             votingEligiblePopulation?: number;
@@ -199,13 +200,25 @@ export async function processPartyGOTV(
         >(
           [...preloadedStateMap.values()].map((s) => ({
             _id: s._id,
+            countryId: s.countryId,
             population: s.population,
             gdp: s.gdp,
             votingEligiblePopulation: s.votingEligiblePopulation,
           }))
         )
       : statesCollection(db)
-          .find({}, { projection: { _id: 1, population: 1, gdp: 1, votingEligiblePopulation: 1 } })
+          .find(
+            {},
+            {
+              projection: {
+                _id: 1,
+                countryId: 1,
+                population: 1,
+                gdp: 1,
+                votingEligiblePopulation: 1,
+              },
+            }
+          )
           .toArray();
 
     const [statePartyOrgs, parties, allCharacters, allNPPs, allStates] = await Promise.all([
