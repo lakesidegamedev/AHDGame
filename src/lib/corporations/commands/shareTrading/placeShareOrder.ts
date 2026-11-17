@@ -1,3 +1,4 @@
+import { prepareShareOrder } from "@/lib/corporations/commands/shareTrading/prepareShareOrder";
 import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
 import {
   loadStockWithholdingContexts,
@@ -9,6 +10,7 @@ import {
  * Share orders reserve funding for purchases and expose shares for sale.
  * placeShareOrder prices corporate currency conversion using the source authority.
  */
+
 import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
@@ -23,34 +25,22 @@ import {
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
 import type { PersonalHoldingChange } from "@/lib/corporations/personalHoldingOps";
 import { ObjectId } from "mongodb";
-import { getDb } from "@/lib/mongodb";
-import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireBasicAuth } from "@/lib/api/requireAuth";
-import { parseJsonBody } from "@/lib/api/validate";
-import { placeOrderSchema } from "@/lib/api/schemas/corporations";
+
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
-import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
+
 import {
   corpPurchaseWouldCycle,
   OWNERSHIP_CYCLE_ERROR,
 } from "@/lib/corporations/subsidiaries/cycleGuard";
-import type { ShareOrder } from "@/lib/db/types";
-import { getCharacterByUserId } from "@/lib/db/characterLookup";
+
 import {
   creditShares,
   debitShares,
   creditSharesToCorp,
   debitSharesFromCorp,
 } from "@/lib/corporations/shareholderOps";
-import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
-import { isForexEnabled } from "@/lib/currency/featureFlag";
-import {
-  buildPersonalBalanceInc,
-  getHomeCurrency,
-  loadCharacterFxRate,
-} from "@/lib/currency/characterFunds";
+
+import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   anchorToCorpLiquidCapital,
@@ -64,8 +54,7 @@ import {
 import { distributeConversionSpread } from "@/lib/currency/marketMaker";
 import { notifyHostileTakeoverThresholdIfEligible } from "@/lib/corporations/hostileTakeoverNotifications";
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
-import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
+
 import {
   atomicallyDebitCharacterCash,
   refundCharacterCash,
@@ -74,26 +63,19 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import {
   applyFloatBuyCredit,
-  settleFloatSellDebit,
   reverseFloatSellDebit,
   onFloatSellCommitted,
-  type EscrowDebitSplit,
 } from "@/lib/corporations/shareEscrowSettlement";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { loadPoolSellPacing, poolSellPacedMessage } from "@/lib/equities/blockPacing";
-import {
-  isOrderFlowPriceEligible,
-  isWithinShareExecutionBand,
-} from "@/lib/corporations/marketExecution";
-import { equityPoolDepthMessage, loadEquityQuote } from "@/lib/equities/marketPool";
+
 import { recordAudit } from "@/lib/audit/recordAudit";
-import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
-interface RouteParams {
+export interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
@@ -109,153 +91,31 @@ interface RouteParams {
  *   If current price >= limit price, fills immediately (money credited).
  *   Otherwise stays open until price rises.
  */
-export async function placeShareOrder(request: Request, { params }: RouteParams) {
+export async function placeShareOrder(...args: Parameters<typeof prepareShareOrder>) {
   try {
-    const auth = await requireBasicAuth();
-    if (!auth.ok) return auth.response;
-
-    const rateLimit = checkRateLimit(
-      `lib/corporations/commands/shareTrading/placeShareOrder:${auth.user.userId}`,
-      20,
-      60000
-    );
-    if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
-
-    const { id } = await params;
-    const parsed = await parseJsonBody(request, placeOrderSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    const { type, shares, pricePerShare, placeAsCorporation } = parsed.data;
-    const db = await getDb();
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
-    const turnGuard = await rejectDuringTurn(db);
-    if (turnGuard) return turnGuard;
-
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
-
-    // Private companies trade through Private sale only. A limit order leaves a
-    // resting bid only private holders can see but cannot fill, and the private
-    // sale band cannot match an order-book price. Refuse at the source.
-    if (corporation.isPrivate === true) {
-      return errorResponse(
-        400,
-        `${corporation.name} is a private company. Private shares change hands through a private sale, not the order book.`
-      );
-    }
-
-    const marketQuote = await loadEquityQuote(db, corporation);
-    const executionPrice = type === "buy" ? marketQuote.askPriceLocal : marketQuote.bidPriceLocal;
-    const orderFlowEligible = isOrderFlowPriceEligible(
-      corporation.publicFloat,
-      corporation.totalShares
-    );
-
-    // Limit prices must sit inside the fundamental-anchored sanity band.
-    // Off-fundamental orders were used for manipulation: fills far from
-    // fundamental inflated order-flow notionals at fabricated prices. Honest
-    // orders near market price are unaffected. The band only applies when the
-    // corp has a positive fundamentalSharePrice.
-    if (!isWithinShareExecutionBand(corporation, pricePerShare)) {
-      return errorResponse(
-        400,
-        `Limit price is too far from ${corporation.name}'s fundamental share price. Place an order closer to the current valuation.`
-      );
-    }
-
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) {
-      return errorResponse(404, "Character not found");
-    }
-    // Resting orders move value between players at fill time — same
-    // disguised-transfer surface the new-character barrier covers elsewhere.
-    const barrier = await newCharacterTransferBarrierResponse(character);
-    if (barrier) return barrier;
-    const tradeLock = await assertCeoTradeNotBlocked(db, corporation, character._id);
-    if (tradeLock.blocked) {
-      return errorResponse(tradeLock.status, tradeLock.error);
-    }
-    const now = new Date();
-    const forexEnabled = await isForexEnabled();
-    const homeCurrency = getHomeCurrency(character);
-
-    // sharePrice and user-supplied pricePerShare are both denominated in the
-    // target corp's liquidCurrencyCode (v0.2.6). Normalize to ₳ here; every
-    // cost/proceeds/escrow calculation below reads through this rate.
-    const targetFxRate = await getCorpFxRate(db, corporation);
-    const currentTurn = await getCurrentTurn(db);
-
-    // CEO self-acquisition cap: a personal buy order by the corp's own CEO counts
-    // against the 10%/120-turn window (reserved at placement; open buy orders are
-    // tallied by the guard). Corp-placed orders can't trade own shares (blocked below).
-    if (!placeAsCorporation && type === "buy") {
-      const ceoCap = await assertCeoAcquisitionWithinCap(
-        db,
-        corporation,
-        character._id,
-        "characterId",
-        shares,
-        currentTurn
-      );
-      if (ceoCap) return errorResponse(ceoCap.status, ceoCap.error);
-    }
-
-    // Treasury-backed market maker: an immediate-fill sell into the float is
-    // bought back from the ISSUER's own liquidCapital (its local currency),
-    // capped at what the treasury holds. Mirrors the market-order sell route so
-    // a limit order can't bypass the cap. (Pending orders that don't fill now
-    // are filled later peer-to-peer or by the turn processor.)
-    const issuerBuyback = shares * executionPrice;
-    const issuerCurrency = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";
-    // Hoisted so the outer-scope rollback paths can reverse the exact escrow/
-    // treasury split recorded when the issuer buyback was settled.
-    let issuerBuybackSplit: EscrowDebitSplit | undefined;
-    async function gateIssuerBuyback(): Promise<NextResponse | null> {
-      if (marketQuote.active && shares > marketQuote.bidDepthShares) {
-        return errorResponse(
-          400,
-          equityPoolDepthMessage(marketQuote.bidDepthShares, marketQuote.currency),
-          { extra: { marketDepthShares: marketQuote.bidDepthShares } }
-        );
-      }
-      const settle = await settleFloatSellDebit(db, corporation, issuerBuyback);
-      issuerBuybackSplit = settle.split;
-      if (settle.paced) {
-        const pacedShares =
-          executionPrice > 0 ? Math.floor((settle.pacedRemainingLocal ?? 0) / executionPrice) : 0;
-        return errorResponse(400, poolSellPacedMessage(pacedShares, corporation.name), {
-          extra: { marketPacedShares: pacedShares },
-        });
-      }
-      if (!settle.ok) {
-        const sym = CURRENCY_SYMBOLS[issuerCurrency] ?? "$";
-        return errorResponse(
-          400,
-          marketQuote.active
-            ? equityPoolDepthMessage(marketQuote.bidDepthShares, marketQuote.currency)
-            : `${corporation.name}'s treasury can't cover this sale (needs ${sym}${issuerBuyback.toLocaleString(undefined, { maximumFractionDigits: 0 })}). List the shares for sale to a real buyer instead.`,
-          {
-            extra: {
-              ...(marketQuote.active ? { marketDepthShares: marketQuote.bidDepthShares } : {}),
-            },
-          }
-        );
-      }
-      return null;
-    }
-
-    // A marketable sell larger than this turn's pool allowance for the company
-    // rests as an order instead of failing; the turn order book fills it a
-    // slice per turn at the market price (blockPacing.ts).
-    async function sellExceedsPoolAllowance(): Promise<boolean> {
-      if (type !== "sell" || !marketQuote.active) return false;
-      const pacing = await loadPoolSellPacing(db, corporation._id);
-      return issuerBuyback > pacing.remainingLocal + 0.01;
-    }
+    const prepared = await prepareShareOrder(...args);
+    if (prepared.kind === "early") return prepared.value;
+    const {
+      character,
+      corporation,
+      currentTurn,
+      db,
+      executionPrice,
+      forexEnabled,
+      gateIssuerBuyback,
+      homeCurrency,
+      issuerBuyback,
+      issuerBuybackSplit,
+      now,
+      orderFlowEligible,
+      parsed,
+      placeAsCorporation,
+      pricePerShare,
+      sellExceedsPoolAllowance,
+      shares,
+      targetFxRate,
+      type,
+    } = prepared.context;
 
     if (placeAsCorporation) {
       const placerCorp = await corporationsCollection(db).findOne({

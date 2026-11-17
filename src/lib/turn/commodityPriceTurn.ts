@@ -1,4 +1,5 @@
-import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand";
+import { settleCommodityPrices } from "@/lib/market/settleCommodityPrices";
+
 /**
  * How commodity prices move each turn. processCommodityPriceTurn sums supply
  * and demand from owned sectors, prices each commodity as 50% global + 25%
@@ -10,8 +11,9 @@ import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand"
  * so the turn's query count and positional fetch sequence are unchanged. Phase
  * logic lives in ./commodity/.
  */
+
 import { getDb } from "@/lib/mongodb";
-import type { CommodityPrice, Corporation, CentralBank, ExchangeRate } from "@/lib/db/types";
+import type { Corporation, CentralBank, ExchangeRate } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
@@ -24,7 +26,6 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import {
-  COMMODITY_TYPES,
   eraScaledBasePrices,
   computeRawSupplyDemand,
   type SectorUnitsOut,
@@ -45,23 +46,19 @@ import {
   getDemographicsDemandEnabled,
   getHouseholdConsumptionEnabled,
 } from "@/lib/market/featureFlag";
-import {
-  plantsHouseholdUnitScale,
-  PLANTS_HOUSEHOLD_SUPPLY_CAP,
-} from "@/lib/turn/householdConsumption";
+import { PLANTS_HOUSEHOLD_SUPPLY_CAP } from "@/lib/turn/householdConsumption";
 import {
   demandSupplyCapForStage,
   normalizeCommodityFixStage,
   retailGdpParamsForStage,
-  stockCoverCapTurnsForStage,
 } from "@/lib/market/commodityFixStages";
-import { normalizeMarketRecoveryStage } from "@/lib/market/marketRecoveryStages";
+
 import {
   inputDemandRealPhaseProgress,
   inputDemandRealPhaseStartTurnFrom,
 } from "@/lib/market/inputDemandRealPhase";
 import { GOVERNMENT_DEMAND_SUPPLY_CAP } from "@/lib/turn/commodity/rules/healthcareDemandCap";
-import { STOCK_COVER_CAP_TURNS } from "@/lib/market/inventory";
+
 import { computeExtractionCapacityMultipliers } from "@/lib/turn/extraction/extractionCapacity";
 import { getStateResourceCapacityCollection } from "@/lib/db/collections/stateResourceCapacity";
 import {
@@ -71,37 +68,14 @@ import {
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import type { CountryId } from "@/lib/constants/countries";
 import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
-import {
-  fundedLedgers,
-  withStatelessCountryDemand,
-  type FundedLedgerRow,
-} from "@/lib/market/producerMarket/fundedLedgerRules";
-import {
-  selectFundedReachableBooks,
-  type FundedCountryBookRow,
-} from "@/lib/market/producerMarket/fundedBookRules";
 
-import { clearAllCommodities } from "@/lib/trade/snapshot";
-import { buildReachableBooks } from "@/lib/trade/reachableBook";
-import {
-  applyTradeConvergence,
-  capClearingToSourcedTrade,
-  tradeConvergenceK,
-} from "@/lib/trade/convergence";
-import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
-import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
-import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
 import { applySphereRoutedMacroContributions } from "@/lib/world/spheres";
-import {
-  addBackgroundBooksToCountries,
-  backgroundCountryContributions,
-  placeBackgroundBooksInStates,
-} from "@/lib/world/macro/rules/countryBooks";
+
 import { depletedCapacityDoc } from "@/lib/extraction/depletion";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolveCommodityNominalIndices } from "@/lib/market/commodityNominalIndex";
-import { persistCommodityNominalIndex } from "@/lib/turn/commodityNominalIndexPersistence";
+
 export { realizedOutputFraction } from "@/lib/extraction/realizedOutputFraction";
 import {
   buildStateLookups,
@@ -113,46 +87,15 @@ import {
   withRealizedOutputCaps,
   accumulatePlantsUnits,
 } from "./commodity/sectorLedger";
-import {
-  applyAdvertisingDemand,
-  applyDemographicsUplift,
-  applyHouseholdDemand,
-  applyLatentFinancialDemand,
-  applyRateSensitiveDemand,
-  aggregateByCountry,
-  applyGovernmentDemand,
-  capHealthcareDemandToLocalSupply,
-  globalDemandCapSupply,
-  applyDemandCalibration,
-  demandCalibrationFor,
-  buildStatesByCountry,
-  collectHouseholdSignals,
-  sumHouseholdDemand,
-} from "./commodity/demandLegs";
-import {
-  buildNudgeMap,
-  buildLaggedRatios,
-  priceCommodity,
-  type CommodityPricingContext,
-} from "./commodity/pricing";
-import { buildBlocsByCountry, buildCurtainedCountries } from "./commodity/tradeContext";
-import { runFreightSettlementPhase } from "./commodity/sourcingSettlement";
-import {
-  buildOwnFreightCapacity,
-  buildOwnMarketSupply,
-  buildOwnRoutes,
-} from "@/lib/logistics/ownRoutes";
-import { stateHops } from "@/lib/logistics/stateDistance";
-import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
-import { persistTurnOutputs } from "./commodity/persistence";
-import { loadBlockadeClosure } from "./commodity/blockadeClosure";
+import { demandCalibrationFor } from "./commodity/demandLegs";
+
 import { bookExtractionDepletion } from "./commodity/extractionDepletion";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
-import { TREATY_TRADE_DIRECTIVE_KEYS } from "@/lib/trade/rules/treatyTrade";
+
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
@@ -160,12 +103,6 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
-import type { Document } from "mongodb";
-import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
-import { tariffsCollection } from "@/lib/db/repositories/tariffs";
-import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
-import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
-import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -214,7 +151,7 @@ export function recentDebtIssuanceFilter(turn: number) {
   };
 }
 
-export async function processCommodityPriceTurn(turn: number): Promise<CommodityPriceTurnResult> {
+async function prepareProcessCommodityPriceTurn(turn: number) {
   const db = await getDb();
   const now = new Date();
   // Window covers one game year (48 turns). Latent financial demand derives from
@@ -712,565 +649,68 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
 
   // Tier-2 sphere-macro countries: last kernel tick's held contribution feeds every normal-turn global market, routed via primary-sphere rules so secondary ties cannot duplicate benefits.
   const macroApplied = await applySphereRoutedMacroContributions(db, global, turn);
-
-  // Background countries: their regions hold no sectors or modelled
-  // households, so their book is their macro economy. The world total already
-  // carries it; here the same units land in the country's own regions so the
-  // national book, freight sourcing and trade clearing treat it as a buyer and
-  // seller. State-built demand legs run over market states only, so these
-  // regions and budgets are not counted twice.
-  const marketStates =
-    backgroundCountryIds.size === 0
-      ? allStates
-      : allStates.filter((state) => !backgroundCountryIds.has(state.countryId));
-  const unplacedBackgroundBooks =
-    backgroundCountryIds.size === 0
-      ? []
-      : placeBackgroundBooksInStates(
-          backgroundCountryContributions(macroApplied.background, backgroundCountryIds),
-          buildStatesByCountry(
-            allStates.filter((state) => backgroundCountryIds.has(state.countryId))
-          ),
-          byState
-        );
-
-  // ── Demand legs ───────────────────────────────────────────────────────
-  applyAdvertisingDemand(
-    {
+  return {
+    kind: "context" as const,
+    context: {
       allCorporations,
-      currencyByCorpId,
-      advertisingBasePrice: LEDGER_BASE_PRICES["advertising"],
-    },
-    global,
-    byState
-  );
-
-  if (demographicsDemandEnabled) {
-    applyDemographicsUplift(marketStates, global, byState);
-  }
-
-  const healthcareOtherDemandByState = new Map(
-    [...byState].map(([stateId, balances]) => [
-      stateId,
-      balances.get("healthcare_services")?.demand ?? 0,
-    ])
-  );
-  let householdFinalDemandByState = new Map<string, Map<CommodityType, number>>();
-  if (householdConsumptionEnabled) {
-    // Optional per-world sizing override (sandbox tuning without a redeploy).
-    const pcCfg = await gameConfigCollection(db).findOne(
-      { _id: "default" },
-      { projection: { householdConsumptionPerCapita: 1 } }
-    );
-    const perCapitaOverride =
-      typeof pcCfg?.householdConsumptionPerCapita === "number" &&
-      pcCfg.householdConsumptionPerCapita > 0
-        ? pcCfg.householdConsumptionPerCapita
-        : undefined;
-    const { metricsByState, priorGlobalPrice, priorGlobalSupply } = collectHouseholdSignals({
-      allStateMetrics,
-      existingPrices,
-    });
-    householdFinalDemandByState = applyHouseholdDemand(
-      {
-        eraUnitScale: ledgerEraUnitScale,
-        supplyCapMultiple: householdSupplyCap,
-        // Plants worlds: re-anchor household demand onto the physical unit basis
-        // plants supply uses, clamped per commodity against prior supply. Legacy
-        // worlds pass 1/undefined and are byte-identical (ticket #1027).
-        plantsUnitScale: plantsLedgerEnabled ? plantsHouseholdUnitScale(worldPreset) : 1,
-        priorGlobalSupply: plantsLedgerEnabled
-          ? globalDemandCapSupply(priorGlobalSupply)
-          : undefined,
-        states: marketStates.map((s) => ({
-          stateId: s._id,
-          countryId: s.countryId,
-          gdp: s.gdp ?? 0,
-          population: s.population ?? 0,
-        })),
-        metricsByState,
-        priorGlobalPrice,
-        perCapita: perCapitaOverride,
-        financialDemandByCountry: await loadFinancialCrisisDemand(
-          db,
-          turn,
-          allCorporations,
-          federalBudgets
-        ),
-        demandCalibration,
-      },
-      global,
+      allStateBudgets,
+      allStates,
+      backgroundCountryIds,
       byState,
-      demandTruncated
-    );
-  }
-
-  // Built once here: sovereign issuance allocation (latent financial leg) and
-  // government regional distribution read the same country → state-GDP shares.
-  const statesByCountry = buildStatesByCountry(marketStates);
-
-  applyLatentFinancialDemand(
-    {
-      statesByCountry,
-      allCorporations,
+      commodityFixStage,
+      commodityNominalPriceIndex,
+      countries,
+      db,
+      demandTruncated,
+      demographicsDemandEnabled,
+      existingPrices,
+      federalBudgets,
+      fixStageCfg,
+      fxByCurrency,
+      fxRateForCountry,
+      global,
+      governmentSupplyCap,
+      householdConsumptionEnabled,
+      householdSupplyCap,
+      LEDGER_BASE_PRICES,
+      ledgerCommandEconomyEnabled,
+      ledgerConfig,
+      ledgerCurrentYear,
+      ledgerEraUnitScale,
+      macroApplied,
+      nominalIndices,
+      now,
+      nudgeDocs,
+      plantsLedgerEnabled,
+      plantsUnitsByCommodity,
+      presetState,
+      producerPath,
+      productionInputDemandByState,
+      sectorData,
+      sectorUnits,
+      stateToCountry,
+      turn,
+      worldPreset,
+      currencyByCorpId,
+      allStateMetrics,
+      demandCalibration,
       recentBonds,
       centralBankByCountry,
-      // Bonds without a currency stamp predate multi-currency issuance and are in ₳.
-      fxRateForBond: (bond) =>
-        bond.currencyCode
-          ? (fxByCurrency.get(bond.currencyCode) ??
-            (bond.issuerType === "sovereign" ? fxRateForCountry(bond.countryId) : 1))
-          : 1,
-    },
-    global,
-    byState
-  );
-
-  applyRateSensitiveDemand(
-    {
-      allStateBudgets:
-        backgroundCountryIds.size === 0
-          ? allStateBudgets
-          : allStateBudgets.filter(
-              (budget) => !backgroundCountryIds.has(stateToCountry.get(budget.stateId) ?? "")
-            ),
-      stateToCountry,
-      fxRateForCountry,
-      centralBankByCountry,
-      ledgerBasePrices: LEDGER_BASE_PRICES,
-    },
-    global,
-    byState
-  );
-
-  // ── National (country-aggregate) commodity balances ───────────────────
-  // Sector-allocated S/D (including advertising, latent financial). Healthcare
-  // govt demand is applied after this block so it can be attributed per country.
-  const byCountry = aggregateByCountry(byState, stateToCountry);
-  addBackgroundBooksToCountries(unplacedBackgroundBooks, byCountry);
-
-  // ── Government spending → commodity demand ────────────────────────────
-  applyGovernmentDemand(
-    {
-      federalBudgets:
-        backgroundCountryIds.size === 0
-          ? federalBudgets
-          : federalBudgets.filter((budget) => !backgroundCountryIds.has(budget.countryId)),
-      supplyCapMultiple: governmentSupplyCap,
-      ledgerBasePrices: LEDGER_BASE_PRICES,
-      fxRateForCountry,
-      ledgerCurrentYear,
-      ledgerCommandEconomyEnabled,
-      statesByCountry,
-      stateToCountry,
-      // Healthcare is capped below against the same state supply the clearing pre-pass reads.
-      // Other commodities retain their prior-world-supply ceiling.
-      priorGlobalSupply: plantsLedgerEnabled
-        ? globalDemandCapSupply(
-            new Map(
-              existingPrices
-                .filter((p) => typeof p.globalSupply === "number")
-                .map((p) => [p.commodity as CommodityType, p.globalSupply as number])
-            )
-          )
-        : undefined,
-      householdDemand: sumHouseholdDemand(householdFinalDemandByState),
-      demandCalibration,
-    },
-    global,
-    byCountry,
-    byState,
-    demandTruncated
-  );
-
-  if (plantsLedgerEnabled) {
-    capHealthcareDemandToLocalSupply({
-      global,
-      byCountry,
-      byState,
-      stateToCountry,
-      householdDemandByState: householdFinalDemandByState,
-      otherDemandByState: healthcareOtherDemandByState,
-      truncated: demandTruncated,
-      demandCalibration,
-      supplyCapMultiple: governmentSupplyCap,
-    });
-  }
-
-  // ── Era-aware demand calibration ──────────────────────────────────────
-  // Applied once, after the last demand generator and BEFORE freight sourcing,
-  // trade clearing and the reachable books, so every downstream book carries
-  // the same corrected figure. Calibration must precede book construction or
-  // the books quote demand 1/m too high for every calibrated commodity.
-  applyDemandCalibration({ activePreset }, global, byCountry, byState);
-
-  // ── Inter-country trade clearing + whole-market dampened convergence ──
-  // (Ordering and influence-lever notes live with the original; the WTO/FTA /
-  // embargo loads stay here, separate from the main parallel block to keep the
-  // positional test fetches stable.)
-  // Replay signed durable-embargo bills into legislation-origin embargo records
-  // before reading them (mirrors tariff-bill reconcile). Minister embargoes are
-  // untouched.
-  await reconcileSignedEmbargoBills(db, turn);
-  const [ftaPairs, orgMembershipDocs, tariffDocs, embargoDocs, treatyTermDocs] = await Promise.all([
-    loadActiveFtaPairs(db),
-    organizationMembershipsCollection(db)
-      .find({}, { projection: { countryId: 1, organizationId: 1 } })
-      .toArray(),
-    tariffsCollection(db).find({}).toArray(),
-    tradeEmbargoesCollection(db)
-      .find({ $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] })
-      .toArray(),
-    organizationLegislationCollection<{ directiveKey?: string }>(db)
-      .find(
-        {
-          type: "directive",
-          status: "active",
-          directiveKey: { $in: Object.keys(TREATY_TRADE_DIRECTIVE_KEYS) },
-        } as never,
-        { projection: { directiveKey: 1 } }
-      )
-      .toArray(),
-  ]);
-  const activeTreaties = new Set(
-    treatyTermDocs.flatMap((d) => {
-      const org = d.directiveKey ? TREATY_TRADE_DIRECTIVE_KEYS[d.directiveKey] : undefined;
-      return org ? [org] : [];
-    })
-  );
-  const blocsByCountry = buildBlocsByCountry(orgMembershipDocs);
-  const curtainedCountries = buildCurtainedCountries(
-    ledgerCurrentYear,
-    ledgerCommandEconomyEnabled
-  );
-  // Naval blockade pressure, read fresh rather than from persisted navair state.
-  //
-  // `commodityPrices` runs EARLIER in the turn than `navairOperations`, so reading the
-  // persisted channels here would silently use last turn's dispositions: a blockade
-  // would take a turn to bite and nothing in the output would say so. The read is one
-  // indexed query (militaryUnits_domain) and returns an empty map whenever nobody is
-  // blockading anybody, which is the common case.
-  const blockadeClosure = await loadBlockadeClosure(db);
-
-  const { affinityFor, capUnitsFor, importCostMultiplierFor } = buildTradeAffinity({
-    ftaPairs,
-    blocsByCountry,
-    tariffs: tariffDocs,
-    embargoes: embargoDocs,
-    curtainedCountries,
-    blockadeClosure,
-    activeTreaties,
-  });
-
-  // Build existing price map early: the sourcing pass uses LAST turn's stored
-  // prices as fixed asks, and the drift baseline below reuses the same map.
-  const existingPriceMap = new Map<string, CommodityPrice>(
-    existingPrices.map((p) => [p.commodity, p])
-  );
-
-  // The market ledger merges buyers by state and commodity. Keep modeled
-  // household and sector-input intent alongside it so the sourcing seam can
-  // allocate accepted purchases proportionally; all remaining demand stays
-  // explicitly in the residual "other" cohort.
-  const demandUsesByState = new Map<
-    string,
-    Map<CommodityType, { householdFinal: number; productionInput: number }>
-  >();
-  for (const stateId of byState.keys()) {
-    const byCommodity = new Map<
-      CommodityType,
-      { householdFinal: number; productionInput: number }
-    >();
-    for (const commodity of COMMODITY_TYPES) {
-      byCommodity.set(commodity, {
-        householdFinal: householdFinalDemandByState.get(stateId)?.get(commodity) ?? 0,
-        productionInput: productionInputDemandByState.get(stateId)?.get(commodity) ?? 0,
-      });
-    }
-    demandUsesByState.set(stateId, byCommodity);
-  }
-
-  const ownRouteSectors = sectorData
-    .filter((s) => !!s.corporationId && !!s.sectorId && !!s.stateId)
-    .map((s) => ({
-      sectorId: s.sectorId,
-      corporationId: s.corporationId!.toString(),
-      stateId: s.stateId,
-    }));
-  const ownRoutePolicies = resolveSupplyPolicies(
-    allCorporations.map((c) => ({
-      id: c._id.toString(),
-      totalShares: c.totalShares,
-      holders: (c.shareholders ?? []).map((h) => ({
-        corporationId: h.corporationId?.toString(),
-        shares: h.shares,
-      })),
-      policy: c.internalSupplyPolicy,
-    }))
-  );
-  const ownRoutes = buildOwnRoutes({
-    sectors: ownRouteSectors,
-    supplyBySector: sectorUnits.supplyBySector,
-    inputDemandBySector: sectorUnits.inputDemandBySector,
-    policies: ownRoutePolicies,
-    stateToCountry,
-    hops: stateHops,
-  });
-  const ownFreightCapacityByState = buildOwnFreightCapacity({
-    sectors: ownRouteSectors,
-    supplyBySector: sectorUnits.supplyBySector,
-    policies: ownRoutePolicies,
-  });
-
-  // ── Landed-price freight settlement ─────────────────────────────────────
-  const { freightSettlement, freightRampFraction } = await runFreightSettlementPhase(
-    db,
-    {
+      activePreset,
       marketSystemMode,
-      allStates,
-      stateToCountry,
       roadConditionByState,
-      existingPriceMap,
-      ledgerBasePrices: LEDGER_BASE_PRICES,
-      ledgerEraUnitScale,
-      tariffDocs,
-      ftaPairs,
-      affinityFor,
-      demandUsesByState,
-      ownRoutes,
-      ownFreightCapacityByState,
-      ownFreightMarketSupply: buildOwnMarketSupply({
-        sectors: ownRouteSectors,
-        supplyBySector: sectorUnits.supplyBySector,
-        policies: ownRoutePolicies,
-      }),
-    },
-    turn,
-    now,
-    global,
-    byState,
-    byCountry
-  );
-
-  const tradeClearing = clearAllCommodities(
-    countries,
-    byCountry,
-    affinityFor,
-    capUnitsFor,
-    importCostMultiplierFor
-  );
-  // Books and convergence count only trade the sourcing pass actually shipped.
-  // The raw clearing result is still what the flow snapshot persists.
-  const shippedClearing = capClearingToSourcedTrade(tradeClearing, freightSettlement?.sourcing);
-  // Reachable books, built from the SAME pre-convergence balances the clearing
-  // ran on. `applyTradeConvergence` mutates `byCountry` in place on the next
-  // line, so this cannot move below it: post-convergence an importer's demand
-  // has already been relieved by k x imports and every deficit reads short by
-  // that factor. Persisted with the flow snapshot so read surfaces quote the
-  // book the engine actually clears on.
-  const reachableBooks = buildReachableBooks({
-    countries,
-    balances: byCountry,
-    clearing: shippedClearing,
-    commodities: COMMODITY_TYPES,
-    affinity: affinityFor,
-  });
-  applyTradeConvergence(
-    countries,
-    byCountry,
-    shippedClearing,
-    tradeConvergenceK(ledgerConfig?.tradeConvergenceFullStartTurn, turn)
-  );
-
-  // Build nudge map from the parallel-fetched nudge docs
-  const nudgeMap = buildNudgeMap(nudgeDocs);
-
-  // Scarcity drift (persistent-imbalance integrator): config-gated so it can
-  // be flipped live without a deploy. When off, multipliers reset to 1 so the
-  // economy returns to the memoryless baseline within one turn.
-  const marketFlagsConfig = await gameConfigCollection(db).findOne(
-    { _id: "default" } as Record<string, unknown>,
-    {
-      projection: {
-        commodityScarcityDriftEnabled: 1,
-        stockCoverCapEnabled: 1,
-        commandEconomyEnabled: 1,
-        producerFundedBookStage: 1,
-      },
-    }
-  );
-  const scarcityDriftEnabled = marketFlagsConfig?.commodityScarcityDriftEnabled === true;
-  // Administered pricing for planned economies (P2). Country-scoped to the
-  // NATIONAL leg only — never the shared global leg.
-  const commandEconomyEnabled = marketFlagsConfig?.commandEconomyEnabled === true;
-  const priceGameState = commandEconomyEnabled
-    ? await (
-        await getGameStateCollection(db)
-      ).findOne({ _id: "current" }, { projection: { currentYear: 1 } })
-    : null;
-  const priceCurrentYear = priceGameState?.currentYear ?? null;
-  // Legacy-stockpile cover cap: accelerated spoilage on shadow stock above
-  // STOCK_COVER_CAP_TURNS × demand. Config-gated so it can be flipped live.
-  const stockCoverCapEnabled = marketFlagsConfig?.stockCoverCapEnabled === true;
-  const scarcityMultByCommodity = new Map<CommodityType, number>();
-
-  // Calculate prices for each commodity
-  const ops: {
-    updateOne: {
-      filter: { commodity: CommodityType };
-      update: { $set: Omit<CommodityPrice, "commodity"> };
-      upsert: boolean;
-    };
-  }[] = [];
-
-  const statesWithActivity = new Set<string>();
-  // Collect actual applied prices for history snapshots
-  const appliedGlobalPrices = new Map<CommodityType, number>();
-  const appliedStatePrices = new Map<CommodityType, Record<string, number>>();
-  const appliedNationalPrices = new Map<CommodityType, Record<string, number>>();
-
-  // Lagged price ratios for producer cost pass-through (see module).
-  const laggedRatios = buildLaggedRatios(
-    LEDGER_BASE_PRICES,
-    existingPriceMap,
-    nominalIndices.lagged
-  );
-
-  let fundedBookRows: readonly FundedCountryBookRow[] | undefined;
-  if (producerPath === "funded") {
-    const outcomes = await producerMarketOutcomesCollection<{
-      _id: string;
-      rows: FundedLedgerRow[];
-      books?: FundedCountryBookRow[];
-    }>(db).findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
-    if (!outcomes) throw new Error(`Funded turn ${turn} has no settled supply and demand`);
-    const funded = fundedLedgers(outcomes.rows);
-    global.clear();
-    for (const [c, b] of funded.global) global.set(c as CommodityType, b);
-    byState.clear();
-    for (const [stateId, m] of funded.byState)
-      byState.set(stateId, new Map([...m].map(([c, b]) => [c as CommodityType, b])));
-    byCountry.clear();
-    // Public, military and investment buyers order from national wallets with
-    // no state. Their rows name a country only when the producer turn ran with
-    // producerNationalPublicDemandStage on; otherwise this adds nothing.
-    for (const [countryId, m] of withStatelessCountryDemand(
-      aggregateByCountry(byState, stateToCountry),
-      funded.statelessByCountry
-    ))
-      byCountry.set(countryId, m);
-    fundedBookRows = outcomes.books;
-  }
-  // The funded market already knows which country's buyers ordered and which
-  // units actually crossed a border. Price from that measured book when the
-  // stage is on; the persisted snapshot keeps the modelled book so the
-  // clearing and room signals that read it are unchanged.
-  const pricingBooks = selectFundedReachableBooks({
-    stage: marketFlagsConfig?.producerFundedBookStage,
-    rows: fundedBookRows,
-    countries,
-    commodities: COMMODITY_TYPES,
-    modelled: reachableBooks,
-  });
-  const pricingCtx: CommodityPricingContext = {
-    ledgerBasePrices: LEDGER_BASE_PRICES,
-    commodityNominalPriceIndex,
-    scarcityDriftEnabled,
-    commodityFixStage,
-    fundedPricing: producerPath === "funded",
-    fundedPricePace: {
-      maxMove: fixStageCfg?.producerPriceMaxMove,
-      maxMultiplier: fixStageCfg?.producerPriceMaxMultiplier,
-      softCeiling: (fixStageCfg?.producerSoftPriceCeilingStage ?? 0) >= 1,
-    },
-    marketRecoveryStage:
-      producerPath === "funded"
-        ? 0
-        : normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
-    commandEconomyEnabled,
-    priceCurrentYear,
-    freightRampFraction,
-    ownRouteCorporationIds: (() => {
-      const byRoute = new Map<string, string[]>();
-      for (const sector of ownRouteSectors) {
-        const routeId = ownRouteIdentity(
-          sector.corporationId,
-          ownRoutePolicies.get(sector.corporationId)
-        );
-        const list = byRoute.get(routeId) ?? [];
-        if (!list.includes(sector.corporationId)) list.push(sector.corporationId);
-        byRoute.set(routeId, list);
-      }
-      return byRoute;
-    })(),
-    freightSettlement,
-    existingPriceMap,
-    nudgeMap,
-    laggedRatios,
-    reachableBooks: pricingBooks,
-    global,
-    byCountry,
-    byState,
-    allStates,
-    stateToCountry,
-    demandTruncated,
-    scarcityMultByCommodity,
-    appliedGlobalPrices,
-    appliedStatePrices,
-    appliedNationalPrices,
-    turn,
-    now,
-  };
-  for (const commodity of COMMODITY_TYPES) {
-    const { priceOp } = priceCommodity(pricingCtx, commodity, statesWithActivity);
-    ops.push(
-      priceOp as {
-        updateOne: {
-          filter: { commodity: CommodityType };
-          update: { $set: Omit<CommodityPrice, "commodity"> };
-          upsert: boolean;
-        };
-      }
-    );
-  }
-
-  if (ops.length > 0) {
-    await commodityPricesCollection<Document>(db).bulkWrite(ops);
-  }
-  await persistCommodityNominalIndex(db, commodityNominalPriceIndex, turn);
-
-  // ── Persistence tail: history, flow ledger, trade snapshot ────────────
-  const { tradeClearedVolume } = await persistTurnOutputs(
-    db,
-    {
-      marketSystemMode,
-      global,
-      byCountry,
-      corporationIds: allCorporations.map((corporation) => corporation._id),
       supplyByCorporation,
-      demandTruncated,
-      appliedGlobalPrices,
-      appliedStatePrices,
-      appliedNationalPrices,
-      scarcityMultByCommodity,
-      ledgerBasePrices: LEDGER_BASE_PRICES,
-      commodityNominalPriceIndex,
-      stockCoverCapEnabled,
-      coverCapTurnsFor: (commodity) =>
-        stockCoverCapTurnsForStage(commodityFixStage, commodity, STOCK_COVER_CAP_TURNS),
-      plantsUnitsByCommodity: plantsLedgerEnabled ? plantsUnitsByCommodity : undefined,
-      tradeClearing,
-      reachableBooks,
-      countries,
-      tradeLanes: { affinityFor, importCostMultiplierFor },
     },
-    turn,
-    now
-  );
-
-  return {
-    commoditiesUpdated: COMMODITY_TYPES.length,
-    statesWithActivity: statesWithActivity.size,
-    tradeClearedVolume,
   };
+}
+export type ProcessCommodityPriceTurnStageContext = Extract<
+  Awaited<ReturnType<typeof prepareProcessCommodityPriceTurn>>,
+  { kind: "context" }
+>["context"];
+
+export async function processCommodityPriceTurn(
+  ...args: Parameters<typeof prepareProcessCommodityPriceTurn>
+): Promise<CommodityPriceTurnResult> {
+  const prepared = await prepareProcessCommodityPriceTurn(...args);
+  return settleCommodityPrices(prepared.context);
 }

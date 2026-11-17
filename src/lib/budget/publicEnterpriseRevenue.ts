@@ -1,3 +1,7 @@
+import {
+  fundedSectorIncome,
+  enterpriseIncomeAfterOverheads,
+} from "@/lib/nationalization/rules/settledEnterprise";
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector, FederalRevenue, StateMetrics } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -27,11 +31,9 @@ import { sectorConstructionInProgressAnchor } from "@/lib/corporations/sectorPro
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import type { MarketSystemMode } from "@/lib/market/featureFlag";
 import { MARKET_REALIZATION_RAMP_TURNS } from "@/lib/market/capital";
-import type { GameConfig } from "@/lib/db/types";
-import type { GameState } from "@/lib/db/types/gameState";
 import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { SOE_REPORTING_SECTOR_FIELDS } from "@/lib/nationalization/soeReadProjections";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -188,7 +190,28 @@ export function estimateNationalizedOperatingIncome(
 
   let sectorIncome = 0;
   let totalRevenueAnchor = 0;
+  const fundedEnterprise =
+    !!corporation.producerPayables ||
+    sectors.some(
+      (s) => s.producerSettlement || s.producerInventory || s.plantsPnl?.source === "funded"
+    );
   for (const sector of sectors) {
+    if (fundedEnterprise) {
+      const receipt = sector.producerSettlement;
+      const hostCode = resolveSectorHostCurrencyCode(sector, corporation);
+      const hostRate = fxRateForSectorHostFromMap(sector, corporation, fxByCurrency);
+      sectorIncome += fundedSectorIncome({
+        currentTurn: plantsRamp?.currentTurn,
+        settledTurn: receipt?.turn ?? sector.plantsPnl?.turn,
+        profitAnchor: receipt?.profit,
+        dailyProfitAnchor:
+          sector.plantsPnl?.source === "funded"
+            ? readCorpEconomicAnchor(sector.plantsPnl.profit, hostCode, hostRate)
+            : undefined,
+      });
+      totalRevenueAnchor += receipt?.revenue ?? 0;
+      continue;
+    }
     // Sector fields are in the sector's host-state currency, not the corp's.
     const sectorCode = resolveSectorHostCurrencyCode(sector, corporation);
     const sectorRate = fxRateForSectorHostFromMap(sector, corporation, fxByCurrency);
@@ -238,7 +261,7 @@ export function estimateNationalizedOperatingIncome(
     // as fully utilized (charge 0).
     //
     // FLIP IDENTITY: fade in over the SAME governor ramp as the turn
-    // processor (λ = 0 on the flip turn).
+    // processor (Î» = 0 on the flip turn).
     const upkeepLambda = plantsEnabled
       ? plantsUpkeepRampLambda(
           sector.plantsStartTurn,
@@ -299,11 +322,17 @@ export function estimateNationalizedOperatingIncome(
   const rdSpendAnchor = isStateOwned(corporation)
     ? Math.min(
         readCorpEconomicAnchor(corporation.rdBudgetPerTurn ?? 0, code, rate),
-        totalRevenueAnchor * NATCORP_RD_FULL_FUND_REVENUE_FRACTION
+        totalRevenueAnchor *
+          (fundedEnterprise ? TURNS_PER_DAY : 1) *
+          NATCORP_RD_FULL_FUND_REVENUE_FRACTION
       )
     : 0;
 
-  return sectorIncome - marketingAnchor - logisticsAnchor - ceoSalaryAnchor - rdSpendAnchor;
+  return enterpriseIncomeAfterOverheads(
+    sectorIncome,
+    marketingAnchor + logisticsAnchor + ceoSalaryAnchor + rdSpendAnchor,
+    fundedEnterprise
+  );
 }
 
 export async function calculateCountryOwnedBudgetRevenue(
@@ -337,10 +366,7 @@ export async function calculateCountryOwnedBudgetRevenue(
   const corporationIds = corporations.map((corporation) => corporation._id);
   const [allSectors, fxByCurrency] = await Promise.all([
     corporateSectorsCollection(db)
-      .find(
-        { corporationId: { $in: corporationIds } },
-        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
-      )
+      .find({ corporationId: { $in: corporationIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
     hoistedFxByCurrency ? Promise.resolve(hoistedFxByCurrency) : loadFxRatesByCurrency(db),
   ]);
@@ -461,10 +487,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
   const corporationIds = corporations.map((c) => c._id);
   const [allSectors, fxByCurrency] = await Promise.all([
     corporateSectorsCollection(db)
-      .find(
-        { corporationId: { $in: corporationIds } },
-        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
-      )
+      .find({ corporationId: { $in: corporationIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
     loadFxRatesByCurrency(db),
   ]);

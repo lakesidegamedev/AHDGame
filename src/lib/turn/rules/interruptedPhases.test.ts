@@ -14,7 +14,7 @@ import {
 function knownTurnSteps(): Set<string> {
   const dir = join(process.cwd(), "src/simulation/phases");
   const names = new Set<string>(BASE_TURN_PHASE_NAMES);
-  for (const file of readdirSync(dir)) {
+  for (const file of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
     if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
     const text = readFileSync(join(dir, file), "utf8");
     for (const m of text.matchAll(/runPhase\(\s*"(\w+)"/g)) names.add(m[1]);

@@ -500,6 +500,11 @@ export interface BuildCostBreakdown {
   totalAnchor: number;
 }
 
+/** Founding discount on a sector's first facility in a market (1 under 1991 construction). */
+export function foundingBuildMultiplier(year: number, preset?: string): number {
+  return uses1991Construction(year, preset) ? 1 : CAPACITY_FOUNDING_DISCOUNT;
+}
+
 /**
  * THE build price. One exported pure function so the command, the UI preview,
  * NPP behaviour and the tests can never disagree about what a build costs.
@@ -629,11 +634,7 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
       ? techGrowthCostMultiplier
       : 1;
   const hostPriceMultiplier = hostBuildPriceIndex(hostCostOfLivingIndex);
-  const foundingMultiplier = founding
-    ? uses1991Construction(year, preset)
-      ? 1
-      : CAPACITY_FOUNDING_DISCOUNT
-    : 1;
+  const foundingMultiplier = founding ? foundingBuildMultiplier(year, preset) : 1;
   const expansionMultiplier = expansionCostMultiplier(founding);
   return {
     unitPriceAnchor,

@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import type { CorpOperatorAction, CorpOperatorPermission } from "@/lib/db/types/corporation";
 import { DEFAULT_CEO_PAY_AUTO_ACCEPT_SHARE } from "@/lib/corporations/rules/nppCeoCareer";
-import { OPERATOR_ACTIONS } from "@/lib/turn/npp/rules/operatorPolicy";
+import { OPERATOR_ACTIONS } from "@/lib/corporations/rules/operatorPolicy";
 import {
   matchOperatorPreset,
   OPERATOR_PRESETS,
   type OperatorAttitude,
-} from "@/lib/turn/npp/rules/operatorPresets";
+} from "@/lib/corporations/rules/operatorPresets";
 import { DenseSection, InlineStatus, KVRow, SmallButton } from "../dense/DenseKit";
 
 type Actions = Partial<Record<CorpOperatorAction, CorpOperatorPermission>>;

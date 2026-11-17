@@ -23,7 +23,7 @@ function makeInterleavingDb(): { db: Db; createIndex: ReturnType<typeof vi.fn> }
   const indexes = vi.fn().mockResolvedValue([
     ...BOUNDED_NPC_CANDIDATE_GUARDS.map(([, key, options]) => ({ key, ...options })),
     {
-      name: "corporateSectors_corporation_state_type_unique",
+      name: "corporateSectors_corporation_state_type_site_unique",
       key: {
         corporationId: 1,
         stateId: 1,

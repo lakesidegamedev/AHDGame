@@ -165,3 +165,27 @@ export function undeliveredUnits(order: SectorBuildOrder, currentTurn: number): 
 export function queueUndeliveredCost(queue: SectorBuildOrder[], currentTurn: number): number {
   return queue.reduce((sum, o) => sum + undeliveredCost(o, currentTurn), 0);
 }
+
+/**
+ * When a new order would deliver, in turns from the turn it is placed. The
+ * dialog quotes this from the same delivery functions the turn uses: the first
+ * plant lands on `firstInTurns`, the last on `lastInTurns` (the full window).
+ */
+export function plannedArrivalTurns(
+  unitsOrdered: number,
+  plantUnits: number,
+  buildTurns: number
+): { firstInTurns: number; lastInTurns: number } | null {
+  if (!(unitsOrdered > 0) || !(plantUnits > 0) || !(buildTurns > 0)) return null;
+  const order: SectorBuildOrder = {
+    unitsOrdered,
+    costPaidAnchor: 0,
+    startTurn: 0,
+    onlineTurn: buildTurns,
+    smooth: true,
+    plantUnits,
+  } as SectorBuildOrder;
+  const first = nextArrivalTurn(order, 0);
+  if (first == null) return null;
+  return { firstInTurns: first, lastInTurns: order.onlineTurn };
+}

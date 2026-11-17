@@ -25,7 +25,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
       "Callers pass the voting collection name for the whipped-vote badge reset; every caller supplies a name already scanned at its own repository.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSCancel",
     argument: "electionsCollection",
     scopeHash: "30da43c7d9467ede39b75fe7e517ea590cff4f8fa78950ef99310c78dad31451",
@@ -33,7 +33,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSCancel",
     argument: "nominationsCollection",
     scopeHash: "30da43c7d9467ede39b75fe7e517ea590cff4f8fa78950ef99310c78dad31451",
@@ -41,7 +41,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSFail",
     argument: "electionsCollection",
     scopeHash: "779ed85169589bb9e535126d50a1332972a1a605ec9050d1d41d85b12a4a3ab9",
@@ -49,7 +49,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSFail",
     argument: "nominationsCollection",
     scopeHash: "779ed85169589bb9e535126d50a1332972a1a605ec9050d1d41d85b12a4a3ab9",
@@ -57,7 +57,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSPass",
     argument: "electionsCollection",
     scopeHash: "00b0b77f6cda2325de9812b1968941095a7964eab2ab7cf88cb4de66026e322a",
@@ -65,7 +65,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
-    file: "src/app/api/admin/leadership-elections/route.ts",
+    file: "src/lib/api/commands/admin/leadership-elections/handlers.ts",
     owner: "handleUSPass",
     argument: "nominationsCollection",
     scopeHash: "00b0b77f6cda2325de9812b1968941095a7964eab2ab7cf88cb4de66026e322a",
@@ -213,7 +213,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
   {
-    file: "src/lib/banking/fundedSovereignCoupons.ts",
+    file: "src/lib/banking/sovereignCouponBatchPayout.ts",
     owner: "loadCouponTargetReadiness",
     argument: "collection",
     scopeHash: "9eb086542e872472efafef81247814572a5899098eaba64a0a9e58b1716eb11c",

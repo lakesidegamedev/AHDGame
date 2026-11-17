@@ -26,7 +26,7 @@ import {
   AUTOPILOT_MAX_INFLIGHT_GROWTH_STEPS,
   evaluateAutopilotGrowthGate,
   autopilotBoundGrowthUnits,
-} from "./rules/autopilotReinvest";
+} from "@/lib/corporations/rules/autopilotReinvest";
 import {
   createReinvestCapacityObserver,
   evaluateReinvestPreSizingGate,
@@ -61,7 +61,7 @@ import {
   extractionGrowthHeadroom,
 } from "@/lib/turn/npp/fragileMarketSupply";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
-import { operatorMay, operatorAllowsPlacement } from "./rules/operatorPolicy";
+import { operatorMay, operatorAllowsPlacement } from "@/lib/corporations/rules/operatorPolicy";
 import {
   extractionDemandBoundUnits,
   isMarketSaturated,
@@ -76,7 +76,7 @@ import type { Corporation } from "@/lib/db/types";
 import type { GroupDirection } from "@/lib/corporations/groups/managementTypes";
 import type { CorporationManagementCohort } from "@/lib/corporations/balanceAudit/rules";
 import type { StrategyLevers } from "@/lib/turn/npp/corpStrategy";
-import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
+import type { OperatorPermissions } from "@/lib/corporations/rules/operatorPolicy";
 
 /** Chooses capacity reinvestments for held plants; returns the remaining cash. */
 export function decideNppCapacityReinvestment({

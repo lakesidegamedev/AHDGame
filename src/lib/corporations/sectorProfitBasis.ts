@@ -264,6 +264,7 @@ export function sumConstructionInProgressAnchor(
 
 /** The sector fields the book-value basis reads. */
 export interface SectorBookValueInput extends SectorCapexFields {
+  producerInventory?: import("@/lib/db/types/producerEconomy").ProducerInventoryState;
   sectorType: CorporationType;
   /**
    * Production method the capacity runs. Capacity is priced at the RPU of the

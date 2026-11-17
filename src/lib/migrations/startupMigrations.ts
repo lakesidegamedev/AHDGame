@@ -1,3 +1,4 @@
+import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
@@ -58,6 +59,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
  * safely separated during a deploy.
  */
 export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
+  nationalizationSiteIdentity,
   // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
   // before the merger gate reads them, or every new country fails open.
   backfillMechanicalLawTypes,

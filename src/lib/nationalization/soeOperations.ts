@@ -1,3 +1,4 @@
+import { publicServiceShare, publicServiceTotals } from "./rules/settledEnterprise";
 /**
  * Turn-time SOE behavior (spec §11): apply public-service mandate contributions
  * to state metrics and back operating losses from the treasury. Builders are
@@ -60,7 +61,7 @@ import {
 import { buildNppPriceSignals } from "@/lib/turn/npp/priceSignals";
 import { sectorShortageScore } from "@/lib/turn/npp/marketSignals";
 import { readGovBudgetAnchor } from "@/lib/currency/govBudgetFields";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+
 import { planSoeCapexGrowth, soeGrowthBudgetAnchor } from "./rules/soeGrowth";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
@@ -73,7 +74,7 @@ import {
   NATCORP_RD_RAMP_UP_PER_TURN,
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { SOE_REPORTING_SECTOR_FIELDS } from "@/lib/nationalization/soeReadProjections";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -374,7 +375,7 @@ export async function processSoeOperations(
 
   const corpIds = soeCorps.map((c) => c._id);
   const sectors = await corporateSectorsCollection(db)
-    .find({ corporationId: { $in: corpIds } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
+    .find({ corporationId: { $in: corpIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
     .toArray();
 
   const stateIds = Array.from(new Set(sectors.map((s) => s.stateId)));
@@ -394,11 +395,29 @@ export async function processSoeOperations(
 
   // Group contributions per state (a state may host sectors from primary + split-offs).
   const contributionsByState = new Map<string, MandateContribution[]>();
+  const marketHoldings = await corporateSectorsCollection(db)
+    .find(
+      { stateId: { $in: stateIds } },
+      {
+        projection: {
+          stateId: 1,
+          countryId: 1,
+          sectorType: 1,
+          mothballed: 1,
+          revenue: 1,
+          realizedRevenue: 1,
+          "producerInventory.worldEpoch": 1,
+          "producerSettlement.revenue": 1,
+        },
+      }
+    )
+    .toArray();
+  const serviceTotals = publicServiceTotals(marketHoldings);
   for (const sector of sectors) {
     const corp = corpById.get(sector.corporationId.toString());
     if (!corp) continue;
     const mandate = resolveSectorMandate(corp, sector);
-    const soeShare = computeSoeShareOfStateSector(sector, sectors);
+    const soeShare = publicServiceShare(sector, serviceTotals);
     const contributions = getMandateContributions(
       corp.countryId as CountryId,
       sector,
@@ -719,27 +738,6 @@ function mergeContributions(contributions: MandateContribution[]): MandateContri
   for (const c of contributions)
     byPath.set(c.metricPath, (byPath.get(c.metricPath) ?? 0) + c.delta);
   return Array.from(byPath, ([metricPath, delta]) => ({ metricPath, delta }));
-}
-
-/**
- * SOE share of its (state, sectorType): this sector's revenue over the total
- * SOE revenue for that (state, sectorType) across all SOE sectors. v1 proxy for
- * "share of the state sector" — full market-share (incl. private + unowned)
- * resolution is a later refinement; SOE-internal share keeps the contribution
- * bounded and monotonic in SOE footprint.
- */
-function computeSoeShareOfStateSector(
-  sector: CorporateSector,
-  allSoeSectors: CorporateSector[]
-): number {
-  let total = 0;
-  for (const s of allSoeSectors) {
-    if (s.stateId === sector.stateId && s.sectorType === sector.sectorType) {
-      total += Math.max(0, s.revenue);
-    }
-  }
-  if (total <= 0) return 0;
-  return Math.max(0, sector.revenue) / total;
 }
 
 // ── State capex grant (plants tier) ─────────────────────────────────────────

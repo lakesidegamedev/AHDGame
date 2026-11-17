@@ -9,7 +9,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
 import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
-import { mapVariantFor } from "./mapVariant";
+import { mapVariantFor } from "@/lib/world/mapVariant";
 import type { CountryMapViewConfig } from "./mapViewConfig";
 
 interface CountryMapClientProps {

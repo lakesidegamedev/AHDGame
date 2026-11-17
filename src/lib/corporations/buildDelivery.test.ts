@@ -5,6 +5,7 @@ import {
   costReleasedThisTurn,
   deliveredFraction,
   nextArrivalTurn,
+  plannedArrivalTurns,
   queueUndeliveredCost,
   resolveBuildSettledTurn,
   steadyUnitsPerTurn,
@@ -205,5 +206,34 @@ describe("buildDelivery: catching up turns the build step did not run (#5169)", 
   it("still lands a legacy order once it has come due", () => {
     expect(unitsDeliveredSince(legacy(), 90, 130)).toBe(100);
     expect(unitsDeliveredSince(legacy(), 90, 99)).toBe(0);
+  });
+});
+
+describe("plannedArrivalTurns", () => {
+  it("makes a one-plant order wait the full window", () => {
+    expect(plannedArrivalTurns(100, 100, 6)).toEqual({ firstInTurns: 6, lastInTurns: 6 });
+  });
+
+  it("lands the first of several plants before the last", () => {
+    expect(plannedArrivalTurns(300, 100, 6)).toEqual({ firstInTurns: 2, lastInTurns: 6 });
+  });
+
+  it("agrees with the delivery the turn applies", () => {
+    const plan = plannedArrivalTurns(500, 100, 7)!;
+    const order = {
+      unitsOrdered: 500,
+      costPaidAnchor: 0,
+      startTurn: 0,
+      onlineTurn: 7,
+      smooth: true,
+      plantUnits: 100,
+    } as SectorBuildOrder;
+    expect(unitsDeliveredThisTurn(order, plan.firstInTurns)).toBeGreaterThan(0);
+    expect(unitsDeliveredSince(order, 0, plan.firstInTurns - 1)).toBe(0);
+    expect(unitsDeliveredSince(order, 0, plan.lastInTurns)).toBeCloseTo(500, 9);
+  });
+
+  it("returns null for an empty order", () => {
+    expect(plannedArrivalTurns(0, 100, 6)).toBeNull();
   });
 });

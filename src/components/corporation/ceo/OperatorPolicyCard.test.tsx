@@ -4,7 +4,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { OperatorPolicyCard } from "./OperatorPolicyCard";
-import { matchOperatorPreset, OPERATOR_PRESETS } from "@/lib/turn/npp/rules/operatorPresets";
+import { matchOperatorPreset, OPERATOR_PRESETS } from "@/lib/corporations/rules/operatorPresets";
 
 const defaults = {
   found: "allow",

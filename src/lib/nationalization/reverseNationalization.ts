@@ -1,3 +1,4 @@
+import { transferFundedSite } from "./fundedSiteTransfer";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
@@ -176,6 +177,25 @@ async function reverseNextTaking(
         // turn; restoring revenue without capacity would be erased. Both, in one
         // write, is the correct pairing.
         await recordRecovery(priorOwner._id);
+        if (sector.producerInventory) {
+          await transferFundedSite(db, {
+            source: sector,
+            toId: priorOwner._id,
+            key: `reverse:${sector._id.toHexString()}:${prov.takenAtTurn}`,
+            fraction: 1,
+            privateTarget: true,
+            acquired: {
+              ...(typeof prov.formerRevenue === "number" ? { revenue: prov.formerRevenue } : {}),
+              ...(typeof prov.formerCapitalStock === "number"
+                ? {
+                    capitalStock: prov.formerCapitalStock,
+                    ...seedPlantLedger(sector, prov.formerCapitalStock),
+                  }
+                : {}),
+              updatedAt: now,
+            },
+          });
+        }
         await sectorsCol.updateOne(
           { _id: sector._id },
           {
@@ -195,6 +215,7 @@ async function reverseNextTaking(
               nationalizedAtTurn: "",
               nationalizationTransitionMultiplier: "",
               nationalizationProvenance: "",
+              nationalizationSiteKey: "",
             },
           }
         );

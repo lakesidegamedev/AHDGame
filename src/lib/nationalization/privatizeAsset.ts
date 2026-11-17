@@ -1,3 +1,6 @@
+import { fundedSiteSlice, fundedCarveFitsMarketLimit } from "./rules/fundedSiteSlice";
+import { transferFundedSite } from "./fundedSiteTransfer";
+import { producerDebtAnchor, producerStockBookAnchor } from "./rules/fundedOwnership";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
@@ -23,7 +26,6 @@ import { applyPrivatizationConsequences } from "./consequences/apply";
 import { recordNationalizationLedger } from "./ledger";
 import { notifyCountryResidents } from "./privatizationNotifications";
 import { logWireEvent, wireHeadlineCorpPrivatized } from "@/lib/wireEvent";
-import type { NationalizationAuction } from "@/lib/db/types";
 import {
   AUCTION_WINDOW_TURNS,
   CARVE_FRACTION_MIN,
@@ -131,6 +133,7 @@ export async function privatizeAsset(
   }
 
   // ── 2. Load + validate the selected sectors (fraction, ownership, cooldown). ──
+  const selectedBuckets = new Set<string>();
   const selected: { sector: CorporateSector; fraction: number }[] = [];
   for (const sel of params.selections) {
     const fraction = sel.carveFraction;
@@ -138,6 +141,12 @@ export async function privatizeAsset(
     if (!sector || !sector.corporationId.equals(source._id)) {
       throw new Error("Sector is not owned by the source National Corporation");
     }
+    const bucket = `${sector.stateId}:${sector.sectorType}`;
+    if (selectedBuckets.has(bucket))
+      throw new Error(
+        "Privatize separate physical sites in the same region and industry as separate companies to preserve their production methods."
+      );
+    selectedBuckets.add(bucket);
     if (hasProtectedConstructionProperty(sector)) {
       throw new Error(
         "This site carries a construction loan, and privatization splits a site into a new holding. Wait until the loan is repaid."
@@ -155,6 +164,11 @@ export async function privatizeAsset(
     // small holding can be spun out in full; a dominant one is limited.
     const sharePct = await fetchSectorMarketSharePercent(db, sector, source);
     const maxFraction = maxCarveFractionForMarketShare(sharePct);
+    if (sector.producerInventory && !fundedCarveFitsMarketLimit(sector, fraction, maxFraction)) {
+      throw new Error(
+        "This carve would transfer a whole facility exceeding the regional market control limit. Privatize a smaller site or wait for more competition."
+      );
+    }
     if (!(fraction >= CARVE_FRACTION_MIN && fraction <= maxFraction + 1e-6)) {
       throw new Error(
         `Carve fraction for ${sector.sectorType} (${sector.stateId}) must be ${Math.round(
@@ -201,15 +215,22 @@ export async function privatizeAsset(
   const privatizeUnitScale = plantsEnabled ? await loadWorldEraUnitScale(db) : 1;
   let valuationAnchor = 0;
   for (const { sector, fraction } of selected) {
+    const slice =
+      plantsEnabled && sector.producerInventory ? fundedSiteSlice(sector, fraction) : null;
+    const quoteSector = slice ? { ...sector, ...slice.acquired } : sector;
     const fullValueAnchor = plantsEnabled
       ? sectorBookValueAnchor(
-          sector,
+          quoteSector,
           gameState?.currentYear,
           privatizeUnitScale,
           gameState?.currentTurn
-        ) * NATIONALIZATION_BOOK_PREMIUM
+        ) *
+          NATIONALIZATION_BOOK_PREMIUM +
+        producerStockBookAnchor(quoteSector.producerInventory) -
+        producerDebtAnchor(source.producerPayables, sector._id.toHexString()) *
+          (slice?.liabilityFraction ?? 1)
       : computeSectorNpvSum([sector], primeMap, source, fxByCurrency);
-    valuationAnchor += fullValueAnchor * fraction;
+    valuationAnchor += Math.max(0, fullValueAnchor) * (slice ? 1 : fraction);
   }
   const currency = (source.liquidCurrencyCode ??
     COUNTRY_CURRENCY_MAP[params.countryId] ??
@@ -353,6 +374,34 @@ export async function privatizeAsset(
     const plantCountSplit = splitWholePlantCount(openingPlantCount, fraction);
     const carvedPlant = carveSectorPlantFields(sector, fraction, plantCountSplit.carved);
     const keptPlant = carveSectorPlantFields(sector, keep, plantCountSplit.kept);
+    if (sector.producerInventory) {
+      await transferFundedSite(db, {
+        source: sector,
+        toId: newCorpId,
+        transitionKey: transitionKeyBySectorId.get(sector._id.toHexString()),
+        key: `privatize:${newCorpId.toHexString()}:${sector._id.toHexString()}`,
+        fraction,
+        privateTarget: true,
+        liabilityFraction:
+          openingPlantCount > 0 ? plantCountSplit.carved / openingPlantCount : fraction,
+        acquired: {
+          ...carvedPlant,
+          revenue: Math.round(sector.revenue * fraction),
+          workers: Math.round(sector.workers * fraction),
+          currentGrowthCost: Math.round(sector.currentGrowthCost * fraction),
+          updatedAt: now,
+        },
+        retained: {
+          ...keptPlant,
+          revenue: keptRevenue,
+          workers: Math.round(sector.workers * keep),
+          currentGrowthCost: Math.round(sector.currentGrowthCost * keep),
+          updatedAt: now,
+        },
+      });
+      sectorsCarved++;
+      continue;
+    }
     await sectors.insertOne({
       _id: new ObjectId(),
       corporationId: newCorpId,

@@ -1,3 +1,6 @@
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { hasProducerDistress } from "@/lib/nationalization/rules/fundedOwnership";
+import { PRODUCER_CREDIT_STUCK_TURNS } from "@/lib/market/producerMarket/producerCreditRules";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
@@ -28,12 +31,18 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
           sequentialId: 1,
           liquidCapital: 1,
           financialDistressSinceTurn: 1,
+          producerPayables: 1,
         },
       }
     )
     .toArray();
   if (corps.length === 0) return;
 
+  const creditConfig = await gameConfigCollection(db).findOne(
+    {},
+    { projection: { producerCreditStuckTurns: 1 } }
+  );
+  const stuckTurns = creditConfig?.producerCreditStuckTurns ?? PRODUCER_CREDIT_STUCK_TURNS;
   const corpIds = corps.map((c) => c._id);
   const defaultedBonds = await bondsCollection(db)
     .find(
@@ -48,7 +57,10 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
 
   for (const corp of corps) {
     if (corp.userId == null) continue; // NPC/unowned — no nationalization grace
-    const inDistress = (corp.liquidCapital ?? 0) < 0 || defaultedByCorp.has(String(corp._id));
+    const inDistress =
+      (corp.liquidCapital ?? 0) < 0 ||
+      defaultedByCorp.has(String(corp._id)) ||
+      hasProducerDistress(corp.producerPayables, turn, stuckTurns);
     const wasFlagged = corp.financialDistressSinceTurn != null;
 
     if (inDistress && !wasFlagged) {
