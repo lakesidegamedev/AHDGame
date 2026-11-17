@@ -15,10 +15,14 @@ import {
   type RankedNation,
 } from "@/lib/world/rankings";
 import { comparePairReady, compareShareParam } from "@/lib/world/countryCompare";
+import { buildCompareSummary, type CompareSummarySide } from "@/lib/world/compareSummary";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useWorldMetricFilter, type WorldMetricsCountry } from "../WorldMetricFilterContext";
 
 const SLOT_COUNT = 2;
+
+/** Which copy button was pressed last, so each one can name its own result. */
+type CopyState = "idle" | "link" | "summary" | "link-failed" | "summary-failed";
 
 /**
  * Side-by-side reading of two nations picked on the globe.
@@ -41,22 +45,26 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   } = useWorldMetricFilter();
   const countryName = useCountryDisplayName();
 
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [copyState, setCopyState] = useState<CopyState>("idle");
 
   // Built at click time from the live address, so the link carries the current
   // origin and any other world parameters already in the URL.
-  const shareComparison = async () => {
-    if (!navigator.clipboard) {
-      setCopyState("failed");
-      return;
-    }
+  const compareUrl = () => {
     const url = new URL(window.location.href);
     url.searchParams.set("compare", compareShareParam(compareCountryIds));
+    return url.toString();
+  };
+
+  const copy = async (text: string, kind: "link" | "summary") => {
+    if (!navigator.clipboard) {
+      setCopyState(kind === "link" ? "link-failed" : "summary-failed");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(url.toString());
-      setCopyState("copied");
+      await navigator.clipboard.writeText(text);
+      setCopyState(kind);
     } catch {
-      setCopyState("failed");
+      setCopyState(kind === "link" ? "link-failed" : "summary-failed");
     }
     window.setTimeout(() => setCopyState("idle"), 2200);
   };
@@ -118,6 +126,37 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   const cellFor = (row: CompareRow, id: CountryId | null) =>
     id ? (row.cells.find((cell) => cell.countryId === id) ?? null) : null;
 
+  // The summary reads the same rows the panel shows, so a pasted comparison
+  // cannot drift from what the sender sees. Both sides need stored figures
+  // before there is anything worth pasting beside the link.
+  const summarySides: [CompareSummarySide, CompareSummarySide] = [
+    {
+      name: sides[0].label ?? "Not picked",
+      overall: sides[0].id ? (overallRanks.get(sides[0].id) ?? null) : null,
+      categoryRank: sides[0].id ? (categoryRanks.get(sides[0].id) ?? null) : null,
+    },
+    {
+      name: sides[1].label ?? "Not picked",
+      overall: sides[1].id ? (overallRanks.get(sides[1].id) ?? null) : null,
+      categoryRank: sides[1].id ? (categoryRanks.get(sides[1].id) ?? null) : null,
+    },
+  ];
+  const summaryReady = comparePairReady(compareCountryIds) && sides.every((side) => side.country);
+  const copySummary = () => {
+    void copy(
+      buildCompareSummary({
+        sides: summarySides,
+        category: category ?? null,
+        rows: rows.map((row) => ({
+          metric: row.metric,
+          cells: [cellFor(row, sides[0].id), cellFor(row, sides[1].id)] as const,
+        })),
+        url: compareUrl(),
+      }),
+      "summary"
+    );
+  };
+
   const shellClass = fullscreen
     ? "fixed left-4 top-16 z-[70] max-h-[70vh] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-card-border bg-card/95 p-4 shadow-panel"
     : "relative z-10 mt-3 rounded-xl border border-card-border bg-card p-4 shadow-sm";
@@ -135,15 +174,29 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           {comparePairReady(compareCountryIds) && (
             <button
               type="button"
-              onClick={shareComparison}
+              onClick={() => void copy(compareUrl(), "link")}
               aria-live="polite"
               className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
             >
-              {copyState === "copied"
+              {copyState === "link"
                 ? "Link copied"
-                : copyState === "failed"
+                : copyState === "link-failed"
                   ? "Copy failed"
                   : "Copy link"}
+            </button>
+          )}
+          {summaryReady && (
+            <button
+              type="button"
+              onClick={copySummary}
+              aria-live="polite"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            >
+              {copyState === "summary"
+                ? "Summary copied"
+                : copyState === "summary-failed"
+                  ? "Copy failed"
+                  : "Copy summary"}
             </button>
           )}
           {compareCountryIds.length > 0 && (
