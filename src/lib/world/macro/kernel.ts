@@ -52,12 +52,12 @@ function addFlows(
 export const PLANNED_MARKET_LEAKAGE = 0.55;
 
 /**
- * Background countries produce far more retail goods than the world buys once
- * their own households are excluded, so their retail supply is scaled down to
- * leave the world retail book roughly balanced against the household demand
- * the basket now adds.
+ * Background countries produce several times the retail goods that real buyers
+ * (player households, plants, government) order. Their retail supply is scaled
+ * down to about 90% of that funded demand. Background demand is never added to
+ * close the gap, because background wallets are topped up to their orders.
  */
-export const MACRO_RETAIL_OUTPUT_SCALE = 0.45;
+export const MACRO_RETAIL_OUTPUT_SCALE = 0.2;
 
 /**
  * Background advertising supply is halved (rate 0.5 to 0.25). Player media
@@ -87,8 +87,28 @@ const MACRO_SUPPLY_SCALE: Partial<Record<OperatingSectorType, number>> = {
   media: MACRO_MEDIA_OUTPUT_SCALE,
 };
 
-/** Household basket weight for general merchandise (matches the turn-level basket). */
-export const MACRO_HOUSEHOLD_RETAIL_WEIGHT = 0.1;
+/**
+ * Macro-only scale on background electricity demand. Every sector burns power
+ * per unit of output, which leaves background demand several times background
+ * supply. This brings it to about 1.1x supply and leaves a small shortage for
+ * player power plants. SECTOR_DEMAND is shared with player recipes, so the
+ * scale lives here.
+ */
+export const MACRO_ENERGY_DEMAND_SCALE = 0.233;
+
+/** Macro-only demand scale per commodity, applied after sector and basket flows. */
+const MACRO_DEMAND_SCALE: Partial<Record<CommodityType, number>> = {
+  energy: MACRO_ENERGY_DEMAND_SCALE,
+};
+
+/**
+ * Per-country economy size, applied to a country's sector output and demand
+ * and resource endowments, so what it supplies and buys both shrink. Nothing
+ * is added.
+ */
+export const MACRO_COUNTRY_SIZE_SCALE: Readonly<Record<string, number>> = {
+  IE: 0.6,
+};
 
 /**
  * Epic P1 kernel (aggregate form):
@@ -108,7 +128,7 @@ export function computeMacroContribution(
     | "shockModifier"
     | "population"
     | "economicSystem"
-  >,
+  > & { entityId?: string },
   turn: number
 ): MacroMarketContribution {
   const stability = clamp01(state.stability);
@@ -117,6 +137,7 @@ export function computeMacroContribution(
   const shock =
     Number.isFinite(state.shockModifier) && state.shockModifier > 0 ? state.shockModifier : 1;
   const demandMod = stabilityDemandModifier(stability);
+  const sizeScale = (state.entityId && MACRO_COUNTRY_SIZE_SCALE[state.entityId]) || 1;
 
   const commodityUnits = emptyCommodityBalances();
   const bySector: Partial<Record<OperatingSectorType, { output: number; demand: number }>> = {};
@@ -125,8 +146,11 @@ export function computeMacroContribution(
     const sector: MacroSectorState | undefined = state.sectors[sectorType];
     if (!sector) continue;
 
-    const output = Math.max(0, sector.capacity * sector.productivity * stability * shock);
-    const demand = Math.max(0, sector.domesticDemand * demandMod);
+    const output = Math.max(
+      0,
+      sector.capacity * sector.productivity * stability * shock * sizeScale
+    );
+    const demand = Math.max(0, sector.domesticDemand * demandMod * sizeScale);
     bySector[sectorType] = {
       output: Math.round(output * 100) / 100,
       demand: Math.round(demand * 100) / 100,
@@ -148,7 +172,7 @@ export function computeMacroContribution(
   ][]) {
     if (!Number.isFinite(endowment) || endowment <= 0) continue;
     const units = dollarsToUnits(
-      endowment * stability * shock * (MACRO_RESOURCE_ENDOWMENT_SCALE[resource] ?? 1),
+      endowment * stability * shock * sizeScale * (MACRO_RESOURCE_ENDOWMENT_SCALE[resource] ?? 1),
       COMMODITY_BASE_PRICES[resource]
     );
     if (units <= 0) continue;
@@ -161,22 +185,17 @@ export function computeMacroContribution(
     0
   );
   const incomeProxy = state.population > 0 ? totalCapacity / state.population : 0;
-  const basketDollars = state.population * incomeProxy * 0.08 * demandMod;
+  const basketDollars = state.population * incomeProxy * 0.08 * demandMod * sizeScale;
   if (basketDollars > 0) {
     addFlows(commodityUnits, basketDollars, SECTOR_DEMAND.retail, "demand");
-    addFlows(
-      commodityUnits,
-      basketDollars * MACRO_HOUSEHOLD_RETAIL_WEIGHT,
-      [{ commodity: "retail", rate: 1 }],
-      "demand"
-    );
   }
 
   const byCommodity: MacroMarketContribution["byCommodity"] = {};
   for (const commodity of COMMODITY_TYPES) {
     const bal = commodityUnits.get(commodity)!;
     const supply = Math.round(bal.supply * exposure * 100) / 100;
-    const demand = Math.round(bal.demand * exposure * 100) / 100;
+    const demand =
+      Math.round(bal.demand * (MACRO_DEMAND_SCALE[commodity] ?? 1) * exposure * 100) / 100;
     if (supply > 0 || demand > 0) {
       byCommodity[commodity] = { supply, demand };
     }
