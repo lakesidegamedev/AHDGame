@@ -68,6 +68,14 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: { rare_earth: 0.138, iron: 0.1, energy: 0.184, chemicals: 0.092, plastics: 0.1 },
   },
+  {
+    id: "building_materials",
+    name: "Building Materials",
+    description:
+      "Retool the plant to make cement and prefabricated components from timber, iron and chemicals.",
+    supply: { building_materials: 0.5 },
+    demand: { energy: 0.13, timber: 0.09, iron: 0.07, chemicals: 0.05, freight: 0.06 },
+  },
   // Vehicle lines for manufacturing plants retooled to build cars and trucks.
   {
     id: "vehicle_assembly",

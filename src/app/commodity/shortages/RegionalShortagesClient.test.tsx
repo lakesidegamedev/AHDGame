@@ -3,6 +3,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import RegionalShortagesClient, { computeRegionalShortages } from "./RegionalShortagesClient";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -40,7 +41,7 @@ const sampleCommodities = [
     stateDemand: { CA: 30, TX: 50 },
     statePrices: { CA: 70, TX: 45 },
   },
-] as never;
+] as CommodityData[];
 
 describe("RegionalShortagesClient", () => {
   beforeEach(() => {
@@ -66,6 +67,39 @@ describe("RegionalShortagesClient", () => {
     expect(ca.map((r) => r.commodity)).toEqual(["steel", "coal"]);
     expect(ca[0].gap).toBe(80);
     expect(ca[1].gap).toBe(30);
+  });
+
+  it("uses regional totals for a legacy save and zero for an empty funded country book", () => {
+    const steel = { ...sampleCommodities[0], nationalSupply: {}, nationalDemand: {} };
+    const stateCountryMap = new Map([
+      ["CA", "US"],
+      ["TX", "US"],
+    ]);
+    expect(computeRegionalShortages([steel], "US", "all", true, stateCountryMap)[0]).toMatchObject({
+      supply: 50,
+      demand: 110,
+    });
+    expect(
+      computeRegionalShortages(
+        [{ ...steel, nationalBalanceSource: "funded_book" }],
+        "US",
+        "all",
+        true,
+        stateCountryMap
+      )[0]
+    ).toMatchObject({ supply: 0, demand: 0 });
+  });
+
+  it("opens the selected country's all-commodities view and includes surpluses", async () => {
+    render(<RegionalShortagesClient initialCountry="UK" initialShowAll />);
+    expect(await screen.findByText("Steel")).toBeTruthy();
+    expect(screen.getByText("Coal")).toBeTruthy();
+    expect(screen.getByText("80 t")).toBeTruthy();
+    expect(screen.getByText("+20 t")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Show"), { target: { value: "shortages" } });
+    expect(screen.queryByText("Steel")).toBeNull();
+    expect(screen.getByText("Coal")).toBeTruthy();
   });
 
   it("renders national shortages and updates when switching country or state", async () => {

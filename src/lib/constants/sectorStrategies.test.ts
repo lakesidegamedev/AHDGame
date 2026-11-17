@@ -7,6 +7,7 @@ import {
   getMediaOperatingModelStrategies,
   getSectorStrategies,
   getStrategy,
+  STRATEGY_TRANSITION_TURNS,
   SECTOR_STRATEGIES,
 } from "./sectorStrategies";
 import { COMMODITY_TYPES } from "./commodities";
@@ -268,4 +269,39 @@ describe("logistics freight-only strategy", () => {
   it("resolves through getStrategy in a 1991 world", () => {
     expect(getStrategy("logistics", "freight_only", "1991-default")).toEqual(freightOnly);
   });
+});
+
+describe("building materials manufacturing", () => {
+  it.each([false, true])(
+    "retools vehicle output into building materials (advertising: %s)",
+    (advertisingInput) => {
+      const strategy = getSectorStrategies("manufacturing").find(
+        (item) => item.id === "building_materials"
+      );
+      expect(strategy?.supply).toEqual({ building_materials: 0.5 });
+      const ratesAt = (elapsed: number) =>
+        getEffectiveStrategyRates(
+          "manufacturing",
+          "building_materials",
+          "vehicle_assembly",
+          100,
+          100 + elapsed,
+          "2027-default",
+          undefined,
+          { advertisingInput }
+        );
+
+      expect(ratesAt(STRATEGY_TRANSITION_TURNS / 2).supply).toEqual({
+        vehicles: 0.25,
+        building_materials: 0.25,
+      });
+      const finished = ratesAt(STRATEGY_TRANSITION_TURNS);
+      expect(finished.supply).toEqual({ building_materials: 0.5 });
+      expect(finished.isTransitioning).toBe(false);
+      expect(finished.demand.advertising).toBe(advertisingInput ? 0.07 : undefined);
+      expect(Object.values(finished.demand).reduce((total, rate) => total + rate, 0)).toBeCloseTo(
+        0.4
+      );
+    }
+  );
 });
