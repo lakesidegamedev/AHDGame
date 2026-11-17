@@ -105,6 +105,32 @@ export async function seedIndexFundIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The cron's payout recovery matches in-flight rows (processing, or carrying a
+  // pending settlement projection) across the whole queue every turn. Paid rows
+  // pile up, so each branch needs its own small partial index or the scan grows.
+  await ensureIndex(
+    db,
+    "indexFundRedemptionQueue",
+    { status: 1 },
+    {
+      background: true,
+      name: "indexFundRedemptionQueue_processing",
+      partialFilterExpression: { status: "processing" },
+    },
+    log
+  );
+  await ensureIndex(
+    db,
+    "indexFundRedemptionQueue",
+    { pendingSettlementProjection: 1 },
+    {
+      background: true,
+      name: "indexFundRedemptionQueue_pending_projection",
+      partialFilterExpression: { pendingSettlementProjection: { $exists: true } },
+    },
+    log
+  );
+
   // NAV snapshots per fund, latest turn first
   await ensureIndex(
     db,
