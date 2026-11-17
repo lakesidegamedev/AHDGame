@@ -60,6 +60,27 @@ describe("plants tier — unit-denominated market share", () => {
     expect(shares.get("a")).toBe(100);
   });
 
+  it("a founding sector with no delivered capacity claims no share from its nameplate revenue", () => {
+    const shares = build([sector("a", 5000, 0)]);
+    expect(shares.get("a")).toBe(0);
+  });
+
+  it("a rival with real capacity keeps its full share against a not-yet-built sector", () => {
+    const shares = build([sector("new", 5000, 0), sector("est", 1000, 40)]);
+    expect(shares.get("new")).toBe(0);
+    expect(shares.get("est")).toBe(100);
+  });
+
+  it("an established dominant firm still reads its real 80% share", () => {
+    const shares = build([sector("big", 8000, 40), sector("small", 2000, 10)]);
+    expect(shares.get("big")).toBeCloseTo(80, 10);
+  });
+
+  it("whole plants delivered count even when capitalStock reads 0", () => {
+    const owned = { ...sector("a", 1000, 0), plantCount: 2 } as CorporateSector;
+    expect(build([owned]).get("a")).toBe(100);
+  });
+
   it("a zero-revenue cell is finite (0), not NaN", () => {
     const shares = build([sector("a", 0)]);
     expect(shares.get("a")).toBe(0);
