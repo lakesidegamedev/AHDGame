@@ -329,8 +329,8 @@ export const DEFAULT_TX_THRESHOLDS: TxThresholds = {
 /**
  * Retention window for financial transaction log entries, expressed in turns.
  *
- * 720 turns × 60 min/turn = 30 IRL days at the default cadence (owner,
- * 2026-11-17: money history must stay traceable for a month of support tickets). The MongoDB
+ * 720 turns × 60 min/turn = 30 IRL days at the default cadence, so support can
+ * trace money for a month. The MongoDB
  * TTL index still operates on `expiresAt` (a wall-clock Date), but emitters
  * now compute that Date as `createdAt + TX_TTL_TURNS × turnLengthMinutes ×
  * 60_000ms` so admins can change turn cadence without silently shrinking or
