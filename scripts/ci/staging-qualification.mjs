@@ -471,20 +471,9 @@ export async function findDevelopmentQualification({
 }
 
 /**
- * Reuse a green pull request qualification for the push that merged it into
- * development.
- *
- * A feature pull request is fully qualified on its merge ref. When it is merged
- * and development has not moved in between, the resulting commit has the very
- * same Git tree, so running the matrix again proves nothing new. The push run
- * reuses the pull request's evidence only when the pushed commit is the merge
- * commit of a same-repository pull request into development, the pull request's
- * newest CI run is a recent native success whose `verify` receipt names this
- * exact tree, the custom-rules and dependency-review gates passed for the same
- * tree, none of the proof code (CI workflow, this helper, the security
- * workflows) changed relative to the commit's first parent, and development
- * requires no gate this cannot vouch for. If development moved so the tree
- * differs, nothing here matches and the full suite runs.
+ * Reuse a green pull request run for the development push it produced: same
+ * tree, same proof code, native receipt and passing security gates. Any
+ * mismatch runs the full suite.
  */
 export async function findPullRequestQualification({
   api,
