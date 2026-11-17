@@ -283,11 +283,14 @@ export function updateRevenueSnapshots(
   turn: number,
   emaNow: number
 ): RevenueSnapshot[] {
+  // A zero level carries no baseline information and would otherwise hold the
+  // cadence slot for a full interval while the world is still founding.
   const log = (snapshots ?? []).filter(
-    (s) => Number.isFinite(s.turn) && Number.isFinite(s.value) && s.turn < turn
+    (s) => Number.isFinite(s.turn) && Number.isFinite(s.value) && s.value > 0 && s.turn < turn
   );
   const newest = log[log.length - 1];
   if (newest !== undefined && turn - newest.turn < REVENUE_SNAPSHOT_EVERY) return log;
+  if (!(emaNow > 0)) return log;
   return [...log, { turn, value: emaNow }].slice(-REVENUE_SNAPSHOT_KEEP);
 }
 

@@ -280,6 +280,16 @@ describe("updateRevenueSnapshots", () => {
     expect(log[log.length - 1]!.turn).toBe(REVENUE_SNAPSHOT_EVERY * 12);
   });
 
+  it("does not let a zero founding snapshot hold the cadence slot", () => {
+    expect(updateRevenueSnapshots([{ turn: 2, value: 0 }], 3, 500)).toEqual([
+      { turn: 3, value: 500 },
+    ]);
+  });
+
+  it("does not log a zero level", () => {
+    expect(updateRevenueSnapshots(undefined, 2, 0)).toEqual([]);
+  });
+
   it("drops future-turn entries (a rolled-back world cannot poison the baseline)", () => {
     const log = [{ turn: 200, value: 1000 }];
     expect(updateRevenueSnapshots(log, 150, 900)).toEqual([{ turn: 150, value: 900 }]);
