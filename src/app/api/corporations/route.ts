@@ -1,3 +1,4 @@
+import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -124,8 +125,11 @@ export async function GET(request: Request) {
     const incomeByCorpId = new Map<string, number>();
     for (const sector of allSectors) {
       const corpKey = sector.corporationId.toString();
-      const maintenance = sector.revenue * (1 - sector.profitMargin / 100);
-      const sectorProfit = sector.revenue - maintenance - sector.currentGrowthCost;
+      // Realized money, not the nameplate: a sector that sells less than it
+      // could produce should not show the unsold share as income.
+      const revenue = sectorEconomicRevenue(sector);
+      const maintenance = revenue * (1 - sector.profitMargin / 100);
+      const sectorProfit = revenue - maintenance - sector.currentGrowthCost;
       incomeByCorpId.set(corpKey, (incomeByCorpId.get(corpKey) ?? 0) + sectorProfit);
     }
 

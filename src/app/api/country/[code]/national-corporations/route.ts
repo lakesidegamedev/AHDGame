@@ -4,6 +4,7 @@
 // Auth: public read (mutating reorg/CEO routes enforce authority)
 // Errors: 400
 import { NextResponse } from "next/server";
+import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -37,11 +38,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
               corporationId: CorporateSector["corporationId"];
               sectorType: CorporateSector["sectorType"];
               revenue: CorporateSector["revenue"];
+              realizedRevenue: CorporateSector["realizedRevenue"];
               workers: CorporateSector["workers"];
             }>({
               corporationId: 1,
               sectorType: 1,
               revenue: 1,
+              realizedRevenue: 1,
               workers: 1,
             })
             .toArray()
@@ -53,7 +56,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     for (const s of sectors) {
       const key = String(s.corporationId);
       sectorCount.set(key, (sectorCount.get(key) ?? 0) + 1);
-      revenuePerTurn.set(key, (revenuePerTurn.get(key) ?? 0) + Math.round(s.revenue ?? 0));
+      revenuePerTurn.set(
+        key,
+        (revenuePerTurn.get(key) ?? 0) + Math.round(sectorEconomicRevenue(s))
+      );
       workers.set(key, (workers.get(key) ?? 0) + Math.round(s.workers ?? 0));
     }
 

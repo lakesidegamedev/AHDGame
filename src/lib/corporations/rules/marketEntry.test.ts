@@ -47,7 +47,7 @@ describe("evaluateMarketEntry", () => {
     const verdict = evaluateMarketEntry({ ...OPEN_FACTS, nppControlled: true });
     expect(verdict.reason).toBe("player_control_required");
     expect(verdict.message).toBe(
-      "Resume player control before building plants for this corporation"
+      "Resume player control of this corporation in its settings, then try again."
     );
   });
 
@@ -60,7 +60,7 @@ describe("evaluateMarketEntry", () => {
   it("refuses a market the corporation already operates in", () => {
     const verdict = evaluateMarketEntry({ ...OPEN_FACTS, alreadyOperating: true });
     expect(verdict.reason).toBe("already_operating");
-    expect(verdict.message).toBe("You already have operations in this state");
+    expect(verdict.message).toBe("You already operate in this state. Open that sector and order more capacity there.");
   });
 
   it("refuses new Retail during the demand unwind and says how long is left", () => {
