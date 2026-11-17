@@ -143,26 +143,15 @@ export function aggregateTechEffects(effects: readonly TechEffect[]): Aggregated
 }
 
 /**
- * Reduce two layers of effects to the per-turn scalars the turn engine applies.
- *
- * `baseline` is the era baseline: effects of nodes from decades before the
- * world's starting decade, which a late-start corporation owns from founding.
- * `researched` is everything the world's own research adds (starting decade
- * onward, frontier programmes and methods). Each layer is clamped to the caps
- * on its own, so the baseline can never use up the room research needs, and
- * the two are then combined:
- *
- *  - plant output, method output, input efficiency: baseline + researched
- *    (30% saved by the baseline and 30% by research is 60% fewer inputs);
- *  - growth-cost and labor-cost multipliers: baseline multiplier times
- *    researched multiplier;
- *  - shields and expansion discount: a + b - a*b;
+ * Reduce an era baseline layer and a researched layer to the engine scalars.
+ * Each layer is clamped to the caps on its own, so the baseline never uses up
+ * the room research needs. Then:
+ *  - plant output, method output, input efficiency: baseline + researched;
+ *  - growth-cost and labor-cost multipliers: the two multipliers multiplied;
+ *  - shields and expansion discount: a + b - a*b, never past 100%;
  *  - per-commodity input and output rates: the product of both layers.
- *
- * With an empty `baseline` the result equals `aggregateTechEffects(researched)`
- * exactly. With no researched effects it equals the baseline layer's own
- * capped aggregate, which is what the old single-layer aggregate returned for
- * a corporation that held only those nodes.
+ * An empty baseline equals aggregateTechEffects(researched) exactly; nothing
+ * researched equals the baseline's own capped aggregate.
  */
 export function aggregateTechEffectLayers(
   baseline: readonly TechEffect[],
