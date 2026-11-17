@@ -360,6 +360,32 @@ export function settleProducerOrders(
     else clearOrder(order);
   }
   for (const order of deferred) clearOrder(order);
+  // Spill pass: after every order has cleared its own book, what a buyer still
+  // wants is offered to leftover supply in its neighbouring states' books.
+  for (const order of context.orders) {
+    if (!order.spillBooks?.length) continue;
+    if (order.supplierOfferId || order.contractUnitPrice != null) continue;
+    if (order.quantityGroup || order.eligibleOfferIds) continue;
+    let wanted = order.units - (context.orderResults.get(order.id)?.deliveredUnits ?? 0);
+    let orderBudget = Math.max(
+      0,
+      (order.maximumSpend ?? Number.MAX_VALUE) - (context.orderResults.get(order.id)?.cost ?? 0)
+    );
+    for (const spillBook of order.spillBooks) {
+      if (!(wanted > 0)) break;
+      const byPrice = new Map<number, ProducerOffer[]>();
+      for (const offer of context.byBook.get(bookKey(order.commodity, spillBook)) ?? []) {
+        if (offer.countryId !== order.countryId) continue;
+        const level = byPrice.get(offer.unitPrice) ?? [];
+        level.push(offer);
+        byPrice.set(offer.unitPrice, level);
+      }
+      if (byPrice.size === 0) continue;
+      ({ wanted, orderBudget } = context.fillLocalOffers(order, wanted, orderBudget, byPrice, {
+        spillBook,
+      }));
+    }
+  }
   for (const offer of context.input.offers) {
     if (!context.poolByOffer.get(offer.id)!.hasPooledSales) continue;
     const seller = context.offerResults.get(offer.id)!;

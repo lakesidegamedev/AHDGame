@@ -20,7 +20,7 @@ export const FINANCIAL_STRATEGIES: SectorStrategy[] = [
     demand: {
       software: 0.2,
       electronics: 0.05,
-      consulting_services: 0.1,
+      consulting_services: 0.05,
       real_estate_services: 0.04,
     },
   },
