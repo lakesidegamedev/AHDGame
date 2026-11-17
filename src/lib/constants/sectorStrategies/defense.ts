@@ -28,13 +28,13 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
     description: "Balanced defense manufacturing: vehicles, electronics, and weapons systems.",
     supply: { vehicles: 0.2, electronics: 0.15, ordnance: 0.1 },
     demand: {
-      steel: 0.2,
-      iron: 0.1,
-      rare_earth: 0.05,
-      electronics: 0.2,
-      software: 0.1,
-      construction_services: 0.05,
-      vehicles: 0.03,
+      steel: 0.105,
+      electronics: 0.105,
+      iron: 0.053,
+      software: 0.053,
+      rare_earth: 0.026,
+      construction_services: 0.026,
+      vehicles: 0.016,
     },
   },
   {
@@ -55,12 +55,12 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
     supply: { vehicles: 0.35 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
-      steel: 0.181,
-      iron: 0.12,
-      energy: 0.094,
-      freight: 0.072,
-      construction_services: 0.036,
-      vehicles: 0.022,
+      steel: 0.132,
+      iron: 0.088,
+      energy: 0.069,
+      freight: 0.053,
+      construction_services: 0.026,
+      vehicles: 0.016,
     },
   },
   {
@@ -71,13 +71,12 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
     supply: { ordnance: 0.45, chemicals: 0.05 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
-      steel: 0.119,
-      iron: 0.1,
-      chemicals: 0.106,
-      energy: 0.085,
-      // Kept at the old rate: munitions stays the defence line heaviest on rare earth.
-      rare_earth: 0.08,
-      freight: 0.057,
+      steel: 0.084,
+      chemicals: 0.074,
+      iron: 0.07,
+      energy: 0.06,
+      rare_earth: 0.056,
+      freight: 0.04,
     },
   },
   // ── Lines added for the national arsenal (C2) ──────────────────────────
@@ -101,12 +100,12 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
     supply: { vehicles: 0.3, steel: 0.1 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
-      steel: 0.231,
-      iron: 0.1,
-      energy: 0.072,
-      construction_services: 0.043,
-      electronics: 0.043,
-      freight: 0.036,
+      steel: 0.17,
+      iron: 0.073,
+      energy: 0.053,
+      construction_services: 0.031,
+      electronics: 0.031,
+      freight: 0.026,
     },
   },
   {
@@ -117,12 +116,12 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
     supply: { ordnance: 0.4, electronics: 0.05 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
-      chemicals: 0.139,
-      steel: 0.139,
-      electronics: 0.093,
-      energy: 0.077,
-      rare_earth: 0.039,
-      freight: 0.039,
+      chemicals: 0.103,
+      steel: 0.101,
+      electronics: 0.068,
+      energy: 0.056,
+      rare_earth: 0.028,
+      freight: 0.028,
     },
   },
   {
@@ -132,11 +131,11 @@ export const DEFENSE_STRATEGIES: SectorStrategy[] = [
       "Airframes, avionics and orbital systems. Electronics-heavy on both sides of the ledger — an aerospace prime consumes components and ships finished avionics.",
     supply: { vehicles: 0.2, electronics: 0.18 },
     demand: {
-      steel: 0.18,
-      electronics: 0.12,
-      energy: 0.1,
-      rare_earth: 0.06,
-      freight: 0.04,
+      steel: 0.138,
+      electronics: 0.092,
+      energy: 0.077,
+      rare_earth: 0.046,
+      freight: 0.031,
     },
   },
 ];

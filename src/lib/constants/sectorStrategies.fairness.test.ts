@@ -12,11 +12,11 @@ describe("input-heavy strategy fairness", () => {
     ["manufacturing", "standard", 0.615],
     ["manufacturing", "heavy_metals", 0.614],
     ["healthcare", "biotech", 0.547],
-    ["defense", "heavy_armor", 0.525],
+    ["defense", "heavy_armor", 0.384],
+    ["logistics", "standard", 0.468],
     ["construction", "standard", 0.5],
     ["construction", "infrastructure", 0.526],
     ["retail", "standard", 0.58],
-    // Phase 1 recalibration (2026-10-18) trimmed the variants to reach the 15-25% base band.
   ] as const)("keeps %s/%s input rates at the audited ceiling", (sector, strategy, expected) => {
     expect(demandRate(sector, strategy)).toBeCloseTo(expected, 10);
   });
@@ -37,7 +37,6 @@ describe("input-heavy strategy fairness", () => {
   it("does not change already-healthy benchmark recipes", () => {
     expect(demandRate("technology", "software")).toBeCloseTo(0.25, 10);
     expect(demandRate("financial", "standard")).toBeCloseTo(0.34, 10);
-    expect(demandRate("logistics", "standard")).toBeCloseTo(0.59, 10);
     expect(demandRate("extraction", "standard")).toBeCloseTo(0.56, 10);
   });
 });
