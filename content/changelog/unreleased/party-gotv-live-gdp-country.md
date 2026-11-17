@@ -1,0 +1,1 @@
+- Party get-out-the-vote, voter suppression and registration budgets run again for every country: the campaign income estimate now groups regions by their own country instead of treating every region as part of the United States.

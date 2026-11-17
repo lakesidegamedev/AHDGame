@@ -1158,3 +1158,110 @@ describe("demographicTurnoutTurn", () => {
     });
   });
 });
+
+describe("processPartyGOTV live national GDP basis", () => {
+  it("prices a national budget from that country's own regions", async () => {
+    const db: MockDb = createMockDb();
+    // Live GDP basis: the revenue estimate must read each region's own country.
+    db.collection("gameConfig").findOne.mockResolvedValue({ campaignLiveGdpBasisEnabled: true });
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+
+    const stateId = "ENG";
+    const partyId = "1";
+
+    const nationalBudget = {
+      _id: new ObjectId(),
+      partyId,
+      countryId: "UK",
+      scope: "national",
+      gotvBudgetPerTurn: 600,
+      gotvBudgetPercent: 0,
+      gotvTargetCategory: "wealth",
+      gotvTargetGroup: "high",
+      suppressionBudgetPercent: 0,
+      orgBuildingPercent: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as PartyBudget;
+
+    const mockTurnout: StateDemographicTurnout = {
+      _id: stateId,
+      countryId: "UK",
+      modifiers: {
+        race: { white: 0, black: 0, hispanic: 0, asian: 0, other: 0 },
+        age: { young: 0, mid: 0, mature: 0, senior: 0 },
+        education: { no_college: 0, college: 0, graduate: 0 },
+        wealth: { low: 0, middle: 0, high: 0 },
+        ideology: {
+          evangelicals: 0,
+          environmentalists: 0,
+          libertarians: 0,
+          progressives: 0,
+          patriots: 0,
+          gunowners: 0,
+        },
+      },
+      lastDecayApplied: new Date(),
+      lastUpdated: new Date(),
+    };
+
+    const mockParty = {
+      _id: new ObjectId(),
+      sequentialId: Number(partyId),
+      countryId: "UK",
+      name: "LAB",
+      economicPosition: 4,
+      socialPosition: 5,
+      nationalTaxRate: 10,
+      treasury: 10_000,
+    } as unknown as PoliticalParty;
+
+    const mockCharacter = {
+      _id: new ObjectId(),
+      party: partyId,
+      countryId: "UK",
+      homeState: stateId,
+      donorBaseLevel: 0,
+      currentOffice: null,
+    } as unknown as import("@/lib/db/types").Character;
+
+    const cursorFor = <T>(docs: T[]) => ({
+      toArray: vi.fn().mockResolvedValue(docs),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      project: vi.fn().mockReturnThis(),
+    });
+
+    db.collection("partyBudget");
+    db.collection("stateDemographicTurnout");
+    db.collection("politicalParties");
+    db.collection("statePartyOrg");
+    db.collection("characters");
+    db.collection("npps");
+    db.collection("states");
+
+    db.collectionMocks["partyBudget"]!.find.mockReturnValue(cursorFor([nationalBudget]));
+    db.collectionMocks["stateDemographicTurnout"]!.find.mockReturnValue(cursorFor([mockTurnout]));
+    db.collectionMocks["politicalParties"]!.find.mockReturnValue(cursorFor([mockParty]));
+    db.collectionMocks["characters"]!.find.mockReturnValue(cursorFor([mockCharacter]));
+    db.collectionMocks["npps"]!.find.mockReturnValue(cursorFor([]));
+    db.collectionMocks["states"]!.find.mockReturnValue(
+      cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "UK" }])
+    );
+
+    await expect(processPartyGOTV()).resolves.toBeDefined();
+
+    const treasuryOps = db.collectionMocks["politicalParties"]!.bulkWrite.mock
+      .calls[0][0] as Array<{
+      updateOne: {
+        filter: Record<string, unknown>;
+        update: { $inc: Record<string, number> };
+      };
+    }>;
+
+    expect(treasuryOps).toHaveLength(1);
+    expect(treasuryOps[0].updateOne.filter).toEqual({ countryId: "UK", sequentialId: 1 });
+  });
+});
