@@ -5,8 +5,8 @@ summary: >-
   Character creation now notices when another account is signed in during Discord linking
   and asks you to reload before continuing.
 tags: [accounts, discord]
-badges: [fix]
-areas: [web]
+badges: [patch]
+areas: [fullstack]
 ---
 
 ## What changed
