@@ -41,8 +41,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const memberIds = sheet.members.map((m) => new ObjectId(m.corporationId));
     const txLog = financialTxLogCollection(db);
     const [reliefTxs, auditTxs, exposedAgreements] = await Promise.all([
-      // The tx log has a ~7-day TTL, so this is inherently "recent" — which is
-      // exactly the window the panel wants.
+      // The tx log has a ~30-day TTL (TX_TTL_TURNS) and the read is capped at
+      // 50 rows, so this stays "recent", which is the window the panel wants.
       txLog
         .find({ type: "corp_group_relief", subjectId: { $in: memberIds } })
         .sort({ createdAt: -1 })

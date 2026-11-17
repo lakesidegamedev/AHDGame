@@ -7,7 +7,7 @@ import { ensureIndex } from "./helpers";
  *
  * The TTL index expires rows at `expiresAt`. Application writes set
  * `expiresAt = createdAt + TX_TTL_TURNS × turnLengthMinutes × 60_000`
- * (default 168 turns ≈ 7 days). The index itself just honors that stamp.
+ * (default 720 turns ≈ 30 days). The index itself just honors that stamp.
  */
 /** Shared with the live-world migration so the definitions cannot drift. */
 export const FINANCIAL_TX_LOG_COUNTERPARTY_INDEX = {

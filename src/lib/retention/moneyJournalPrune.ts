@@ -8,7 +8,7 @@
  * balance is derived from it; every reader is current-turn reconciliation, a
  * 48-turn turnover window, or an idempotent upsert that would rebuild an
  * identical row. `financialTxLog`, the forensic trail it mirrors, already
- * expires at the same 168-turn window.
+ * expires at the same 720-turn window.
  *
  * `bankMoneyMoves` doubles as the idempotency record for settlements, so only
  * terminal, fully projected moves of high-volume kinds whose keys embed the
