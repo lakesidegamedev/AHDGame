@@ -131,6 +131,14 @@ export interface ProducerGameConfig {
   producerPublicHomeFirstStage?: number;
 
   /**
+   * Funded producer market: >= 1 lifts the plant economy's share of GDP, which
+   * scales public buying and household transfers, to a minimum so a young world
+   * has demand to build into. Each higher stage raises the minimum. The money is
+   * the same budget outlay the treasury already spends. 0 or absent = off.
+   */
+  producerDemandFloorStage?: number;
+
+  /**
    * Funded producer market: >= 1 clears each price level of the world book
    * across public buyers together, pro rata to what each still wants, after
    * any home-first pass. Before, the leftover went to governments in order-id

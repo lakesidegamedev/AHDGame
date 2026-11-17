@@ -46,6 +46,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerFundedBookStage: 1,
   producerNationalPublicDemandStage: 1,
   producerPublicHomeFirstStage: 1,
+  producerDemandFloorStage: 1,
   producerPublicFairShareStage: 1,
   producerProcurementSpillStage: 1,
   producerProcurementSpillShare: 1,

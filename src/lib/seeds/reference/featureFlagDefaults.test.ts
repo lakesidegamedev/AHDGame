@@ -66,6 +66,8 @@ function flagFieldsOf(file: string, iface: string): string[] {
 
 const LADDER_TOPS: Record<string, string | number> = {
   producerTariffStage: 1,
+  // Stage 1 is the standing floor; higher stages are live-only raises an operator sets.
+  producerDemandFloorStage: 1,
   outputBasis: "value_added",
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
