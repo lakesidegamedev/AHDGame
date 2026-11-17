@@ -14,8 +14,19 @@ vi.mock("@/contexts/RegisteredCountriesContext", () => ({
   useCountryDisplayName: () => (id: string) => (id === "US" ? "United States" : "United Kingdom"),
 }));
 
-const sampleCommodities = [
+const defaultCommodityFields = {
+  icon: "",
+  colors: "",
+  globalSupply: 0,
+  globalDemand: 0,
+  exchangeSupply: 0,
+  exchangeDemand: 0,
+  priceChange: 0,
+};
+
+const sampleCommodities: CommodityData[] = [
   {
+    ...defaultCommodityFields,
     commodity: "steel",
     label: "Steel",
     unit: "t",
@@ -29,6 +40,7 @@ const sampleCommodities = [
     statePrices: { CA: 150, TX: 90 },
   },
   {
+    ...defaultCommodityFields,
     commodity: "coal",
     label: "Coal",
     unit: "t",
@@ -41,7 +53,7 @@ const sampleCommodities = [
     stateDemand: { CA: 30, TX: 50 },
     statePrices: { CA: 70, TX: 45 },
   },
-] as CommodityData[];
+];
 
 describe("RegionalShortagesClient", () => {
   beforeEach(() => {
