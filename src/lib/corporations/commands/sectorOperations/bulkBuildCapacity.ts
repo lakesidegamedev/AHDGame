@@ -131,7 +131,10 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
 
     const mode = await getMarketSystemMode();
     if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-      return errorResponse(400, "Building is switched off in this world right now, so no capacity can be ordered.");
+      return errorResponse(
+        400,
+        "Building is switched off in this world right now, so no capacity can be ordered."
+      );
     }
 
     const resolved = await resolveCorporation(db, id);

@@ -239,7 +239,10 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     // Plants gate. Same read shape as setSectorPricing's clearing gate.
     const mode = await getMarketSystemMode();
     if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-      return errorResponse(400, "Building is switched off in this world right now, so no capacity can be ordered.");
+      return errorResponse(
+        400,
+        "Building is switched off in this world right now, so no capacity can be ordered."
+      );
     }
 
     const resolved = await resolveCorporation(db, id);

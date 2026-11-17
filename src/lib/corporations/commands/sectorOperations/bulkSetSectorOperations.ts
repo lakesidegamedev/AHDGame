@@ -328,7 +328,10 @@ async function bulkSetCapacity(
 ) {
   const mode = await getMarketSystemMode();
   if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-    return errorResponse(400, "Building is switched off in this world right now, so no capacity can be ordered.");
+    return errorResponse(
+      400,
+      "Building is switched off in this world right now, so no capacity can be ordered."
+    );
   }
   const mothballed = action === "mothball";
   const filter: Record<string, unknown> = {

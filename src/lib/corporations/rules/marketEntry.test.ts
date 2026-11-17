@@ -60,7 +60,9 @@ describe("evaluateMarketEntry", () => {
   it("refuses a market the corporation already operates in", () => {
     const verdict = evaluateMarketEntry({ ...OPEN_FACTS, alreadyOperating: true });
     expect(verdict.reason).toBe("already_operating");
-    expect(verdict.message).toBe("You already operate in this state. Open that sector and order more capacity there.");
+    expect(verdict.message).toBe(
+      "You already operate in this state. Open that sector and order more capacity there."
+    );
   });
 
   it("refuses new Retail during the demand unwind and says how long is left", () => {
