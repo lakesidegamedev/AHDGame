@@ -1,1 +1,10 @@
-export { GET, PATCH } from "@/lib/electricityNetwork/admin";
+import {
+  GET as handleGET,
+  PATCH as handlePATCH,
+} from "@/lib/api/commands/admin/electricity-network/handlers";
+export function GET(...args: Parameters<typeof handleGET>) {
+  return handleGET(...args);
+}
+export function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return handlePATCH(...args);
+}

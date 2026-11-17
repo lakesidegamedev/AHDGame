@@ -68,15 +68,17 @@ const links: readonly [string, string, number, number, string?][] = [
   ["BR", "UY", 500, 2001],
   ["NG", "BJ", 200, 2007],
 ];
+const REGION_GRID_ZONES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  US: { AK: "US:AK", HI: "US:HI" },
+  CA: { NU: "CA:NU", NT: "CA:NT", YT: "CA:YT", NL: "CA:NL" },
+  UK: { NIR: "UK:NIR", NI: "UK:NIR" },
+};
 export function gridZone(location: GridLocation): string | null {
   const c = location.countryId?.trim().toUpperCase();
   if (!c) return null;
   const raw = (location.stateId ?? "").toUpperCase();
   const s = raw.startsWith(`${c}_`) || raw.startsWith(`${c}-`) ? raw.slice(c.length + 1) : raw;
-  if (c === "US" && (s === "AK" || s === "HI")) return `${c}:${s}`;
-  if (c === "CA" && ["NU", "NT", "YT", "NL"].includes(s)) return `CA:${s}`;
-  if (c === "UK" && ["NIR", "NI"].includes(s)) return "UK:NIR";
-  return c;
+  return REGION_GRID_ZONES[c]?.[s] ?? c;
 }
 export function buildElectricityNetwork(
   year: number,

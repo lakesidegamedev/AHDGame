@@ -12,9 +12,9 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { electricityMode } from "./rules/types";
-import type { ElectricityReport } from "./rules/report";
-import { buildElectricityNetwork } from "./rules/network";
+import { electricityMode } from "@/lib/electricityNetwork/rules/types";
+import type { ElectricityReport } from "@/lib/electricityNetwork/rules/report";
+import { buildElectricityNetwork } from "@/lib/electricityNetwork/rules/network";
 const modeSchema = z.object({ mode: z.enum(["off", "shadow", "enforced"]) }).strict();
 const querySchema = z.object({ turn: z.coerce.number().int().nonnegative().optional() }).strict();
 export const GET = withNoStore(async () => {
