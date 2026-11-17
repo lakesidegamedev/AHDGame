@@ -15,7 +15,7 @@ import {
   AUTOPILOT_GROWTH_STEP_OF_RUN,
   AUTOPILOT_PAYBACK_HORIZON_TURNS,
   evaluateAutopilotGrowthGate,
-} from "./rules/autopilotReinvest";
+} from "@/lib/corporations/rules/autopilotReinvest";
 import { getNppCashFloorAnchor } from "./nppCashReserve";
 
 const CASH = 36_800_000;

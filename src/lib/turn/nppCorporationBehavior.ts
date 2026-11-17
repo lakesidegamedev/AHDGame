@@ -35,7 +35,7 @@ import {
   type NppFoundingCashWitness,
 } from "@/lib/turn/npp/foundingCashLedger";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, ExchangeRate, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
@@ -68,7 +68,7 @@ import {
 } from "@/lib/turn/npp/decisionSnapshotIndexes";
 
 import { partitionOpenMarkets } from "@/lib/economy/queries/privateEnterpriseGate";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+
 import type { ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 
 import { bucketKey } from "@/lib/market/marketBuckets";
@@ -135,7 +135,7 @@ import {
 } from "@/lib/corporations/autopilot";
 import type { CorpAutopilotAdvisory } from "@/lib/db/types/corporation";
 import { operatorPermissionsFor } from "@/lib/turn/npp/operatorPermissions";
-import { operatorMay } from "@/lib/turn/npp/rules/operatorPolicy";
+import { operatorMay } from "@/lib/corporations/rules/operatorPolicy";
 import { createNotifications } from "@/lib/notifications";
 import {
   corpDailyGrossRevenueLocalFromSectors,

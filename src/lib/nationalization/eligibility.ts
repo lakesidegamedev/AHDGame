@@ -13,6 +13,7 @@ export interface EligibilityInput {
   /** Corp liquid capital in its own currency; < 0 ⇒ insolvent. Ignored for non-player. */
   liquidCapital: number;
   hasDefaultedBond: boolean;
+  hasProducerArrears?: boolean;
   /** Consecutive turns the CEO seat has been vacant (0 if seated). */
   ceoVacantTurns: number;
   currentTurn: number;
@@ -61,7 +62,8 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityResult 
   // Financial distress (insolvency / defaulted bond) only exposes a player corp
   // after it has persisted the grace window, giving the owner time to cure.
   // CEO-vacancy keeps its own DISTRESS_VACANT_CEO_TURNS threshold.
-  const inFinancialDistress = input.liquidCapital < 0 || input.hasDefaultedBond;
+  const inFinancialDistress =
+    input.liquidCapital < 0 || input.hasDefaultedBond || input.hasProducerArrears === true;
   const financialMature =
     inFinancialDistress && input.financialDistressTurns >= FINANCIAL_DISTRESS_GRACE_TURNS;
   const distressed = financialMature || input.ceoVacantTurns >= DISTRESS_VACANT_CEO_TURNS;

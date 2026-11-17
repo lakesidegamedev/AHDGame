@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { CorporationOperatorPolicy } from "@/lib/db/types/corporation";
-import { OPERATOR_ACTIONS } from "@/lib/turn/npp/rules/operatorPolicy";
+import { OPERATOR_ACTIONS } from "@/lib/corporations/rules/operatorPolicy";
 
 const permission = z.enum(["allow", "ask", "never"]);
 

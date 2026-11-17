@@ -6,11 +6,12 @@ import { ensureIndex } from "./helpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const CORPORATE_SECTOR_IDENTITY_INDEX_NAME =
-  "corporateSectors_corporation_state_type_unique";
+  "corporateSectors_corporation_state_type_site_unique";
 export const CORPORATE_SECTOR_IDENTITY_INDEX_KEY = {
   corporationId: 1,
   stateId: 1,
   sectorType: 1,
+  nationalizationSiteKey: 1,
 } as const;
 
 // Core identity and lookup indexes on user-facing collections.

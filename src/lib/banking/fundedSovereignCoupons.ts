@@ -1,23 +1,53 @@
+import {
+  freezeDueSovereignCouponClaimSet,
+  groupedRecords,
+} from "@/lib/banking/frozenSovereignCouponClaims";
+export { freezeDueSovereignCouponClaimSet } from "@/lib/banking/frozenSovereignCouponClaims";
+export type {
+  FreezeDueSovereignCouponInput,
+  FrozenSovereignCouponClaimSet,
+} from "@/lib/banking/frozenSovereignCouponClaims";
+import {
+  isDuplicateKeyError,
+  batchPayoutTransition,
+  loadCouponTargetReadiness,
+} from "@/lib/banking/sovereignCouponBatchPayout";
+export { loadCouponTargetReadiness } from "@/lib/banking/sovereignCouponBatchPayout";
+import type {
+  SovereignCouponClaimRecord,
+  SovereignCouponSettlementPrefetch,
+  CouponBatchRecord,
+} from "@/lib/banking/sovereignCouponPrefetch";
+import {
+  OPEN_CLAIM,
+  sovereignCouponClaimStore,
+  BATCH_PROJECTION,
+  couponBatchKey,
+} from "@/lib/banking/sovereignCouponPrefetch";
+export {
+  sovereignCouponClaimStore,
+  loadSovereignCouponSettlementPrefetch,
+  couponBatchKey,
+} from "@/lib/banking/sovereignCouponPrefetch";
+export type {
+  SovereignCouponClaimRecord,
+  SovereignCouponSettlementPrefetch,
+  CouponBatchRecord,
+} from "@/lib/banking/sovereignCouponPrefetch";
 import { createHash } from "node:crypto";
-import { ObjectId, type Db, type Filter } from "mongodb";
+import { type Db, type Filter } from "mongodb";
 import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, FundedSovereignCouponClaim } from "@/lib/db/types/budget";
-import type { Corporation } from "@/lib/db/types/corporation";
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
-import { bondAccruesCoupon } from "@/lib/constants/bonds";
+
 import {
   settleTransition,
   resumeSettlement,
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
-import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
+
 import { checkBalancedTransfer } from "@/lib/banking/rules/invariants";
 import {
-  freezeSovereignCouponClaim,
-  groupSovereignCouponClaims,
   sovereignCouponGroupTokenPrefix,
-  sovereignCouponPayeeGroup,
-  type SovereignCouponBondSnapshot,
   type SovereignCouponCorporationQuote,
 } from "@/lib/banking/rules/sovereignCoupons";
 
@@ -28,6 +58,7 @@ import {
  * and put the document on course for the 16 MB limit. The claim, its id and its
  * frozen quotes are unchanged; only where it is kept moved.
  */
+
 import {
   FISCAL_SCALE_PLAYER_HOLDER_KINDS,
   claimAtFiscalScale,
@@ -35,41 +66,13 @@ import {
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
-import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
-import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
-import { couponCashWitness, payoutTransition } from "./sovereignCouponPayout";
+import { payoutTransition } from "./sovereignCouponPayout";
 export { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "./sovereignCouponPayout";
 import {
-  fundedCouponPayeeWitness,
   loadCouponCashWitnessContext,
   type CouponCashWitnessContext,
 } from "./fundedCouponPayeeWitness";
-
-export interface SovereignCouponClaimRecord {
-  /**
-   * The claim id, `sovereign-coupon:<bondId>:<dueTurn>`. A grouped claim
-   * (`sovereignCouponGroupedAccrualEnabled`) carries its group token in place
-   * of the bond id.
-   */
-  _id: string;
-  budgetId: string;
-  /** Book position within the due turn, so claims settle in the order they were frozen. */
-  order: number;
-  claim: FundedSovereignCouponClaim;
-  /**
-   * Bonds whose coupon a grouped claim carries. Read only when a replayed
-   * freeze finds the grouped id already installed; no settlement reads it.
-   */
-  bondIds?: string[];
-  createdAt: Date;
-  /** Set by the payout projection once the claim is paid. */
-  settledTurn?: number;
-  /** Written by the settlement journal while it publishes to this record; never set here. */
-  pendingSettlementProjection?: unknown;
-}
-
-const OPEN_CLAIM = { settledTurn: { $exists: false } };
 
 /**
  * The claim fields a settlement reads.
@@ -89,45 +92,6 @@ export const FROZEN_CLAIM_PROBE_PROJECTION = {
   ...SOVEREIGN_COUPON_CLAIM_PROJECTION,
   bondIds: 1,
 } as const;
-
-let claimIndexReady: Promise<unknown> | null = null;
-
-/** The claim store, with its indexes ensured once per process. */
-export function sovereignCouponClaimStore(db: Db) {
-  const store = sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(db);
-  claimIndexReady ??= Promise.all([
-    store.createIndex(
-      { budgetId: 1, settledTurn: 1 },
-      { name: "sovereignCouponClaims_budget_settled", background: true }
-    ),
-    // Serves the oldest-open-due-turn probe and the book-order sort without
-    // fetching every claim document; the amount bound is checked on the
-    // fetched candidates only.
-    store.createIndex(
-      { budgetId: 1, settledTurn: 1, "claim.dueTurn": 1, order: 1 },
-      { name: "sovereignCouponClaims_budget_settled_due", background: true }
-    ),
-    // The cash bound is the predicate that decides which claims a pass can act
-    // on at all. In the index it is one range per budget instead of a fetch of
-    // every open claim the budget owns.
-    store.createIndex(
-      { budgetId: 1, settledTurn: 1, "claim.amountLocal": 1 },
-      { name: "sovereignCouponClaims_budget_settled_amount", background: true }
-    ),
-    // The phase groups the whole open queue once per turn (oldest due turn,
-    // smallest claim, which budgets owe one). Every budget-prefixed index has
-    // `settledTurn` in second position, so that grouping cannot bound it; this
-    // order walks only the open entries and covers the group.
-    store.createIndex(
-      { settledTurn: 1, budgetId: 1, "claim.dueTurn": 1, "claim.amountLocal": 1 },
-      { name: "sovereignCouponClaims_open_queue", background: true }
-    ),
-  ]).catch((error) => {
-    claimIndexReady = null;
-    throw error;
-  });
-  return store;
-}
 
 /** Lock key of one frozen coupon holder, or null when it credits no document. */
 function couponHolderKey(
@@ -362,35 +326,6 @@ export async function openSovereignCouponPoolCurrencies(
 }
 
 /**
- * Per-budget coupon facts one Treasury phase reads before its settlement lanes
- * start. Each map is keyed by budget id and covers every budget the caller
- * passed to `loadSovereignCouponSettlementPrefetch`.
- */
-export interface SovereignCouponSettlementPrefetch {
-  /**
-   * Budgets that still owe at least one stored claim.
-   *
-   * The phase used to ask the server for a distinct `budgetId` over every
-   * claim with no `settledTurn`, which cannot use the budget-prefixed indexes
-   * and walked the whole collection. The queue grouping below answers the same
-   * question for the budgets actually loaded.
-   */
-  budgetsWithOpenClaims: ReadonlySet<string>;
-  /** Cash each budget held in the projected budget read the phase locks against. */
-  cashLocalByBudget: ReadonlyMap<string, number>;
-  /** Due turn of each budget's oldest open claim, legacy array claims included. */
-  firstOpenDueTurnByBudget: ReadonlyMap<string, number>;
-  /** Amount of each budget's smallest open claim, legacy array claims included. */
-  smallestOpenClaimAmountByBudget: ReadonlyMap<string, number>;
-  /** Currency codes each budget's public-float holders can be paid in. */
-  poolCurrenciesByBudget: ReadonlyMap<string, readonly string[]>;
-  /** Grouped receipts that could own each budget's queued claims. */
-  batchesByBudget: ReadonlyMap<string, readonly CouponBatchRecord[]>;
-  /** Open claims a prior or grouped receipt still owns, by budget id. */
-  receiptClaimIdsByBudget: ReadonlyMap<string, ReadonlySet<string>>;
-}
-
-/**
  * One budget's share of a pass-wide coupon preparation
  * (`loadSovereignCouponPass`). Everything the settlement would otherwise read
  * for itself before it moves money.
@@ -412,168 +347,6 @@ export interface PreparedSovereignCouponSettlement {
   skipped: boolean;
 }
 
-interface OpenClaimBudgetSummaryRow {
-  _id: string;
-  firstDueTurn?: unknown;
-  smallestAmountLocal?: unknown;
-}
-
-interface OpenClaimPoolCurrencyRow {
-  _id: { budgetId: string; currencyCode: string };
-}
-
-const finiteNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value);
-
-/**
- * The per-budget probes `settleFundedSovereignCoupons` would otherwise issue
- * inside its lane, read once for the whole phase: the oldest open due turn and
- * smallest open amount (one grouped aggregation), the public-float currencies
- * (one grouped aggregation), the grouped receipts that could own a queued claim
- * (one keyed read over every budget's keys) and the open claims a receipt still
- * owns (one keyed read). Both aggregations are grouped by budget id, so the
- * server walks the claim queue once instead of once per budget. Legacy array
- * claims are folded in here because they are migrated into the store only when
- * the budget settles.
- */
-export async function loadSovereignCouponSettlementPrefetch(
-  db: Db,
-  input: {
-    budgets: ReadonlyArray<
-      Pick<FederalBudget, "_id" | "treasuryCashLocal" | "sovereignCouponClaims">
-    >;
-    turn: number;
-    receiptClaimIds: readonly string[];
-  }
-): Promise<SovereignCouponSettlementPrefetch> {
-  const budgetIds = input.budgets.map((budget) => String(budget._id));
-  const receiptIds = [...new Set(input.receiptClaimIds)];
-  const [summaryRows, currencyRows, receiptRows] = await Promise.all([
-    budgetIds.length
-      ? sovereignCouponClaimStore(db)
-          .aggregate<OpenClaimBudgetSummaryRow>([
-            { $match: { ...OPEN_CLAIM, budgetId: { $in: budgetIds } } },
-            {
-              $group: {
-                _id: "$budgetId",
-                firstDueTurn: { $min: "$claim.dueTurn" },
-                smallestAmountLocal: { $min: "$claim.amountLocal" },
-              },
-            },
-          ])
-          .toArray()
-      : Promise.resolve<OpenClaimBudgetSummaryRow[]>([]),
-    budgetIds.length
-      ? sovereignCouponClaimStore(db)
-          .aggregate<OpenClaimPoolCurrencyRow>([
-            {
-              $match: {
-                ...OPEN_CLAIM,
-                budgetId: { $in: budgetIds },
-                "claim.holders.kind": "publicFloat",
-              },
-            },
-            { $group: { _id: { budgetId: "$budgetId", currencyCode: "$claim.currencyCode" } } },
-          ])
-          .toArray()
-      : Promise.resolve<OpenClaimPoolCurrencyRow[]>([]),
-    receiptIds.length
-      ? sovereignCouponClaimStore(db)
-          .find(
-            { _id: { $in: receiptIds }, ...OPEN_CLAIM },
-            { projection: { _id: 1, budgetId: 1 } }
-          )
-          .toArray()
-      : Promise.resolve<SovereignCouponClaimRecord[]>([]),
-  ]);
-
-  const budgetsWithOpenClaims = new Set<string>();
-  const cashLocalByBudget = new Map<string, number>();
-  const firstOpenDueTurnByBudget = new Map<string, number>();
-  const smallestOpenClaimAmountByBudget = new Map<string, number>();
-  const poolCurrenciesByBudget = new Map<string, Set<string>>();
-  for (const budget of input.budgets) {
-    const cash = budget.treasuryCashLocal;
-    cashLocalByBudget.set(String(budget._id), finiteNumber(cash) ? Math.max(0, cash) : 0);
-  }
-  for (const row of summaryRows) {
-    const budgetId = String(row._id);
-    budgetsWithOpenClaims.add(budgetId);
-    if (finiteNumber(row.firstDueTurn)) firstOpenDueTurnByBudget.set(budgetId, row.firstDueTurn);
-    if (finiteNumber(row.smallestAmountLocal))
-      smallestOpenClaimAmountByBudget.set(budgetId, row.smallestAmountLocal);
-  }
-  for (const row of currencyRows) {
-    const budgetId = String(row._id.budgetId);
-    const set = poolCurrenciesByBudget.get(budgetId) ?? new Set<string>();
-    set.add(row._id.currencyCode);
-    poolCurrenciesByBudget.set(budgetId, set);
-  }
-  // Legacy array claims land in the store when the budget settles, so the
-  // prefetch has to answer for them as well.
-  for (const budget of input.budgets) {
-    const budgetId = String(budget._id);
-    for (const claim of budget.sovereignCouponClaims ?? []) {
-      const first = firstOpenDueTurnByBudget.get(budgetId);
-      if (first === undefined || claim.dueTurn < first)
-        firstOpenDueTurnByBudget.set(budgetId, claim.dueTurn);
-      const smallest = smallestOpenClaimAmountByBudget.get(budgetId);
-      if (smallest === undefined || claim.amountLocal < smallest)
-        smallestOpenClaimAmountByBudget.set(budgetId, claim.amountLocal);
-      if (!claim.holders.some((holder) => holder.kind === "publicFloat")) continue;
-      const set = poolCurrenciesByBudget.get(budgetId) ?? new Set<string>();
-      set.add(claim.currencyCode);
-      poolCurrenciesByBudget.set(budgetId, set);
-    }
-  }
-  const receiptClaimIdsByBudget = new Map<string, Set<string>>();
-  for (const row of receiptRows) {
-    const budgetId = String(row.budgetId);
-    const set = receiptClaimIdsByBudget.get(budgetId) ?? new Set<string>();
-    set.add(row._id);
-    receiptClaimIdsByBudget.set(budgetId, set);
-  }
-
-  // Every grouped receipt that could own a queued claim, in one keyed read.
-  // The keys are the same range `loadCouponBatches` builds per budget.
-  const keyOwner = new Map<string, string>();
-  const keys: string[] = [];
-  for (const budget of input.budgets) {
-    const budgetId = String(budget._id);
-    const first = firstOpenDueTurnByBudget.get(budgetId) ?? input.turn;
-    for (let turn = first; turn <= input.turn; turn++) {
-      const key = couponBatchKey(budgetId, turn);
-      keys.push(key);
-      keyOwner.set(key, budgetId);
-    }
-  }
-  const batchRows = keys.length
-    ? await bankMoneyMovesCollection<CouponBatchRecord>(db)
-        .find({ _id: { $in: keys } }, { projection: BATCH_PROJECTION })
-        .toArray()
-    : [];
-  const batchesByBudget = new Map<string, CouponBatchRecord[]>();
-  for (const row of batchRows) {
-    const budgetId = keyOwner.get(row._id);
-    if (!budgetId) continue;
-    const list = batchesByBudget.get(budgetId) ?? [];
-    list.push(row);
-    batchesByBudget.set(budgetId, list);
-  }
-
-  return {
-    budgetsWithOpenClaims,
-    cashLocalByBudget,
-    firstOpenDueTurnByBudget,
-    smallestOpenClaimAmountByBudget,
-    poolCurrenciesByBudget: new Map<string, readonly string[]>(
-      [...poolCurrenciesByBudget].map(([budgetId, set]) => [budgetId, [...set]] as const)
-    ),
-    batchesByBudget,
-    receiptClaimIdsByBudget,
-  };
-}
-
 /**
  * Insert claim records. Unordered, so a record a concurrent or replayed install
  * already wrote fails alone with a duplicate key and every other record lands.
@@ -588,17 +361,6 @@ export async function insertClaimRecords(
   } catch (error) {
     if (!isDuplicateKeyError(error)) throw error;
   }
-}
-
-function isDuplicateKeyError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const { code, writeErrors } = error as { code?: unknown; writeErrors?: unknown };
-  if (code === 11000) return true;
-  return (
-    Array.isArray(writeErrors) &&
-    writeErrors.length > 0 &&
-    writeErrors.every((row) => (row as { code?: unknown })?.code === 11000)
-  );
 }
 
 async function findPriorPayouts(
@@ -653,151 +415,6 @@ export function sovereignCouponQueuedClaimIds(
   for (const batch of batches) for (const id of batchMembers(batch)) ids.add(id);
   for (const move of priors) ids.add(claimIdOfMove(move._id));
   return ids;
-}
-
-export interface FreezeDueSovereignCouponInput {
-  budgetId: string;
-  bonds: readonly Bond[];
-  turn: number;
-  anchorRate: number;
-  forexEnabled: boolean;
-  corporateQuotes: ReadonlyMap<string, SovereignCouponCorporationQuote>;
-  frozenThrough?: Record<string, number>;
-  knownClaims: ReadonlyMap<string, FundedSovereignCouponClaim>;
-  /**
-   * `sovereignCouponGroupedAccrualEnabled`: fold this turn's per-bond claims
-   * into one claim per currency and payee group
-   * (`groupSovereignCouponClaims`). Absent, one claim per bond.
-   */
-  grouped?: boolean;
-}
-
-/** One budget's frozen claims for this turn, and the frozen-through marks they set. */
-export interface FrozenSovereignCouponClaimSet {
-  records: SovereignCouponClaimRecord[];
-  /** `$max` update for `sovereignCouponFrozenThrough`, one entry per bond frozen. */
-  marks: Record<string, number>;
-  /** Grouped only: the per-bond claims each grouped record folds, by record id. */
-  parts: Map<string, FundedSovereignCouponClaim[]>;
-}
-
-export function freezeDueSovereignCouponClaimSet(
-  input: FreezeDueSovereignCouponInput
-): FrozenSovereignCouponClaimSet {
-  const records: SovereignCouponClaimRecord[] = [];
-  for (const bond of input.bonds) {
-    if (
-      bond.issuerType !== "sovereign" ||
-      bond.defaulted ||
-      bond.matured ||
-      !bondAccruesCoupon(bond)
-    )
-      continue;
-    const bondId = bond._id.toHexString();
-    const claimId = `sovereign-coupon:${bondId}:${input.turn}`;
-    if (input.knownClaims.has(claimId)) continue;
-    if ((input.frozenThrough?.[`b${bondId}`] ?? -1) >= input.turn) continue;
-    const snapshot: SovereignCouponBondSnapshot = {
-      id: bondId,
-      countryId: String(bond.countryId ?? ""),
-      currencyCode: bond.currencyCode,
-      couponRate: bond.couponRate,
-      publicFloat: bond.publicFloat,
-      holders: (bond.holders ?? []).map((holder) => {
-        if (holder.bankId || holder.bankTreasuryTradeId)
-          return { kind: "bank", units: holder.units };
-        if (holder.characterId)
-          return { kind: "character", id: holder.characterId.toHexString(), units: holder.units };
-        if (holder.imperialCharacterId)
-          return {
-            kind: "imperial",
-            id: holder.imperialCharacterId.toHexString(),
-            units: holder.units,
-          };
-        if (holder.corporationId)
-          return {
-            kind: "corporation",
-            id: holder.corporationId.toHexString(),
-            units: holder.units,
-          };
-        if (holder.fundId)
-          return { kind: "fund", id: holder.fundId.toHexString(), units: holder.units };
-        if (holder.nppId)
-          return { kind: "npp", id: holder.nppId.toHexString(), units: holder.units };
-        return { kind: "bank", units: holder.units };
-      }),
-    };
-    const claim = freezeSovereignCouponClaim({
-      bond: snapshot,
-      turn: input.turn,
-      anchorRate: input.anchorRate,
-      forexEnabled: input.forexEnabled,
-      corporateQuotes: input.corporateQuotes,
-    });
-    if (!claim) continue;
-    records.push({
-      _id: claim.id,
-      budgetId: input.budgetId,
-      order: records.length,
-      claim,
-      createdAt: new Date(),
-    });
-  }
-  const marks = Object.fromEntries(
-    records.map((row) => [`sovereignCouponFrozenThrough.b${row.claim.bondId}`, row.claim.dueTurn])
-  );
-  if (!input.grouped) return { records, marks, parts: new Map() };
-  return {
-    ...groupedRecords(
-      input.budgetId,
-      records.map((row) => row.claim)
-    ),
-    marks,
-  };
-}
-
-function groupedRecords(
-  budgetId: string,
-  claims: readonly FundedSovereignCouponClaim[],
-  idSuffix = ""
-): Pick<FrozenSovereignCouponClaimSet, "records" | "parts"> {
-  const parts = new Map<string, FundedSovereignCouponClaim[]>();
-  const records = groupSovereignCouponClaims(budgetId, claims, idSuffix).map((row, order) => {
-    // Only the legs this group carries, so regrouping a part rebuilds exactly
-    // its share of the claim.
-    const bondIds = new Set(row.bondIds);
-    parts.set(
-      row.claim.id,
-      claims.flatMap((claim) => {
-        if (
-          !bondIds.has(claim.bondId) ||
-          claim.dueTurn !== row.claim.dueTurn ||
-          claim.currencyCode !== row.claim.currencyCode ||
-          claim.anchorRate !== row.claim.anchorRate
-        )
-          return [];
-        const holders = claim.holders.filter(
-          (holder) => sovereignCouponPayeeGroup(holder.kind) === row.group
-        );
-        return [
-          {
-            ...claim,
-            holders,
-            amountLocal: holders.reduce((sum, holder) => sum + holder.amountLocal, 0),
-          },
-        ];
-      })
-    );
-    return {
-      _id: row.claim.id,
-      budgetId,
-      order,
-      claim: row.claim,
-      createdAt: new Date(),
-      bondIds: row.bondIds,
-    };
-  });
-  return { records, parts };
 }
 
 /**
@@ -1315,27 +932,6 @@ export async function settleFundedSovereignCoupons(
   return prepared ? { completed: true, batchClose } : { completed: true };
 }
 
-export type CouponBatchRecord = {
-  _id: string;
-  status?: string;
-  projectionsCompletedAt?: Date;
-  projections?: { applied?: boolean }[];
-  event?: { meta?: { claimIds?: unknown } };
-};
-
-const BATCH_PROJECTION = {
-  _id: 1,
-  status: 1,
-  projectionsCompletedAt: 1,
-  "projections.applied": 1,
-  "event.meta.claimIds": 1,
-} as const;
-
-/** Grouped receipt key: one per Treasury and attempt turn. */
-export function couponBatchKey(budgetId: string, turn: number): string {
-  return `sovereign-coupon-batch:${budgetId}:${turn}`;
-}
-
 const batchTurn = (batch: CouponBatchRecord) =>
   Number(batch._id.slice(batch._id.lastIndexOf(":") + 1));
 
@@ -1473,211 +1069,4 @@ function isBatchable(
   } catch {
     return false;
   }
-}
-
-/**
- * One balanced receipt for many claims in one currency. It is the per-claim
- * receipts added together: one Treasury debit for the sum of the claims, and
- * one credit per payee holding the sum of that payee's per-claim credits, each
- * valued at the frozen quotes it summed. The debit is valued at the anchor sum
- * of the credits, so the receipt nets exactly. Each claim keeps its own frozen
- * quote on its record, and leaves the queue only after the receipt lands.
- */
-function batchPayoutTransition(
-  claims: FundedSovereignCouponClaim[],
-  budgetId: string,
-  turn: number,
-  witnessRate: number,
-  witnessContext?: CouponCashWitnessContext
-): BankingTransition {
-  const currencyCode = claims[0].currencyCode;
-  const credits = new Map<
-    string,
-    { leg: TransitionLeg; currencyCode: string; amount: number; anchor: number }
-  >();
-  const couponsIn = new Map<string, number>();
-  let amount = 0;
-  for (const claim of claims) {
-    amount += claim.amountLocal;
-    const single = payoutTransition(claim, budgetId, Math.max(turn, claim.dueTurn));
-    for (const leg of single.legs) {
-      if (leg.kind !== "credit" || !leg.valuation) continue;
-      // A corporate credit's guard is part of its target: two claims frozen
-      // under different payee currency guards keep separate legs.
-      const guard = leg.collection === "corporations" ? `|${JSON.stringify(leg.filter)}` : "";
-      const target = `${leg.collection}|${String((leg.filter as { _id?: unknown })._id)}|${leg.path}|${leg.valuation.currencyCode}${guard}`;
-      const row = credits.get(target) ?? {
-        leg,
-        currencyCode: leg.valuation.currencyCode,
-        amount: 0,
-        anchor: 0,
-      };
-      row.amount += leg.amount;
-      row.anchor += leg.amount / leg.valuation.localPerAnchor;
-      credits.set(target, row);
-    }
-    for (const holder of claim.holders) {
-      if (holder.kind !== "publicFloat") continue;
-      couponsIn.set(
-        claim.currencyCode,
-        (couponsIn.get(claim.currencyCode) ?? 0) + holder.amountLocal
-      );
-    }
-  }
-  let creditAnchor = 0;
-  const creditLegs: TransitionLeg[] = [...credits.values()].map((row) => {
-    creditAnchor += row.anchor;
-    return {
-      ...row.leg,
-      amount: row.amount,
-      valuation: { currencyCode: row.currencyCode, localPerAnchor: row.amount / row.anchor },
-    };
-  });
-  return {
-    key: couponBatchKey(budgetId, turn),
-    kind: "sovereign_coupon_funded_batch_payout",
-    turn,
-    currency: currencyCode,
-    legs: [
-      {
-        kind: "debit",
-        amount,
-        valuation: { currencyCode, localPerAnchor: amount / creditAnchor },
-        collection: "federalBudget",
-        filter: { _id: budgetId, treasuryCashLocal: { $gte: amount } },
-        path: "treasuryCashLocal",
-        note: "Pay sovereign coupon claims from funded Treasury cash",
-      },
-      ...creditLegs,
-    ],
-    projections: [
-      ...(witnessContext
-        ? [fundedCouponPayeeWitness(couponBatchKey(budgetId, turn), turn, claims, witnessContext)]
-        : []),
-      couponCashWitness(
-        couponBatchKey(budgetId, turn),
-        claims[0].countryId,
-        currencyCode,
-        amount,
-        witnessRate,
-        turn
-      ),
-      ...[...couponsIn].map(([pool, inc]) => ({
-        collection: "bondMarketPools",
-        filter: { _id: pool },
-        update: { $inc: { "lifetime.couponsIn": inc } },
-        note: "Record funded public-float coupon receipts",
-      })),
-    ],
-    event: {
-      kind: "monetary.executed",
-      command: "turn.sovereignCoupon.fundedBatchPayout",
-      subjectType: "country",
-      subjectId: claims[0].countryId,
-      amount,
-      meta: { claimIds: claims.map((claim) => claim.id).join(","), claims: claims.length },
-    },
-  };
-}
-
-export async function loadCouponTargetReadiness(
-  db: Db,
-  claims: FundedSovereignCouponClaim[],
-  knownPoolCurrencies?: readonly string[]
-): Promise<Set<string>> {
-  // The pool upsert is a side effect that must not depend on which claims the
-  // cash bound let this pass load, so a caller that pre-filtered passes the
-  // currency set read from every open claim.
-  const poolCurrencies = new Set<string>([
-    ...(knownPoolCurrencies ?? []),
-    ...claims.flatMap((claim) =>
-      claim.holders.some((holder) => holder.kind === "publicFloat") ? [claim.currencyCode] : []
-    ),
-  ]);
-  if (poolCurrencies.size > 0) {
-    try {
-      await bondMarketPoolsCollection<{ _id: string }>(db).bulkWrite(
-        [...poolCurrencies].map((currencyCode) => ({
-          updateOne: {
-            filter: { _id: currencyCode },
-            update: { $setOnInsert: { targetCashLocal: 0, createdAt: new Date() } },
-            upsert: true,
-          },
-        })),
-        { ordered: false }
-      );
-    } catch (error) {
-      // Two Treasuries creating the same missing pool at once is the only way
-      // this can race, and the loser's document is already the one it wanted.
-      if (!isDuplicateKeyError(error)) throw error;
-    }
-  }
-  const collections = new Map<string, Set<string>>();
-  for (const claim of claims) {
-    for (const holder of claim.holders) {
-      if (!holder.id) continue;
-      const collection = targetCollection(holder.kind);
-      if (!collection) continue;
-      const ids = collections.get(collection) ?? new Set<string>();
-      ids.add(holder.id);
-      collections.set(collection, ids);
-    }
-  }
-  const foundIds = new Map<string, Set<string>>();
-  const corporationsById = new Map<string, Corporation>();
-  for (const [collection, ids] of collections) {
-    const found =
-      collection === "corporations"
-        ? await db
-            .collection<Corporation>(collection)
-            .find(
-              { _id: { $in: [...ids].map((id) => new ObjectId(id)) } },
-              { projection: { _id: 1, countryId: 1, liquidCurrencyCode: 1 } }
-            )
-            .toArray()
-        : await db
-            .collection<{ _id: ObjectId }>(collection)
-            .find(
-              { _id: { $in: [...ids].map((id) => new ObjectId(id)) } },
-              { projection: { _id: 1 } }
-            )
-            .toArray();
-    foundIds.set(collection, new Set(found.map((row) => row._id.toHexString())));
-    if (collection === "corporations") {
-      for (const corp of found as Corporation[]) corporationsById.set(corp._id.toHexString(), corp);
-    }
-  }
-  const ready = new Set<string>();
-  for (const claim of claims) {
-    const hasAllTargets = claim.holders.every((holder) => {
-      if (holder.kind === "publicFloat") return poolCurrencies.has(claim.currencyCode);
-      if (!holder.id) return false;
-      const collection = targetCollection(holder.kind);
-      if (!collection || !foundIds.get(collection)?.has(holder.id)) return false;
-      if (holder.kind !== "corporation") return true;
-      const corp = corporationsById.get(holder.id);
-      return (
-        !!corp &&
-        resolveCorpLiquidCurrencyCode(corp) === holder.payeeCurrencyCode &&
-        (holder.payeeCurrencyFieldPresent
-          ? corp.liquidCurrencyCode === holder.payeeCurrencyFieldValue
-          : corp.liquidCurrencyCode === undefined) &&
-        (!holder.payeeCurrencyUsesCountryFallback ||
-          String(corp.countryId ?? "") === holder.payeeCountryId)
-      );
-    });
-    if (hasAllTargets) ready.add(claim.id);
-  }
-  return ready;
-}
-
-function targetCollection(
-  kind: FundedSovereignCouponClaim["holders"][number]["kind"]
-): string | null {
-  if (kind === "character") return "characters";
-  if (kind === "imperial") return "imperialCharacters";
-  if (kind === "corporation") return "corporations";
-  if (kind === "fund") return "indexFunds";
-  if (kind === "npp") return "npps";
-  return null;
 }

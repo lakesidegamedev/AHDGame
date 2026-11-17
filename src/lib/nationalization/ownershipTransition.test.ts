@@ -1071,23 +1071,12 @@ describe("nationalizeWholeCorp", () => {
       consequence: CONSEQ,
     });
 
-    // Verify that BYD's shares in Baowu were removed
-    const removeCall = db.collectionMocks.corporations.updateOne.mock.calls.find(
-      (c) => c[1]?.$pull?.shareholders != null
-    );
-    expect(removeCall).toBeTruthy();
-    expect(removeCall![1].$pull.shareholders).toEqual({ corporationId: targetId });
-
-    // Verify that the National Corporation received the shares in Baowu
-    const addCall = db.collectionMocks.corporations.updateOne.mock.calls.find(
-      (c) => c[1]?.$push?.shareholders != null && (c[0]?._id as ObjectId)?.equals(baowuCorpId)
-    );
-    expect(addCall).toBeTruthy();
-    expect(addCall![1].$push.shareholders).toEqual({
-      corporationId: nationalCorpId,
-      shares: 100,
-      avgCostPerShare: 150,
-    });
+    const transfer = db.collectionMocks.corporations.bulkWrite.mock.calls
+      .flatMap((c) => c[0])
+      .find((op) => op.updateOne?.filter?._id?.equals(baowuCorpId));
+    expect(transfer?.updateOne.update.$set.shareholders).toEqual([
+      { corporationId: nationalCorpId, shares: 100, avgCostPerShare: 150 },
+    ]);
 
     // Shares only: the buyout pays the holders for them, so crediting their value
     // to the National Corporation as cash too would create money (#3041).
@@ -1096,4 +1085,18 @@ describe("nationalizeWholeCorp", () => {
     );
     expect(creditCall).toBeUndefined();
   });
+});
+
+// Memory fixtures exercise orchestration; isolated replica-set tests prove transaction rollback.
+vi.mock("@/lib/db/runRequiredTransaction", async (load) => {
+  const real = await load<typeof import("@/lib/db/runRequiredTransaction")>();
+  return {
+    ...real,
+    runRequiredTransaction: vi.fn(
+      async (
+        body: import("@/lib/db/runRequiredTransaction").RequiredTransactionBody<unknown>,
+        options?: import("@/lib/db/runRequiredTransaction").RequiredTransactionOptions
+      ) => (options?.client ? real.runRequiredTransaction(body, options) : body(undefined as never))
+    ),
+  };
 });

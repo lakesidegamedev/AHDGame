@@ -27,6 +27,7 @@ import {
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
@@ -226,6 +227,7 @@ export async function loadCommodityDominanceContext(
           projection: {
             commodity: 1,
             globalDemand: 1,
+            demandTruncatedUnits: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
             ...Object.fromEntries(countryStateIds.map((id) => [`stateDemand.${id}`, 1])),
           },
@@ -235,15 +237,24 @@ export async function loadCommodityDominanceContext(
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
     const countryDemand: Partial<Record<CommodityType, number>> = {};
+    // The books store demand after the ledger cap, which can leave a state with
+    // a fraction of a unit of "demand" for a service the world plainly wants.
+    // The toll asks how much a firm could oversupply what people want, so it
+    // reads demand with the capped-away part restored, pro rata by scope.
     for (const doc of priceDocs) {
-      demand[doc.commodity] = doc.globalDemand;
+      const worldCapped = doc.globalDemand;
+      const truncated = doc.demandTruncatedUnits;
+      demand[doc.commodity] = worldCapped + latentDemandTopUp(worldCapped, worldCapped, truncated);
       const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
-      if (typeof local === "number") stateDemand[doc.commodity] = local;
-      if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity))
-        countryDemand[doc.commodity] = countryStateIds.reduce(
+      if (typeof local === "number")
+        stateDemand[doc.commodity] = local + latentDemandTopUp(local, worldCapped, truncated);
+      if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity)) {
+        const capped = countryStateIds.reduce(
           (sum, id) => sum + (Number(doc.stateDemand?.[id]) || 0),
           0
         );
+        countryDemand[doc.commodity] = capped + latentDemandTopUp(capped, worldCapped, truncated);
+      }
     }
     return {
       sectors: pricedSectors,

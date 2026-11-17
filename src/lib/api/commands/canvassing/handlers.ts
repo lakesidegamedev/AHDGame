@@ -1,0 +1,442 @@
+import {
+  loadCampaignCurrencyRates,
+  loadCampaignPriceLevel,
+} from "@/lib/campaigns/campaignCurrency";
+import { canvassUnitFundsCost } from "@/lib/canvassing/cost";
+import { z } from "zod";
+import { canUseNativeCanvassTargets } from "@/lib/canvassing/campaignContext";
+import { parseJsonBody } from "@/lib/api/validate";
+import {
+  addTurnoutBoost,
+  canvassingBoost,
+  targetAudience,
+  audienceTurnout,
+  CAMPAIGN_RULES_VERSION,
+  TURNOUT_CAP,
+} from "@/lib/campaignTargeting/rules";
+import { loadCampaignAudience } from "@/lib/campaignTargeting/audience";
+import { calculateCanvassingBoost } from "@/lib/turn/demographicTurnoutCalculations";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { localCampaignBalance } from "@/lib/currency/campaignBalance";
+import { campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
+import { getStateDemographicTurnoutCollection } from "@/lib/db/collections";
+import { getDb } from "@/lib/mongodb";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+
+import { ObjectId } from "mongodb";
+import { applyDiminishingReturns } from "@/lib/utils/diminishingReturns";
+import { randomUUID } from "node:crypto";
+import { applyCanvassSpend } from "@/lib/canvassing/canvassSpend";
+import { getMoneyFlowReceiptsCollection } from "@/lib/db/collections/moneyFlowReceipts";
+import { MoneyFlowKeyConflictError } from "@/lib/db/nonAtomicMoneyFlow";
+import {
+  resolveCanvassState,
+  resolveRunningMateCanvassState,
+  CANVASS_ELIGIBILITY_MESSAGE,
+} from "@/lib/canvassing/eligibility";
+import { getGameTime } from "@/lib/time/gameTime";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+
+const COST_ACTIONS = 1;
+
+const MAX_CANVASS_BATCH = 50;
+const electionIdSchema = z
+  .string()
+  .regex(/^[a-fA-F0-9]{24}$/)
+  .optional();
+const canvassSchema = z.object({
+  electionId: electionIdSchema,
+  stateId: z.string().min(1).max(100),
+  category: z
+    .string()
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .max(100),
+  group: z
+    .string()
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .max(100),
+  count: z.number().int().min(1).max(MAX_CANVASS_BATCH).default(1),
+});
+
+// GET /api/canvassing: current eligible targets and a turnout preview.
+// Auth: requireAuthWithCharacter; errors: 400, 401, 403, 404.
+export async function GET(req: NextRequest) {
+  try {
+    const auth = await requireAuthWithCharacter();
+    if (!auth.ok) return auth.response;
+    const previewRate = checkRateLimit(`canvassing-preview:${auth.user.userId}`, 30, 60_000);
+    if (!previewRate.ok) return rateLimitResponse(previewRate.retryAfter);
+    const db = await getDb();
+    const mate = await resolveRunningMateCanvassState(db, auth.user.character);
+    const eligibility = mate.ok ? mate : await resolveCanvassState(db, auth.user.character);
+    if (!eligibility.ok) return errorResponse(403, CANVASS_ELIGIBILITY_MESSAGE[eligibility.reason]);
+    const stateId = eligibility.stateId;
+    const electionId = electionIdSchema.safeParse(
+      req.nextUrl.searchParams.get("electionId") ?? undefined
+    );
+    if (!electionId.success) return errorResponse(400, "Invalid election");
+    const nativeAllowed = await canUseNativeCanvassTargets(
+      db,
+      auth.user.character.countryId ?? "US",
+      stateId,
+      electionId.data ?? (mate.ok ? mate.electionId.toString() : undefined)
+    );
+    const turnoutData = await (
+      await getStateDemographicTurnoutCollection()
+    ).findOne({ _id: stateId });
+    if (!turnoutData) return errorResponse(404, "State turnout data not found");
+    const audience = await loadCampaignAudience(
+      db,
+      auth.user.character.countryId,
+      stateId,
+      turnoutData
+    );
+    const targets = new Map<string, { dimension: string; bucket: string }>();
+    for (const cell of audience?.cells ?? [])
+      for (const [dimension, bucket] of Object.entries(cell.buckets))
+        targets.set(`${dimension}:${bucket}`, { dimension, bucket });
+    const target = {
+      dimension: req.nextUrl.searchParams.get("category") ?? "",
+      bucket: req.nextUrl.searchParams.get("group") ?? "",
+    };
+    if (
+      target.dimension === "__proto__" ||
+      target.dimension === "constructor" ||
+      target.dimension === "prototype" ||
+      target.bucket === "__proto__" ||
+      target.bucket === "constructor" ||
+      target.bucket === "prototype"
+    ) {
+      return errorResponse(400, "Invalid demographic group");
+    }
+    const count = z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_CANVASS_BATCH)
+      .safeParse(req.nextUrl.searchParams.get("count") ?? 1);
+    if (!count.success) return errorResponse(400, "Invalid canvassing count");
+    const info = audience ? targetAudience(audience.cells, target) : null;
+    let preview = null;
+    if (nativeAllowed && audience && info) {
+      const closing = await checkActiveCampaignSeason(stateId, auth.user.character.countryId);
+      const campaignModifiers = structuredClone(
+        turnoutData.campaignModifiers ?? turnoutData.modifiers
+      );
+      const buckets = (campaignModifiers[target.dimension] ??= {});
+      const before = buckets[target.bucket] ?? 0;
+      const position = auth.user.character.policies;
+      buckets[target.bucket] = addTurnoutBoost(
+        before,
+        canvassingBoost(
+          { economicLean: position.economic, socialLean: position.social },
+          info.position,
+          closing
+        ),
+        count.data
+      );
+      const after = audience.build({ ...turnoutData, campaignModifiers });
+      preview = {
+        bucketBoost: buckets[target.bucket] - before,
+        turnoutBefore: audienceTurnout(audience.cells, target),
+        turnoutAfter: audienceTurnout(after?.campaignCells ?? [], target),
+        closing,
+      };
+    }
+    const forex = await isForexEnabled();
+    const [campaignRates, priceLevel] = await Promise.all([
+      loadCampaignCurrencyRates(db),
+      loadCampaignPriceLevel(db),
+    ]);
+    const fundsCost =
+      canvassUnitFundsCost(priceLevel) *
+      (forex ? campaignLocalRate(auth.user.character.countryId, campaignRates) : 1);
+    return NextResponse.json(
+      { stateId, targets: [...targets.values()], preview, fundsCost },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+// POST /api/canvassing — Canvasses a demographic group in the character's active campaign state (home state by default; presidential candidates use travelState/primaryCampaignState) to boost voter turnout modifiers
+// Auth: requireAuthWithCharacter
+// Errors: 400, 401, 403, 404, 429
+export async function POST(req: NextRequest) {
+  try {
+    const auth = await requireAuthWithCharacter();
+    if (!auth.ok) return auth.response;
+    const user = auth.user;
+
+    const rateLimit = checkRateLimit(`api/canvassing:${auth.user.userId}`, 60, 60000);
+    if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+
+    const parsed = await parseJsonBody(req, canvassSchema);
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+    const { stateId, category, group, count, electionId } = parsed.data;
+    if (
+      category === "__proto__" ||
+      category === "constructor" ||
+      category === "prototype" ||
+      group === "__proto__" ||
+      group === "constructor" ||
+      group === "prototype"
+    ) {
+      return errorResponse(400, "Invalid demographic group");
+    }
+
+    const db = await getDb();
+
+    // Running-mate surrogate branch takes precedence when the acting character is the running mate canvassing the ticket's travel state. The surrogate spends the VP's own actions/funds AND draws down the ticket's shared per-day surrogate pool. Otherwise fall through to normal eligibility.
+    const mateEligibility = await resolveRunningMateCanvassState(db, user.character);
+    const usingSurrogate = mateEligibility.ok && mateEligibility.stateId === stateId;
+    let surrogateCampaignId: ObjectId | null = null;
+    if (usingSurrogate && mateEligibility.ok) {
+      const ticketCampaign = await campaignsCollection(db).findOne(
+        {
+          electionId: mateEligibility.electionId,
+          candidateId: mateEligibility.nomineeCharacterId,
+          status: { $ne: "archived" },
+        },
+        { projection: { _id: 1 } }
+      );
+      if (!ticketCampaign) {
+        return errorResponse(404, "Ticket campaign not found");
+      }
+      surrogateCampaignId = ticketCampaign._id;
+    } else {
+      // Resolve canvass eligibility: presidential candidates use travel/primary
+      // state, everyone else uses home state. Returns blocked when a presidential
+      // candidate hasn't set their travel/primary state yet.
+      const eligibility = await resolveCanvassState(db, user.character);
+      if (!eligibility.ok) {
+        return errorResponse(403, CANVASS_ELIGIBILITY_MESSAGE[eligibility.reason]);
+      }
+      if (eligibility.stateId !== stateId) {
+        return errorResponse(403, "You can only canvass in your active campaign state");
+      }
+    }
+
+    const nativeAllowed = await canUseNativeCanvassTargets(
+      db,
+      user.character.countryId ?? "US",
+      stateId,
+      electionId ??
+        (usingSurrogate && mateEligibility.ok ? mateEligibility.electionId.toString() : undefined)
+    );
+    const totalActionsCost = COST_ACTIONS * count;
+
+    const forexEnabled = await isForexEnabled();
+    // The canvass cost is an ANCHOR-denominated constant scaled by the era's
+    // campaign price level, like every other campaign cost. Campaign funds are
+    // decoupled from live forex: convert to LOCAL at the frozen world-seeded
+    // currency basis so the gate and the $inc both operate on local-unit balances.
+    const [campaignRates, priceLevel] = await Promise.all([
+      loadCampaignCurrencyRates(db),
+      loadCampaignPriceLevel(db),
+    ]);
+    const totalFundsCost = canvassUnitFundsCost(priceLevel) * count;
+    const campaignRate = forexEnabled
+      ? campaignLocalRate(user.character.countryId ?? "US", campaignRates)
+      : 1;
+    const totalFundsCostLocal = forexEnabled ? totalFundsCost * campaignRate : totalFundsCost;
+    const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
+    const balanceLocal = localCampaignBalance(user.character, forexEnabled);
+
+    // Crash-safe spend: the surrogate-pool draw and character funds+actions debit are keyed idempotent legs, and the turnout boost a terminal keyed write, so a crash between writes reconciles to exactly one charged canvass. `Idempotency-Key` replays the stored outcome without charging again.
+    const headerKey = req.headers.get("Idempotency-Key");
+    if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
+      return errorResponse(400, "Invalid Idempotency-Key header");
+    }
+    const flowKey = headerKey ?? randomUUID();
+    const fingerprint = `${user.character._id.toHexString()}:${stateId}:${category}:${group}:${count}`;
+    const receipts = await getMoneyFlowReceiptsCollection(db);
+    // A completed retry sees balances and pools *after* the first request, so
+    // read its receipt before the mutable balance checks below. An
+    // interrupted flow must likewise reach the keyed spend for recovery.
+    const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
+    if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {
+      throw new MoneyFlowKeyConflictError(flowKey);
+    }
+    const resuming =
+      previousReceipt?.status === "completed" || previousReceipt?.status === "in_progress";
+
+    // Check funds and actions for the full batch. Skipped when resuming a
+    // keyed attempt: the first request already passed these, and the balances
+    // it left behind must not fail its own retry.
+    if (!resuming) {
+      if (balanceLocal < totalFundsCostLocal) {
+        return errorResponse(400, "Insufficient funds");
+      }
+
+      if (user.character.actions < totalActionsCost) {
+        return errorResponse(400, "Insufficient actions");
+      }
+    }
+
+    // Check if there's an active election in this state
+    const isActiveCampaign = await checkActiveCampaignSeason(stateId, user.character.countryId);
+
+    // Apply canvassing effect immediately (simplified - no action queue)
+    const turnoutCollection = await getStateDemographicTurnoutCollection();
+    const turnoutData = await turnoutCollection.findOne({ _id: stateId });
+
+    if (!turnoutData) {
+      return errorResponse(404, "State turnout data not found");
+    }
+
+    const audience = await loadCampaignAudience(db, user.character.countryId, stateId, turnoutData);
+    const target = { dimension: category, bucket: group };
+    const targetInfo = audience ? targetAudience(audience.cells, target) : null;
+    if (!targetInfo) return errorResponse(400, "Invalid demographic group");
+    const charPosition = user.character.policies;
+    const candidatePosition = {
+      economicLean: charPosition.economic,
+      socialLean: charPosition.social,
+    };
+    const targetPosition = targetInfo.position;
+    // Races stamped before the campaign rules read the legacy `modifiers`
+    // snapshot, so the same bucket also gets the legacy diminishing-returns
+    // boost there.
+    const boost = calculateCanvassingBoost(
+      charPosition,
+      { economic: targetPosition.economicLean, social: targetPosition.socialLean },
+      isActiveCampaign
+    );
+    const campaignModifiers = structuredClone(
+      turnoutData.campaignModifiers ?? turnoutData.modifiers
+    );
+    const modernCategory = (campaignModifiers[category] ??= {});
+    const beforeModifier = modernCategory[group] ?? 0;
+    const modernBoost = canvassingBoost(candidatePosition, targetPosition, isActiveCampaign);
+    modernCategory[group] = addTurnoutBoost(beforeModifier, modernBoost, count);
+    const realizedContact = modernCategory[group] - beforeModifier;
+    const campaignContactModifiers = structuredClone(turnoutData.campaignContactModifiers ?? {});
+    const contactCategory = (campaignContactModifiers[category] ??= {});
+    contactCategory[group] = Math.max(
+      -TURNOUT_CAP,
+      Math.min(TURNOUT_CAP, (contactCategory[group] ?? 0) + realizedContact)
+    );
+    const afterAudience = audience?.build({ ...turnoutData, campaignModifiers });
+    const turnoutBefore =
+      nativeAllowed && audience ? audienceTurnout(audience.cells, target) : null;
+    const turnoutAfter =
+      nativeAllowed && afterAudience?.campaignCells
+        ? audienceTurnout(afterAudience.campaignCells, target)
+        : null;
+
+    // Apply boost iteratively with diminishing returns for each canvass
+    const categoryModifiers = turnoutData.modifiers[category];
+    let currentModifier = categoryModifiers?.[group] ?? 0;
+    let totalBoost = 0;
+
+    for (let i = 0; i < count; i++) {
+      const adjustedBoost = applyDiminishingReturns(currentModifier, boost);
+      currentModifier = Math.max(-20, Math.min(20, currentModifier + adjustedBoost));
+      totalBoost += adjustedBoost;
+    }
+
+    let duplicate = false;
+    try {
+      ({ duplicate } = await applyCanvassSpend(db, {
+        characterId: user.character._id,
+        campaignFundsField,
+        totalFundsCostLocal,
+        totalActionsCost,
+        ...(surrogateCampaignId ? { surrogateCampaignId } : {}),
+        turnout: {
+          stateId,
+          lastUpdated: turnoutData.lastUpdated,
+          modifierPath: `modifiers.${category}.${group}`,
+          modifierValue: currentModifier,
+          campaignModifiers,
+          campaignContactModifiers,
+        },
+        fingerprint,
+        idempotencyKey: flowKey,
+      }));
+    } catch (error) {
+      if ((error as Error).message === "SURROGATE_DEPLETED") {
+        return errorResponse(409, "No running-mate surrogate actions remaining today.");
+      }
+      if ((error as Error).message === "INSUFFICIENT_RESOURCES") {
+        return errorResponse(409, "Your available actions or funds changed. Please try again.");
+      }
+      if ((error as Error).message.startsWith("TURNOUT_CONFLICT")) {
+        return errorResponse(
+          409,
+          "State turnout changed while canvassing. Please refresh and try again."
+        );
+      }
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      message:
+        count > 1
+          ? `Canvassed ${group} voters in ${stateId} ${count} times`
+          : `Canvassing ${group} voters in ${stateId}`,
+      count,
+      ...(duplicate ? { duplicate: true } : {}),
+      effect: {
+        boost: (nativeAllowed ? modernCategory[group] - beforeModifier : totalBoost).toFixed(3),
+        newModifier: (nativeAllowed ? modernCategory[group] : currentModifier).toFixed(2),
+        legacyBoost: totalBoost.toFixed(3),
+        legacyModifier: currentModifier.toFixed(2),
+        campaignRulesVersion: nativeAllowed ? CAMPAIGN_RULES_VERSION : 0,
+        turnoutBefore,
+        turnoutAfter,
+        campaignSeasonActive: isActiveCampaign,
+      },
+    });
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+/**
+ * Check if there's an active election in the state (within 4 turns of election day).
+ * Campaign season provides 2x effectiveness for canvassing.
+ */
+async function checkActiveCampaignSeason(stateId: string, countryId?: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    const { currentTurn, effectiveNow: now } = await getGameTime();
+
+    // Check for elections ending within the next 4 turns. Turn-first
+    // (drift-immune, freezes on pause) with a Date fallback for un-backfilled
+    // docs. 1 turn = 1 game-hour.
+    const fourTurnsAhead = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const endingSoon = {
+      $or: [
+        { endTurn: { $gte: currentTurn, $lte: currentTurn + 4 } },
+        { endTurn: { $exists: false }, endTime: { $gte: now, $lte: fourTurnsAhead } },
+      ],
+    };
+
+    // In-season when a state-level race in this state is near its finish OR a
+    // NATIONAL presidential race for this state's country is near — the latter
+    // fixes the old miss where a presidential contest (stored `state:"US"`,
+    // never `state:"CA"`) never counted its states as in campaign season.
+    const location: Record<string, unknown>[] = [{ state: stateId }];
+    if (countryId) {
+      location.push({ electionType: "president", countryId });
+    }
+
+    const activeElection = await electionsCollection(db).findOne({
+      status: "active",
+      $and: [endingSoon, { $or: location }],
+    });
+
+    return activeElection !== null;
+  } catch (error) {
+    console.error("[Canvassing API] Error checking campaign season:", error);
+    return false;
+  }
+}

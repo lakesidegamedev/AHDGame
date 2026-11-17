@@ -56,6 +56,7 @@ export function producerStageEnv(
         producerFundedBookStage?: number;
         producerNationalPublicDemandStage?: number;
         producerPublicHomeFirstStage?: number;
+        producerDemandFloorStage?: number;
         producerPublicFairShareStage?: number;
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
@@ -95,6 +96,7 @@ export function producerStageEnv(
     fundedBookStage: config?.producerFundedBookStage,
     nationalPublicDemandStage: config?.producerNationalPublicDemandStage,
     publicHomeFirstStage: config?.producerPublicHomeFirstStage,
+    demandFloorStage: config?.producerDemandFloorStage,
     publicFairShareStage: config?.producerPublicFairShareStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,

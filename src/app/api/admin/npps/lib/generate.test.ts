@@ -35,7 +35,7 @@ vi.mock("@/lib/db/sequentialId", () => ({
   getNextSequentialId: vi.fn().mockResolvedValue(12345),
 }));
 
-import { handleGenerateNPPs } from "./generate";
+import { handleGenerateNPPs } from "@/lib/api/commands/admin/npps/lib/generate";
 
 interface ElectionFixture {
   _id: ObjectId;

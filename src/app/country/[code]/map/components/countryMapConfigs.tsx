@@ -37,9 +37,9 @@ import { MapFallback } from "./MapFallback";
 import type { FreightDemandResponse } from "@/lib/logistics/types";
 import { freightHaulLoadLabel, freightHaulLoadTooltip } from "./freightHaulLoadCopy";
 
-import type { ParliamentaryMapCountryId } from "../mapVariant";
+import type { ParliamentaryMapCountryId } from "@/lib/world/mapVariant";
 
-export { isParliamentaryMapCountry } from "../mapVariant";
+export { isParliamentaryMapCountry } from "@/lib/world/mapVariant";
 export type { ParliamentaryMapCountryId };
 
 export interface MapModeConfig {

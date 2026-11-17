@@ -131,6 +131,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",
   producerTariffStage:
     "fresh-world flag (FRESH_WORLD_GAME_CONFIG_FLAGS): import tariffs are a standing trade rule of every plants economy",
+  producerDemandFloorStage:
+    "fresh-world flag (FRESH_WORLD_GAME_CONFIG_FLAGS): a rebuilt economy starts with almost no plants, so it needs the demand floor to have anything to build into",
   producerShortageBuildFactor: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMove: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMultiplier: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",

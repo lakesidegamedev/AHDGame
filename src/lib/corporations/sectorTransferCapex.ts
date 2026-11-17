@@ -1,3 +1,12 @@
+import {
+  mergeFundedInventory,
+  splitFundedInventory,
+} from "@/lib/nationalization/rules/fundedOwnership";
+import type {
+  ProducerInventoryState,
+  ProducerGenerationStamp,
+} from "@/lib/db/types/producerEconomy";
+
 /**
  * Plant-state transfer rules for sector ownership changes (P3b).
  *
@@ -30,6 +39,8 @@ import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 
 /** The plant-state subset of a sector doc. Structural so projections fit. */
 export interface SectorPlantFields {
+  producerInventory?: ProducerInventoryState;
+  producerCapacity?: ProducerGenerationStamp;
   sectorType?: CorporationType | null;
   /** Decides plant size alongside the lane (vehicle recipes build vehicle plants). */
   strategyId?: string | null;
@@ -68,6 +79,8 @@ export interface SectorPlantFields {
 
 /** The `$set` fragment a merge/carve produces. Keys match the sector doc. */
 export interface SectorPlantFieldsUpdate {
+  producerInventory?: ProducerInventoryState;
+  producerCapacity?: ProducerGenerationStamp;
   capitalStock: number;
   operatingCapacityUnits?: number;
   operatingCapacityTurn?: number | null;
@@ -224,6 +237,15 @@ export function mergeSectorPlantFields(
     // The incoming doc is deleted next, so its pile is summed per commodity
     // into the survivor or it disappears with the row.
     ...inventoryFragment([survivor, incoming]),
+    ...(mergeFundedInventory(survivor.producerInventory, incoming.producerInventory)
+      ? {
+          producerInventory: mergeFundedInventory(
+            survivor.producerInventory,
+            incoming.producerInventory
+          ),
+          producerCapacity: survivor.producerCapacity ?? incoming.producerCapacity,
+        }
+      : {}),
   };
 }
 
@@ -255,6 +277,9 @@ export function identitySectorPlantFields(sector: SectorPlantFields): SectorPlan
     plantsStartTurn: typeof sector.plantsStartTurn === "number" ? sector.plantsStartTurn : null,
     legacyRevenueShadow: shadow(sector),
     ...inventoryFragment([sector]),
+    ...(sector.producerInventory
+      ? { producerInventory: sector.producerInventory, producerCapacity: sector.producerCapacity }
+      : {}),
   };
 }
 
@@ -322,7 +347,16 @@ export function carveSectorPlantFields(
     // must still sum to the original one.
     legacyRevenueShadow: sourceShadow === null ? null : sourceShadow * f,
     // The pile follows the capacity, so the two halves still sum to the original.
-    ...inventoryFragment([sector], stockFraction),
+    ...inventoryFragment([sector], openingPlantCount > 0 ? stockFraction : f),
+    ...(sector.producerInventory
+      ? {
+          producerInventory: splitFundedInventory(
+            sector.producerInventory,
+            openingPlantCount > 0 ? stockFraction : f
+          ).moved,
+          producerCapacity: sector.producerCapacity,
+        }
+      : {}),
   };
 }
 
@@ -341,7 +375,10 @@ export function hasPlantState(sector: SectorPlantFields): boolean {
 /** Convenience: read the plant subset off a full sector doc. */
 export function readSectorPlantFields(sector: Partial<CorporateSector>): SectorPlantFields {
   return {
+    producerInventory: sector.producerInventory,
+    producerCapacity: sector.producerCapacity,
     sectorType: sector.sectorType,
+    strategyId: sector.strategyId,
     capitalStock: sector.capitalStock,
     operatingCapacityUnits: sector.operatingCapacityUnits,
     operatingCapacityTurn: sector.operatingCapacityTurn,

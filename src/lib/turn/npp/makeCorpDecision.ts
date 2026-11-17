@@ -34,7 +34,7 @@ import type { CorporateSector } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
 import { operatorPermissionsFor } from "./operatorPermissions";
-import { operatorAllowsPlacement, operatorMay } from "./rules/operatorPolicy";
+import { operatorAllowsPlacement, operatorMay } from "@/lib/corporations/rules/operatorPolicy";
 import {
   createFoundingCapacityOutcome,
   makeCapacityCashToAnchor,

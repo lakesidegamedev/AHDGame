@@ -201,6 +201,8 @@ export interface SectorPlantsSection {
     /** Base ₳ per unit at this era, before the multipliers below. */
     unitPriceAnchor: number;
     expansionMultiplier?: number;
+    /** Price share charged for the first facility in a new market (1 = no discount). */
+    foundingMultiplier?: number;
     dominanceMultiplier: number;
     /** The part of {@link dominanceMultiplier} that comes from market share alone. */
     localDominanceMultiplier?: number;

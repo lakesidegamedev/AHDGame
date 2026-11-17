@@ -35,6 +35,7 @@ import {
 } from "@/lib/corporations/buildDelivery";
 import {
   computeBuildCost,
+  foundingBuildMultiplier,
   MOTHBALL_UPKEEP_FRACTION,
   IDLE_UPKEEP_FRACTION,
   techBuildTurns,
@@ -598,6 +599,7 @@ export function buildSectorPlantsSection(args: {
     buildQuote: {
       unitPriceAnchor: oneUnit.unitPriceAnchor,
       expansionMultiplier: oneUnit.expansionMultiplier,
+      foundingMultiplier: foundingBuildMultiplier(currentYear, preset),
       dominanceMultiplier: oneUnit.dominanceMultiplier,
       localDominanceMultiplier: localQuote.dominanceMultiplier,
       ...(tollModels.length > 0

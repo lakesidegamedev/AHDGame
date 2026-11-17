@@ -1,3 +1,6 @@
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { hasProducerDistress } from "./rules/fundedOwnership";
+import { PRODUCER_CREDIT_STUCK_TURNS } from "@/lib/market/producerMarket/producerCreditRules";
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -41,6 +44,11 @@ export async function resolveCorpEligibilityBatch(
   const resolved = new Map<string, ResolvedCorpEligibility>();
   if (corps.length === 0) return resolved;
 
+  const creditConfig = await gameConfigCollection(db).findOne(
+    {},
+    { projection: { producerCreditStuckTurns: 1 } }
+  );
+  const stuckTurns = creditConfig?.producerCreditStuckTurns ?? PRODUCER_CREDIT_STUCK_TURNS;
   const corpIds = corps.map((c) => c._id);
   const [defaultedBondCorpIds, allSectors, designatedTypes] = await Promise.all([
     bondsCollection(db).distinct("corporationId", {
@@ -96,6 +104,7 @@ export async function resolveCorpEligibilityBatch(
       ownerKind,
       liquidCapital: corp.liquidCapital,
       hasDefaultedBond,
+      hasProducerArrears: hasProducerDistress(corp.producerPayables, currentTurn, stuckTurns),
       ceoVacantTurns,
       currentTurn,
       strategicSectorMatch,

@@ -120,6 +120,23 @@ describe("processSoeRemittance", () => {
     expect(vi.mocked(remitToTreasury)).not.toHaveBeenCalled();
   });
 
+  it("uses booked funded income instead of a profitable nameplate estimate", async () => {
+    seed(40);
+    const { estimateNationalizedOperatingIncome } =
+      await import("@/lib/budget/publicEnterpriseRevenue");
+    vi.mocked(estimateNationalizedOperatingIncome).mockReturnValue(1_000_000);
+    const { remitToTreasury } = await import("./treasury");
+    const { processSoeRemittance } = await import("./soeRemittance");
+    await processSoeRemittance(
+      db as unknown as Db,
+      now,
+      undefined,
+      new Map([[corpId.toHexString(), -24]])
+    );
+    expect(vi.mocked(remitToTreasury)).not.toHaveBeenCalled();
+    expect(vi.mocked(estimateNationalizedOperatingIncome)).not.toHaveBeenCalled();
+  });
+
   it("caps remittance at available liquidCapital — never overdraws an SOE", async () => {
     // Estimate says profit (remit 600), but the SOE only holds 100 in cash.
     seed(40, 100);

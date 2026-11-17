@@ -164,6 +164,29 @@ const natCorpCash = async (db: Db) =>
 describe("whole-corporation taking of a company with ordinary bank loans", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("refuses a funded foreign site without a host successor before payment or deletion", async () => {
+    const w = await world();
+    const foreignId = new ObjectId();
+    const foreign = {
+      _id: foreignId,
+      corporationId: w.targetId,
+      countryId: "CA",
+      stateId: "CA_ON",
+      sectorType: "energy",
+      producerInventory: {
+        worldEpoch: "world",
+        turn: 200,
+        inputStock: [{ commodity: "fuel", units: 10, value: 100 }],
+        outputStock: [],
+      },
+    };
+    await w.db.collection("corporateSectors").insertOne(foreign);
+    await expect(take(w.db, w.targetId)).rejects.toThrow(/receiving state enterprise/);
+    expect(vi.mocked(debitTreasuryCompensation)).not.toHaveBeenCalled();
+    expect(await w.db.collection("corporateSectors").findOne({ _id: foreignId })).toEqual(foreign);
+    expect(await w.db.collection("corporations").findOne({ _id: w.targetId })).not.toBeNull();
+  });
+
   it("moves the loans to the National Corporation, which services them next turn", async () => {
     const w = await world();
     await take(w.db, w.targetId);

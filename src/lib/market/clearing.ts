@@ -1,3 +1,23 @@
+import { clearCommodityMarket } from "@/lib/market/clearCommodityBook";
+export { clearCommodityMarket } from "@/lib/market/clearCommodityBook";
+import { autoPosture, isClearingBookBreach } from "@/lib/market/clearingDiagnostics";
+export {
+  autoPosture,
+  isClearingBookBreach,
+  describeClearingBookBreach,
+} from "@/lib/market/clearingDiagnostics";
+import type {
+  ClearingSeller,
+  SectorClearingInput,
+  ClearingBookDiagnostic,
+  SectorClearingResult,
+} from "@/lib/market/clearingTypes";
+export type {
+  ClearingSeller,
+  SectorClearingInput,
+  ClearingBookDiagnostic,
+  SectorClearingResult,
+} from "@/lib/market/clearingTypes";
 import { offerPriceFactor } from "./rules/offerPricing";
 import {
   guardedPricingPosture,
@@ -25,7 +45,7 @@ import { placementRevenueLeg } from "./placementRevenuePhase";
 import { capDeliveredMediaUnits, type MediaOwnershipMarket } from "@/lib/mediaRegulation/rules";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
-import { LOYAL_POOL_FRACTION, SLICE_NOISE_FLOOR } from "@/lib/market/brandLoyalty";
+
 import { isStateScopedCommodity, supplyAgreementScopeKey } from "@/lib/market/commodityMarketScope";
 
 /**
@@ -64,17 +84,6 @@ export {
 import { clampPricingPosture, costPlusPriceFactor } from "./costPlusPricing/rules";
 
 /**
- * Own-fill feedback thresholds for autoPosture (clearing collapse remediation,
- * 2026-07-06 t879 clone A/B). The aggregate d/s heuristic is blind to the
- * seller's own order-book outcome: a sector can detect a shortage, post +0.1,
- * sell last under cheapest-first, and keep skimming forever while its fill
- * rate sits near zero. These thresholds make the autopilot read its own
- * lagged soldFraction before it prices.
- */
-const AUTO_POSTURE_FILL_CHASE = 0.35;
-const AUTO_POSTURE_FILL_HEALTHY = 0.7;
-
-/**
  * Quality → premium pricing coupling (Package B, qualityPremiumPricingEnabled).
  *
  * Output quality was designed to feed the premium-pricing strategy: a corp that
@@ -94,71 +103,6 @@ export {
   QUALITY_PREMIUM_MULT_MAX,
   qualityPremiumMultiplier,
 } from "./rules/offerPricing";
-/**
- * Automated posture for NPP/unowned sellers: skim into shortages, undercut
- * into gluts, sit at market when balanced. Milder than the player range so
- * players can always out-position the AI.
- *
- * `lastSoldFraction` gates the aggregate heuristic: a seller that failed to
- * clear its book must not skim, and one that barely sold undercuts to chase
- * volume. Survival beats margin for an unmanaged corp.
- */
-export function autoPosture(
-  demandUnits: number,
-  supplyUnits: number,
-  lastSoldFraction?: number | null
-): number {
-  // Own-fill feedback first: our actual outcome trumps the aggregate signal.
-  if (typeof lastSoldFraction === "number" && Number.isFinite(lastSoldFraction)) {
-    if (lastSoldFraction < AUTO_POSTURE_FILL_CHASE) return -0.1;
-    if (lastSoldFraction < AUTO_POSTURE_FILL_HEALTHY) {
-      // Not selling well enough to skim — at most match the market.
-      return Math.min(0, autoPostureFromBalance(demandUnits, supplyUnits));
-    }
-  }
-  return autoPostureFromBalance(demandUnits, supplyUnits);
-}
-
-/** The original aggregate-balance heuristic (no own-fill signal). */
-function autoPostureFromBalance(demandUnits: number, supplyUnits: number): number {
-  if (!(supplyUnits > 0) || !(demandUnits > 0)) return 0;
-  const ds = demandUnits / supplyUnits;
-  if (ds > 1.2) return 0.1;
-  if (ds < 0.8) return -0.1;
-  return 0;
-}
-
-export interface ClearingSeller {
-  /** Sector id (or synthetic id for aggregate pools). */
-  id: string;
-  /** Units offered this turn after any pre-market audience availability limit. */
-  units: number;
-  /** Physical output before any audience availability limit. */
-  physicalUnits?: number;
-  /** Editorially available fraction of advertising output. */
-  editorialAvailability?: number;
-  /** Product-reachable fraction of this physical offer. */
-  productAvailability?: number;
-  /** Combined editorial and title reach applied to this offer before clearing. */
-  availability?: number;
-  /** Posted price relative to market, −0.2 … 0.2. */
-  posture: number;
-  /** Internally resolved quote relative to this book's price; CEO input is still bounded. */
-  quotedPosture?: number;
-  /**
-   * Plants tier: these units came from the seller's OWN measured output
-   * (`producedUnits`), not from the revenue nameplate, so they are exempt from
-   * the lagged-supply normalization below. Absent/false ⇒ normalized as before.
-   */
-  realUnits?: boolean;
-  /**
-   * Optional contract-reservation basis (plants units) when the open-market
-   * offer must stay on the revenue nameplate — extraction under plants. Does
-   * not set realUnits or replace `units`. Absent ⇒ contracts reserve against
-   * `units` as before.
-   */
-  contractFillUnits?: number;
-}
 
 /** Plants contract-fill basis, else the open-market offer. */
 function sellerContractFillBasis(s: ClearingSeller): number {
@@ -167,360 +111,6 @@ function sellerContractFillBasis(s: ClearingSeller): number {
     s.contractFillUnits >= 0
     ? s.contractFillUnits
     : Math.max(0, s.units);
-}
-
-/*
- * Fill one commodity's demand cheapest-first. Sellers at the same posture split
- * residual demand pro-rata. Returns soldFraction per seller id.
- *
- * When `loyaltyById` is supplied, a loyal-slice pre-pass runs first: a finite
- * pool (LOYAL_POOL_FRACTION of demand) is split by relative loyalty and filled
- * at each seller's own price. Omitting it is identical to plain cheapest-first.
- *
- * A supply contract is ADDITIVE, not restrictive: `contractedUnitsById`
- * reserves the buyer's volume off the top, and everything the supplier produces
- * ABOVE the contract clears on the open market, so `soldFraction` reflects real
- * total sales. Contracted volume is guaranteed up to the supplier's offer; do
- * not re-bound it by this pass's anonymous demand.
- */
-export function clearCommodityMarket(
-  demandUnits: number,
-  sellers: readonly ClearingSeller[],
-  loyaltyById?: ReadonlyMap<string, number>,
-  contractedUnitsById?: ReadonlyMap<string, number>,
-  contractedTakeOut?: Map<string, number>
-): Map<string, number> {
-  const result = new Map<string, number>();
-  let remaining = Math.max(0, demandUnits);
-
-  // Filled units per seller (reservation + cheapest-first), and units still on
-  // offer after the loyal reservation is taken off the top.
-  const filledUnits = new Map<string, number>();
-  const offerUnits = new Map<string, number>();
-  for (const s of sellers) {
-    filledUnits.set(s.id, 0);
-    offerUnits.set(s.id, Math.max(0, s.units));
-  }
-
-  // ── Contracted pre-pass (private supply agreements) ────────────────────────
-  // Runs FIRST: contracted units are guaranteed-sold for the supplier and leave
-  // the open market (demand is reduced), before loyalty or cheapest-first.
-  // Extraction under plants may pass `contractFillUnits` above the nameplate
-  // offer: reserve against that plants basis, but never leave nameplate residual
-  // that the larger take already consumed (`max(0, offer − take)`).
-  if (contractedUnitsById) {
-    for (const s of sellers) {
-      const contracted = contractedUnitsById.get(s.id) ?? 0;
-      if (contracted <= 0) continue;
-      const offered = offerUnits.get(s.id) ?? 0;
-      const fillBasis =
-        typeof s.contractFillUnits === "number" &&
-        Number.isFinite(s.contractFillUnits) &&
-        s.contractFillUnits >= 0
-          ? s.contractFillUnits
-          : offered;
-      const take = Math.min(contracted, fillBasis);
-      if (take <= 0) continue;
-      filledUnits.set(s.id, (filledUnits.get(s.id) ?? 0) + take);
-      offerUnits.set(s.id, Math.max(0, offered - take));
-      contractedTakeOut?.set(s.id, take);
-      remaining -= take;
-    }
-    remaining = Math.max(0, remaining);
-  }
-
-  // ── Loyal-slice pre-pass ───────────────────────────────────────────────────
-  if (loyaltyById && remaining > 0) {
-    // Eligibility and the reservation both read `offerUnits`, not `s.units`, so
-    // the contracted pre-pass above is respected (a seller cannot reserve units
-    // it has already sold). With no contracts in play `offerUnits === s.units`,
-    // so this is byte-identical to the original slice.
-    const eligible = sellers.filter(
-      (s) => (loyaltyById.get(s.id) ?? 0) >= SLICE_NOISE_FLOOR && (offerUnits.get(s.id) ?? 0) > 0
-    );
-    const totalLoyalty = eligible.reduce(
-      (sum, s) => sum + Math.max(0, loyaltyById.get(s.id) ?? 0),
-      0
-    );
-    if (totalLoyalty > 0) {
-      const pool = LOYAL_POOL_FRACTION * remaining;
-      for (const s of eligible) {
-        const share = pool * (Math.max(0, loyaltyById.get(s.id) ?? 0) / totalLoyalty);
-        const available = offerUnits.get(s.id) ?? 0;
-        const reserve = Math.min(share, available); // never more than the seller still offers
-        filledUnits.set(s.id, (filledUnits.get(s.id) ?? 0) + reserve);
-        offerUnits.set(s.id, available - reserve);
-        remaining -= reserve;
-      }
-      remaining = Math.max(0, remaining);
-    }
-  }
-
-  // ── Cheapest-first over the remaining demand and unreserved units ──────────
-  const byPosture = new Map<number, ClearingSeller[]>();
-  for (const s of sellers) {
-    const p = s.quotedPosture ?? clampPricingPosture(s.posture);
-    byPosture.set(p, [...(byPosture.get(p) ?? []), s]);
-  }
-  for (const posture of [...byPosture.keys()].sort((a, b) => a - b)) {
-    const group = byPosture.get(posture)!;
-    const groupUnits = group.reduce((sum, s) => sum + (offerUnits.get(s.id) ?? 0), 0);
-    const fillFraction = groupUnits <= 0 ? 0 : Math.min(1, remaining / groupUnits);
-    for (const s of group) {
-      const offered = offerUnits.get(s.id) ?? 0;
-      filledUnits.set(s.id, (filledUnits.get(s.id) ?? 0) + offered * fillFraction);
-    }
-    remaining = Math.max(0, remaining - groupUnits * fillFraction);
-  }
-
-  // soldFraction = total filled ÷ original units offered.
-  for (const s of sellers) {
-    const orig = Math.max(0, s.units);
-    result.set(s.id, orig > 0 ? Math.min(1, (filledUnits.get(s.id) ?? 0) / orig) : 0);
-  }
-  return result;
-}
-
-export interface SectorClearingInput {
-  sectorId: string;
-  /**
-   * Sector's revenue base (drives offered units per output).
-   * MUST be anchor-normalized (₳) — sector.revenue is stored in the corp's
-   * LOCAL currency, and the lagged balances/demand this book clears against
-   * are ₳-denominated (commodityPriceTurn anchor-normalizes before unit
-   * accumulation). Feeding raw local revenue inflates a JPY corp's offered
-   * units ~100× and an NGN corp's ~1900×, drowning the whole book: the t879
-   * clone A/B showed corporate mean fill ~0.13 in a market whose aggregate
-   * flows cleared 88%, with undercutters filling WORSE than at-market sellers.
-   */
-  revenue: number;
-  /** Output rates (strategy supply). */
-  supplyRates: Partial<Record<CommodityType, number>>;
-  /** Exact per-commodity physical offers from a product line, when enabled. */
-  outputUnitsByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Fraction of each physical offer reachable by current media product titles. */
-  offerAvailabilityByCommodity?: Partial<Record<CommodityType, number>>;
-  /**
-   * Placement share used for REVENUE by the revenue-follows-placement phase:
-   * placed plus freight-limited. Absent falls back to `offerPlacementByCommodity`.
-   */
-  revenuePlacementByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Host-state placement cap for each output, independent of other commodities. */
-  offerPlacementByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Conserved nominal output value by commodity, used to weight sector realization. */
-  outputAnchorByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Product quality by output commodity, overriding the legacy corp average for that output. */
-  productQualityByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Project-only redirected units offered, excluding the strategy recipe baseline. */
-  projectOutputUnitsByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Product quality for the active project, independent of quality-premium pricing. */
-  projectQualityByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Active project identity for the project-owned offer snapshot. */
-  productProjectId?: string;
-  /** Turn that produced the project-owned offer. */
-  productOutputTurn?: number;
-  /** Owning corporation id, for the dumping guard. Absent ⇒ never guarded. */
-  corporationId?: string;
-  /** Posted posture (player-set), or null to auto-position (NPP/unowned). */
-  posture: number | null;
-  /** Flag-gated input basket index for cost-plus pricing, otherwise absent. */
-  inputCostIndex?: number;
-  /** Recipe's base material spend as a share of nominal output value. */
-  inputCostShare?: number;
-  /** Recorded payroll, overhead, upkeep and compliance per nominal output value. */
-  fixedCostShare?: number;
-  /**
-   * The sector's own soldFraction from the PRIOR turn (lagged, like every
-   * other clearing input), if known. Feeds autoPosture's own-fill feedback;
-   * ignored for player-posted postures.
-   */
-  lastSoldFraction?: number | null;
-  /**
-   * Owning corp's brand loyalty (0–100), lagged. Only consulted when the
-   * caller opts into the loyal-slice pre-pass (brandLoyaltySliceEnabled).
-   * Absent ⇒ treated as 0 (no protected slice).
-   */
-  brandLoyalty?: number | null;
-  /**
-   * Owning corp's lagged output quality (0–100), supplied only when the caller
-   * opts into the quality→premium coupling (qualityPremiumPricingEnabled). Used
-   * to scale the premium portion of a positive posture; null/undefined ⇒ no
-   * quality effect on this sector's premium.
-   */
-  outputQuality?: number | null;
-  /**
-   * Plants tier (marketSystemMode >= "plants"): the units this sector actually
-   * produced last turn (`sector.producedUnits`, daily, currency-free), already
-   * carrying the canonical ledger-side legs the caller applies
-   * (scaleMeasuredProducedUnits: natcorpScale, embargo haircut, arsenal
-   * retention) so the offer is comparable to `balances`. When supplied AND
-   * the caller sets `plantsEnabled`, the offered book is built from these
-   * units instead of from the revenue nameplate. Null/absent falls back to
-   * the legacy revenue-derived offer.
-   */
-  producedUnits?: number | null;
-  /**
-   * Plants contract-fill basis for sectors that must keep a nameplate clearing
-   * offer (extraction). Same scale chain as `producedUnits` would use; never
-   * sets `realUnits`. Absent ⇒ contracts use the offered units.
-   */
-  contractFillUnits?: number | null;
-  /** Share of advertising output available to its audience, default 1. */
-  editorialAdvertisingAvailability?: number;
-}
-
-/**
- * Per-commodity book-sanity diagnostic emitted by computeClearingFactors.
- * The raw book can legitimately exceed lagged supply because legacy nameplate
- * offers omit ledger-side scale and extraction haircuts. Callers must read
- * mismatch state from invariantBreach (the canonical-basis invariant), not
- * from ad-hoc ratios over rawOfferedUnits. A large post-normalization excess
- * means exempt measured production and the balance ledger are in different
- * units, so fill rates can still be depressed.
- */
-export interface ClearingBookDiagnostic {
-  commodity: CommodityType;
-  /** Country/reachable-market book key, or null for the worldwide book. */
-  group: string | null;
-  /** Total before legacy nameplate reconciliation. Informational only. */
-  rawOfferedUnits: number;
-  /** Total after legacy nameplate reconciliation. Use for mismatch alarms. */
-  normalizedOfferedUnits: number;
-  /** @deprecated Alias of normalizedOfferedUnits for existing consumers. */
-  offeredUnits: number;
-  /** Legacy/nameplate units before reconciliation. */
-  normalizableUnits: number;
-  /** Measured produced units exempt from nameplate reconciliation. */
-  exemptRealUnits: number;
-  laggedSupply: number;
-  laggedDemand: number;
-  /**
-   * True when the post-normalization book breaches the canonical-basis
-   * invariant (see isClearingBookBreach). Both sides now build plants units
-   * through the canonical basis, so a breach is a genuine defect: the turn
-   * keeps clearing honestly and records a health warning.
-   */
-  invariantBreach: boolean;
-}
-
-/**
- * Clearing book invariant: after normalization the offered book and the lagged
- * supply ledger MUST be in one canonical basis. The basis fix
- * (canonicalPlantsUnitsForCommodity on both sides) makes them comparable; this
- * predicate is the backstop that names residual drift.
- *
- * Two gates, both required. First MATERIALITY: the absolute gap must reach
- * MIN_MATERIAL_BOOK_GAP units. A sub-gap excess cannot move fills or prices:
- * pinned books run in the thousands, so a gap two orders below that is
- * mix-rounding and scope noise, never a defect. Second GROWTH: legitimate
- * one-turn growth cannot double an established book (builds land over many
- * turns, the policy output curve caps at +15%), so an excess past 2x is a
- * basis breach. A material book against a zero (or missing) lagged baseline
- * breaches: canonicalization leaves no legitimate way to offer thousands of
- * units the ledger never saw.
- */
-const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
-const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
-
-/** Pure predicate behind ClearingBookDiagnostic.invariantBreach. */
-export function isClearingBookBreach(
-  normalizedOfferedUnits: number,
-  laggedSupply: number
-): boolean {
-  if (!(
-    typeof normalizedOfferedUnits === "number" &&
-    Number.isFinite(normalizedOfferedUnits) &&
-    typeof laggedSupply === "number" &&
-    Number.isFinite(laggedSupply)
-  )) {
-    return false;
-  }
-  if (normalizedOfferedUnits - laggedSupply < CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP) {
-    return false;
-  }
-  if (laggedSupply <= 0) return true;
-  return normalizedOfferedUnits > laggedSupply * CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR;
-}
-
-/**
- * Deterministic warning text for one breached book. Pure: the same diagnostic
- * always yields the same string, so turn replays and retries cannot duplicate
- * or drop it.
- */
-export function describeClearingBookBreach(d: ClearingBookDiagnostic): string {
-  const book = d.group ? d.commodity + "@" + d.group : d.commodity;
-  const ratio =
-    d.laggedSupply > 0 ? d.normalizedOfferedUnits / d.laggedSupply : Number.POSITIVE_INFINITY;
-  return (
-    "clearing invariant breach on " +
-    book +
-    ": normalized " +
-    Math.round(d.normalizedOfferedUnits) +
-    " vs lagged supply " +
-    Math.round(d.laggedSupply) +
-    " (" +
-    (Number.isFinite(ratio) ? ratio.toFixed(1) : "inf") +
-    "x; raw " +
-    Math.round(d.rawOfferedUnits) +
-    ")"
-  );
-}
-
-export interface SectorClearingResult {
-  /** Normalized share of each scoped offer book, for allocating shortage headroom once. */
-  marketSupplyShareByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Weighted legFactor across outputs (unramped). */
-  factor: number;
-  /** Weighted sold fraction across outputs. */
-  soldFraction: number;
-  /**
-   * Sold fraction per output commodity, before the rate-weighted rollup above.
-   * A multi-output sector (oil_gas: oil 0.58 + natural_gas 0.32) can sell one
-   * output out completely and the other barely at all; the weighted headline
-   * hides that, and players read the blended number as "my short commodity
-   * isn't selling". The sector page renders these per output.
-   *
-   * Optional so callers that hand-build a result (tests, fixtures) need not
-   * restate it; computeClearingFactors always populates it.
-   */
-  soldByCommodity?: Partial<Record<CommodityType, number>>;
-  /**
-   * Editorial audience fit actually applied to each output's offer, for outputs
-   * where it cut the offer (today: advertising for an outlet whose stance does
-   * not match its audience). The cut shrinks the offer, not demand, so a sold
-   * out outlet's fill reads below 1 and its sold-out headroom needs this
-   * restored. Absent when no output was cut.
-   */
-  editorialAvailabilityByCommodity?: Partial<Record<CommodityType, number>>;
-  /**
-   * Offered fraction buyers took but a media ownership law refused, overall
-   * and per output. Not sold and not paid; production feedback counts it as
-   * demand so a capped outlet does not shrink because of a legal limit.
-   * Absent when nothing was blocked.
-   */
-  regulationBlockedFraction?: number;
-  regulationBlockedByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Exact normalized units delivered, emitted only when recording is enabled. */
-  deliveredUnitsByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Posture actually used (player's, or the auto value). */
-  effectivePosture: number;
-  /** Exact quoted offer factor per output, before sold quantity is applied. */
-  offerFactorByCommodity?: Partial<Record<CommodityType, number>>;
-  /**
-   * Each output's share of the sector's realized revenue this pass (weight x
-   * sold x offer factor, normalized to sum to 1). Telemetry only: the money
-   * path still uses the blended `factor`. The sector page uses it to split
-   * the blended "sold at" price into a sale price per product, which matters
-   * when outputs are priced far apart (ordnance vs. industrial chemicals).
-   * Absent when nothing sold.
-   */
-  revenueShareByCommodity?: Partial<Record<CommodityType, number>>;
-  /** Project-owned offer identity and units, carried through commodity clearing. */
-  productProjectId?: string;
-  productOutputTurn?: number;
-  projectOutputUnitsByCommodity?: Partial<Record<CommodityType, number>>;
-  projectSoldUnitsByCommodity?: Partial<Record<CommodityType, number>>;
-  projectQualityByCommodity?: Partial<Record<CommodityType, number>>;
 }
 
 /**

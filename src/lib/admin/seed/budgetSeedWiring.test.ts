@@ -36,7 +36,7 @@ function read(rel: string): string {
 
 describe("US budget seed wiring", () => {
   it("seedAllCountryData opts out of runSeed's budget pass", () => {
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("seedCountryData.ts");
     const call = source.match(/await runSeed\(\{[^}]*\}\)/);
     expect(call, "seedAllCountryData no longer calls runSeed").not.toBeNull();
     expect(call![0]).toContain("includeBudgets: false");

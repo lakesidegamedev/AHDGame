@@ -1,3 +1,4 @@
+import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as canadianCensusDivisions } from "./entries/2026-11-14-canadian-census-divisions";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
@@ -152,6 +153,7 @@ import { migration as advertisingAgreementIndexes } from "./entries/2026-10-05-a
 import { migration as activateLiveDemographicsV2 } from "./entries/2026-10-07-activate-live-demographics-v2";
 
 export const MIGRATIONS: Migration[] = [
+  nationalizationSiteIdentity,
   // v0.2.6 currency cutover (declarative - shipped via standalone scripts)
   bondCurrencyStamp,
   corpEconomyToLocalCurrency,

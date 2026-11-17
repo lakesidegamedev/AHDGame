@@ -33,6 +33,7 @@ import {
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
 import { releaseCarriedLines } from "@/lib/market/rules/publicCarryRelease";
+import { flooredPlantShare } from "@/lib/market/producerMarket/demandFloorRules";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -299,7 +300,10 @@ export async function buildProducerTurnDemand(
       (gdpToAnchor(gdpMillionsByCountry.get(countryId) ?? 0, countryId as never, lookups.preset) *
         1_000_000) /
       TURNS_PER_YEAR;
-    const share = plantEconomyShare(valueAdded, gdpPerTurn);
+    const share = flooredPlantShare(
+      plantEconomyShare(valueAdded, gdpPerTurn),
+      input.env.demandFloorStage
+    );
     publicShareByCountry[countryId] = {
       valueAdded,
       gdpPerTurn,
