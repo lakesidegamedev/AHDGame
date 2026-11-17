@@ -13,20 +13,19 @@ function render(view: ReactElement) {
     </NextIntlClientProvider>
   );
 }
-it("shows mixed-output demand separately with its source turn and unknown values", () => {
+it("shows mixed-output demand separately with unknown values", () => {
   render(
     <FundedBuildDemand
-      turn={778}
       rows={[
         { commodity: "network_services", scope: "national", funded: 100, delivered: 0, unmet: 100 },
         { commodity: "software", scope: "regional", funded: null, delivered: null, unmet: null },
       ]}
     />
   );
-  expect(screen.getByText("Funded buyer demand, turn 778")).toBeTruthy();
+  expect(screen.getByText("Buyer demand")).toBeTruthy();
   expect(screen.getByText(/Network Services \/ National/)).toBeTruthy();
-  expect(screen.getAllByText("Not measured")).toHaveLength(3);
-  expect(screen.getByText(/International orders are not included/)).toBeTruthy();
+  expect(screen.getAllByText("n/a")).toHaveLength(3);
+  expect(screen.getByText(/International orders are not counted/)).toBeTruthy();
 });
 it("does not show national demand for a regional-only output", () => {
   render(
@@ -63,17 +62,13 @@ it("shows rounded per-output buildings and the conservative full-mix count witho
       ]}
     />
   );
-  expect(screen.getByText("Buildings to fill gap")).toBeTruthy();
+  expect(screen.getByText("Buildings needed")).toBeTruthy();
   expect(screen.getByText("3")).toBeTruthy();
-  expect(screen.getByText("Room with buyers for every output: 0 buildings")).toBeTruthy();
-  expect(screen.getByText(/staffing, inputs or profit recommendation/)).toBeTruthy();
+  expect(screen.getByText("Room for buyers of every product: 0 buildings")).toBeTruthy();
+  expect(screen.getByText(/not a check on your cash, staff, inputs or profit/)).toBeTruthy();
+  expect(screen.getByText(/A count of zero does not mean building is pointless/)).toBeTruthy();
+  expect(screen.getByText(/may pay for itself/)).toBeTruthy();
   expect(
-    screen.getByText(/A zero all-output count does not mean no buildings are useful/)
-  ).toBeTruthy();
-  expect(
-    screen.getByText(/may be profitable if those sales cover the full running costs/)
-  ).toBeTruthy();
-  expect(
-    screen.getByText(/Delivered means completed purchases by buyers in this market/)
+    screen.getByText(/Delivered means purchases completed by buyers in this market/)
   ).toBeTruthy();
 });
