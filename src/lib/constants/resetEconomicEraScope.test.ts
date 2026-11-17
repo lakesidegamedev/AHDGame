@@ -77,7 +77,14 @@ describe("1991 reset calibration does not change other era presets", () => {
         rpu * revenueDays,
         8
       );
-      const base = { sectorType, strategyId: "standard", year, eraUnitScale: 1, units: 10 };
+      const base = {
+        sectorType,
+        strategyId: "standard",
+        year,
+        eraUnitScale: 1,
+        units: 10,
+        buildPriceScale: 1,
+      };
       expect(computeBuildCost({ ...base, founding: true }).totalAnchor).toBeCloseTo(
         10 * rpu * revenueDays * 0.1,
         8

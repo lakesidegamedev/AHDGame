@@ -229,6 +229,8 @@ export interface NppPlantsContext {
   holdExpansionAtCashFloor?: boolean;
   year: number;
   eraUnitScale: number;
+  /** Resolved `gameConfig.plantBuildPriceScale`; absent = shipped default. */
+  buildPriceScale?: number;
   preset: string | undefined;
   primeRateOf: (countryId: string) => number;
   costOfLivingOf: (stateId: string) => number | null;
