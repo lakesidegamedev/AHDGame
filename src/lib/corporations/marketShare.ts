@@ -21,6 +21,21 @@ import { type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
+/**
+ * Revenue that counts toward market share. A sector with no delivered capacity
+ * yet (a founding sector inside its build window) carries a nameplate revenue
+ * figure that nothing has earned, so it must not claim share. Sectors whose
+ * capacity fields are absent (legacy rows, narrow projections) count as before.
+ */
+export function shareRevenueLocal(sector: {
+  revenue?: number;
+  capitalStock?: number;
+  plantCount?: number;
+}): number {
+  if (sector.capitalStock === 0 && !((sector.plantCount ?? 0) > 0)) return 0;
+  return sector.revenue ?? 0;
+}
+
 /** Bounded market share percentage (0–100) given anchor-denominated inputs. */
 export function computeMarketSharePercent(
   sectorRevenueAnchor: number,
@@ -48,7 +63,16 @@ export function corporationNationalSectorShareKey(
  */
 export function buildCorporationNationalRevenueShareByMarket(
   sectors: ReadonlyArray<
-    Pick<CorporateSector, "corporationId" | "countryId" | "stateId" | "sectorType" | "revenue">
+    Pick<
+      CorporateSector,
+      | "corporationId"
+      | "countryId"
+      | "stateId"
+      | "sectorType"
+      | "revenue"
+      | "capitalStock"
+      | "plantCount"
+    >
   >,
   countryByStateId: ReadonlyMap<string, CountryId> = new Map()
 ): Map<string, number> {
@@ -71,8 +95,8 @@ export function buildCorporationNationalRevenueShareByMarket(
       (sector.countryId as CountryId | undefined) ?? resolvedCountryByStateId.get(sector.stateId);
     if (!countryId) continue;
     const revenue =
-      typeof sector.revenue === "number" && Number.isFinite(sector.revenue)
-        ? Math.max(0, sector.revenue)
+      typeof shareRevenueLocal(sector) === "number" && Number.isFinite(shareRevenueLocal(sector))
+        ? Math.max(0, shareRevenueLocal(sector)!)
         : 0;
     const nationalMarketKey = marketKey(countryId, sector.sectorType);
     const corporationKey = corporationNationalSectorShareKey(
@@ -161,7 +185,7 @@ function sectorAnchorIndex(
       null,
       exchangeRatesByCurrency
     );
-    anchors[i] = readCorpEconomicAnchor(sector.revenue, hostCode, hostRate);
+    anchors[i] = readCorpEconomicAnchor(shareRevenueLocal(sector), hostCode, hostRate);
   }
   return { anchors, countries };
 }
@@ -319,7 +343,14 @@ export async function fetchSectorMarketSharePercent(
   db: Db,
   sector: Pick<
     CorporateSector,
-    "_id" | "stateId" | "sectorType" | "revenue" | "countryId" | "capitalStock" | "strategyId"
+    | "_id"
+    | "stateId"
+    | "sectorType"
+    | "revenue"
+    | "countryId"
+    | "capitalStock"
+    | "plantCount"
+    | "strategyId"
   >,
   // Retained for call-site compatibility; sector revenue is now denominated in
   // its host-state currency, so the owning corp's FX context is no longer used.
@@ -350,6 +381,8 @@ export async function fetchSectorMarketSharePercent(
           projection: {
             _id: 1,
             revenue: 1,
+            capitalStock: 1,
+            plantCount: 1,
             corporationId: 1,
             sectorType: 1,
           },
@@ -375,7 +408,7 @@ export async function fetchSectorMarketSharePercent(
   let cellRevenue = 0;
   let thisSectorAnchor = 0;
   for (const s of siblingSectors) {
-    const anchor = readCorpEconomicAnchor(s.revenue, hostCode, hostRate);
+    const anchor = readCorpEconomicAnchor(shareRevenueLocal(s), hostCode, hostRate);
     cellRevenue += anchor;
     if (s._id.toString() === sector._id.toString()) {
       thisSectorAnchor = anchor;
@@ -384,7 +417,7 @@ export async function fetchSectorMarketSharePercent(
   // Fallback: if the focal sector wasn't in the siblings query result (race),
   // normalize it directly at the same host rate and include it in the cell total.
   if (thisSectorAnchor === 0) {
-    thisSectorAnchor = readCorpEconomicAnchor(sector.revenue, hostCode, hostRate);
+    thisSectorAnchor = readCorpEconomicAnchor(shareRevenueLocal(sector), hostCode, hostRate);
     cellRevenue += thisSectorAnchor;
   }
 
@@ -435,6 +468,8 @@ export async function fetchCorporationNationalSectorSharesByCountry(
           stateId: 1,
           sectorType: 1,
           revenue: 1,
+          capitalStock: 1,
+          plantCount: 1,
         },
       }
     )
@@ -507,7 +542,14 @@ export async function fetchMarketSharePercentForSectors(
   targetSectors: Array<
     Pick<
       CorporateSector,
-      "_id" | "stateId" | "sectorType" | "revenue" | "countryId" | "corporationId"
+      | "_id"
+      | "stateId"
+      | "sectorType"
+      | "revenue"
+      | "countryId"
+      | "corporationId"
+      | "capitalStock"
+      | "plantCount"
     >
   >,
   /** @deprecated Ignored. Share is revenue-basis in every tier. */
@@ -535,6 +577,8 @@ export async function fetchMarketSharePercentForSectors(
             sectorType: 1,
             countryId: 1,
             revenue: 1,
+            capitalStock: 1,
+            plantCount: 1,
           },
         }
       )
@@ -568,7 +612,14 @@ export async function fetchAttackerDefenderShares(
   db: Db,
   targetSector: Pick<
     CorporateSector,
-    "_id" | "stateId" | "sectorType" | "countryId" | "revenue" | "capitalStock" | "strategyId"
+    | "_id"
+    | "stateId"
+    | "sectorType"
+    | "countryId"
+    | "revenue"
+    | "capitalStock"
+    | "plantCount"
+    | "strategyId"
   >,
   // Retained for call-site compatibility; sector revenue is now denominated in
   // its host-state currency, so the defender corp's FX context is no longer used.
@@ -593,6 +644,8 @@ export async function fetchAttackerDefenderShares(
             _id: 1,
             corporationId: 1,
             revenue: 1,
+            capitalStock: 1,
+            plantCount: 1,
             sectorType: 1,
           },
         }
@@ -617,7 +670,7 @@ export async function fetchAttackerDefenderShares(
   let attackerAnchor = 0;
   const attackerIdStr = attackerCorpId.toString();
   for (const s of siblingSectors) {
-    const anchor = readCorpEconomicAnchor(s.revenue, hostCode, hostRate);
+    const anchor = readCorpEconomicAnchor(shareRevenueLocal(s), hostCode, hostRate);
     cellRevenue += anchor;
     if (s._id.toString() === targetSector._id.toString()) {
       defenderAnchor = anchor;
@@ -629,7 +682,7 @@ export async function fetchAttackerDefenderShares(
   // Race fallback: if the target sector wasn't yet visible in the siblings
   // query, normalize its revenue directly at the same host rate.
   if (defenderAnchor === 0) {
-    defenderAnchor = readCorpEconomicAnchor(targetSector.revenue, hostCode, hostRate);
+    defenderAnchor = readCorpEconomicAnchor(shareRevenueLocal(targetSector), hostCode, hostRate);
     cellRevenue += defenderAnchor;
   }
 
