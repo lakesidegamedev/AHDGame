@@ -95,15 +95,26 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
       { commodity: "software", scope: "national", funded: 3, delivered: 3, unmet: 0 },
     ],
   });
-  expect(screen.getByText(/Buyers still have open orders/)).toBeTruthy();
-  expect(screen.queryByText(/buyers are already taking all they need/)).toBeNull();
+  expect(screen.getByText(/Network Services/)).toBeTruthy();
+  expect(screen.queryByText(/oversupplied/)).toBeNull();
 });
 
-it("shows fluctuation and idle-capacity warnings even when an order fits today's estimate", () => {
+it("keeps the default view to the headline figures and one details disclosure", () => {
   renderDialog();
-  expect(screen.getByText("Demand today is not guaranteed sales tomorrow")).toBeTruthy();
-  expect(screen.getByText(/Existing idle or parked plants may restart first/)).toBeTruthy();
-  expect(screen.getByText(/not demand reserved for your company/)).toBeTruthy();
+  expect(screen.getByText("Build total")).toBeTruthy();
+  expect(screen.getByText("First income")).toBeTruthy();
+  expect(screen.getByText("Profit per turn")).toBeTruthy();
+  expect(screen.getByText("Payback")).toBeTruthy();
+  expect(screen.getByTestId("build-room").textContent).toContain("Room left in the market");
+  expect(document.querySelectorAll("details")).toHaveLength(1);
+  expect(screen.queryByText(/Demand today is not guaranteed/)).toBeNull();
+});
+
+it("reports profit per turn and payback from the cash scenario", () => {
+  renderDialog();
+  const text = document.querySelector("dl")?.textContent ?? "";
+  expect(text).toMatch(/Profit per turn\$[\d,]+/);
+  expect(text).toMatch(/Payback\d+ turns/);
 });
 
 it("sizes funded building counts from the funded build room", () => {
@@ -128,8 +139,9 @@ it("sizes funded building counts from the funded build room", () => {
   );
   expect(screen.getByText("Room for buyers of every product: 4 buildings")).toBeTruthy();
   expect(screen.queryByText(/share is fully claimed/i)).toBeNull();
-  const pane = screen.getByRole("region", { name: "Buyer demand" }).parentElement;
-  expect(pane?.className).toContain("overscroll-contain");
+  expect(
+    screen.getByRole("region", { name: "Buyer demand" }).closest(".overscroll-contain")
+  ).toBeTruthy();
   expect(document.body.style.overflow).toBe("hidden");
 });
 
@@ -165,9 +177,10 @@ describe("BuildCapacityDialog count control", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Match demand: 3" }));
     expect(input.value).toBe("3");
-    expect(screen.getByText("This expansion fits the current demand estimate")).toBeTruthy();
+    expect(screen.getByTestId("build-room").textContent).toContain("Room left in the market: 0");
+    expect(screen.queryByText(/More than the market has room for/)).toBeNull();
     fireEvent.click(screen.getByLabelText(/build one more/i));
-    expect(screen.getByText("This expansion exceeds the current demand estimate")).toBeTruthy();
+    expect(screen.getByText(/More than the market has room for/)).toBeTruthy();
   });
 
   it("disables shortcuts when cash or buyer room cannot fund one whole facility", () => {
@@ -339,8 +352,8 @@ describe("BuildCapacityDialog count control", () => {
       labourStaffingFactor: 0.25,
     } as PlantsData);
 
-    expect(screen.getByText(/currently fills 25% of its jobs/i)).toBeTruthy();
-    expect(screen.getByText(/unless you raise pay or the local workforce grows/i)).toBeTruthy();
+    expect(screen.getByText(/fills 25% of its jobs/i)).toBeTruthy();
+    expect(screen.getByText(/New jobs may stay vacant/i)).toBeTruthy();
   });
 
   it("steps from the arrow keys, with the same modifiers", () => {
@@ -370,21 +383,16 @@ function render(ui: ReactElement) {
   );
 }
 
-describe("BuildCapacityDialog delivery timing and founding price", () => {
-  it("says a single facility arrives when the window ends", () => {
-    renderDialog();
-    expect(screen.getByTestId("build-arrival").textContent).toContain("arrives in 3 turns");
-  });
-
-  it("says the first and last facility arrival for a multi-facility order", () => {
+describe("BuildCapacityDialog first income and founding price", () => {
+  it("shows the first income turn from the first delivery", () => {
     const { input } = renderDialog();
+    expect(screen.getByText("First income").nextSibling?.textContent).toBe("3 turns");
     fireEvent.change(input, { target: { value: "3" } });
-    const text = screen.getByTestId("build-arrival").textContent ?? "";
-    expect(text).toContain("3 facilities arrive one at a time");
-    expect(text).toContain("The first is ready in 1 turns, the last in 3 turns");
+    expect(screen.getByText("First income").nextSibling?.textContent).toBe("1 turn");
+    expect(screen.getByTestId("build-arrival").textContent).toContain("last in 3 turns");
   });
 
-  it("explains that only the first facility in a market is discounted", () => {
+  it("notes that only the first facility in a market is discounted", () => {
     renderDialog(vi.fn(), {
       ...plants,
       buildQuote: { ...plants.buildQuote, foundingMultiplier: 0.1 },

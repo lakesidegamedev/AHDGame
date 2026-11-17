@@ -73,20 +73,13 @@ export default function FundedBuildDemand({
         </table>
       </div>
       {sized && (
-        <>
-          <p className="mt-2 text-body-xs font-semibold">
-            {t("fullMix", {
-              count:
-                fullMix == null ? t("unknown") : number(Math.floor(fullMix / unitsPerFacility)),
-            })}
-          </p>
-          <p className="mt-1 text-body-xs text-muted">{t("buildingNote")}</p>
-          <p className="mt-2 text-body-xs text-warning">{t("partialOutput")}</p>
-        </>
+        <p className="mt-2 text-body-xs font-semibold">
+          {t("fullMix", {
+            count: fullMix == null ? t("unknown") : number(Math.floor(fullMix / unitsPerFacility)),
+          })}
+        </p>
       )}
-      <p className="mt-2 text-body-xs text-muted">{t("deliveryNote")}</p>
-      <p className="mt-2 text-body-xs text-muted">{t("scopeNote")}</p>
-      <p className="mt-1 text-body-xs text-muted">{t("salesNote")}</p>
+      <p className="mt-1 text-body-xs text-muted">{t("scopeNote")}</p>
     </section>
   );
 }
