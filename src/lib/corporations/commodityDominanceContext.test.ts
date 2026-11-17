@@ -161,3 +161,64 @@ describe("commodity dominance context with capped demand", () => {
     expect(commodityDominanceMultiplier(toll.ratio)).toBe(1);
   });
 });
+
+describe("commodity dominance context for country-booked services", () => {
+  const usId = new ObjectId();
+  const stateIds = ["TX", "CA", "NY"];
+
+  async function seedConstruction() {
+    await db
+      .collection("states")
+      .insertMany(stateIds.map((id) => ({ _id: id as never, countryId: "US" })));
+    await db.collection("corporateSectors").insertOne({
+      _id: usId,
+      corporationId: corpId,
+      countryId: "US",
+      stateId: "TX",
+      sectorType: "construction",
+      strategyId: "standard",
+      capitalStock: 100,
+      buildQueue: [],
+    });
+    await db.collection("commodityPrices").insertOne({
+      commodity: "construction_services",
+      turn: 22,
+      globalDemand: 11_041,
+      stateDemand: { TX: 5.36, CA: 2.11, NY: 0.34 },
+    });
+  }
+
+  it("measures against the funded country book, not the state demand sum", async () => {
+    await seedConstruction();
+    await db.collection("gameState").insertOne({ _id: "current" as never, worldEpochId: "w1" });
+    await db.collection("producerMarketOutcomes").insertOne({
+      _id: "w1:22" as never,
+      books: [
+        {
+          countryId: "US",
+          commodity: "construction_services",
+          supply: 17.32,
+          demand: 5_876.79,
+          imports: 0,
+          exports: 0,
+        },
+      ],
+    });
+    const ctx = await contextFor(usId);
+    expect(ctx.countryDemand?.construction_services).toBeCloseTo(5_876.79);
+    const model = commodityTollModels(ctx).find((m) => m.commodity === "construction_services");
+    expect(model?.demandUnits).toBeCloseTo(5_876.79);
+    const toll = commodityDominanceFor(ctx, 0);
+    // About 8 units of state demand would put a 100-capital firm far past half;
+    // 5,877 does not.
+    expect(toll.commodity).toBe("construction_services");
+    expect(toll.ratio).toBeLessThan(0.5);
+    expect(commodityDominanceMultiplier(toll.ratio)).toBe(1);
+  });
+
+  it("falls back to the state demand sum when no funded book was published", async () => {
+    await seedConstruction();
+    const ctx = await contextFor(usId);
+    expect(ctx.countryDemand?.construction_services).toBeCloseTo(5.36 + 2.11 + 0.34);
+  });
+});

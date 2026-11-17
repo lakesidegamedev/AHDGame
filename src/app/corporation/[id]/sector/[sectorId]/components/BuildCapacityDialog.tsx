@@ -512,9 +512,9 @@ export default function BuildCapacityDialog({
               />
               {q.commodityToll && (
                 <CostLeg
-                  label="Share of world demand"
+                  label="Share of market demand"
                   value={fmtMult(commodityDominanceMultiplier(preview.tollRatio))}
-                  help={`With this order you could make about ${Math.round(preview.tollRatio * 100)}% of world demand for ${preview.tollLabel ?? "this good"}. Past half costs sharply more.`}
+                  help={`With this order you could make about ${Math.round(preview.tollRatio * 100)}% of the market demand for ${preview.tollLabel ?? "this good"}. Past half costs sharply more.`}
                   muted={commodityDominanceMultiplier(preview.tollRatio) === 1}
                 />
               )}
