@@ -59,6 +59,9 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   marketGuardReferenceFundamentalMcap: "",
   marketGuardReferenceTurn: "",
   marketGuardTrippedAt: "",
+  // Era baseline tech mode belongs to the old world's late start. A new world
+  // has no era baseline: absent means pre-start-decade tech gives no bonus.
+  legacyTechMode: "",
   // Retail demand unwind window (src/lib/market/retailDemandTransition.ts).
   // Capacity expansion is refused until start + turns.
   retailDemandTransitionStartTurn: "",

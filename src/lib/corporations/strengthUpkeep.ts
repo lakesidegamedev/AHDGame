@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import {
   getSectorTechEffects,
   getSectorTechEffectsForYear,
+  type LegacyTechContext,
   type TechCorpView,
 } from "@/lib/constants/techTree";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -51,17 +52,18 @@ export function upkeptDominanceShield(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
   currentYear: number | null | undefined,
-  stage: number | null | undefined
+  stage: number | null | undefined,
+  legacy: LegacyTechContext
 ): number {
   if (
     !strengthUpkeepActive(stage, STRENGTH_UPKEEP_STAGE.SHIELD) ||
     typeof currentYear !== "number" ||
     !Number.isFinite(currentYear)
   ) {
-    return getSectorTechEffects(corp, sectorType).dominanceShield;
+    return getSectorTechEffects(corp, sectorType, legacy).dominanceShield;
   }
   return Math.min(
     DOMINANCE_SHIELD_UPKEEP_CAP,
-    getSectorTechEffectsForYear(corp, sectorType, currentYear).dominanceShield
+    getSectorTechEffectsForYear(corp, sectorType, currentYear, legacy).dominanceShield
   );
 }

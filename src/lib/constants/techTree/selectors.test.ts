@@ -26,6 +26,8 @@ import {
 } from "./selectors";
 
 const FUNDS = { rdScore: 999, cashAvailable: 1e12, cashCost: 0 };
+// Every node counts in full: the world starts in the earliest decade.
+const ALL_COUNT = { startingYear: 1940, mode: "baseline" as const };
 
 describe("decades", () => {
   it("returns current decade onward as researchable", () => {
@@ -171,7 +173,7 @@ describe("committed lane + effects", () => {
   it("aggregates plant effects from unlocked nodes", () => {
     const corp: TechCorpView = { type: "energy", unlockedTechNodeIds: [corpNodeId("2019", 1)] };
     expect(getActiveTechEffects(corp).length).toBeGreaterThan(0);
-    expect(getAggregatedTechEffects(corp).plantOutputBonus).toBeCloseTo(0.02); // RPA = +2% output
+    expect(getAggregatedTechEffects(corp, ALL_COUNT).plantOutputBonus).toBeCloseTo(0.02); // RPA = +2% output
   });
   it("surfaces unlocked production methods", () => {
     const corp: TechCorpView = {
@@ -188,11 +190,11 @@ describe("committed lane + effects", () => {
       unlockedTechNodeIds: [sectorNodeId("energy", "2019", 1), corpNodeId("2019", 1)],
     };
     // Primary (energy) sector: corp output halved to 1%, sector inputs at full strength.
-    expect(getSectorTechEffects(corp, "energy").plantOutputBonus).toBeCloseTo(0.01);
-    expect(getSectorTechEffects(corp, "energy").inputEfficiencyBonus).toBeCloseTo(0.105);
+    expect(getSectorTechEffects(corp, "energy", ALL_COUNT).plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "energy", ALL_COUNT).inputEfficiencyBonus).toBeCloseTo(0.105);
     // A non-primary sector: only the corp lane, halved; no sector bonus.
-    expect(getSectorTechEffects(corp, "retail").plantOutputBonus).toBeCloseTo(0.01);
-    expect(getSectorTechEffects(corp, "retail").inputEfficiencyBonus).toBe(0);
+    expect(getSectorTechEffects(corp, "retail", ALL_COUNT).plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "retail", ALL_COUNT).inputEfficiencyBonus).toBe(0);
   });
 });
 

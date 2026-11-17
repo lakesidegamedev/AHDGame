@@ -80,6 +80,7 @@ import { classifyCorporationManagement } from "@/lib/corporations/balanceAudit/r
 import { getMarketSystemMode, isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import {
   CAPACITY_BUILD_CANCEL_REFUND,
   CAPACITY_BUILD_TURNS,
@@ -824,7 +825,8 @@ export async function placeCapacityBuild(
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const techBuildEffects = getSectorTechEffects(techView, sector.sectorType);
+  const legacyTech = await loadLegacyTechContext(db);
+  const techBuildEffects = getSectorTechEffects(techView, sector.sectorType, legacyTech);
   const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
   // Strength upkeep: from its shield stage the dominance shield counts only
   // current and previous decade techs and is capped at 50%.
@@ -833,7 +835,8 @@ export async function placeCapacityBuild(
         techView,
         sector.sectorType,
         currentYear,
-        await loadStrengthUpkeepStage(db)
+        await loadStrengthUpkeepStage(db),
+        legacyTech
       )
     : 0;
 

@@ -10,6 +10,7 @@ import type { CorporateSector, Corporation, GameState } from "@/lib/db/types";
 import {
   getSectorTechEffects,
   getSectorTechEffectsForYear,
+  type LegacyTechContext,
   type StrategyAvailabilityWorld,
   type TechCorpView,
 } from "@/lib/constants/techTree";
@@ -19,12 +20,15 @@ import {
   loadPrerequisiteLaneResearch,
 } from "@/lib/corporations/techTree/frontierResearch";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { loadStrategyDiffusionWorld } from "@/lib/corporations/techTree/diffusion";
 
 export interface SectorTechContext {
   techTreesEnabled: boolean;
   techCurrentYear: number;
   techCorpView: TechCorpView;
+  /** Era context: how pre-start-decade tech nodes count in every effect read. */
+  legacyTech: LegacyTechContext;
   strategyWorld: StrategyAvailabilityWorld;
 }
 
@@ -52,7 +56,8 @@ export async function loadSectorTechContext(
   const techCurrentYear =
     gameState?.currentYear ??
     STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
-  const [sectorResearch, laneResearch, diffusion] = await Promise.all([
+  const [legacyTech, sectorResearch, laneResearch, diffusion] = await Promise.all([
+    loadLegacyTechContext(db),
     loadLaneBreakthroughResearch(db, input.lane, techTreesEnabled),
     loadPrerequisiteLaneResearch(db, SECTOR_STRATEGIES[input.lane] ?? [], techTreesEnabled),
     // A player company may license early; an NPP corporation follows its country.
@@ -66,6 +71,7 @@ export async function loadSectorTechContext(
   return {
     techTreesEnabled,
     techCurrentYear,
+    legacyTech,
     techCorpView: {
       type: corporation.type,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
@@ -83,12 +89,13 @@ export function computeTechGrowthCostReductionPct(args: {
   mediaOperatingModelsEnabled?: boolean;
   techCurrentYear: number;
   techCorpView: TechCorpView;
+  legacyTech: LegacyTechContext;
   sectorType: CorporationType;
 }): number {
-  const { techTreesEnabled, techCurrentYear, techCorpView, sectorType } = args;
+  const { techTreesEnabled, techCurrentYear, techCorpView, legacyTech, sectorType } = args;
   if (!techTreesEnabled) return 0;
   const effects = techCurrentYear
-    ? getSectorTechEffectsForYear(techCorpView, sectorType, techCurrentYear)
-    : getSectorTechEffects(techCorpView, sectorType);
+    ? getSectorTechEffectsForYear(techCorpView, sectorType, techCurrentYear, legacyTech)
+    : getSectorTechEffects(techCorpView, sectorType, legacyTech);
   return Math.round((1 - effects.growthCostMultiplier) * 100 * 10) / 10;
 }
