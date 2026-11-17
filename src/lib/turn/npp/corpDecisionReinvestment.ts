@@ -409,6 +409,7 @@ export function decideNppCapacityReinvestment({
               acumen: NEUTRAL_STAT,
               hostCostOfLivingIndex: plants.costOfLivingOf(sector.stateId),
               founding: false,
+              buildPriceScale: plants.buildPriceScale,
             }).totalAnchor
           )
         : 0;
@@ -602,6 +603,7 @@ export function decideNppCapacityReinvestment({
         // discount does not apply. An NPP topping up capacity pays the same
         // list price a player pays through `buildCapacity`.
         founding: false,
+        buildPriceScale: plants.buildPriceScale,
       });
       const costAnchor = reinvestPrice.totalAnchor;
       const costLocal = toCorpLocal(costAnchor);

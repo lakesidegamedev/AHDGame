@@ -77,6 +77,7 @@ import {
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
 
+import { resolvePlantBuildPriceScale } from "@/lib/corporations/rules/capacityEconomy";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   foundingInputAvailability,
@@ -523,6 +524,7 @@ export async function processNppCorporationDecisions(
         producerCaptiveDeliveryStage?: number;
         nppDividendAfterTaxStage?: number;
         nppGrowthPerProductFillStage?: number;
+        plantBuildPriceScale?: number;
       } & ShortageGrowthFinanceConfigInput
     >(db).findOne(
       { _id: "default" as never },
@@ -536,6 +538,7 @@ export async function processNppCorporationDecisions(
           nppShortageGrowthFinanceStage: 1,
           nppDividendAfterTaxStage: 1,
           nppGrowthPerProductFillStage: 1,
+          plantBuildPriceScale: 1,
           nppShortageGrowthFinanceCandidateLimit: 1,
           nppShortageGrowthFinanceMaxPaybackTurns: 1,
           nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
@@ -550,6 +553,7 @@ export async function processNppCorporationDecisions(
       enabled: true,
       year: plantsYear,
       eraUnitScale: await loadWorldEraUnitScale(db),
+      buildPriceScale: resolvePlantBuildPriceScale(nppGameConfig?.plantBuildPriceScale),
       preset: resolvePresetIdFromGameState(gsPlants),
       primeRateOf: (cid) => primeByCountry.get(cid) ?? 0,
       costOfLivingOf: (sid) => colByState.get(sid) ?? null,
