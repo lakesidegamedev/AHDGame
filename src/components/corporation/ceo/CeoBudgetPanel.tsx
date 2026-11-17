@@ -267,6 +267,11 @@ export default function CeoBudgetPanel({
     financials.growthCosts -
     (financials.freightCosts ?? 0);
   const tax = financials.federalTax + financials.stateTax;
+  // A flow-through LLC pays no corporate income tax: the charge is the owners'
+  // tax on its profit, collected at source (same split the Financials tab shows).
+  const passThroughOwnerTax = Math.min(financials.passThroughOwnerTax ?? 0, tax);
+  const passThroughPhase = corporation.passThroughTaxPhase ?? 1;
+  const otherTax = tax - passThroughOwnerTax;
 
   return (
     <DenseSection
@@ -478,7 +483,30 @@ export default function CeoBudgetPanel({
           strong
           title="Earnings before interest and tax, at the saved budgets."
         />
-        {tax > 0 && (
+        {tax > 0 && passThroughOwnerTax > 0 && (
+          <>
+            <StatementLine
+              indent
+              label={
+                passThroughPhase < 1
+                  ? `Owner tax on pass-through profit (${Math.round(passThroughPhase * 100)}% phased in)`
+                  : "Owner tax on pass-through profit"
+              }
+              amount={cost(passThroughOwnerTax)}
+              pct={pctOfRevenue(passThroughOwnerTax)}
+              title="Owners of a pass-through are taxed on their full share of the profit, paid out or not. The company pays it for them, so payouts are not taxed again."
+            />
+            {otherTax > 0 && (
+              <StatementLine
+                indent
+                label="Other tax"
+                amount={cost(otherTax)}
+                pct={pctOfRevenue(otherTax)}
+              />
+            )}
+          </>
+        )}
+        {tax > 0 && passThroughOwnerTax <= 0 && (
           <StatementLine indent label="Corporate tax" amount={cost(tax)} pct={pctOfRevenue(tax)} />
         )}
         {financials.bondInterestCost > 0 && (
