@@ -67,7 +67,7 @@ describe("NPP tech spending budget", () => {
   });
 
   it("does not spend the opening cash twice after capacity reinvestment", () => {
-    const corp = corporation(2_900_000);
+    const corp = corporation(2_000_000);
     const decision = makeNppCorpDecision(
       {
         corp,

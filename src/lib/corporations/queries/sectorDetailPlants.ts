@@ -88,6 +88,8 @@ export function buildSectorPlantsSection(args: {
   techGrowthCostMultiplier: number;
   /** Tech dominance shield (cuts the dominance build toll). Optional for older fixtures. */
   techDominanceShield?: number;
+  /** `gameConfig.plantBuildPriceScale`, resolved. Absent = shipped default. */
+  buildPriceScale?: number;
   /**
    * Commodity-level toll inputs (see `commodityTollModels`): the firm's potential
    * output of each commodity this sector makes against world demand. Empty or
@@ -145,6 +147,7 @@ export function buildSectorPlantsSection(args: {
     hostCostOfLivingIndex,
     techGrowthCostMultiplier,
     techDominanceShield = 0,
+    buildPriceScale,
     eraUnitScale,
     preset,
     corpCapitalAnchor,
@@ -321,6 +324,7 @@ export function buildSectorPlantsSection(args: {
     hostCostOfLivingIndex,
     techGrowthCostMultiplier,
     techDominanceShield,
+    buildPriceScale,
   };
   // The local/national toll alone, then the full quote for one unit. The
   // commodity toll reads the ratio after the order lands, so the dialog

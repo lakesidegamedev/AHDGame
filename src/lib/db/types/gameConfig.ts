@@ -291,6 +291,12 @@ export interface GameConfig extends ProducerGameConfig {
    */
   dominanceRunningCostScale?: number;
   /**
+   * Multiplier (0 to 1] on the ordinary plant build price outside the 1991
+   * basis. Absent = the shipped default (PLANT_BUILD_PRICE_SCALE). Founding is
+   * not scaled. Set 1 to restore the previous prices without a deploy.
+   */
+  plantBuildPriceScale?: number;
+  /**
    * Honest balance sheets rollout stage: 1 counts bank construction loans and
    * overdrawn cash as debt in credit and share price. 0 or absent = off.
    */
