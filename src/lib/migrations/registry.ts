@@ -1,5 +1,6 @@
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
+import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
 import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as canadianCensusDivisions } from "./entries/2026-11-14-canadian-census-divisions";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
@@ -422,6 +423,7 @@ export const MIGRATIONS: Migration[] = [
   splitRenewablesPowerMethod,
   wikiRevisionsIndexes,
   moveFrackingToExtraction,
+  linearBuildDelivery,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

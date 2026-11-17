@@ -123,27 +123,26 @@ describe("whole-plant build delivery", () => {
     onlineTurn: 10,
     smooth: true,
     plantUnits: SIZE,
+    deliveryBaseFraction: 0,
   };
 
-  it("delivers whole plants only, the last on the online turn", () => {
+  it("delivers an equal slice every turn, the last on the online turn", () => {
     const delivered: number[] = [];
     for (let t = 1; t <= 10; t++) delivered.push(unitsDeliveredThisTurn(order, t));
-    for (const units of delivered) expect(units % SIZE).toBe(0);
-    expect(delivered.reduce((a, b) => a + b, 0)).toBe(100);
-    // Plant k lands when the ramp passes k/4: turns 3 (0.3 >= 0.25), 5, 8, 10.
-    expect(delivered).toEqual([0, 0, 25, 0, 25, 0, 0, 25, 0, 25]);
+    for (const units of delivered) expect(units).toBeCloseTo(10, 9);
+    expect(delivered.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 9);
     expect(unitsDeliveredThisTurn(order, 11)).toBe(0);
   });
 
-  it("releases cost and keeps construction in progress in the same plant steps", () => {
+  it("releases cost and keeps construction in progress in the same slices", () => {
     let released = 0;
     for (let t = 1; t <= 10; t++) {
       released += costReleasedThisTurn(order, t);
       expect(released + undeliveredCost(order, t)).toBeCloseTo(400, 9);
-      expect(undeliveredUnits(order, t) % SIZE).toBeCloseTo(0, 9);
+      expect(undeliveredUnits(order, t)).toBeCloseTo(100 - 10 * t, 9);
     }
     expect(released).toBeCloseTo(400, 9);
-    expect(deliveredFraction(order, 4)).toBe(0.25);
+    expect(deliveredFraction(order, 4)).toBeCloseTo(0.4, 12);
   });
 
   it("leaves unstamped orders on today's linear slices", () => {

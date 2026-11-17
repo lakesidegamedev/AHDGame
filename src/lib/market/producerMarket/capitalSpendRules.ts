@@ -3,7 +3,7 @@
  *
  * A build order is paid in full when placed; in the funded market that cash
  * buys construction work from producers as the order progresses, spread over
- * the build window via `deliveredFraction` (linear for smooth orders, all at
+ * the build window via `deliveredFraction` (linear for any order with a window, all at
  * landing for all-at-once). Using the delivery schedule keeps money closed: a
  * cancellation refunds undelivered cost only, a shortage speed-up preserves
  * the delivered fraction, so work bought plus any refund never exceeds what
@@ -33,7 +33,7 @@ export const CAPITAL_GOODS_BASKET: Readonly<Partial<Record<CommodityType, number
 
 export type BuildOrderWork = Pick<
   SectorBuildOrder,
-  "costPaidAnchor" | "startTurn" | "onlineTurn" | "smooth"
+  "costPaidAnchor" | "startTurn" | "onlineTurn" | "smooth" | "deliveryBaseFraction"
 >;
 
 /** Anchor value of the construction work done on an order during `turn`. */

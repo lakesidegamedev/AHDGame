@@ -199,7 +199,7 @@ describe("retooling preserves value through the blended production recipe", () =
       toStrategyId: to,
       plantsEnabled: true,
       capitalStock: 400,
-      buildQueue: [{ unitsOrdered: 40, costPaidAnchor: 900, startTurn: 990, onlineTurn: 1003 }],
+      buildQueue: [{ unitsOrdered: 40, costPaidAnchor: 900, startTurn: 1002, onlineTurn: 1003 }],
     });
     const { update } = run(
       "plants",

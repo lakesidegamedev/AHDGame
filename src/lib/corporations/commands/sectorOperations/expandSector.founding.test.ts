@@ -224,6 +224,7 @@ describe("expandSector — founding build (plants)", () => {
     expect(insertedSector().sectorType).toBe("agriculture");
     const queue = insertedSector().buildQueue as Array<Record<string, number>>;
     expect(queue[0].unitsOrdered).toBe(foundingStarterUnits("agriculture"));
+    expect(queue[0].deliveryBaseFraction).toBe(0);
     expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
