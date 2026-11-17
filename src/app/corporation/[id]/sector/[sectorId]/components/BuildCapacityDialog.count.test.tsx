@@ -384,12 +384,14 @@ function render(ui: ReactElement) {
 }
 
 describe("BuildCapacityDialog first income and founding price", () => {
-  it("shows the first income turn from the first delivery", () => {
+  it("shows first income next turn for any order size", () => {
     const { input } = renderDialog();
-    expect(screen.getByText("First income").nextSibling?.textContent).toBe("3 turns");
+    expect(screen.getByText("First income").nextSibling?.textContent).toBe("1 turn");
     fireEvent.change(input, { target: { value: "3" } });
     expect(screen.getByText("First income").nextSibling?.textContent).toBe("1 turn");
-    expect(screen.getByTestId("build-arrival").textContent).toContain("last in 3 turns");
+    const text = screen.getByTestId("build-arrival").textContent ?? "";
+    expect(text).toContain("equal slices every turn, starting next turn");
+    expect(text).toContain("finishes in 3 turns");
   });
 
   it("notes that only the first facility in a market is discounted", () => {

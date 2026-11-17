@@ -149,7 +149,7 @@
       "freightOneHopEstimate": "If this sector ran at full capacity and shipped all output one state away, it would need about {estimate} TEU per day. Local sales use no freight; longer routes use more.",
       "expansionDiscount": "Expansion cost adjustment",
       "expansionDiscountHelp": "New ordinary expansion receives this build-cost reduction. Founder pricing is separate.",
-      "arrivalMany": "{count} facilities arrive one at a time. The first is ready in {first} turns, the last in {last} turns.",
+      "arrivalLinear": "Capacity arrives in equal slices every turn, starting next turn. The build finishes in {turns} turns.",
       "foundingPriceNote": "Only the first facility in a new market gets a founding discount ({percent}% off). Every build after that is full price.",
       "forecastTitle": "Cash return from this expansion",
       "noForecast": "Cash return needs a full turn of results from this sector.",

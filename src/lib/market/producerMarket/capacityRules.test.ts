@@ -87,7 +87,7 @@ describe("owned producer capacity", () => {
       completedTurn: 6,
       ownedDailyUnits: 100,
       paidBookAnchor: 50,
-      buildQueue: [{ unitsOrdered: 80, costPaidAnchor: 10, startTurn: 3, onlineTurn: 7 }],
+      buildQueue: [{ unitsOrdered: 80, costPaidAnchor: 10, startTurn: 6, onlineTurn: 7 }],
     });
     expect(next.deliveredDailyUnits).toBe(80);
     expect(next.state.paidBookAnchor).toBeCloseTo(60 * (1 - CAPITAL_DEPRECIATION_PER_TURN));
@@ -123,7 +123,7 @@ describe("owned producer capacity", () => {
       paidBookAnchor: 50,
       buildQueue: [
         // Lands in the missed turn: dropping it would lose its paid cost.
-        { unitsOrdered: 30, costPaidAnchor: 12, startTurn: 555, onlineTurn: 561 },
+        { unitsOrdered: 30, costPaidAnchor: 12, startTurn: 560, onlineTurn: 561 },
         { unitsOrdered: 60, costPaidAnchor: 24, startTurn: 558, onlineTurn: 564, smooth: true },
         // Placed while the turn was missed.
         { unitsOrdered: 40, costPaidAnchor: 8, startTurn: 561, onlineTurn: 565, smooth: true },

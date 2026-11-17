@@ -995,6 +995,7 @@ export async function placeCapacityBuild(
     // as one lump on `onlineTurn`. See `buildDelivery.ts`. Only orders placed
     // through this path ramp; legacy in-flight orders keep all-at-once landing.
     smooth: true,
+    deliveryBaseFraction: 0,
     ...(wholePlants ? { plantUnits } : {}),
   };
   if (input.financing) {
