@@ -221,14 +221,19 @@ async function collectBalanceState(
     { worldEpoch: gameState?.worldEpochId ?? "" },
     { projection: { currency: 1, cash: 1 } }
   );
+  // A wallet in a currency with no observed rate still snapshots at 1:1, the
+  // same fallback financialTxLog uses for its anchor legs, so one legacy wallet
+  // (for example a pre-euro balance left in a euro-zone world) cannot abort the
+  // whole snapshot. A wallet whose currency is not a ledger currency has no
+  // legs to reconcile and is skipped rather than thrown.
   for await (const wallet of producerWalletCursor) {
     const currency = ZOD_CURRENCY_ENUM.find((code) => code === wallet.currency);
-    const rate = currency && rates.get(currency);
-    if (!currency || !rate || !Number.isFinite(rate) || rate <= 0 || !Number.isFinite(wallet.cash))
-      throw new Error(
-        "Producer wallet snapshot requires native cash and an observed currency rate"
-      );
-    add(balances, accountId("economy_wallet", wallet._id, currency), wallet.cash / rate);
+    if (!currency || !Number.isFinite(wallet.cash)) continue;
+    add(
+      balances,
+      accountId("economy_wallet", wallet._id, currency),
+      toAnchor(wallet.cash, currency, rates)
+    );
   }
   const accountValuations: NonNullable<BalanceSnapshot["accountValuations"]> = {};
   const budgets = federalBudgetCollection<{
