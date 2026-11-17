@@ -67,16 +67,3 @@ describe("page translator recursion", () => {
     expect(isTranslatorDomRecursion("Boom", true)).toBe(false);
   });
 });
-
-describe("stackless client timeout", () => {
-  it("drops only the stackless TimeoutError", async () => {
-    const { isStacklessClientTimeout } = await import("@/lib/observability/sentryFilters");
-    const ev = (frames?: Array<{ filename?: string }>) => ({
-      exception: {
-        values: [{ type: "TimeoutError", value: "signal timed out", stacktrace: { frames } }],
-      },
-    });
-    expect(isStacklessClientTimeout(ev())).toBe(true);
-    expect(isStacklessClientTimeout(ev([{ filename: "a.js" }]))).toBe(false);
-  });
-});

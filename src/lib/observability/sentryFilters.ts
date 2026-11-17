@@ -94,19 +94,3 @@ export function isTranslatorDomRecursion(message: string, translated: boolean): 
   if (!translated) return false;
   return message === "Maximum call stack size exceeded." || /^Na$/.test(message);
 }
-
-/**
- * An `AbortSignal.timeout` firing on a poll over a failing connection rejects
- * with a stackless `TimeoutError`. It reports a slow network, not an app fault,
- * and the pollers retry on their own schedule.
- */
-export function isStacklessClientTimeout(event: StreamErrorEvent): boolean {
-  const values = event.exception?.values;
-  if (!values || values.length !== 1) return false;
-  const value = values[0];
-  return (
-    value.type === "TimeoutError" &&
-    value.value === "signal timed out" &&
-    !value.stacktrace?.frames?.length
-  );
-}

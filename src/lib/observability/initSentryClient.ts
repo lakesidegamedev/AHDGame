@@ -8,7 +8,6 @@ import * as Sentry from "@sentry/nextjs";
 import {
   isMarketPollingTeardown,
   isPageTranslated,
-  isStacklessClientTimeout,
   isTranslatorDomRecursion,
   isValuelessNonErrorRejection,
 } from "@/lib/observability/sentryFilters";
@@ -136,7 +135,6 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
     beforeSend(event: Sentry.ErrorEvent, hint) {
       const message = event.exception?.values?.[0]?.value ?? "";
       if (isMarketPollingTeardown(event)) return null;
-      if (isStacklessClientTimeout(event)) return null;
 
       // Value-less non-Error promise rejections:
       // a promise rejected with no reason (undefined/null/empty), so the SDK
