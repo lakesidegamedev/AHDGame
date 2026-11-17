@@ -1,17 +1,13 @@
 /**
  * Era baseline tech: owned from founding, kept outside the research caps.
  *
- * A world that starts in a late year founds every corporation with the baseline
- * nodes of every decade before the world's starting decade (see
- * autoGrantedNodeIds). Those nodes stay owned in every mode, so prerequisites,
- * strategy availability, history and display keep working. What changes is how
- * their running effects count (`gameConfig.legacyTechMode`):
- *
- *  - "baseline": the effects keep today's size but sit in their own layer,
- *    clamped to the caps by themselves and added on top of the researched
- *    layer (see aggregateTechEffectLayers). Research then has the full cap to
- *    work with. A world founded under the old single cap keeps its numbers.
- *  - "off": the effects give nothing. Fresh worlds run like this; absent
+ * A late-start world founds every corporation with the baseline nodes of each
+ * decade before the starting decade (autoGrantedNodeIds). The nodes stay owned
+ * in every mode; `gameConfig.legacyTechMode` sets how their running effects count:
+ *  - "baseline": the effects keep their size but sit in a layer of their own,
+ *    clamped by the caps alone and added to the researched layer
+ *    (aggregateTechEffectLayers). Research keeps the full cap.
+ *  - "off": the effects give nothing. Fresh worlds run like this, and absent
  *    config means "off".
  */
 import { TECH_DECADES, getDecadeById, getDecadeForYear } from "@/lib/constants/techTree/decades";

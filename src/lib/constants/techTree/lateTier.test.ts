@@ -8,7 +8,8 @@ import { getSectorTechEffectsForYear } from "./selectors";
 
 // Every node counts in full: the world starts in the earliest decade.
 const ALL_COUNT = { startingYear: 1940, mode: "baseline" as const };
-import { aggregateTechEffects, NEUTRAL_TECH_EFFECTS, TECH_PLANT_OUTPUT_CAP } from "./effects";
+import { NEUTRAL_TECH_EFFECTS, TECH_PLANT_OUTPUT_CAP } from "./effects";
+import { aggregateTechEffects } from "@/lib/techTree/rules/effectLayers";
 import {
   arePrerequisiteLanesReached,
   countsAsFrontierResearch,

@@ -14,6 +14,7 @@
  * working.
  */
 export * from "./selectorsTables";
+export { aggregateTechEffects, aggregateTechEffectLayers } from "@/lib/techTree/rules/effectLayers";
 export {
   resolveLegacyTechContext,
   resolveLegacyTechMode,

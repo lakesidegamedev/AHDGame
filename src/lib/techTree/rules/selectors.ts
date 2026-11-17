@@ -2,8 +2,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { TECH_TREE, type TechLane, type TechTreeNode } from "@/lib/constants/techTree/nodes";
 import {
   NEUTRAL_TECH_EFFECTS,
-  aggregateTechEffectLayers,
-  aggregateTechEffects,
   collectUnlockedStrategyIds,
   scaleEffect,
   CORP_LANE_EFFECT_SCALE,
@@ -11,6 +9,7 @@ import {
   type TechEffect,
 } from "@/lib/constants/techTree/effects";
 import { frontierProgrammeEffects } from "@/lib/constants/techTree/frontier";
+import { aggregateTechEffectLayers, aggregateTechEffects } from "./effectLayers";
 import { isLegacyTechDecade, type LegacyTechContext } from "./legacyTech";
 import { frontierMethodEffects } from "@/lib/frontierRaces/rules";
 import {
