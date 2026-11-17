@@ -247,6 +247,30 @@ describe("proxy() — retired admin and moderator panel URLs", () => {
   });
 });
 
+describe("proxy() — legacy /corporations link", () => {
+  const redirectOf = async (path: string) => {
+    const res = await proxy(
+      makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+    );
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    return location.pathname + location.search;
+  };
+
+  it("sends the old corporations page straight to the market hub stocks tab", async () => {
+    expect(await redirectOf("/corporations")).toBe("/market?tab=stocks");
+  });
+
+  it("leaves look-alike paths to the router", async () => {
+    for (const path of ["/corporation", "/corporations/extra"]) {
+      const res = await proxy(
+        makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+      );
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+});
+
 describe("proxy() — tri-state maintenance gating", () => {
   it("redirects a non-admin to /maintenance when mode is 'full'", async () => {
     mockMaintenanceStatus.mockResolvedValueOnce({ mode: "full", enabled: true });
