@@ -162,7 +162,10 @@ export function ownTierOf(
 }
 
 /** Expand supplier-level trades for audits or route and contract accounting without retaining a matrix. */
-export function* producerTrades(receipt: ProducerTradeReceipt): Generator<ProducerTrade> {
+export function* producerTrades(
+  receipt: ProducerTradeReceipt,
+  accountId?: string
+): Generator<ProducerTrade> {
   const orders = new Map(receipt.orders.map((order) => [order.id, order]));
   const poolByOffer = new Map<string, ProducerSupplyPool>();
   const pools = new Map<string, ProducerSupplyPool>();
@@ -247,11 +250,16 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     // A replay group can drift from the clearing pass by rounding dust; share what it holds.
     if (!(total > 0)) continue;
     const fillUnits = Math.min(fill.units, total);
-    for (const offer of group) {
+    const visible =
+      pooled && accountId && order.accountId !== accountId
+        ? group.filter((offer) => offer.accountId === accountId)
+        : group;
+    for (const offer of visible) {
       const available = remaining.get(offer.id)!;
       const units = Math.min(available, (fillUnits / total) * available);
       if (!(units > 0)) continue;
       if (!pooled) remaining.set(offer.id, Math.max(0, available - units));
+      if (accountId && order.accountId !== accountId && offer.accountId !== accountId) continue;
       yield {
         id: JSON.stringify([receipt.turn, order.id, offer.id]),
         kind: fill.kind,

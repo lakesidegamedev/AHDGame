@@ -6,6 +6,29 @@ import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { decodeReceipt, encodeReceipt, stageReceiptChunks } from "./receiptStorage";
 
 describe("chunked producer receipts", () => {
+  it("projects only selected arrays and loads their nested chunks without reading unrelated chunks", async () => {
+    const memory = createInMemoryDb();
+    const ids = Array.from({ length: 200 }, (_, i) => `supplier:${i}`);
+    const selected = { rows: Array.from({ length: 200 }, (_, i) => ({ id: i, eligible: ids })) };
+    const original = {
+      selected,
+      unrelated: Array.from({ length: 500 }, (_, i) => ({
+        id: i,
+        unused: "large unrelated value",
+      })),
+    };
+    const encoded = encodeReceipt(original);
+    const selectedChunks = encodeReceipt(selected).chunks;
+    await stageReceiptChunks(memory as never, selectedChunks);
+    expect(encoded.chunks.length).toBeGreaterThan(selectedChunks.length);
+    expect(
+      await decodeReceipt(memory as never, encoded, (root) => (root as typeof original).selected)
+    ).toEqual(selected);
+    await expect(decodeReceipt(memory as never, encoded)).rejects.toThrow(
+      "Missing producer receipt chunk"
+    );
+  });
+
   it("stores nested route and supplier lists once and restores shared arrays", async () => {
     const memory = createInMemoryDb();
     const ids = Array.from({ length: 500 }, (_, i) => `supplier:${i}`);

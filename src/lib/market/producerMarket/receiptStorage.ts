@@ -190,7 +190,8 @@ export async function stageReceiptChunks(
 
 export async function decodeReceipt(
   db: Db,
-  record: Pick<EncodedReceipt, "payload" | "digest">
+  record: Pick<EncodedReceipt, "payload" | "digest">,
+  select?: (root: unknown) => unknown
 ): Promise<unknown> {
   const bytes = decode(record.payload, ROOT_DECODE_LIMIT);
   if (hash(bytes) !== record.digest) throw new Error("Producer receipt checksum mismatch");
@@ -201,7 +202,8 @@ export async function decodeReceipt(
     throw new Error("Unsupported producer receipt version");
   if (versioned && (!("value" in envelope) || !("chunks" in envelope)))
     throw new Error("Invalid producer receipt envelope");
-  const root: unknown = versioned && "value" in envelope ? envelope.value : envelope;
+  const fullRoot: unknown = versioned && "value" in envelope ? envelope.value : envelope;
+  const root = select ? select(fullRoot) : fullRoot;
   const required = new Set<string>();
   const collect = (value: unknown): void => {
     if (Array.isArray(value)) {
@@ -219,16 +221,19 @@ export async function decodeReceipt(
       ids.forEach((id: string) => required.add(id));
     } else Object.values(value).forEach(collect);
   };
-  if (versioned && "chunks" in envelope) {
+  if (!select && versioned && "chunks" in envelope) {
     collect({ $producerReceiptArray: envelope.chunks });
   }
   collect(root);
   // New receipts can reference arrays inside chunk rows. Load each unique
   // content hash once, in bounded cursor batches, including nested references.
   const chunks = new Map<string, unknown[]>();
-  if (required.size > 0) {
+  const loadChunks = async (depth: number): Promise<void> => {
+    const pending = [...required].filter((id) => !chunks.has(id));
+    if (!pending.length) return;
+    if (depth > 32) throw new Error("Producer receipt nesting exceeds limit");
     const stored = producerEconomyTurnChunksCollection<ReceiptChunk>(db)
-      .find({ _id: { $in: [...required] } })
+      .find({ _id: { $in: pending } })
       .batchSize(64);
     for await (const chunk of stored) {
       const decoded = decode(chunk.payload, CHUNK_DECODE_LIMIT);
@@ -238,9 +243,10 @@ export async function decodeReceipt(
       chunks.set(chunk._id, rows);
       collect(rows);
     }
-    if ([...required].some((id) => !chunks.has(id)))
-      throw new Error("Missing producer receipt chunk");
-  }
+    if (pending.some((id) => !chunks.has(id))) throw new Error("Missing producer receipt chunk");
+    await loadChunks(depth + 1);
+  };
+  await loadChunks(0);
   const restored = new Map<string, unknown[]>();
   const arraysByMarker = new Map<string, unknown[]>();
   const restoring = new Set<string>();

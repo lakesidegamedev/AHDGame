@@ -33,6 +33,7 @@ vi.mock("@/components/corporation/CorporationPageTabs", () => ({
   OverviewTab: () => null,
   TechTab: () => null,
   CommoditiesTab: () => null,
+  SupplyChainTab: () => null,
   DealsTab: () => null,
   CorporationContractsTab: () => null,
   DefenceContractsTab: () => null,

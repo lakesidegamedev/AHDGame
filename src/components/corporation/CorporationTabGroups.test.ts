@@ -19,6 +19,16 @@ function resolveToTabId(tabParam: string | null, subParam: string | null = null)
   return corpTabIdFor(ALL_CORP_TABS, r.superTab, r.subTab);
 }
 
+it("puts Supply chain between Commodities and Tech in Operations", () => {
+  const ids = CORP_GROUPS.find((g) => g.id === "operations")!.tabIds;
+  expect(ids.indexOf("supply-chain")).toBe(ids.indexOf("commodities") + 1);
+  expect(ids.indexOf("tech")).toBe(ids.indexOf("supply-chain") + 1);
+  expect(corpNavLocation(ALL_CORP_TABS, "supply-chain")).toEqual({
+    superTab: "operations",
+    subTab: "supply-chain",
+  });
+});
+
 describe("corporation tab grouping", () => {
   it("keeps the top-level tab count small enough not to need sideways scrolling", () => {
     expect(allNav.length).toBeLessThanOrEqual(5);

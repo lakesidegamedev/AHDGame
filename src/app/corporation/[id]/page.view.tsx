@@ -44,6 +44,7 @@ import {
   OverviewTab,
   TechTab,
   CommoditiesTab,
+  SupplyChainTab,
   DealsTab,
   CorporationContractsTab,
   DefenceContractsTab,
@@ -585,6 +586,10 @@ export function renderCorporationDetailPageView(
                         }}
                       />
                     </div>
+                  )}
+
+                  {tab === "supply-chain" && (
+                    <SupplyChainTab corpId={id} modViewEnabled={modViewEnabled} />
                   )}
 
                   {tab === "commodities" && (
