@@ -328,7 +328,7 @@ function useExpandMarketModalContext({
   const activeBlockMessage =
     activeSuggestion && !activeCanEnter
       ? (activeSuggestion.entry?.message ??
-        "You do not have enough capital for the entry fee and first plant.")
+        "You do not have enough cash for the entry fee and first plant. Add capital or pick a cheaper sector.")
       : null;
   const selectedFacility = facilityVocabulary(selectedType);
   const selectedFacilityAction =

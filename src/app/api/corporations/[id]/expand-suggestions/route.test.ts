@@ -751,7 +751,7 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     expect(row.entry).toEqual({
       canEnter: false,
       reason: "player_control_required",
-      message: "Resume player control before building plants for this corporation",
+      message: "Resume player control of this corporation in its settings, then try again.",
     });
   });
 

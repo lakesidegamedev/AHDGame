@@ -258,12 +258,6 @@ export default function BulkBuildCapacityDialog({
       title="Build capacity across sectors"
     >
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-5">
-        <p className="text-body-sm text-muted">
-          Order new capacity in many sectors at once. Each sector is priced and built exactly as its
-          own Build button would, one after another, until the cash runs out. Up to{" "}
-          {BULK_BUILD_MAX_SECTORS} sectors per order.
-        </p>
-
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-body-sm font-medium text-muted">
             Country
@@ -481,10 +475,10 @@ export default function BulkBuildCapacityDialog({
             {(preview.operatingReserveLocal ?? 0) > 0 && (
               <div className="mt-2 text-body-xs text-muted">
                 <p>
-                  Your plants need about {fmt(preview.operatingReserveLocal!)} to run for{" "}
-                  {preview.reserveTurns} turns (wages, site bills and inputs).{" "}
+                  Reserve {fmt(preview.operatingReserveLocal!)} ({preview.reserveTurns} turns of
+                  running costs).{" "}
                   {overrideReserve
-                    ? "You chose to build past that reserve."
+                    ? "Building past it."
                     : "Builds stop before cash falls below it."}
                 </p>
                 {(preview.reserveHeldBack || overrideReserve) && (
@@ -497,17 +491,11 @@ export default function BulkBuildCapacityDialog({
                         invalidate();
                       }}
                     />
-                    Build past the reserve. Plants short of cash run at a fraction of their output
-                    until it recovers.
+                    Build past the reserve
                   </label>
                 )}
               </div>
             )}
-            <p className="mt-2 text-body-xs text-muted">
-              Building several sectors of one industry can raise the price of later ones a little,
-              because your share of world demand grows with each order. You are never charged more
-              than the total you confirm: any sector that would go past it is skipped.
-            </p>
           </div>
         )}
 
@@ -532,9 +520,6 @@ export default function BulkBuildCapacityDialog({
             <p className="font-semibold text-foreground">
               Spend up to {fmt(readyCost)} building in {readyCount} sector
               {readyCount === 1 ? "" : "s"}?
-            </p>
-            <p className="mt-1 text-muted">
-              The money leaves your cash now and the capacity comes online over the next few turns.
             </p>
           </div>
         )}

@@ -41,6 +41,17 @@ export function deliveredFraction(order: SectorBuildOrder, turn: number): number
     : linear;
 }
 
+/**
+ * First turn on which any capacity of the order lands, or `onlineTurn` when it
+ * lands all at once. Lets player copy name the turn output actually starts.
+ */
+export function firstDeliveryTurn(order: SectorBuildOrder): number {
+  for (let turn = order.startTurn + 1; turn < order.onlineTurn; turn++) {
+    if (deliveredFraction(order, turn) > 0) return turn;
+  }
+  return order.onlineTurn;
+}
+
 function safeUnits(order: SectorBuildOrder): number {
   return Number.isFinite(order.unitsOrdered) && order.unitsOrdered > 0 ? order.unitsOrdered : 0;
 }

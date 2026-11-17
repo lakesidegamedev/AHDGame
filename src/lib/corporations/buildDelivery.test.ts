@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import {
+  firstDeliveryTurn,
   costReleasedSince,
   costReleasedThisTurn,
   deliveredFraction,
@@ -235,5 +236,21 @@ describe("plannedArrivalTurns", () => {
 
   it("returns null for an empty order", () => {
     expect(plannedArrivalTurns(0, 100, 6)).toBeNull();
+  });
+});
+
+describe("firstDeliveryTurn", () => {
+  const base = { unitsOrdered: 50, costPaidAnchor: 100, startTurn: 10, onlineTurn: 18 };
+
+  it("is the online turn for a single whole plant", () => {
+    expect(firstDeliveryTurn({ ...base, smooth: true, plantUnits: 50 })).toBe(18);
+  });
+
+  it("is the first landed plant for a multi-plant smooth order", () => {
+    expect(firstDeliveryTurn({ ...base, smooth: true, plantUnits: 25 })).toBe(14);
+  });
+
+  it("is the online turn for a legacy lump order", () => {
+    expect(firstDeliveryTurn(base)).toBe(18);
   });
 });

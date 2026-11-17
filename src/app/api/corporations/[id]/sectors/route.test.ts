@@ -166,7 +166,7 @@ describe("POST /api/corporations/[id]/sectors", () => {
     const response = await POST(request, { params: Promise.resolve({ id: "1" }) });
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      error: "You already have operations in this state",
+      error: "You already operate in this state. Open that sector and order more capacity there.",
       code: "BAD_REQUEST",
       ref: expect.any(String),
     });

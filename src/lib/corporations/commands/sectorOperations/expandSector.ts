@@ -1,3 +1,4 @@
+import { firstDeliveryTurn } from "@/lib/corporations/buildDelivery";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
@@ -237,6 +238,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     let starterUnits = 0;
     let starterBuildAnchor = 0;
     let starterOnlineTurn = 0;
+    let starterFirstDeliveryTurn = 0;
     let currentTurn = 0;
     // Modern basis until the plants block resolves the world's real scale; the
     // pool writer below only runs under plants, where the block has run.
@@ -389,6 +391,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       // basis.
       newSector.capacityBookAnchor = 0;
       newSector.buildQueue = [starterOrder];
+      starterFirstDeliveryTurn = firstDeliveryTurn(starterOrder);
       // Born under plants, so it never needs the flip-turn migration — stamping
       // this now keeps `sectorTurn`'s `isFlipTurn` (plantsStartTurn == null) from
       // treating a zero-capacity newborn as a legacy sector to convert.
@@ -421,7 +424,10 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       newSectorId = inserted.insertedId;
     } catch (error) {
       if (isCorporateSectorDuplicateKey(error)) {
-        return errorResponse(400, "You already have operations in this state");
+        return errorResponse(
+          400,
+          "You already operate in this state. Open that sector and order more capacity there."
+        );
       }
       throw error;
     }
@@ -490,7 +496,9 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         success: true,
         sectorId: newSectorId.toString(),
         message: plantsEnabled
-          ? `Expanded operations to ${state.name}. Your first plants come online in ${starterOnlineTurn - currentTurn} turns.`
+          ? starterFirstDeliveryTurn < starterOnlineTurn
+            ? `Expanded operations to ${state.name}. Your first plant comes online in ${starterFirstDeliveryTurn - currentTurn} turns and the full build in ${starterOnlineTurn - currentTurn}.`
+            : `Expanded operations to ${state.name}. Your first plant comes online in ${starterOnlineTurn - currentTurn} turns.`
           : `Expanded operations to ${state.name}`,
         ...(plantsEnabled
           ? {
