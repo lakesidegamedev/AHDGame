@@ -15,4 +15,4 @@ areas: [backend]
 ## What changed
 
 - The dominance surcharge on plant builds now measures your share against the larger of total supply and what buyers have funded. A first seller in a mostly unserved market pays little or no surcharge.
-- Markets that are already well served behave as before. 
+- Markets that are already well served behave as before.
