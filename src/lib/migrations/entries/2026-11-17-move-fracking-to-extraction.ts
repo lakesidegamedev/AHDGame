@@ -6,6 +6,7 @@ import { unitYieldForSupply } from "@/lib/corporations/rules/capacityEconomy";
 import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Hydraulic Fracturing is an extraction method now, not an energy method.
@@ -76,8 +77,7 @@ async function refundRetoolFee(
   db: Db,
   sector: SectorLike
 ): Promise<{ refunded: boolean; amount: number }> {
-  const fees = await db
-    .collection("financialTxLog")
+  const fees = await financialTxLogCollection<Document>(db)
     .find({
       type: "corp_sector_retool",
       "meta.sectorId": sector._id.toString(),

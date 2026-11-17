@@ -69,15 +69,15 @@ export const EXTRACTION_STRATEGIES: SectorStrategy[] = [
     description:
       "Horizontal drilling and fracturing that pull more oil and natural gas out of a deposit than conventional wells. Heavier steel, chemical, freight and sand bills.",
     // Output beats Oil & Gas (1.04 vs 0.90) on a slightly larger input bill
-    // (0.70 vs 0.57), so the tech-gated method earns a little more per unit of
+    // (0.62 vs 0.57), so the tech-gated method earns a little more per unit of
     // capacity. Building materials stand in for frac sand; there is no water commodity.
     supply: { oil: 0.64, natural_gas: 0.4 },
     demand: {
-      steel: 0.18,
-      chemicals: 0.18,
+      steel: 0.16,
+      chemicals: 0.16,
       energy: 0.12,
-      freight: 0.08,
-      construction_services: 0.08,
+      freight: 0.06,
+      construction_services: 0.06,
       building_materials: 0.06,
     },
   },

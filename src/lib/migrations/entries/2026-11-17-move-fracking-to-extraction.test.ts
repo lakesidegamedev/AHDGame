@@ -10,6 +10,10 @@ import { REQUIRED_STARTUP_MIGRATIONS } from "../startupMigrations";
 import { SECTOR_STRATEGIES, getStrategy } from "@/lib/constants/sectorStrategies";
 import { TECH_TREE } from "@/lib/constants/techTree/nodes";
 
+interface TechNodeLike {
+  effects: { kind: string; strategyId?: string }[];
+}
+
 describe("fracking moved from energy to extraction", () => {
   it("no energy method supplies oil or natural gas, and fracking is not an energy method", () => {
     const energy = SECTOR_STRATEGIES.energy;
@@ -36,11 +40,13 @@ describe("fracking moved from energy to extraction", () => {
   });
 
   it("the research that unlocks it sits in the extraction tree and nothing unlocks fracking", () => {
-    const unlocks = (sector: string) =>
-      (TECH_TREE[sector as never] ?? [])
+    const unlocks = (sector: string): string[] => {
+      const nodes = (TECH_TREE as unknown as Record<string, TechNodeLike[] | undefined>)[sector];
+      return (nodes ?? [])
         .flatMap((n) => n.effects)
         .filter((e) => e.kind === "unlockStrategy")
-        .map((e) => (e as { strategyId: string }).strategyId);
+        .map((e) => e.strategyId ?? "");
+    };
     expect(unlocks("extraction")).toContain("hydraulic_fracturing");
     expect(unlocks("energy")).not.toContain("fracking");
     expect(unlocks("energy")).not.toContain("hydraulic_fracturing");
