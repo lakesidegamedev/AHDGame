@@ -7,7 +7,7 @@ import {
 } from "@/lib/corporations/buildDelivery";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
-import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { applyPlantChange, productiveCapacityUnits } from "@/lib/corporations/wholePlants/rules";
 
 /**
  * Whole-plant counters (gameConfig.wholePlantsStage on). Present only when the
@@ -159,7 +159,9 @@ export function advanceProducerCapacity(input: {
     "closing construction value"
   );
   const capacityUnits = nonNegative(
-    (ownedDailyUnits * input.operatingRecipeRatio) / TURNS_PER_DAY,
+    (productiveCapacityUnits(ownedDailyUnits, wholePlants?.creditUnits) *
+      input.operatingRecipeRatio) /
+      TURNS_PER_DAY,
     "per-turn operating capacity"
   );
   return {
