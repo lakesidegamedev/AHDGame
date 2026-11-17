@@ -38,6 +38,7 @@ describe("computeBuildCost", () => {
       marketSharePercent: 0,
       primeRate: 5,
       acumen: NEUTRAL_STAT,
+      buildPriceScale: 1,
     });
     // Neutral acumen ⇒ sensitivity 1 ⇒ rate multiplier 1 + 5/10 = 1.5.
     expect(acumenRateSensitivity(NEUTRAL_STAT)).toBeCloseTo(1, 10);
@@ -228,6 +229,7 @@ describe("founding calibration gate — one facility", () => {
       strategyId: null,
       units,
       year: CAPACITY_ANCHOR_YEAR,
+      buildPriceScale: 1,
     });
     const founding = computeBuildCost({
       eraUnitScale: 1,

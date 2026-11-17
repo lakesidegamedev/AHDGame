@@ -23,6 +23,9 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // Legacy market recovery ladder (price memory damping, margin trim relief,
   // service labour relief): patches for the old formula market.
   marketRecoveryStage: "",
+  // Live rollback override for the plant build price scale; a fresh world uses
+  // the code default.
+  plantBuildPriceScale: "",
   // Launch-safety governor on the plants tier: cap, ramp and every glide field.
   // A rebuilt plants economy starts clean, with no deviation cap to glide off.
   marketGovernorCap: "",

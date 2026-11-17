@@ -2,6 +2,7 @@ import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { loadPlantBuildPriceScale } from "@/lib/corporations/plantBuildPriceScale";
 import { isWholePlantOrder } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
@@ -868,6 +869,7 @@ export async function placeCapacityBuild(
     hostCostOfLivingIndex,
     techGrowthCostMultiplier: techBuildCostMultiplier,
     techDominanceShield,
+    buildPriceScale: await loadPlantBuildPriceScale(db),
   });
   // The same research that discounts the price also shortens the build.
   const buildTurns = techBuildTurns(

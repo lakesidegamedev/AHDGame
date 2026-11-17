@@ -82,6 +82,7 @@ import type { StrategyAvailabilityWorld, TechCorpView } from "@/lib/constants/te
 import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
+import { loadPlantBuildPriceScale } from "@/lib/corporations/plantBuildPriceScale";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
@@ -780,6 +781,7 @@ export async function buildSectorDetailPlantsTier({
       hostCostOfLivingIndex: metrics.costOfLiving,
       techGrowthCostMultiplier: techBuildCostMultiplier,
       techDominanceShield,
+      buildPriceScale: await loadPlantBuildPriceScale(db),
       eraUnitScale: sectorDetailUnitScale,
       preset: sectorDetailPreset,
       corpCapitalAnchor: corpLiquidCapitalToAnchor(
