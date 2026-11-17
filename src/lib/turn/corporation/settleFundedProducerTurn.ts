@@ -81,6 +81,9 @@ export async function settleFundedProducerTurn(
     walletScopes: context.walletScopes,
     rates: context.rates,
     demand: {
+      ...(context.demand.electricityNetwork
+        ? { electricityNetwork: context.demand.electricityNetwork }
+        : {}),
       households: context.demand.households,
       // Marketing budgets keep their legacy settlement to media sellers this
       // turn; buying them here as well would spend each budget twice.
@@ -154,6 +157,9 @@ export async function settleFundedProducerTurn(
           ? { stuckTurns: context.input.env.creditStuckTurns }
           : {}),
       },
+      ...(context.demand.electricityNetwork
+        ? { countryOfProducer: (id: string) => context.demand.planCountry.get(id) }
+        : {}),
       ...((context.input.env.fundedBookStage ?? 0) >= 1
         ? {
             countryOfProducer: (id: string) => context.demand.planCountry.get(id),

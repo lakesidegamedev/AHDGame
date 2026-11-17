@@ -6,6 +6,7 @@ export type AdminLogAction =
   | "discord_character_gate_changed"
   | "government_contracts_gate_changed"
   | "party_adjacency_gate_changed"
+  | "electricity_network_mode_changed"
   | "government_confidence_gate_changed"
   | "sandbox_access_granted"
   | "vpn_whitelist_granted"

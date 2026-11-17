@@ -228,6 +228,7 @@ export interface SourcingResult {
 export type Balance = { supply: number; demand: number };
 
 export type SourcingCandidate = {
+  gridPath?: import("@/lib/electricityNetwork/rules/types").GridPath;
   originType: "state" | "country";
   originId: string;
   landed: number;
@@ -246,6 +247,7 @@ export type FairForeignDemand = {
 };
 
 export interface SourcingInputs {
+  electricityNetwork?: import("@/lib/electricityNetwork/rules/types").ElectricityNetwork;
   /** Non-national-scope states with their country. */
   states: ReadonlyArray<{ stateId: string; countryId: CountryId }>;
   /** Per-state balances (read-only; the pass copies what it consumes). */

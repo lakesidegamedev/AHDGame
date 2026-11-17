@@ -1,3 +1,4 @@
+import { buildElectricityNetwork } from "@/lib/electricityNetwork/rules/network";
 /** Funded-market demand construction shared by the producer shadow and the live funded market. */
 import {
   markPublicFairShare,
@@ -710,6 +711,13 @@ export async function buildProducerTurnDemand(
     )
   );
   return {
+    electricityNetwork:
+      env.electricityNetworkMode && env.electricityNetworkMode !== "off"
+        ? buildElectricityNetwork(
+            lookups.eraYear ?? Number.parseInt(lookups.preset ?? "2027", 10),
+            env.electricityNetworkMode
+          )
+        : undefined,
     backgroundOffers,
     backgroundOrders,
     skippedSectors,

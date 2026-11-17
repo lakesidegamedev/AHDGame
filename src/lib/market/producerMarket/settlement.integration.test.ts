@@ -229,92 +229,166 @@ describe("frozen producer turn settlement", () => {
     expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
   });
 
-  it.each([null, false, true])(
-    "conserves mixed-currency cash on the first funded turn and retries, injectedAfterWrite=%s",
-    async (afterWrite) => {
+  it.each(["shadow", "enforced"] as const)(
+    "freezes the %s grid report across an interrupted first funded settlement",
+    async (mode) => {
       const { memory, input, db } = fixture();
-      const large = 6e12;
-      const rate = 33.891;
-      memory.seed("producerEconomyAccounts", [
-        {
-          _id: "public",
-          worldEpoch: "example",
-          currency: "TRY",
-          cash: large * rate,
-          kind: "publicBuyer",
-          countryId: "TR",
-        },
-      ]);
-      input.production.accounts = [...input.production.accounts, { id: "public", cash: large }];
-      input.bindings = [
-        ...input.bindings,
-        {
-          kind: "economyAccount",
-          accountId: "public",
-          economyAccountId: "public",
-          currency: "TRY",
-          localPerAnchor: rate,
-          openingCashLocal: large * rate,
-        },
-      ];
+      input.production.electricityNetwork = {
+        version: "test",
+        year: 2027,
+        mode,
+        links: [],
+        notes: [],
+      };
+      input.production.producers[0].outputs[0].commodity = "energy";
       input.production.households = [];
-      input.production.producers[0].outputs[0].policy = { kind: "manual", unitPrice: 0.37 };
+      input.production.countryOfProducer = () => "US";
       input.production.externalOrders = [
         {
-          id: "procurement",
-          accountId: "public",
-          commodity: "goods",
+          id: "overseas",
+          accountId: "households",
+          commodity: "energy",
           book: "world",
+          countryId: "JP",
           units: 10,
-          maximumUnitPrice: 0.37,
+          maximumUnitPrice: 3,
         },
       ];
-      input.close = () => ({
-        transfers: [
-          {
-            reason: "operating_income",
-            fromAccountId: "public",
-            toAccountId: "households",
-            amountAnchor: 0.11,
-          },
-        ],
+      const faulty = withInjectedCrash(memory, {
+        collection: "ledgerEntries",
+        op: "insertOne",
+        onCall: 1,
+        afterWrite: true,
       });
-      if (afterWrite != null) {
-        const faulty = withInjectedCrash(memory, {
-          collection: "ledgerEntries",
-          op: "insertOne",
-          onCall: 1,
-          afterWrite,
-        });
-        await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
-      }
-      const first = await settleProducerTurn(db, input);
-      expect(first.cashChanges).toBeDefined();
-      expect(first.producers[0].revenue).toBeCloseTo(3.7, 10);
-      expect(memory.collection("corporations").docs[0].liquidCapital).toBeCloseTo(977.4, 10);
-      expect(memory.collection("corporations").docs[0].bankCharter).toEqual({
-        cashReserves: 9000,
-        totalLoans: 6000,
-        totalDeposits: 8000,
+      await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+      const frozen = structuredClone(memory.collection("producerEconomyTurns").docs[0]);
+      expect(frozen.electricityNetwork).toMatchObject({ mode });
+      expect(frozen.electricityReport).toMatchObject({
+        off: { delivered: 10 },
+        grid: { delivered: 0 },
       });
-      expect(
-        memory.collection("producerEconomyAccounts").docs.find((w) => w._id === "public")!.cash
-      ).toBe(large * rate - 3.81 * rate);
-      const beforeRetry = structuredClone(memory.collection("producerEconomyAccounts").docs);
-      input.close = () => {
-        throw new Error("A frozen close must never be recomputed");
+      input.production.electricityNetwork = {
+        ...input.production.electricityNetwork,
+        mode: mode === "shadow" ? "enforced" : "off",
       };
-      const repeated = await settleProducerTurn(db, input);
-      expect(repeated).toEqual(first);
-      expect(memory.collection("producerEconomyAccounts").docs).toEqual(beforeRetry);
+      const first = await settleProducerTurn(db, input);
+      const wallets = structuredClone(memory.collection("producerEconomyAccounts").docs);
+      expect(await settleProducerTurn(db, input)).toEqual(first);
+      expect(memory.collection("producerEconomyAccounts").docs).toEqual(wallets);
+      expect(memory.collection("producerEconomyTurns").docs[0].electricityReport).toEqual(
+        frozen.electricityReport
+      );
       expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
-      const entry = memory.collection("ledgerEntries").docs[0] as unknown as LedgerEntry;
-      expect(
-        Math.abs(entry.legs.reduce((sum, leg) => sum + (leg.anchorAmount ?? 0), 0))
-      ).toBeLessThan(1e-7);
-      expect(memory.collection("producerEconomyTurns").docs).toHaveLength(1);
+      expect(first.tradeReceipt.tradeCount).toBe(mode === "shadow" ? 1 : 0);
     }
   );
+
+  it.each(
+    [null, false, true].flatMap((afterWrite) => [false, true].map((grid) => ({ afterWrite, grid })))
+  )("conserves first-funded mixed-currency cash and retries: %j", async ({ afterWrite, grid }) => {
+    const { memory, input, db } = fixture();
+    if (grid)
+      input.production.electricityNetwork = {
+        version: "fx-test",
+        year: 2027,
+        mode: "enforced",
+        notes: [],
+        links: [
+          {
+            id: "US-TR",
+            from: "US",
+            to: "TR",
+            capacity: 20,
+            loss: 0.1,
+            name: "Synthetic cable",
+            source: "test",
+          },
+        ],
+      };
+    input.production.countryOfProducer = () => "US";
+    if (grid) input.production.producers[0].outputs[0].commodity = "energy";
+    const large = 6e12;
+    const rate = 33.891;
+    memory.seed("producerEconomyAccounts", [
+      {
+        _id: "public",
+        worldEpoch: "example",
+        currency: "TRY",
+        cash: large * rate,
+        kind: "publicBuyer",
+        countryId: "TR",
+      },
+    ]);
+    input.production.accounts = [...input.production.accounts, { id: "public", cash: large }];
+    input.bindings = [
+      ...input.bindings,
+      {
+        kind: "economyAccount",
+        accountId: "public",
+        economyAccountId: "public",
+        currency: "TRY",
+        localPerAnchor: rate,
+        openingCashLocal: large * rate,
+      },
+    ];
+    input.production.households = [];
+    input.production.producers[0].outputs[0].policy = { kind: "manual", unitPrice: 0.37 };
+    input.production.externalOrders = [
+      {
+        id: "procurement",
+        accountId: "public",
+        commodity: grid ? "energy" : "goods",
+        countryId: "TR",
+        book: "world",
+        units: grid ? 9 : 10,
+        maximumUnitPrice: grid ? 0.37 / 0.9 : 0.37,
+      },
+    ];
+    input.close = () => ({
+      transfers: [
+        {
+          reason: "operating_income",
+          fromAccountId: "public",
+          toAccountId: "households",
+          amountAnchor: 0.11,
+        },
+      ],
+    });
+    if (afterWrite != null) {
+      const faulty = withInjectedCrash(memory, {
+        collection: "ledgerEntries",
+        op: "insertOne",
+        onCall: 1,
+        afterWrite,
+      });
+      await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+    }
+    const first = await settleProducerTurn(db, input);
+    expect(first.cashChanges).toBeDefined();
+    expect(first.producers[0].revenue).toBeCloseTo(3.7, 10);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBeCloseTo(977.4, 10);
+    expect(memory.collection("corporations").docs[0].bankCharter).toEqual({
+      cashReserves: 9000,
+      totalLoans: 6000,
+      totalDeposits: 8000,
+    });
+    expect(
+      memory.collection("producerEconomyAccounts").docs.find((w) => w._id === "public")!.cash
+    ).toBe(large * rate - 3.81 * rate);
+    const beforeRetry = structuredClone(memory.collection("producerEconomyAccounts").docs);
+    input.close = () => {
+      throw new Error("A frozen close must never be recomputed");
+    };
+    const repeated = await settleProducerTurn(db, input);
+    expect(repeated).toEqual(first);
+    expect(memory.collection("producerEconomyAccounts").docs).toEqual(beforeRetry);
+    expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
+    const entry = memory.collection("ledgerEntries").docs[0] as unknown as LedgerEntry;
+    expect(
+      Math.abs(entry.legs.reduce((sum, leg) => sum + (leg.anchorAmount ?? 0), 0))
+    ).toBeLessThan(1e-7);
+    expect(memory.collection("producerEconomyTurns").docs).toHaveLength(1);
+  });
 
   it("expires before claiming a receipt or changing money or plant state", async () => {
     const { db, input, memory } = fixture();

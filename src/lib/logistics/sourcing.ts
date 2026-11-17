@@ -326,6 +326,7 @@ function prepareRunSourcingPass(inputs: SourcingInputs) {
       freightUsedByState,
       haulRevenueByOriginState,
       hops,
+      electricityNetwork: inputs.electricityNetwork,
       importAggregatesByCountry,
       isBlocked,
       landedPremiumByDestState,
