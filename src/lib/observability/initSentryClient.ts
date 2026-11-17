@@ -7,6 +7,9 @@ import * as Sentry from "@sentry/nextjs";
 
 import {
   isMarketPollingTeardown,
+  isPageTranslated,
+  isStacklessClientTimeout,
+  isTranslatorDomRecursion,
   isValuelessNonErrorRejection,
 } from "@/lib/observability/sentryFilters";
 import { isTauriAclRefusalMessage, isTauriShell } from "@/lib/clientShell/tauriAclFallback";
@@ -133,6 +136,7 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
     beforeSend(event: Sentry.ErrorEvent, hint) {
       const message = event.exception?.values?.[0]?.value ?? "";
       if (isMarketPollingTeardown(event)) return null;
+      if (isStacklessClientTimeout(event)) return null;
 
       // Value-less non-Error promise rejections:
       // a promise rejected with no reason (undefined/null/empty), so the SDK
@@ -164,6 +168,11 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       if (message.includes("removeChild") && message.includes("not a child")) return null;
       if (message.includes("insertBefore") && message.includes("not a child")) return null;
       if (message.includes("The object can not be found here")) return null;
+      if (
+        typeof document !== "undefined" &&
+        isTranslatorDomRecursion(message, isPageTranslated(document.documentElement))
+      )
+        return null;
 
       return scrubSentryEvent(withPlayerContext(event));
     },
