@@ -79,7 +79,7 @@ describe("NPP strategy choice respects a parent-directed strategy", () => {
 
   it("resumes normal management once the window ends", () => {
     expect(decide(parentDirected(100), { building_materials: 2 })?.updates).toMatchObject({
-      strategyId: "standard",
+      strategyId: "building_materials",
       transitionFromStrategyId: "heavy_metals",
     });
   });

@@ -22,6 +22,7 @@ const defaultCommodityFields = {
   exchangeSupply: 0,
   exchangeDemand: 0,
   priceChange: 0,
+  turn: 1,
 };
 
 const sampleCommodities: CommodityData[] = [
