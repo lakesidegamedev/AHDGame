@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { RetentionMode } from "./policy";
 
@@ -38,7 +39,7 @@ describe("runRetention — dry run", () => {
     expect(col.deleteMany).not.toHaveBeenCalled();
     expect(archiveDocs).not.toHaveBeenCalled();
     const r = summary.results[0];
-    expect(r.cutoff).toBe(1009 - 168);
+    expect(r.cutoff).toBe(1009 - TX_TTL_TURNS);
     expect(r.wouldDelete).toBe(100);
   });
 });
@@ -124,8 +125,8 @@ describe("runRetention — fast-mode cadence", () => {
       $and: Record<string, { $lt?: Date }>[];
     };
     const cutoffDate = fallback.$and[1].createdAt.$lt as Date;
-    // 168 turns x 30 min = 84 h before now
-    expect(cutoffDate.toISOString()).toBe("2026-10-19T00:00:00.000Z");
+    // TX_TTL_TURNS (720) x 30 min = 360 h before now
+    expect(cutoffDate.toISOString()).toBe("2026-10-07T12:00:00.000Z");
   });
 });
 

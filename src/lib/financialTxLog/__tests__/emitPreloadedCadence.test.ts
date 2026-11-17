@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { DEFAULT_TX_THRESHOLDS } from "@/lib/db/types/financialTxLog";
 import { emitTx, emitTxBulk } from "../emit";
@@ -74,7 +75,7 @@ describe("emitTx preloaded turn cadence", () => {
     expect(db.collectionMocks.gameConfig.findOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.financialTxLog.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({
-        expiresAt: new Date(createdAt.getTime() + 168 * 30 * 60_000),
+        expiresAt: new Date(createdAt.getTime() + TX_TTL_TURNS * 30 * 60_000),
       })
     );
   });
