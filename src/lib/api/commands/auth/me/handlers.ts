@@ -1,0 +1,434 @@
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
+import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
+import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
+import { navCustomization } from "@/lib/navigation/navCustomization";
+import { notificationTypeFilter } from "@/lib/notifications/visibility";
+import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
+import { withNoStore } from "@/lib/api/withNoStore";
+import { NextResponse } from "next/server";
+import { isSingleplayer } from "@/lib/singleplayer";
+import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
+import { ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { clearAuthCookie, getTrackingCookieOptions, verifyAuth } from "@/lib/auth";
+import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
+import { needsCharacterHint } from "@/lib/auth/characterGate";
+import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
+import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
+import type { User } from "@/lib/db/types";
+import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { isPatreonActive } from "@/lib/db/types";
+import { getImperialTitle } from "@/lib/imperial";
+import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
+import { getNotificationBundleUserIds } from "@/lib/notifications/notificationBundle";
+import { getClientIp } from "@/lib/utils/network";
+import { appleExemptsDiscordGate } from "@/lib/auth/providerLinkHistory";
+import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
+import { resolveStaffRole } from "@/lib/staff/rules";
+import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { formerUsername } from "@/lib/auth/accountFields/rules";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+
+function getPatreonAdPreference(
+  user: User | null | undefined
+): "ad-free" | "player-only" | "all-ads" {
+  if (user?.patreonAdPreference) return user.patreonAdPreference;
+  return user?.adsDisabled ? "ad-free" : "all-ads";
+}
+
+/** Midnight UTC of the given instant. */
+function startOfUtcDay(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+// GET /api/auth/me — Returns the current user's profile, character, and unread notification counts.
+// Auth: public (manual JWT via cookie)
+// Errors: 401
+export const GET = withNoStore(async () => {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+
+    if (!token) {
+      return errorResponse(401, "Authentication required");
+    }
+
+    const payload = await verifyAuth();
+    if (!payload) {
+      await clearAuthCookie("auth_me:verify_returned_null");
+      return errorResponse(401, "Authentication required");
+    }
+    const userId = payload.userId;
+
+    const db = await getDb();
+    let user = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      await clearAuthCookie("auth_me:user_not_found");
+      return errorResponse(401, "Authentication required");
+    }
+    if (user.isBanned) {
+      await clearAuthCookie("auth_me:user_banned");
+      return errorResponse(403, "banned", {
+        extra: { reason: user.banReason || "Violation of rules" },
+      });
+    }
+    if (isAuthMigrationFenced(user) && !(await unifiedSessionIsCurrent(db, payload))) {
+      await clearAuthCookie("auth_me:source_fenced");
+      return errorResponse(401, "Authentication required");
+    }
+    if (isTokenRevokedByCutoff(user.authRevokedAt, payload.iat)) {
+      await clearAuthCookie("auth_me:auth_revoked");
+      return errorResponse(401, "Authentication required");
+    }
+
+    // Day-level "seen" stamp for intake retention (returned after day 0, after
+    // a week). The user doc is already loaded, so this costs a write only on
+    // the first load of each UTC day. Fire-and-forget: never delays /me.
+    const seenDay = startOfUtcDay(new Date());
+    if (!(user.lastSeenAt instanceof Date) || user.lastSeenAt < seenDay) {
+      void usersCollection(db)
+        .updateOne(
+          {
+            _id: user._id,
+            $or: [{ lastSeenAt: { $exists: false } }, { lastSeenAt: { $lt: seenDay } }],
+          },
+          { $set: { lastSeenAt: seenDay } }
+        )
+        .catch(() => {});
+    }
+
+    // Staff flags come from the current DB account record only. Verified JWT
+    // claims are identity (which account this session is for), never
+    // authority: an old token from before a demotion must not re-grant here.
+    const isAdmin = user?.isAdmin === true || user?.role === "admin";
+    const isModerator = isAdmin || user?.role === "moderator";
+    // Read-only staff. Deliberately separate from isModerator so no
+    // moderator-gated gameplay bypass opens for it.
+    const staffRole = resolveStaffRole(user);
+    const isJuniorDev = staffRole === "junior_dev";
+
+    // Clear expired Patreon benefits inline — avoids 2 extra DB reads from clearExpiredPatreonBenefits
+    if (
+      user &&
+      user.patreonTier &&
+      !isPatreonActive(user.patreonTier, user.patreonExpiresAt ?? null)
+    ) {
+      await usersCollection(db).updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            patreonTier: null,
+            patreonExpiresAt: user.patreonExpiresAt ?? new Date(),
+          },
+          $unset: { patreonProfileBorder: "", patreonHighlightColor: "" },
+        }
+      );
+      user = await usersCollection(db).findOne({ _id: user._id });
+    }
+
+    // Resolve active character — check if user is in imperial mode
+    let isImperialMode = user?.activeCharacterType === "imperial";
+    let character = null;
+    let imperialCharacter: ImperialCharacter | null = null;
+
+    if (isImperialMode && user?.activeImperialCharacterId) {
+      imperialCharacter = await imperialCharactersCollection(db).findOne({
+        _id: user.activeImperialCharacterId,
+        userId: new ObjectId(userId),
+      });
+
+      // If the imperial character was deleted (e.g., by a game reset), clear the orphaned
+      // reference and fall back to regular character mode.
+      if (!imperialCharacter) {
+        isImperialMode = false;
+        usersCollection(db)
+          .updateOne(
+            { _id: new ObjectId(userId) },
+            { $unset: { activeImperialCharacterId: "", activeCharacterType: "" } }
+          )
+          .catch(() => {});
+      }
+    }
+
+    if (!isImperialMode || !imperialCharacter) {
+      // Regular character resolution (existing behavior)
+      const characterQuery = user?.activeCharacterId
+        ? { _id: user.activeCharacterId, userId: new ObjectId(userId) }
+        : { userId: new ObjectId(userId) };
+      character = await charactersCollection(db).findOne(characterQuery);
+    }
+
+    // Ensure persistent tracking cookie exists for anti-fraud duplicate detection
+    const existingTrack = cookieStore.get("__ahd_track")?.value;
+    const trackingId = existingTrack || randomUUID();
+    if (!existingTrack) {
+      cookieStore.set("__ahd_track", trackingId, await getTrackingCookieOptions());
+    }
+
+    // Update last activity timestamp and tracking ID (fire-and-forget for performance)
+    usersCollection<Document>(db)
+      // `trackingIdAt` matters most here: this is the ONLY trackingId writer
+      // with no `lastLogin` alongside it, so without the stamp an active
+      // player's cookie would be dated by a login months old and expire under
+      // the identity-signal cutoff (src/lib/auth/identitySignals.ts).
+      .updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { lastActivity: new Date(), trackingId, trackingIdAt: new Date() } }
+      )
+      .catch(() => {
+        /* ignore errors */
+      });
+
+    // Catch IP rotation that happens WITHOUT a re-login, which capture at the
+    // auth endpoints alone misses entirely: mid-session network changes never
+    // re-authenticate, so `lastKnownIp` keeps reporting the login address.
+    //
+    // `getClientIp` reads `headers()`, so it must be resolved inside request
+    // scope, on the critical path of every authenticated page load. Wrapped
+    // so a capture failure never 500s the session response.
+    //
+    // The equality check short-circuits before any I/O, and the writer
+    // debounces repeat sightings.
+    try {
+      const sessionIp = await getClientIp();
+      if (sessionIp !== user?.lastKnownIp) {
+        recordIdentitySignals(db, {
+          userId: new ObjectId(userId),
+          ip: sessionIp,
+          observedAt: new Date(),
+          source: "session",
+        });
+      }
+    } catch {
+      /* never block the session response on identity capture */
+    }
+
+    // Get home state name, party name, and unread count in parallel
+    let homeStateName: string | undefined;
+    let partyName: string | undefined;
+    let unreadCount = 0;
+    let unreadMailCount = 0;
+    let notificationAccounts: { id: string; username: string; displayName: string }[] | undefined;
+
+    const bundleIds =
+      user && user._id
+        ? getNotificationBundleUserIds({
+            _id: user._id,
+            notificationBundleUserIds: user.notificationBundleUserIds,
+          })
+        : [new ObjectId(userId)];
+
+    if (bundleIds.length > 1) {
+      const labelDocs = await usersCollection(db)
+        .find({ _id: { $in: bundleIds } })
+        .project<{ _id: ObjectId; username: string; displayName: string }>({
+          username: 1,
+          displayName: 1,
+        })
+        .toArray();
+      const order = new Map(bundleIds.map((id, i) => [id.toString(), i]));
+      labelDocs.sort(
+        (a, b) => (order.get(a._id.toString()) ?? 0) - (order.get(b._id.toString()) ?? 0)
+      );
+      notificationAccounts = labelDocs.map((d) => ({
+        id: d._id.toString(),
+        username: d.username,
+        displayName: d.displayName,
+      }));
+    }
+
+    if (character) {
+      const [state, party, unread, unreadMail] = await Promise.all([
+        statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
+        character.party && Number.isFinite(Number(character.party))
+          ? politicalPartiesCollection(db).findOne({
+              sequentialId: Number(character.party),
+              countryId: character.countryId,
+            })
+          : Promise.resolve(null),
+        notificationsCollection(db).countDocuments({
+          userId: { $in: bundleIds },
+          ...notificationTypeFilter(user?.notificationPreferences, new Date()),
+          read: false,
+        }),
+        playerMailCollection<Document>(db).countDocuments({
+          toUserId: new ObjectId(userId),
+          read: false,
+          deletedByRecipient: false,
+          blockedByRecipient: { $ne: true },
+        }),
+      ]);
+      homeStateName = state?.name;
+      partyName = party?.name;
+      unreadCount = unread;
+      unreadMailCount = unreadMail;
+    } else {
+      [unreadCount, unreadMailCount] = await Promise.all([
+        notificationsCollection(db).countDocuments({
+          userId: { $in: bundleIds },
+          ...notificationTypeFilter(user?.notificationPreferences, new Date()),
+          read: false,
+        }),
+        playerMailCollection<Document>(db).countDocuments({
+          toUserId: new ObjectId(userId),
+          read: false,
+          deletedByRecipient: false,
+          blockedByRecipient: { $ne: true },
+        }),
+      ]);
+    }
+
+    const forexEnabled = await isForexEnabled();
+    const forexRates = forexEnabled ? await loadFxRatesRecord(db) : undefined;
+
+    // Keep the character-creation hint cookie (read by middleware) in sync with
+    // DB truth on every page load. This is the self-healer: a character lost to
+    // reset, retirement, a game event, or an admin action redirects the player
+    // back to /create-character on their next navigation without any per-route
+    // wiring.
+    await setCharacterGateCookie(
+      cookieStore,
+      needsCharacterHint({
+        role: user?.role ?? "player",
+        isAdmin: !!isAdmin,
+        hasCharacter: !!character || !!imperialCharacter,
+      })
+    );
+
+    return NextResponse.json(
+      {
+        user: {
+          id: userId,
+          // The row, not the token: a rename must show without a new sign-in.
+          username: user?.username ?? payload.username,
+          formerUsername: formerUsername(user?.usernameHistory, new Date()),
+          singleplayer: isSingleplayer(),
+          email: user?.email ?? undefined,
+          patreonTier: user?.patreonTier ?? null,
+          supporterProvider: user?.supporterProvider ?? null,
+          patreonExpiresAt: user?.patreonExpiresAt ?? null,
+          patreonSince: user?.patreonSince ?? null,
+          patreonUserId: user?.patreonUserId ?? null,
+          adsDisabled: user?.adsDisabled ?? false,
+          patreonAdPreference: getPatreonAdPreference(user),
+          patreonHighlightColor: user?.patreonHighlightColor ?? null,
+          patreonProfileBorder: user?.patreonProfileBorder ?? null,
+          isPatronActive:
+            !!isAdmin || isPatreonActive(user?.patreonTier ?? null, user?.patreonExpiresAt ?? null),
+          isAdmin: isAdmin || false,
+          isModerator: isModerator || false,
+          isJuniorDev,
+          staffRole,
+          role: user?.role ?? "player",
+          theme: user?.theme ?? undefined,
+          statusBarLayout: user?.statusBarLayout ?? undefined,
+          corpOverviewMode: user?.corpOverviewMode ?? undefined,
+          experimentalFeatures: user?.experimentalFeatures === true,
+          desktopNavigationLayout: desktopNavigationLayout(user?.desktopNavigationLayout),
+          mobileNavigationLayout: mobileNavigationLayout(user?.mobileNavigationLayout),
+          widgetLayout: widgetLayout(user?.widgetLayout),
+          widgetTrayOpen: user?.widgetTrayOpen === true,
+          widgetWatchlist: widgetWatchlist(user?.widgetWatchlist),
+          askDrawerSide: user?.askDrawerSide === "left" ? "left" : "right",
+          askDrawerHidden: user?.askDrawerHidden === true,
+          navCustomization: navCustomization(user?.navCustomization),
+          hasCharacter: !!character || !!imperialCharacter,
+          isImperial: !!imperialCharacter && isImperialMode,
+          forexEnabled,
+          referralCount: user?.referralCount ?? 0,
+          discordId: user?.discordId ?? undefined,
+          discordUsername: user?.discordUsername ?? undefined,
+          discordAvatar: user?.discordAvatar ?? undefined,
+          googleId: user?.googleId ?? undefined,
+          googleEmail: user?.googleEmail ?? undefined,
+          googleName: user?.googleName ?? undefined,
+          googleAvatar: user?.googleAvatar ?? undefined,
+          appleId: user?.appleId ?? undefined,
+          // False when the Apple ID already belonged to another account, in
+          // which case Apple sign-in does not stand in for Discord linking.
+          appleExemptsDiscord:
+            user?._id && user.appleId
+              ? await appleExemptsDiscordGate(db, user._id, user.appleId)
+              : false,
+          appleEmail: user?.appleEmail ?? undefined,
+          hasPassword: !!user?.password,
+          character: character
+            ? {
+                id: character._id.toString(),
+                name: character.name,
+                party: character.party,
+                partyName,
+                homeState: character.homeState,
+                homeStateName,
+                countryId: character.countryId,
+                homeCurrency: getHomeCurrency(character),
+                actions: character.actions,
+                // Both fields now expose the LOCAL home-currency balance —
+                // the canonical source of truth post-cf-inconsistency-fix.
+                // `funds` is kept as an alias for older clients; new clients
+                // should read `campaignFundsStored`.
+                funds: character.currencyBalances?.campaign ?? character.funds ?? 0,
+                campaignFundsStored: character.currencyBalances?.campaign ?? character.funds ?? 0,
+                cashOnHand: getTotalPersonalLiquidWealth(character, forexEnabled, forexRates),
+                nationalInfluence: character.nationalInfluence ?? 0,
+                missingDemographics: !character.demographics,
+                // RPG stats: expose the block and a grandfather flag so the
+                // client can force the one-time allocation modal for characters
+                // created before the stat system shipped.
+                stats: character.stats ?? null,
+                statsAllocated: character.statsAllocated ?? false,
+                statsReallocationUsed: character.statsReallocationUsed ?? false,
+                needsStatAllocation:
+                  !character.statsAllocated && !character.statAllocationDismissed,
+                needsWealthTierRepick: character.wealthTierRepickPending === true,
+                displayCurrencyPreference:
+                  character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),
+              }
+            : undefined,
+          imperialCharacter: imperialCharacter
+            ? {
+                id: imperialCharacter._id.toString(),
+                name: imperialCharacter.name,
+                title: getImperialTitle(imperialCharacter.countryId, imperialCharacter.gender),
+                gender: imperialCharacter.gender,
+                countryId: imperialCharacter.countryId,
+                homeState: imperialCharacter.homeState,
+                royalHouse: imperialCharacter.royalHouse,
+                avatarUrl: imperialCharacter.avatarUrl,
+                coatOfArmsUrl: imperialCharacter.coatOfArmsUrl,
+                sequentialId: imperialCharacter.sequentialId,
+                displayCurrencyPreference:
+                  imperialCharacter.displayCurrencyPreference ??
+                  (forexEnabled ? "local" : "internal"),
+              }
+            : undefined,
+          unreadCount,
+          unreadMailCount: user?.notificationPreferences?.muteMail ? 0 : unreadMailCount,
+          ...(notificationAccounts ? { notificationAccounts } : {}),
+        },
+      },
+      {
+        headers: {
+          // no-store, not a positive max-age: /api/auth/me carries per-user
+          // unread counts and character-gate state that a CDN/browser must
+          // never serve stale or cross-user (matches /api/character/me).
+          "Cache-Control": "no-store, no-transform",
+        },
+      }
+    );
+  } catch (error) {
+    return handleRouteError(error);
+  }
+});

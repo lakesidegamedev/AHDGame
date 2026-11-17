@@ -397,42 +397,8 @@ export interface DefenceSupplierView {
   totalFactories: number;
   stateOwned: boolean;
 }
-
-export interface DefenceContractView {
-  /** "pending" until the supplying CEO accepts; only "active" delivers. */
-  status?: string;
-  _id: string;
-  corporationId: string;
-  sectorId: string;
-  supplierName: string;
-  component: string;
-  lotsOrdered: number;
-  lotsDelivered: number;
-  pricePerLot: number;
-  awardedTurn: number;
-  /** Lots built and banked but not yet shipped, so a stalled order reads as stalled. */
-  lotsBuiltNotDelivered?: number;
-  /** Local currency paid so far, and what is still committed against the appropriation. */
-  amountPaid?: number;
-  encumberedAmount?: number;
-  /** Why the last delivery turn banked output instead of shipping it, in plain text. */
-  carryReasonText?: string;
-  /** Grade this order is written for (0..3), and the lines the contractor assigned to it. */
-  gradeCeiling?: number;
-  assignedFactories?: number;
-  totalFactories?: number;
-  /** Public disclosure that the awarding minister had an interest in the supplier. */
-  selfDealing?: { basis: "owner" | "shareholding"; stakeShare: number; ministerName?: string };
-  /**
-   * What tearing this contract up right now would cost, quoted BEFORE the minister confirms.
-   *
-   * A break fee the player only discovers from their appropriation afterwards is a trap, not
-   * a rule. `terminationBasis` is why the number is what it is: a withdrawal or a supplier
-   * who has stopped building costs nothing.
-   */
-  terminationFee?: number;
-  terminationBasis?: "withdrawal" | "cause" | "convenience";
-}
+import type { DefenceContractView } from "@/lib/cabinet/defenceContractView";
+export type { DefenceContractView } from "@/lib/cabinet/defenceContractView";
 
 export function useCabinetOffice(countryCode: string, positionId: string) {
   const key = `${countryCode}:${positionId}`;
@@ -441,17 +407,14 @@ export function useCabinetOffice(countryCode: string, positionId: string) {
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const requestId = useRef(0);
 
-  const fetchData = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      const ownedRequest = ++requestId.current;
-      // A silent refresh keeps the existing tree mounted. Flipping `loading` here
-      // unmounted the roster after every assign/recruit, which reset the branch
-      // tab back to Ground and closed any open Manage panel.
-      if (!opts?.silent) setLoading(true);
-      try {
-        const res = await fetch(
-          `/api/country/${countryCode}/executive/cabinet/${positionId}/briefing`
-        );
+  const fetchData = useCallback(async () => {
+    const ownedRequest = ++requestId.current;
+    // A silent refresh keeps the existing tree mounted. Flipping `loading` here
+    // unmounted the roster after every assign/recruit, which reset the branch
+    // tab back to Ground and closed any open Manage panel.
+
+    return fetch(`/api/country/${countryCode}/executive/cabinet/${positionId}/briefing`)
+      .then(async (res) => {
         if (!res.ok) {
           const json = await res.json();
           if (ownedRequest === requestId.current)
@@ -465,23 +428,24 @@ export function useCabinetOffice(countryCode: string, positionId: string) {
         if (ownedRequest !== requestId.current) return;
         setSnapshot({ key, data });
         setFailure(null);
-      } catch {
+      })
+      .catch(async () => {
         if (ownedRequest === requestId.current) setFailure({ key, message: "Network error" });
-      } finally {
+      })
+      .finally(() => {
         if (ownedRequest === requestId.current) setLoading(false);
-      }
-    },
-    [countryCode, positionId, key]
-  );
+      });
+  }, [countryCode, positionId, key]);
 
+  const cancelPending = useCallback(() => {
+    requestId.current++;
+  }, []);
   useEffect(() => {
     void fetchData();
-    return () => {
-      requestId.current++;
-    };
-  }, [fetchData]);
+    return cancelPending;
+  }, [fetchData, cancelPending]);
 
-  const refetch = useCallback(() => fetchData({ silent: true }), [fetchData]);
+  const refetch = useCallback(() => fetchData(), [fetchData]);
 
   const data = snapshot?.key === key ? snapshot.data : null;
   const error = failure?.key === key ? failure.message : null;

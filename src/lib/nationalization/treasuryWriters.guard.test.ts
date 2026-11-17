@@ -47,6 +47,10 @@ const REGISTRY: Record<string, Registered> = {
     writers: ["debitTreasuryCompensation"],
     witness: [{ kind: "flow", flows: ["nationalization_compensation"] }],
   },
+  "src/lib/nationalization/shareholderCompensation.ts": {
+    writers: ["creditTreasuryProceedsFromAnchor"],
+    witness: [{ kind: "flow", flows: ["nationalization_buyout_float"] }],
+  },
   "src/lib/nationalization/ownershipTransition.ts": {
     writers: ["debitTreasuryCompensation", "creditTreasuryProceedsFromAnchor"],
     witness: [
@@ -55,7 +59,6 @@ const REGISTRY: Record<string, Registered> = {
         flows: [
           "nationalization_compensation",
           "nationalization_buyout_pool",
-          "nationalization_buyout_float",
           "corporation_liquidation",
         ],
       },

@@ -1,7 +1,10 @@
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import type { Corporation } from "@/lib/db/types";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
-import { resolveOperatorPermissions, type OperatorPermissions } from "./rules/operatorPolicy";
+import {
+  resolveOperatorPermissions,
+  type OperatorPermissions,
+} from "@/lib/corporations/rules/operatorPolicy";
 
 /** Permissions for the NPP operator of a corporation, derived from the corp document alone. */
 export function operatorPermissionsFor(corp: Corporation): OperatorPermissions {

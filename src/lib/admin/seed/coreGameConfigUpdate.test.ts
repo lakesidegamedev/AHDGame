@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { gameConfig as referenceGameConfig } from "@/lib/seeds/reference/gameConfig";
@@ -42,21 +43,33 @@ describe("1991 player banking seed settings", () => {
 
 /** Top-level GameConfig fields with their declared types, read from the type source. */
 function gameConfigFields(): Array<{ name: string; type: string }> {
-  const src = readFileSync(path.resolve(__dirname, "../../db/types/gameConfig.ts"), "utf8");
-  const start = src.indexOf("export interface GameConfig {");
-  expect(start).toBeGreaterThanOrEqual(0);
-  let depth = 0;
-  let body = "";
-  for (let i = src.indexOf("{", start); i < src.length; i++) {
-    const c = src[i];
-    if (c === "{") depth++;
-    if (c === "}") depth--;
-    if (depth >= 1) body += c;
-    if (depth === 0) break;
-  }
   const fields: Array<{ name: string; type: string }> = [];
-  for (const match of body.matchAll(/^ {2}([A-Za-z0-9_]+)\??:\s*([^;]+);/gm)) {
-    fields.push({ name: match[1], type: match[2] });
+  for (const [file, name, bases] of [
+    ["gameConfig.ts", "GameConfig", ["ProducerGameConfig"]],
+    ["producerGameConfig.ts", "ProducerGameConfig", []],
+  ] as const) {
+    const filename = path.resolve(__dirname, "../../db/types", file);
+    const source = ts.createSourceFile(
+      filename,
+      readFileSync(filename, "utf8"),
+      ts.ScriptTarget.Latest,
+      true
+    );
+    const declaration = source.statements.find(
+      (node): node is ts.InterfaceDeclaration =>
+        ts.isInterfaceDeclaration(node) && node.name.text === name
+    );
+    expect(declaration, `Missing ${name} interface`).toBeDefined();
+    expect(
+      declaration!.heritageClauses?.flatMap((clause) =>
+        clause.types.map((base) => base.expression.getText(source))
+      ) ?? [],
+      "Every inherited config interface must participate in reset coverage"
+    ).toEqual(bases);
+    for (const member of declaration!.members) {
+      if (ts.isPropertySignature(member) && member.name && member.type)
+        fields.push({ name: member.name.getText(source), type: member.type.getText(source) });
+    }
   }
   return fields;
 }

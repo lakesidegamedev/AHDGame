@@ -2,15 +2,11 @@
   "note": "Archetype ratchet. The word archetype in src may only go down per file, except for estate, infra, military, ceo, career and governing archetypes (see ALLOWED_CONCEPTS). Describe voters with census buckets (`dim:bucket`); after removing hits run `npm run archetypes:lower`.",
   "files": {
     "src/app/api/admin/country/[code]/settings/route.test.ts": 1,
-    "src/app/api/admin/country/[code]/settings/route.ts": 4,
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/infra.route.test.ts": 3,
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/start/route.ts": 5,
-    "src/app/congress/components/ProposeBillModal.tsx": 1,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/FlagshipRouter.test.tsx": 1,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/infra/infraUi.tsx": 1,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/infra/PipelineTab.tsx": 2,
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice.ts": 2,
-    "src/app/country/[code]/legislature/ProposeLegislationModal.tsx": 1,
     "src/app/country/[code]/referendums/[regionId]/page.tsx": 1,
     "src/app/country/[code]/region/[id]/office/tabs/address/DeliverAddressModal.tsx": 1,
     "src/app/country/[code]/region/[id]/page.tsx": 1,
@@ -160,6 +156,11 @@
     "src/lib/world/transitions/roster.test.ts": 1,
     "src/lib/world/transitions/transitions.test.ts": 1,
     "src/lib/world/worldEntityManifest.test.ts": 16,
-    "src/lib/world/worldEntityManifest.ts": 33
+    "src/lib/api/commands/admin/country/[code]/settings/handlers.ts": 4,
+    "src/lib/world/worldEntityManifest.ts": 25,
+    "src/lib/world/tierOneMatrixAdjustments.ts": 8,
+    "src/app/congress/components/ProposeBillModal.view.tsx": 1,
+    "src/app/country/[code]/legislature/ProposeLegislationModal.view.tsx": 1,
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice.ts": 2
   }
 }

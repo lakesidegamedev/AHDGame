@@ -5,7 +5,7 @@ import { AUTOPILOT_ADVISORY_COPY } from "@/lib/corporations/autopilot";
 import {
   AUTOPILOT_CAPEX_CASH_SHARE,
   AUTOPILOT_GROWTH_STEP_OF_RUN,
-} from "@/lib/turn/npp/rules/autopilotReinvest";
+} from "@/lib/corporations/rules/autopilotReinvest";
 import type { CorpTabId, CorporationDetail } from "./CorporationPageTypes";
 import { DenseSection, InlineStatus, SmallButton } from "./dense/DenseKit";
 import { CeoPayCard } from "./ceo/CeoPayCard";

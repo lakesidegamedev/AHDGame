@@ -1,0 +1,477 @@
+import { NextResponse } from "next/server";
+import { captureIntakeEvent } from "@/lib/analytics/intakeEvents";
+import {
+  ACQUISITION_COOKIE,
+  acquisitionEventProperties,
+  parseAcquisition,
+} from "@/lib/analytics/acquisition";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
+import bcrypt from "bcryptjs";
+import { createHash, randomUUID } from "crypto";
+import { ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
+import { cookies } from "next/headers";
+import { createAdminLog } from "@/lib/adminLog";
+import { getClientIp } from "@/lib/utils/network";
+import { createNotification } from "@/lib/notifications";
+import { AUTH_LIMITS, rateLimitResponse } from "@/lib/api/rateLimit";
+import { durableRateLimit } from "@/lib/api/rateLimit.mongo";
+import { parseJsonBody } from "@/lib/api/validate";
+import { registerBodySchema } from "@/lib/api/schemas/auth";
+import { normalizeReferralCode } from "@/lib/auth/normalizeReferralCode";
+import { getTrackingCookieOptions } from "@/lib/auth";
+import { assertRegistrationAllowed } from "@/lib/auth/registrationGate";
+import { normalizeIp } from "@/lib/utils/ipNormalize";
+import { classifyDevice } from "@/lib/utils/userAgent";
+import { checkIpFireAndForget } from "@/lib/ip/ipteoh";
+import { getCfFingerprint, isEmptyCfFingerprint } from "@/lib/utils/cfFingerprint";
+
+import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
+import { verifyTurnstileToken } from "@/lib/turnstile";
+import { isSingleplayer } from "@/lib/singleplayer";
+import { shouldGrantOwnerAdminOnRegister } from "@/lib/singleplayerOwnerAdmin";
+import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
+import { recordAudit } from "@/lib/audit/recordAudit";
+import type { ActionAuditNet } from "@/lib/db/types/actionAuditLog";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  bridgeAccountFromUser,
+  centralRollbackCreate,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+
+/** Partially redact an IP for display in forensic surfaces — never store the
+ * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
+function maskIp(ip: string): string {
+  if (!ip || ip === "unknown") return "unknown";
+  if (ip.includes(":")) {
+    const parts = ip.split(":");
+    return `${parts.slice(0, 3).join(":")}::`;
+  }
+  const parts = ip.split(".");
+  return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.xxx` : "unknown";
+}
+
+/** One-way hash so alt-detection can still match "same IP" across rows
+ * without a second copy of the raw address anywhere in the audit spine. */
+function hashIp(ip: string): string | undefined {
+  if (!ip || ip === "unknown") return undefined;
+  return createHash("sha256").update(ip).digest("hex").slice(0, 32);
+}
+
+// POST /api/auth/register — Creates a new user account with optional admin key or referral code.
+// Auth: public
+// Errors: 400, 403, 409, 429, 503
+export async function POST(request: Request) {
+  try {
+    const db = await getDb();
+    const clientIp = await getClientIp();
+
+    // Block registration during maintenance mode (both "partial" and "full").
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
+    if (normalizeMaintenanceMode(config?.maintenanceMode) !== "off") {
+      return errorResponse(
+        503,
+        "Registration is disabled during maintenance. Please try again later."
+      );
+    }
+
+    const limit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
+    if (!limit.ok) return rateLimitResponse(limit.retryAfter);
+
+    const parsed = await parseJsonBody(request, registerBodySchema);
+    if (!parsed.success) {
+      return errorResponse(parsed.status, parsed.error);
+    }
+    const {
+      email,
+      username,
+      password,
+      adminKey,
+      fingerprint,
+      deviceKey,
+      fingerprintComponents,
+      referralCode,
+      testSecret,
+      ageConfirmed,
+      termsAccepted,
+      turnstileToken,
+    } = parsed.data;
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
+
+    // Read (not minted) here so every rejection/acceptance path below shares
+    // one masked/hashed `net` snapshot — mirrors the login route.
+    const cookieStore = await cookies();
+    const existingTrack = cookieStore.get("__ahd_track")?.value;
+    const device = classifyDevice(request.headers.get("user-agent"));
+    const netBase: ActionAuditNet = {
+      ipMasked: maskIp(clientIp),
+      ipHash: hashIp(clientIp),
+      fingerprint: fingerprint || undefined,
+      deviceKey: deviceKey || undefined,
+      trackingId: existingTrack,
+      uaClass: device,
+    };
+
+    const turnstile = await verifyTurnstileToken(turnstileToken, clientIp);
+    if (!turnstile.ok) {
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.register",
+        subject: { type: "user", name: email.toLowerCase() },
+        net: netBase,
+        outcome: "rejected",
+        reason: "turnstile_failed",
+      });
+      return errorResponse(400, "Verification failed. Please try again.");
+    }
+
+    if (!ageConfirmed || !termsAccepted) {
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.register",
+        subject: { type: "user", name: email.toLowerCase() },
+        net: netBase,
+        outcome: "rejected",
+        reason: !ageConfirmed ? "age_not_confirmed" : "terms_not_accepted",
+      });
+    }
+    if (!ageConfirmed) {
+      return errorResponse(400, "You must confirm that you are at least 13 years old to register.");
+    }
+    if (!termsAccepted) {
+      return errorResponse(
+        400,
+        "You must accept the Terms of Service and Privacy Policy to register."
+      );
+    }
+
+    // Master kill-switch, manual IP bans, and (if enabled) registration-collision checks.
+    // Throws ApiError(403) on block — caught by handleRouteError below.
+    let gateDecision;
+    try {
+      gateDecision = await assertRegistrationAllowed(db, {
+        clientIp,
+        fingerprint,
+        trackingId: existingTrack,
+        deviceKey,
+        device,
+      });
+    } catch (err) {
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.register",
+        subject: { type: "user", name: email.toLowerCase() },
+        net: netBase,
+        outcome: "rejected",
+        reason: "registration_gate_blocked",
+      });
+      throw err;
+    }
+
+    // Block registration when test mode is enabled and no valid test secret is provided
+    if (config?.testMode) {
+      const expectedSecret = authConfig.testSecret();
+      if (!expectedSecret || !timingSafeCompare(testSecret ?? "", expectedSecret)) {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.register",
+          subject: { type: "user", name: email.toLowerCase() },
+          net: netBase,
+          outcome: "rejected",
+          reason: "invalid_test_secret",
+        });
+        return errorResponse(
+          403,
+          "Registration requires a valid test secret. Contact an admin for access."
+        );
+      }
+    }
+
+    const usersCollectionHandle = usersCollection<Document>(db);
+
+    // Check if user already exists
+    const existingUser = await usersCollectionHandle.findOne({
+      $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }],
+    });
+
+    if (existingUser) {
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.register",
+        subject: { type: "user", name: email.toLowerCase() },
+        net: netBase,
+        outcome: "rejected",
+        reason: "duplicate_account",
+      });
+      return errorResponse(409, "An account with this email or username already exists");
+    }
+
+    // Validate referral code if provided
+    let referredByObjectId: ObjectId | undefined;
+    if (referralCode) {
+      const normalizedReferralCode = normalizeReferralCode(referralCode);
+      if (!normalizedReferralCode) {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.register",
+          subject: { type: "user", name: email.toLowerCase() },
+          net: netBase,
+          outcome: "rejected",
+          reason: "invalid_referral_code",
+        });
+        return errorResponse(400, "Invalid referral code");
+      }
+      const referrer = await usersCollectionHandle.findOne({
+        _id: new ObjectId(normalizedReferralCode),
+      });
+      if (!referrer) {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.register",
+          subject: { type: "user", name: email.toLowerCase() },
+          net: netBase,
+          outcome: "rejected",
+          reason: "invalid_referral_code",
+        });
+        return errorResponse(400, "Invalid referral code");
+      }
+      // Prevent self-referral (can't happen at registration but guard anyway)
+      referredByObjectId = referrer._id as ObjectId;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Determine if user should be an admin
+    let isAdmin = false;
+    if (
+      shouldGrantOwnerAdminOnRegister({
+        singleplayer: isSingleplayer(),
+        existingUserCount: await usersCollectionHandle.countDocuments(),
+      })
+    ) {
+      // First account of a singleplayer world owns the machine: full admin
+      // in the DB record, so the hardening invariant keeps holding.
+      isAdmin = true;
+      recordAudit({
+        source: "api",
+        category: "auth",
+        action: "auth.register",
+        subject: { type: "user", name: email.toLowerCase() },
+        net: netBase,
+        outcome: "ok",
+        reason: "first_singleplayer_account_owner_admin",
+      });
+    }
+    if (!isAdmin && adminKey && adminKey.trim() !== "") {
+      // Master switch — checked before key validation so a disabled flag
+      // never leaks timing info about whether the provided key matches.
+      // Treated as enabled when undefined for legacy configs.
+      if (config?.adminRegistrationEnabled === false) {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.register",
+          subject: { type: "user", name: email.toLowerCase() },
+          net: netBase,
+          outcome: "rejected",
+          reason: "admin_registration_disabled",
+        });
+        return errorResponse(403, "Admin registration is currently disabled.");
+      }
+      const adminRegKey = authConfig.adminRegistrationKey();
+      if (adminRegKey && timingSafeCompare(adminKey ?? "", adminRegKey)) {
+        isAdmin = true;
+      } else {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.register",
+          subject: { type: "user", name: email.toLowerCase() },
+          net: netBase,
+          outcome: "rejected",
+          reason: "invalid_admin_key",
+        });
+        return errorResponse(403, "Invalid admin key");
+      }
+    }
+
+    // Persistent tracking cookie for anti-fraud duplicate detection
+    const trackingId = existingTrack || randomUUID();
+    if (!existingTrack) {
+      cookieStore.set("__ahd_track", trackingId, await getTrackingCookieOptions());
+    }
+
+    // Server-side Cloudflare edge fingerprint (country/ASN/colo/JA4/bot &
+    // threat scores) — all-optional, `{}` when this zone/request exposes
+    // none of it (e.g. local dev with no Cloudflare in front).
+    const cf = getCfFingerprint(request.headers);
+
+    // Single instant for the row's timestamps, including the per-signal `*At`
+    // stamps (src/lib/auth/identitySignals.ts).
+    const observedAt = new Date();
+
+    // Create player user
+    const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
+    const newUserId = new ObjectId();
+    const newAccount = bridgeAccountFromUser(
+      { _id: newUserId, username: username.toLowerCase(), email: email.toLowerCase() },
+      { passwordHash: hashedPassword, emailVerified: false }
+    );
+    // Central mode creates the central account first; refuse if it is unreachable.
+    if (!(await centralWriteFirst({ op: "account-upsert", account: newAccount }))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE);
+    }
+    const result = await usersCollectionHandle
+      .insertOne({
+        _id: newUserId,
+        ...(acquisition ? { acquisition } : {}),
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        displayName: username,
+        password: hashedPassword,
+        role: "player",
+        isAdmin: isAdmin, // Flag to indicate admin privileges
+        hasCompletedSetup: false, // Character creation not done yet
+        // Store normalized form so the IP-collision check (which normalizes on
+        // read via registrationGate) can match consistently across header
+        // variants (IPv4-mapped IPv6 vs bare IPv4, casing, whitespace).
+        registrationIp: normalizeIp(clientIp) ?? clientIp,
+        lastKnownIp: clientIp,
+        lastKnownIpAt: observedAt,
+        registrationFingerprint: fingerprint || null,
+        lastFingerprint: fingerprint || null,
+        // Stamped only when a fingerprint was actually supplied — an absent one
+        // must not read as "observed at signup".
+        ...(fingerprint
+          ? { registrationFingerprintAt: observedAt, lastFingerprintAt: observedAt }
+          : {}),
+        fingerprintHistory: fingerprint ? [fingerprint] : [],
+        registrationFingerprintComponents: fingerprintComponents ?? null,
+        lastFingerprintComponents: fingerprintComponents ?? null,
+        ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
+        trackingId,
+        trackingIdAt: observedAt,
+        deviceKey: deviceKey || null,
+        ...(deviceKey ? { deviceKeyAt: observedAt } : {}),
+        lastDevice: device,
+        ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
+        referralCount: 0,
+        activeCharacterId: null,
+        activeCharacterCount: 0,
+        ...lakesideAccountFields("ahd"),
+        createdAt: observedAt,
+        updatedAt: observedAt,
+      })
+      .catch(async (error: unknown) => {
+        await centralRollbackCreate(newUserId.toHexString());
+        throw error;
+      });
+
+    shadowMirrorWrite({ op: "account-upsert", account: newAccount });
+
+    // Log account creation
+    await createAdminLog({
+      category: "account",
+      action: "account_created",
+      username: username.toLowerCase(),
+      details: isAdmin ? "Created with admin privileges" : undefined,
+    });
+
+    // Anonymous, consent-independent signup count (see intakeEvents.ts).
+    // Admin-key registrations are staff, not intake.
+    if (!isAdmin) {
+      await captureIntakeEvent("account_registered", {
+        auth_provider: "email",
+        has_referral: Boolean(referredByObjectId),
+        ...acquisitionEventProperties(acquisition),
+      });
+    }
+
+    if (gateDecision.softAllow) {
+      // Surfaces the cgNAT bypass in the admin log so moderators can review
+      // registrations that slipped past the IP-collision block.
+      const sa = gateDecision.softAllow;
+      await createAdminLog({
+        category: "account",
+        action: "cgnat_soft_allow",
+        username: username.toLowerCase(),
+        details: `Allowed despite IP collision (${sa.device}) — shared IP ${sa.sharedIp} already used by ${sa.existingCount} account${sa.existingCount === 1 ? "" : "s"}.`,
+      });
+    }
+
+    // Identity history runs. Recorded after the insert so the run carries the
+    // real user id. Fire-and-forget, like the IP detection below.
+    recordIdentitySignals(db, {
+      userId: result.insertedId as ObjectId,
+      ip: clientIp,
+      fingerprint,
+      observedAt,
+      source: "register",
+    });
+
+    // Fire-and-forget: IP/VPN detection via ipapi.co.
+    // Non-blocking — if it fails, registration still succeeds.
+    if (config?.ipDetectionEnabled) {
+      checkIpFireAndForget(clientIp).then((ipDetails) => {
+        if (ipDetails) {
+          usersCollectionHandle
+            .updateOne({ _id: result.insertedId }, { $set: { ipDetails } })
+            .catch(() => {});
+        }
+      });
+    }
+
+    // Send welcome notification
+    await createNotification({
+      userId: result.insertedId as ObjectId,
+      type: "welcome",
+      title: "Welcome to A House Divided!",
+      message:
+        "You've entered one of the most competitive political simulations online. " +
+        "Create your character, choose a home state, and pick a party — then start building influence. " +
+        "Use Actions to campaign, fundraise, and advertise. Enter elections to win office. " +
+        "Primary elections narrow each party to one candidate; the general election decides the winner. " +
+        "Good luck, and may the best politician win.",
+    });
+
+    recordAudit({
+      source: "api",
+      category: "auth",
+      action: "auth.register",
+      subject: { type: "user", id: result.insertedId, name: username.toLowerCase() },
+      net: { ...netBase, trackingId },
+      outcome: "ok",
+    });
+
+    return NextResponse.json(
+      {
+        message: "Account created successfully" + (isAdmin ? " with admin privileges" : ""),
+        userId: result.insertedId.toString(),
+        isAdmin: isAdmin,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

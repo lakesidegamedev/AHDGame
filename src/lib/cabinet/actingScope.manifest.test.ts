@@ -4,7 +4,8 @@
  * holder authorization and successful writes are covered by route integration tests.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
+import { readRouteSource } from "@/lib/test-utils/routeSource";
 import path from "node:path";
 import { CABINET_ROUTE_SCOPES } from "./actingScope";
 
@@ -44,7 +45,7 @@ function collectRoutes(dir: string, prefix = ""): Array<{ key: string; source: s
       continue;
     }
     if (entry.name !== "route.ts") continue;
-    out.push({ key: prefix, source: readFileSync(next, "utf8") });
+    out.push({ key: prefix, source: readRouteSource(next) });
   }
   return out;
 }

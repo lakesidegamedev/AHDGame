@@ -355,3 +355,22 @@ describe("stockpiled inventory across transfers", () => {
     );
   });
 });
+
+it("conserves funded input and output stock when a zero-capacity site is carved", () => {
+  const site: SectorPlantFields = {
+    sectorType: "energy",
+    capitalStock: 0,
+    plantCount: 0,
+    producerInventory: {
+      worldEpoch: "world",
+      turn: 1,
+      inputStock: [{ commodity: "steel", units: 10, value: 25 }],
+      outputStock: [{ commodity: "energy", units: 6, book: "world", quoteUnitCost: 2 }],
+    },
+  };
+  const moved = carveSectorPlantFields(site, 0.3, 0).producerInventory!;
+  const kept = carveSectorPlantFields(site, 0.7, 0).producerInventory!;
+  expect(moved.inputStock[0].units + kept.inputStock[0].units).toBe(10);
+  expect(moved.outputStock[0].units + kept.outputStock[0].units).toBeCloseTo(6, 12);
+  expect(moved.inputStock[0].value + kept.inputStock[0].value).toBe(25);
+});

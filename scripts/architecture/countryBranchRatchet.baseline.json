@@ -7,6 +7,7 @@
     "src/lib/counties/subdivisionReference.ts": 9,
     "src/lib/seats/rules/historicalSeats.ts": 5,
     "src/lib/states/regionalExecutive.ts": 2,
-    "src/lib/world/worldEntityManifest.ts": 4
+    "src/lib/world/worldEntityManifest.ts": 1,
+    "src/lib/world/tierOneMatrixAdjustments.ts": 3
   }
 }

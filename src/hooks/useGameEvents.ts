@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import type { EconomyPauseStatus } from "@/lib/turn/economyPause";
+import type { EconomyPauseStatus } from "@/lib/economy/economyPauseStatus";
 
 export interface GameEvent {
   /**

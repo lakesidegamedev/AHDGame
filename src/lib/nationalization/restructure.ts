@@ -1,8 +1,19 @@
+import { transferFinancialHoldings } from "./transferFinancialHoldings";
+import { transferCorporateArrears } from "./transferCorporateArrears";
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { transferFundedSite } from "./fundedSiteTransfer";
+import { moveProducerLiabilities } from "./producerLiabilities";
+import { consolidateStateCash } from "./consolidateStateCash";
+import {
+  assumeCorporateLoans,
+  corporateLoanAssumptionCheck,
+} from "@/lib/banking/corporateLoanAssumption";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 
 import {
@@ -126,21 +137,31 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
 
     // Move all sectors of this type held by any of the country's NatCorps.
     for (const [index, sector] of sectors.entries()) {
-      const moved = await corporateSectorsCollection(db).updateOne(
-        {
-          _id: sector._id,
-          corporationId: sector.corporationId,
-          "constructionPropertyTransition.key": transitionKeys[index],
-          ...constructionTransfers.claimFilterFor(sector),
-        },
-        {
-          $set: {
-            corporationId: newId,
-            ...constructionTransfers.setFor(sector._id),
-            updatedAt: now,
-          },
-        }
-      );
+      const moved = sector.producerInventory
+        ? (await transferFundedSite(db, {
+            source: sector,
+            transitionKey: transitionKeys[index],
+            toId: newId,
+            key: `split:${newId.toHexString()}:${sector._id.toHexString()}`,
+            fraction: 1,
+            acquired: { ...constructionTransfers.setFor(sector._id), updatedAt: now },
+          }),
+          { matchedCount: 1 })
+        : await corporateSectorsCollection(db).updateOne(
+            {
+              _id: sector._id,
+              corporationId: sector.corporationId,
+              "constructionPropertyTransition.key": transitionKeys[index],
+              ...constructionTransfers.claimFilterFor(sector),
+            },
+            {
+              $set: {
+                corporationId: newId,
+                ...constructionTransfers.setFor(sector._id),
+                updatedAt: now,
+              },
+            }
+          );
       if (moved.matchedCount !== 1)
         throw new Error("A sector changed during the National Corporation split-off");
       sectorsMoved += 1;
@@ -261,6 +282,13 @@ export async function mergeBackSectorType(
     target = await ensurePrimaryNationalCorporation(db, params.countryId);
   }
 
+  await transferFinancialHoldings(db, splitOff._id, target._id, now, { dryRun: true });
+  const loanRefusal = await corporateLoanAssumptionCheck(db, {
+    fromId: splitOff._id,
+    toCurrency: resolveCorpLiquidCurrencyCode(target),
+  });
+  if (loanRefusal) throw new Error(loanRefusal);
+
   // Financed sites move with their construction loans; the target becomes the
   // borrower.
   const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
@@ -287,21 +315,31 @@ export async function mergeBackSectorType(
   // Move the split-off's sectors into the target.
   let sectorsMoved = 0;
   for (const [index, sector] of splitOffSectors.entries()) {
-    const moved = await corporateSectorsCollection(db).updateOne(
-      {
-        _id: sector._id,
-        corporationId: splitOff._id,
-        "constructionPropertyTransition.key": transitionKeys[index],
-        ...constructionTransfers.claimFilterFor(sector),
-      },
-      {
-        $set: {
-          corporationId: target._id,
-          ...constructionTransfers.setFor(sector._id),
-          updatedAt: now,
-        },
-      }
-    );
+    const moved = sector.producerInventory
+      ? (await transferFundedSite(db, {
+          source: sector,
+          transitionKey: transitionKeys[index],
+          toId: target._id,
+          key: `merge:${splitOff._id.toHexString()}:${sector._id.toHexString()}`,
+          fraction: 1,
+          acquired: { ...constructionTransfers.setFor(sector._id), updatedAt: now },
+        }),
+        { matchedCount: 1 })
+      : await corporateSectorsCollection(db).updateOne(
+          {
+            _id: sector._id,
+            corporationId: splitOff._id,
+            "constructionPropertyTransition.key": transitionKeys[index],
+            ...constructionTransfers.claimFilterFor(sector),
+          },
+          {
+            $set: {
+              corporationId: target._id,
+              ...constructionTransfers.setFor(sector._id),
+              updatedAt: now,
+            },
+          }
+        );
     if (moved.matchedCount !== 1) {
       await settleConstructionBorrowerTransfers(db, constructionTransfers);
       throw new Error("A sector changed during the National Corporation merge-back");
@@ -320,6 +358,15 @@ export async function mergeBackSectorType(
   }
 
   // Dissolve the emptied split-off shell (no payout, no restore).
+  await moveProducerLiabilities(db, { fromId: splitOff._id, toId: target._id });
+  await transferCorporateArrears(db, splitOff._id, target._id);
+  await transferFinancialHoldings(db, splitOff._id, target._id, now);
+  await consolidateStateCash(db, splitOff._id, target._id);
+  await assumeCorporateLoans(db, { fromId: splitOff._id, toId: target._id });
+  await bondsCollection(db).updateMany(
+    { corporationId: splitOff._id, matured: false },
+    { $set: { corporationId: target._id } }
+  );
   await corps.deleteOne({ _id: splitOff._id });
   await recordCorporationExit(db, splitOff, {
     reason: "national_corporation_merged",
