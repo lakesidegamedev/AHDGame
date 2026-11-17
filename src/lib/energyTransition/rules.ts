@@ -110,7 +110,6 @@ export const AGING_PENALTY_CAP = 0.2;
 const OPENING_AGE_BY_METHOD: Readonly<Record<string, number>> = {
   standard: 28,
   nuclear: 34,
-  fracking: 12,
   hydroelectric: 45,
   gas_fired: 18,
   wind: 8,
@@ -217,7 +216,6 @@ const CARBON_PRICE_FULL_BILL = 600;
  */
 const ENERGY_INTENSITY_BY_METHOD: Readonly<Record<string, number>> = {
   standard: 1,
-  fracking: 0.8,
   gas_fired: 0.5,
 };
 const INTENSITY_BY_TYPE: Readonly<Record<string, number>> = {

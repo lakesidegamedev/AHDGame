@@ -69,6 +69,7 @@ describe("runRequiredStartupMigrations", () => {
       "2026-11-11-bucket-approvals-rename",
       "2026-11-11-region-group-drift-to-buckets",
       "2026-11-16-split-renewables-power-method",
+      "2026-11-17-move-fracking-to-extraction",
     ]);
     expect(REQUIRED_STARTUP_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenNthCalledWith(1, db, {

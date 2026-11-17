@@ -443,7 +443,7 @@ Computer-run corporations may automatically retool a sector onto a better strate
 
 | Sector | Strategies | Count |
 | --- | --- | --- |
-| Energy | Conventional, Gas-Fired, Hydroelectric, Wind Power, Solar Power, Hydraulic Fracturing, Nuclear Expansion, Smart Grid, Fusion Generation | 9 |
+| Energy | Conventional, Gas-Fired, Hydroelectric, Wind Power, Solar Power, Nuclear Expansion, Smart Grid, Fusion Generation | 8 |
 | Manufacturing | Additive Manufacturing, Autonomous Factory, Standard, Heavy Metals, Electronics Manufacturing, Vehicle Assembly, Trucks and Heavy Machinery | 7 |
 | Technology | Quantum Computing, AI Platforms, Standard, Hardware Focus, Software Focus | 5 |
 | Agriculture | Vertical Farming, Precision Agriculture, Traditional, Industrial, Sustainable | 5 |
