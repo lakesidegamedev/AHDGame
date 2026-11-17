@@ -185,12 +185,12 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
     },
     infrastructure: {
       advertising: 0.07,
-      building_materials: 0.044,
-      construction_services: 0.132,
-      electronics: 0.105,
-      energy: 0.105,
-      rare_earth: 0.053,
-      steel: 0.07,
+      building_materials: 0.033,
+      construction_services: 0.097,
+      electronics: 0.078,
+      energy: 0.078,
+      rare_earth: 0.039,
+      steel: 0.052,
     },
     mobile_5g: {
       advertising: 0.07,
