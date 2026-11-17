@@ -376,8 +376,27 @@ export async function loadFxRatesByCurrency(db: Db): Promise<Map<CurrencyCode, n
  * Czechoslovak corp's 25,714,260 Kčs read as ₳25,714,260 instead of ₳952,380.
  */
 export async function loadValuationFxRates(db: Db): Promise<Map<CurrencyCode, number>> {
-  const rates = await loadFxRatesByCurrency(db);
-  const preset = await presetFromDb(db);
+  return withAuthoredEraRates(await loadFxRatesByCurrency(db), await presetFromDb(db));
+}
+
+/**
+ * Fill every `COUNTRY_CURRENCY_MAP` currency that has no live rate from the
+ * preset's authored table, in place, and return the same map. Live rates always
+ * win.
+ *
+ * This is THE sector FX map rule. A cross-border sector is stored in its host
+ * country's era-blind currency (FRF, ITL, ... via
+ * {@link resolveSectorHostCurrencyCode}), and those codes have no
+ * `exchangeRates` row in a euro-era world. The turn engine writes and reads
+ * sector money at the authored rate, so every reader must use this exact
+ * fallback or it falls to 1.0 and shows the figure 4.2x (FRF) or 833x (ITL)
+ * too high. Pure, so it can wrap a map built from documents the caller already
+ * loaded. Do not re-implement the loop at call sites.
+ */
+export function withAuthoredEraRates(
+  rates: Map<CurrencyCode, number>,
+  preset: string | undefined
+): Map<CurrencyCode, number> {
   for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
     if (rates.has(code)) continue;
     const era = eraRateForCurrency(code, preset);

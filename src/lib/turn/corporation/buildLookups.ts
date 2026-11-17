@@ -10,7 +10,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
 import { buildGroupDominanceShares } from "@/lib/corporations/groups/groupDominanceShares";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { readFreightBillingSnapshot } from "@/lib/logistics/freightBillingSnapshot";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
@@ -50,7 +50,7 @@ import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { CorporationLookups } from "./types";
-import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
+import { corpCapitalToAnchor, withAuthoredEraRates } from "@/lib/currency/corporationCapital";
 import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -317,16 +317,11 @@ export async function buildCorporationLookups(
     exchangeRateDocs.map((r) => [r.currencyCode as CurrencyCode, r.rate])
   );
   // The corporation turn needs an economic conversion rate even when a
-  // currency is deliberately not player-traded. Six 1953 command-economy
-  // currencies have no exchangeRates document, but their sector revenue,
-  // profit, cash, debt, and share values are still stored in local units.
-  // Falling back to 1.0 inflated every anchor value by 13.5x to 27x. Preserve
-  // every live rate and fill only absent currencies from the authored preset.
-  for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
-    if (exchangeRatesByCurrency.has(code)) continue;
-    const authoredRate = eraRateForCurrency(code, worldPreset);
-    if (authoredRate !== undefined) exchangeRatesByCurrency.set(code, authoredRate);
-  }
+  // currency is deliberately not player-traded (1953 command-economy codes,
+  // and the era codes FRF/ITL/... that cross-border sectors in euro-era worlds
+  // are stored in). Falling back to 1.0 inflated every anchor value by 4.2x to
+  // 833x. Shared with every reader so they cannot drift from the engine.
+  withAuthoredEraRates(exchangeRatesByCurrency, worldPreset);
   const issuedBondDebtByCorpId = new Map<string, number>();
   for (const [corpId, bonds] of bondsByCorpId) {
     const issuer = corpById.get(corpId);
