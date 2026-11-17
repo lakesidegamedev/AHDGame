@@ -129,7 +129,10 @@ describe("sector expansion budget payload", () => {
   });
   it("reserves technology-amplified idle capacity and quotes new builds in plant units", async () => {
     const tech = await import("@/lib/constants/techTree");
-    const effects = tech.getSectorTechEffects({ type: "media" }, "media");
+    const effects = tech.getSectorTechEffects({ type: "media" }, "media", {
+      startingYear: 1940,
+      mode: "baseline",
+    });
     vi.spyOn(tech, "getSectorTechEffects").mockReturnValue({
       ...effects,
       outputRateMult: { advertising: 2 },

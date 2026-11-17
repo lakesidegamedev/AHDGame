@@ -9,6 +9,9 @@ import {
 } from "./strengthUpkeep";
 import { TECH_TREE } from "@/lib/constants/techTree";
 
+// Every node counts in full: the world starts in the earliest decade.
+const ALL_COUNT = { startingYear: 1940, mode: "baseline" as const };
+
 describe("strength upkeep stages", () => {
   it("is off at 0 or absent and cumulative after", () => {
     expect(strengthUpkeepActive(undefined, STRENGTH_UPKEEP_STAGE.SHIELD)).toBe(false);
@@ -40,12 +43,12 @@ describe("dominance shield upkeep", () => {
   };
 
   it("keeps the old aggregate before the shield stage", () => {
-    const before = upkeptDominanceShield(corp, "energy", 2019, 0);
+    const before = upkeptDominanceShield(corp, "energy", 2019, 0, ALL_COUNT);
     expect(before).toBeGreaterThanOrEqual(0);
   });
 
   it("caps the shield and counts only active decades from the shield stage", () => {
-    const after = upkeptDominanceShield(corp, "energy", 2019, 1);
+    const after = upkeptDominanceShield(corp, "energy", 2019, 1, ALL_COUNT);
     expect(after).toBeLessThanOrEqual(DOMINANCE_SHIELD_UPKEEP_CAP);
     // Shield techs from decades before the previous one no longer count.
     const oldOnly = {
@@ -54,7 +57,7 @@ describe("dominance shield upkeep", () => {
         .filter((n) => ["1940", "1950", "1960", "1970"].includes(n.decadeId))
         .map((n) => n.id),
     };
-    expect(upkeptDominanceShield(oldOnly, "energy", 2019, 0)).toBeGreaterThan(0);
-    expect(upkeptDominanceShield(oldOnly, "energy", 2019, 1)).toBe(0);
+    expect(upkeptDominanceShield(oldOnly, "energy", 2019, 0, ALL_COUNT)).toBeGreaterThan(0);
+    expect(upkeptDominanceShield(oldOnly, "energy", 2019, 1, ALL_COUNT)).toBe(0);
   });
 });

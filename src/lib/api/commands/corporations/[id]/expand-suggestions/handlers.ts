@@ -27,6 +27,7 @@ import {
   type FoundingQuoteInputs,
 } from "@/lib/corporations/rules/marketEntry";
 import { loadFoundingTechEffects } from "@/lib/corporations/foundingTechEffects";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { corporationActionsPause } from "@/lib/corporations/corporationActionsPause";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -167,6 +168,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       supply: supplyMix,
       owner: corporation,
       techEnabled: gameStateDoc?.sectorTechTreesEnabled === true,
+      legacyTech: await loadLegacyTechContext(db, {
+        startingYear: gameStateDoc?.startingYear,
+      }),
       turn: currentTurn,
       preset: resolvePresetIdFromGameState(gameStateDoc),
     });

@@ -14,6 +14,16 @@
  * working.
  */
 export * from "./selectorsTables";
+export { aggregateTechEffects, aggregateTechEffectLayers } from "@/lib/techTree/rules/effectLayers";
+export {
+  resolveLegacyTechContext,
+  resolveLegacyTechMode,
+  isPreStartDecade,
+  isLegacyTechDecade,
+  preStartDecadeIds,
+  type LegacyTechMode,
+  type LegacyTechContext,
+} from "@/lib/techTree/rules/legacyTech";
 export {
   getTreeForType,
   getNodeById,
@@ -23,6 +33,8 @@ export {
   getAggregatedTechEffects,
   isPrimaryTechSector,
   getSectorTechEffects,
+  getSectorTechEffectBreakdown,
+  type SectorTechEffectBreakdown,
   getUnlockedStrategyIds,
   getCommittedLane,
   getNodePrereqId,

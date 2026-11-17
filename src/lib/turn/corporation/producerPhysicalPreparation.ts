@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
@@ -235,6 +236,8 @@ export type ProducerPhysicalEnv = Pick<
     | "stateOwnershipConcentrationByCountry"
     | "energyTransition"
     | "automationPolicyByCountry"
+    | "legacyTechStartingYear"
+    | "legacyTechMode"
   >;
 };
 
@@ -317,7 +320,12 @@ export function prepareProducerPhysicalSector(input: {
   const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
-          getSectorTechEffectsForYear(corp, sector.sectorType, currentYear),
+          getSectorTechEffectsForYear(
+            corp,
+            sector.sectorType,
+            currentYear,
+            legacyTechContextFromLookups(lookups)
+          ),
           operatingType,
           sector.strategyId,
           currentYear

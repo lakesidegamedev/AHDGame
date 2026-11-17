@@ -57,6 +57,8 @@ describe("runSeed reset drops", () => {
         "retailDemandTransitionTurns",
         "commodityNominalPriceIndex",
         "commodityNominalPriceIndexTurn",
+        // Era baseline tech mode: absent means off, which is what a fresh world needs.
+        "legacyTechMode",
       ])
     );
   });

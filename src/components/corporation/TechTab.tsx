@@ -85,6 +85,8 @@ interface TechResponse {
   plantOutputCapPct?: number | null;
   inputEfficiencyPct?: number | null;
   inputEfficiencyCapPct?: number | null;
+  /** Pre-start-decade tech, outside the caps. Zero when the world does not count it. */
+  eraBaseline?: { plantOutputPct: number; inputEfficiencyPct: number } | null;
   unlockedStrategyNames?: string[];
   totalNodes?: number;
   techsUnlocked?: number;
@@ -356,6 +358,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`−${data.inputEfficiencyPct ?? 0}%`}
               hint={`cap −${data.inputEfficiencyCapPct ?? 30}%`}
             />
+            {data.eraBaseline &&
+              (data.eraBaseline.plantOutputPct > 0 || data.eraBaseline.inputEfficiencyPct > 0) && (
+                <KVRow
+                  label="Era baseline"
+                  value={`+${data.eraBaseline.plantOutputPct}% output, −${data.eraBaseline.inputEfficiencyPct}% inputs`}
+                  hint="from earlier decades, on top of the caps"
+                />
+              )}
             <KVRow
               label="Production methods"
               value={methods.length}
