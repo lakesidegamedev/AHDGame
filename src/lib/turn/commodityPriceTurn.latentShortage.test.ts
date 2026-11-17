@@ -7,6 +7,14 @@ describe("latentShortageFields (#1460)", () => {
     expect(latentShortageFields({ supply: 100, demand: 150 }, 0)).toEqual({});
   });
 
+  it("reports no latent shortage on a book with supply above demand", () => {
+    expect(latentShortageFields({ supply: 162223, demand: 38190 }, 8796112)).toEqual({});
+    expect(latentShortagePersistence({ supply: 162223, demand: 38190 }, 8796112)).toEqual({
+      set: {},
+      unset: { demandTruncatedUnits: "", latentShortageMultiple: "" },
+    });
+  });
+
   it("reports the truncated units and the latent multiple over supply", () => {
     // Capped at 1.5x supply with 350 more units of demand hidden: the world is
     // 5x short, not 1.5x.

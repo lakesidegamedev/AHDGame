@@ -50,6 +50,12 @@ import {
   operatingReserveMessage,
   type ReserveReceipt,
 } from "@/lib/corporations/rules/operatingReserve";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
+import {
+  demandAdjustedSharePercent,
+  shareCoverages,
+} from "@/lib/corporations/rules/dominanceDemandCoverage";
 import {
   fetchCorporationNationalSectorSharePercent,
   fetchSectorCompetitorCount,
@@ -239,7 +245,10 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     // Plants gate. Same read shape as setSectorPricing's clearing gate.
     const mode = await getMarketSystemMode();
     if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-      return errorResponse(400, "Capacity building is not enabled in this world");
+      return errorResponse(
+        400,
+        "Building is switched off in this world right now, so no capacity can be ordered."
+      );
     }
 
     const resolved = await resolveCorporation(db, id);
@@ -780,6 +789,17 @@ export async function placeCapacityBuild(
   // How contested the cell is, which scales that dominance toll. Resolved
   // here AND in the sector-detail quote from the same helper, so the price the
   // dialog shows is the price this command charges.
+  // A market the buyers want far more of than anyone delivers is not dominated
+  // by its first seller: measure share against max(supply, funded demand).
+  const buildSupply = getEffectiveStrategyRates(
+    sector.sectorType,
+    sector.strategyId ?? "standard",
+    sector.transitionFromStrategyId,
+    sector.transitionStartTurn,
+    currentTurn
+  ).supply;
+  const fundedBook = await loadFundedBuildDemand(db);
+  const shareCoverage = shareCoverages(fundedBook?.rows(buildSupply, sector.stateId, countryId));
   const ceoChar = corporation.ceoId
     ? await charactersCollection(db).findOne(
         { _id: corporation.ceoId },
@@ -836,8 +856,11 @@ export async function placeCapacityBuild(
     year: currentYear,
     preset: resolvePresetIdFromGameState(gameState),
     eraUnitScale,
-    marketSharePercent: marketSharePct,
-    nationalMarketSharePercent: nationalMarketSharePct,
+    marketSharePercent: demandAdjustedSharePercent(marketSharePct, shareCoverage.local),
+    nationalMarketSharePercent: demandAdjustedSharePercent(
+      nationalMarketSharePct,
+      shareCoverage.national
+    ),
     competitorCount: competitorCount ?? undefined,
     commodityDominanceRatio: commodityDominance?.ratio ?? 0,
     primeRate,

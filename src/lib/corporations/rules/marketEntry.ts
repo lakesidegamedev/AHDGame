@@ -72,15 +72,15 @@ export function marketEntryMessage(
     case "actions_paused":
       return facts.actionsPausedMessage ?? "Corporation actions are currently paused.";
     case "player_control_required":
-      return "Resume player control before building plants for this corporation";
+      return "Resume player control of this corporation in its settings, then try again.";
     case "command_economy":
-      return "This market is state-controlled under a command economy and is closed to private sector expansion.";
+      return "This market is state-controlled under a command economy and is closed to private companies. Pick a state with a market economy.";
     case "already_operating":
-      return "You already have operations in this state";
+      return "You already operate in this state. Open that sector and order more capacity there.";
     case "retail_paused":
       return `New Retail sectors are paused while consumer demand is rebalanced (${facts.retailPauseTurnsRemaining ?? 0} turns remaining).`;
     case "insufficient_capital":
-      return "You do not have enough capital for the entry fee and first plant.";
+      return "You do not have enough cash for the entry fee and first plant. Add capital or pick a cheaper sector.";
   }
 }
 
