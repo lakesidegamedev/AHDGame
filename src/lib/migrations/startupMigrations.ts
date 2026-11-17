@@ -1,4 +1,5 @@
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
+import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
 import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
@@ -124,6 +125,8 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // The renewables power method split into wind and solar; a sector or subsidy
   // still naming it would point at a method this build no longer defines.
   splitRenewablesPowerMethod,
+  // Energy sectors on the removed fracking method must leave it before a turn runs without it.
+  moveFrackingToExtraction,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

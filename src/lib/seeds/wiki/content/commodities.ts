@@ -262,7 +262,7 @@ Each sector type has **4-8 operating strategies** that change which commodities 
 
 ### Extraction strategies
 
-Extraction sectors choose between a **Diversified** strategy (standard) and six **focused** strategies (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
+Extraction sectors choose between a **Diversified** strategy (standard) and six **focused** strategies plus the tech-unlocked **Hydraulic Fracturing** (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
 
 | Strategy | Supply rate | vs Diversified | Notes |
 | --- | --- | --- | --- |
@@ -270,6 +270,7 @@ Extraction sectors choose between a **Diversified** strategy (standard) and six 
 | Iron & Metals Mining | Iron **0.78** | **~3.1×** iron output | Best when iron is severely scarce (D/S above 2×) |
 | Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~3.1× / ~1.7×** | Best when oil is scarce |
 | Natural Gas Focus | Natural Gas **0.58** + Oil **0.32** | **~3.1× / ~1.7×** | Best when natural gas is scarce and oil is not |
+| Hydraulic Fracturing | Oil **0.64** + Natural Gas **0.40** | **~3.5× / ~2.2×** | Unlocked by the Shale Extraction research (2009). Higher output than Oil & Gas for a heavier steel, chemicals and sand bill |
 | Coal Mining | Coal **0.72** | **~3.3×** | Best when coal is scarce |
 | Timber & Forestry | Timber **0.64** | **~21×** | Best when timber is scarce |
 | Rare Earth Minerals Mining | Rare Earth **0.72** | **~5.1×** | Covers the merged copper + rare-earth market; best when that market is scarce |
