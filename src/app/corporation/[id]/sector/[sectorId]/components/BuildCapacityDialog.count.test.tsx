@@ -371,3 +371,31 @@ function render(ui: ReactElement) {
     </NextIntlClientProvider>
   );
 }
+
+describe("BuildCapacityDialog delivery timing and founding price", () => {
+  it("says a single facility arrives when the window ends", () => {
+    renderDialog();
+    expect(screen.getByTestId("build-arrival").textContent).toContain("arrives in 3 turns");
+  });
+
+  it("says the first and last facility arrival for a multi-facility order", () => {
+    const { input } = renderDialog();
+    fireEvent.change(input, { target: { value: "3" } });
+    const text = screen.getByTestId("build-arrival").textContent ?? "";
+    expect(text).toContain("3 facilities arrive one at a time");
+    expect(text).toContain("The first is ready in 1 turns, the last in 3 turns");
+  });
+
+  it("explains that only the first facility in a market is discounted", () => {
+    renderDialog(vi.fn(), {
+      ...plants,
+      buildQuote: { ...plants.buildQuote, foundingMultiplier: 0.1 },
+    });
+    expect(screen.getByTestId("founding-note").textContent).toContain("90% off");
+  });
+
+  it("hides the founding note when there is no discount", () => {
+    renderDialog();
+    expect(screen.queryByTestId("founding-note")).toBeNull();
+  });
+});

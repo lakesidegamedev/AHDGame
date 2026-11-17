@@ -13,6 +13,7 @@ import {
   runAfterBuild,
   runAfterBuildMessage,
 } from "@/lib/corporations/rules/operatingReserve";
+import { plannedArrivalTurns } from "@/lib/corporations/buildDelivery";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
 import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
@@ -204,6 +205,12 @@ export default function BuildCapacityDialog({
     };
   }, [count, unitsPerFacility, q, plants]);
 
+  const arrivals = plannedArrivalTurns(preview.safeUnits, unitsPerFacility, plants.buildTurns);
+  const foundingMultiplier = q.foundingMultiplier ?? 1;
+  const foundingDiscountPercent =
+    foundingMultiplier > 0 && foundingMultiplier < 1
+      ? Math.round((1 - foundingMultiplier) * 100)
+      : 0;
   const maxAffordableFacilities = Math.floor(q.maxAffordableUnits / unitsPerFacility);
   const ownedFacilities =
     plants.plantCount ??
@@ -426,6 +433,20 @@ export default function BuildCapacityDialog({
           />
         </div>
 
+        {arrivals && (
+          <p className="text-body-sm text-muted" data-testid="build-arrival">
+            {preview.safeCount === 1
+              ? t("arrivalOne", { turns: arrivals.lastInTurns })
+              : arrivals.firstInTurns === arrivals.lastInTurns
+                ? t("arrivalAllTogether", { turns: arrivals.lastInTurns })
+                : t("arrivalMany", {
+                    first: arrivals.firstInTurns,
+                    last: arrivals.lastInTurns,
+                    count: preview.safeCount,
+                  })}
+          </p>
+        )}
+
         <FundedBuildDemand
           rows={plants.buildDemand}
           turn={plants.buildDemandTurn}
@@ -535,6 +556,11 @@ export default function BuildCapacityDialog({
               {money(preview.total)}
             </p>
           </div>
+          {foundingDiscountPercent > 0 && (
+            <p className="mt-2 text-body-xs text-muted" data-testid="founding-note">
+              {t("foundingPriceNote", { percent: foundingDiscountPercent })}
+            </p>
+          )}
           {preview.transferFee > 0 && (
             <p className="mt-2 text-body-xs text-muted">
               {t("includedTransferFee", { amount: money(preview.transferFee) })}

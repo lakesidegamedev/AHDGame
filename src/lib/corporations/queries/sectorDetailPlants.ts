@@ -598,6 +598,7 @@ export function buildSectorPlantsSection(args: {
     buildQuote: {
       unitPriceAnchor: oneUnit.unitPriceAnchor,
       expansionMultiplier: oneUnit.expansionMultiplier,
+      foundingMultiplier: computeBuildCost({ ...oneUnitInputs, founding: true }).foundingMultiplier,
       dominanceMultiplier: oneUnit.dominanceMultiplier,
       localDominanceMultiplier: localQuote.dominanceMultiplier,
       ...(tollModels.length > 0
