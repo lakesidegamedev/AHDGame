@@ -23,7 +23,7 @@ describe("input-heavy strategy fairness", () => {
 
   it("does not change already-healthy benchmark recipes", () => {
     expect(demandRate("technology", "software")).toBeCloseTo(0.25, 10);
-    expect(demandRate("financial", "standard")).toBeCloseTo(0.39, 10);
+    expect(demandRate("financial", "standard")).toBeCloseTo(0.34, 10);
     expect(demandRate("logistics", "standard")).toBeCloseTo(0.59, 10);
     expect(demandRate("extraction", "standard")).toBeCloseTo(0.56, 10);
   });

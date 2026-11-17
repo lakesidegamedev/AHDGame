@@ -52,6 +52,29 @@ function addFlows(
 export const PLANNED_MARKET_LEAKAGE = 0.55;
 
 /**
+ * Background countries produce far more retail goods than the world buys once
+ * their own households are excluded, so their retail supply is scaled down to
+ * leave the world retail book roughly balanced against the household demand
+ * the basket now adds.
+ */
+export const MACRO_RETAIL_OUTPUT_SCALE = 0.45;
+
+/**
+ * Background advertising supply is halved (rate 0.5 to 0.25). Player media
+ * plants read their own strategy rates, so this scale is macro-only.
+ */
+export const MACRO_MEDIA_OUTPUT_SCALE = 0.5;
+
+/** Output scale applied only to a sector's supply flows in the macro market. */
+const MACRO_SUPPLY_SCALE: Partial<Record<OperatingSectorType, number>> = {
+  retail: MACRO_RETAIL_OUTPUT_SCALE,
+  media: MACRO_MEDIA_OUTPUT_SCALE,
+};
+
+/** Household basket weight for general merchandise (matches the turn-level basket). */
+export const MACRO_HOUSEHOLD_RETAIL_WEIGHT = 0.1;
+
+/**
  * Epic P1 kernel (aggregate form):
  *   output = capacity × productivity × stability × shockModifier
  *   demand = domesticDemand × stabilityDemandModifier
@@ -93,7 +116,12 @@ export function computeMacroContribution(
       demand: Math.round(demand * 100) / 100,
     };
 
-    addFlows(commodityUnits, output, SECTOR_SUPPLY[sectorType], "supply");
+    addFlows(
+      commodityUnits,
+      output * (MACRO_SUPPLY_SCALE[sectorType] ?? 1),
+      SECTOR_SUPPLY[sectorType],
+      "supply"
+    );
     addFlows(commodityUnits, demand, SECTOR_DEMAND[sectorType], "demand");
   }
 
@@ -117,6 +145,12 @@ export function computeMacroContribution(
   const basketDollars = state.population * incomeProxy * 0.08 * demandMod;
   if (basketDollars > 0) {
     addFlows(commodityUnits, basketDollars, SECTOR_DEMAND.retail, "demand");
+    addFlows(
+      commodityUnits,
+      basketDollars * MACRO_HOUSEHOLD_RETAIL_WEIGHT,
+      [{ commodity: "retail", rate: 1 }],
+      "demand"
+    );
   }
 
   const byCommodity: MacroMarketContribution["byCommodity"] = {};
