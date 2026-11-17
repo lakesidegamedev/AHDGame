@@ -1,5 +1,9 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import { getSectorTechEffects, type TechCorpView } from "@/lib/constants/techTree";
+import {
+  getSectorTechEffects,
+  type LegacyTechContext,
+  type TechCorpView,
+} from "@/lib/constants/techTree";
 
 /**
  * Resolve the tech-tree growth-cost multiplier for a corp's sector of the given
@@ -8,7 +12,8 @@ import { getSectorTechEffects, type TechCorpView } from "@/lib/constants/techTre
  */
 export async function getCorpTechGrowthCostMultiplier(
   corp: TechCorpView,
-  sectorType: OperatingSectorType
+  sectorType: OperatingSectorType,
+  legacy: LegacyTechContext
 ): Promise<number> {
-  return getSectorTechEffects(corp, sectorType).growthCostMultiplier;
+  return getSectorTechEffects(corp, sectorType, legacy).growthCostMultiplier;
 }

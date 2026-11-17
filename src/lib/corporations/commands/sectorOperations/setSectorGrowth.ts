@@ -12,6 +12,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { getCorpTechGrowthCostMultiplier } from "@/lib/corporations/techTree/corpEffects";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -118,7 +119,11 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
     // Sector tech-tree growth-cost discount (scoped to this sector's type), so
     // preview/persisted cost matches the turn.
-    const techGrowthMult = await getCorpTechGrowthCostMultiplier(corporation, sector.sectorType);
+    const techGrowthMult = await getCorpTechGrowthCostMultiplier(
+      corporation,
+      sector.sectorType,
+      await loadLegacyTechContext(db)
+    );
     const newGrowthCost = growthCostFor(
       sector.revenue,
       activeGrowthRate,
