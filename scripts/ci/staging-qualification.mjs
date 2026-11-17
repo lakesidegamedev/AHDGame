@@ -470,6 +470,198 @@ export async function findDevelopmentQualification({
   }
 }
 
+/**
+ * Reuse a green pull request run for the development push it produced: same
+ * tree, same proof code, native receipt and passing security gates. Any
+ * mismatch runs the full suite.
+ */
+export async function findPullRequestQualification({
+  api,
+  repository,
+  eventName,
+  event,
+  checkout,
+  now = Date.now(),
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  log = () => {},
+}) {
+  const fallback = (reason) => ({ reuse: false, promotion: false, reason });
+  if (eventName !== "push" || event?.ref !== "refs/heads/development")
+    return fallback("not a development push");
+  try {
+    if (
+      ![checkout.commit, checkout.tree, checkout.workflowBlob, checkout.scriptBlob].every((x) =>
+        SHA.test(x || "")
+      )
+    )
+      return fallback("checkout identity unavailable");
+    if (event.after !== checkout.commit) return fallback("push differs from checkout");
+    const repo = await api("");
+    if (repo.full_name !== repository || event.repository?.full_name !== repository)
+      return fallback("repository identity differs");
+    const sameRepo = (side) => side?.repo?.id === repo.id && side.repo.full_name === repository;
+    const commit = await api(`commits/${checkout.commit}`);
+    const parent = commit?.parents?.[0]?.sha;
+    if (
+      commit?.sha !== checkout.commit ||
+      commit.commit?.tree?.sha !== checkout.tree ||
+      !SHA.test(parent || "")
+    )
+      return fallback("pushed commit identity unavailable");
+    const matches = (p) =>
+      p?.merged_at &&
+      p.merge_commit_sha === checkout.commit &&
+      p.base?.ref === "development" &&
+      sameRepo(p.head) &&
+      sameRepo(p.base);
+    let pulls;
+    for (let attempt = 1; ; attempt++) {
+      pulls = await api(`commits/${checkout.commit}/pulls?per_page=30`);
+      if (!Array.isArray(pulls) || pulls.length >= 30)
+        return fallback("pull request association unavailable");
+      if (pulls.some(matches) || attempt >= ASSOCIATION_ATTEMPTS) break;
+      log(`no merged pull request indexed for ${checkout.commit} yet (attempt ${attempt})`);
+      await sleep(ASSOCIATION_RETRY_MS);
+    }
+    const pr = pulls.find(matches);
+    if (!pr || !pr.head?.ref || !SHA.test(pr.head.sha || ""))
+      return fallback("push is not a merged same-repository pull request");
+
+    const workflow = await api("actions/workflows/ci.yml");
+    if (
+      !Number.isSafeInteger(workflow?.id) ||
+      workflow.path !== WORKFLOW ||
+      workflow.state !== "active"
+    )
+      return fallback("workflow identity unavailable");
+    // The proof code must be exactly what the already qualified parent ran.
+    const proofFiles = [
+      [WORKFLOW, checkout.workflowBlob],
+      [SCRIPT, checkout.scriptBlob],
+      ...SECURITY.map(({ file }) => [`.github/workflows/${file}`, checkout.externalBlobs?.[file]]),
+    ];
+    if (proofFiles.some(([, blob]) => !SHA.test(blob || "")))
+      return fallback("proof code identity unavailable");
+    for (const [file, blob] of proofFiles) {
+      if ((await api(`contents/${file}?ref=${parent}`))?.sha !== blob)
+        return fallback("proof code changed in this merge");
+    }
+
+    const rules = await api("rules/branches/development");
+    if (!Array.isArray(rules)) return fallback("required branch gates unavailable");
+    const supported = new Set(["verify", ...SECURITY.map((gate) => gate.context)]);
+    const required = rules
+      .filter((rule) => rule.type === "required_status_checks")
+      .flatMap((rule) => rule.parameters?.required_status_checks || []);
+    if (required.some((gate) => !supported.has(gate.context)))
+      return fallback("additional required gates need full checks");
+
+    const evidence = createEvidence({ api, repo, repository, now, tree: checkout.tree });
+    const listed = await api(
+      `actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pr.head.sha}&per_page=20`
+    );
+    // A later failed or restarted attempt must not be masked by an older pass.
+    const candidate = listed?.workflow_runs?.[0];
+    if (!success(candidate) || !evidence.validRun(candidate, workflow, pr.head.sha, pr.head.ref))
+      return fallback("newest pull request CI run is not a recent success");
+    const jobs = await api(
+      `actions/runs/${candidate.id}/attempts/${candidate.run_attempt}/jobs?per_page=100`
+    );
+    if (!Array.isArray(jobs?.jobs) || jobs.total_count !== jobs.jobs.length)
+      return fallback("pull request qualification jobs unavailable");
+    const name = `qualified-${pr.head.ref}-development-tree-${checkout.tree}`;
+    const receipt = jobs.jobs.find((j) => j.name === "verify" && success(j));
+    if (!receipt?.steps?.some((step) => step.name === name && success(step)))
+      return fallback("pull request run has no full-qualification receipt for this tree");
+    if (!(await evidence.nativeCheck(receipt, candidate, "verify")))
+      return fallback("pull request receipt is not native");
+    if (!(await evidence.securityPassed(pr.head.sha, pr.head.ref)))
+      return fallback("security gates did not pass for this tree");
+    return {
+      reuse: true,
+      promotion: false,
+      tree: checkout.tree,
+      qualificationRun: candidate.id,
+      qualificationPr: pr.number,
+      reason: "identical tree passed full pull request qualification",
+    };
+  } catch {
+    return fallback("qualification evidence unavailable");
+  }
+}
+
+/** Native check-run, run and security-gate verification shared by the finders. */
+function createEvidence({ api, repo, repository, now, tree }) {
+  const nativeCheck = async (job, run, name) => {
+    if (!job || job.name !== name || !success(job)) return false;
+    const prefix = `https://api.github.com/repos/${repository}/check-runs/`;
+    if (!job.check_run_url?.startsWith(prefix)) return false;
+    const checkId = job.check_run_url.slice(prefix.length);
+    if (!/^\d+$/.test(checkId)) return false;
+    const check = await api(`check-runs/${checkId}`);
+    return (
+      success(check) &&
+      check.id === Number(checkId) &&
+      check.name === name &&
+      check.head_sha === run.head_sha &&
+      check.app?.id === 15368 &&
+      check.app.slug === "github-actions" &&
+      check.check_suite?.id === run.check_suite_id &&
+      check.details_url === `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`
+    );
+  };
+  const validRun = (run, expectedWorkflow, head, branch) => {
+    const age = now - Date.parse(run?.updated_at);
+    return (
+      run?.workflow_id === expectedWorkflow.id &&
+      run.path === expectedWorkflow.path &&
+      run.event === "pull_request" &&
+      run.head_branch === branch &&
+      run.head_sha === head &&
+      run.repository?.id === repo.id &&
+      run.head_repository?.id === repo.id &&
+      Number.isFinite(age) &&
+      age >= 0 &&
+      age <= MAX_AGE_MS &&
+      Number.isSafeInteger(run.id) &&
+      Number.isSafeInteger(run.run_attempt) &&
+      run.run_attempt > 0
+    );
+  };
+  const securityPassed = async (head, branch) => {
+    for (const { file, context } of SECURITY) {
+      const info = await api(`actions/workflows/${file}`);
+      if (
+        !Number.isSafeInteger(info?.id) ||
+        info.path !== `.github/workflows/${file}` ||
+        info.state !== "active"
+      )
+        return false;
+      const runs = await api(
+        `actions/workflows/${file}/runs?event=pull_request&head_sha=${head}&per_page=20`
+      );
+      const run = runs?.workflow_runs?.[0];
+      if (
+        !validRun(run, info, head, branch) ||
+        ["failure", "cancelled", "timed_out"].includes(run.conclusion)
+      )
+        return false;
+      const jobs = await api(
+        `actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`
+      );
+      if (!Array.isArray(jobs?.jobs) || jobs.total_count !== jobs.jobs.length) return false;
+      const job = jobs.jobs.find((j) => j.name === context);
+      if (
+        !job?.steps?.some((step) => step.name === `qualified-tree-${tree}` && success(step)) ||
+        !(await nativeCheck(job, run, context))
+      )
+        return false;
+    }
+    return true;
+  };
+  return { nativeCheck, validRun, securityPassed };
+}
+
 async function main() {
   const git = (...args) => execFileSync("git", ["rev-parse", ...args], { encoding: "utf8" }).trim();
   const checkout = {
@@ -511,6 +703,10 @@ async function main() {
   if (!result.reuse) {
     const development = await findDevelopmentQualification({ ...args, waitUntil });
     if (development.promotion) result = development;
+  }
+  if (!result.reuse && !result.promotion) {
+    const pullRequest = await findPullRequestQualification(args);
+    if (pullRequest.reuse) result = pullRequest;
   }
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT,

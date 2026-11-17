@@ -29,7 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     # A development -> staging promotion waits here (up to 60 minutes) for
     # development's own push run on the same tree instead of rerunning the
-    # matrix beside it. Every other event decides in seconds.
+    # matrix beside it. A development push whose tree a green pull request run
+    # already proved reuses that run, so the wait is short. Every other event
+    # decides in seconds.
     timeout-minutes: 66
     permissions:
       contents: read
@@ -68,7 +70,7 @@ jobs:
         shell: bash
         env:
           REUSE_QUALIFICATION: ${{ steps.reuse.outputs.reuse }}
-          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
           EMPTY_BACK_MERGE: ${{ github.event_name == 'pull_request' && github.head_ref == 'main' && (github.base_ref == 'development' || github.base_ref == 'staging') && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id }}
           PROMOTION: ${{ steps.reuse.outputs.promotion }}
         run: |
@@ -265,10 +267,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Six shards everywhere (about 6 to 7 minutes each). Feature pull requests
-        # used four to leave runner headroom for promotions, but jobs showed no
-        # queueing, and four shards made the slowest shard about 11 minutes.
-        shard: [1, 2, 3, 4, 5, 6]
+        # Eight shards: the two long fixtures run in their own jobs, and the
+        # slowest of six shards ran 4 to 9 minutes depending on the draw.
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -278,7 +279,7 @@ jobs:
       # Use job-total rather than a fixed divisor, so adding or removing a shard in
       # the matrix above cannot silently desync the divisor and drop test files.
       - name: Unit tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
-        # The two long fixtures run in the integration job instead.
+        # The two long fixtures run in their own job instead.
         run: npm run test:ci -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --exclude=src/lib/admin/seed/presetBootstrap.integration.test.ts --exclude=src/lib/admin/economyReset/economyReset.integration.test.ts
         env:
           NODE_OPTIONS: --max-old-space-size=6144
@@ -362,11 +363,10 @@ jobs:
           path: .next/cache/turbopack
           key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
-  # Federation transactions against an isolated Mongo replica set, then the
-  # full-world bootstrap fixture. They shared nothing but setup, and as two
-  # jobs each held a runner from the account's 20 concurrent-job pool for
-  # 3 and 5 minutes; one job of about 7 minutes stays under the test shards.
-  integration:
+  # Federation transactions against an isolated Mongo replica set. A job of its
+  # own so it runs beside the bootstrap qualification and the test shards.
+  federation:
+    name: Qualify federation transactions
     needs: changes
     if: needs.changes.outputs.full_suite == 'true'
     runs-on: ubuntu-latest
@@ -441,25 +441,37 @@ jobs:
         run: npx vitest run src/lib/turn/federationSettlements.mongo.integration.test.ts src/lib/turn/democratic1991Bills.mongo.integration.test.ts src/lib/countries/ru/dumaElections.mongo.integration.test.ts src/lib/countries/ru/assemblySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyVacancySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyCampaigns.mongo.integration.test.ts src/lib/countries/ru/dumaConvocations.mongo.integration.test.ts src/lib/countries/ru/dumaElectoralProposals1995.mongo.integration.test.ts scripts/sim/experimentReportSummary.mongo.integration.test.ts src/lib/countries/ru/councilComposition.mongo.integration.test.ts src/lib/countries/bg/foundingAssembly1990.mongo.integration.test.ts src/lib/countries/bg/ordinaryAssemblySeating.mongo.integration.test.ts src/lib/countries/hu/assembly1991.mongo.integration.test.ts src/lib/countries/hu/electoralProposals1994.mongo.integration.test.ts src/lib/countries/hu/electoralProposals2011.mongo.integration.test.ts src/lib/countries/ro/electoralProposals1992.mongo.integration.test.ts src/lib/countries/bg/constitutionalProposals1991.mongo.integration.test.ts src/lib/countries/bg/constitutionalInitiative1991.mongo.integration.test.ts src/lib/countries/bg/listVacancies1991.mongo.integration.test.ts src/lib/countries/bg/constituencyByElections1991.mongo.integration.test.ts src/lib/currency/openingPolicyRates.mongo.integration.test.ts src/lib/countries/ca/campaignRiding.mongo.integration.test.ts src/lib/currency/nativeGdpBasis1991.mongo.integration.test.ts src/lib/admin/seed/backfillMissingRegionLeans.mongo.integration.test.ts src/lib/charters/draftCharter.emptyStart.mongo.integration.test.ts src/lib/npp/mortality.nativeSlate.mongo.integration.test.ts src/lib/turn/bgAssemblyTransition.mongo.test.ts src/lib/admin/seed/indexes/boundedNpcCandidates.mongo.integration.test.ts src/lib/casino/casino.mongo.integration.test.ts src/app/api/discord-bot/casino/casinoRoutes.mongo.integration.test.ts src/app/api/discord-bot/tickets/intake.mongo.integration.test.ts src/lib/contests/history.mongo.integration.test.ts --maxWorkers=1
         env:
           FEDERATION_TEST_MONGO_URI: mongodb://127.0.0.1:27991/?replicaSet=federationQualification&directConnection=true
-      # Two single-file fixtures that each take 3 to 5 minutes: alone they set
-      # the length of whichever test shard drew them (economy reset took 220 s
-      # of a 439 s shard on 2026-10-30). Here they run side by side.
-      - name: Qualify bootstrap presets and the economy reset
-        if: ${{ !cancelled() }}
-        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts src/lib/admin/economyReset/economyReset.integration.test.ts --maxWorkers=2
-        env:
-          NODE_OPTIONS: --max-old-space-size=6144
       - name: Stop isolated Mongo
         if: always()
         run: |
           docker logs federation-mongo || true
           docker rm --force federation-mongo || true
 
+  # Two single-file fixtures that each take 3 to 5 minutes: alone they set the
+  # length of whichever test shard drew them. They use no database, so this job
+  # needs no Mongo.
+  bootstrap:
+    name: Qualify bootstrap presets and the economy reset
+    needs: changes
+    if: needs.changes.outputs.full_suite == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Qualify bootstrap presets and the economy reset
+        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts src/lib/admin/economyReset/economyReset.integration.test.ts --maxWorkers=2
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
   # The operator recognizes this job only after independently checking native
   # workflow/run/job provenance and the trusted workflow and helper blobs.
   reuse-staging-qualification:
     needs: changes
-    if: needs.changes.outputs.reuse == 'true' && ((github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: needs.changes.outputs.reuse == 'true' && ((github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -477,7 +489,17 @@ jobs:
   # above has completed successfully.
   verify:
     if: always()
-    needs: [changes, content-checks, static, test, build, integration, reuse-staging-qualification]
+    needs:
+      [
+        changes,
+        content-checks,
+        static,
+        test,
+        build,
+        federation,
+        bootstrap,
+        reuse-staging-qualification,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -486,13 +508,14 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           FULL_SUITE: ${{ needs.changes.outputs.full_suite }}
           REUSE_QUALIFICATION: ${{ needs.changes.outputs.reuse }}
-          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')) }}
           REUSE_RESULT: ${{ needs['reuse-staging-qualification'].result }}
           CONTENT_RESULT: ${{ needs.content-checks.result }}
           STATIC_RESULT: ${{ needs.static.result }}
           TEST_RESULT: ${{ needs.test.result }}
           BUILD_RESULT: ${{ needs.build.result }}
-          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          FEDERATION_RESULT: ${{ needs.federation.result }}
+          BOOTSTRAP_RESULT: ${{ needs.bootstrap.result }}
         run: |
           printf 'changes=%s full-suite=%s content=%s\n' \
             "$CHANGES_RESULT" "$FULL_SUITE" "$CONTENT_RESULT"
@@ -519,12 +542,13 @@ jobs:
 
           printf 'static=%s test=%s build=%s\n' \
             "$STATIC_RESULT" "$TEST_RESULT" "$BUILD_RESULT"
-          printf 'integration=%s\n' "$INTEGRATION_RESULT"
+          printf 'federation=%s bootstrap=%s\n' "$FEDERATION_RESULT" "$BOOTSTRAP_RESULT"
 
           if [[ "$STATIC_RESULT" != "success" || \
                 "$TEST_RESULT" != "success" || \
                 "$BUILD_RESULT" != "success" || \
-                "$INTEGRATION_RESULT" != "success" ]]; then
+                "$FEDERATION_RESULT" != "success" || \
+                "$BOOTSTRAP_RESULT" != "success" ]]; then
             exit 1
           fi
       # No checkout or application code runs here. This native successful step
