@@ -102,21 +102,21 @@ export const MANUFACTURING_PRODUCT_KINDS: readonly ManufacturingProductKind[] = 
     label: "Cement",
     outputCommodity: "building_materials",
     sectorTypes: ["manufacturing"],
-    strategyIds: ["standard", "autonomous_factory"],
+    strategyIds: ["standard", "building_materials", "autonomous_factory"],
   },
   {
     id: "prefabricated_components",
     label: "Prefabricated components",
     outputCommodity: "building_materials",
     sectorTypes: ["manufacturing"],
-    strategyIds: ["standard", "autonomous_factory", "additive_manufacturing"],
+    strategyIds: ["standard", "building_materials", "autonomous_factory", "additive_manufacturing"],
   },
   {
     id: "construction_materials",
     label: "Construction materials",
     outputCommodity: "building_materials",
     sectorTypes: ["manufacturing"],
-    strategyIds: ["standard", "autonomous_factory", "additive_manufacturing"],
+    strategyIds: ["standard", "building_materials", "autonomous_factory", "additive_manufacturing"],
   },
 ];
 
