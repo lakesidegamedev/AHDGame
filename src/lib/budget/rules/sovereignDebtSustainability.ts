@@ -2,23 +2,13 @@
  * Sovereign debt sustainability: where the debt ratio is going, and what that
  * should cost.
  *
- * The credit ladder in `budget/debt.ts` prices the debt ratio as it stands
- * today. That reads a country at 300% of GDP paying 14% forever even while it
- * runs a large primary surplus, because nothing in the ladder looks at the
- * direction of travel. A sovereign that stabilises its ratio should see its
- * borrowing cost come down; one whose ratio climbs should be charged for it.
- *
- * This module is the standard debt-dynamics identity, with all values as plain
- * ratios or percentages:
+ * The credit ladder in `budget/debt.ts` prices the ratio as it stands, so a
+ * surplus country still pays the top rate forever. This module is the standard
+ * debt-dynamics identity, in plain ratios and percentages:
  *
  *   d(t+1) = ((1 + r) / (1 + g)) * d(t) - pb
  *
- * where `d` is debt/GDP, `r` the nominal interest rate, `g` nominal growth and
- * `pb` the primary balance (revenue minus non interest spending) as a share of
- * GDP. The term `((1 + r) / (1 + g) - 1) * d` is the primary balance that holds
- * the ratio flat, which is the number a finance ministry actually needs.
- *
- * Pure rules: plain data in, plain data out. No database, clock or randomness.
+ * Pure rules: plain data in, plain data out.
  */
 
 export type DebtTrajectory = "falling" | "stable" | "rising";
@@ -76,17 +66,11 @@ const clamp = (value: number, min: number, max: number): number =>
 /**
  * Nominal GDP growth from the real growth the engine stores plus inflation.
  *
- * `economicFactors.gdpGrowth` is real: the GDP engine closes the output gap
- * against potential, and the tax-base ceiling adds inflation to reach a nominal
- * rate. The debt-dynamics identity divides by nominal growth, so passing the
- * real rate alone understates `g` and turns an ordinary 2% real, 2% inflation
- * year into a rising ratio that charges a premium it has not earned.
- *
- * Inflation is signed here. Deflation shrinks nominal GDP and raises the debt
- * ratio even when real output holds, so flooring it at zero would understate a
- * deflating sovereign's path. The tax-base ceiling floors inflation for a
- * different reason, keeping a deflationary year from cutting a base; that is a
- * revenue concern, not this identity.
+ * The debt identity divides by nominal growth, so passing real growth alone
+ * understates `g` and turns an ordinary 2% real, 2% inflation year into a
+ * rising ratio that charges an unearned premium. Inflation stays signed here:
+ * deflation shrinks nominal GDP and raises the ratio even when real output
+ * holds. The tax-base ceiling floors inflation for a revenue reason instead.
  */
 export function nominalGrowthFromReal(
   realGrowthPct: number | null | undefined,
