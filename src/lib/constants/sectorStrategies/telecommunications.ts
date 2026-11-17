@@ -75,12 +75,12 @@ export const TELECOMMUNICATIONS_STRATEGIES: SectorStrategy[] = [
     // ongoing component consumption - electronics lowered to 0.12, rare_earth (covers copper) to 0.06.
     supply: { software: 0.1, network_services: 0.55 },
     demand: {
-      construction_services: 0.15,
-      steel: 0.08,
-      electronics: 0.12,
-      energy: 0.12,
-      building_materials: 0.05,
-      rare_earth: 0.06,
+      construction_services: 0.116,
+      electronics: 0.092,
+      energy: 0.092,
+      steel: 0.062,
+      rare_earth: 0.046,
+      building_materials: 0.039,
     },
   },
   {

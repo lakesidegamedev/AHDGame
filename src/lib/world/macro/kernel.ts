@@ -65,6 +65,22 @@ export const MACRO_RETAIL_OUTPUT_SCALE = 0.45;
  */
 export const MACRO_MEDIA_OUTPUT_SCALE = 0.5;
 
+/**
+ * Authored site capacity is a hard ceiling, but no background sector consumes
+ * most of it, so unscaled endowments flood the world raw-resource book several
+ * times over and drag prices to the floor. These factors put total background
+ * raw supply (endowment plus the extraction sector) at about 90% of background
+ * raw demand, leaving a small gap for player and NPP plants to fill. Natural
+ * gas is already balanced, so it is not listed.
+ */
+export const MACRO_RESOURCE_ENDOWMENT_SCALE: Partial<Record<ExtractableResource, number>> = {
+  iron: 0.07,
+  coal: 0.042,
+  timber: 0.043,
+  rare_earth: 0.08,
+  oil: 0.175,
+};
+
 /** Output scale applied only to a sector's supply flows in the macro market. */
 const MACRO_SUPPLY_SCALE: Partial<Record<OperatingSectorType, number>> = {
   retail: MACRO_RETAIL_OUTPUT_SCALE,
@@ -131,7 +147,10 @@ export function computeMacroContribution(
     number,
   ][]) {
     if (!Number.isFinite(endowment) || endowment <= 0) continue;
-    const units = dollarsToUnits(endowment * stability * shock, COMMODITY_BASE_PRICES[resource]);
+    const units = dollarsToUnits(
+      endowment * stability * shock * (MACRO_RESOURCE_ENDOWMENT_SCALE[resource] ?? 1),
+      COMMODITY_BASE_PRICES[resource]
+    );
     if (units <= 0) continue;
     commodityUnits.get(resource)!.supply += units;
   }

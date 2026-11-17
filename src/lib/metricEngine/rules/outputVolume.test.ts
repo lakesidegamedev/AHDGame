@@ -127,8 +127,8 @@ describe("value added versus gross output", () => {
     expect(gross(techUp)).toBeCloseTo(gross(retailUp), 6);
     expect(added(techUp)).toBeGreaterThan(added(retailUp));
     // Recorded comparison (percent growth, current -> corrected).
-    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.47]);
-    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.23]);
+    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.29]);
+    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.07]);
   });
 
   it("counts unsold output as production and ignores price-only changes", () => {

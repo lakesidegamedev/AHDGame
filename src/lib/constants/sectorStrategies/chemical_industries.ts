@@ -58,12 +58,12 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     supply: { pharmaceuticals: 0.45, chemicals: 0.1 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
-      chemicals: 0.192,
-      electronics: 0.115,
-      software: 0.096,
-      energy: 0.077,
-      freight: 0.048,
-      vehicles: 0.096,
+      chemicals: 0.154,
+      electronics: 0.093,
+      software: 0.077,
+      vehicles: 0.077,
+      energy: 0.062,
+      freight: 0.039,
     },
   },
   {
@@ -73,12 +73,6 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     description:
       "Petroleum-derived resin and polymer production for automotive, packaging, and construction industries. Heavy oil feedstock consumption.",
     supply: { plastics: 0.45, chemicals: 0.1 },
-    demand: {
-      oil: 0.25,
-      energy: 0.15,
-      chemicals: 0.08,
-      freight: 0.08,
-      vehicles: 0.05,
-    },
+    demand: { oil: 0.206, energy: 0.123, chemicals: 0.066, freight: 0.066, vehicles: 0.041 },
   },
 ];
