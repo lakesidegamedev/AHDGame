@@ -23,6 +23,10 @@ import {
   explainOwnSupplyReach,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
+import {
+  demandAdjustedSharePercent,
+  shareCoverages,
+} from "@/lib/corporations/rules/dominanceDemandCoverage";
 import { buildNationalDominanceShareBySectorId } from "@/lib/corporations/marketShare";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
@@ -504,6 +508,7 @@ export async function buildSectorDetailPlantsTier({
     const reachableBooks = await loadReachableBooks(db, currentTurn);
     const fundedBuild = await loadFundedBuildDemand(db, gameState);
     const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
+    const buildShareCoverage = shareCoverages(buildDemand);
     const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));
     const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
     const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
@@ -755,8 +760,11 @@ export async function buildSectorDetailPlantsTier({
       worldGovernorAnchorTurn: marketCtx.worldGovernorAnchorTurn,
       governorGlideEndTurn: marketCtx.governorGlideEndTurn,
       governorGlide: marketCtx.governorGlide,
-      marketSharePercent: marketShare,
-      nationalMarketSharePercent: nationalMarketShare,
+      marketSharePercent: demandAdjustedSharePercent(marketShare, buildShareCoverage.local),
+      nationalMarketSharePercent: demandAdjustedSharePercent(
+        nationalMarketShare,
+        buildShareCoverage.national
+      ),
       // Distinct RIVAL corps in this (state, type) cell. `siblingsSectors` is
       // already scoped to exactly that cell, so this needs no extra read,
       // but it must be distinct CORPS, not sectors, or a rival holding two
