@@ -171,6 +171,7 @@ function order(overrides: Partial<SectorBuildOrder> = {}): SectorBuildOrder {
     costPaidAnchor: 500_000,
     startTurn: Math.min(onlineTurn, 1000),
     onlineTurn,
+    deliveryBaseFraction: 0,
     ...overrides,
   };
 }
@@ -313,6 +314,7 @@ describe("plants build queue — smooth (per-turn) delivery", () => {
     startTurn: 900,
     onlineTurn: 900 + BUILD_TURNS,
     smooth: true,
+    deliveryBaseFraction: 0,
     ...overrides,
   });
 
@@ -416,6 +418,7 @@ describe("plants build queue — builds due inside an economy pause (#5169)", ()
     startTurn: 900,
     onlineTurn: 900 + BUILD_TURNS,
     smooth: true,
+    deliveryBaseFraction: 0,
   });
 
   /** One sector turn at `currentTurn`; returns the gross units it delivered. */
@@ -889,6 +892,7 @@ describe("plants build queue — a command racing the turn (C4)", () => {
       costPaidAnchor: 900_000,
       startTurn: 1000,
       onlineTurn: 1000 + BUILD_TURNS,
+      deliveryBaseFraction: 0,
     };
     const live = commandPlaceOrder(sector as unknown as Record<string, unknown>, fresh);
     expect(live).toMatchObject({

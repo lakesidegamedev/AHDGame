@@ -4,8 +4,21 @@ import { buildRoomUnits, queuedUndeliveredUnits } from "./buildRoom";
 describe("room to build", () => {
   it("counts only capacity still to be delivered", () => {
     const queue = [
-      { unitsOrdered: 100, costPaidAnchor: 1, startTurn: 10, onlineTurn: 20, smooth: true },
-      { unitsOrdered: 50, costPaidAnchor: 1, startTurn: 10, onlineTurn: 20 },
+      {
+        unitsOrdered: 100,
+        costPaidAnchor: 1,
+        startTurn: 10,
+        onlineTurn: 20,
+        smooth: true,
+        deliveryBaseFraction: 0,
+      },
+      {
+        unitsOrdered: 50,
+        costPaidAnchor: 1,
+        startTurn: 10,
+        onlineTurn: 20,
+        deliveryBaseFraction: 0,
+      },
     ];
     // Both orders are half delivered at turn 15.
     expect(queuedUndeliveredUnits(queue, 15)).toBeCloseTo(50 + 25);

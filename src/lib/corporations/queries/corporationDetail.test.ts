@@ -940,7 +940,15 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       soldUnits: 1_200,
       constructionInProgressAnchor: storedCip,
       mothballed: true,
-      buildQueue: [{ unitsOrdered: 800, costPaidAnchor: 250_000, startTurn: 4, onlineTurn: 52 }],
+      buildQueue: [
+        {
+          unitsOrdered: 800,
+          costPaidAnchor: 250_000,
+          startTurn: 4,
+          onlineTurn: 52,
+          deliveryBaseFraction: 0,
+        },
+      ],
       ...partial,
     };
   }

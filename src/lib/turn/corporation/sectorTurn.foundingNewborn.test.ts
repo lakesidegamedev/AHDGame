@@ -47,6 +47,7 @@ function newbornSector(overrides: Partial<CorporateSector> = {}): CorporateSecto
     costPaidAnchor: 300_000,
     startTurn: FOUNDED_TURN,
     onlineTurn: FOUNDED_TURN + BUILD_TURNS,
+    deliveryBaseFraction: 0,
   };
   return {
     _id: SECTOR_ID,

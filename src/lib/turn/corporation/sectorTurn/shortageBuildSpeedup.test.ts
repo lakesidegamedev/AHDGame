@@ -18,6 +18,7 @@ const order = (o: Partial<SectorBuildOrder> = {}): SectorBuildOrder => ({
   startTurn: 155,
   onlineTurn: 203,
   smooth: true,
+  deliveryBaseFraction: 0,
   ...o,
 });
 

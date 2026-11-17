@@ -23,12 +23,20 @@ function smooth(partial: Partial<SectorBuildOrder> = {}): SectorBuildOrder {
     startTurn: 0,
     onlineTurn: 100,
     smooth: true,
+    deliveryBaseFraction: 0,
     ...partial,
   };
 }
 
 function legacy(partial: Partial<SectorBuildOrder> = {}): SectorBuildOrder {
-  return { unitsOrdered: 100, costPaidAnchor: 1_000, startTurn: 0, onlineTurn: 100, ...partial };
+  return {
+    unitsOrdered: 100,
+    costPaidAnchor: 1_000,
+    startTurn: 0,
+    onlineTurn: 100,
+    deliveryBaseFraction: 0,
+    ...partial,
+  };
 }
 
 describe("buildDelivery — smooth orders ramp linearly", () => {
@@ -109,6 +117,54 @@ describe("buildDelivery — re-anchored in-flight orders", () => {
     expect(deliveredFraction(o, 7)).toBeCloseTo(0.75, 9);
     expect(unitsDeliveredSince(o, 4, 10)).toBeCloseTo(50, 9);
     expect(steadyUnitsPerTurn(o, 5)).toBeCloseTo(50 / 6, 9);
+  });
+});
+
+describe("buildDelivery: orders not yet stamped keep their original curve", () => {
+  it("lands a whole-plant order in whole-plant steps", () => {
+    const o = smooth({
+      unitsOrdered: 300,
+      plantUnits: 100,
+      startTurn: 0,
+      onlineTurn: 6,
+      deliveryBaseFraction: undefined,
+    });
+    const perTurn = [1, 2, 3, 4, 5, 6].map((t) => unitsDeliveredThisTurn(o, t));
+    perTurn.forEach((u) => expect(Math.abs(u % 100)).toBeLessThan(1e-9));
+    expect(perTurn.reduce((a, b) => a + b, 0)).toBeCloseTo(300, 9);
+    expect(perTurn.some((u) => u === 0)).toBe(true);
+    expect(steadyUnitsPerTurn(o, 2)).toBe(0);
+  });
+
+  it("lands a non-smooth order in one lump at the online turn", () => {
+    const o = legacy({ onlineTurn: 40, deliveryBaseFraction: undefined });
+    expect(unitsDeliveredSince(o, 0, 39)).toBe(0);
+    expect(unitsDeliveredThisTurn(o, 40)).toBe(100);
+    expect(costReleasedThisTurn(o, 40)).toBe(1_000);
+    expect(nextArrivalTurn(o, 10)).toBe(40);
+  });
+
+  it("ramps a smooth order without plant steps linearly", () => {
+    const o = smooth({ deliveryBaseFraction: undefined });
+    expect(unitsDeliveredThisTurn(o, 50)).toBeCloseTo(1, 9);
+  });
+
+  it("a migrated order telescopes to exactly the units ordered when a turn ran first", () => {
+    const old = smooth({
+      unitsOrdered: 300,
+      plantUnits: 100,
+      startTurn: 0,
+      onlineTurn: 6,
+      deliveryBaseFraction: undefined,
+    });
+    // Turn 3 runs on the new code before the migration: old curve delivers.
+    const before = unitsDeliveredSince(old, 0, 3);
+    // Migration then re-anchors at the settled turn 3 with the old share as base.
+    const base = before / 300;
+    const migrated = { ...old, startTurn: 3, deliveryBaseFraction: base };
+    const after = unitsDeliveredSince(migrated, 3, 6);
+    expect(before + after).toBeCloseTo(300, 9);
+    expect(unitsDeliveredSince(migrated, 6, 20)).toBe(0);
   });
 });
 
@@ -228,6 +284,7 @@ describe("plannedArrivalTurns", () => {
       onlineTurn: 7,
       smooth: true,
       plantUnits: 100,
+      deliveryBaseFraction: 0,
     } as SectorBuildOrder;
     expect(unitsDeliveredThisTurn(order, plan.firstInTurns)).toBeGreaterThan(0);
     expect(unitsDeliveredSince(order, 0, plan.firstInTurns - 1)).toBe(0);

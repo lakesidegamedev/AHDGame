@@ -375,6 +375,7 @@ describe("buildCapacity — build", () => {
     const queue = set.buildQueue as Array<Record<string, number>>;
     expect(queue.length).toBe(1);
     expect(queue[0].unitsOrdered).toBe(1_000);
+    expect(queue[0].deliveryBaseFraction).toBe(0);
     expect(queue[0].costPaidAnchor).toBeCloseTo(expected.totalAnchor, 6);
     expect(set).not.toHaveProperty("constructionInProgressAnchor");
 

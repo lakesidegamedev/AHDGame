@@ -14,7 +14,7 @@ describe("construction work as demand", () => {
   });
 
   it("spreads a legacy order's work over its window like any other order", () => {
-    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14 };
+    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14, deliveryBaseFraction: 0 };
     expect([11, 12, 13].map((t) => buildWorkThisTurn(order, t))).toEqual([25, 25, 25]);
     expect(buildWorkThisTurn(order, 14)).toBe(25);
   });

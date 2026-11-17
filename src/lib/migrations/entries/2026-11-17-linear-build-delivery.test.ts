@@ -46,5 +46,6 @@ describe("linear build delivery re-anchor", () => {
   it("skips landed and already re-anchored orders", () => {
     expect(reanchoredOrder(order({ onlineTurn: 5 }), 5)).toBeNull();
     expect(reanchoredOrder(order({ deliveryBaseFraction: 0.2 }), 4)).toBeNull();
+    expect(reanchoredOrder(order({ deliveryBaseFraction: 0 }), 4)).toBeNull();
   });
 });

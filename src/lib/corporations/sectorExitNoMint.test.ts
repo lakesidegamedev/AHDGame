@@ -303,6 +303,7 @@ describe("C1 — sectorTurn maintains the paid basis", () => {
           costPaidAnchor: paid,
           startTurn,
           onlineTurn: 1000 + CAPACITY_BUILD_TURNS(TYPE),
+          deliveryBaseFraction: 0,
         },
       ],
       createdAt: new Date(),

@@ -3,7 +3,14 @@ import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
 import type { SectorBuildOrder } from "@/lib/db/types";
 
 function order(partial: Partial<SectorBuildOrder>): SectorBuildOrder {
-  return { unitsOrdered: 100, costPaidAnchor: 1_000, startTurn: 0, onlineTurn: 48, ...partial };
+  return {
+    unitsOrdered: 100,
+    costPaidAnchor: 1_000,
+    startTurn: 0,
+    onlineTurn: 48,
+    deliveryBaseFraction: 0,
+    ...partial,
+  };
 }
 
 describe("summarizeBuildQueue", () => {

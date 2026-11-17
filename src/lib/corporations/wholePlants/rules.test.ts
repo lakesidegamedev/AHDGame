@@ -123,6 +123,7 @@ describe("whole-plant build delivery", () => {
     onlineTurn: 10,
     smooth: true,
     plantUnits: SIZE,
+    deliveryBaseFraction: 0,
   };
 
   it("delivers an equal slice every turn, the last on the online turn", () => {
