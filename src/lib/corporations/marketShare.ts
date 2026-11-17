@@ -31,9 +31,9 @@ export function shareRevenueLocal(sector: {
   revenue?: number;
   capitalStock?: number;
   plantCount?: number;
-}): number | undefined {
+}): number {
   if (sector.capitalStock === 0 && !((sector.plantCount ?? 0) > 0)) return 0;
-  return sector.revenue;
+  return sector.revenue ?? 0;
 }
 
 /** Bounded market share percentage (0–100) given anchor-denominated inputs. */

@@ -5,9 +5,9 @@ summary: >-
   A sector you have just founded no longer reads as owning the whole market
   while its first plant is still being built, so your first expansion there is
   not charged the dominance surcharge.
-tags: [corporations, economy, fix]
+tags: [corporations, economy, bugfix]
 badges: [patch]
-areas: [economy]
+areas: [engine]
 ---
 
 ## What changed
