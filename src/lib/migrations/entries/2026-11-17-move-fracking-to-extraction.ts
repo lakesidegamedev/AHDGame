@@ -160,9 +160,9 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     const sectors = corporateSectorsCollection<Document>(db);
-    const onMethod = (await sectors
+    const onMethod = await corporateSectorsCollection<SectorLike & Document>(db)
       .find({ strategyId: LEGACY_METHOD })
-      .toArray()) as unknown as SectorLike[];
+      .toArray();
     const ratio = legacyToConventionalRatio();
     let moved = 0;
     let refunds = 0;
