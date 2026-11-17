@@ -32,9 +32,12 @@ areas: [backend, frontend]
 
 - A refinancing ladder groups outstanding sovereign face by the fiscal year it
   matures: how much reprices this year and in each of the next five, its share
-  of the stock, what it pays in coupons now, and what the same face would cost
-  at today's effective rate. It makes clear that the trajectory premium reaches
-  the budget through rollovers rather than repricing the whole stock at once.
+  of the stock, its average coupon and what it pays in coupons now. Each row
+  sets that average against today's effective rate and the gap in basis points,
+  with a rising repricing cost in the warning tone, so a treasury can see which
+  fiscal year the trajectory premium actually lands in. It makes clear the
+  premium reaches the budget through rollovers rather than repricing the whole
+  stock at once.
 - A rate breakdown card shows what the effective sovereign rate is made of:
   the level ladder and rating, the investor confidence premium, the trajectory
   premium, and any IMF or hard-ceiling cap, with the prior fiscal close beside

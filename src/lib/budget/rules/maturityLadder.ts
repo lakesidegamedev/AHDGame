@@ -30,6 +30,10 @@ export interface MaturityLadderYear {
   couponCost: number;
   /** What the same face would cost per year at today's rate. */
   repricedCost: number;
+  /** The coupon this face pays on average, in percent. */
+  averageCouponPct: number;
+  /** Today's effective rate minus that average, in points. Positive costs more. */
+  repricingGapPct: number;
 }
 
 export interface SovereignMaturityLadder {
@@ -82,6 +86,8 @@ export function sovereignMaturityLadder(
     share: 0,
     couponCost: 0,
     repricedCost: 0,
+    averageCouponPct: 0,
+    repricingGapPct: 0,
   }));
   let beyondPrincipal = 0;
   let totalPrincipal = 0;
@@ -104,6 +110,8 @@ export function sovereignMaturityLadder(
 
   for (const year of years) {
     year.share = totalPrincipal > 0 ? year.principal / totalPrincipal : 0;
+    year.averageCouponPct = year.principal > 0 ? (year.couponCost / year.principal) * 100 : 0;
+    year.repricingGapPct = year.principal > 0 ? todayRatePct - year.averageCouponPct : 0;
   }
 
   return { years, beyondPrincipal, totalPrincipal, todayRatePct };

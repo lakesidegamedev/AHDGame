@@ -11,10 +11,10 @@ interface MaturityLadderPanelProps {
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 /**
- * How much of the sovereign stock reprices each fiscal year, and what the same
- * face would cost at today's rate. The trajectory premium only lands through
- * these rollovers, so a ladder full of near-term maturities is why a rate move
- * shows up quickly.
+ * How much of the sovereign stock reprices each fiscal year, the coupon it pays
+ * on average and today's rate. The trajectory premium only lands through these
+ * rollovers, so a ladder full of near-term maturities is why a rate move shows
+ * up quickly.
  */
 export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
   const years = ladder.years.filter((year) => year.principal > 0);
@@ -40,7 +40,7 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
 
       <div className="mt-2 space-y-1.5">
         {years.map((year) => {
-          const delta = year.repricedCost - year.couponCost;
+          const gapBp = Math.round(year.repricingGapPct * 100);
           return (
             <div key={year.fyOffset} className="text-body-sm">
               <div className="flex items-baseline justify-between gap-2">
@@ -58,11 +58,14 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
                   style={{ width: `${Math.max(1, (year.principal / maxPrincipal) * 100)}%` }}
                 />
               </div>
-              <div className="mt-0.5 flex items-baseline justify-between text-[10px] text-muted">
-                <span>coupons {formatFundsCompact(year.couponCost, sym)}/yr at issued rates</span>
-                <span className={delta > 0 ? "text-warning" : "text-muted"}>
-                  {delta > 0 ? "+" : ""}
-                  {formatFundsCompact(delta, sym)}/yr at {ladder.todayRatePct.toFixed(2)}%
+              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[10px] text-muted">
+                <span>
+                  coupons {formatFundsCompact(year.couponCost, sym)}/yr at{" "}
+                  {year.averageCouponPct.toFixed(2)}% average
+                </span>
+                <span className={gapBp > 0 ? "text-warning" : "text-muted"}>
+                  {ladder.todayRatePct.toFixed(2)}% today ({gapBp > 0 ? "+" : ""}
+                  {gapBp} bp)
                 </span>
               </div>
             </div>

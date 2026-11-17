@@ -56,6 +56,24 @@ describe("sovereignMaturityLadder", () => {
     expect(ladder.years[1].share).toBeCloseTo(0.75, 10);
   });
 
+  it("reports the average coupon on a year's face and the gap to today's rate", () => {
+    const ladder = sovereignMaturityLadder([bond(100, 2, 110), bond(300, 6, 120)], {
+      currentTurn: 100,
+      todayRatePct: 5,
+    });
+    expect(ladder.years[0].averageCouponPct).toBeCloseTo(5, 10);
+    expect(ladder.years[0].repricingGapPct).toBeCloseTo(0, 10);
+  });
+
+  it("shows a positive gap where the stock reprices above its average coupon", () => {
+    const ladder = sovereignMaturityLadder([bond(500, 1, 110)], {
+      currentTurn: 100,
+      todayRatePct: 4.5,
+    });
+    expect(ladder.years[0].averageCouponPct).toBeCloseTo(1, 10);
+    expect(ladder.years[0].repricingGapPct).toBeCloseTo(3.5, 10);
+  });
+
   it("ignores non-finite or non-positive rows", () => {
     const ladder = sovereignMaturityLadder(
       [bond(Number.NaN, 2, 110), bond(0, 2, 110), bond(100, Number.NaN, 110), bond(200, 2, 150)],
@@ -68,6 +86,8 @@ describe("sovereignMaturityLadder", () => {
     const ladder = sovereignMaturityLadder([], { currentTurn: 100, todayRatePct: 5 });
     expect(ladder.totalPrincipal).toBe(0);
     expect(ladder.years.every((year) => year.share === 0)).toBe(true);
+    expect(ladder.years.every((year) => year.averageCouponPct === 0)).toBe(true);
+    expect(ladder.years.every((year) => year.repricingGapPct === 0)).toBe(true);
   });
 
   it("accepts a custom year length", () => {
