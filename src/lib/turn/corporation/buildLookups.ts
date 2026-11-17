@@ -316,11 +316,9 @@ export async function buildCorporationLookups(
   const exchangeRatesByCurrency = new Map<CurrencyCode, number>(
     exchangeRateDocs.map((r) => [r.currencyCode as CurrencyCode, r.rate])
   );
-  // The corporation turn needs an economic conversion rate even when a
-  // currency is deliberately not player-traded (1953 command-economy codes,
-  // and the era codes FRF/ITL/... that cross-border sectors in euro-era worlds
-  // are stored in). Falling back to 1.0 inflated every anchor value by 4.2x to
-  // 833x. Shared with every reader so they cannot drift from the engine.
+  // Currencies without a live row (command-economy codes, and the era codes FRF
+  // and ITL that cross-border sectors are stored in) still need an economic
+  // rate; 1.0 would misstate every anchor value. Shared with the readers.
   withAuthoredEraRates(exchangeRatesByCurrency, worldPreset);
   const issuedBondDebtByCorpId = new Map<string, number>();
   for (const [corpId, bonds] of bondsByCorpId) {

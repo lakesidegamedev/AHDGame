@@ -380,18 +380,11 @@ export async function loadValuationFxRates(db: Db): Promise<Map<CurrencyCode, nu
 }
 
 /**
- * Fill every `COUNTRY_CURRENCY_MAP` currency that has no live rate from the
- * preset's authored table, in place, and return the same map. Live rates always
- * win.
- *
- * This is THE sector FX map rule. A cross-border sector is stored in its host
- * country's era-blind currency (FRF, ITL, ... via
- * {@link resolveSectorHostCurrencyCode}), and those codes have no
- * `exchangeRates` row in a euro-era world. The turn engine writes and reads
- * sector money at the authored rate, so every reader must use this exact
- * fallback or it falls to 1.0 and shows the figure 4.2x (FRF) or 833x (ITL)
- * too high. Pure, so it can wrap a map built from documents the caller already
- * loaded. Do not re-implement the loop at call sites.
+ * Fill every `COUNTRY_CURRENCY_MAP` currency with no live rate from the preset's
+ * authored table, in place; live rates win. This is the one sector FX rule:
+ * cross-border sectors are stored in the host's era-blind currency (FRF, ITL),
+ * which has no `exchangeRates` row, and the turn engine reads them at the
+ * authored rate, so every reader must too or it shows them 4.2x or 833x high.
  */
 export function withAuthoredEraRates(
   rates: Map<CurrencyCode, number>,
