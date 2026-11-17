@@ -17,9 +17,7 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
-import { DEFAULT_SHARE_PRICE, CEO_INITIAL_SHARES } from "@/lib/constants/corporations";
-import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
-import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { DEFAULT_SHARE_PRICE } from "@/lib/constants/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface EnsureImfPlaceholderResult {
@@ -54,10 +52,10 @@ export async function ensureImfInstitutionPlaceholder(db: Db): Promise<EnsureImf
     countryId: "US",
     headquartersState: "DC",
     ceoVacant: true,
-    // Era share base, so the placeholder's cap table matches every other
-    // corporation minted in this world (no holders and price is the default,
-    // so this is consistency rather than an economic change).
-    totalShares: getEraFounderShares(CEO_INITIAL_SHARES, await getGameStatePresetOrDefault(db)),
+    // No holders and no float yet, so no shares exist. Issuing the era base here
+    // left totalShares at 10M with nothing accounted for (share_accounting
+    // breach). `seedImfInstitution` mints the shares when the Board is assigned.
+    totalShares: 0,
     shareholders: [],
     updatedAt: now,
     liquidCapital: 0,
