@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { recordProviderLinkAudit } from "@/lib/auth/providerLinkAudit";
+vi.mock("@/lib/auth/providerLinkAudit", () => ({ recordProviderLinkAudit: vi.fn() }));
 import { decodeJwt } from "jose";
 import { ObjectId } from "mongodb";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
@@ -286,5 +288,46 @@ describe("GET /api/auth/discord/callback: login failures and signup IP detection
     const res = await GET(callback());
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("reason=exchange_failed");
+  });
+});
+
+describe("Discord link callback audit", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cookieState.reset({ discord_oauth_mode: "link", discord_oauth_state: "state-1" });
+  });
+  it.each([
+    ["?error=access_denied&state=state-1", "provider_denied"],
+    ["?state=state-1", "missing_params"],
+    ["?code=synthetic-code&state=wrong-state", "invalid_state"],
+  ])("records a sanitized rejection for %s", async (query, reason) => {
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(`https://ahousedividedgame.com/api/auth/discord/callback${query}`)
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(recordProviderLinkAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "discord", stage: "callback", reason })
+    );
+    expect(JSON.stringify(vi.mocked(recordProviderLinkAudit).mock.calls)).not.toContain(
+      "synthetic-code"
+    );
+    expect(exchangeCodeForToken).not.toHaveBeenCalled();
+  });
+  it("logs exchange failures without credential material", async () => {
+    exchangeCodeForToken.mockRejectedValueOnce(new Error("synthetic-sensitive-error"));
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(
+        "https://ahousedividedgame.com/api/auth/discord/callback?code=synthetic-code&state=state-1"
+      )
+    );
+    expect(response.headers.get("location")).toContain("reason=exchange_failed");
+    expect(recordProviderLinkAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "exchange_failed" })
+    );
+    expect(JSON.stringify(vi.mocked(recordProviderLinkAudit).mock.calls)).not.toContain(
+      "synthetic-sensitive-error"
+    );
   });
 });

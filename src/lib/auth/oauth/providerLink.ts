@@ -1,3 +1,4 @@
+import { recordProviderLinkAudit } from "@/lib/auth/providerLinkAudit";
 import { ObjectId, type Filter } from "mongodb";
 import { getAuthUser, verifyAuth } from "@/lib/auth";
 import { credentialSessionIsCurrent } from "@/lib/auth/credentialSession";
@@ -31,7 +32,26 @@ export async function runOAuthLink(
   state: string
 ) {
   const grant = await getAuthUser();
+  const audit = (reason: Parameters<typeof recordProviderLinkAudit>[0]["reason"]) => {
+    if (adapter.provider === "discord") {
+      recordProviderLinkAudit({
+        provider: adapter.provider,
+        stage: "result",
+        reason,
+        userId: grant?.userId,
+        state,
+      });
+    }
+  };
+  const result = (
+    status: "success" | "error",
+    reason?: "already_linked" | "registration_blocked" | "session_expired" | "exchange_failed"
+  ) => {
+    audit(status === "success" ? "completed" : (reason ?? "exchange_failed"));
+    return adapter.linkResult(status, reason);
+  };
   if (!grant) {
+    audit("session_expired");
     return adapter.loginRequired();
   }
 
@@ -39,6 +59,7 @@ export async function runOAuthLink(
   // Credential writes require the uncached account state, never the cached grant.
   const account = await usersCollectionHandle.findOne({ _id: new ObjectId(grant.userId) });
   if (!account) {
+    audit("session_expired");
     return adapter.loginRequired();
   }
 
@@ -46,11 +67,12 @@ export async function runOAuthLink(
   // a signed-out, revoked, or banned session cannot link a provider.
   const auth = await verifyAuth();
   if (!credentialSessionIsCurrent(grant.userId, account, auth)) {
+    audit("session_expired");
     return adapter.loginRequired();
   }
   // Fenced accounts never mutate provider bindings via legacy link.
   if (isAuthMigrationFenced(account)) {
-    return adapter.linkResult("error", "session_expired");
+    return result("error", "session_expired");
   }
 
   // The link flow started by one account/session must not complete for another:
@@ -64,14 +86,14 @@ export async function runOAuthLink(
   const linkCtxCookie = providerLinkContextCookieName(adapter.provider);
   const linkCtx = cookieStore.get(linkCtxCookie)?.value;
   cookieStore.delete(linkCtxCookie);
-  if (
-    !verifyProviderLinkContext(linkCtx, {
-      provider: adapter.provider,
-      userId: grant.userId,
-      iat: auth?.iat ?? -1,
-      state,
-    }).ok
-  ) {
+  const context = verifyProviderLinkContext(linkCtx, {
+    provider: adapter.provider,
+    userId: grant.userId,
+    iat: auth?.iat ?? -1,
+    state,
+  });
+  if (!context.ok) {
+    audit(context.reason === "account_mismatch" ? "account_mismatch" : "context_invalid");
     return adapter.linkResult("error", "session_expired");
   }
 
@@ -82,22 +104,22 @@ export async function runOAuthLink(
   } as Filter<User>);
 
   if (existingUser) {
-    return adapter.linkResult("error", "already_linked");
+    return result("error", "already_linked");
   }
 
   // A login account tied to a banned player cannot be linked to another account.
   if (await isProviderSubjectBanned(db, adapter.provider, adapter.externalId)) {
-    return adapter.linkResult("error", "registration_blocked");
+    return result("error", "registration_blocked");
   }
 
   // Never silently replace a different existing provider link; the old link
   // must be explicitly unlinked first.
   const link = decideProviderLink(account, adapter.provider, adapter.externalId);
   if (!link.ok) {
-    return adapter.linkResult("error", "already_linked");
+    return result("error", "already_linked");
   }
   if (link.mode === "idempotent") {
-    return adapter.linkResult("success");
+    return result("success");
   }
 
   // Central mode records the provider id centrally first; refuse if it is unreachable.
@@ -106,7 +128,7 @@ export async function runOAuthLink(
     account: bridgeAccountFromUser(account, { [adapter.idField]: adapter.externalId }),
   };
   if (!(await centralWriteFirst(linkWrite))) {
-    return adapter.linkResult("error", "exchange_failed");
+    return result("error", "exchange_failed");
   }
   const restoreLink = () =>
     centralRestoreAccount(account, { overrides: { [adapter.idField]: null } });
@@ -132,7 +154,7 @@ export async function runOAuthLink(
     );
   } catch {
     await restoreLink();
-    return adapter.linkResult("error", "exchange_failed");
+    return result("error", "exchange_failed");
   } finally {
     // A concurrent read may have repopulated the cache while the write was
     // pending; evict again after the settled write. A write can commit
@@ -142,13 +164,13 @@ export async function runOAuthLink(
   }
   if (write.acknowledged !== true) {
     await restoreLink();
-    return adapter.linkResult("error", "exchange_failed");
+    return result("error", "exchange_failed");
   }
   if (write.matchedCount !== 1) {
     await restoreLink();
     // A concurrent provider, password, ban, or revocation write won the
     // snapshot race. Never report success without a confirmed write.
-    return adapter.linkResult("error", "session_expired");
+    return result("error", "session_expired");
   }
 
   shadowMirrorWrite(linkWrite);
@@ -159,5 +181,5 @@ export async function runOAuthLink(
     action: "link",
     at: linkedAt,
   });
-  return adapter.linkResult("success");
+  return result("success");
 }

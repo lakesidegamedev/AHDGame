@@ -1,9 +1,9 @@
+import { recordProviderLinkAudit } from "@/lib/auth/providerLinkAudit";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ObjectId } from "mongodb";
 import { getAuthUser, getOAuthStateCookieOptions, verifyAuth } from "@/lib/auth"; // Optional auth — intentionally uses getAuthUser() for conditional redirect logic
 import { getDb } from "@/lib/mongodb";
-import type { User } from "@/lib/db/types";
 import { credentialSessionIsCurrent } from "@/lib/auth/credentialSession";
 import {
   PROVIDER_LINK_CONTEXT_TTL_SECONDS,
@@ -27,19 +27,40 @@ import { usersCollection } from "@/lib/db/repositories/users";
 // (rate-limit, login redirect, provider redirect, error redirect) uncached.
 export const GET = withNoStore(async function GET(request: Request) {
   const baseUrl = getBaseUrl(request);
+  const reqUrl = new URL(request.url);
   const clientIp = await getClientIp();
   const limit = checkRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
-  if (!limit.ok) return rateLimitResponse(limit.retryAfter);
+  if (!limit.ok) {
+    recordProviderLinkAudit({ provider: "discord", stage: "start", reason: "rate_limited" });
+    return rateLimitResponse(limit.retryAfter);
+  }
+  let userId: string | undefined;
+  let state: string | undefined;
+  const audit = (reason: Parameters<typeof recordProviderLinkAudit>[0]["reason"]) =>
+    recordProviderLinkAudit({ provider: "discord", stage: "start", reason, userId, state });
   try {
     const user = await getAuthUser();
     if (!user) {
+      audit("session_expired");
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
 
+    userId = user.userId;
+    const expectedUserId = reqUrl.searchParams.get("expectedUserId");
+    if (expectedUserId && expectedUserId !== userId) {
+      audit("account_mismatch");
+      const next =
+        reqUrl.searchParams.get("returnUrl")?.split("?")[0] === "/create-character"
+          ? "/create-character"
+          : "/settings";
+      const params = new URLSearchParams({ status: "error", reason: "session_expired", next });
+      return NextResponse.redirect(new URL(`/auth/discord/result?${params}`, baseUrl));
+    }
     const clientId = authConfig.discordClientId();
     const redirectUri = discordRedirectUri();
 
     if (!clientId || !redirectUri) {
+      audit("not_configured");
       return NextResponse.redirect(
         new URL("/settings?discord=error&reason=not_configured", baseUrl)
       );
@@ -47,7 +68,6 @@ export const GET = withNoStore(async function GET(request: Request) {
 
     // Accept an optional returnUrl so callers outside /settings (e.g.
     // create-character) can preserve their page after the OAuth flow.
-    const reqUrl = new URL(request.url);
     const returnUrl = reqUrl.searchParams.get("returnUrl") ?? "/settings";
 
     // Link start requires the fresh current account/session, not the cached
@@ -56,18 +76,17 @@ export const GET = withNoStore(async function GET(request: Request) {
     const account = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const auth = await verifyAuth();
     if (!account || !auth || !credentialSessionIsCurrent(user.userId, account, auth)) {
+      audit("session_expired");
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
     if (!Number.isSafeInteger(auth.iat)) {
+      audit("session_expired");
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
 
     // Generate state token for CSRF protection
     // App-started sign-ins are marked so a browser-side callback can hand back (ticket 1461).
-    const state = consentStateFor(
-      request.headers.get("user-agent"),
-      randomBytes(32).toString("hex")
-    );
+    state = consentStateFor(request.headers.get("user-agent"), randomBytes(32).toString("hex"));
 
     // Store state, mode, and returnUrl in cookies (shared domain so they survive www ↔ apex hops)
     const cookieStore = await cookies();
@@ -95,9 +114,11 @@ export const GET = withNoStore(async function GET(request: Request) {
     );
 
     const oauthUrl = getDiscordOAuthUrl(state, redirectUri, clientId);
+    audit("started");
     return NextResponse.redirect(oauthUrl);
-  } catch (error) {
-    console.error("[Discord link] Error:", error);
+  } catch {
+    audit("exchange_failed");
+    console.error("Discord account link is temporarily unavailable");
     return NextResponse.redirect(
       new URL("/settings?discord=error&reason=exchange_failed", baseUrl)
     );

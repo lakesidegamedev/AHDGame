@@ -72,6 +72,10 @@ export const characterDemographicsSchema = z.object({
 });
 
 export const createCharacterSchema = z.object({
+  expectedUserId: z
+    .string()
+    .regex(/^[a-f0-9]{24}$/i)
+    .optional(),
   analyticsConsent: z.boolean().optional().default(false),
   name: moderatedNameSchema("Name", 2, 50),
   homeState: z.string().min(1, "Home state required"),
