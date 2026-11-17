@@ -1,6 +1,8 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { TECH_TREE, type TechLane, type TechTreeNode } from "@/lib/constants/techTree/nodes";
 import {
+  NEUTRAL_TECH_EFFECTS,
+  aggregateTechEffectLayers,
   aggregateTechEffects,
   collectUnlockedStrategyIds,
   scaleEffect,
@@ -9,6 +11,7 @@ import {
   type TechEffect,
 } from "@/lib/constants/techTree/effects";
 import { frontierProgrammeEffects } from "@/lib/constants/techTree/frontier";
+import { isLegacyTechDecade, type LegacyTechContext } from "./legacyTech";
 import { frontierMethodEffects } from "@/lib/frontierRaces/rules";
 import {
   TECH_DECADES,
@@ -59,9 +62,62 @@ export function getActiveTechEffects(corp: TechCorpView): TechEffect[] {
   return getUnlockedNodes(corp).flatMap((n) => n.effects);
 }
 
-/** Engine-ready aggregate of EVERY unlocked node, unscaled (display / summary). */
-export function getAggregatedTechEffects(corp: TechCorpView): AggregatedTechEffects {
-  return aggregateTechEffects(getActiveTechEffects(corp));
+/**
+ * Running effects of one node at its lane strength: Corporate-lane nodes apply
+ * everywhere at CORP_LANE_EFFECT_SCALE, Sector-lane nodes only to the primary
+ * sector.
+ */
+function nodeRunningEffects(node: TechTreeNode, isPrimary: boolean): TechEffect[] {
+  if (node.lane === "generic")
+    return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
+  return isPrimary ? node.effects : [];
+}
+
+/** Running effects split into the era baseline layer and the researched layer. */
+interface TechEffectLayers {
+  /** Nodes from decades before the world's starting decade (kept even when mode is "off"; see `layered`). */
+  baseline: TechEffect[];
+  /** Nodes from the starting decade onward, plus frontier programmes and methods. */
+  researched: TechEffect[];
+}
+
+/** The one place a node's effects are assigned to a layer. */
+function layerNodeEffects(
+  nodes: readonly TechTreeNode[],
+  isPrimary: boolean,
+  legacy: LegacyTechContext
+): TechEffectLayers {
+  const layers: TechEffectLayers = { baseline: [], researched: [] };
+  for (const node of nodes) {
+    const target = isLegacyTechDecade(node.decadeId, legacy) ? layers.baseline : layers.researched;
+    target.push(...nodeRunningEffects(node, isPrimary));
+  }
+  return layers;
+}
+
+/** Total, with the era baseline counted only in "baseline" mode. Every aggregate goes through here. */
+function totalFromLayers(layers: TechEffectLayers, legacy: LegacyTechContext) {
+  return aggregateTechEffectLayers(
+    legacy.mode === "baseline" ? layers.baseline : [],
+    layers.researched
+  );
+}
+
+/**
+ * Engine-ready aggregate of EVERY unlocked node at full lane strength, no lane
+ * scaling (display / summary). Pre-start-decade nodes follow `legacy.mode`.
+ */
+export function getAggregatedTechEffects(
+  corp: TechCorpView,
+  legacy: LegacyTechContext
+): AggregatedTechEffects {
+  const layers: TechEffectLayers = { baseline: [], researched: [] };
+  for (const node of getUnlockedNodes(corp)) {
+    (isLegacyTechDecade(node.decadeId, legacy) ? layers.baseline : layers.researched).push(
+      ...node.effects
+    );
+  }
+  return totalFromLayers(layers, legacy);
 }
 
 /**
@@ -83,19 +139,48 @@ export function isPrimaryTechSector(
  */
 export function getSectorTechEffects(
   corp: TechCorpView,
-  sectorType: OperatingSectorType
+  sectorType: OperatingSectorType,
+  legacy: LegacyTechContext
 ): AggregatedTechEffects {
+  return getSectorTechEffectBreakdown(corp, sectorType, null, legacy).total;
+}
+
+/** A sector's tech effects, with the researched and era baseline parts shown separately. */
+export interface SectorTechEffectBreakdown {
+  /** What the turn applies. */
+  total: AggregatedTechEffects;
+  /** Researched layer alone, against the caps (neutral when nothing is researched). */
+  researched: AggregatedTechEffects;
+  /** Era baseline layer alone (neutral in "off" mode, where it does not count). */
+  baseline: AggregatedTechEffects;
+}
+
+/**
+ * The single reader of a corporation's per-sector tech effects. `currentYear`
+ * null counts every owned node; a year limits node effects to the current and
+ * previous decade (see getActiveTechDecadeIds). Frontier programmes and methods
+ * are researched effects and never expire.
+ */
+export function getSectorTechEffectBreakdown(
+  corp: TechCorpView,
+  sectorType: OperatingSectorType,
+  currentYear: number | null,
+  legacy: LegacyTechContext
+): SectorTechEffectBreakdown {
+  const allowedIds = currentYear == null ? null : getActiveTechDecadeIds(currentYear);
   const isPrimary = isPrimaryTechSector(corp, sectorType);
-  const effects = getUnlockedNodes(corp).flatMap((node) => {
-    if (node.lane === "generic")
-      return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
-    return isPrimary ? node.effects : [];
-  });
+  const nodes = getUnlockedNodes(corp).filter((n) => !allowedIds || allowedIds.has(n.decadeId));
+  const layers = layerNodeEffects(nodes, isPrimary, legacy);
   if (isPrimary) {
-    effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
-    effects.push(...frontierMethodEffects(corp.frontierMethods));
+    layers.researched.push(...frontierProgrammeEffects(corp.frontierProgrammes));
+    layers.researched.push(...frontierMethodEffects(corp.frontierMethods));
   }
-  return aggregateTechEffects(effects);
+  return {
+    total: totalFromLayers(layers, legacy),
+    researched: aggregateTechEffects(layers.researched),
+    baseline:
+      legacy.mode === "baseline" ? aggregateTechEffects(layers.baseline) : NEUTRAL_TECH_EFFECTS,
+  };
 }
 
 /** Production-method (strategy) ids the corp has unlocked via the tree. */
@@ -260,12 +345,6 @@ export function decadeLabel(decadeId: string): string {
 }
 
 /**
- * Variant of getSectorTechEffects that limits per-turn stat bonuses to
- * the current and previous decade only. Strategy unlocks (unlockStrategy
- * effects) are ignored here — they're tracked separately via
- * getUnlockedStrategyIds and are permanent.
- */
-/**
  * Decades whose owned techs still apply their running plant effects in the
  * turn: the current decade and the one before it. Older techs stay owned but
  * stop applying (shown as expired on the Tech tab).
@@ -302,24 +381,17 @@ export function isTechNodeEffectExpired(
   );
 }
 
+/**
+ * Variant of getSectorTechEffects that limits per-turn stat bonuses to
+ * the current and previous decade only. Strategy unlocks (unlockStrategy
+ * effects) are ignored here; they are tracked separately via
+ * getUnlockedStrategyIds and are permanent.
+ */
 export function getSectorTechEffectsForYear(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
-  currentYear: number
+  currentYear: number,
+  legacy: LegacyTechContext
 ): AggregatedTechEffects {
-  const allowedIds = getActiveTechDecadeIds(currentYear);
-
-  const isPrimary = isPrimaryTechSector(corp, sectorType);
-  const effects = getUnlockedNodes(corp).flatMap((node) => {
-    if (!allowedIds.has(node.decadeId)) return [];
-    if (node.lane === "generic")
-      return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
-    return isPrimary ? node.effects : [];
-  });
-  // Frontier programmes belong to no decade, so they never expire.
-  if (isPrimary) {
-    effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
-    effects.push(...frontierMethodEffects(corp.frontierMethods));
-  }
-  return aggregateTechEffects(effects);
+  return getSectorTechEffectBreakdown(corp, sectorType, currentYear, legacy).total;
 }

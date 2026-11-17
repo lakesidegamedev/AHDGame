@@ -54,6 +54,8 @@ import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { STARTING_YEAR } from "@/lib/constants/turnTime";
+import { resolveLegacyTechMode } from "@/lib/techTree/rules/legacyTech";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { retoolProductionMeasurements } from "@/lib/corporations/retooling/rules";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -506,6 +508,7 @@ export async function buildCorporationLookups(
     _id: string;
     managementOverheadPpPerDoubling?: number;
     strengthUpkeepStage?: number;
+    legacyTechMode?: unknown;
     groupSizeCostsStage?: number;
     soeSizeCostScale?: number;
     dominanceRunningCostScale?: number;
@@ -521,6 +524,7 @@ export async function buildCorporationLookups(
       projection: {
         managementOverheadPpPerDoubling: 1,
         strengthUpkeepStage: 1,
+        legacyTechMode: 1,
         groupSizeCostsStage: 1,
         soeSizeCostScale: 1,
         dominanceRunningCostScale: 1,
@@ -1040,6 +1044,8 @@ export async function buildCorporationLookups(
     soeSizeCostByCorpId,
     dominanceRunningCost,
     strengthUpkeepStage,
+    legacyTechStartingYear: gameState?.startingYear ?? STARTING_YEAR,
+    legacyTechMode: resolveLegacyTechMode(overheadCfg?.legacyTechMode),
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     landedPremiumByState,

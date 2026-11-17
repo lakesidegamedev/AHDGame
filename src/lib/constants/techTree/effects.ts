@@ -283,8 +283,26 @@ export function scaleEffect(effect: TechEffect, scale: number): TechEffect {
   }
 }
 
-/** Reduce a flat list of effects to the per-turn scalars the turn engine applies. */
-export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffects {
+/**
+ * One layer of per-turn effects after its own caps: the plain sums are clamped
+ * to their caps and the per-commodity rates are multiplied out. The turn engine
+ * never sees a layer directly; `finishTechLayers` folds one or two of them into
+ * {@link AggregatedTechEffects}.
+ */
+interface TechEffectLayer {
+  plantOutput: number;
+  methodOutput: number;
+  inputEfficiency: number;
+  growthReduction: number;
+  laborReduction: number;
+  dominanceShield: number;
+  tariffShield: number;
+  expansionDiscount: number;
+  inputCostMult: Record<string, number>;
+  outputRateMult: Record<string, number>;
+}
+
+function reduceTechLayer(effects: readonly TechEffect[]): TechEffectLayer {
   let plantOutputPct = 0;
   let methodOutputPct = 0;
   let inputEfficiencyPct = 0;
@@ -293,7 +311,7 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
   let dominanceShield = 0;
   let tariffShield = 0;
   let expansionDiscount = 0;
-  const inputRateMult: Record<string, number> = {};
+  const inputCostMult: Record<string, number> = {};
   const outputRateMult: Record<string, number> = {};
   for (const effect of effects) {
     if (effect.kind === "plantOutput") {
@@ -312,26 +330,61 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
     } else if (effect.kind === "expansionDiscount") {
       expansionDiscount += effect.pct;
     } else if (effect.kind === "inputCost") {
-      const cur = inputRateMult[effect.commodity] ?? 1;
-      inputRateMult[effect.commodity] = cur * Math.max(0, 1 - effect.pct);
+      const cur = inputCostMult[effect.commodity] ?? 1;
+      inputCostMult[effect.commodity] = cur * Math.max(0, 1 - effect.pct);
     } else if (effect.kind === "outputRate") {
       const cur = outputRateMult[effect.commodity] ?? 1;
       outputRateMult[effect.commodity] = cur * (1 + Math.max(0, effect.pct));
     }
   }
-  const clampedReduction = Math.min(TECH_GROWTH_REDUCTION_CAP, Math.max(0, growthCostReductionPct));
-  const clampedLaborReduction = Math.min(
-    TECH_LABOR_REDUCTION_CAP,
-    Math.max(0, laborCostReductionPct)
-  );
-  const shield = (v: number) => Math.min(TECH_SHIELD_CAP, Math.max(0, v));
+  const clamp = (v: number, cap: number) => Math.min(cap, Math.max(0, v));
+  return {
+    plantOutput: clamp(plantOutputPct, TECH_PLANT_OUTPUT_CAP),
+    methodOutput: clamp(methodOutputPct, TECH_METHOD_OUTPUT_CAP),
+    inputEfficiency: clamp(inputEfficiencyPct, TECH_INPUT_EFFICIENCY_CAP),
+    growthReduction: clamp(growthCostReductionPct, TECH_GROWTH_REDUCTION_CAP),
+    laborReduction: clamp(laborCostReductionPct, TECH_LABOR_REDUCTION_CAP),
+    dominanceShield: clamp(dominanceShield, TECH_SHIELD_CAP),
+    tariffShield: clamp(tariffShield, TECH_SHIELD_CAP),
+    expansionDiscount: clamp(expansionDiscount, TECH_SHIELD_CAP),
+    inputCostMult,
+    outputRateMult,
+  };
+}
+
+/**
+ * Fold a baseline layer (or none) and a researched layer into the engine
+ * scalars. See {@link aggregateTechEffectLayers} for the rule.
+ */
+function finishTechLayers(
+  baseline: TechEffectLayer | null,
+  researched: TechEffectLayer
+): AggregatedTechEffects {
+  const b = baseline;
+  // Percent bonuses that cannot reach 100% add (baseline + researched).
+  const plantOutputBonus = (b?.plantOutput ?? 0) + researched.plantOutput;
+  const methodOutputBonus = (b?.methodOutput ?? 0) + researched.methodOutput;
+  const inputEfficiencyBonus = (b?.inputEfficiency ?? 0) + researched.inputEfficiency;
+  // Cost multipliers multiply, so two layers of up to 50% each can never make
+  // a cost free: (1 - 0.5) * (1 - 0.5) = 0.25.
+  const growthCostMultiplier = (1 - (b?.growthReduction ?? 0)) * (1 - researched.growthReduction);
+  const laborCostMultiplier = (1 - (b?.laborReduction ?? 0)) * (1 - researched.laborReduction);
+  // Shields are shares of a penalty neutralized: the second layer works on what
+  // the first left, s = a + b - a*b, so two layers never pass 100%.
+  const shield = (own: number, base: number | undefined) =>
+    base === undefined ? own : base + own - base * own;
+  const inputRateMult: Record<string, number> = { ...(b?.inputCostMult ?? {}) };
+  for (const [c, m] of Object.entries(researched.inputCostMult)) {
+    inputRateMult[c] = (inputRateMult[c] ?? 1) * m;
+  }
+  const outputRateMult: Record<string, number> = { ...(b?.outputRateMult ?? {}) };
+  for (const [c, m] of Object.entries(researched.outputRateMult)) {
+    outputRateMult[c] = (outputRateMult[c] ?? 1) * m;
+  }
   // The plant-wide effects fold into the per-commodity maps every consumer
   // already reads (supply, demand, unit yield, world ledger), so no consumer
   // needs a second code path. Applied to every commodity: a rate a recipe does
   // not use is never read.
-  const plantOutputBonus = Math.min(TECH_PLANT_OUTPUT_CAP, Math.max(0, plantOutputPct));
-  const methodOutputBonus = Math.min(TECH_METHOD_OUTPUT_CAP, Math.max(0, methodOutputPct));
-  const inputEfficiencyBonus = Math.min(TECH_INPUT_EFFICIENCY_CAP, Math.max(0, inputEfficiencyPct));
   if (plantOutputBonus > 0 || methodOutputBonus > 0 || inputEfficiencyBonus > 0) {
     for (const commodity of COMMODITY_TYPES) {
       if (plantOutputBonus > 0 || methodOutputBonus > 0) {
@@ -347,14 +400,48 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
     plantOutputBonus,
     methodOutputBonus,
     inputEfficiencyBonus,
-    growthCostMultiplier: 1 - clampedReduction,
-    laborCostMultiplier: 1 - clampedLaborReduction,
+    growthCostMultiplier,
+    laborCostMultiplier,
     inputRateMult,
     outputRateMult,
-    dominanceShield: shield(dominanceShield),
-    tariffShield: shield(tariffShield),
-    expansionDiscount: shield(expansionDiscount),
+    dominanceShield: shield(researched.dominanceShield, b?.dominanceShield),
+    tariffShield: shield(researched.tariffShield, b?.tariffShield),
+    expansionDiscount: shield(researched.expansionDiscount, b?.expansionDiscount),
   };
+}
+
+/** Reduce a flat list of effects to the per-turn scalars the turn engine applies. */
+export function aggregateTechEffects(effects: readonly TechEffect[]): AggregatedTechEffects {
+  return finishTechLayers(null, reduceTechLayer(effects));
+}
+
+/**
+ * Reduce two layers of effects to the per-turn scalars the turn engine applies.
+ *
+ * `baseline` is the era baseline: effects of nodes from decades before the
+ * world's starting decade, which a late-start corporation owns from founding.
+ * `researched` is everything the world's own research adds (starting decade
+ * onward, frontier programmes and methods). Each layer is clamped to the caps
+ * on its own, so the baseline can never use up the room research needs, and
+ * the two are then combined:
+ *
+ *  - plant output, method output, input efficiency: baseline + researched
+ *    (30% saved by the baseline and 30% by research is 60% fewer inputs);
+ *  - growth-cost and labor-cost multipliers: baseline multiplier times
+ *    researched multiplier;
+ *  - shields and expansion discount: a + b - a*b;
+ *  - per-commodity input and output rates: the product of both layers.
+ *
+ * With an empty `baseline` the result equals `aggregateTechEffects(researched)`
+ * exactly. With no researched effects it equals the baseline layer's own
+ * capped aggregate, which is what the old single-layer aggregate returned for
+ * a corporation that held only those nodes.
+ */
+export function aggregateTechEffectLayers(
+  baseline: readonly TechEffect[],
+  researched: readonly TechEffect[]
+): AggregatedTechEffects {
+  return finishTechLayers(reduceTechLayer(baseline), reduceTechLayer(researched));
 }
 
 /** Strength grants on a single node, applied once at unlock time. */

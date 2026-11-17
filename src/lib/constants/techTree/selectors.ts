@@ -15,6 +15,15 @@
  */
 export * from "./selectorsTables";
 export {
+  resolveLegacyTechContext,
+  resolveLegacyTechMode,
+  isPreStartDecade,
+  isLegacyTechDecade,
+  preStartDecadeIds,
+  type LegacyTechMode,
+  type LegacyTechContext,
+} from "@/lib/techTree/rules/legacyTech";
+export {
   getTreeForType,
   getNodeById,
   getDecadeLaneNodes,
@@ -23,6 +32,8 @@ export {
   getAggregatedTechEffects,
   isPrimaryTechSector,
   getSectorTechEffects,
+  getSectorTechEffectBreakdown,
+  type SectorTechEffectBreakdown,
   getUnlockedStrategyIds,
   getCommittedLane,
   getNodePrereqId,

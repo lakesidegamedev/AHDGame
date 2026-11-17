@@ -1,7 +1,7 @@
 /** Convert current sector capacity into comparable output for build advice. */
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
-import { getSectorTechEffects } from "@/lib/constants/techTree";
+import { getSectorTechEffects, type LegacyTechContext } from "@/lib/constants/techTree";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { deliveredFraction } from "../buildDelivery";
 import { productionProductivityMultiplier } from "./productionProductivity";
@@ -11,6 +11,8 @@ export function buildAdviceOutputMultiplier(input: {
   supply: Partial<Record<CommodityType, number>>;
   owner?: Corporation;
   techEnabled: boolean;
+  /** Era context: how pre-start-decade tech counts. */
+  legacyTech: LegacyTechContext;
   turn: number;
   preset: string;
 }) {
@@ -21,7 +23,7 @@ export function buildAdviceOutputMultiplier(input: {
     supply: input.supply,
     outputRateMult:
       input.techEnabled && owner
-        ? getSectorTechEffects(owner, sector.sectorType).outputRateMult
+        ? getSectorTechEffects(owner, sector.sectorType, input.legacyTech).outputRateMult
         : undefined,
     currentTurn: input.turn,
     preset: input.preset,
@@ -33,6 +35,7 @@ export function buildDemandProducer(input: {
   owner?: Corporation;
   countryId?: string;
   techEnabled: boolean;
+  legacyTech: LegacyTechContext;
   turn: number;
   preset: string;
   hardwareInputReliefStartTurn?: number;

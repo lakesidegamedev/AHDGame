@@ -5,6 +5,9 @@ import { getStrategyAvailability, isUngatedStrategy } from "./strategyAvailabili
 import { sectorNodeId, TECH_TREE, DECADE_COST } from "./nodes";
 import type { TechCorpView } from "./selectors";
 import { getSectorTechEffectsForYear } from "./selectors";
+
+// Every node counts in full: the world starts in the earliest decade.
+const ALL_COUNT = { startingYear: 1940, mode: "baseline" as const };
 import { aggregateTechEffects, NEUTRAL_TECH_EFFECTS, TECH_PLANT_OUTPUT_CAP } from "./effects";
 import {
   arePrerequisiteLanesReached,
@@ -139,8 +142,12 @@ describe("frontier programmes", () => {
 
   it("apply to the primary sector only and never expire", () => {
     const corp: TechCorpView = { type: "energy", frontierProgrammes: { output: 5 } };
-    expect(getSectorTechEffectsForYear(corp, "energy", 2080).plantOutputBonus).toBeCloseTo(0.02);
-    expect(getSectorTechEffectsForYear(corp, "technology", 2080).plantOutputBonus).toBe(0);
+    expect(
+      getSectorTechEffectsForYear(corp, "energy", 2080, ALL_COUNT).plantOutputBonus
+    ).toBeCloseTo(0.02);
+    expect(getSectorTechEffectsForYear(corp, "technology", 2080, ALL_COUNT).plantOutputBonus).toBe(
+      0
+    );
   });
 });
 

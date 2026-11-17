@@ -8,6 +8,10 @@ vi.mock("@/lib/constants/techTree", () => ({
     dominanceShield: 0.2,
   })),
 }));
+const LEGACY = { startingYear: 1991, mode: "off" as const };
+vi.mock("@/lib/corporations/techTree/legacyTechContext", () => ({
+  loadLegacyTechContext: vi.fn(async () => LEGACY),
+}));
 vi.mock("@/lib/corporations/strengthUpkeep", () => ({
   loadStrengthUpkeepStage: vi.fn(async () => 0),
   upkeptDominanceShield: vi.fn(() => 0.1),
@@ -33,13 +37,15 @@ describe("loadFoundingTechEffects", () => {
     const effects = await loadFoundingTechEffects(db, corporation, "manufacturing", 1991);
     expect(getSectorTechEffects).toHaveBeenCalledWith(
       expect.objectContaining({ type: "energy" }),
-      "manufacturing"
+      "manufacturing",
+      LEGACY
     );
     expect(upkeptDominanceShield).toHaveBeenCalledWith(
       expect.objectContaining({ type: "energy" }),
       "manufacturing",
       1991,
-      0
+      0,
+      LEGACY
     );
     expect(effects).toEqual({
       expansionDiscount: 0.15,

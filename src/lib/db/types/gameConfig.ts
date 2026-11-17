@@ -277,6 +277,15 @@ export interface GameConfig extends ProducerGameConfig {
    */
   decommissionGrantShare?: number;
 
+  /**
+   * How tech node effects from decades before the world's starting decade count
+   * (src/lib/techTree/rules/legacyTech.ts). Those nodes stay owned either way.
+   * "baseline": their effects keep their size but sit outside the research caps,
+   * so research adds on top. "off" or absent: they give no bonus, which is right
+   * for every fresh world. Cleared on a world reset.
+   */
+  legacyTechMode?: "baseline" | "off";
+
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
   /**

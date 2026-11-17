@@ -1,10 +1,16 @@
 /**
  * Decade brackets for the sector tech trees.
  *
- * Each sector tree has six decade tiers. A tier becomes researchable once
- * `currentYear` reaches its `startYear`; earlier decades are ungated baseline
- * and never appear. `currentYear` is the reset preset's `startingYear` plus
- * elapsed game years (see `src/lib/time/gameTime.ts`).
+ * Each sector tree has one tier per decade. A tier becomes researchable once
+ * `currentYear` reaches its `startYear`. Decades before the world's current
+ * decade are completed: a corporation founded then owns their baseline nodes
+ * (slots 1 to 9, both lanes) from the start, and the Tech tab lists them as
+ * granted rather than researchable. Those nodes stay owned for prerequisites,
+ * strategy availability and history, but whether their running effects count is
+ * set by `gameConfig.legacyTechMode`: "baseline" counts them outside the
+ * research caps, "off" (the default) counts none of them. See
+ * `src/lib/techTree/rules/legacyTech.ts`. `currentYear` is the reset preset's
+ * `startingYear` plus elapsed game years (see `src/lib/time/gameTime.ts`).
  */
 
 export interface TechDecade {
