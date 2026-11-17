@@ -265,11 +265,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Branch runs (development, staging, main) are the promotion path and keep
-        # six shards (about 7.5 minutes each). Feature pull requests use four:
-        # every repository in the account shares one hosted-runner pool, and
-        # fewer jobs per PR run keeps promotion runs from queueing behind them.
-        shard: ${{ fromJSON(github.event_name == 'pull_request' && github.head_ref != 'development' && github.head_ref != 'staging' && '[1, 2, 3, 4]' || '[1, 2, 3, 4, 5, 6]') }}
+        # Six shards everywhere (about 6 to 7 minutes each). Feature pull requests
+        # used four to leave runner headroom for promotions, but jobs showed no
+        # queueing, and four shards made the slowest shard about 11 minutes.
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

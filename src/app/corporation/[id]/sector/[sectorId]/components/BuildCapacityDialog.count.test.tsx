@@ -95,7 +95,7 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
       { commodity: "software", scope: "national", funded: 3, delivered: 3, unmet: 0 },
     ],
   });
-  expect(screen.getByText(/Funded buyers remain unfilled/)).toBeTruthy();
+  expect(screen.getByText(/Buyers still have open orders/)).toBeTruthy();
   expect(screen.queryByText(/buyers are already taking all they need/)).toBeNull();
 });
 
@@ -126,9 +126,9 @@ it("sizes funded building counts from the funded build room", () => {
     },
     "telecommunications"
   );
-  expect(screen.getByText("Room with buyers for every output: 4 buildings")).toBeTruthy();
+  expect(screen.getByText("Room for buyers of every product: 4 buildings")).toBeTruthy();
   expect(screen.queryByText(/share is fully claimed/i)).toBeNull();
-  const pane = screen.getByRole("region", { name: "Funded buyer demand" }).parentElement;
+  const pane = screen.getByRole("region", { name: "Buyer demand" }).parentElement;
   expect(pane?.className).toContain("overscroll-contain");
   expect(document.body.style.overflow).toBe("hidden");
 });
@@ -188,9 +188,7 @@ describe("BuildCapacityDialog count control", () => {
     renderDialog(vi.fn(), { ...plants, investment: undefined });
     const demand = screen.getByRole("button", { name: "Match demand" }) as HTMLButtonElement;
     expect(demand.disabled).toBe(true);
-    expect(
-      screen.getByText(/Automatic sizing needs a full turn of operating figures/)
-    ).toBeTruthy();
+    expect(screen.getByText(/Automatic sizing needs one full turn of results/)).toBeTruthy();
   });
 
   it("explains that outstanding debt withholds automatic sizing", () => {
@@ -201,7 +199,7 @@ describe("BuildCapacityDialog count control", () => {
     expect(
       (screen.getByRole("button", { name: "Match demand" }) as HTMLButtonElement).disabled
     ).toBe(true);
-    expect(screen.getByText(/loans, bonds or unpaid arrears/)).toBeTruthy();
+    expect(screen.getByText(/loans, bonds or unpaid bills/)).toBeTruthy();
   });
 
   it("does not offer Match demand for a build that fails the lower-price scenario", () => {
@@ -212,9 +210,7 @@ describe("BuildCapacityDialog count control", () => {
     expect(
       (screen.getByRole("button", { name: "Match demand" }) as HTMLButtonElement).disabled
     ).toBe(true);
-    expect(
-      screen.getByText(/Expansion does not produce positive cash when sale prices fall/)
-    ).toBeTruthy();
+    expect(screen.getByText(/Expanding would not make money if sale prices fall/)).toBeTruthy();
   });
 
   it("does not scale an extraction plant without deposit headroom", () => {
@@ -222,7 +218,9 @@ describe("BuildCapacityDialog count control", () => {
     expect(
       (screen.getByRole("button", { name: "Match demand" }) as HTMLButtonElement).disabled
     ).toBe(true);
-    expect(screen.getByText(/Automatic sizing for extraction needs deposit headroom/)).toBeTruthy();
+    expect(
+      screen.getByText(/Automatic sizing can't check how much of the resource is left/)
+    ).toBeTruthy();
   });
 
   it("keeps a funded build disabled until the loan pledge is reviewed", async () => {

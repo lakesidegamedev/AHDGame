@@ -629,7 +629,6 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
 
                       <FundedBuildDemand
                         rows={activeSuggestion.buildDemand}
-                        turn={activeSuggestion.buildDemandTurn}
                         unitsPerFacility={foundingQuote?.starterUnits}
                       />
                       {/* Stats row — plants */}
