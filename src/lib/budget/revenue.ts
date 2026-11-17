@@ -1,4 +1,5 @@
 import { initializeIncomeTaxRates, incomeTaxRevenue } from "./rules/incomeTaxTiers";
+import { nominalTaxBaseGrowthPct } from "./rules/nominalGrowth";
 /**
  * Federal / state revenue projections.
  *
@@ -892,15 +893,9 @@ function pullTowardGdpShare(
  * floors at 0), so a deflationary year does not become a base cut.
  */
 function nominalGrowthCeiling(factors: EconomicGrowthFactors): number {
-  const inflation = Number.isFinite(factors.inflationRate) ? Math.max(0, factors.inflationRate) : 0;
-  // `gdpGrowth` is finiteness-checked for the same reason `inflationRate` is:
-  // `Math.min(rate, NaN)` is NaN, so a single bad reading here would NaN every
-  // base that passes through the ceiling — exactly the failure `sanitizeStateTaxBases`
-  // exists to clean up, and the one `fiscalBaseGrowth`'s inflation guard already
-  // documents. Production callers pre-check via `metricRate`, but these growth
-  // helpers are exported and must not depend on every caller doing so.
-  const gdpGrowth = Number.isFinite(factors.gdpGrowth) ? factors.gdpGrowth : 0;
-  return gdpGrowth + inflation + TAX_BASE_GROWTH_PREMIUM_CAP;
+  return (
+    nominalTaxBaseGrowthPct(factors.gdpGrowth, factors.inflationRate) + TAX_BASE_GROWTH_PREMIUM_CAP
+  );
 }
 
 /**

@@ -52,6 +52,8 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import type { DebtTrajectory } from "@/lib/budget/rules/sovereignDebtSustainability";
+import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
 
 interface HistoryPoint {
   turn: number;
@@ -78,7 +80,16 @@ export interface CountryEconomyOutlook {
       neutral: number;
       history: HistoryPoint[];
     };
-    credit: { rating: string | null; debtToGdpRatio: number | null };
+    credit: {
+      rating: string | null;
+      debtToGdpRatio: number | null;
+      /** Which way the ratio is moving, from the same debt-dynamics identity the rollover prices. */
+      debtTrajectory: DebtTrajectory | null;
+      /** Primary balance, in percent of GDP, that holds the ratio flat. */
+      stabilisingPrimaryBalancePct: number | null;
+      /** Ladder rate the path is priced at, in percent, before premiums. */
+      debtPathBasisPct: number | null;
+    };
   };
   realEconomy: {
     wageGrowth: number | null;
@@ -245,6 +256,27 @@ export async function buildCountryEconomyOutlook(
   // page. See lib/budget/federalSurplus.
   const surplus = budget ? federalSurplus(budget) : null;
   const ratioGdp = budget ? resolveRatioGdp(budget) : 0;
+  // The same identity the fiscal-year rollover prices: where the ratio goes at
+  // the stored marginal rate and this year's primary balance. Display only.
+  const debtPrincipal = budget?.debt?.principal ?? 0;
+  const storedDebtRate = budget?.debt?.interestRate ?? 0;
+  const primaryBalance = surplus === null ? null : surplus + debtPrincipal * storedDebtRate;
+  // The rollover prices the identity off the ladder rate before premiums, so the
+  // displayed stabilising balance is read from that same breakdown. Pricing it
+  // off the stored effective rate showed a different number than the one charged.
+  const debtRate =
+    budget && primaryBalance !== null && ratioGdp > 0
+      ? explainSovereignRate({
+          debtToGdpRatio: debtPrincipal / ratioGdp,
+          primaryBalanceToGdp: primaryBalance / ratioGdp,
+          realGrowthPct: budget.economicFactors?.gdpGrowth,
+          inflationPct: budget.economicFactors?.inflationRate,
+          investorConfidence: budget.investorConfidence,
+          imfBailoutActive: budget.imfSovereignBailoutActive,
+          sovereignRiskAnchor: budget.sovereignRiskAnchor,
+        })
+      : null;
+  const debtPath = debtRate?.path ?? null;
 
   const publishedBoard = await readResetMetricBoard(db, countryId);
   const publishedObservations =
@@ -291,6 +323,10 @@ export async function buildCountryEconomyOutlook(
       credit: {
         rating: budget?.creditRating ?? null,
         debtToGdpRatio: budget?.debtToGdpRatio ?? null,
+        debtTrajectory: debtPath?.trajectory ?? null,
+        stabilisingPrimaryBalancePct:
+          debtPath === null ? null : round2(debtPath.stabilisingPrimaryBalanceToGdp * 100),
+        debtPathBasisPct: debtRate === null ? null : round2(debtRate.afterImfCapRate * 100),
       },
     },
     realEconomy: {

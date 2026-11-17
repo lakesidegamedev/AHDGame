@@ -15,6 +15,8 @@ export interface SnapshotLaw {
 
 export type DisplayEnactedLaw = EnactedLaw & { annualCost?: number };
 
+import type { SovereignMaturityLadder } from "@/lib/budget/rules/maturityLadder";
+
 export interface BudgetData {
   budget: FederalBudget;
   /** Era-dollar rate for this country and world preset, resolved by the server. */
@@ -45,6 +47,8 @@ export interface BudgetData {
   fyHistory?: FyHistoryPoint[];
   /** Live sovereign-default signals (Sovereign Health panel). */
   sovereign?: SovereignProjection;
+  /** Outstanding sovereign face by fiscal year of maturity (live only). */
+  maturityLadder?: SovereignMaturityLadder;
   /** True when the viewer is the seated finance minister (Minister lens gate). */
   isFinanceMinister?: boolean;
   /** Calendar year for planned-economy regime banding. */

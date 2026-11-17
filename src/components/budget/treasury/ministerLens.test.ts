@@ -65,11 +65,27 @@ describe("deriveMinisterFlags", () => {
 });
 
 describe("deriveMinisterProjection", () => {
-  it("projects revenue by GDP growth and spending by inflation + drift", () => {
+  it("projects revenue by nominal tax-base growth and spending by inflation + drift", () => {
     const p = deriveMinisterProjection(base);
-    expect(p.projRevenue).toBeCloseTo(102, 5); // 100 * 1.02
+    expect(p.projRevenue).toBeCloseTo(104, 5); // 100 * (1 + (2 + 2)/100)
     expect(p.projSpending).toBeCloseTo(103.4, 5); // 100 * (1 + 3.4/100)
+    expect(p.projSurplus).toBeCloseTo(0.6, 5);
+  });
+
+  it("grows revenue with inflation even when real output is flat", () => {
+    const p = deriveMinisterProjection({ ...base, gdpGrowth: 0, inflationRate: 3 });
+    expect(p.projRevenue).toBeCloseTo(103, 5);
+    expect(p.projSpending).toBeCloseTo(104.4, 5);
     expect(p.projSurplus).toBeCloseTo(-1.4, 5);
+  });
+
+  it("floors deflation for revenue while the ratio keeps its real GDP basis", () => {
+    const p = deriveMinisterProjection({ ...base, gdpGrowth: 1, inflationRate: -2 });
+    expect(p.projRevenue).toBeCloseTo(101, 5); // base rule: no deflation cut
+    expect(p.projSpending).toBeCloseTo(99.4, 5); // −2 + 1.4 drift
+    // Debt is flat under the surplus and the denominator grows 1% real, so the
+    // ratio eases. A nominal denominator (down 1%) would have raised it.
+    expect(p.projDebtToGdp).toBeLessThan(p.currentDebtToGdp);
   });
 
   it("raises the debt ratio when a large deficit outpaces growth", () => {
@@ -102,13 +118,13 @@ describe("deriveMinisterProjection", () => {
 describe("describeProjectionAssumptions", () => {
   it("states the ticket-1272 UK inputs that produced the 1B-deficit card", () => {
     expect(describeProjectionAssumptions({ gdpGrowth: -9.334, inflationRate: 1.51 })).toBe(
-      "Assumes -9.3% real GDP growth, 1.5% inflation; spending +2.9% (inflation + 1.4pp demographics)."
+      "Assumes -9.3% real GDP growth, 1.5% inflation; revenue -7.8% (real plus inflation), spending +2.9% (inflation + 1.4pp demographics)."
     );
   });
 
   it("signs positive growth explicitly", () => {
     expect(describeProjectionAssumptions({ gdpGrowth: 2, inflationRate: 2 })).toBe(
-      "Assumes +2.0% real GDP growth, 2.0% inflation; spending +3.4% (inflation + 1.4pp demographics)."
+      "Assumes +2.0% real GDP growth, 2.0% inflation; revenue +4.0% (real plus inflation), spending +3.4% (inflation + 1.4pp demographics)."
     );
   });
 });
