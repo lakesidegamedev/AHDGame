@@ -12,7 +12,11 @@ import { getPartyMap } from "@/lib/db/partyMap";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import { tallySeatsByParty, getLargestParty } from "@/lib/turn/parliamentaryGovernment";
+import {
+  tallySeatsByParty,
+  tallySeatsByPartyForCountries,
+  getLargestParty,
+} from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
@@ -185,7 +189,9 @@ async function snapshotForCountry(
   db: Db,
   countryId: CountryId,
   /** World preset, threaded in so each country does not re-read gameState. */
-  preset?: string
+  preset?: string,
+  /** Lower-chamber seats by party for this country, when the caller tallied them in bulk. */
+  seatsByPartyOverride?: Record<string, number>
 ): Promise<NationWorldSnapshot> {
   const config = COUNTRY_CONFIGS[countryId];
   const usId = COUNTRY_CONFIGS.US.id;
@@ -208,7 +214,7 @@ async function snapshotForCountry(
     const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
     const [executive, seatsByParty] = await Promise.all([
       resolveParliamentaryExecutive(db, countryId, gov),
-      tallySeatsByParty(db, countryId, preset),
+      seatsByPartyOverride ?? tallySeatsByParty(db, countryId, preset),
     ]);
 
     let legSeq: string | null = null;
@@ -244,8 +250,14 @@ export async function getNationWorldSnapshots(
   // Build for every REGISTERED country (COUNTRY_ORDER ∪ runtime-activated SCO/WAL)
   // so a seceded nation's /world card has a snapshot — matching getAllCountryAccess.
   const ids = await getRegisteredCountryIds(db);
+  const parliamentaryIds = ids.filter(
+    (id) => id !== COUNTRY_CONFIGS.US.id && isParliamentarySystem(COUNTRY_CONFIGS[id])
+  );
+  const seatsByCountry = await tallySeatsByPartyForCountries(db, parliamentaryIds, preset);
   const entries = await Promise.all(
-    ids.map(async (id) => [id, await snapshotForCountry(db, id, preset)] as const)
+    ids.map(
+      async (id) => [id, await snapshotForCountry(db, id, preset, seatsByCountry[id])] as const
+    )
   );
   return Object.fromEntries(entries) as Record<CountryId, NationWorldSnapshot>;
 }

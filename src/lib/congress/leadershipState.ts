@@ -99,31 +99,41 @@ type ChamberElection = SenateLeadershipElection | HouseLeadershipElection;
 type GameTime = Awaited<ReturnType<typeof getGameTime>>;
 
 /**
- * Reads one role's election, resolving it first when its window has closed so
- * the caller never shows a finished race as still open.
+ * Reads every requested role's election in one query, resolving those whose
+ * window has closed first so the caller never shows a finished race as still
+ * open. Results follow the order of `specs`.
  */
-async function loadFreshElection(
+async function loadFreshElections(
   db: Db,
-  role: LeadershipRoleSpec["role"],
-  leaderRole: LeadershipRole,
+  specs: LeadershipRoleSpec[],
   chamber: "senate" | "house"
-): Promise<{ election: ChamberElection | null; gameTime: GameTime }> {
+): Promise<Array<{ election: ChamberElection | null; gameTime: GameTime }>> {
   const electionCollection =
     chamber === "senate" ? "senateLeadershipElections" : "houseLeadershipElections";
+  const collection = db.collection<ChamberElection>(electionCollection);
+  const roles = specs.map((spec) => spec.role);
 
-  // Use the game clock so the endsAt window matches turn-based resolution
-  // even when real time has drifted.
-  let election = await db.collection<ChamberElection>(electionCollection).findOne({ _id: role });
+  const [docs, gameTime] = await Promise.all([
+    collection.find({ _id: { $in: roles } }).toArray(),
+    // Use the game clock so the endsAt window matches turn-based resolution
+    // even when real time has drifted.
+    getGameTime(),
+  ]);
+  const byRole = new Map<string, ChamberElection>(docs.map((doc) => [String(doc._id), doc]));
 
-  const gameTime = await getGameTime();
-  if (
-    election?.status === "voting" &&
-    isLeadershipElectionClosed(election, gameTime.currentTurn, gameTime.effectiveNow)
-  ) {
-    await resolveLeadershipElection(db, role, leaderRole, chamber, false);
-    election = await db.collection<ChamberElection>(electionCollection).findOne({ _id: role });
-  }
-  return { election, gameTime };
+  return Promise.all(
+    specs.map(async (spec) => {
+      let election = byRole.get(spec.role) ?? null;
+      if (
+        election?.status === "voting" &&
+        isLeadershipElectionClosed(election, gameTime.currentTurn, gameTime.effectiveNow)
+      ) {
+        await resolveLeadershipElection(db, spec.role, spec.leaderRole, chamber, false);
+        election = await collection.findOne({ _id: spec.role });
+      }
+      return { election, gameTime };
+    })
+  );
 }
 
 /**
@@ -297,9 +307,7 @@ export async function buildLeadershipElectionStates(
   specs: LeadershipRoleSpec[],
   viewer: LeadershipViewer
 ): Promise<LeadershipElectionState[]> {
-  const fresh = await Promise.all(
-    specs.map((spec) => loadFreshElection(db, spec.role, spec.leaderRole, chamber))
-  );
+  const fresh = await loadFreshElections(db, specs, chamber);
   const leaders = await loadLeaderDisplays(
     db,
     specs.map((spec) => spec.leaderRole),

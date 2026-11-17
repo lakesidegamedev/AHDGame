@@ -7,6 +7,8 @@ import * as Sentry from "@sentry/nextjs";
 
 import {
   isMarketPollingTeardown,
+  isPageTranslated,
+  isTranslatorDomRecursion,
   isValuelessNonErrorRejection,
 } from "@/lib/observability/sentryFilters";
 import { isTauriAclRefusalMessage, isTauriShell } from "@/lib/clientShell/tauriAclFallback";
@@ -164,6 +166,11 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       if (message.includes("removeChild") && message.includes("not a child")) return null;
       if (message.includes("insertBefore") && message.includes("not a child")) return null;
       if (message.includes("The object can not be found here")) return null;
+      if (
+        typeof document !== "undefined" &&
+        isTranslatorDomRecursion(message, isPageTranslated(document.documentElement))
+      )
+        return null;
 
       return scrubSentryEvent(withPlayerContext(event));
     },

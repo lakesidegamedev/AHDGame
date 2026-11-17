@@ -138,6 +138,51 @@ export async function tallySeatsByParty(
 }
 
 /**
+ * `tallySeatsByParty` for several countries with one read of `electedOfficials`
+ * instead of one read per country.
+ */
+export async function tallySeatsByPartyForCountries(
+  db: Db,
+  countryIds: CountryId[],
+  preset?: string
+): Promise<Record<string, Record<string, number>>> {
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  const result: Record<string, Record<string, number>> = {};
+  if (countryIds.length === 0) return result;
+  const layouts = await Promise.all(
+    countryIds.map(
+      async (countryId) =>
+        [
+          countryId,
+          (await loadRuntimeCountryOffices(db, countryId, activePreset)).lowerOfficeType,
+        ] as const
+    )
+  );
+  const lowerOfficeByCountry = new Map<string, string>(layouts);
+  for (const countryId of countryIds) result[countryId] = {};
+
+  const officials = await (
+    await getElectedOfficialsCollection(db)
+  )
+    .find(
+      {
+        $or: layouts.map(([countryId, officeType]) => ({ officeType, countryId })),
+      },
+      { projection: { party: 1, seatsHeld: 1, countryId: 1, officeType: 1 } }
+    )
+    .toArray();
+
+  for (const official of officials) {
+    if (!official.party || !official.countryId) continue;
+    // The $or pairs office and country loosely; keep only the exact pair.
+    if (lowerOfficeByCountry.get(official.countryId) !== official.officeType) continue;
+    const seats = result[official.countryId];
+    seats[official.party] = (seats[official.party] ?? 0) + (official.seatsHeld ?? 1);
+  }
+  return result;
+}
+
+/**
  * Return the party key (sequentialId string) with the most seats,
  * or null when the map is empty.
  */
