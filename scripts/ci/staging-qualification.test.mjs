@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   findDevelopmentQualification,
+  findPullRequestQualification,
   findStagingQualification,
 } from "./staging-qualification.mjs";
 
@@ -747,4 +748,119 @@ test("without a wait budget a development promotion does not wait", async () => 
   });
   assert.equal((await findDevelopmentQualification(f.input)).reuse, false);
   assert.equal(polls(), 1);
+});
+
+function pushFixture() {
+  const f = fixture();
+  const pushed = sha("7"),
+    parent = sha("8"),
+    prHead = sha("a");
+  const side = (ref, commit) => ({ ref, sha: commit, repo: f.state.repository });
+  const pr = {
+    number: 60,
+    state: "closed",
+    merged_at: "2026-10-14T11:30:00Z",
+    head: side("feature-x", prHead),
+    base: side("development", parent),
+    merge_commit_sha: pushed,
+  };
+  const name = `qualified-feature-x-development-tree-${f.tree}`;
+  f.state.run = { ...f.state.run, head_branch: "feature-x", head_sha: prHead };
+  f.state.jobs.jobs[1].steps[0].name = name;
+  f.state.check.head_sha = prHead;
+  for (const gate of Object.values(f.state.security)) {
+    gate.run = { ...gate.run, head_branch: "feature-x", head_sha: prHead };
+    gate.check.head_sha = prHead;
+  }
+  const commit = { sha: pushed, parents: [{ sha: parent }], commit: { tree: { sha: f.tree } } };
+  const base = f.input.api;
+  const state = { ...f.state, pr, commit, pulls: [pr] };
+  const calls = [];
+  const api = async (path) => {
+    calls.push(path);
+    if (path === "rules/branches/development") return state.rules;
+    if (path === `commits/${pushed}`) return state.commit;
+    if (path === `commits/${pushed}/pulls?per_page=30`) return state.pulls;
+    return base(path);
+  };
+  const input = {
+    ...f.input,
+    api,
+    eventName: "push",
+    event: { ref: "refs/heads/development", after: pushed, repository: state.repository },
+    checkout: { ...f.input.checkout, commit: pushed },
+  };
+  return { input, state, calls, tree: f.tree, pushed };
+}
+
+test("a development push reuses the merged pull request's full qualification", async () => {
+  const f = pushFixture();
+  const result = await findPullRequestQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(result.qualificationRun, 100);
+  assert.equal(result.qualificationPr, 60);
+  assert.equal(result.promotion, false);
+});
+
+test("a pull request run on a different tree is not reused", async () => {
+  const f = pushFixture();
+  f.state.jobs.jobs[1].steps[0].name = `qualified-feature-x-development-tree-${sha("5")}`;
+  assert.equal((await findPullRequestQualification(f.input)).reuse, false);
+});
+
+test("a development push that is not a pull request merge is not reused", async () => {
+  const f = pushFixture();
+  f.state.pulls = [];
+  assert.equal((await findPullRequestQualification(f.input)).reuse, false);
+});
+
+for (const [name, mutate] of [
+  ["unmerged pull request", (f) => (f.state.pr.merged_at = null)],
+  ["different merge commit", (f) => (f.state.pr.merge_commit_sha = sha("6"))],
+  ["wrong base branch", (f) => (f.state.pr.base.ref = "staging")],
+  ["fork head", (f) => (f.state.pr.head.repo = { id: 1, full_name: "fork/game" })],
+  ["pushed tree differs", (f) => (f.state.commit.commit.tree.sha = sha("5"))],
+  ["run failed", (f) => (f.state.run.conclusion = "failure")],
+  ["run too old", (f) => (f.state.run.updated_at = "2026-10-10T10:00:00Z")],
+  ["run for another head", (f) => (f.state.run.head_sha = sha("5"))],
+  ["receipt not native", (f) => (f.state.check.app.id = 1)],
+  ["custom-rules failed", (f) => (f.state.security["semgrep.yml"].run.conclusion = "failure")],
+  [
+    "dependency-review missing receipt",
+    (f) => (f.state.security["dependency-review.yml"].jobs.jobs[0].steps = []),
+  ],
+  ["workflow edited in the merge", (f) => (f.state.blobs[".github/workflows/ci.yml"] = sha("5"))],
+  [
+    "helper edited in the merge",
+    (f) => (f.state.blobs["scripts/ci/staging-qualification.mjs"] = sha("5")),
+  ],
+  [
+    "extra required gate",
+    (f) => f.state.rules[0].parameters.required_status_checks.push({ context: "other" }),
+  ],
+]) {
+  test(`development push falls back to full checks: ${name}`, async () => {
+    const f = pushFixture();
+    mutate(f);
+    assert.equal((await findPullRequestQualification(f.input)).reuse, false);
+  });
+}
+
+test("a push other than development never reuses a pull request run", async () => {
+  const f = pushFixture();
+  f.input.event.ref = "refs/heads/main";
+  assert.equal((await findPullRequestQualification(f.input)).reuse, false);
+  const g = pushFixture();
+  g.input.eventName = "pull_request";
+  assert.equal((await findPullRequestQualification(g.input)).reuse, false);
+});
+
+test("a development push whose API calls fail falls back", async () => {
+  const f = pushFixture();
+  const api = f.input.api;
+  f.input.api = async (path) => {
+    if (path.startsWith("check-runs/")) throw new Error("unavailable");
+    return api(path);
+  };
+  assert.equal((await findPullRequestQualification(f.input)).reuse, false);
 });

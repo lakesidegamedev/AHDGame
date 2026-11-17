@@ -1,0 +1,124 @@
+name: Cache warm
+
+# A development push that reuses a pull request's qualification skips the CI
+# build and typecheck, and those are the jobs that save the caches every pull
+# request restores (pull request caches are not shared across pull requests).
+# This workflow saves the same caches for those pushes, off the critical path:
+# it runs after CI completes and gates nothing.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [development]
+
+concurrency:
+  group: cache-warm
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  decide:
+    # Only push runs that CI finished successfully by reusing evidence.
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      warm: ${{ steps.build-job.outputs.warm }}
+    steps:
+      - name: Did CI skip its build job
+        id: build-job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ && "$ATTEMPT" =~ ^[0-9]+$ ]]
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.name == "build")][0].conclusion // "none"')
+          echo "build job: $conclusion"
+          if [[ "$conclusion" == "skipped" ]]; then
+            echo "warm=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "warm=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  typecheck-cache:
+    needs: decide
+    if: needs.decide.outputs.warm == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - uses: actions/cache@v4
+        with:
+          path: tsconfig.tsbuildinfo
+          key: typecheck-${{ runner.os }}-${{ hashFiles('package-lock.json', 'tsconfig.json') }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            typecheck-${{ runner.os }}-${{ hashFiles('package-lock.json', 'tsconfig.json') }}-
+      - name: Typecheck
+        run: npm run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=12288
+
+  build-cache:
+    needs: decide
+    if: needs.decide.outputs.warm == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Restore Turbopack compiler cache
+        id: compiler-cache
+        uses: actions/cache/restore@v4
+        continue-on-error: true
+        timeout-minutes: 2
+        with:
+          path: .next/cache/turbopack
+          key: ${{ runner.os }}-${{ runner.arch }}-node22-turbopack-v1-${{ hashFiles('package-lock.json', 'package.json', 'next.config.ts', 'tsconfig*.json', 'postcss.config.*') }}-${{ hashFiles('src/**', 'content/**', 'messages/**', 'public/**', 'sentry.*.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-node22-turbopack-v1-${{ hashFiles('package-lock.json', 'package.json', 'next.config.ts', 'tsconfig*.json', 'postcss.config.*') }}-
+      - name: Discard an incomplete compiler cache restore
+        if: steps.compiler-cache.outcome == 'failure'
+        run: |
+          pkill -f 'tar -xf .*cache.tzst' || true
+          for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -f 'tar -xf .*cache.tzst' >/dev/null || break; sleep 1; done
+          if [ -d .next/cache/turbopack ]; then
+            mv .next/cache/turbopack "$RUNNER_TEMP/turbopack-discarded-$$"
+            rm -rf "$RUNNER_TEMP/turbopack-discarded-$$" || true
+          fi
+      - name: Add swap
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /mnt/build.swap
+          sudo chmod 600 /mnt/build.swap
+          sudo mkswap /mnt/build.swap
+          sudo swapon /mnt/build.swap
+      - name: Next build
+        if: steps.compiler-cache.outputs.cache-hit != 'true'
+        run: npm run verify:build
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+          CI: "true"
+          NEXT_BUILD_CPUS: "1"
+      - name: Save Turbopack compiler cache
+        if: steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: .next/cache/turbopack
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
