@@ -1,25 +1,10 @@
 /**
- * Funded demand floor (gameConfig.producerDemandFloorStage).
- *
- * Public buying and household transfers are the budget lines scaled by the
- * plant economy's share of GDP. A young world has almost no plants, so the
- * share is near zero, nothing is bought, nobody builds and the share stays
- * near zero. The floor lifts that share to a minimum so the budget lines the
- * treasury already spends reach the plant market from the first turn. Once
- * plants grow past the floor the measured share is used unchanged.
- *
- * The money is the same budget outlay as before (minted against the treasury's
- * own spending, or drawn from its cash under fiscal scale stage 2). Nothing
- * extra is created; the floor only raises how much of each line is spent here,
- * and the share can never exceed 1, the whole line.
- *
- * Pure: stage and measured share in, share out.
+ * Funded demand floor (gameConfig.producerDemandFloorStage). Budget lines are
+ * scaled by the plant economy's share of GDP, which is near zero in a young
+ * world, so nothing is bought and nobody builds. The floor sets a minimum share.
  */
 
-/**
- * Minimum plant-economy share of GDP by stage. Stage 1 is the standing floor
- * for a young world; higher stages are deliberate raises.
- */
+/** Minimum plant-economy share of GDP by stage. */
 export const DEMAND_FLOOR_SHARE_BY_STAGE: readonly number[] = [0, 2e-6, 1e-5, 5e-5];
 
 export function demandFloorShare(stage: number | undefined): number {
