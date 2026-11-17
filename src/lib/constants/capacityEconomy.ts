@@ -53,5 +53,6 @@ export {
   techBuildTurns,
   hostBuildPriceIndex,
   computeBuildCost,
+  foundingBuildMultiplier,
 } from "@/lib/corporations/rules/capacityEconomy";
 export type { BuildCostInputs, BuildCostBreakdown } from "@/lib/corporations/rules/capacityEconomy";
