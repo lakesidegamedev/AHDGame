@@ -537,6 +537,11 @@ describe("demographicTurnoutTurn", () => {
 
       await processPartyGOTV();
 
+      // The national GDP index groups by countryId; a projection without it
+      // files every region under the US and prices other countries as unknown.
+      const stateFindArgs = db.collectionMocks["states"]!.find.mock.calls[0];
+      expect(stateFindArgs[1]?.projection).toMatchObject({ countryId: 1, gdp: 1, population: 1 });
+
       const treasuryOps = db.collectionMocks["politicalParties"]!.bulkWrite.mock
         .calls[0][0] as Array<{
         updateOne: {
