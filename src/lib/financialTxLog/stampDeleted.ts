@@ -5,14 +5,14 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 /**
  * Stamp `subjectDeletedAt` / `counterpartyDeletedAt` on every tx row that
  * references the entity, then extend `expiresAt` so the row survives the
- * full 168-turn forensic window from event time.
+ * full 720-turn forensic window from event time.
  *
  * Usage: call this immediately before deleting a character / corporation /
  * party / imperial character. Tx history is the source of truth for admin
  * audit; cascade deletion would erase forensic trails.
  *
  * Why two-step (stamp + extend): a freshly-emitted tx that's about to fall
- * out of the 168-turn window would still drop after deletion. Re-pinning
+ * out of the 720-turn window would still drop after deletion. Re-pinning
  * expiresAt to the deletion moment guarantees admins have at least a full
  * turn-window after the entity is gone to investigate.
  *

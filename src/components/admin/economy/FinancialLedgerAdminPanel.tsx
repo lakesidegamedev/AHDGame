@@ -137,14 +137,15 @@ interface TimelineProps {
   prefilterSubjectName?: string;
 }
 
-// Phase 5: turn-window presets surface the 168-turn retention window default
-// so admins don't have to manually compute "now − 168" each time. The values
+// Phase 5: turn-window presets. 168 turns stays the default view; the log keeps
+// TX_TTL_TURNS (720, ~30 days) so the longest preset reaches the full window. Admins don't have to manually compute "now − 168" each time. The values
 // are turn counts; the dropdown's label flips them into IRL durations at the
 // default 60-min cadence.
 const WINDOW_PRESETS: { label: string; turns: number }[] = [
   { label: "Last 24 turns (~24h)", turns: 24 },
   { label: "Last 72 turns (~3d)", turns: 72 },
   { label: "Last 168 turns (~7d)", turns: 168 },
+  { label: "Last 720 turns (~30d)", turns: 720 },
   { label: "All available", turns: 0 },
 ];
 

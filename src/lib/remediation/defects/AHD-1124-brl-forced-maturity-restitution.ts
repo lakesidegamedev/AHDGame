@@ -1,7 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
-import type { ExchangeRate } from "@/lib/db/types";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -24,7 +23,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
  * bond, so it was sold at the bug's price and is made good at
  * {@link COUNTERFACTUAL_BRL_RATE}.
  *
- * Rows are hardcoded because `financialTxLog` carries a 7-day TTL;
+ * Rows are hardcoded because `financialTxLog` carried a 7-day TTL at the time;
  * {@link FORCED_BRL_MATURITIES} keeps the heal re-derivable and testable.
  * `brlAmount` is `meta.bondAmount` when present, else `amount`.
  *
