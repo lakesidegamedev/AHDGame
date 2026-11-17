@@ -47,6 +47,7 @@ import {
   blendedOwnerRate,
   corporateTaxMultiplierFor,
   passThroughOwnerTax,
+  netPassThroughProfit,
   passThroughTaxMode,
 } from "@/lib/corporations/rules/passThroughTax";
 import type { ProcessSectorsStageContext } from "@/lib/turn/corporation/sectorCalculations";
@@ -517,7 +518,7 @@ function prepareProcessCorporationAccount(
       }
     );
     const ownerTax = passThroughOwnerTax({
-      taxableProfit: Math.max(0, consolidatedNet) + Math.max(0, perTurnBondCouponIncome),
+      taxableProfit: netPassThroughProfit(consolidatedNet, perTurnBondCouponIncome),
       phase: context.passThroughPhase,
       rates: ownerRates,
     });

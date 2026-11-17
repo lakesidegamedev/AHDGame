@@ -22,6 +22,7 @@ import {
   legalStructureTaxLabel,
   passThroughOwnerTax,
   passThroughReformPhase,
+  netPassThroughProfit,
   passThroughTaxMode,
 } from "@/lib/corporations/rules/passThroughTax";
 import { loadBankingPolicy } from "@/lib/banking/policy";
@@ -391,7 +392,7 @@ export async function computeIncomeStatement(
     const homeBudget = federalBudgets.find((b) => b.countryId === corporation.countryId);
     const hqBudget = hq ? stateBudgetsForTax.find((b) => b._id === hq) : undefined;
     const ownerTax = passThroughOwnerTax({
-      taxableProfit: Math.max(0, consolidatedTaxableNet) + Math.max(0, dailyCouponIncomeLocal),
+      taxableProfit: netPassThroughProfit(consolidatedTaxableNet, dailyCouponIncomeLocal),
       phase: passThroughPhase,
       rates: blendedOwnerRate(
         (corporation.shareholders ?? []).map((sh) => ({
