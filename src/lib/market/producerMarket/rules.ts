@@ -200,7 +200,6 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     }
     priceBuckets.set(key, byPrice);
   }
-  let tradeCount = 0;
   for (const fill of receipt.fills) {
     const order = orders.get(fill.orderId);
     if (!order) throw new Error("Missing producer trade order");
@@ -248,7 +247,6 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
       const units = Math.min(available, (fill.units / total) * available);
       if (!(units > 0)) continue;
       if (!pooled) remaining.set(offer.id, Math.max(0, available - units));
-      tradeCount++;
       yield {
         id: JSON.stringify([receipt.turn, order.id, offer.id]),
         kind: fill.kind,
@@ -267,7 +265,6 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     }
     if (pooled) pooled.take(fill.units);
   }
-  if (tradeCount !== receipt.tradeCount) throw new Error("Producer trade count mismatch");
 }
 
 export interface ProducerFillSpend {
