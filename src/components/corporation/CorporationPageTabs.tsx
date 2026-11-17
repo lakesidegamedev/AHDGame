@@ -73,3 +73,7 @@ export const DefaultedBondCrisisModal = dynamic(
   // Modal overlay — render nothing (not a tab skeleton) while the chunk loads.
   { loading: () => null }
 );
+
+export const SupplyChainTab = dynamic(() => import("@/components/corporation/SupplyChainTab"), {
+  loading: TabFallback,
+});

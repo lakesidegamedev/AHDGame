@@ -1031,6 +1031,7 @@ export type CorpTabId =
   | "financials"
   | "sectors"
   | "commodities"
+  | "supply-chain"
   | "shares"
   | "credit"
   | "charts"
