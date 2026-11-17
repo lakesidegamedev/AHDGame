@@ -31,6 +31,14 @@ import type { MapBlocId } from "@/lib/world/blocMembership";
 const DEFAULT_BLOC_PALETTE = buildBlocPalette([]);
 
 /**
+ * Outline for a nation picked in the map's two-nation comparison. Stroke only:
+ * the pick must stay visible on top of a heatmap or tier fill without replacing
+ * the figure it is painted with.
+ */
+const COMPARE_STROKE = "var(--primary, #3b82f6)";
+const COMPARE_STROKE_WIDTH = 1.9;
+
+/**
  * pathRefsMap key for the single merged Background Nations layer. The landing
  * globe writes one concatenated `d` here per frame instead of touching ~150
  * individual background paths.
@@ -151,6 +159,11 @@ interface MapSVGContentProps {
   blocLookup?: ReadonlyMap<string, MapBlocId>;
   blocPalette?: Readonly<Record<string, MapBlocStyle>>;
   /**
+   * Countries picked in the two-nation comparison, keyed by country id. Each is
+   * outlined so both sides of the comparison are findable on the globe itself.
+   */
+  comparedCountryIds?: ReadonlySet<string> | null;
+  /**
    * Era art for the landing globe. `underlay` paints after the starfield and
    * before the sphere, so anything in it passes behind the globe; `overlay`
    * paints last. Both must be inert (`pointer-events: none`): they sit over
@@ -210,6 +223,7 @@ export default function MapSVGContent({
   inspectableFeatureIds,
   blocLookup,
   blocPalette = DEFAULT_BLOC_PALETTE,
+  comparedCountryIds,
   underlay,
   overlay,
   backgroundMacroFeatureIds,
@@ -414,6 +428,11 @@ export default function MapSVGContent({
           : undefined;
         const isHov =
           !isAnimating && hoveredOwnerKey != null && featureOwnerKey(id) === hoveredOwnerKey;
+        // The comparison outline follows the owning country, so a British-Isles
+        // overlay blob and its base feature read as one pick.
+        const comparedOwner =
+          (feature.properties?.ownerCountryId as string | undefined) ?? WORLD_COUNTRY_ISO_TO_ID[id];
+        const isCompared = comparedOwner ? comparedCountryIds?.has(comparedOwner) === true : false;
 
         // Four-tier mode keeps four fills. Inspectable background aggregates
         // receive their own path, while unsimulated land stays merged above.
@@ -469,8 +488,10 @@ export default function MapSVGContent({
               }}
               d={paths.get(id) ?? ""}
               fill={tierFill}
-              stroke={tierStroke}
-              strokeWidth={isHov ? 1.5 : TIER_STROKE_WIDTHS[tier]}
+              stroke={isCompared ? COMPARE_STROKE : tierStroke}
+              strokeWidth={
+                isCompared ? COMPARE_STROKE_WIDTH : isHov ? 1.5 : TIER_STROKE_WIDTHS[tier]
+              }
               style={{
                 outline: "none",
                 cursor: isAnimating ? "default" : "pointer",
@@ -526,6 +547,10 @@ export default function MapSVGContent({
             biFill = isHov ? "#004400" : "#000e00";
             biStroke = wireframeColor;
             biStrokeWidth = isHov ? 1.2 : 0.6;
+          }
+          if (isCompared) {
+            biStroke = COMPARE_STROKE;
+            biStrokeWidth = COMPARE_STROKE_WIDTH;
           }
           return (
             <path
@@ -647,6 +672,13 @@ export default function MapSVGContent({
           fillColor = isHov ? "#004400" : "#000e00";
           strokeColor = wireframeColor;
           strokeWidth = isHov ? 1.2 : 0.6;
+        }
+
+        // Comparison picks win the stroke: the fill still says what the active
+        // filter says, while the outline says "this is one of my two nations".
+        if (isCompared) {
+          strokeColor = COMPARE_STROKE;
+          strokeWidth = COMPARE_STROKE_WIDTH;
         }
 
         return (
