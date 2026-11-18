@@ -3,6 +3,7 @@
 import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useCallback, useEffect, useState } from "react";
 import type { CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -77,13 +78,12 @@ export default function ImpeachmentPanel({
 
   // President cases are keyed by the target's characterId; governor cases by
   // state + office (the client need not know the sitting governor's id).
-  const hasTarget = isGovernor ? Boolean(state && targetName) : Boolean(targetCharacterId);
+  const hasImpeachableTarget =
+    getCountryClientConfig(countryId).governmentType === "presidential" &&
+    (isGovernor ? Boolean(state && targetName) : Boolean(targetCharacterId));
 
   const load = useCallback(async () => {
-    if (!hasTarget) {
-      setLoading(false);
-      return;
-    }
+    if (!hasImpeachableTarget) return;
     try {
       const params = isGovernor
         ? `countryId=${countryId}&office=governor&state=${encodeURIComponent(state ?? "")}`
@@ -104,7 +104,7 @@ export default function ImpeachmentPanel({
     } finally {
       setLoading(false);
     }
-  }, [countryId, isGovernor, state, targetCharacterId, hasTarget]);
+  }, [countryId, isGovernor, state, targetCharacterId, hasImpeachableTarget]);
 
   useEffect(() => {
     void load();
@@ -152,7 +152,7 @@ export default function ImpeachmentPanel({
     }
   };
 
-  if (!hasTarget || loading) return null;
+  if (!hasImpeachableTarget || loading) return null;
 
   const officeLabel = isGovernor ? "Governor" : "president";
   // Governor cases run as a single conviction vote at the "senate" stage.
