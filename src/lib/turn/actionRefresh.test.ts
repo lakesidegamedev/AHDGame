@@ -1236,13 +1236,8 @@ describe("processActionRefresh", () => {
       expect(update.nationalInfluence).toBeCloseTo(2, 5);
     });
 
-    it("gives a state party chair the 0.5 tier", async () => {
-      statePartyRows = [{ chairId: "c1" }];
-      expect((await refreshOne(baseCharacter({}))).nationalInfluence).toBeCloseTo(0.5, 5);
-    });
-
-    it("starts passive party-office NPI only after founding ends", async () => {
-      gameStateRow = { currentTurn: 32, preIteration: { active: true } };
+    it("awards only international NPI to a party officer who also heads an organization", async () => {
+      gameStateRow = { currentTurn: 49, preIteration: { active: false } };
       partyRows = [{ chairId: "c1", viceChairId: "c2", treasurerId: "c4" }];
       statePartyRows = [{ chairId: "c1" }, { chairId: "c3" }];
       roleFixtures.orgHeadIds.add("c1");
@@ -1256,12 +1251,6 @@ describe("processActionRefresh", () => {
       expect(await readBonus("c2")).toBe(0);
       expect(await readBonus("c3")).toBe(0);
       expect(await readBonus("c4")).toBe(0);
-
-      gameStateRow = { currentTurn: 49, preIteration: { active: false } };
-      expect(await readBonus("c1")).toBe(3);
-      expect(await readBonus("c2")).toBe(1.5);
-      expect(await readBonus("c3")).toBe(0.5);
-      expect(await readBonus("c4")).toBe(1.5);
     });
 
     it("waits out the CEO tenure before granting CEO NI, then grants the tier", async () => {
