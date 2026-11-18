@@ -8,13 +8,14 @@ import { scoreGovernanceStyle } from "./score";
 import { aggregateNationalPoliticalMetrics } from "@/lib/politicalMetrics/aggregate";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { readResetDemocraticHealth } from "@/lib/resetMetrics/readDemocraticHealth";
 
 type DemocraticHealthGameState =
   Pick<GameState, "preset" | "presidentialTenureByCountry"> | null | undefined;
 
 /**
- * Load the same national Democratic Health score shown by the political
- * metrics screen, without loading the rest of that screen's evidence payload.
+ * Load the same national Democratic Health score shown by the country's
+ * metrics screen (the v2 board for v2 countries, else the political board), without loading the rest of that screen's evidence payload.
  * The election engine consumes this read-only value once per presidential vote
  * turn and applies its own candidate-pressure channel from the snapshot.
  */
@@ -23,6 +24,13 @@ export async function loadDemocraticHealth(
   countryId: CountryId,
   gameState: DemocraticHealthGameState
 ): Promise<number | null> {
+  // A v2 country's laws are delivered on the v2 board, not the political
+  // board, so its score comes from v2. An unreadable v2 board is neutral
+  // rather than a fallback to the political board, which decays in v2 worlds.
+  const v2 = await readResetDemocraticHealth(db, countryId);
+  if (v2.status === "ready") return v2.value;
+  if (v2.status === "unavailable") return null;
+
   const [docs, states] = await Promise.all([
     politicalMetricsCollection(db).find({ countryId }).toArray(),
     statesCollection<Pick<State, "_id" | "population">>(db)
