@@ -346,12 +346,13 @@ export default function CorporationGuidePage() {
                   <tr>
                     <td className="px-4 py-2.5 text-foreground font-medium">Carbon emissions</td>
                     <td className="px-4 py-2.5">
-                      <Tag variant="negative">−3%</Tag>
+                      <Tag variant="negative">Up to 0.75 pp penalty</Tag>
                     </td>
+                    <td className="px-4 py-2.5">Varies by sector and operating strategy</td>
                     <td className="px-4 py-2.5">
-                      Energy, Chemicals, Manufacturing, Autos, Extraction
+                      No penalty at or below 3 metric tons per person. The base penalty rises
+                      through 25 metric tons per person before strategy weights and caps apply.
                     </td>
-                    <td className="px-4 py-2.5">3-25 MT per capita</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5 text-foreground font-medium">Cost of living</td>
@@ -823,10 +824,6 @@ Scaled growth  = 0.65 × ln(1 + dailyBudget / 100,000)
                   <li>
                     • <strong className="text-foreground">Tariffs</strong>. Hurts cross-border
                     operations
-                  </li>
-                  <li>
-                    • <strong className="text-foreground">Carbon emission caps</strong>. Energy,
-                    Chemicals, Manufacturing, Autos, Extraction
                   </li>
                   <li>
                     • <strong className="text-foreground">High sovereign debt</strong>. −15% cap on
