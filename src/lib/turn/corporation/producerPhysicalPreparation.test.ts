@@ -207,10 +207,10 @@ describe("physical producer preparation", () => {
         0
       );
     expect(plan.labourCost).toBeCloseTo(outputValue * getSectorLaborShare("financial", 1991), 8);
-    expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.04, 8);
+    expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.036, 8);
     // Cold upkeep alone: the floor the site bill keeps when short inputs cut the run.
     expect(plan.idleOperatingCost).toBeCloseTo(
-      outputValue * 0.04 * COLD_CAPACITY_UPKEEP_FRACTION,
+      outputValue * 0.036 * COLD_CAPACITY_UPKEEP_FRACTION,
       8
     );
     env.lookups.priceRatioByCommodity.set("financial_services", 2);

@@ -3,9 +3,9 @@
   "sectorOps": 420,
   "corpOps": 60,
   "totalRevenueGenerated": 6460696.071294792,
-  "totalIncomeGenerated": 1498306.8949659767,
+  "totalIncomeGenerated": 1524974.966037701,
   "sectorsProcessed": 420,
-  "sha256": "b1c1feda388e7f1dab851702674f7c48a50383c32c5517476003cb5478d248ed",
+  "sha256": "427a6f2704c3cf6319cc16012df5b122e32ecf016c8d67fd9680bc71249a3c7f",
   "shadow": {
     "plants": 420,
     "skipped": 0,
@@ -16,7 +16,7 @@
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "aec39e37d9c86f6e7c1be5c50764671f35440bd96c85d6ac3b6b5b870a5bcbcb"
+    "sha256": "eb6213b918015afcd50a41f49a273efb4e9b587d1d38bfb46c2a292e00171869"
   },
   "clearing": {
     "sectorsWithClearing": 420,
@@ -48,6 +48,6 @@
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "4b80301828d1bc29258165e2e28af0da81e5b19744a4a2e42918e94747c4f062"
+    "sha256": "d12805a182bd086a3fff24374e53d9d9a6cff6358dfc62c60267e350b556d8ea"
   }
 }
