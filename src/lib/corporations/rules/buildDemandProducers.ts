@@ -5,10 +5,12 @@ import { getSectorTechEffects, type LegacyTechContext } from "@/lib/constants/te
 import type { CommodityType } from "@/lib/constants/commodities";
 import { deliveredFraction } from "../buildDelivery";
 import { productionProductivityMultiplier } from "./productionProductivity";
-import type { PlantThroughputSector } from "./plantThroughput";
 
 export function buildAdviceOutputMultiplier(input: {
-  sector: PlantThroughputSector;
+  sector: Pick<
+    CorporateSector,
+    "sectorType" | "strategyId" | "transitionFromStrategyId" | "transitionStartTurn"
+  >;
   supply: Partial<Record<CommodityType, number>>;
   owner?: Corporation;
   techEnabled: boolean;

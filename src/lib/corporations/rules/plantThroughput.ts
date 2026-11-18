@@ -13,7 +13,7 @@ const STANDARD_RETAIL_THROUGHPUT_2027 = 1.26;
 /** Throughput scales the run and its input purchases at the same rate. */
 export function plantThroughputMultiplier(
   sector: PlantThroughputSector,
-  currentTurn: number,
+  currentTurn: number | undefined,
   preset?: string | null
 ): number {
   if (sector.sectorType !== "retail" || preset !== "2027-default") {
@@ -23,7 +23,12 @@ export function plantThroughputMultiplier(
     strategyId === "standard" ? STANDARD_RETAIL_THROUGHPUT_2027 : 1;
   const target = multiplierFor(sector.strategyId ?? "standard");
   const { transitionFromStrategyId, transitionStartTurn } = sector;
-  if (!transitionFromStrategyId || transitionStartTurn == null || !Number.isFinite(currentTurn))
+  if (
+    !transitionFromStrategyId ||
+    transitionStartTurn == null ||
+    currentTurn == null ||
+    !Number.isFinite(currentTurn)
+  )
     return target;
 
   const progress = Math.min(
