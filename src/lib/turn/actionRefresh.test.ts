@@ -131,21 +131,8 @@ describe("processActionRefresh", () => {
   let persistFixture = false;
   let characterRows: Character[] = [];
   let gameStateRow: { currentTurn: number; preIteration?: { active: boolean } } | null = null;
-  let partyRows: {
-    countryId: string;
-    sequentialId: number;
-    chairId?: string;
-    viceChairId?: string;
-  }[] = [];
-  let statePartyRows: {
-    _id: string;
-    countryId: string;
-    stateId: string;
-    partyId: string;
-    chairId?: string;
-    organization: number;
-    organizationUnits?: number;
-  }[] = [];
+  let partyRows: { chairId?: string; viceChairId?: string; treasurerId?: string }[] = [];
+  let statePartyRows: { chairId: string }[] = [];
   const mockNppBulkWrite = vi.fn();
 
   beforeEach(async () => {
@@ -1250,73 +1237,31 @@ describe("processActionRefresh", () => {
     });
 
     it("gives a state party chair the 0.5 tier", async () => {
-      statePartyRows = [
-        {
-          _id: "CA_1",
-          countryId: "US",
-          stateId: "CA",
-          partyId: "1",
-          chairId: "c1",
-          organization: 0,
-        },
-      ];
+      statePartyRows = [{ chairId: "c1" }];
       expect((await refreshOne(baseCharacter({}))).nationalInfluence).toBeCloseTo(0.5, 5);
     });
 
-    it("uses the actual Org balance for founding party offices and restores the regular rates", async () => {
+    it("starts passive party-office NPI only after founding ends", async () => {
       gameStateRow = { currentTurn: 32, preIteration: { active: true } };
-      partyRows = [{ countryId: "US", sequentialId: 1, chairId: "c1", viceChairId: "c2" }];
-      statePartyRows = [
-        {
-          _id: "US_CA_1",
-          countryId: "US",
-          stateId: "CA",
-          partyId: "1",
-          chairId: "c1",
-          organization: 99,
-          organizationUnits: 900,
-        },
-        {
-          _id: "US_NY_1",
-          countryId: "US",
-          stateId: "NY",
-          partyId: "1",
-          chairId: "c3",
-          organization: 1,
-          organizationUnits: 100,
-        },
-        {
-          _id: "CA_ON_1",
-          countryId: "CA",
-          stateId: "ON",
-          partyId: "1",
-          organization: 99,
-          organizationUnits: 20_000,
-        },
-        {
-          _id: "US_FL_2",
-          countryId: "US",
-          stateId: "FL",
-          partyId: "2",
-          chairId: "c4",
-          organization: 40,
-        },
-      ];
+      partyRows = [{ chairId: "c1", viceChairId: "c2", treasurerId: "c4" }];
+      statePartyRows = [{ chairId: "c1" }, { chairId: "c3" }];
+      roleFixtures.orgHeadIds.add("c1");
+
       async function readBonus(id: string) {
         mockBulkWrite.mockClear();
         return (await refreshOne(baseCharacter({ _id: id as never }))).positionNiBonus;
       }
 
-      expect(await readBonus("c1")).toBeCloseTo(0.5625);
-      expect(await readBonus("c2")).toBeCloseTo(0.375);
-      expect(await readBonus("c3")).toBeCloseTo(0.1875);
-      // A legacy 40% share mints 40/(100-40) times the regional baseline.
-      expect(await readBonus("c4")).toBeCloseTo(0.175);
+      expect(await readBonus("c1")).toBe(1);
+      expect(await readBonus("c2")).toBe(0);
+      expect(await readBonus("c3")).toBe(0);
+      expect(await readBonus("c4")).toBe(0);
 
-      gameStateRow.preIteration!.active = false;
-      expect(await readBonus("c1")).toBe(2);
+      gameStateRow = { currentTurn: 49, preIteration: { active: false } };
+      expect(await readBonus("c1")).toBe(3);
       expect(await readBonus("c2")).toBe(1.5);
       expect(await readBonus("c3")).toBe(0.5);
+      expect(await readBonus("c4")).toBe(1.5);
     });
 
     it("waits out the CEO tenure before granting CEO NI, then grants the tier", async () => {
