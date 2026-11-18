@@ -376,7 +376,19 @@ export async function loadFxRatesByCurrency(db: Db): Promise<Map<CurrencyCode, n
  * Czechoslovak corp's 25,714,260 Kčs read as ₳25,714,260 instead of ₳952,380.
  */
 export async function loadValuationFxRates(db: Db): Promise<Map<CurrencyCode, number>> {
-  return withAuthoredEraRates(await loadFxRatesByCurrency(db), await presetFromDb(db));
+  return fillAuthoredEraRates(db, await loadFxRatesByCurrency(db));
+}
+
+/**
+ * {@link withAuthoredEraRates} on a COPY of a map the caller already holds
+ * (hoisted per turn, or frozen by a lease), with the world's preset read from
+ * the db. Live and caller-set rates win; the input is never mutated.
+ */
+export async function fillAuthoredEraRates(
+  db: Db,
+  rates: ReadonlyMap<CurrencyCode, number>
+): Promise<Map<CurrencyCode, number>> {
+  return withAuthoredEraRates(new Map(rates), await presetFromDb(db));
 }
 
 /**
