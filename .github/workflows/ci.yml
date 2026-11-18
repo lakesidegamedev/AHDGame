@@ -267,8 +267,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Eight shards: the two long fixtures run in their own jobs, and the
-        # slowest of six shards ran 4 to 9 minutes depending on the draw.
+        # The sequencer distributes the discovered files by measured duration.
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
@@ -502,6 +501,8 @@ jobs:
       ]
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      actions: read
     steps:
       - name: Require every CI gate
         env:
@@ -560,3 +561,25 @@ jobs:
         env:
           TREE: ${{ needs.changes.outputs.tree }}
         run: '[[ "$TREE" =~ ^[a-f0-9]{40}$ ]]'
+      - name: Report prerequisite and runner timings
+        if: always() && !cancelled()
+        continue-on-error: true
+        timeout-minutes: 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jobs=$(timeout 8 gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100")
+          jq -r '
+            .jobs
+            | map(select(.status == "completed" and .conclusion != "skipped"))
+            | sort_by(.completed_at)
+            | "### CI prerequisite timings",
+              "",
+              "| Job | Wait for runner | Job time |",
+              "| --- | ---: | ---: |",
+              (.[] | [
+                .name,
+                ((.started_at | fromdateiso8601) - (.created_at | fromdateiso8601) | "\(.)s"),
+                ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601) | "\(.)s")
+              ] | "| " + join(" | ") + " |")
+          ' <<< "$jobs" >> "$GITHUB_STEP_SUMMARY"

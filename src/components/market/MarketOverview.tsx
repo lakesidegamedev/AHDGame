@@ -16,6 +16,12 @@ import { useMarketJson } from "./useMarketJson";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import type { MarketOverviewPreviews } from "@/lib/market/loadOverviewPreviews";
+import {
+  MARKET_OVERVIEW_ROWS,
+  topCommodityMovers,
+  topStocksForPreview,
+} from "@/lib/market/overviewPreview";
 
 const byDesc =
   <T,>(score: (t: T) => number) =>
@@ -24,32 +30,34 @@ const byDesc =
 
 export function MarketOverview({
   commodities,
+  previews,
   sectors,
   offers,
-  loading,
+  commoditiesLoading,
+  sectorsLoading,
+  offersLoading,
 }: {
   commodities: CommodityData[] | null;
+  previews?: MarketOverviewPreviews | null;
   sectors: SectorsForSaleResponse | null;
   offers: SupplyOffersResponse | null;
-  loading: boolean;
+  commoditiesLoading: boolean;
+  sectorsLoading: boolean;
+  offersLoading: boolean;
 }) {
   const { formatAmount, formatListingPrice } = useCurrency();
-  const stocks = useMarketJson<ExchangeData>(STOCKS_PREVIEW_URL);
+  const stocks = useMarketJson<ExchangeData>(previews?.stocks == null ? STOCKS_PREVIEW_URL : null);
   const bonds = useMarketJson<BondsResponse>(BONDS_PREVIEW_URL);
   const funds = useMarketJson<FundsResponse>(FUNDS_URL);
 
-  const topStocks = (stocks.data?.listings ?? [])
-    .filter((l) => !l.isNpp)
-    .sort(byDesc((l) => l.marketCapAnchor ?? l.marketCap))
-    .slice(0, 5);
+  const topStocks =
+    previews?.stocks ?? topStocksForPreview(stocks.data?.listings ?? [], MARKET_OVERVIEW_ROWS);
   const topBonds = (bonds.data?.bonds ?? [])
     .filter((b) => b.issuerType !== "sovereign" && !b.defaulted && b.publicFloat > 0)
     .sort(byDesc((b) => b.yieldToMaturity))
     .slice(0, 5);
   const topFunds = [...(funds.data?.funds ?? [])].sort(byDesc((f) => f.aumAnchor)).slice(0, 5);
-  const movers = [...(commodities ?? [])]
-    .sort(byDesc((c) => Math.abs(vsBasePct(c) ?? 0)))
-    .slice(0, 5);
+  const movers = previews?.movers ?? topCommodityMovers(commodities ?? []);
   const sectorRows = (sectors?.sectors ?? []).slice(0, 5);
   const offerRows = (offers?.offers ?? []).slice(0, 5);
 
@@ -122,7 +130,7 @@ export function MarketOverview({
         title="Sectors for sale"
         detail={`${sectors?.totalItems ?? 0} listed`}
         href="/market?tab=sectors"
-        loading={loading}
+        loading={sectorsLoading}
         error=""
         empty={sectorRows.length === 0}
       >
@@ -143,7 +151,7 @@ export function MarketOverview({
         title="Commodities"
         detail="Furthest from base price"
         href="/market?tab=commodities"
-        loading={loading}
+        loading={commoditiesLoading}
         error=""
         empty={movers.length === 0}
       >
@@ -161,7 +169,7 @@ export function MarketOverview({
         title="Supply deals"
         detail={`${offers?.total ?? 0} open`}
         href="/market?tab=supply"
-        loading={loading}
+        loading={offersLoading}
         error=""
         empty={offerRows.length === 0}
       >

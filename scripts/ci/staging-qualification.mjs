@@ -706,7 +706,7 @@ async function main() {
   }
   if (!result.reuse && !result.promotion) {
     const pullRequest = await findPullRequestQualification(args);
-    if (pullRequest.reuse) result = pullRequest;
+    if (args.eventName === "push" && event.ref === "refs/heads/development") result = pullRequest;
   }
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT,

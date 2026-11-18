@@ -97,17 +97,17 @@ You also receive the highest position bonus you qualify for:
 | Position tier | NPI per turn |
 | --- | ---: |
 | National head of government or executive head of state | +2.5 |
-| Vice president or deputy head of government, presiding officer (Speaker of the House, Bundestag President, NPC Standing Committee chair, Nigerian Speaker and Senate President, President pro tempore), House or Senate majority leader, national party chair | +2.0 |
-| Confirmed cabinet member, governor or minister-president, Supreme Court justice, central bank chair, House or Senate minority leader, CPPCC chair, party vice chair | +1.5 |
+| Vice president or deputy head of government, presiding officer (Speaker of the House, Bundestag President, NPC Standing Committee chair, Nigerian Speaker and Senate President, President pro tempore), House or Senate majority leader | +2.0 |
+| Confirmed cabinet member, governor or minister-president, Supreme Court justice, central bank chair, House or Senate minority leader, CPPCC chair | +1.5 |
 | National legislator, ceremonial head of state | +1.0 |
 | Acting cabinet member | +0.75 |
-| State or regional legislator, state party chair | +0.5 |
+| State or regional legislator | +0.5 |
 | CEO of one of the 10 largest listed corporations in its country by market cap, not on autopilot | +0.3 |
 | CEO of any other listed corporation in the top half of its country by market cap | +0.15 |
 
 A CEO only qualifies after running the same corporation for 12 turns. Running a corporation grants no extra actions.
 
-Position bonuses do not stack with each other. You get your single highest tier, then the local-influence term is added. Holding a seat, a party chair and a cabinet post is not +4.5 NPI per turn.
+Position bonuses do not stack with each other. You get your single highest tier, then the local-influence term is added. Party officers build Party Influence. If they also hold a qualifying public office, they earn that office’s NPI tier.
 
 The one exception is international leadership. Holding an international organisation's leadership seat (Secretary-General or equivalent) adds **+1.0** on top of your domestic tier.
 

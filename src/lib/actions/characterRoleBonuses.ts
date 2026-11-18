@@ -6,7 +6,6 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial } from "@/lib/db/types";
 import { loadOrganizationHeads } from "@/lib/internationalOrganizations/orgHeadAgenda";
 import type { LeadershipRole } from "@/lib/db/types/leadership";
 import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
@@ -17,8 +16,6 @@ import {
   type CeoNiTier,
 } from "./positionNiBonus";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
-import { loadPartyPositionNiBonuses } from "./positionNiBonus/partyLeadership";
 
 export interface CharacterRoleBonusInput {
   character: {
@@ -54,18 +51,13 @@ export async function loadCharacterRoleBonuses(
 ): Promise<CharacterRoleBonuses> {
   const countryId = (character.countryId ?? "US") as CountryId;
   const id = character._id.toString();
-  const [presiding, partyBonuses, orgSeats, opposition] = await Promise.all([
+  const [presiding, orgSeats, opposition] = await Promise.all([
     electedOfficialsCollection(db)
       .find(
         { characterId: character._id, officeType: { $in: ["speaker", "senatePresident"] } },
         { projection: { officeType: 1 } }
       )
       .toArray(),
-    gameStateCollection(db)
-      .findOne({ _id: "current" }, { projection: { "preIteration.active": 1 } })
-      .then((gameState) =>
-        loadPartyPositionNiBonuses(db, gameState?.preIteration?.active === true, character._id)
-      ),
     loadOrganizationHeads(db, { characterId: character._id }).catch(() => []),
     resolveOppositionLeaderForCountry(db, countryId).catch(() => null),
   ]);
@@ -88,7 +80,6 @@ export async function loadCharacterRoleBonuses(
       currentOfficeType: character.currentOffice?.type,
       countryId,
       congressLeadershipRoles: roles,
-      partyPositionNiBonus: partyBonuses.get(id),
       isSeatedJustice,
       isCentralBankChair,
       cabinetCountryId: cabinetSeat
