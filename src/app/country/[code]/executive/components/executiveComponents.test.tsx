@@ -22,6 +22,8 @@ describe("OfficePlaques", () => {
             sealGlyph: "P",
             holder: {
               name: "Abigail Whitmore",
+              href: "/politicians/npp/17",
+              avatarUrl: "/whitmore.png",
               partyId: "1",
               partyName: "Democratic Party",
               partyColor: "#3b82f6",
@@ -37,7 +39,9 @@ describe("OfficePlaques", () => {
         ]}
       />
     );
-    expect(screen.getByText("Abigail Whitmore")).toBeTruthy();
+    const holderLink = screen.getByRole("link", { name: /Abigail Whitmore/ });
+    expect(holderLink.getAttribute("href")).toBe("/politicians/npp/17");
+    expect(holderLink.querySelector("img")?.getAttribute("src")).toContain("whitmore.png");
     expect(screen.getByText("since Jan 2026")).toBeTruthy();
     expect(screen.getByText("Vacant")).toBeTruthy();
     expect(screen.getByText(/serves at their pleasure/)).toBeTruthy();

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useGameClock } from "@/contexts/useGameClock";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { LocalTime } from "@/components/time/LocalTime";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -17,7 +18,13 @@ interface NominationDisplay {
 }
 
 interface NpcscChairResponse {
-  leader: { characterId: string | null; characterName: string; party: string | null } | null;
+  leader: {
+    characterId: string | null;
+    characterName: string;
+    party: string | null;
+    avatarUrl?: string;
+    profileHref?: string;
+  } | null;
   election: {
     status: string;
     startedAt: string;
@@ -120,15 +127,18 @@ export function NpcscChairPanel() {
   return (
     <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-body-sm font-medium text-muted">{ROLE_LABEL}</p>
-          <p className="text-base font-semibold text-foreground mt-0.5">
-            {data.leader?.characterName ?? "Vacant"}
-          </p>
-          {data.leader?.party && (
-            <p className="text-xs text-muted">{data.leader.party.toUpperCase()}</p>
-          )}
-        </div>
+        <OfficeholderPortrait
+          compact
+          role={ROLE_LABEL}
+          detail={data.leader?.party?.toUpperCase()}
+          holder={
+            data.leader && {
+              name: data.leader.characterName,
+              avatarUrl: data.leader.avatarUrl,
+              href: data.leader.profileHref,
+            }
+          }
+        />
         {viewer.isAdmin && !isElectionActive && (
           <button
             onClick={() => postAction("start_election")}

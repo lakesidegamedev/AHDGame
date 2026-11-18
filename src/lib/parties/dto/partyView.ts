@@ -158,6 +158,7 @@ export interface CommitteeMember {
   id: string;
   sequentialId?: number;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface CommitteeCandidate {

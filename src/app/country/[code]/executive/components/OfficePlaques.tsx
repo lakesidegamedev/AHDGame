@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
@@ -72,55 +71,22 @@ export function OfficePlaques({
             >
               {plaque.sealGlyph}
             </span>
-            <div className="text-body-sm font-medium text-muted">{plaque.title}</div>
-            <div className="mt-2.5 flex items-center gap-2.5">
-              {plaque.holder ? (
-                <>
-                  <Avatar
-                    url={plaque.holder.avatarUrl}
-                    name={plaque.holder.name}
-                    size="h-11 w-11"
-                    className="rounded-xl"
-                  />
-                  <div className="min-w-0">
-                    {plaque.holder.href ? (
-                      <Link
-                        href={plaque.holder.href}
-                        className="block truncate text-sm font-bold text-foreground transition-colors hover:text-primary"
-                      >
-                        {plaque.holder.name}
-                      </Link>
-                    ) : (
-                      <span className="block truncate text-sm font-bold">{plaque.holder.name}</span>
-                    )}
-                    {plaque.holder.partyName && (
-                      <div className="mt-1">
-                        <PartyChip
-                          partyName={plaque.holder.partyName}
-                          partyColor={plaque.holder.partyColor ?? "#888888"}
-                          partyId={plaque.holder.partyId ?? "independent"}
-                          countryId={countryId}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-card-border bg-card-muted text-muted">
-                    —
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-sm font-semibold italic text-muted">Vacant</span>
-                    {plaque.vacancyNote && (
-                      <p className="mt-0.5 text-[11px] leading-snug text-muted/80">
-                        {plaque.vacancyNote}
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <OfficeholderPortrait role={plaque.title} holder={plaque.holder} />
+            {plaque.holder?.partyName && (
+              <div className="mt-2 flex justify-center">
+                <PartyChip
+                  partyName={plaque.holder.partyName}
+                  partyColor={plaque.holder.partyColor ?? "#888888"}
+                  partyId={plaque.holder.partyId ?? "independent"}
+                  countryId={countryId}
+                />
+              </div>
+            )}
+            {vacant && plaque.vacancyNote && (
+              <p className="mt-2 text-center text-body-sm leading-snug text-muted">
+                {plaque.vacancyNote}
+              </p>
+            )}
             {plaque.tenureLine && (
               <div className="mt-3 border-t border-card-border/50 pt-2 font-mono text-[10px] text-muted/70">
                 {plaque.tenureLine}

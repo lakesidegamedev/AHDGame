@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PartyChip, formatPartyState } from "./CongressShared";
 import { ElectionDropdown } from "./LeadershipShared";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
@@ -18,25 +17,21 @@ function SpeakerCard({
   countryId: CountryId;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-card-border bg-card p-4">
-      <Avatar
-        url={speaker.avatarUrl}
-        name={speaker.characterName}
-        size="h-10 w-10"
-        borderKey={speaker.borderKey}
-        tintColor={speaker.tintColor}
-      />
-      <div className="flex-1 min-w-0">
-        <Link
-          href={`/character/${speaker.sequentialId ?? speaker.characterId}`}
-          className="font-semibold hover:text-primary transition-colors"
-        >
-          {speaker.characterName}
-          <span className="text-muted font-normal ml-1">
-            {formatPartyState(speaker.party, speaker.state, speaker.partyName)}
-          </span>
-        </Link>
-        <p className="text-xs text-muted mt-0.5">Speaker of the House</p>
+    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-card-border bg-card p-4">
+      <div className="min-w-0 flex-1">
+        <OfficeholderPortrait
+          compact
+          role="Speaker of the House"
+          detail={formatPartyState(speaker.party, speaker.state, speaker.partyName)}
+          holder={{
+            ...speaker,
+            name: speaker.characterName,
+            href:
+              speaker.sequentialId != null || speaker.characterId
+                ? `/character/${speaker.sequentialId ?? speaker.characterId}`
+                : undefined,
+          }}
+        />
       </div>
       <PartyChip
         partyName={speaker.partyName}

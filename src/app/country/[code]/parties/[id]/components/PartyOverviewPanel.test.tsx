@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PartyData } from "./types";
 import { PartyOverviewPanel } from "./PartyOverviewPanel";
@@ -9,8 +9,8 @@ describe("PartyOverviewPanel leadership labels", () => {
     const party = {
       countryId: "CN",
       leadershipTitles: { chair: "Party Chair" },
-      chair: null,
-      viceChair: null,
+      chair: { id: "chair-id", sequentialId: 27, name: "Lian Zhao", avatarUrl: "/chair.png" },
+      viceChair: { id: "deputy-id", name: "Jia Wu" },
       treasurer: null,
       economicPosition: 0,
       socialPosition: 0,
@@ -18,11 +18,22 @@ describe("PartyOverviewPanel leadership labels", () => {
       effectivePsCap: 0,
     } as PartyData;
 
-    render(<PartyOverviewPanel party={party} />);
+    render(<PartyOverviewPanel party={party} committeeResult={null} />);
 
     expect(screen.getByText("Party Chair")).toBeTruthy();
     expect(screen.getByText("Deputy General Secretary")).toBeTruthy();
-    expect(screen.getByText("National Treasurer")).toBeTruthy();
+    const seats = screen.getAllByRole("listitem");
+    expect(seats.map((seat) => seat.textContent)).toEqual([
+      expect.stringContaining("Party Chair"),
+      expect.stringContaining("Deputy General Secretary"),
+      expect.stringContaining("National Treasurer"),
+    ]);
+    const chairLink = within(seats[0]).getByRole("link", { name: /Lian Zhao/ });
+    expect(chairLink.getAttribute("href")).toBe("/character/27");
+    expect(chairLink.querySelector("img")?.getAttribute("src")).toContain("chair.png");
+    expect(chairLink.querySelector("img")?.closest('[aria-hidden="true"]')).toBeTruthy();
+    expect(within(seats[2]).getByText("Vacant")).toBeTruthy();
+    expect(within(seats[2]).queryByRole("link")).toBeNull();
   });
 
   it("renders custom titles as text", () => {
@@ -39,7 +50,7 @@ describe("PartyOverviewPanel leadership labels", () => {
       effectivePsCap: 0,
     } as PartyData;
 
-    render(<PartyOverviewPanel party={party} />);
+    render(<PartyOverviewPanel party={party} committeeResult={null} />);
 
     expect(screen.getByText(title)).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();

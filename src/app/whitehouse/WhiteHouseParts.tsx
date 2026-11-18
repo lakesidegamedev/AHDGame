@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { SectionLabel } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countries";
@@ -32,10 +31,12 @@ export function holderHref(holder: {
   isNPP?: boolean;
   sequentialId?: number;
   characterId: string;
-}): string {
-  return holder.isNPP
-    ? `/politicians/npp/${holder.sequentialId}`
-    : `/character/${holder.sequentialId ?? holder.characterId}`;
+}): string | undefined {
+  if (holder.isNPP) {
+    return holder.sequentialId != null ? `/politicians/npp/${holder.sequentialId}` : undefined;
+  }
+  const characterId = holder.sequentialId ?? holder.characterId;
+  return characterId ? `/character/${characterId}` : undefined;
 }
 
 /** Where the White House points players for presidential powers and running. */
@@ -124,37 +125,24 @@ export function ExecutiveCard({
   return (
     <div className="rounded-2xl border border-card-border bg-card overflow-hidden transition-colors shadow-sm hover:shadow-md">
       <div className="p-6">
-        <SectionLabel as="h3">{title}</SectionLabel>
+        <OfficeholderPortrait
+          role={<SectionLabel as="h3">{title}</SectionLabel>}
+          holder={
+            data && { name: data.characterName, href: holderHref(data), avatarUrl: data.avatarUrl }
+          }
+        />
         {data ? (
-          <div className="flex items-center gap-4">
-            <Link href={holderHref(data)} className="shrink-0">
-              <Avatar
-                url={data.avatarUrl}
-                name={data.characterName}
-                size="h-16 w-16"
-                className="rounded-xl text-2xl ring-2 ring-card-border"
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            <div className="text-center">
+              <PartyChip
+                partyName={data.partyName ?? data.party ?? "Independent"}
+                partyColor={data.partyColor ?? "#888888"}
+                partyId={data.party ?? "independent"}
+                countryId={data.countryId ?? "US"}
               />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <Link
-                href={holderHref(data)}
-                className="font-semibold text-foreground hover:text-primary transition-colors"
-              >
-                {data.characterName}
-              </Link>
-              <div className="mt-1">
-                <PartyChip
-                  partyName={data.partyName ?? data.party ?? "Independent"}
-                  partyColor={data.partyColor ?? "#888888"}
-                  partyId={data.party ?? "independent"}
-                  countryId={data.countryId ?? "US"}
-                />
-                {data.administrationStartGameDate && (
-                  <p className="text-xs text-muted mt-1">
-                    Since {data.administrationStartGameDate}
-                  </p>
-                )}
-              </div>
+              {data.administrationStartGameDate && (
+                <p className="mt-1 text-xs text-muted">Since {data.administrationStartGameDate}</p>
+              )}
             </div>
             <div className="flex flex-col gap-2 shrink-0">
               {onResign && officialId && (
@@ -177,22 +165,16 @@ export function ExecutiveCard({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-card-elevated flex items-center justify-center text-2xl text-muted ring-2 ring-dashed ring-card-border">
-              —
-            </div>
-            <div className="flex-1">
-              <p className="text-muted italic">Vacant</p>
-              <p className="text-xs text-muted mt-0.5">
-                {needsInit
-                  ? "Initialize executive slots in Admin first"
-                  : onNominateVp
-                    ? vpNominationPending
-                      ? "Nomination pending Senate confirmation"
-                      : "President can nominate a replacement (25th Amendment)"
-                    : "Admin can appoint a player character"}
-              </p>
-            </div>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-center">
+            <p className="text-xs text-muted">
+              {needsInit
+                ? "Initialize executive slots in Admin first"
+                : onNominateVp
+                  ? vpNominationPending
+                    ? "Nomination pending Senate confirmation"
+                    : "President can nominate a replacement (25th Amendment)"
+                  : "Admin can appoint a player character"}
+            </p>
             {isAdmin && needsInit && onInitialize && (
               <button
                 onClick={onInitialize}

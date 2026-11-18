@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { getPartyLabel } from "@/lib/utils/politics";
 
 export interface LeaderCardCharacter {
@@ -16,41 +15,38 @@ export interface LeaderCardCharacter {
 export function LeaderCard({
   title,
   subtitle,
+  emptyLabel,
   character,
 }: {
   title: string;
-  subtitle: string;
-  character: LeaderCardCharacter | null;
+  subtitle?: string;
+  emptyLabel?: string;
+  character: (Omit<LeaderCardCharacter, "party" | "since"> & { party?: string | null }) | null;
 }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <p className="text-body-sm font-medium text-muted">{title}</p>
-      <p className="mb-3 text-xs text-muted">{subtitle}</p>
-      {character ? (
-        <div className="flex items-center gap-3">
-          <Avatar
-            url={character.avatarUrl ?? null}
-            name={character.characterName}
-            size="h-10 w-10"
-          />
-          <div>
-            {character.characterId ? (
-              <Link
-                href={`/character/${character.sequentialId ?? character.characterId}`}
-                className="font-semibold text-foreground hover:text-primary transition-colors"
-              >
-                {character.characterName}
-              </Link>
-            ) : (
-              <span className="font-semibold text-foreground">{character.characterName}</span>
-            )}
-            {character.party && (
-              <p className="text-xs text-muted">{getPartyLabel(character.party)}</p>
-            )}
-          </div>
+      <OfficeholderPortrait
+        role={title}
+        vacancyLabel={emptyLabel}
+        holder={
+          character && {
+            name: character.characterName,
+            avatarUrl: character.avatarUrl,
+            href: character.isNPP
+              ? character.sequentialId != null
+                ? `/politicians/npp/${character.sequentialId}`
+                : undefined
+              : character.characterId
+                ? `/character/${character.sequentialId ?? character.characterId}`
+                : undefined,
+          }
+        }
+      />
+      {(subtitle || character?.party) && (
+        <div className="mt-2 text-center text-body-sm text-muted">
+          {subtitle && <p>{subtitle}</p>}
+          {character?.party && <p>{getPartyLabel(character.party)}</p>}
         </div>
-      ) : (
-        <p className="text-sm italic text-muted">Vacant</p>
       )}
     </div>
   );

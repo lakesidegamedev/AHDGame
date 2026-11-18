@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
 import { PlainPositionLabel } from "@/components/party/PlainPositionLabel";
 import {
   PARTY_LABEL_CLASS,
@@ -9,87 +7,36 @@ import {
   PARTY_SUBHEADING_CLASS,
   PARTY_VALUE_CLASS,
 } from "@/components/party/partyPageStyles";
-import type { PartyData, PartyLeader } from "./types";
-import { POSITIONS, getPositionLabels, POSITION_DESC } from "./helpers";
+import type { CommitteeData, PartyData } from "./types";
+import { NationalPartyCommitteeRoster } from "./NationalPartyCommitteeRoster";
+import { NationalPartyOfficerRow } from "./NationalPartyOfficerRow";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface PartyOverviewPanelProps {
   party: PartyData;
+  committeeResult: CommitteeData | "unavailable" | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PartyOverviewPanel({ party }: PartyOverviewPanelProps) {
-  const positionLabels = getPositionLabels(party.countryId, party.leadershipTitles);
+export function PartyOverviewPanel({ party, committeeResult }: PartyOverviewPanelProps) {
   const strengthPercent =
     party.effectivePsCap > 0
       ? Math.min(100, Math.max(0, ((party.politicalStrength ?? 0) / party.effectivePsCap) * 100))
       : 0;
 
   return (
-    <div className="grid gap-x-12 gap-y-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
-      <section aria-labelledby="leadership-title" className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 id="leadership-title" className={PARTY_SECTION_HEADING_CLASS}>
-            National leadership
-          </h2>
-          <p className={PARTY_LABEL_CLASS}>3 offices</p>
-        </div>
-
-        <ul className="border-t border-card-border">
-          {POSITIONS.map((pos) => {
-            const leader = party[pos] as PartyLeader | null;
-
-            return (
-              <li
-                key={pos}
-                className="grid gap-3 border-b border-card-border py-4 sm:grid-cols-[11rem_minmax(0,1fr)] sm:items-center sm:gap-6"
-              >
-                <div>
-                  <p className="text-body font-semibold text-foreground">{positionLabels[pos]}</p>
-                  <p className="mt-0.5 text-body-sm leading-relaxed text-muted">
-                    {POSITION_DESC[pos]}
-                  </p>
-                </div>
-                <div className="flex min-w-0 items-center gap-3">
-                  {leader ? (
-                    <>
-                      <Avatar
-                        url={leader.avatarUrl}
-                        name={leader.name}
-                        size="h-12 w-12"
-                        className="shrink-0"
-                      />
-                      <Link
-                        href={`/character/${leader.sequentialId ?? leader.id}`}
-                        className="min-w-0 line-clamp-2 break-words text-heading-sm font-semibold text-foreground hover:underline hover:underline-offset-4"
-                      >
-                        {leader.name}
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <span
-                        className="h-12 w-12 shrink-0 rounded-full border border-dashed border-card-border"
-                        aria-hidden
-                      />
-                      <span className="text-heading-sm text-muted">Vacant</span>
-                    </>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+    <div className="space-y-8">
+      <NationalPartyOfficerRow party={party} />
+      <NationalPartyCommitteeRoster countryId={party.countryId} committeeResult={committeeResult} />
 
       <section aria-labelledby="platform-title" className="min-w-0">
         <h2 id="platform-title" className={`mb-4 ${PARTY_SECTION_HEADING_CLASS}`}>
           Party platform
         </h2>
 
-        <div className="space-y-8">
+        <div className="grid gap-8 md:grid-cols-3">
           <div>
             <p className={PARTY_LABEL_CLASS}>Strength capacity</p>
             <div className="mt-0.5 flex items-baseline justify-between gap-3">
