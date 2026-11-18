@@ -8,7 +8,10 @@ export type PlantThroughputSector = {
   transitionStartTurn?: number | null;
 };
 
-const STANDARD_RETAIL_THROUGHPUT_2027 = 1.26;
+const THROUGHPUT_2027 = new Map([
+  ["retail", { strategyId: "standard", multiplier: 1.26 }],
+  ["financial", { strategyId: "fintech", multiplier: 1.4 }],
+]);
 
 /** Throughput scales the run and its input purchases at the same rate. */
 export function plantThroughputMultiplier(
@@ -16,11 +19,12 @@ export function plantThroughputMultiplier(
   currentTurn: number | undefined,
   preset?: string | null
 ): number {
-  if (sector.sectorType !== "retail" || preset !== "2027-default") {
+  const method = preset === "2027-default" ? THROUGHPUT_2027.get(sector.sectorType) : undefined;
+  if (!method) {
     return energyProductivityMultiplier(sector.sectorType, currentTurn, preset);
   }
   const multiplierFor = (strategyId: string) =>
-    strategyId === "standard" ? STANDARD_RETAIL_THROUGHPUT_2027 : 1;
+    strategyId === method.strategyId ? method.multiplier : 1;
   const target = multiplierFor(sector.strategyId ?? "standard");
   const { transitionFromStrategyId, transitionStartTurn } = sector;
   if (
