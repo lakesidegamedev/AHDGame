@@ -35,7 +35,7 @@ export default async function CountryMapPage({ params }: Props) {
     preload(USA_GEO_URL, { as: "fetch", crossOrigin: "anonymous" });
   }
   const config = getCountryClientConfig(countryId);
-  const overview = await loadCountryMapOverview(countryId).catch(() => null);
+  const overview = loadCountryMapOverview(countryId).catch(() => null);
   return (
     <CountryMapClient
       countryId={countryId}

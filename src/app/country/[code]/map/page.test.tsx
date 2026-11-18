@@ -60,12 +60,12 @@ describe("country map country validation", () => {
     vi.mocked(loadCountryMapOverview).mockResolvedValue(overview);
     const page = await CountryMapPage({ params: Promise.resolve({ code: "us" }) });
     expect(loadCountryMapOverview).toHaveBeenCalledWith("US");
-    expect(page.props.overview).toEqual(overview);
+    await expect(page.props.overview).resolves.toEqual(overview);
   });
 
   it("lets the browser retry an unavailable overview", async () => {
     vi.mocked(loadCountryMapOverview).mockRejectedValue(new Error("Unavailable"));
     const page = await CountryMapPage({ params: Promise.resolve({ code: "UK" }) });
-    expect(page.props.overview).toBeNull();
+    await expect(page.props.overview).resolves.toBeNull();
   });
 });

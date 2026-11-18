@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
+import { Suspense, use, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -14,7 +14,7 @@ interface CountryMapClientProps {
   countryId: CountryId;
   /** Server-resolved display fields, so the client does not ship the registry. */
   config: CountryMapViewConfig;
-  overview: MapOverviewResponse | null;
+  overview: Promise<MapOverviewResponse | null>;
 }
 
 // A country uses exactly one renderer; load the chosen one instead of shipping
@@ -34,7 +34,7 @@ const UnifiedMapWithModes = dynamic(loadUnifiedMap, { ssr: false, loading: MapLo
 const EconOnlyMapPlaceholder = dynamic(loadEconOnlyMap, { ssr: false, loading: MapLoading });
 
 /**
- * Start the renderer even when the overview needs a browser retry.
+ * Start the renderer while the server streams the overview.
  */
 function warmMapRenderer(countryId: CountryId) {
   const variant = mapVariantFor(countryId);
@@ -48,10 +48,23 @@ function warmMapRenderer(countryId: CountryId) {
 }
 
 export default function CountryMapClient(props: CountryMapClientProps) {
-  return <CountryMapContent key={props.countryId} {...props} />;
+  const { countryId } = props;
+  useEffect(() => {
+    warmMapRenderer(countryId);
+  }, [countryId]);
+  return (
+    <Suspense fallback={<MapLoading />}>
+      <CountryMapContent key={countryId} {...props} />
+    </Suspense>
+  );
 }
 
-function CountryMapContent({ countryId, config, overview }: CountryMapClientProps) {
+function CountryMapContent({
+  countryId,
+  config,
+  overview: streamedOverview,
+}: CountryMapClientProps) {
+  const overview = use(streamedOverview);
   const router = useRouter();
   const t = useTranslations("elections.atlas");
   const [loadFailed, setLoadFailed] = useState(false);
@@ -61,7 +74,6 @@ function CountryMapContent({ countryId, config, overview }: CountryMapClientProp
 
   useEffect(() => {
     if (overview) return;
-    warmMapRenderer(countryId);
     const controller = new AbortController();
     fetch(`/api/map/overview?countryId=${countryId}`, { signal: controller.signal })
       .then(async (res) => {
