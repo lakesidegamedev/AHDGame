@@ -98,7 +98,6 @@ export interface PositionNiBonusInput {
   currentOfficeType?: string;
   countryId: CountryId;
   congressLeadershipRoles?: readonly LeadershipRole[];
-  partyPositionNiBonus?: number;
   isSeatedJustice?: boolean;
   isCentralBankChair?: boolean;
   /**
@@ -119,7 +118,6 @@ export function resolvePositionNiBonus({
   currentOfficeType,
   countryId,
   congressLeadershipRoles = [],
-  partyPositionNiBonus = 0,
   isSeatedJustice = false,
   isCentralBankChair = false,
   cabinetCountryId,
@@ -137,8 +135,6 @@ export function resolvePositionNiBonus({
   for (const role of congressLeadershipRoles) {
     bonus = Math.max(bonus, CONGRESS_LEADER_NI_BONUS[role] ?? 0);
   }
-
-  bonus = Math.max(bonus, partyPositionNiBonus);
 
   if (isSeatedJustice) bonus = Math.max(bonus, JUSTICE_NI_BONUS_PER_TURN);
   if (isCentralBankChair) bonus = Math.max(bonus, CENTRAL_BANK_CHAIR_NI_BONUS);
