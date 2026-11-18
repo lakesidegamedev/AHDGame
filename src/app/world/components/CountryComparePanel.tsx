@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MetricCategoryId } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import {
@@ -18,6 +18,9 @@ import { comparePairReady, compareShareParam } from "@/lib/world/countryCompare"
 import { buildCompareSummary, type CompareSummarySide } from "@/lib/world/compareSummary";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useWorldMetricFilter, type WorldMetricsCountry } from "../WorldMetricFilterContext";
+import type { CountryEconomyOutlook } from "@/lib/economy/queries/countryEconomyOutlook";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import { buildCompareSeries } from "@/lib/world/compareSeries";
 
 const SLOT_COUNT = 2;
 
@@ -68,6 +71,45 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
     }
     window.setTimeout(() => setCopyState("idle"), 2200);
   };
+
+  // Recent paths come from the same economy payload the economy page reads, one
+  // fetch per pick. Two nations only, and the effect is keyed on the pair so a
+  // changed side refetches instead of showing the previous nation's line.
+  const [outlooks, setOutlooks] = useState<Record<string, CountryEconomyOutlook | null>>({});
+  const pairKey = compareCountryIds.slice(0, SLOT_COUNT).join(",");
+  useEffect(() => {
+    const ids = pairKey ? pairKey.split(",") : [];
+    if (ids.length < SLOT_COUNT) {
+      setOutlooks({});
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    Promise.allSettled(
+      ids.map((id) =>
+        fetchJson<CountryEconomyOutlook>(`/api/country/${id.toLowerCase()}/economy`, {
+          feature: "world-compare-economy",
+          signal: controller.signal,
+        })
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      // A nation without a stored economy document is a normal empty side, and
+      // settled results keep the other side's series when one fetch fails.
+      setOutlooks(
+        Object.fromEntries(
+          ids.map((id, index) => [
+            id,
+            results[index]?.status === "fulfilled" ? results[index].value : null,
+          ])
+        )
+      );
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [pairKey]);
 
   // Every national document, keyed by country id. The ISO-keyed map is a subset
   // and only fills gaps in the by-id payload.
@@ -122,6 +164,16 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   const rows = category
     ? compareAcrossMetrics({ countries: all, countryIds: picked, category, metrics: metricIds })
     : [];
+
+  // Charts only when both sides loaded with history; one missing side would
+  // silently show a single line and invite a comparison that is not there.
+  const chartPair =
+    compareCountryIds.length === SLOT_COUNT && compareCountryIds.every((id) => outlooks[id])
+      ? ([outlooks[compareCountryIds[0]], outlooks[compareCountryIds[1]]] as [
+          CountryEconomyOutlook,
+          CountryEconomyOutlook,
+        ])
+      : null;
 
   const cellFor = (row: CompareRow, id: CountryId | null) =>
     id ? (row.cells.find((cell) => cell.countryId === id) ?? null) : null;
@@ -309,6 +361,34 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           </div>
         </div>
       )}
+      {chartPair && (
+        <div className="mt-4">
+          <h3 className="text-body-sm font-semibold">Recent path</h3>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Both nations on one scale per series, positioned by turn.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <SeriesChart
+              title="GDP growth"
+              seriesA={chartPair[0].pulse.gdpGrowth.history}
+              seriesB={chartPair[1].pulse.gdpGrowth.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
+            <SeriesChart
+              title="Inflation"
+              seriesA={chartPair[0].pulse.inflation.history}
+              seriesB={chartPair[1].pulse.inflation.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
+            <SeriesChart
+              title="Policy rate"
+              seriesA={chartPair[0].pulse.primeRate.history}
+              seriesB={chartPair[1].pulse.primeRate.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -376,6 +456,73 @@ function MetricRow({
           </span>
         );
       })}
+    </div>
+  );
+}
+
+const SERIES_COLORS = ["var(--primary, #3b82f6)", "var(--color-warning, #f59e0b)"] as const;
+
+function SeriesChart({
+  title,
+  seriesA,
+  seriesB,
+  labels,
+}: {
+  title: string;
+  seriesA: readonly { turn: number; rate: number }[];
+  seriesB: readonly { turn: number; rate: number }[];
+  labels: [string, string];
+}) {
+  const chart = buildCompareSeries(seriesA, seriesB);
+  if (!chart) return null;
+  return (
+    <div className="rounded-lg border border-card-border bg-card px-3 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-body-sm font-medium text-muted">{title}</span>
+        <span className="text-[10px] tabular-nums text-muted">
+          {chart.min.toFixed(1)} to {chart.max.toFixed(1)}%
+        </span>
+      </div>
+      <svg
+        viewBox="0 0 100 30"
+        preserveAspectRatio="none"
+        className="mt-1 h-14 w-full"
+        role="img"
+        aria-label={`${title}, ${labels[0]} against ${labels[1]}`}
+      >
+        <polyline
+          points={chart.a}
+          fill="none"
+          stroke={SERIES_COLORS[0]}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        <polyline
+          points={chart.b}
+          fill="none"
+          stroke={SERIES_COLORS[1]}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted">
+        {[chart.latestA, chart.latestB].map((latest, index) => (
+          <span key={index} className="flex items-center gap-1">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: SERIES_COLORS[index] }}
+            />
+            <span className="truncate">{labels[index]}</span>
+            <span className="tabular-nums text-foreground">
+              {latest == null ? "n/a" : `${latest.toFixed(1)}%`}
+            </span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
