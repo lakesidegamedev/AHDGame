@@ -85,11 +85,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const country = (url.searchParams.get("country") ?? "US").toUpperCase() as CountryId;
 
-    /*
-     * National executive offices come from the country config rather than a
-     * hand-maintained map (which omitted BR/NG/RU/DD and still listed the
-     * dropped CA). An empty list means the id isn't a configured country.
-     */
+    // An empty list means the id has no configured national executive.
     const officeTypes = nationalOfficeTypes(country);
     if (officeTypes.length === 0) {
       return errorResponse(400, `Unsupported country: ${country}`);
@@ -106,7 +102,7 @@ export async function GET(request: Request) {
         .find({ countryId: country, officeType: { $in: officeTypes } })
         .toArray(),
       directElection ? congressLeadersCollection(db).find({}).toArray() : Promise.resolve([]),
-      directElection ? cabinetMembersCollection(db).find({}).toArray() : Promise.resolve([]),
+      cabinetMembersCollection(db).find({ countryId: country }).toArray(),
     ]);
 
     // Collect all character IDs for profile URL lookups
@@ -246,7 +242,7 @@ export async function GET(request: Request) {
         party: partyName,
         partyColor,
         profileUrl: buildProfileUrl(c.characterId?.toString() ?? null),
-        isNPP: false,
+        isNPP: c.isNPP ?? false,
       });
     }
 
