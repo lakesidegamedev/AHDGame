@@ -92,7 +92,7 @@ export async function processActionRefresh(
   const accountability = await observeGovernmentAccountability(db, executives);
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
-    { projection: { currentTurn: 1, "preIteration.active": 1 } }
+    { projection: { currentTurn: 1 } }
   );
   const currentTurn = gameState?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
@@ -182,7 +182,7 @@ export async function processActionRefresh(
     loadOppositionRoles(db),
     loadCeoCandidates(db),
     loadOrgHeadIds(db),
-    loadPartyChairOrganizations(db, gameState?.preIteration?.active === true),
+    loadPartyChairOrganizations(db),
   ]);
 
   // Recover the underlying legislative seat only for the cabinet ministers whose

@@ -16,7 +16,6 @@ import {
   type CeoNiTier,
 } from "./positionNiBonus";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { loadPartyChairOrganizations } from "./positionNiBonus/partyChair";
 
 export interface CharacterRoleBonusInput {
@@ -62,12 +61,7 @@ export async function loadCharacterRoleBonuses(
       .toArray(),
     loadOrganizationHeads(db, { characterId: character._id }).catch(() => []),
     resolveOppositionLeaderForCountry(db, countryId).catch(() => null),
-    gameStateCollection(db)
-      .findOne({ _id: "current" }, { projection: { "preIteration.active": 1 } })
-      .then((gameState) =>
-        loadPartyChairOrganizations(db, gameState?.preIteration?.active === true, character._id)
-      )
-      .catch(() => new Map<string, number>()),
+    loadPartyChairOrganizations(db, character._id).catch(() => new Map<string, number>()),
   ]);
 
   const roles: LeadershipRole[] = [
