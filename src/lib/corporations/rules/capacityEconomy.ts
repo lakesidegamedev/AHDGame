@@ -37,6 +37,7 @@ import {
   HOST_BUILD_PRICE_INDEX_MAX,
   HOST_BUILD_PRICE_INDEX_MIN,
   PLANT_BUILD_PRICE_SCALE,
+  STANDARD_BUILD_PRICE_SCALE_2027,
 } from "@/lib/constants/capacityEconomyTables";
 
 /**
@@ -481,7 +482,7 @@ export interface BuildCostInputs {
 
 /** Itemized build cost, so UI/tests/NPPs can show WHY a build costs what it does. */
 export interface BuildCostBreakdown {
-  /** Base anchor currency per capacity unit in the world's nominal unit basis. */
+  /** Base construction cost in anchor currency per unit of the selected capacity. */
   unitPriceAnchor: number;
   /** Dominance penalty multiplier (1 below the dominance threshold). */
   dominanceMultiplier: number;
@@ -597,7 +598,13 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
     buildPriceScale = null,
   } = inputs;
   const safeUnits = Number.isFinite(units) && units > 0 ? units : 0;
-  const unitPriceAnchor = capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset);
+  // Construction and installed-capacity valuation use separate prices.
+  const standardBuildScale =
+    preset === "2027-default" && (strategyId ?? DEFAULT_STRATEGY_ID) === DEFAULT_STRATEGY_ID
+      ? (STANDARD_BUILD_PRICE_SCALE_2027[sectorType] ?? 1)
+      : 1;
+  const unitPriceAnchor =
+    capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset) * standardBuildScale;
   // Dominance is scaled by how contested the cell is. The factor multiplies the
   // toll's EXCESS over 1.0, so a market with no rivals still pays a monopoly
   // premium, just a smaller one — and a sub-threshold sector (multiplier 1) is
@@ -655,8 +662,7 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
   const expansionMultiplier = expansionCostMultiplier(founding);
   // The 1991 basis already prices a plant at one day of output, and founding
   // keeps its own discount, so only the ordinary legacy-basis build is scaled.
-  // The scale never takes a plant below that one-day basis, which keeps the
-  // early eras, whose legacy index is small, from becoming nearly free.
+  // The ordinary-build scale keeps early eras above one day of nominal output.
   const oneDayOfOutputShare = 1 / (GROWTH_COST_MULTIPLIER * capacityEraPriceIndex(year));
   const buildPriceScaleMultiplier =
     founding || uses1991Construction(year, preset)
