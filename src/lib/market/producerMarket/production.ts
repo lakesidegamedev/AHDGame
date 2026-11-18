@@ -508,6 +508,7 @@ export function advanceProducerEconomy(
       }
     return settleProducerMarket({
       checkBudget: execution?.checkBudget,
+      ...(input.electricityNetwork ? { electricityNetwork: input.electricityNetwork } : {}),
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
@@ -817,6 +818,7 @@ export function advanceProducerEconomy(
     producers: results,
     planning,
     tradeReceipt: market.tradeReceipt,
+    ...(market.electricity ? { electricity: market.electricity } : {}),
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),

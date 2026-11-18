@@ -13,6 +13,7 @@ import {
 } from "@/lib/mediaOperatingModels/catalog";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_DEMAND_1991 } from "@/lib/constants/sectorStrategyDefinitions1991";
+import { STANDARD_RETAIL_INPUT_SCALE_2027 } from "@/lib/constants/sectorStrategies/retail";
 import {
   MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR,
   PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR,
@@ -104,12 +105,27 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
 function strategyForPreset(
   sectorType: string,
   strategy: SectorStrategy,
-  preset?: string
+  preset?: string,
+  options?: StrategyOptions
 ): SectorStrategy {
-  const demand =
-    strategy.id === "standard" && eraForPreset(preset ?? DEFAULT_SEED_PRESET) === "1991"
-      ? DEFAULT_DEMAND_1991[sectorType as OperatingSectorType]
-      : undefined;
+  const era = eraForPreset(preset ?? DEFAULT_SEED_PRESET);
+  const standard1991 = strategy.id === "standard" && era === "1991";
+  const eraDemand = standard1991
+    ? DEFAULT_DEMAND_1991[sectorType as OperatingSectorType]
+    : undefined;
+  const overlay = options?.advertisingInput
+    ? standard1991
+      ? ADVERTISING_INPUT_STANDARD_1991_DEMAND[sectorType]
+      : ADVERTISING_INPUT_VARIANT_DEMAND[sectorType]?.[strategy.id]
+    : undefined;
+  const demand = overlay ?? eraDemand;
+  if (era === "2027" && sectorType === "retail" && strategy.id === "standard") {
+    const resizedDemand = { ...(demand ?? strategy.demand) };
+    for (const commodity of Object.keys(resizedDemand) as CommodityType[]) {
+      resizedDemand[commodity] = (resizedDemand[commodity] ?? 0) * STANDARD_RETAIL_INPUT_SCALE_2027;
+    }
+    return { ...strategy, demand: resizedDemand };
+  }
   return demand ? { ...strategy, demand: { ...demand } } : strategy;
 }
 
@@ -126,13 +142,7 @@ export function getStrategy(
     getMediaOperatingModelStrategies(sectorType).find((s) => s.id === strategyId) ??
     strategies.find((s) => s.id === "standard") ??
     UNKNOWN_SECTOR_STRATEGY;
-  const resolved = strategyForPreset(sectorType, strategy, preset);
-  if (!options?.advertisingInput) return resolved;
-  const overlay =
-    resolved.id === "standard" && eraForPreset(preset ?? DEFAULT_SEED_PRESET) === "1991"
-      ? ADVERTISING_INPUT_STANDARD_1991_DEMAND[sectorType]
-      : ADVERTISING_INPUT_VARIANT_DEMAND[sectorType]?.[resolved.id];
-  return overlay ? { ...resolved, demand: { ...overlay } } : resolved;
+  return strategyForPreset(sectorType, strategy, preset, options);
 }
 
 /** Strategy options for queries and menus. Model options are omitted unless enabled. */

@@ -1,19 +1,4 @@
-/**
- * Refund a matured sovereign claim the Treasury cannot pay from cash: sell a
- * new par bond to the currency's bond pool and credit the proceeds to the
- * Treasury's spendable cash, so the ordinary funded maturity path can pay
- * every holder on time.
- *
- * The sale is one primary placement through the same settlement journal as
- * scheduled issuance (pool cash debit, Treasury cash credit, principal and
- * coupon projections, ledger witnesses), plus a projection that records the
- * refunded face on the maturing claim in the same receipt. A bank claim's
- * refunding also carries the escrow funding legs in that receipt, so the
- * proceeds can never sit in Treasury cash where other outflows spend them. The key is per
- * claim, scope and turn: a replay in the same turn returns the receipt that
- * already landed, and a later turn may only refund what the claim's cap still
- * allows. See rules/sovereignMaturityRefunding.ts for the debt-ceiling rule.
- */
+/** Fund a frozen sovereign maturity from a journaled primary placement. */
 import type { Db, ObjectId } from "mongodb";
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import type { Bond } from "@/lib/db/types";
@@ -40,6 +25,9 @@ import {
   type SovereignRolloverBondIdentity,
 } from "./sovereignRolloverBond";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { resumeSettlement, unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export interface SovereignMaturityRefundingInput {
@@ -66,6 +54,8 @@ export interface SovereignMaturityRefundingInput {
    * debit needs the full amount in Treasury cash.
    */
   followOn?: { legs: TransitionLeg[]; projections: TransitionProjection[] };
+  /** Frozen non-bank claim escrow and valuation for a direct market fill. */
+  holderEscrow?: { escrowLocal: number; localPerAnchor: number };
   turn: number;
   now: Date;
   /** Add the issue to the issuer's shared rollover bond for the turn. */
@@ -80,6 +70,27 @@ const SCOPE_COUNTER = {
 export type SovereignMaturityRefundingResult =
   | { status: "issued" | "replayed"; key: string; bondId: ObjectId; faceLocal: number }
   | { status: "refused"; key: string; refusal: SovereignRefundingRefusal | "not_settled" };
+
+export async function recoverBankSovereignRefundingReceipts(
+  db: Db,
+  claimId: string
+): Promise<boolean> {
+  const pending = await bankMoneyMovesCollection<{ _id: string }>(db)
+    .find(
+      {
+        _id: { $regex: `^sovereign-refunding:${claimId}:bank:` },
+        ...unfinishedSettlementFilter(),
+      },
+      { projection: { _id: 1 } }
+    )
+    .sort({ createdAt: 1 })
+    .toArray();
+  for (const { _id } of pending) {
+    const result = await resumeSettlement(db, _id);
+    if (result.status !== "applied" && (result.status !== "replayed" || result.error)) return false;
+  }
+  return true;
+}
 
 export async function refundSovereignMaturityShortfall(
   db: Db,
@@ -119,8 +130,8 @@ export async function refundSovereignMaturityShortfall(
       return { status: "replayed", key, bondId, faceLocal: issued?.totalIssued ?? 0 };
     }
   } catch {
-    // A rejected or still-settling receipt owns this turn's key. Nothing new
-    // may be sold under it; the next turn opens a fresh attempt.
+    // The receipt owns this turn's key. Recovery must finish any landed legs
+    // before a later quote can use the claim's remaining cap.
     return { status: "refused", key, refusal: "not_settled" };
   }
   if (!Number.isFinite(input.couponRate) || input.couponRate < 0)
@@ -219,6 +230,57 @@ export async function refundSovereignMaturityShortfall(
         insert: refunding as unknown as Record<string, unknown>,
         note: "Refunding issue for an unfunded sovereign maturity",
       };
+  const holderFunding = input.holderEscrow;
+  const holderProjections: TransitionProjection[] = [];
+  let route: Parameters<typeof commitSovereignPrimary>[4];
+  if (holderFunding) {
+    const remaining = input.scopeOwedLocal - holderFunding.escrowLocal;
+    const routedLocal = Math.min(cashLocal, remaining);
+    route = {
+      kind: "holders",
+      routedLocal,
+      legs: [
+        {
+          kind: "credit",
+          amount: routedLocal,
+          collection: "bonds",
+          filter: {
+            _id: input.sourceBond._id,
+            "sovereignMaturityClaim.id": input.claimId,
+            "sovereignMaturityClaim.escrowLocal": holderFunding.escrowLocal,
+          },
+          path: "sovereignMaturityClaim.escrowLocal",
+          note: "Route market proceeds to the frozen maturity claim",
+        },
+      ],
+    };
+    // Book the fiscal payment when the full escrow is ready for payout.
+    // If Treasury cash is still needed, the separate funding receipt owns it.
+    if (routedLocal === remaining) {
+      holderProjections.push(
+        {
+          collection: "federalBudget",
+          filter: { _id: input.budgetId },
+          update: { $inc: { treasuryBalance: -input.scopeOwedLocal } },
+          note: "Record fully market-funded principal payment in signed fiscal position",
+        },
+        ...treasuryPaymentWitness({
+          key,
+          country: input.countryId,
+          currency: input.currencyCode,
+          amount: 0,
+          rate: holderFunding.localPerAnchor,
+          turn: input.turn,
+          signedPositionOwned: true,
+          signedPositionAmount: input.scopeOwedLocal,
+          txType: "gov_bond_maturity_payment",
+          now: input.now,
+        })
+      );
+    }
+  } else if (input.followOn) {
+    route = { kind: "bank", ...routeProceeds(input.followOn.legs, cashLocal, input.budgetId) };
+  }
   try {
     await commitSovereignPrimary(
       db,
@@ -250,9 +312,10 @@ export async function refundSovereignMaturityShortfall(
           note: "Record refunded face on the maturing claim",
         },
         ...(input.followOn?.projections ?? []),
+        ...holderProjections,
       ],
       accounting,
-      input.followOn ? routeProceeds(input.followOn.legs, cashLocal, input.budgetId) : undefined
+      route
     );
   } catch {
     // The pool cash guard refused or the receipt is still settling: no new

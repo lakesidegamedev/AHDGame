@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
@@ -80,7 +81,7 @@ import {
   getOutputMultiplier,
   trendProductionPolicy,
 } from "@/lib/utils/productionPolicy";
-import { energyProductivityMultiplier } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import {
@@ -125,6 +126,7 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** gameConfig.producerOwnSitesFirstStage >= 1: own sites take own output first, nearest first. */
   ownSitesFirst?: boolean;
+  electricityNetworkMode?: import("@/lib/electricityNetwork/rules/types").ElectricityNetworkMode;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
   /** gameConfig.producerPublicCarryReleaseStage >= 1: release carry over several turns. */
@@ -234,6 +236,8 @@ export type ProducerPhysicalEnv = Pick<
     | "stateOwnershipConcentrationByCountry"
     | "energyTransition"
     | "automationPolicyByCountry"
+    | "legacyTechStartingYear"
+    | "legacyTechMode"
   >;
 };
 
@@ -316,7 +320,12 @@ export function prepareProducerPhysicalSector(input: {
   const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
-          getSectorTechEffectsForYear(corp, sector.sectorType, currentYear),
+          getSectorTechEffectsForYear(
+            corp,
+            sector.sectorType,
+            currentYear,
+            legacyTechContextFromLookups(lookups)
+          ),
           operatingType,
           sector.strategyId,
           currentYear
@@ -686,7 +695,7 @@ export function prepareProducerPhysicalSector(input: {
     policyOutput *
     (outputYield / baseRecipe.unitsPerNominalAnchor) *
     extraction *
-    energyProductivityMultiplier(sector.sectorType, currentTurn, lookups.preset) *
+    plantThroughputMultiplier(sector, currentTurn, lookups.preset) *
     (sector.sectorType === "financial"
       ? commodityProductionCapacityScale(corp.bankCharter, env.privateBankingEnabled === true)
       : 1) *

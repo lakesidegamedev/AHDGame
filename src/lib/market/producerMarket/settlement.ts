@@ -1,3 +1,6 @@
+import { compareElectricity } from "@/lib/electricityNetwork/comparison";
+import type { ElectricityReport } from "@/lib/electricityNetwork/rules/report";
+import type { ElectricityNetwork } from "@/lib/electricityNetwork/rules/types";
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { recordPhaseSubstep, substepMarker } from "@/lib/observability/phaseSubsteps";
@@ -57,6 +60,8 @@ interface FrozenProducerTurn {
 }
 
 interface ProducerTurnRecord {
+  electricityNetwork?: ElectricityNetwork;
+  electricityReport?: ElectricityReport;
   _id: string;
   worldEpoch: string;
   turn: number;
@@ -254,6 +259,17 @@ function comparableInventory(image: unknown): string {
   );
 }
 
+export function compareProducerInventory(
+  storedInventory: unknown,
+  expectedInventory: unknown
+): "exact" | "equivalent" | "different" {
+  // Native serialization suffices when both use the same book names.
+  if (JSON.stringify(storedInventory) === JSON.stringify(expectedInventory)) return "exact";
+  return comparableInventory(storedInventory) === comparableInventory(expectedInventory)
+    ? "equivalent"
+    : "different";
+}
+
 interface PhysicalVerification {
   /** Deterministic turn warnings for sectors whose owner drifted after the plan froze. */
   turnWarnings: string[];
@@ -344,19 +360,15 @@ async function verifyPhysicalTargets(
       throw new Error(
         `Producer physical opening changed or was not reconciled: sector ${target.sectorId} (capacity ${sector.producerCapacity?.worldEpoch === frozen.worldEpoch ? `turn ${sector.producerCapacity?.turn} vs ${state.completedTurn}` : "other world"}, stock ${sector.capitalStock} vs ${state.ownedDailyUnits}, queue ${(sector.buildQueue ?? []).length} vs ${(state.buildQueue ?? []).length})`
       );
-    if (
-      comparableInventory(sector.producerInventory) !==
-      comparableInventory(
-        (prior?.turn === turn ? closingInventories : openingInventories).get(target.producerId)
-      )
-    )
+    const storedInventory = sector.producerInventory;
+    const expectedInventory = (prior?.turn === turn ? closingInventories : openingInventories).get(
+      target.producerId
+    );
+    const inventoryMatch = compareProducerInventory(storedInventory, expectedInventory);
+    if (inventoryMatch === "different")
       throw new Error("Producer inventory opening changed or was not reconciled");
-    if (
-      prior?.turn !== turn &&
-      JSON.stringify(sector.producerInventory) !==
-        JSON.stringify(openingInventories.get(target.producerId))
-    )
-      storedOpeningInventory.set(target.producerId, sector.producerInventory);
+    if (inventoryMatch === "equivalent" && prior?.turn !== turn)
+      storedOpeningInventory.set(target.producerId, storedInventory);
     if (sector.sectorType !== target.plantType.sectorType)
       throw new Error("Producer physical plant type changed");
   }
@@ -654,6 +666,7 @@ export async function settleProducerTurn(
       })),
     };
     clock.lap("capacityMs");
+    const electricityPassLimit = production.maximumPlanningPasses;
     const payload: FrozenProducerTurn = {
       version: 1,
       createdAt: new Date().toISOString(),
@@ -691,8 +704,18 @@ export async function settleProducerTurn(
       })(),
     };
     clock.lap("closeMs");
+    phaseSteps.mark("producerMarket.close");
+    const electricityReport = compareElectricity(
+      production,
+      payload.result,
+      input.targets,
+      electricityPassLimit
+    );
+    clock.lap("electricityComparisonMs");
+    phaseSteps.mark("producerMarket.electricityComparison");
     validateTargets(payload);
     clock.lap("validateTargetsMs");
+    phaseSteps.mark("producerMarket.validateTargets");
     // The market is fully computed here. The execution deadline guards the
     // expensive clearing only: encoding and staging a finished receipt must not
     // discard it, because a retry recomputes the same market against the same
@@ -705,6 +728,10 @@ export async function settleProducerTurn(
       worldEpoch: input.worldEpoch,
       turn,
       status: "frozen",
+      ...(production.electricityNetwork
+        ? { electricityNetwork: production.electricityNetwork }
+        : {}),
+      ...(electricityReport ? { electricityReport } : {}),
       digest: encoded.digest,
       payload: encoded.payload,
     };

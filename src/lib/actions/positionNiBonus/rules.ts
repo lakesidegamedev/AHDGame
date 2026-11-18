@@ -79,17 +79,24 @@ export function resolveLeadershipActionBonus({
   return bonus;
 }
 
-/** Party offices. */
-const PARTY_CHAIR_NI_BONUS = 2.0;
-const PARTY_SUB_CHAIR_NI_BONUS = 1.5;
-const STATE_PARTY_CHAIR_NI_BONUS = 0.5;
 /** Central bank chair: the cabinet tier. */
 const CENTRAL_BANK_CHAIR_NI_BONUS = CABINET_NI_BONUS;
 
 /** CEO of one of the 10 largest listed corporations in their country. */
-const MAJOR_CEO_NI_BONUS = 0.3;
+const MAJOR_CEO_NI_BONUS = 0.2;
 /** CEO of any other qualifying corporation. */
-const CEO_NI_BONUS = 0.15;
+const CEO_NI_BONUS = 0.05;
+
+/** A national party chair at full organization matches a major CEO. */
+export const PARTY_CHAIR_NI_BONUS_MAX = MAJOR_CEO_NI_BONUS;
+/** National party organization (0-100) at which a chair earns the full rate. */
+export const PARTY_CHAIR_FULL_ORGANIZATION = 50;
+
+/** Per-turn recognition for a national party chair, scaled by organization. */
+export function partyChairNiBonus(organization: number | null | undefined): number {
+  if (organization == null || !Number.isFinite(organization) || organization <= 0) return 0;
+  return PARTY_CHAIR_NI_BONUS_MAX * Math.min(1, organization / PARTY_CHAIR_FULL_ORGANIZATION);
+}
 export type CeoNiTier = "major" | "standard";
 
 /**
@@ -102,9 +109,6 @@ export interface PositionNiBonusInput {
   currentOfficeType?: string;
   countryId: CountryId;
   congressLeadershipRoles?: readonly LeadershipRole[];
-  isPartyChair?: boolean;
-  isPartySubChair?: boolean;
-  isStatePartyChair?: boolean;
   isSeatedJustice?: boolean;
   isCentralBankChair?: boolean;
   /**
@@ -116,6 +120,8 @@ export interface PositionNiBonusInput {
   /** The cabinet membership is an acting appointment. */
   isActingCabinet?: boolean;
   ceoTier?: CeoNiTier | null;
+  /** National organization (0-100) of the party this character chairs. */
+  partyChairOrganization?: number | null;
   /** Holds an international organisation's leadership seat. */
   isOrgHead?: boolean;
 }
@@ -125,14 +131,12 @@ export function resolvePositionNiBonus({
   currentOfficeType,
   countryId,
   congressLeadershipRoles = [],
-  isPartyChair = false,
-  isPartySubChair = false,
-  isStatePartyChair = false,
   isSeatedJustice = false,
   isCentralBankChair = false,
   cabinetCountryId,
   isActingCabinet = false,
   ceoTier = null,
+  partyChairOrganization = null,
   isOrgHead = false,
 }: PositionNiBonusInput): number {
   // Acting appointments overwrite currentOffice with the cabinet key, so the
@@ -146,13 +150,6 @@ export function resolvePositionNiBonus({
     bonus = Math.max(bonus, CONGRESS_LEADER_NI_BONUS[role] ?? 0);
   }
 
-  if (isPartyChair) {
-    bonus = Math.max(bonus, PARTY_CHAIR_NI_BONUS);
-  } else if (isPartySubChair) {
-    bonus = Math.max(bonus, PARTY_SUB_CHAIR_NI_BONUS);
-  }
-  if (isStatePartyChair) bonus = Math.max(bonus, STATE_PARTY_CHAIR_NI_BONUS);
-
   if (isSeatedJustice) bonus = Math.max(bonus, JUSTICE_NI_BONUS_PER_TURN);
   if (isCentralBankChair) bonus = Math.max(bonus, CENTRAL_BANK_CHAIR_NI_BONUS);
 
@@ -162,6 +159,8 @@ export function resolvePositionNiBonus({
 
   if (ceoTier === "major") bonus = Math.max(bonus, MAJOR_CEO_NI_BONUS);
   else if (ceoTier === "standard") bonus = Math.max(bonus, CEO_NI_BONUS);
+
+  bonus = Math.max(bonus, partyChairNiBonus(partyChairOrganization));
 
   return bonus + (isOrgHead ? ORG_HEAD_NI_BONUS : 0);
 }

@@ -17,6 +17,11 @@ import type { GameState } from "@/lib/db/types/gameState";
 
 /** Gameplay flags held below their maximum on fresh worlds, and why. */
 export const FRESH_WORLD_FLAG_EXCLUSIONS = {
+  electricityNetworkMode: {
+    value: "shadow",
+    reason:
+      "Grid comparisons start without changing settlement; enforcement requires an explicit administrator choice.",
+  },
   nppAutonomyLevel: {
     value: "v6",
     reason:
@@ -58,6 +63,7 @@ export type DefaultGameStateFlagKey = keyof typeof DEFAULT_GAME_STATE_FLAGS;
 
 /** Gameplay gates and rollout modes on `gameConfig` for every fresh world. */
 export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
+  electricityNetworkMode: FRESH_WORLD_FLAG_EXCLUSIONS.electricityNetworkMode.value,
   nppEconomyEnabled: true,
   nppCorpsAttackable: true,
   nppFundRedemptionEnabled: true,
@@ -138,6 +144,8 @@ export const NON_GAMEPLAY_GAME_STATE_FIELDS: Readonly<Record<string, string>> = 
 /** gameConfig fields shaped like flags that this policy deliberately does not set. */
 export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> = {
   maintenanceMode: "ops maintenance switch",
+  legacyTechMode:
+    "era baseline tech switch: absent means off, which fresh worlds want; an operator sets baseline on a late-start world and a reset clears it",
   producerMarketShadowEnabled:
     "telemetry only: runs the unified producer market in memory beside the live engine; changes no gameplay",
   producerTransitionPackageEnabled:

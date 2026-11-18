@@ -17,6 +17,22 @@ export function safeLakesideLoginReturn(value: string | null | undefined): strin
   }
 }
 
+export function isMarginOfVictoryLogin(value: string | null): boolean {
+  const continuation = safeLakesideLoginReturn(value);
+  if (!continuation) return false;
+  try {
+    const callback = new URL(new URL(continuation).searchParams.get("return") ?? "");
+    return (
+      callback.origin === "https://sim.ahousedividedgame.com" &&
+      callback.pathname === "/api/lakeside/login" &&
+      !callback.username &&
+      !callback.password
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function loginDestination(
   returnTo: string | null | undefined,
   user: { role: string; isAdmin: boolean; hasCompletedSetup: boolean }

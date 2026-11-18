@@ -50,6 +50,8 @@ import {
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { ProducerSectorSettlement } from "@/lib/db/types/producerEconomy";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBookRules";
+import { fundedFreightGaps } from "@/lib/market/producerMarket/fundedFreightDispatchRules";
 
 import {
   inTransitionWindow,
@@ -331,14 +333,33 @@ async function prepareRunFundedProducerTurn(
   // from one read.
   const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
   const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
+  const freightDispatchOn = lookups.preset === "2027-default" && openingTurn === turn - 1;
   const lastOutcome = await producerMarketOutcomesCollection<{
     _id: string;
     clearingPrices?: Record<string, number>;
     laneClearingPrices?: Record<string, number>;
     bookPressure?: Record<string, number>;
+    books?: FundedCountryBookRow[];
   }>(db).findOne(
     { _id: `${worldEpoch}:${openingTurn}` },
-    { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
+    {
+      projection: {
+        clearingPrices: 1,
+        laneClearingPrices: 1,
+        bookPressure: 1,
+        ...(freightDispatchOn
+          ? {
+              books: {
+                $filter: {
+                  input: { $ifNull: ["$books", []] },
+                  as: "book",
+                  cond: { $eq: ["$$book.commodity", "freight"] },
+                },
+              },
+            }
+          : {}),
+      },
+    }
   );
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
@@ -359,6 +380,9 @@ async function prepareRunFundedProducerTurn(
     publicCarryIn,
     householdIncomeFloor: incomeFloor,
     openingShareByCountry,
+    ...(freightDispatchOn && lastOutcome?.books
+      ? { freightGapsByCountry: fundedFreightGaps(lastOutcome.books) }
+      : {}),
     carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,

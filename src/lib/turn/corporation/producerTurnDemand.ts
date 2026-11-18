@@ -1,3 +1,4 @@
+import { buildElectricityNetwork } from "@/lib/electricityNetwork/rules/network";
 /** Funded-market demand construction shared by the producer shadow and the live funded market. */
 import {
   markPublicFairShare,
@@ -48,6 +49,7 @@ import {
 import type { ProfitOwnerKind } from "@/lib/market/producerMarket/profitDistributionRules";
 import { type MarketAccount } from "@/lib/market/producerMarket/rules";
 import type { ProductionPlan } from "@/lib/market/producerMarket/production";
+import { fundedFreightDispatchMultiplier } from "@/lib/market/producerMarket/fundedFreightDispatchRules";
 import { gdpToAnchor } from "@/lib/currency/gdpAnchorRate";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -102,6 +104,8 @@ export async function buildProducerTurnDemand(
     openingShareByCountry?: ReadonlyMap<string, number>;
     /** Background countries trading their macro economy (#5702); absent or empty: none. */
     backgroundEconomies?: readonly BackgroundEconomy[];
+    /** Per-turn freight work left unfilled by funded orders in the previous country books. */
+    freightGapsByCountry?: ReadonlyMap<string, number>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -152,6 +156,8 @@ export async function buildProducerTurnDemand(
 
   // 1. Prepare every producing plant, opening from last shadow turn's stock and receipt.
   const producers: ShadowProducer[] = [];
+  const plannedFreightByCountry = new Map<string, number>();
+  const dispatchableDepots: { plan: ProductionPlan; countryId: string; gap: number }[] = [];
   let skipped = 0;
   const cashByCorp = new Map<string, number>();
   const newCompanyCash = { total: 0 };
@@ -187,6 +193,29 @@ export async function buildProducerTurnDemand(
         });
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
+        const freightGap = input.freightGapsByCountry?.get(sectorCountry);
+        if (
+          freightGap &&
+          sector.sectorType === "logistics" &&
+          sector.strategyId === "freight_only"
+        ) {
+          const output = plan.outputs.find((row) => row.commodity === "freight");
+          const freightUnits =
+            plan.capacityUnits *
+            plan.activeFraction *
+            plan.outputMultiplier *
+            (output?.unitsPerOutput ?? 0);
+          const otherProduction = plan.outputs.some(
+            (row) => row.commodity !== "freight" && row.unitsPerOutput > 0
+          );
+          if (freightUnits > 0 && !otherProduction) {
+            plannedFreightByCountry.set(
+              sectorCountry,
+              (plannedFreightByCountry.get(sectorCountry) ?? 0) + freightUnits
+            );
+            dispatchableDepots.push({ plan, countryId: sectorCountry, gap: freightGap });
+          }
+        }
         preparedSectors.push({ ...prepared, plan });
         headcountBySectorId.set(sectorId, {
           desiredWorkers: headcount.desiredWorkers,
@@ -255,6 +284,10 @@ export async function buildProducerTurnDemand(
     }
   }
 
+  for (const { plan, countryId, gap } of dispatchableDepots) {
+    const planned = plannedFreightByCountry.get(countryId) ?? 0;
+    plan.outputMultiplier *= fundedFreightDispatchMultiplier(gap, planned);
+  }
   input.stage?.("demand.plants");
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
@@ -710,6 +743,13 @@ export async function buildProducerTurnDemand(
     )
   );
   return {
+    electricityNetwork:
+      env.electricityNetworkMode && env.electricityNetworkMode !== "off"
+        ? buildElectricityNetwork(
+            lookups.eraYear ?? Number.parseInt(lookups.preset ?? "2027", 10),
+            env.electricityNetworkMode
+          )
+        : undefined,
     backgroundOffers,
     backgroundOrders,
     skippedSectors,

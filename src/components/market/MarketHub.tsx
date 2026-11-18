@@ -12,7 +12,7 @@ import { MarketOverview } from "./MarketOverview";
 import { sectorsUrl, type SectorsForSaleResponse } from "./marketEndpoints";
 import { DEFAULT_OFFER_FILTERS, offersQuery, SUPPLY_PAGE_SIZE } from "./supplyOfferUi";
 import type { SupplyOffersResponse } from "./supplyOfferUi";
-import { StockMarketChart } from "@/app/country/[code]/stockmarket/components/MarketOverview";
+import type { MarketOverviewPreviews } from "@/lib/market/loadOverviewPreviews";
 import { useMarketJson } from "./useMarketJson";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useHasSession } from "@/contexts/AuthDataContext";
@@ -29,6 +29,14 @@ import type { ExchangeData } from "@/app/country/[code]/stockmarket/types";
 // eager because it is the default tab.
 const PanelFallback = () => (
   <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const StockMarketChart = dynamic(
+  () =>
+    import("@/app/country/[code]/stockmarket/components/MarketOverview").then(
+      (m) => m.StockMarketChart
+    ),
+  { ssr: false, loading: PanelFallback }
 );
 
 const StocksPanel = dynamic(() => import("./MarketPanels").then((m) => m.StocksPanel), {
@@ -81,13 +89,16 @@ const MarketCorporationAction = dynamic(
 
 /** Chart visibility, remembered per browser; expanded until the player hides it. */
 function useChartOpen(): [boolean, (open: boolean) => void] {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(CHART_KEY) === "0") setOpen(false);
-    } catch {
-      // storage unavailable: keep the default
-    }
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        setOpen(window.localStorage.getItem(CHART_KEY) !== "0");
+      } catch {
+        setOpen(true);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
   return [
     open,
@@ -102,7 +113,7 @@ function useChartOpen(): [boolean, (open: boolean) => void] {
   ];
 }
 
-export function MarketHub() {
+export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | null } = {}) {
   const groupT = useTranslations("corporations.marketGroups");
   const router = useRouter();
   const pathname = usePathname();
@@ -121,15 +132,17 @@ export function MarketHub() {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareLoaded, setCompareLoaded] = useState(false);
 
-  // Shared with the overview and the commodities, sectors and supply tabs
-  // through the response cache.
-  const commodities = useMarketJson<{ commodities?: CommodityData[] }>("/api/commodities");
-  const sectors = useMarketJson<SectorsForSaleResponse>(sectorsUrl(1));
+  const commodities = useMarketJson<{ commodities?: CommodityData[] }>(
+    tab === "commodities" || (tab === "overview" && previews?.movers == null)
+      ? "/api/commodities"
+      : null
+  );
+  const sectors = useMarketJson<SectorsForSaleResponse>(tab === "overview" ? sectorsUrl(1) : null);
   // Standing supply offers name the viewer's corporations and require auth, so
   // a signed-out visit must not request them (the 401 is a console error).
   const hasSession = useHasSession();
   const offers = useMarketJson<SupplyOffersResponse>(
-    hasSession
+    hasSession && (tab === "overview" || tab === "commodities")
       ? `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
       : null
   );
@@ -275,9 +288,12 @@ export function MarketHub() {
           {tab === "overview" && (
             <MarketOverview
               commodities={list}
+              previews={previews}
               sectors={sectors.data}
               offers={offers.data}
-              loading={commodities.loading || sectors.loading || offers.loading}
+              commoditiesLoading={commodities.loading}
+              sectorsLoading={sectors.loading}
+              offersLoading={offers.loading}
             />
           )}
           {tab === "stocks" && <StocksPanel exchange={exchangeApi} />}

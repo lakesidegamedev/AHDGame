@@ -17,7 +17,7 @@ import {
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
   resolveSectorHostCurrencyCode,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
       // SP4: merged legacy + political-board read so playable regions' worker
       // counts keep matching the turn's adapter-fed values.
       loadWorkforceSkillByState(db, stateIds),
-      loadFxRatesByCurrency(db),
+      loadValuationFxRates(db),
     ]);
 
     const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));

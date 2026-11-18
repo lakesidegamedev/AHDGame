@@ -5,7 +5,11 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/currency/corporationCapital")>();
-  return { ...actual, loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()) };
+  return {
+    ...actual,
+    loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
+    loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
+  };
 });
 
 function cursor<T>(rows: T[]) {

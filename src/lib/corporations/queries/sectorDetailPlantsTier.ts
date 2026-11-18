@@ -78,7 +78,11 @@ import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondR
 import type { Db, Document, WithId } from "mongodb";
 import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { StrategyAvailabilityWorld, TechCorpView } from "@/lib/constants/techTree";
+import type {
+  LegacyTechContext,
+  StrategyAvailabilityWorld,
+  TechCorpView,
+} from "@/lib/constants/techTree";
 import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
@@ -108,6 +112,7 @@ export async function buildSectorDetailPlantsTier({
   ceo,
   techTreesEnabled,
   techCorpView,
+  legacyTech,
   sectorType,
   techCurrentYear,
   effectiveSupply,
@@ -216,6 +221,7 @@ export async function buildSectorDetailPlantsTier({
   ceo: WithId<Document> | WithId<Character> | null;
   techTreesEnabled: boolean;
   techCorpView: TechCorpView;
+  legacyTech: LegacyTechContext;
   sectorType:
     | "financial"
     | "media"
@@ -485,7 +491,7 @@ export async function buildSectorDetailPlantsTier({
       (ceo as { stats?: { businessAcumen?: number } } | null)?.stats?.businessAcumen ??
       NEUTRAL_STAT;
     const techBuildEffects = techTreesEnabled
-      ? getSectorTechEffects(techCorpView, sectorType)
+      ? getSectorTechEffects(techCorpView, sectorType, legacyTech)
       : null;
     const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
     const techDominanceShield = techBuildEffects
@@ -493,7 +499,8 @@ export async function buildSectorDetailPlantsTier({
           techCorpView,
           sectorType,
           techCurrentYear,
-          governorConfig?.strengthUpkeepStage
+          governorConfig?.strengthUpkeepStage,
+          legacyTech
         )
       : 0;
     // The physical input bill: the same demand rows the Inputs panel renders,
@@ -534,6 +541,7 @@ export async function buildSectorDetailPlantsTier({
     );
     const outputContext = {
       techEnabled: techTreesEnabled,
+      legacyTech,
       turn: currentTurn,
       preset: sectorDetailPreset,
     };

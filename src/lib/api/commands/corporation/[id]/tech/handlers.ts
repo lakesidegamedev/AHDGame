@@ -47,7 +47,8 @@ import {
   getPassedDecadeIds,
   getUnlockedStrategyIds,
   isNodeOpenForResearch,
-  getSectorTechEffectsForYear,
+  isLegacyTechDecade,
+  getSectorTechEffectBreakdown,
   getActiveTechDecadeIds,
   isTechNodeEffectExpired,
   SLOT_PARENT,
@@ -70,8 +71,16 @@ import {
   FRONTIER_INPUT_PCT,
 } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
+/** Effect kinds that are not per-turn running effects: they apply at unlock or as availability. */
+const NON_RUNNING_EFFECT_KINDS: ReadonlySet<string> = new Set([
+  "unlockStrategy",
+  "marketingStrength",
+  "logisticsStrength",
+]);
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -131,6 +140,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       frontierProgrammes: corporation.frontierProgrammes,
       frontierMethods: corporation.frontierMethods,
     };
+    // Pre-start-decade nodes stay owned; whether their running effects count
+    // follows gameConfig.legacyTechMode, the same rule the turn applies.
+    const legacy = await loadLegacyTechContext(db, { startingYear });
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
     const activeDecadeIds = getActiveTechDecadeIds(currentYear);
@@ -181,8 +193,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
         // running plant effects have expired (past decades no longer apply).
         const effectExpired =
           owned && isTechNodeEffectExpired(node, activeDecadeIds, { shieldExpires });
+        // An era node in "off" mode is owned but gives no running effect.
+        const effectsOff = legacy.mode === "off" && isLegacyTechDecade(node.decadeId, legacy);
         const valuePerTurn =
-          techPlantBasis && !effectExpired ? techNodeValuePerTurn(node, techPlantBasis) : 0;
+          techPlantBasis && !effectExpired && !effectsOff
+            ? techNodeValuePerTurn(node, techPlantBasis)
+            : 0;
         const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
         // Past decades have both lanes auto-granted — no lane commitment applies.
         const laneLocked = isPastDecade ? false : !!committed && committed !== lane;
@@ -210,17 +226,23 @@ export async function GET(_request: Request, { params }: RouteParams) {
           paybackTurns: redact ? null : paybackTurns,
           inputEfficiencyContributionPct: redact
             ? null
-            : Math.round(
-                node.effects
-                  .filter((effect) => effect.kind === "inputEfficiency")
-                  .reduce((sum, effect) => sum + effect.pct, 0) *
-                  (lane === "generic" ? CORP_LANE_EFFECT_SCALE : 1) *
-                  1000
-              ) / 10,
-          effects: node.effects.map((e) => ({
-            category: techEffectCategory(e.kind),
-            label: describeTechEffect(e),
-          })),
+            : effectsOff
+              ? 0
+              : Math.round(
+                  node.effects
+                    .filter((effect) => effect.kind === "inputEfficiency")
+                    .reduce((sum, effect) => sum + effect.pct, 0) *
+                    (lane === "generic" ? CORP_LANE_EFFECT_SCALE : 1) *
+                    1000
+                ) / 10,
+          // An era node that gives nothing lists only what still applies
+          // (strategy unlocks, strength grants).
+          effects: node.effects
+            .filter((e) => !effectsOff || NON_RUNNING_EFFECT_KINDS.has(e.kind))
+            .map((e) => ({
+              category: techEffectCategory(e.kind),
+              label: describeTechEffect(e),
+            })),
           unlocksStrategy: strategyEffect
             ? (strategyNameById.get((strategyEffect as { strategyId: string }).strategyId) ??
               (strategyEffect as { strategyId: string }).strategyId)
@@ -269,9 +291,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Headline = the effective bonus on the corp's PRIMARY sector
     // (Corporate-lane scaled + Sector-lane full), which is the strongest case.
     // Uses the same decade window as the turn, so expired techs do not count.
-    const agg = redact
+    const breakdown = redact
       ? null
-      : getSectorTechEffectsForYear(corpView, operatingSectorType, currentYear);
+      : getSectorTechEffectBreakdown(corpView, operatingSectorType, currentYear, legacy);
 
     // ── Tech overview metrics ──────────────────────────────────────────────
     const totalNodes = (TECH_TREE[operatingSectorType] ?? []).length;
@@ -357,12 +379,27 @@ export async function GET(_request: Request, { params }: RouteParams) {
       unlockedStrategyIds: redact ? [] : getUnlockedStrategyIds(corpView),
       unlockedStrategyNames,
       // Active plant-wide tech effects against their caps.
-      plantOutputPct: agg ? Math.round(agg.plantOutputBonus * 1000) / 10 : null,
+      // The percentages and caps below describe RESEARCH: the era baseline is
+      // outside the caps and reported on its own line.
+      plantOutputPct: breakdown
+        ? Math.round(breakdown.researched.plantOutputBonus * 1000) / 10
+        : null,
       plantOutputCapPct: Math.round(TECH_PLANT_OUTPUT_CAP * 100),
       // Frontier race methods sit on top of the node cap as their own term.
-      methodOutputPct: agg ? Math.round(agg.methodOutputBonus * 1000) / 10 : null,
-      inputEfficiencyPct: agg ? Math.round(agg.inputEfficiencyBonus * 1000) / 10 : null,
+      methodOutputPct: breakdown
+        ? Math.round(breakdown.researched.methodOutputBonus * 1000) / 10
+        : null,
+      inputEfficiencyPct: breakdown
+        ? Math.round(breakdown.researched.inputEfficiencyBonus * 1000) / 10
+        : null,
       inputEfficiencyCapPct: Math.round(TECH_INPUT_EFFICIENCY_CAP * 100),
+      // Era baseline: pre-start-decade tech outside the caps. Zero when it does not count.
+      eraBaseline: breakdown
+        ? {
+            plantOutputPct: Math.round(breakdown.baseline.plantOutputBonus * 1000) / 10,
+            inputEfficiencyPct: Math.round(breakdown.baseline.inputEfficiencyBonus * 1000) / 10,
+          }
+        : null,
       // Overview metrics.
       totalNodes,
       techsUnlocked,

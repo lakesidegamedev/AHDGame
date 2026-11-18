@@ -61,9 +61,21 @@ describe("public sovereign watch query", () => {
       creditRating: "AA",
       debtToGdpRatio: 0.8,
       inflationRate: 3,
+      realGdpGrowthPct: 2.5,
+      annualGdpGrowth: 2.5,
       demand: { band: expect.any(String), components: expect.any(Array) },
-      sustainability: { score: expect.any(Number), band: expect.any(String) },
+      sustainability: {
+        score: expect.any(Number),
+        band: expect.any(String),
+        components: expect.arrayContaining([
+          expect.objectContaining({ id: "growth", label: "Real GDP growth" }),
+        ]),
+      },
     });
+
+    // The explicit real-growth name and its deprecated alias must not drift.
+    const published = us as unknown as { realGdpGrowthPct: number; annualGdpGrowth: number };
+    expect(published.realGdpGrowthPct).toBe(published.annualGdpGrowth);
   });
 
   it("does not quote a dissolved country", async () => {

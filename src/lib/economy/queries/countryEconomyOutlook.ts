@@ -53,6 +53,9 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import type { DebtTrajectory } from "@/lib/budget/rules/sovereignDebtSustainability";
+import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
+import { sovereignInputsFromBudget } from "@/lib/budget/rules/sovereignInputs";
 
 interface HistoryPoint {
   turn: number;
@@ -79,7 +82,16 @@ export interface CountryEconomyOutlook {
       neutral: number;
       history: HistoryPoint[];
     };
-    credit: { rating: string | null; debtToGdpRatio: number | null };
+    credit: {
+      rating: string | null;
+      debtToGdpRatio: number | null;
+      /** Which way the ratio is moving, from the same debt-dynamics identity the rollover prices. */
+      debtTrajectory: DebtTrajectory | null;
+      /** Primary balance, in percent of GDP, that holds the ratio flat. */
+      stabilisingPrimaryBalancePct: number | null;
+      /** Ladder rate the path is priced at, in percent, before premiums. */
+      debtPathBasisPct: number | null;
+    };
   };
   realEconomy: {
     wageGrowth: number | null;
@@ -312,6 +324,10 @@ export async function buildCountryEconomyOutlook(
       credit: {
         rating: budget?.creditRating ?? null,
         debtToGdpRatio: budget?.debtToGdpRatio ?? null,
+        debtTrajectory: debtPath?.trajectory ?? null,
+        stabilisingPrimaryBalancePct:
+          debtPath === null ? null : round2(debtPath.stabilisingPrimaryBalanceToGdp * 100),
+        debtPathBasisPct: debtRate === null ? null : round2(debtRate.afterImfCapRate * 100),
       },
     },
     realEconomy: {

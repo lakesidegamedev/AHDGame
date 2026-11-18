@@ -457,7 +457,11 @@ async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
  * effect intents to the owning systems and writes the instance back in one bulk
  * write. A crisis that throws is skipped and the rest still run.
  */
-export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
+export async function processCrisisV2Turn(
+  db: Db,
+  turn: number,
+  { pauseOpenings = false }: { pauseOpenings?: boolean } = {}
+): Promise<CrisisV2TurnResult> {
   ensureBuiltinCrisisV2Content();
   ensureLegacyCrisisContent();
   ensureCampaignCrisisContent();
@@ -476,7 +480,9 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
     if (bills.failed > 0) crises = await loadLive();
   }
 
-  if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
+  if (crises.length === 0 && (pauseOpenings || listCrisisOpenCandidateProviders().length === 0)) {
+    return EMPTY_RESULT;
+  }
 
   ensureBuiltinCrisisHolderProviders();
   if (crises.length > 0) await runNppCrisisResponse(db, turn);
@@ -783,8 +789,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   } catch (error) {
     logger.error(COMPONENT, "scar pass failed", error);
   }
-  result.opened = await openNewCrises(db, turn, stillActive);
-  result.opened += (await runCrisisSpillover(db, turn)).opened;
+  if (!pauseOpenings) {
+    result.opened = await openNewCrises(db, turn, stillActive);
+    result.opened += (await runCrisisSpillover(db, turn)).opened;
+  }
   return result;
 }
 

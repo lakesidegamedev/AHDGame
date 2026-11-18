@@ -7,6 +7,7 @@ import { processActionRefresh } from "@/lib/turn/actionRefresh";
 import { processCaucusTax } from "@/lib/turn/caucusTax";
 import { processFundGeneration } from "@/lib/turn/fundGeneration";
 
+import { shouldPauseFoundingCrisisOpenings } from "@/lib/crises/rules/foundingCrisisPause";
 import { processAutoDisasterTurn } from "@/lib/turn/autoDisasterTurn";
 import { processAutoCrisisTurn } from "@/lib/turn/autoCrisisTurn";
 import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
@@ -88,12 +89,20 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
         // full-strength onset turn on an inert economy. Deferring keeps the
         // cadence honest, it fires on the next unpaused turn instead.
         if (!corpActionsPaused) {
+          const pauseOpenings = shouldPauseFoundingCrisisOpenings(gameState.preIteration, newTurn);
+          const disasterConfig = {
+            autoCrisisPaused: pauseOpenings || gameState.autoCrisisPaused === true,
+            autoDisastersEnabled: gameState.autoDisastersEnabled,
+            startingYear: gameState.startingYear,
+          };
           await runtime.runPhase("autoDisasterTurn", () =>
-            processAutoDisasterTurn(context.db, newTurn, gameState)
+            processAutoDisasterTurn(context.db, newTurn, disasterConfig)
           );
-          await runtime.runPhase("autoCrisisTurn", () =>
-            processAutoCrisisTurn(context.db, newTurn, gameState)
-          );
+          if (!pauseOpenings) {
+            await runtime.runPhase("autoCrisisTurn", () =>
+              processAutoCrisisTurn(context.db, newTurn, gameState)
+            );
+          }
         }
         // Global cold-war tension relaxes toward its standing-pressure floor.
         // Deliberately OUTSIDE the corpActionsPaused gate: tension is world

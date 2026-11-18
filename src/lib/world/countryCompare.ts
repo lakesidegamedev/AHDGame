@@ -30,3 +30,36 @@ export function toggleComparePair(
 export function comparePairReady(selected: readonly string[]): boolean {
   return selected.length === MAP_COMPARE_SLOTS;
 }
+
+/**
+ * The `compare` query value for a shared map link, in panel order.
+ *
+ * Ids are country ids (not ISO numbers), uppercase, so the link reads as
+ * `/world?compare=FR,JP`. Order is kept because the panel reads left to right.
+ */
+export function compareShareParam(selected: readonly string[]): string {
+  return selected.filter(Boolean).slice(0, MAP_COMPARE_SLOTS).join(",");
+}
+
+/**
+ * Read a shared `compare` value back into a selection.
+ *
+ * The value arrives from a URL, so it is untrusted: unknown countries, blanks,
+ * duplicates and anything past the two slots are dropped rather than trusted.
+ * A link that names one real country opens with that side filled, and junk
+ * opens nothing at all.
+ */
+export function parseCompareShareParam(
+  value: string | null | undefined,
+  allowed: ReadonlySet<string>
+): string[] {
+  if (!value) return [];
+  const picked: string[] = [];
+  for (const raw of value.split(",")) {
+    const id = raw.trim();
+    if (!id || picked.includes(id) || !allowed.has(id)) continue;
+    picked.push(id);
+    if (picked.length === MAP_COMPARE_SLOTS) break;
+  }
+  return picked;
+}

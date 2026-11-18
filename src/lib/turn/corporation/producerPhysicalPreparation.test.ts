@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
+import { producerRunBudget } from "@/lib/market/producerMarket/productionPlan";
 import {
   prepareProducerPhysicalSector,
   withStateBooks,
@@ -58,6 +59,27 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("funds the extra 2027 Standard retail throughput with proportional input purchases", () => {
+    const { input, sector, env } = fixture();
+    sector.sectorType = "retail";
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    const { prepared } = prepareProducerPhysicalSector(input);
+    const { plan, target } = prepared;
+    const before = { ...plan, outputMultiplier: plan.outputMultiplier / 1.26 };
+    const billedInputBudget = (p: typeof plan) =>
+      producerRunBudget([p]).variableNeed.get(p.accountId)! -
+      p.labourCost -
+      (p.otherOperatingCost - (p.idleOperatingCost ?? p.otherOperatingCost));
+
+    expect(billedInputBudget(plan)).toBeGreaterThan(0);
+    expect(billedInputBudget(plan)).toBeCloseTo(billedInputBudget(before) * 1.26, 8);
+    expect(plan.outputs).toHaveLength(1);
+    expect(plan.outputs[0]).toMatchObject({ commodity: "retail", unitsPerOutput: 1 });
+    expect(target.capacity.ownedDailyUnits).toBe(sector.capitalStock);
+    expect(target.capacity.paidBookAnchor).toBe(sector.capacityBookAnchor);
+  });
+
   it("reuses era prices without changing regional prices or country-specific plans", () => {
     for (const countryId of ["US", "UK", "JP"] as const) {
       const { input, env } = fixture();
@@ -148,6 +170,26 @@ describe("physical producer preparation", () => {
     sector.sellOutsideFirst = true;
     expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBe(true);
   });
+
+  it("adds financed throughput for fintech while retaining both products and the input recipe", () => {
+    const { input, sector, env } = fixture();
+    sector.strategyId = "fintech";
+    env.currentYear = 2027;
+    env.lookups.preset = "2019-default";
+    const prior = prepareProducerPhysicalSector(input).prepared;
+    env.lookups.preset = "2027-default";
+    const current = prepareProducerPhysicalSector(input).prepared;
+
+    expect(current.plan.outputMultiplier).toBeCloseTo(prior.plan.outputMultiplier * 1.4, 10);
+    expect(current.plan.inputs).toEqual(prior.plan.inputs);
+    expect(current.plan.outputs).toEqual(prior.plan.outputs);
+    expect(current.plan.outputs.map((output) => output.commodity).sort()).toEqual([
+      "financial_services",
+      "software",
+    ]);
+    expect(current.target.capacity).toEqual(prior.target.capacity);
+  });
+
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
     sector.producerInventory!.outputStock = [
@@ -207,10 +249,10 @@ describe("physical producer preparation", () => {
         0
       );
     expect(plan.labourCost).toBeCloseTo(outputValue * getSectorLaborShare("financial", 1991), 8);
-    expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.04, 8);
+    expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.036, 8);
     // Cold upkeep alone: the floor the site bill keeps when short inputs cut the run.
     expect(plan.idleOperatingCost).toBeCloseTo(
-      outputValue * 0.04 * COLD_CAPACITY_UPKEEP_FRACTION,
+      outputValue * 0.036 * COLD_CAPACITY_UPKEEP_FRACTION,
       8
     );
     env.lookups.priceRatioByCommodity.set("financial_services", 2);

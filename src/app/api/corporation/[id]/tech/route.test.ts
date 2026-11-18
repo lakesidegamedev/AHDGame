@@ -12,6 +12,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { TECH_TREE } from "@/lib/constants/techTree";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({ resolveCorporation: vi.fn() }));
@@ -240,6 +241,64 @@ describe("GET /api/corporation/[id]/tech", () => {
     it("keeps redacting for anonymous viewers", async () => {
       const body = await getAs(null, null);
       expect(body.redacted).toBe(true);
+    });
+  });
+  describe("era baseline (gameConfig.legacyTechMode)", () => {
+    // A 2027 world: the 2009 decade is the previous one, so its nodes still apply
+    // per turn, but they are pre-start-decade tech.
+    const eraNode = TECH_TREE.financial.find(
+      (n) =>
+        n.decadeId === "2009" &&
+        n.lane === "sector" &&
+        n.effects.some((e) => e.kind === "plantOutput" || e.kind === "inputEfficiency")
+    );
+
+    async function fetchTech(legacyTechMode?: string) {
+      const { getGameState } = await import("@/lib/gameState");
+      vi.mocked(getGameState).mockResolvedValue({
+        currentTurn: 1,
+        startingYear: 2027,
+        currentYear: 2027,
+      } as never);
+      db.collection("gameConfig").findOne.mockResolvedValue(
+        legacyTechMode ? { _id: "default", legacyTechMode } : null
+      );
+      const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+      vi.mocked(resolveCorporation).mockResolvedValue({
+        ok: true,
+        corporation: makeCorp({ unlockedTechNodeIds: eraNode ? [eraNode.id] : [] }),
+      } as never);
+      const { GET } = await import("./route");
+      const res = await GET(new Request("http://localhost/api/corporation/x/tech"), {
+        params: Promise.resolve({ id: corpId.toString() }),
+      });
+      return res.json();
+    }
+
+    it("has an era node to test with", () => {
+      expect(eraNode).toBeDefined();
+    });
+
+    it("counts nothing from earlier decades when the mode is absent", async () => {
+      const body = await fetchTech();
+      expect(body.eraBaseline).toEqual({ plantOutputPct: 0, inputEfficiencyPct: 0 });
+      expect(body.plantOutputPct).toBe(0);
+      expect(body.inputEfficiencyPct).toBe(0);
+      const node = body.decades
+        .flatMap((d: { lanes: { sector: { id: string }[] } }) => d.lanes.sector)
+        .find((n: { id: string }) => n.id === eraNode?.id);
+      expect(node.owned).toBe(true);
+      expect(node.valuePerTurn).toBeNull();
+      expect(node.inputEfficiencyContributionPct).toBe(0);
+    });
+
+    it("reports earlier-decade tech on its own line and leaves the research numbers at zero in baseline mode", async () => {
+      const body = await fetchTech("baseline");
+      expect(body.eraBaseline.plantOutputPct + body.eraBaseline.inputEfficiencyPct).toBeGreaterThan(
+        0
+      );
+      expect(body.plantOutputPct).toBe(0);
+      expect(body.inputEfficiencyPct).toBe(0);
     });
   });
 });

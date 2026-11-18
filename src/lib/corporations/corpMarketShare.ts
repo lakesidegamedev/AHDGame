@@ -14,12 +14,12 @@ import { CORPORATION_TYPE_LABELS } from "@/lib/constants/corporations";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { computeMarketSharePercent } from "./marketShare";
+import { computeMarketSharePercent, loadSectorOwnerCurrencyInfo } from "./marketShare";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -81,18 +81,21 @@ export async function loadIndustryBasis(
         revenue: 1,
       })
       .toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
   ]);
 
-  // Every in-scope sector is physically located in `countryId` (states are
-  // filtered to this country, sectors to those states), so they all share one
-  // host-state functional currency — the currency their revenue is stored in
-  // regardless of which corp (foreign or domestic) owns them. Resolve the ₳
-  // conversion rate once from the host country, not per owning corp.
-  const hostCode = resolveSectorHostCurrencyCode({ countryId }, null);
-  const hostRate = fxRateForSectorHostFromMap({ countryId }, null, fxByCurrency);
-  const anchorFor = (revenue: number): number =>
-    readCorpEconomicAnchor(revenue, hostCode, hostRate);
+  // Every in-scope sector sits in `countryId`, but its stored currency follows
+  // its owner: a domestic sector carries the owner's stamped home currency, a
+  // cross-border one the host's era-blind code. Resolve per sector with the owner.
+  const ownerById = await loadSectorOwnerCurrencyInfo(db, sectorsInScope);
+  const anchorFor = (sec: Pick<CorporateSector, "corporationId" | "revenue">): number => {
+    const owner = ownerById.get(sec.corporationId.toString()) ?? null;
+    return readCorpEconomicAnchor(
+      sec.revenue,
+      resolveSectorHostCurrencyCode({ countryId }, owner),
+      fxRateForSectorHostFromMap({ countryId }, owner, fxByCurrency)
+    );
+  };
 
   for (const sectorType of types) {
     const typeSectors = sectorsInScope.filter((s) => s.sectorType === sectorType);
@@ -101,7 +104,7 @@ export async function loadIndustryBasis(
     const anchorByCorp = new Map<string, number>();
     let totalMarket = 0;
     for (const sec of typeSectors) {
-      const anchor = anchorFor(sec.revenue);
+      const anchor = anchorFor(sec);
       totalMarket += anchor;
       const id = sec.corporationId.toString();
       anchorByCorp.set(id, (anchorByCorp.get(id) ?? 0) + anchor);

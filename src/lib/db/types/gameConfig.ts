@@ -2,6 +2,8 @@ import type { ProducerGameConfig } from "./producerGameConfig";
 import type { EconomicInterventionPlan } from "@/lib/economy/interventionGovernance";
 
 export interface GameConfig extends ProducerGameConfig {
+  /** Shadow records a counterfactual; only Enforced changes electricity clearing. */
+  electricityNetworkMode?: import("@/lib/electricityNetwork/rules/types").ElectricityNetworkMode;
   _id: string;
   /**
    * Which turn engine processes a new turn: "v1" (default when absent) or "v2".
@@ -276,6 +278,15 @@ export interface GameConfig extends ProducerGameConfig {
    * Absent = 0.5. Never paid when the pool is empty.
    */
   decommissionGrantShare?: number;
+
+  /**
+   * How tech node effects from decades before the world's starting decade count
+   * (src/lib/techTree/rules/legacyTech.ts). Those nodes stay owned either way.
+   * "baseline": their effects keep their size but sit outside the research caps,
+   * so research adds on top. "off" or absent: they give no bonus, which is right
+   * for every fresh world. Cleared on a world reset.
+   */
+  legacyTechMode?: "baseline" | "off";
 
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;

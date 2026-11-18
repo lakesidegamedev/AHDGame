@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+import { getNationalCommodityBalance } from "@/lib/commodity-map/nationalBalances";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
+
+const EMPTY_STATE_COUNTRY_MAP: ReadonlyMap<string, string> = new Map();
 
 interface ScopeMeta {
   countryIds: string[];
@@ -27,19 +30,24 @@ interface ShortageRow {
 export function computeRegionalShortages(
   commodities: CommodityData[],
   countryId: string,
-  stateId: string
+  stateId: string,
+  showAll = false,
+  stateCountryMap = EMPTY_STATE_COUNTRY_MAP
 ): ShortageRow[] {
   const rows: ShortageRow[] = [];
   for (const c of commodities) {
     const useState = stateId !== "all";
-    const supply = useState
-      ? (c.stateSupply?.[stateId] ?? 0)
-      : (c.nationalSupply?.[countryId] ?? 0);
-    const demand = useState
-      ? (c.stateDemand?.[stateId] ?? 0)
-      : (c.nationalDemand?.[countryId] ?? 0);
+    const stateSupply = c.stateSupply ?? {};
+    const stateDemand = c.stateDemand ?? {};
+    const { supply, demand } = useState
+      ? { supply: stateSupply[stateId] ?? 0, demand: stateDemand[stateId] ?? 0 }
+      : getNationalCommodityBalance(
+          { ...c, stateSupply, stateDemand },
+          countryId,
+          c.nationalBalanceSource === "funded_book" ? EMPTY_STATE_COUNTRY_MAP : stateCountryMap
+        );
     const gap = demand - supply;
-    if (gap <= 0) continue;
+    if (!showAll && gap <= 0) continue;
 
     const price = useState
       ? (c.statePrices?.[stateId] ?? c.nationalPrices?.[countryId] ?? c.globalPrice)
@@ -59,16 +67,23 @@ export function computeRegionalShortages(
     });
   }
 
-  return rows.sort((a, b) => b.gap - a.gap);
+  return rows.sort((a, b) => (showAll ? a.label.localeCompare(b.label) : b.gap - a.gap));
 }
 
-export default function RegionalShortagesClient() {
+export default function RegionalShortagesClient({
+  initialCountry,
+  initialShowAll = false,
+}: {
+  initialCountry?: string;
+  initialShowAll?: boolean;
+}) {
   const { formatPrice } = useCurrency();
   const countryName = useCountryDisplayName();
   const [commodities, setCommodities] = useState<CommodityData[]>([]);
   const [scopeMeta, setScopeMeta] = useState<ScopeMeta | null>(null);
   const [countryId, setCountryId] = useState<string>("");
   const [stateId, setStateId] = useState<string>("all");
+  const [showAll, setShowAll] = useState(initialShowAll);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -76,7 +91,7 @@ export default function RegionalShortagesClient() {
     let cancelled = false;
     fetch("/api/commodities?scope=full")
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to load commodity shortages");
+        if (!res.ok) throw new Error("Failed to load regional commodity data");
         return res.json();
       })
       .then((data: { commodities?: CommodityData[]; scopeMeta?: ScopeMeta }) => {
@@ -86,19 +101,23 @@ export default function RegionalShortagesClient() {
         setCommodities(list);
         setScopeMeta(meta);
         if (meta && meta.countryIds.length > 0) {
-          setCountryId((prev) => prev || meta.countryIds[0]);
+          setCountryId(
+            initialCountry && meta.countryIds.includes(initialCountry)
+              ? initialCountry
+              : meta.countryIds[0]
+          );
         }
         setLoading(false);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load commodity shortages");
+        setError(err instanceof Error ? err.message : "Failed to load regional commodity data");
         setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialCountry]);
 
   const countries = scopeMeta?.countryIds ?? [];
   const states = useMemo(
@@ -106,10 +125,13 @@ export default function RegionalShortagesClient() {
     [countryId, scopeMeta]
   );
 
-  const shortages = useMemo(
-    () => (countryId ? computeRegionalShortages(commodities, countryId, stateId) : []),
-    [commodities, countryId, stateId]
-  );
+  const rows = useMemo(() => {
+    const stateCountryMap = new Map(states.map((id) => [id, countryId]));
+    return countryId
+      ? computeRegionalShortages(commodities, countryId, stateId, showAll, stateCountryMap)
+      : [];
+  }, [commodities, countryId, stateId, showAll, states]);
+  const title = showAll ? "Regional commodity demand" : "Regional commodity shortages";
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -127,11 +149,15 @@ export default function RegionalShortagesClient() {
                 Commodities
               </Link>
               <span aria-hidden>/</span>
-              <span className="font-medium text-foreground">Regional shortages</span>
+              <span className="font-medium text-foreground">
+                {showAll ? "Regional demand" : "Regional shortages"}
+              </span>
             </nav>
-            <h1 className="text-2xl font-bold text-foreground">Regional commodity shortages</h1>
+            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
             <p className="mt-1 text-sm text-muted">
-              Every commodity where demand exceeds local supply in the chosen country or state.
+              {showAll
+                ? "Supply and demand for every commodity in the chosen country or state."
+                : "Every commodity where demand exceeds local supply in the chosen country or state."}
             </p>
           </div>
         </div>
@@ -174,16 +200,29 @@ export default function RegionalShortagesClient() {
             </select>
           </label>
 
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <span>Show</span>
+            <select
+              value={showAll ? "all" : "shortages"}
+              onChange={(e) => setShowAll(e.target.value === "all")}
+              className="h-8 rounded-md border border-card-border bg-background px-2 text-sm text-foreground focus:border-foreground focus:outline-none"
+            >
+              <option value="all">All commodities</option>
+              <option value="shortages">Shortages only</option>
+            </select>
+          </label>
+
           {!loading && !error && (
             <span className="ml-auto text-xs text-muted">
-              {shortages.length} {shortages.length === 1 ? "commodity" : "commodities"} short
+              {rows.length} {rows.length === 1 ? "commodity" : "commodities"}
+              {!showAll && " short"}
             </span>
           )}
         </div>
 
         {loading && (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
-            Loading regional shortages…
+            Loading regional commodity data…
           </div>
         )}
 
@@ -193,13 +232,15 @@ export default function RegionalShortagesClient() {
           </div>
         )}
 
-        {!loading && !error && shortages.length === 0 && (
+        {!loading && !error && rows.length === 0 && (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
-            No commodities are short in this market right now.
+            {showAll
+              ? "Commodity data is unavailable for this market."
+              : "No commodities are short in this market right now."}
           </div>
         )}
 
-        {!loading && !error && shortages.length > 0 && (
+        {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
             <table className="w-full min-w-[600px] text-sm">
               <thead>
@@ -207,14 +248,16 @@ export default function RegionalShortagesClient() {
                   <th className="px-4 py-2.5 font-medium">Commodity</th>
                   <th className="px-4 py-2.5 text-right font-medium">Supply</th>
                   <th className="px-4 py-2.5 text-right font-medium">Demand</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Shortage gap</th>
+                  <th className="px-4 py-2.5 text-right font-medium">
+                    {showAll ? "Balance" : "Shortage gap"}
+                  </th>
                   <th className="px-4 py-2.5 text-right font-medium">Price</th>
                   <th className="px-4 py-2.5 text-right font-medium">vs base</th>
                   <th className="px-4 py-2.5 text-right font-medium">Market</th>
                 </tr>
               </thead>
               <tbody>
-                {shortages.map((row) => (
+                {rows.map((row) => (
                   <tr
                     key={row.commodity}
                     className="border-b border-card-border/50 last:border-b-0 hover:bg-card-elevated/40"
@@ -224,10 +267,15 @@ export default function RegionalShortagesClient() {
                       {Math.round(row.supply).toLocaleString()}
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted">
-                      {Math.round(row.demand).toLocaleString()}
+                      {Math.round(row.demand).toLocaleString()} {row.unit}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-error">
-                      -{Math.round(row.gap).toLocaleString()} {row.unit}
+                    <td
+                      className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
+                        row.gap > 0 ? "text-error" : row.gap < 0 ? "text-success" : "text-muted"
+                      }`}
+                    >
+                      {row.gap < 0 ? "+" : ""}
+                      {Math.round(-row.gap).toLocaleString()} {row.unit}
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                       {formatPrice(row.price)}

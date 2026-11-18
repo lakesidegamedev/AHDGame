@@ -31,6 +31,29 @@ const DISPLAY_PATHS = [
   "src/lib/world/legacyLeaderboard.ts",
   // Ranks corps by revenue for the player info panel.
   "src/app/api/pip/corp/route.ts",
+  // Cross-border sector money is stored in the host's era currency (FRF, ITL,
+  // ...), which has no live row. These readers restate it for people, so they
+  // need the authored fallback the engine uses or they show it 4.2x / 833x high.
+  "src/lib/corporations/commands/capitalOperations/updateCorporationSettings.ts",
+  "src/app/api/discord-bot/sectors/route.ts",
+  "src/app/api/discord-bot/marketshare/route.ts",
+  // Engine mirrors and money movers that read the same cross-border sector
+  // money. The engine converts it at the authored rate, so each of these must
+  // too: on a live-only map a French sector reads 4.2x and an Italian one 833x
+  // high, which inflates bond ceilings, SOE remittance and nationalization
+  // valuations instead of matching what the engine paid.
+  "src/lib/corporations/corpMarketShare.ts",
+  "src/lib/corporations/marketShare.ts",
+  "src/lib/corporations/dailyGrossRevenue.ts",
+  "src/lib/budget/publicEnterpriseRevenue.ts",
+  "src/lib/nationalization/soeRemittance.ts",
+  "src/lib/nationalization/soeOperations.ts",
+  "src/lib/nationalization/ownershipTransition.ts",
+  "src/lib/corporations/issueRelocationBond.ts",
+  "src/lib/api/commands/corporations/[id]/bonds/handlers.ts",
+  "src/lib/bonds/executeCorporationBondRefinance.ts",
+  "src/lib/bonds/executeCorporationBondDefaultDissolution.ts",
+  "src/lib/bonds/executeCorporationBondRestructure.ts",
 ];
 
 /**
@@ -39,17 +62,15 @@ const DISPLAY_PATHS = [
  * Use the VALUATION map when the surface values a holding for a human to read
  * or rank: portfolios, wealth lists, leaderboards, corp balance figures.
  *
- * Keep the SETTLEMENT map when the surface moves money OR when it exists to
- * mirror an engine computation. A market-share chart, a revenue base, an SOE
- * remittance or an inflation diagnostic must reproduce what the engine did, so
- * feeding it "better" rates would make it disagree with the thing it explains.
- * That is why `corpMarketShare`, `dailyGrossRevenue`, `publicEnterpriseRevenue`,
- * `soeRemittance` and `subsidyBudgetCosts` stay on the settlement map even
- * though several of them never write. The same reasoning keeps
- * `monetaryPolicy/queries/inflationDiagnostics` reading the stored `surplus`
- * cache rather than the derived value (it explains the engine's inflation math,
- * so it must use the engine's inputs); it takes no FX map, so it is not listed
- * below.
+ * Keep the SETTLEMENT map when the surface moves money in a currency that has
+ * to exist as a live market (a trade, a refund, a takeover price) so it can fail
+ * closed instead of converting at a turn-0 anchor.
+ *
+ * Reading stored sector money is a different case, even when the reader moves
+ * money with it: the engine itself restates cross-border sector fields at the
+ * authored era rate, so a bond ceiling, remittance or nationalization value
+ * built from those fields must use that rate too. `inflationDiagnostics` still
+ * reads the stored `surplus` cache and takes no FX map, so it is not listed.
  */
 const SETTLEMENT_PATHS = [
   "src/lib/banking/lending.ts",
@@ -57,11 +78,6 @@ const SETTLEMENT_PATHS = [
   "src/lib/corporations/cancelShareListing.ts",
   "src/lib/corporations/commands/takeovers/hostileTakeover.ts",
   "src/lib/budget/revenue.ts",
-  // Engine mirrors: these must reproduce the engine's own numbers.
-  "src/lib/corporations/corpMarketShare.ts",
-  "src/lib/corporations/dailyGrossRevenue.ts",
-  "src/lib/budget/publicEnterpriseRevenue.ts",
-  "src/lib/nationalization/soeRemittance.ts",
 ];
 
 describe("valuation vs settlement FX usage", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
@@ -120,6 +121,15 @@ export default function CommodityCountryDrilldownView({
             showCapacity={!!capacityByState}
           />
         </div>
+      </div>
+
+      <div className="border-b border-card-border px-4 py-2">
+        <Link
+          href={`/commodity/shortages?country=${countryId}&view=all`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          View demand for all commodities
+        </Link>
       </div>
 
       {/* Map and legend */}
