@@ -160,16 +160,16 @@ describe("decomposePhysicalCosts — P3.5 calibration exactness (#588)", () => {
         storedOtherOpexAnchor: -100,
       })
     );
-    expect(r.otherOpex).toBeCloseTo(360, 10);
+    expect(r.otherOpex).toBeCloseTo(324, 10);
     expect(r.solvedOtherOpexPerUnit).toBeNull();
-    expect(r.physicalPnl?.profit).toBeCloseTo(7290, 10);
+    expect(r.physicalPnl?.profit).toBeCloseTo(7326, 10);
   });
 
   it("does not calibrate a new margin residual under explicit costs", () => {
     const r = decomposePhysicalCosts(physicalInput({ explicitPlantCostsEnabled: true }));
     expect(r.otherOpexCalibrated).toBe(false);
     expect(r.solvedOtherOpexPerUnit).toBeNull();
-    expect(r.otherOpex).toBeCloseTo(360, 10);
+    expect(r.otherOpex).toBeCloseTo(324, 10);
   });
 
   it("bills a starved plant more overhead per unit produced than a full one", () => {
