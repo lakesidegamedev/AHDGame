@@ -92,7 +92,8 @@ export default async function GovernorOfficePage({ params }: Props) {
   const { code, id: rawRegionParam } = await params;
   const id = canonicalRegionId(code.toUpperCase(), rawRegionParam);
   const countryId = code.toUpperCase() as CountryId;
-  if (!COUNTRY_CONFIGS[countryId]) notFound();
+  const config = COUNTRY_CONFIGS[countryId];
+  if (!config) notFound();
   const stateId = id.toUpperCase();
 
   const auth = await getAuthUserWithCharacter();
@@ -403,9 +404,7 @@ export default async function GovernorOfficePage({ params }: Props) {
     { sort: { proposedAt: -1 } }
   );
 
-  // Devolution tab data — only for UK SCO/WAL/NIR seats. Computes the per-turn
-  // driver preview from the same shared helper the engine uses, so the UI
-  // breakdown stays in lockstep with the actual drift math.
+  // Use the same drift calculation as the turn engine.
   let devolutionProps: {
     currentValue: number;
     currentTrend: number;
@@ -433,7 +432,7 @@ export default async function GovernorOfficePage({ params }: Props) {
     referendum: ReferendumPanelData;
   } | null = null;
   const sovereignty = sovereigntyRegionIn(countryId, stateId);
-  if (sovereignty) {
+  if (sovereignty && (auth.character.countryId ?? "US") === countryId) {
     const snapshot = (await loadIndependenceDesireSnapshots(db, sovereignty.countryId)).find(
       (row) => row.stateId === stateId
     );
@@ -559,6 +558,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         officeHolderPartyName={officeHolderPartyName}
         officeHolderPartyAbbreviation={officeHolderPartyAbbreviation}
         officeHolderPartyColor={officeHolderPartyColor}
+        supportsImpeachment={config.governmentType === "presidential"}
         viewerIsAdmin={isAdmin}
         viewerIsHolder={viewerIsHolder}
         viewerCanManage={viewerCanManage}

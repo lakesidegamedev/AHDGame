@@ -74,6 +74,7 @@ interface Props {
   officeHolderPartyName: string | null;
   officeHolderPartyAbbreviation: string | null;
   officeHolderPartyColor: string | null;
+  supportsImpeachment: boolean;
   viewerIsAdmin: boolean;
   viewerIsHolder: boolean;
   /**
@@ -133,7 +134,8 @@ export function GovernorOfficeClient(props: Props) {
   const showDevolution =
     sovereigntyRegionIn(props.countryId, props.stateId) != null && props.devolution != null;
   const tabs = buildTabs(showDevolution, props.stateId);
-  const [active, setActive] = useState<TabKey>("overview");
+  const [selectedTab, setSelectedTab] = useState<TabKey>("overview");
+  const active = selectedTab === "devolution" && !showDevolution ? "overview" : selectedTab;
   const router = useRouter();
 
   // Some regional titles already encode the state name ("Mayor of London")
@@ -250,7 +252,7 @@ export function GovernorOfficeClient(props: Props) {
             {tabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActive(tab.key)}
+                onClick={() => setSelectedTab(tab.key)}
                 className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
                   active === tab.key
                     ? "border-b-2 border-primary text-foreground font-medium"
@@ -264,7 +266,7 @@ export function GovernorOfficeClient(props: Props) {
           </nav>
         </header>
 
-        {props.officeHolderName && (
+        {props.supportsImpeachment && props.officeHolderName && (
           <ImpeachmentPanel
             countryId={props.countryId}
             office="governor"
