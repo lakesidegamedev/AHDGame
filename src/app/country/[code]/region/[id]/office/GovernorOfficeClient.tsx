@@ -133,7 +133,8 @@ export function GovernorOfficeClient(props: Props) {
   const showDevolution =
     sovereigntyRegionIn(props.countryId, props.stateId) != null && props.devolution != null;
   const tabs = buildTabs(showDevolution, props.stateId);
-  const [active, setActive] = useState<TabKey>("overview");
+  const [selectedTab, setSelectedTab] = useState<TabKey>("overview");
+  const active = selectedTab === "devolution" && !showDevolution ? "overview" : selectedTab;
   const router = useRouter();
 
   // Some regional titles already encode the state name ("Mayor of London")
@@ -250,7 +251,7 @@ export function GovernorOfficeClient(props: Props) {
             {tabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActive(tab.key)}
+                onClick={() => setSelectedTab(tab.key)}
                 className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
                   active === tab.key
                     ? "border-b-2 border-primary text-foreground font-medium"
