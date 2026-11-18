@@ -13,6 +13,7 @@ import {
 } from "@/lib/mediaOperatingModels/catalog";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_DEMAND_1991 } from "@/lib/constants/sectorStrategyDefinitions1991";
+import { FINTECH_INPUT_SCALE_2027 } from "@/lib/constants/sectorStrategies/financial";
 import { STANDARD_RETAIL_INPUT_SCALE_2027 } from "@/lib/constants/sectorStrategies/retail";
 import {
   MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR,
@@ -36,6 +37,11 @@ const UNKNOWN_SECTOR_STRATEGY: SectorStrategy = {
   description: "Production is unavailable until this sector type is recognized.",
   supply: {},
   demand: {},
+};
+
+const INPUT_SCALE_2027: Readonly<Partial<Record<string, Readonly<Record<string, number>>>>> = {
+  financial: { fintech: FINTECH_INPUT_SCALE_2027 },
+  retail: { standard: STANDARD_RETAIL_INPUT_SCALE_2027 },
 };
 
 /**
@@ -119,10 +125,11 @@ function strategyForPreset(
       : ADVERTISING_INPUT_VARIANT_DEMAND[sectorType]?.[strategy.id]
     : undefined;
   const demand = overlay ?? eraDemand;
-  if (era === "2027" && sectorType === "retail" && strategy.id === "standard") {
+  const inputScale = era === "2027" ? INPUT_SCALE_2027[sectorType]?.[strategy.id] : undefined;
+  if (inputScale !== undefined) {
     const resizedDemand = { ...(demand ?? strategy.demand) };
     for (const commodity of Object.keys(resizedDemand) as CommodityType[]) {
-      resizedDemand[commodity] = (resizedDemand[commodity] ?? 0) * STANDARD_RETAIL_INPUT_SCALE_2027;
+      resizedDemand[commodity] = (resizedDemand[commodity] ?? 0) * inputScale;
     }
     return { ...strategy, demand: resizedDemand };
   }

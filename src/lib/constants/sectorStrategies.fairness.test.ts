@@ -39,32 +39,32 @@ describe("input-heavy strategy fairness", () => {
     expect(sum).toBeCloseTo(expected, 10);
   });
 
-  it.each([false, true])(
-    "scales only 2027 Standard retail inputs with advertising=%s",
-    (advertisingInput) => {
+  it.each([
+    { sector: "retail", strategyId: "standard", scale: 0.7, advertisingInput: false },
+    { sector: "retail", strategyId: "standard", scale: 0.7, advertisingInput: true },
+    { sector: "financial", strategyId: "fintech", scale: 0.8, advertisingInput: false },
+    { sector: "financial", strategyId: "fintech", scale: 0.8, advertisingInput: true },
+  ])(
+    "scales 2027 $sector/$strategyId inputs with advertising=$advertisingInput",
+    ({ sector, strategyId, scale, advertisingInput }) => {
       const options = { advertisingInput };
-      const prior = getStrategy("retail", "standard", "2019-default", options);
-      const modern = getStrategy("retail", "standard", "2027-default", options);
+      const prior = getStrategy(sector, strategyId, "2019-default", options);
+      const modern = getStrategy(sector, strategyId, "2027-default", options);
       expect(modern.supply).toEqual(prior.supply);
       expect(Object.keys(modern.demand)).toEqual(Object.keys(prior.demand));
       for (const [commodity, rate] of Object.entries(prior.demand)) {
-        expect(modern.demand[commodity as keyof typeof modern.demand]).toBeCloseTo(rate * 0.7, 10);
+        expect(modern.demand[commodity as keyof typeof modern.demand]).toBeCloseTo(
+          rate * scale,
+          10
+        );
       }
       expect(
-        getEffectiveStrategyRates(
-          "retail",
-          "standard",
-          null,
-          null,
-          43,
-          "2027-default",
-          null,
-          options
-        ).demand
+        getEffectiveStrategyRates(sector, strategyId, null, null, 43, "2027-default", null, options)
+          .demand
       ).toEqual(modern.demand);
       if (!advertisingInput) {
         expect(
-          getSectorStrategies("retail", false, "2027-default").find((s) => s.id === "standard")
+          getSectorStrategies(sector, false, "2027-default").find((s) => s.id === strategyId)
             ?.demand
         ).toEqual(modern.demand);
       }

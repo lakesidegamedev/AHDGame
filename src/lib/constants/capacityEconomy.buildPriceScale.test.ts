@@ -106,7 +106,9 @@ describe("2027 standard facility build cost", () => {
 
   it.each([
     { sectorType: "retail", strategyId: "ecommerce", preset: "2027-default" },
-    { sectorType: "financial", strategyId: "fintech", preset: "2027-default" },
+    { sectorType: "financial", strategyId: "traditional_banking", preset: "2027-default" },
+    { sectorType: "financial", strategyId: "fintech", preset: "2019-default" },
+    { sectorType: "financial", strategyId: "toString", preset: "2027-default" },
     { sectorType: "retail", strategyId: "standard", preset: "2019-default" },
   ] as const)("uses the normal basis for $preset $sectorType $strategyId", (input) => {
     expect(computeBuildCost({ ...base, ...input }).unitPriceAnchor).toBeCloseTo(
@@ -119,4 +121,17 @@ describe("2027 standard facility build cost", () => {
       )
     );
   });
+});
+
+it("quotes a 2027 fintech expansion at its own construction basis", () => {
+  const input = {
+    ...base,
+    sectorType: "financial",
+    strategyId: "fintech",
+    preset: "2027-default",
+    primeRate: 5,
+    units: foundingStarterUnits("financial"),
+  } as const;
+  expect(computeBuildCost(input).totalAnchor).toBeCloseTo(7_200);
+  expect(capacityPricePerUnit("financial", 2027, 1, "fintech", input.preset)).toBeCloseTo(40_000);
 });

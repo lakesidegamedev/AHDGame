@@ -37,7 +37,7 @@ import {
   HOST_BUILD_PRICE_INDEX_MAX,
   HOST_BUILD_PRICE_INDEX_MIN,
   PLANT_BUILD_PRICE_SCALE,
-  STANDARD_BUILD_PRICE_SCALE_2027,
+  BUILD_PRICE_SCALE_2027,
 } from "@/lib/constants/capacityEconomyTables";
 
 /**
@@ -599,12 +599,13 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
   } = inputs;
   const safeUnits = Number.isFinite(units) && units > 0 ? units : 0;
   // Construction and installed-capacity valuation use separate prices.
-  const standardBuildScale =
-    preset === "2027-default" && (strategyId ?? DEFAULT_STRATEGY_ID) === DEFAULT_STRATEGY_ID
-      ? (STANDARD_BUILD_PRICE_SCALE_2027[sectorType] ?? 1)
-      : 1;
+  const strategyBuildScale =
+    preset === "2027-default"
+      ? BUILD_PRICE_SCALE_2027[sectorType]?.[strategyId ?? DEFAULT_STRATEGY_ID]
+      : undefined;
   const unitPriceAnchor =
-    capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset) * standardBuildScale;
+    capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset) *
+    (typeof strategyBuildScale === "number" ? strategyBuildScale : 1);
   // Dominance is scaled by how contested the cell is. The factor multiplies the
   // toll's EXCESS over 1.0, so a market with no rivals still pays a monopoly
   // premium, just a smaller one — and a sub-threshold sector (multiplier 1) is

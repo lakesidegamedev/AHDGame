@@ -1,5 +1,7 @@
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 
+export const FINTECH_INPUT_SCALE_2027 = 0.8;
+
 export const FINANCIAL_STRATEGIES: SectorStrategy[] = [
   {
     id: "algorithmic_trading",
