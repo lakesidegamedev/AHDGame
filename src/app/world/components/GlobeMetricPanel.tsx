@@ -79,15 +79,8 @@ const METRIC_NAMES: Record<string, string> = {
   newsTrust: "News Trust",
 };
 
-export type MetricFilter =
-  | { type: "none" }
-  | { type: "overall" }
-  | { type: "category"; categoryId: MetricCategoryId }
-  | { type: "metric"; categoryId: MetricCategoryId; metricId: string }
-  | { type: "party" }
-  | { type: "corps" }
-  /** Treaty Blocs, including player-founded poles. See `worldBlocs.ts`. */
-  | { type: "blocs" };
+import type { MetricFilter } from "@/lib/world/metricFilter";
+export type { MetricFilter };
 
 interface GlobeMetricPanelProps {
   filter: MetricFilter;
