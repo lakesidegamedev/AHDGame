@@ -82,6 +82,13 @@ export interface PresidentialRuleset {
    * the nominee's 1.0x. 1.0 = no discount (identity for a brand-new mechanic).
    */
   vpTravelPresenceWeight: number;
+
+  // ── General-election reach ────────────────────────────────────────────────
+  /**
+   * National-influence floor for a major-party nominee's general-election
+   * reach. 0 = no floor (identity). See `nomineeReachFloor.ts`.
+   */
+  generalNomineeReachFloorNI: number;
 }
 
 /**
@@ -103,6 +110,7 @@ const IDENTITY: Omit<PresidentialRuleset, "version"> = {
   endorsementCoalitionCredibility: 0,
   vpSurrogateActionCap: 2,
   vpTravelPresenceWeight: 1,
+  generalNomineeReachFloorNI: 0,
 };
 
 const V1: PresidentialRuleset = { version: 1, ...IDENTITY };
@@ -127,6 +135,9 @@ const V2: PresidentialRuleset = { version: 2, ...IDENTITY };
  * perfectly aligned suspender still transfers today's 25%, misaligned ones less),
  * and endorsementOrgFraction / endorsementCoalitionCredibility stay 0 so
  * endorsements grant no org or credibility until calibrated at t384.
+ *
+ * generalNomineeReachFloorNI → 25: a magnitude knob applied prospectively to
+ * live v3 races. Each turn's new ballots use it; banked ballots are untouched.
  */
 const V3: PresidentialRuleset = {
   version: 3,
@@ -138,6 +149,9 @@ const V3: PresidentialRuleset = {
   primaryCalendar: "stretched",
   conventionEnabled: true,
   suspendTransferMode: "affinity",
+  // A major party's nominee carries the party's recognition: without a floor a
+  // low-influence nominee was multiplied down in every state at once.
+  generalNomineeReachFloorNI: 25,
 };
 
 const RULESETS: Record<number, PresidentialRuleset> = {
