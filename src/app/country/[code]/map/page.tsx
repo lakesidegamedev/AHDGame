@@ -5,10 +5,10 @@ import { preload } from "react-dom";
 import { getGameState } from "@/lib/gameState";
 import { getDb } from "@/lib/mongodb";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
-import { loadCountryMapOverview } from "@/lib/map/loadCountryMapOverview";
 import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
 import { mapVariantFor } from "@/lib/world/mapVariant";
 import CountryMapClient from "./CountryMapClient";
+import { mapOverviewUrl } from "./mapViewConfig";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -31,16 +31,15 @@ export default async function CountryMapPage({ params }: Props) {
   const { code } = await params;
   const countryId = code.toUpperCase() as CountryId;
   if (!Object.hasOwn(COUNTRY_CONFIGS, countryId)) notFound();
+  preload(mapOverviewUrl(countryId), { as: "fetch", crossOrigin: "anonymous" });
   if (mapVariantFor(countryId) === "us") {
     preload(USA_GEO_URL, { as: "fetch", crossOrigin: "anonymous" });
   }
   const config = getCountryClientConfig(countryId);
-  const overview = loadCountryMapOverview(countryId).catch(() => null);
   return (
     <CountryMapClient
       countryId={countryId}
       config={{ id: config.id, name: config.name, overviewPath: config.overviewPath }}
-      overview={overview}
     />
   );
 }

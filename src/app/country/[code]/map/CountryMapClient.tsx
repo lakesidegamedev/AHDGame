@@ -1,20 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, use, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
 import { mapVariantFor } from "@/lib/world/mapVariant";
-import type { CountryMapViewConfig } from "./mapViewConfig";
+import { mapOverviewUrl, type CountryMapViewConfig } from "./mapViewConfig";
 
 interface CountryMapClientProps {
   countryId: CountryId;
   /** Server-resolved display fields, so the client does not ship the registry. */
   config: CountryMapViewConfig;
-  overview: Promise<MapOverviewResponse | null>;
 }
 
 // A country uses exactly one renderer; load the chosen one instead of shipping
@@ -34,7 +33,7 @@ const UnifiedMapWithModes = dynamic(loadUnifiedMap, { ssr: false, loading: MapLo
 const EconOnlyMapPlaceholder = dynamic(loadEconOnlyMap, { ssr: false, loading: MapLoading });
 
 /**
- * Start the renderer while the server streams the overview.
+ * Start the renderer while the overview data preloads.
  */
 function warmMapRenderer(countryId: CountryId) {
   const variant = mapVariantFor(countryId);
@@ -47,63 +46,50 @@ function warmMapRenderer(countryId: CountryId) {
   }
 }
 
-export default function CountryMapClient(props: CountryMapClientProps) {
-  const { countryId } = props;
-  useEffect(() => {
-    warmMapRenderer(countryId);
-  }, [countryId]);
-  return (
-    <Suspense fallback={<MapLoading />}>
-      <CountryMapContent key={countryId} {...props} />
-    </Suspense>
-  );
+export default function CountryMapClient({ countryId, config }: CountryMapClientProps) {
+  return <CountryMapContent key={countryId} countryId={countryId} config={config} />;
 }
 
-function CountryMapContent({
-  countryId,
-  config,
-  overview: streamedOverview,
-}: CountryMapClientProps) {
-  const overview = use(streamedOverview);
+function CountryMapContent({ countryId, config }: CountryMapClientProps) {
   const router = useRouter();
   const t = useTranslations("elections.atlas");
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
-  const [retriedOverview, setRetriedOverview] = useState<MapOverviewResponse | null>(null);
-  const mapData = overview ?? retriedOverview;
+  const [mapData, setMapData] = useState<MapOverviewResponse | null>(null);
 
   useEffect(() => {
-    if (overview) return;
+    warmMapRenderer(countryId);
     const controller = new AbortController();
-    fetch(`/api/map/overview?countryId=${countryId}`, { signal: controller.signal })
+    fetch(mapOverviewUrl(countryId), { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) throw new Error("Map unavailable");
         return res.json();
       })
       .then((data) => {
         if (!controller.signal.aborted) {
-          setRetriedOverview(data);
+          setMapData(data);
+          setLoadState("ready");
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setLoadFailed(true);
+        if (!controller.signal.aborted) setLoadState("error");
       });
     return () => controller.abort();
-  }, [countryId, attempt, overview]);
+  }, [countryId, attempt]);
 
   const onRegionClick = (id: string) => router.push(regionUrl(countryId, id));
 
-  if (mapData === null) {
+  if (loadState !== "ready") {
     return (
-      <main className="mx-auto max-w-7xl p-8" aria-busy={!loadFailed}>
-        <p role={loadFailed ? "alert" : "status"} className="text-muted">
-          {t(loadFailed ? "loadError" : "loading")}
+      <main className="mx-auto max-w-7xl p-8" aria-busy={loadState === "loading"}>
+        <p role={loadState === "error" ? "alert" : "status"} className="text-muted">
+          {t(loadState === "loading" ? "loading" : "loadError")}
         </p>
-        {loadFailed && (
+        {loadState === "error" && (
           <button
             className="mt-4 rounded-lg border border-card-border px-4 py-2"
             onClick={() => {
-              setLoadFailed(false);
+              setLoadState("loading");
               setAttempt((n) => n + 1);
             }}
           >

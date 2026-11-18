@@ -3,13 +3,14 @@ import CountryMapPage, { generateMetadata } from "./page";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
-import { loadCountryMapOverview } from "@/lib/map/loadCountryMapOverview";
+import { preload } from "react-dom";
+import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/country/countryIdentity", () => ({ resolveCountryIdentity: vi.fn() }));
-vi.mock("@/lib/map/loadCountryMapOverview", () => ({ loadCountryMapOverview: vi.fn() }));
 vi.mock("./CountryMapClient", () => ({ default: vi.fn() }));
+vi.mock("react-dom", () => ({ preload: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -46,26 +47,10 @@ describe("country map country validation", () => {
     expect(resolveCountryIdentity).toHaveBeenCalled();
   });
 
-  it("passes the first overview to the map from the server", async () => {
-    const overview = {
-      partyOrg: {},
-      senate: {},
-      house: {},
-      governor: {},
-      approval: {},
-      lean: {},
-      presidential: {},
-      regions: [{ id: "OH", name: "Ohio", population: 1, seats: 1, grouping: "Midwest" }],
-    };
-    vi.mocked(loadCountryMapOverview).mockResolvedValue(overview);
-    const page = await CountryMapPage({ params: Promise.resolve({ code: "us" }) });
-    expect(loadCountryMapOverview).toHaveBeenCalledWith("US");
-    await expect(page.props.overview).resolves.toEqual(overview);
-  });
-
-  it("lets the browser retry an unavailable overview", async () => {
-    vi.mocked(loadCountryMapOverview).mockRejectedValue(new Error("Unavailable"));
-    const page = await CountryMapPage({ params: Promise.resolve({ code: "UK" }) });
-    await expect(page.props.overview).resolves.toBeNull();
+  it("starts the US map data and geometry requests with the page shell", async () => {
+    await CountryMapPage({ params: Promise.resolve({ code: "us" }) });
+    const fetchOptions = { as: "fetch", crossOrigin: "anonymous" };
+    expect(preload).toHaveBeenCalledWith("/api/map/overview?countryId=US", fetchOptions);
+    expect(preload).toHaveBeenCalledWith(USA_GEO_URL, fetchOptions);
   });
 });

@@ -6,3 +6,6 @@ import type { CountryClientConfig } from "@/lib/constants/countryClientConfig";
  * the full 154 KB registry for three fields.
  */
 export type CountryMapViewConfig = Pick<CountryClientConfig, "id" | "name" | "overviewPath">;
+
+export const mapOverviewUrl = (countryId: CountryMapViewConfig["id"]) =>
+  `/api/map/overview?countryId=${countryId}`;
