@@ -26,7 +26,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   anchorToCorpCapital,
   corpLiquidCapitalToAnchor,
-  loadFxRatesByCurrency,
+  fillAuthoredEraRates,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { errorResponse } from "@/lib/api/errors";
@@ -94,7 +95,9 @@ export async function previewRelocationBond(
   const existingBonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
-  const fxByCurrency = fxByCurrencyOverride ?? (await loadFxRatesByCurrency(db));
+  const fxByCurrency = fxByCurrencyOverride
+    ? await fillAuthoredEraRates(db, fxByCurrencyOverride)
+    : await loadValuationFxRates(db);
   const existingDebt = sumBondPrincipalAnchor(existingBonds, fxByCurrency);
 
   const sectors = await corporateSectorsCollection(db)
@@ -258,7 +261,9 @@ export async function issueRelocationBond(
 
   // Translate ₳ cost → LOCAL face value, round down to whole bond units, then
   // mirror back to ₳ for wire + response payload.
-  const fxByCurrency = fxByCurrencyOverride ?? (await loadFxRatesByCurrency(db));
+  const fxByCurrency = fxByCurrencyOverride
+    ? await fillAuthoredEraRates(db, fxByCurrencyOverride)
+    : await loadValuationFxRates(db);
   const corpCurrencyCode = resolveCorpLiquidCurrencyCode(corporation);
   const corpFxRate = fxByCurrency.get(corpCurrencyCode ?? "USD") ?? 1;
   const relocationCostLocal = anchorToCorpCapital(

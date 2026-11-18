@@ -4,18 +4,22 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
  *
  * Entering a market is a first build, so use one facility (`plantSizeUnits`)
  * rather than a revenue-derived facility count, which breaks era scaling.
- * The entry fee (SECTOR_EXPANSION_BASE_COST) is a modern constant and must be
- * era-deflated to match corp treasuries.
+ * Era-specific fee calibrations keep entry costs in line with starting budgets.
  *
  * expandSector, expand-suggestions, and NPP founding MUST call these helpers
  * so the quote and the charge cannot drift.
  */
 
-import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { eraForPreset, type EraId } from "@/lib/seeds/presetSelector";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { SECTOR_EXPANSION_BASE_COST } from "@/lib/constants/corporations";
 import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
 import { getEraNominalAmount } from "@/lib/constants/sectorSeedEra";
+
+const SECTOR_ENTRY_FEE_BY_ERA: Partial<Record<EraId, number>> = {
+  "1991": 2_500,
+  "2027": 5_000,
+};
 
 /** Capacity units ordered for a greenfield first plant (one facility). */
 export function foundingStarterUnits(sectorType: CorporationType): number {
@@ -32,11 +36,7 @@ export function sectorEntryFeeAnchor(preset: string | undefined, expansionDiscou
     Number.isFinite(expansionDiscount) && expansionDiscount > 0
       ? Math.min(1, expansionDiscount)
       : 0;
-  return Math.round(
-    getEraNominalAmount(
-      eraForPreset(preset ?? DEFAULT_SEED_PRESET) === "1991" ? 2_500 : SECTOR_EXPANSION_BASE_COST,
-      preset
-    ) *
-      (1 - disc)
-  );
+  const era = eraForPreset(preset ?? DEFAULT_SEED_PRESET);
+  const fee = SECTOR_ENTRY_FEE_BY_ERA[era] ?? SECTOR_EXPANSION_BASE_COST;
+  return Math.round(getEraNominalAmount(fee, preset) * (1 - disc));
 }

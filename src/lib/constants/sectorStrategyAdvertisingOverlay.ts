@@ -83,6 +83,14 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
       iron: 0.1,
       software: 0.1,
     },
+    building_materials: {
+      advertising: 0.07,
+      energy: 0.107,
+      timber: 0.074,
+      iron: 0.058,
+      chemicals: 0.041,
+      freight: 0.05,
+    },
     electronics_manufacturing: {
       advertising: 0.07,
       chemicals: 0.082,

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  aggregateTechEffects,
   techEffectCategory,
   describeTechEffect,
   TECH_PLANT_OUTPUT_CAP,
@@ -10,6 +9,7 @@ import {
   TECH_LABOR_REDUCTION_CAP,
   type TechEffect,
 } from "./effects";
+import { aggregateTechEffects } from "@/lib/techTree/rules/effectLayers";
 
 describe("aggregateTechEffects", () => {
   it("caps plant output and folds it into every output rate", () => {

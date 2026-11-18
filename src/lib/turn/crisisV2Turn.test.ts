@@ -433,6 +433,10 @@ describe("director integration", () => {
       ],
     });
     const { db, calls } = makeDb(baseData());
+    const paused = await processCrisisV2Turn(db, 9, { pauseOpenings: true });
+    expect(paused.opened).toBe(0);
+    expect(calls.insertMany).not.toHaveBeenCalled();
+
     const result = await processCrisisV2Turn(db, 10);
     expect(result.opened).toBe(1);
     const docs = (

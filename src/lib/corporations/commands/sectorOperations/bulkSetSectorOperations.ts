@@ -25,6 +25,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -158,8 +159,9 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         unlockedTechNodeIds: corporation.unlockedTechNodeIds,
         techDecadeLane: corporation.techDecadeLane,
       };
+      const legacyTech = await loadLegacyTechContext(db);
       const techMultFor = (s: CorporateSector) =>
-        getSectorTechEffects(techCorpView, s.sectorType).growthCostMultiplier;
+        getSectorTechEffects(techCorpView, s.sectorType, legacyTech).growthCostMultiplier;
       let projectedTotal = 0;
       let currentTotal = 0;
       for (const s of sectors) {

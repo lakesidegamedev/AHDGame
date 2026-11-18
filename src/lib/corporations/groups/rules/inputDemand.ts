@@ -1,8 +1,6 @@
 /** Input demand uses the market ledger recipe, production utilization and era unit scale. */
-import {
-  energyProductivityMultiplier,
-  plantUtilizationForInputs,
-} from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantUtilizationForInputs } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { getInputMultiplier } from "@/lib/utils/productionPolicy";
 import {
@@ -52,7 +50,7 @@ export function computeSupplyAgreementSectorDemand(args: {
       ? plantUtilizationForInputs(
           sector.producedUnits,
           sector.capacityUnits,
-          energyProductivityMultiplier(sector.sectorType, args.currentTurn, args.preset)
+          plantThroughputMultiplier(sector, args.currentTurn, args.preset)
         )
       : 1;
   const inputMultiplier = getInputMultiplier(sector.productionPolicyLevel ?? 0);

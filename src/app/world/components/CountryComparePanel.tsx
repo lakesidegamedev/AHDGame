@@ -118,6 +118,37 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   const cellFor = (row: CompareRow, id: CountryId | null) =>
     id ? (row.cells.find((cell) => cell.countryId === id) ?? null) : null;
 
+  // The summary reads the same rows the panel shows, so a pasted comparison
+  // cannot drift from what the sender sees. Both sides need stored figures
+  // before there is anything worth pasting beside the link.
+  const summarySides: [CompareSummarySide, CompareSummarySide] = [
+    {
+      name: sides[0].label ?? "Not picked",
+      overall: sides[0].id ? (overallRanks.get(sides[0].id) ?? null) : null,
+      categoryRank: sides[0].id ? (categoryRanks.get(sides[0].id) ?? null) : null,
+    },
+    {
+      name: sides[1].label ?? "Not picked",
+      overall: sides[1].id ? (overallRanks.get(sides[1].id) ?? null) : null,
+      categoryRank: sides[1].id ? (categoryRanks.get(sides[1].id) ?? null) : null,
+    },
+  ];
+  const summaryReady = comparePairReady(compareCountryIds) && sides.every((side) => side.country);
+  const copySummary = () => {
+    void copy(
+      buildCompareSummary({
+        sides: summarySides,
+        category: category ?? null,
+        rows: rows.map((row) => ({
+          metric: row.metric,
+          cells: [cellFor(row, sides[0].id), cellFor(row, sides[1].id)] as const,
+        })),
+        url: compareUrl(),
+      }),
+      "summary"
+    );
+  };
+
   const shellClass = fullscreen
     ? "fixed left-4 top-16 z-[70] max-h-[70vh] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-card-border bg-card/95 p-4 shadow-panel"
     : "relative z-10 mt-3 rounded-xl border border-card-border bg-card p-4 shadow-sm";

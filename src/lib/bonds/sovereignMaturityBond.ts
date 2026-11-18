@@ -24,7 +24,10 @@ import {
   marketSovereignRolloverCoupon,
   settleFundedSovereignBondMaturity,
 } from "@/lib/bonds/sovereign";
-import { refundSovereignMaturityShortfall } from "@/lib/bonds/sovereignMaturityRefunding";
+import {
+  recoverBankSovereignRefundingReceipts,
+  refundSovereignMaturityShortfall,
+} from "@/lib/bonds/sovereignMaturityRefunding";
 import type { CountryId } from "@/lib/constants/countries";
 import type { BankSovereignClaim } from "@/lib/db/types/budget";
 import type { SovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
@@ -86,6 +89,8 @@ export async function settleSovereignBondMaturityBond(
   });
   const bondIdHex = bond._id.toHexString();
   if (newClaims.length > 0 || bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) {
+    const claimId = `sovereign-maturity:${bondIdHex}:${bond.maturityTurn}`;
+    if (!(await recoverBankSovereignRefundingReceipts(db, claimId))) return null;
     const budgetWithClaims = await federalBudgetCollection(db).findOne(
       { _id: budgetId },
       {

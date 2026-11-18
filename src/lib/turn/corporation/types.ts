@@ -258,6 +258,13 @@ export interface CorporationLookups {
    */
   strengthUpkeepStage?: number;
   /**
+   * World starting year and `gameConfig.legacyTechMode`, read once per turn.
+   * Together they say how pre-start-decade tech counts (see
+   * `legacyTechContextFromLookups`). Absent mode = "off".
+   */
+  legacyTechStartingYear?: number;
+  legacyTechMode?: "baseline" | "off";
+  /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
    * `capInputPriceRatioAtWorld`). Cheap local inputs still win; expensive

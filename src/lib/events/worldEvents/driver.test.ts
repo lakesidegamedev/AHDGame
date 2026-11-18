@@ -259,6 +259,46 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     }
   );
 
+  it("offers ordinary events while scheduled crisis openings are paused", async () => {
+    const bankRun = makeDefinition({
+      kind: "worldEvents.bankRun",
+      minTension: 65,
+      requiresCountryIds: ["US"],
+    });
+    const generic = makeDefinition({ kind: "worldEvents.papalVisit" });
+    db.collectionMocks.eventDefinitions!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([bankRun, generic]),
+    });
+    db.collectionMocks.eventInstances!.findOne.mockResolvedValue(null);
+    db.collectionMocks.eventCooldownLedger!.findOne.mockResolvedValue(null);
+    db.collectionMocks.coldWarTension!.findOne.mockResolvedValue({
+      _id: "current",
+      value: 100,
+      pressureFloor: 100,
+      updatedTurn: 100,
+      events: [],
+      updatedAt: new Date(),
+    });
+
+    db.collectionMocks.countryModifiers!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+
+    const result = await processWorldEventsTurn(db as never, 100, { pauseCrisisOpenings: true });
+
+    expect(result.offered).toBeGreaterThan(0);
+    expect(createCrisisFromTemplate).not.toHaveBeenCalled();
+    expect(db.collectionMocks.eventInstances!.insertOne).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "worldEvents.papalVisit" })
+    );
+
+    await processWorldEventsTurn(db as never, 100);
+    expect(createCrisisFromTemplate).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ templateKey: "war_bank_run" })
+    );
+  });
+
   it("creates a due wartime crisis even when a pending card blocks an earlier generic definition", async () => {
     const generic = makeDefinition({ kind: "worldEvents.papalVisit" });
     const bankRun = makeDefinition({

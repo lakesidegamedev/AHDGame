@@ -8,7 +8,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { LeadershipRole } from "@/lib/db/types/leadership";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
-import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { CeoNiTier } from "@/lib/actions/positionNiBonus";
 import { loadOrganizationHeads } from "@/lib/internationalOrganizations/orgHeadAgenda";
 import { resolveOppositionLeaderFromState } from "@/lib/parliament/oppositionLeader";
@@ -17,7 +16,6 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
-import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
@@ -164,14 +162,6 @@ export async function loadPresidingOfficerRoles(
         ]
       : []
   );
-}
-
-/** Character ids of every seated state party chair. */
-export async function loadStatePartyChairIds(db: Db): Promise<Set<string>> {
-  const rows = await statePartyOrgCollection(db)
-    .find({ chairId: { $ne: null } }, { projection: { chairId: 1 } })
-    .toArray();
-  return new Set(rows.flatMap((r) => (r.chairId ? [r.chairId.toString()] : [])));
 }
 
 /**

@@ -1,8 +1,9 @@
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
+import type { ElectricityNetwork } from "@/lib/electricityNetwork/rules/types";
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameConfig } from "@/lib/db/types";
 import type { Tariff } from "@/lib/db/types/tariff";
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import {
@@ -26,6 +27,7 @@ import type { Document } from "mongodb";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 export interface FreightSettlementInputs {
+  worldEpoch?: string;
   marketSystemMode: Parameters<typeof marketAtLeast>[0];
   allStates: Pick<State, "_id" | "countryId">[];
   stateToCountry: Map<string, string>;
@@ -110,12 +112,22 @@ export async function runFreightSettlementPhase(
   const canonicalFreightBillingEnabled =
     freightSettlementConfig?.canonicalFreightBillingEnabled === true;
   let freightSettlement: FreightSettlement | null = null;
+  const frozen = inputs.worldEpoch
+    ? await producerEconomyTurnsCollection<{
+        _id: string;
+        electricityNetwork?: ElectricityNetwork;
+      }>(db).findOne(
+        { _id: `${inputs.worldEpoch}:${turn}` },
+        { projection: { electricityNetwork: 1 } }
+      )
+    : null;
 
   if (marketAtLeast(marketSystemMode, "ledger")) {
     const sourcingStates = allStates
       .filter((s) => !NATIONAL_SCOPE_IDS.has(s._id) && stateToCountry.has(s._id))
       .map((s) => ({ stateId: s._id, countryId: s.countryId as CountryId }));
     freightSettlement = settleFreightNetwork({
+      electricityNetwork: frozen?.electricityNetwork,
       states: sourcingStates,
       byState,
       byCountry,

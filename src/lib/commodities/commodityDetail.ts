@@ -48,9 +48,10 @@ import {
   fxRateForSectorHostFromMap,
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
+  withAuthoredEraRates,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
+import { eraRateForCurrency } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -396,11 +397,7 @@ export async function getCommodityDetailData(
     // exchangeRates row; fill only the absent ones from the authored preset,
     // exactly like the corporation commodities route. Live rates win.
     if (includeHeavy) {
-      for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
-        if (fxByCurrency.has(code)) continue;
-        const authoredRate = eraRateForCurrency(code, worldPreset);
-        if (authoredRate !== undefined) fxByCurrency.set(code, authoredRate);
-      }
+      withAuthoredEraRates(fxByCurrency, worldPreset);
     }
     const marketingBudgets =
       includeHeavy && commodity === "advertising"

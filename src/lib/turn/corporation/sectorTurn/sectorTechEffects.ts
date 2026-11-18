@@ -8,6 +8,7 @@ import {
 import { withEnergyTransition } from "@/lib/energyTransition/policies";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationLookups } from "../types";
+import { legacyTechContextFromLookups } from "./legacyTechContext";
 
 /**
  * Per-sector tech effects: Corporate-lane bonuses apply to every sector at
@@ -28,11 +29,12 @@ export function resolveSectorTechEffects(
   currentYear: number | null | undefined,
   operatingSectorType: Parameters<typeof withSunsetPenalty>[1]
 ): AggregatedTechEffects {
+  const legacy = legacyTechContextFromLookups(lookups);
   const base = techTreesEnabled
     ? withSunsetPenalty(
         currentYear != null
-          ? getSectorTechEffectsForYear(corp, sector.sectorType, currentYear)
-          : getSectorTechEffects(corp, sector.sectorType),
+          ? getSectorTechEffectsForYear(corp, sector.sectorType, currentYear, legacy)
+          : getSectorTechEffects(corp, sector.sectorType, legacy),
         operatingSectorType,
         sector.strategyId,
         currentYear

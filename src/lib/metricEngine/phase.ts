@@ -65,6 +65,7 @@ import {
   supportsGovernanceStyle,
 } from "@/lib/governanceStyle/score";
 import { democraticHealthEconomicDrag } from "@/lib/governanceStyle/rules/democraticConsequences";
+import { readResetDemocraticHealth } from "@/lib/resetMetrics/readDemocraticHealth";
 import { loadDemocraticCompetition } from "@/lib/governanceStyle/loadCompetition";
 import type { LivingConflictState } from "@/lib/livingConflict/types";
 import { type CrisisEconomicExposure } from "@/lib/livingConflict/rules/economicExposure";
@@ -485,9 +486,24 @@ async function prepareRunMetricEngine(db: Db, turn: number) {
       )
     )
   );
+  // V2 countries score Democratic Health from the v2 board the player sees;
+  // their political board is not where their laws are delivered.
+  const resetHealthByCountry = new Map(
+    await Promise.all(
+      healthCountries.map(
+        async (countryId) => [countryId, await readResetDemocraticHealth(db, countryId)] as const
+      )
+    )
+  );
   for (const [countryId, totals] of healthTotalsByCountry) {
     const config = getCountryConfig(countryId as CountryId, eraGameState?.preset);
     if (!supportsGovernanceStyle(config.governmentType)) continue;
+    const resetHealth = resetHealthByCountry.get(countryId);
+    if (resetHealth?.status === "ready") {
+      democraticHealthDragByCountry.set(countryId, democraticHealthEconomicDrag(resetHealth.value));
+      continue;
+    }
+    if (resetHealth?.status === "unavailable") continue;
     const values = Object.fromEntries(
       [...totals].map(([id, total]) => [id, total.weighted / total.population])
     );

@@ -40,6 +40,16 @@ describe("manufacturing product eligibility", () => {
     ).not.toContain("building_materials");
   });
 
+  it("offers all building materials lines on a specialized manufacturing plant", () => {
+    const plant = { ...plants[0], strategyId: "building_materials" };
+    expect(legalManufacturingProductKinds([plant]).map((kind) => kind.id)).toEqual([
+      "cement",
+      "prefabricated_components",
+      "construction_materials",
+    ]);
+    expect(isLegalManufacturingProductForPlant("cement", plant)).toBe(true);
+  });
+
   it("rejects duplicate plants and combined allocations above one", () => {
     expect(
       validateProductAllocations([

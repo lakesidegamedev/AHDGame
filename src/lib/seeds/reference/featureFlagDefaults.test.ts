@@ -77,9 +77,19 @@ const LADDER_TOPS: Record<string, string | number> = {
 
 describe("fresh-world flag policy", () => {
   it("seeds NPP autonomy at v6", () => {
-    expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual(["nppAutonomyLevel"]);
+    expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual([
+      "electricityNetworkMode",
+      "nppAutonomyLevel",
+    ]);
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v6");
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyEnabled).toBe(true);
+  });
+
+  it("keeps fresh-world electrical enforcement behind an explicit administrator choice", () => {
+    expect(referenceGameConfig.electricityNetworkMode).toBe("shadow");
+    expect(FRESH_WORLD_FLAG_EXCLUSIONS.electricityNetworkMode.reason).toContain(
+      "explicit administrator"
+    );
   });
 
   it("turns every gameState gameplay flag on, at the top of every ladder", () => {
@@ -95,11 +105,13 @@ describe("fresh-world flag policy", () => {
     for (const [key, value] of Object.entries(FRESH_WORLD_GAME_CONFIG_FLAGS)) {
       // New economic routing remains opt-in until integrated world qualification is reviewed.
       const expected =
-        key === "groupSupplyCoordinationEnabled"
-          ? false
-          : typeof value === "boolean"
-            ? true
-            : LADDER_TOPS[key];
+        key === "electricityNetworkMode"
+          ? "shadow"
+          : key === "groupSupplyCoordinationEnabled"
+            ? false
+            : typeof value === "boolean"
+              ? true
+              : LADDER_TOPS[key];
       expect([key, value]).toEqual([key, expected]);
     }
   });

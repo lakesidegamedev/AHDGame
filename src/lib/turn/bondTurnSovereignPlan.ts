@@ -58,7 +58,8 @@ export function createSovereignMaturityPlanner({
     });
     if (!treasuryValuation || !(treasuryValuation.anchorRate > 0)) return null;
 
-    if (isUnfundableOverdueMaturity(bond, bondCcy, maturityWave)) return null;
+    const poolCashPerFace = poolCashPerFaceByCountry.get(countryId) ?? 1;
+    if (isUnfundableOverdueMaturity(bond, bondCcy, maturityWave, poolCashPerFace)) return null;
 
     const bankUnits = (bond.holders ?? []).reduce(
       (sum, holder) =>
@@ -73,7 +74,6 @@ export function createSovereignMaturityPlanner({
       (bond.holders ?? []).reduce((sum, holder) => sum + Math.max(0, holder.units), 0) +
       Math.max(0, bond.publicFloat) +
       Math.max(0, bond.centralBankHoldings ?? 0);
-    const poolCashPerFace = poolCashPerFaceByCountry.get(countryId) ?? 1;
     const poolFloatFaceLocal = Math.max(0, bond.publicFloat) * BOND_UNIT_FACE_VALUE;
     const totalRepaymentLocal =
       totalUnits * BOND_UNIT_FACE_VALUE - poolFloatFaceLocal * (1 - poolCashPerFace);

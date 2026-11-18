@@ -10,7 +10,8 @@
  *   - D/GDP penalty: 0.0 below 60%, scales linearly to -50 at 200%
  *   - Primary balance/GDP: surplus contributes up to +15; deficit penalizes up to -25
  *   - FX 10-turn depreciation: 0 below 5%, -10 at 10%, -25 at >25%
- *   - GDP growth (annual fraction): up to +10 above 3%; up to -25 below -3%
+ *   - Real GDP growth (annual fraction, inflation excluded): up to +10 above
+ *     3%; up to -25 below -3%
  *
  * Net score = clamp(0, 100, 80 + sum(modifiers)).
  *
@@ -44,7 +45,10 @@ export interface DsaInputs {
   primarySurplusToGdp: number;
   /** FX depreciation over the lookback window (0..1) */
   fxDepreciation10t: number;
-  /** Annual GDP growth as a fraction, e.g. 0.025 = 2.5% */
+  /**
+   * Real annual GDP growth as a fraction, inflation excluded: 0.025 is 2.5%.
+   * Nominal growth would reward a price spike as if output had risen.
+   */
   annualGdpGrowth: number;
 }
 
@@ -105,8 +109,8 @@ export function computeDsa(inputs: DsaInputs): DsaResult {
     contribution: fxPenalty > 0 ? -fxPenalty : 0,
   });
 
-  // GDP growth: positive growth helps, negative hurts (asymmetric — recession
-  // hurts more than growth helps).
+  // Real growth: positive helps, negative hurts (asymmetric, a recession hurts
+  // more than growth helps).
   let growthMod: number;
   if (inputs.annualGdpGrowth > 0) {
     growthMod = Math.min(DSA_GROWTH_BONUS_CAP, inputs.annualGdpGrowth * DSA_GROWTH_RATE_BONUS);
@@ -120,7 +124,7 @@ export function computeDsa(inputs: DsaInputs): DsaResult {
   }
   components.push({
     id: "growth",
-    label: "Annual GDP growth",
+    label: "Real GDP growth",
     contribution: growthMod,
   });
 

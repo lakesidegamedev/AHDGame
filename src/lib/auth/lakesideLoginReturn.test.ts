@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isMarginOfVictoryLogin,
   loginDestination,
   safeLakesideLoginReturn,
   takeOAuthReturnUrlCookie,
@@ -13,6 +14,22 @@ describe("safeLakesideLoginReturn", () => {
     expect(safeLakesideLoginReturn("https://evil.example/auth/ahd")).toBeNull();
     expect(safeLakesideLoginReturn("https://auth.ahousedividedgame.com/other")).toBeNull();
     expect(safeLakesideLoginReturn("javascript:alert(1)")).toBeNull();
+  });
+
+  it("brands only the Margin of Victory broker callback", () => {
+    const continuation = (callback: string, broker = "https://auth.ahousedividedgame.com") =>
+      `${broker}/auth/ahd?return=${encodeURIComponent(callback)}`;
+    const mov = "https://sim.ahousedividedgame.com/api/lakeside/login";
+    expect(isMarginOfVictoryLogin(continuation(`${mov}?return=%2Fnative-login`))).toBe(true);
+    expect(isMarginOfVictoryLogin(continuation(mov, "https://other.example"))).toBe(false);
+    expect(
+      isMarginOfVictoryLogin(continuation("https://ops.lakesidegames.net/auth/callback"))
+    ).toBe(false);
+    expect(isMarginOfVictoryLogin(continuation(`${mov}-other`))).toBe(false);
+    expect(isMarginOfVictoryLogin(continuation(mov.replace("https:", "http:")))).toBe(false);
+    expect(isMarginOfVictoryLogin("https://sim.ahousedividedgame.com/api/lakeside/login")).toBe(
+      false
+    );
   });
 
   it("returns authenticated users to Lakeside instead of the AHD profile", () => {

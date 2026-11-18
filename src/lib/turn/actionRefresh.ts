@@ -45,10 +45,9 @@ import {
   loadOppositionRoles,
   loadOrgHeadIds,
   loadPresidingOfficerRoles,
-  loadStatePartyChairIds,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
-import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { loadPartyChairOrganizations } from "@/lib/actions/positionNiBonus/partyChair";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -91,13 +90,11 @@ export async function processActionRefresh(
   const db = await getDb();
   const executives = new Map<CountryId, NationalExecutiveParty>();
   const accountability = await observeGovernmentAccountability(db, executives);
-  const currentTurn =
-    (
-      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1 } }
-      )
-    )?.currentTurn ?? 0;
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
+  const currentTurn = gameState?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
   const influenceDecayMultiplier = (countryId: string | undefined, party: string | undefined) => {
     const executive = countryId ? executives.get(countryId as CountryId) : undefined;
@@ -143,11 +140,7 @@ export async function processActionRefresh(
   );
 
   // ── Position-based NI bonuses ────────────────────────────────────────────
-  // Domestic tiers take the highest qualifying role: 2.5 executive head, 2.0
-  // deputy executive / presiding officers / majority leaders / party chair,
-  // 1.5 cabinet / governors / justices / central bank chair / minority
-  // leaders, 1.0 national legislators, 0.5 sub-national legislators and state
-  // party chairs, 0.3 / 0.15 CEOs. Office tiers live in `resolveOfficeNiBonus`.
+  // Domestic roles compete for the highest NI tier.
   const congressLeaderRows = await congressLeadersCollection(db)
     .find({ characterId: { $ne: null } }, { projection: { characterId: 1, role: 1 } })
     .toArray();
@@ -158,28 +151,6 @@ export async function processActionRefresh(
     const roles = leaderRolesByCharId.get(id) ?? [];
     roles.push(row.role);
     leaderRolesByCharId.set(id, roles);
-  }
-
-  const partyChairIds = new Set<string>();
-  const partySubChairIds = new Set<string>();
-  const partyRows = await (
-    await getPoliticalPartiesCollection(db)
-  )
-    .find(
-      {
-        $or: [
-          { chairId: { $ne: null } },
-          { viceChairId: { $ne: null } },
-          { treasurerId: { $ne: null } },
-        ],
-      },
-      { projection: { chairId: 1, viceChairId: 1, treasurerId: 1 } }
-    )
-    .toArray();
-  for (const p of partyRows) {
-    if (p.chairId) partyChairIds.add(p.chairId.toString());
-    if (p.viceChairId) partySubChairIds.add(p.viceChairId.toString());
-    if (p.treasurerId) partySubChairIds.add(p.treasurerId.toString());
   }
 
   /*
@@ -207,11 +178,11 @@ export async function processActionRefresh(
   }
   for (const id of confirmedCabinetIds) actingOnlyCabinetIds.delete(id);
 
-  const [opposition, statePartyChairIds, ceoCandidates, orgHeadIds] = await Promise.all([
+  const [opposition, ceoCandidates, orgHeadIds, partyChairOrgs] = await Promise.all([
     loadOppositionRoles(db),
-    loadStatePartyChairIds(db),
     loadCeoCandidates(db),
     loadOrgHeadIds(db),
+    loadPartyChairOrganizations(db),
   ]);
 
   // Recover the underlying legislative seat only for the cabinet ministers whose
@@ -320,14 +291,12 @@ export async function processActionRefresh(
       currentOfficeType: character.currentOffice?.type,
       countryId: character.countryId,
       congressLeadershipRoles: leaderRolesByCharId.get(charIdStr),
-      isPartyChair: partyChairIds.has(charIdStr),
-      isPartySubChair: partySubChairIds.has(charIdStr),
-      isStatePartyChair: statePartyChairIds.has(charIdStr),
       isSeatedJustice: seatedJusticeCharacterIds.has(charIdStr),
       isCentralBankChair: chairCharacterIds.has(charIdStr),
       cabinetCountryId: cabinetCountry,
       isActingCabinet: actingOnlyCabinetIds.has(charIdStr),
       ceoTier: ceo.tier,
+      partyChairOrganization: partyChairOrgs.get(charIdStr),
       isOrgHead: orgHeadIds.has(charIdStr),
     });
 

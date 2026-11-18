@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveLeadershipActionBonus, resolvePositionNiBonus } from "./positionNiBonus";
+import {
+  partyChairNiBonus,
+  resolveLeadershipActionBonus,
+  resolvePositionNiBonus,
+} from "./positionNiBonus";
 
 describe("resolvePositionNiBonus", () => {
   it("uses the Speaker tier instead of the ordinary House tier", () => {
@@ -38,8 +42,8 @@ describe("resolvePositionNiBonus", () => {
   });
 
   it("grants CEO tiers below any office", () => {
-    expect(resolvePositionNiBonus({ countryId: "US", ceoTier: "major" })).toBe(0.3);
-    expect(resolvePositionNiBonus({ countryId: "US", ceoTier: "standard" })).toBe(0.15);
+    expect(resolvePositionNiBonus({ countryId: "US", ceoTier: "major" })).toBe(0.2);
+    expect(resolvePositionNiBonus({ countryId: "US", ceoTier: "standard" })).toBe(0.05);
     expect(
       resolvePositionNiBonus({ countryId: "US", currentOfficeType: "house", ceoTier: "major" })
     ).toBe(1);
@@ -96,5 +100,23 @@ describe("resolveLeadershipActionBonus", () => {
     expect(resolveLeadershipActionBonus({ isOppositionLeader: true })).toBe(2);
     expect(resolveLeadershipActionBonus({ isShadowCabinetMember: true })).toBe(1);
     expect(resolveLeadershipActionBonus({})).toBe(0);
+  });
+
+  it("scales a national party chair's recognition by organization", () => {
+    expect(partyChairNiBonus(50)).toBeCloseTo(0.2);
+    expect(partyChairNiBonus(80)).toBeCloseTo(0.2);
+    expect(partyChairNiBonus(32)).toBeCloseTo(0.128);
+    expect(partyChairNiBonus(0)).toBe(0);
+    expect(partyChairNiBonus(null)).toBe(0);
+    expect(resolvePositionNiBonus({ countryId: "US", partyChairOrganization: 25 })).toBeCloseTo(
+      0.1
+    );
+    expect(
+      resolvePositionNiBonus({
+        countryId: "US",
+        currentOfficeType: "house",
+        partyChairOrganization: 50,
+      })
+    ).toBe(1);
   });
 });

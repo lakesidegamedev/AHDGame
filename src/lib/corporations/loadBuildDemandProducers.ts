@@ -2,6 +2,7 @@
 import type { Db } from "mongodb";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildDemandProducer } from "./rules/buildDemandProducers";
+import { loadLegacyTechContext } from "./techTree/legacyTechContext";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
@@ -14,6 +15,7 @@ export async function loadBuildDemandProducers(db: Db) {
       {
         projection: {
           currentTurn: 1,
+          startingYear: 1,
           sectorTechTreesEnabled: 1,
           preset: 1,
           hardwareInputReliefStartTurn: 1,
@@ -61,6 +63,9 @@ export async function loadBuildDemandProducers(db: Db) {
   const byOwner = new Map(owners.map((owner) => [owner._id.toString(), owner]));
   const byRegion = new Map(regions.map((region) => [region._id, region.countryId]));
   const preset = resolvePresetIdFromGameState(state);
+  const legacyTech = await loadLegacyTechContext(db, {
+    startingYear: state?.startingYear,
+  });
   return {
     state,
     preset,
@@ -70,6 +75,7 @@ export async function loadBuildDemandProducers(db: Db) {
         owner: byOwner.get(sector.corporationId.toString()),
         countryId: byRegion.get(sector.stateId),
         techEnabled: state?.sectorTechTreesEnabled === true,
+        legacyTech,
         turn: state?.currentTurn ?? 0,
         preset,
         hardwareInputReliefStartTurn: state?.hardwareInputReliefStartTurn,

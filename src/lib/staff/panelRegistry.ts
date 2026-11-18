@@ -318,6 +318,7 @@ export const TOOLS: readonly ToolDef[] = [
       ["market", "Market"],
       ["bonds", "Bonds"],
       ["commodities", "Commodities"],
+      ["electricity-network", "Electricity network"],
       ["resource-capacity", "Resource capacity"],
       ["extraction", "Prospecting and contracts"],
       ["budgets", "Budget overview"],

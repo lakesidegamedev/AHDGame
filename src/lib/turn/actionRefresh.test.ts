@@ -22,7 +22,6 @@ const roleFixtures = vi.hoisted(() => ({
   oppositionLeaderIds: new Set<string>(),
   shadowCabinetIds: new Set<string>(),
   presidingOfficers: [] as { characterId: unknown; role: string }[],
-  statePartyChairIds: new Set<string>(),
   orgHeadIds: new Set<string>(),
   ceoCandidates: new Map<string, { corporationId: string; tier: "major" | "standard" }>(),
 }));
@@ -35,7 +34,6 @@ vi.mock("./actionRefreshRoles", async (importOriginal) => {
       shadowCabinetIds: roleFixtures.shadowCabinetIds,
     })),
     loadPresidingOfficerRoles: vi.fn(async () => roleFixtures.presidingOfficers),
-    loadStatePartyChairIds: vi.fn(async () => roleFixtures.statePartyChairIds),
     loadOrgHeadIds: vi.fn(async () => roleFixtures.orgHeadIds),
     loadCeoCandidates: vi.fn(async () => roleFixtures.ceoCandidates),
   };
@@ -132,7 +130,9 @@ describe("processActionRefresh", () => {
   let seatedJusticeRows: { justiceCharacterId: unknown }[] = [];
   let persistFixture = false;
   let characterRows: Character[] = [];
-  let gameStateRow: { currentTurn: number } | null = null;
+  let gameStateRow: { currentTurn: number; preIteration?: { active: boolean } } | null = null;
+  let partyRows: { chairId?: string; viceChairId?: string; treasurerId?: string }[] = [];
+  let statePartyRows: { chairId: string }[] = [];
   const mockNppBulkWrite = vi.fn();
 
   beforeEach(async () => {
@@ -140,7 +140,6 @@ describe("processActionRefresh", () => {
     roleFixtures.oppositionLeaderIds = new Set();
     roleFixtures.shadowCabinetIds = new Set();
     roleFixtures.presidingOfficers = [];
-    roleFixtures.statePartyChairIds = new Set();
     roleFixtures.orgHeadIds = new Set();
     roleFixtures.ceoCandidates = new Map();
     chairRows = [];
@@ -154,6 +153,8 @@ describe("processActionRefresh", () => {
     persistFixture = false;
     characterRows = [];
     gameStateRow = null;
+    partyRows = [];
+    statePartyRows = [];
     mockBulkWrite.mockImplementation(async (ops: unknown[]) => {
       if (persistFixture) {
         for (const op of ops as {
@@ -227,10 +228,12 @@ describe("processActionRefresh", () => {
             }),
           };
         }
-        if (name === "politicalParties") {
+        if (name === "politicalParties" || name === "statePartyOrg") {
           return {
             find: vi.fn().mockReturnValue({
-              toArray: vi.fn().mockResolvedValue([]),
+              toArray: vi
+                .fn()
+                .mockResolvedValue(name === "politicalParties" ? partyRows : statePartyRows),
             }),
           };
         }
@@ -1233,9 +1236,21 @@ describe("processActionRefresh", () => {
       expect(update.nationalInfluence).toBeCloseTo(2, 5);
     });
 
-    it("gives a state party chair the 0.5 tier", async () => {
-      roleFixtures.statePartyChairIds = new Set(["c1"]);
-      expect((await refreshOne(baseCharacter({}))).nationalInfluence).toBeCloseTo(0.5, 5);
+    it("awards only international NPI to a party officer who also heads an organization", async () => {
+      gameStateRow = { currentTurn: 49, preIteration: { active: false } };
+      partyRows = [{ chairId: "c1", viceChairId: "c2", treasurerId: "c4" }];
+      statePartyRows = [{ chairId: "c1" }, { chairId: "c3" }];
+      roleFixtures.orgHeadIds.add("c1");
+
+      async function readBonus(id: string) {
+        mockBulkWrite.mockClear();
+        return (await refreshOne(baseCharacter({ _id: id as never }))).positionNiBonus;
+      }
+
+      expect(await readBonus("c1")).toBe(1);
+      expect(await readBonus("c2")).toBe(0);
+      expect(await readBonus("c3")).toBe(0);
+      expect(await readBonus("c4")).toBe(0);
     });
 
     it("waits out the CEO tenure before granting CEO NI, then grants the tier", async () => {
@@ -1250,7 +1265,7 @@ describe("processActionRefresh", () => {
         baseCharacter({ ceoNiTenure: { corporationId: "corp1", sinceTurn: -12 } })
       );
       expect(later.ceoNiTier).toBe("major");
-      expect(later.nationalInfluence).toBeCloseTo(0.3, 5);
+      expect(later.nationalInfluence).toBeCloseTo(0.2, 5);
     });
 
     it("restarts CEO tenure when the qualifying corporation changes", async () => {

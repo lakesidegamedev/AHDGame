@@ -33,7 +33,7 @@ export function plantLaborShare(args: {
 }
 
 /** Plant services per unit, priced at the era's nominal output basket. */
-export const PLANT_OVERHEAD_OUTPUT_SHARE = 0.04;
+export const PLANT_OVERHEAD_OUTPUT_SHARE = 0.036;
 
 /**
  * Share of that overhead that is fixed to the plant's active capacity rather

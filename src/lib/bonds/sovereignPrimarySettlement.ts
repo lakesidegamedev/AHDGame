@@ -186,7 +186,7 @@ export async function commitSovereignPrimary(
    * The journal applies every debit before any credit, so a leg here may only
    * debit cash that already exists, never the proceeds themselves.
    */
-  route?: { routedLocal: number; legs: TransitionLeg[] }
+  route?: { routedLocal: number; legs: TransitionLeg[]; kind: "bank" | "holders" }
 ): Promise<void> {
   const transition = sovereignPrimaryTransition({
     ...input,
@@ -281,7 +281,10 @@ export async function commitSovereignPrimary(
       },
     });
   }
-  if (accounting.ledgerShadow && accounting.treasuryCashLedgerEnabled && input.poolCash > 0) {
+  // The bank follow-on already witnesses a full Treasury debit. Direct holder
+  // funding has no such offset, so its issuance witness records only excess.
+  const treasuryCashCredit = input.poolCash - (route?.kind === "holders" ? route.routedLocal : 0);
+  if (accounting.ledgerShadow && accounting.treasuryCashLedgerEnabled && treasuryCashCredit > 0) {
     const currency = input.currency as CurrencyCode;
     transition.projections.push({
       collection: "ledgerEntries",
@@ -294,16 +297,16 @@ export async function commitSovereignPrimary(
         legs: [
           {
             account: `government_cash:${input.countryId}:${currency}`,
-            amount: input.poolCash,
+            amount: treasuryCashCredit,
             currencyCode: currency,
-            anchorAmount: input.poolCash / rate,
+            anchorAmount: treasuryCashCredit / rate,
             role: "primary",
           },
           {
             account: `bond_pool:${currency}:${currency}`,
-            amount: -input.poolCash,
+            amount: -treasuryCashCredit,
             currencyCode: currency,
-            anchorAmount: -input.poolCash / rate,
+            anchorAmount: -treasuryCashCredit / rate,
             role: "contra",
           },
         ],

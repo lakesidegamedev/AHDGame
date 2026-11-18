@@ -8,6 +8,7 @@ import type { CorporateSector } from "@/lib/db/types/corporation";
 vi.mock("@/lib/currency/corporationCapital", async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map([["USD", 1]])),
+  loadValuationFxRates: vi.fn().mockResolvedValue(new Map([["USD", 1]])),
   resolveSectorHostCurrencyCode: () => "USD",
   fxRateForSectorHostFromMap: () => 1,
 }));

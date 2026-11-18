@@ -29,6 +29,11 @@ const RESET_DEMOCRATIC_HEALTH_WEIGHTS = {
   "53": 0.05, // Disinformation exposure, already normalized so higher is favorable
 } as const;
 
+/** Metric ids in the v2 Democratic Health basket. */
+export const RESET_DEMOCRATIC_HEALTH_METRIC_IDS = Object.freeze(
+  Object.keys(RESET_DEMOCRATIC_HEALTH_WEIGHTS)
+);
+
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
 const rounded = (value: number) => Math.round(clamp(value) * 10) / 10;
 

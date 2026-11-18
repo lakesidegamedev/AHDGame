@@ -17,6 +17,7 @@ import { processExecutiveEndorsements } from "@/lib/turn/executiveEndorsements";
 import { processCampaignTurn } from "@/lib/turn/campaignTurn";
 import { preeConfigFlags, processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
+import { shouldPauseFoundingCrisisOpenings } from "@/lib/crises/rules/foundingCrisisPause";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
 
 import { COUNTRY_BILL_PHASES } from "@/lib/turn/countryPhases";
@@ -288,7 +289,10 @@ export function getBillsCampaignsAndActivityPhases(): TurnPhaseAdapter[] {
         // expired its cooldown modifier can be offered again the same turn.
         // No-op when there are no scheduled definitions.
         const worldEventsSchedulerResult = await runtime.runPhase("worldEventsScheduler", () =>
-          processWorldEventsTurn(db, newTurn, { currentYear: eventsCurrentYear })
+          processWorldEventsTurn(db, newTurn, {
+            currentYear: eventsCurrentYear,
+            pauseCrisisOpenings: shouldPauseFoundingCrisisOpenings(gameState.preIteration, newTurn),
+          })
         );
         if (worldEventsSchedulerResult) {
           phaseResults.worldEventsScheduler = worldEventsSchedulerResult;
