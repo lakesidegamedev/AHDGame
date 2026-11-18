@@ -8,6 +8,7 @@ vi.mock("@/lib/currency/corporationCapital", () => ({
   anchorToCorpLiquidCapital: vi.fn((v: number) => v),
   corpLiquidCapitalToAnchor: vi.fn((v: number) => v),
   loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
+  loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
   resolveCorpLiquidCurrencyCode: vi.fn(() => "CNY"),
   resolveSectorHostCurrencyCode: vi.fn(() => "CNY"),
   fxRateForSectorHostFromMap: vi.fn(() => 1),

@@ -24,6 +24,7 @@ vi.mock("./treasuryLedger", () => ({
 }));
 vi.mock("@/lib/currency/corporationCapital", () => ({
   loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
+  loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
   resolveCorpLiquidCurrencyCode: vi.fn(() => "CNY"),
   fxRateForCorpFromMap: vi.fn(() => 1),
   anchorToCorpCapital: vi.fn((v: number) => v), // identity at rate 1

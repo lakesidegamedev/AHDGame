@@ -26,7 +26,7 @@ import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -245,7 +245,7 @@ export async function nationalizeSector(
   // Valuation in ₳ via the canonical sector NPV (going-concern, growth-cost-net).
   const [centralBanks, fxByCurrency, donorFxRate, marketMode, gameState] = await Promise.all([
     centralBanksCollection(db).find({}).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getCorpFxRate(db, donor),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -718,7 +718,7 @@ export async function nationalizeWholeCorp(
       .toArray(),
     bonds.find({ "holders.corporationId": target._id, matured: false }).toArray(),
     centralBanksCollection(db).find({}).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getCorpFxRate(db, target),
     getMarketSystemModeForDb(db),
     getGameState(db),

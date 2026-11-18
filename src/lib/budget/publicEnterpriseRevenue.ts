@@ -9,7 +9,8 @@ import { type CurrencyCode } from "@/lib/constants/currencies";
 import {
   anchorToCorpCapital,
   fxRateForCorpFromMap,
-  loadFxRatesByCurrency,
+  fillAuthoredEraRates,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
@@ -368,7 +369,7 @@ export async function calculateCountryOwnedBudgetRevenue(
     corporateSectorsCollection(db)
       .find({ corporationId: { $in: corporationIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
-    hoistedFxByCurrency ? Promise.resolve(hoistedFxByCurrency) : loadFxRatesByCurrency(db),
+    hoistedFxByCurrency ? fillAuthoredEraRates(db, hoistedFxByCurrency) : loadValuationFxRates(db),
   ]);
 
   // Per-state metrics drive the dynamic SOE efficiency penalty (spec §11.3), so
@@ -489,7 +490,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
     corporateSectorsCollection(db)
       .find({ corporationId: { $in: corporationIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
   ]);
 
   const stateIds = Array.from(new Set(allSectors.map((s) => s.stateId)));
