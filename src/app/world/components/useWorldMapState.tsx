@@ -45,6 +45,7 @@ export function useWorldMapState({
     countryIdToIso,
     compareMode,
     setCompareMode,
+    compareCountryIds,
     toggleCompareCountry,
   } = useWorldMetricFilter();
   const blocsAvailable = hasBlocData(preset, blocMapData.customBlocs.length);
@@ -248,6 +249,7 @@ export function useWorldMapState({
       blocsAvailable,
       cardRef,
       compareMode,
+      compareCountryIds,
       corpsData,
       countryAccess,
       countryIdToIso,
