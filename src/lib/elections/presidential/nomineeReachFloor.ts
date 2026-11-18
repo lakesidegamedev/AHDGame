@@ -1,18 +1,11 @@
 /**
  * National name-recognition floor for major-party presidential nominees.
  *
- * In the general election a candidate's reach (sqrt of national influence)
- * multiplies their vote in every state at once. A nominee who won the primary
- * with little national influence of their own was therefore multiplied down
- * everywhere: an influence gap of 26 to 2 handed the better-known nominee about
- * 3.6 times the votes in every state, and a 76/24 result in California. A
- * major party's nominee carries the party's own recognition on the ballot, so
- * their reach never falls below the floor. Influence above the floor still
- * counts in full.
- *
- * "Major" means the party holds at least `MAJOR_PARTY_REGISTRATION_SHARE` of
- * national party registration, population-weighted across states. Minor
- * parties and independents keep their own influence.
+ * General-election reach multiplies a candidate's vote in every state at once,
+ * so a low-influence nominee was multiplied down everywhere. A major party's
+ * nominee carries the party's recognition on the ballot: their influence never
+ * falls below the floor, and influence above it counts in full. "Major" means
+ * at least `MAJOR_PARTY_REGISTRATION_SHARE` of national party registration.
  */
 
 /** Minimum national registration share, 0-1, for a party to count as major. */
