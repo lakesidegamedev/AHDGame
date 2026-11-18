@@ -5,9 +5,10 @@ import { getSectorTechEffects, type LegacyTechContext } from "@/lib/constants/te
 import type { CommodityType } from "@/lib/constants/commodities";
 import { deliveredFraction } from "../buildDelivery";
 import { productionProductivityMultiplier } from "./productionProductivity";
+import type { PlantThroughputSector } from "./plantThroughput";
 
 export function buildAdviceOutputMultiplier(input: {
-  sector: Pick<CorporateSector, "sectorType">;
+  sector: PlantThroughputSector;
   supply: Partial<Record<CommodityType, number>>;
   owner?: Corporation;
   techEnabled: boolean;
@@ -19,7 +20,7 @@ export function buildAdviceOutputMultiplier(input: {
   const { sector, owner } = input;
   if (input.techEnabled && !owner) return NaN;
   return productionProductivityMultiplier({
-    sectorType: sector.sectorType,
+    sector,
     supply: input.supply,
     outputRateMult:
       input.techEnabled && owner
