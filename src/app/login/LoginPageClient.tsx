@@ -62,6 +62,7 @@ const LAKESIDE_ERROR_KEYS: Record<string, string> = {
 };
 
 interface LoginPageClientProps {
+  marginOfVictory: boolean;
   initialMaintenanceMode: boolean;
   wireframeColor?: string;
   eraLabel?: string;
@@ -73,6 +74,7 @@ interface LoginPageClientProps {
 }
 
 export default function LoginPageClient({
+  marginOfVictory,
   initialMaintenanceMode,
   registrationOpen = true,
   wireframeColor,
@@ -274,43 +276,44 @@ export default function LoginPageClient({
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Era art panel: full-colour photo for modern eras, ghosted behind
-          the CRT treatment for wireframe eras (1953, 1979). */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-card-muted p-10 lg:flex lg:w-[52%] xl:w-[56%] xl:px-14 xl:py-12">
-        {eraImage}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgb(12_12_18/0.55)_0%,rgb(12_12_18/0)_22%,rgb(12_12_18/0)_45%,rgb(12_12_18/0.85)_80%,rgb(12_12_18/0.96)_100%)]"
-        />
-        <div className="relative z-10">{brand}</div>
-        <div className="relative z-10 max-w-xl">
-          {eraLabel && (
-            <span
-              className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
-                wireframeColor ? "font-mono uppercase tracking-widest" : ""
-              }`}
-            >
-              {eraLabel}
-            </span>
-          )}
-          {eraTagline && (
-            <p
-              className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
-                wireframeColor ? "font-mono" : ""
-              }`}
-            >
-              {eraTagline}
+      {!marginOfVictory && (
+        <aside className="relative hidden flex-col justify-between overflow-hidden bg-card-muted p-10 lg:flex lg:w-[52%] xl:w-[56%] xl:px-14 xl:py-12">
+          {eraImage}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(180deg,rgb(12_12_18/0.55)_0%,rgb(12_12_18/0)_22%,rgb(12_12_18/0)_45%,rgb(12_12_18/0.85)_80%,rgb(12_12_18/0.96)_100%)]"
+          />
+          <div className="relative z-10">{brand}</div>
+          <div className="relative z-10 max-w-xl">
+            {eraLabel && (
+              <span
+                className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
+                  wireframeColor ? "font-mono uppercase tracking-widest" : ""
+                }`}
+              >
+                {eraLabel}
+              </span>
+            )}
+            {eraTagline && (
+              <p
+                className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
+                  wireframeColor ? "font-mono" : ""
+                }`}
+              >
+                {eraTagline}
+              </p>
+            )}
+            <p className="mt-3 max-w-md text-body-lg leading-relaxed text-white/80">
+              {t("eraDescription")}
             </p>
-          )}
-          <p className="mt-3 max-w-md text-body-lg leading-relaxed text-white/80">
-            {t("eraDescription")}
-          </p>
-        </div>
-      </aside>
-
-      <main className="flex w-full flex-col border-card-border bg-background lg:w-[48%] lg:border-l xl:w-[44%]">
+          </div>
+        </aside>
+      )}
+      <main
+        className={`flex w-full flex-col bg-background ${marginOfVictory ? "pt-6 lg:pt-0" : "border-card-border lg:w-[48%] lg:border-l xl:w-[44%]"}`}
+      >
         {/* New-player link, desktop only (mobile repeats it under the form). */}
-        {!maintenanceMode && registrationOpen && (
+        {!marginOfVictory && !maintenanceMode && registrationOpen && (
           <div className="hidden items-center justify-end gap-3 px-9 pt-6 text-body-sm text-muted lg:flex">
             {t("newToGameShort")}
             <Link
@@ -324,20 +327,26 @@ export default function LoginPageClient({
 
         <div className="flex flex-1 items-start justify-center lg:items-center lg:px-9 lg:py-8">
           <div className="w-full lg:max-w-[392px]">
-            {/* Mobile art header */}
-            <div className="relative mb-6 h-52 overflow-hidden lg:hidden">
-              {eraImage}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-[linear-gradient(180deg,rgb(20_20_28/0.35)_0%,rgb(20_20_28/0)_35%,rgb(20_20_28/0.6)_70%,var(--background)_100%)]"
-              />
-              <div className="absolute left-5 top-4 z-10">{brand}</div>
-              {eraLabel && (
-                <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white">
-                  {eraLabel}
-                </span>
-              )}
-            </div>
+            {marginOfVictory ? (
+              <div className="mb-6 flex items-center gap-3 px-5 text-body-sm font-semibold text-muted lg:px-0">
+                <Image src="/lakeside-mark.svg" alt="" width={28} height={28} />
+                Lakeside Games
+              </div>
+            ) : (
+              <div className="relative mb-6 h-52 overflow-hidden lg:hidden">
+                {eraImage}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-[linear-gradient(180deg,rgb(20_20_28/0.35)_0%,rgb(20_20_28/0)_35%,rgb(20_20_28/0.6)_70%,var(--background)_100%)]"
+                />
+                <div className="absolute left-5 top-4 z-10">{brand}</div>
+                {eraLabel && (
+                  <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white">
+                    {eraLabel}
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="px-5 pb-8 lg:px-0 lg:pb-0">
               {maintenanceMode && (
@@ -363,9 +372,11 @@ export default function LoginPageClient({
               )}
 
               <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground lg:text-[1.875rem]">
-                {t("heading")}
+                {t(marginOfVictory ? "movTitle" : "heading")}
               </h1>
-              <p className="mt-2 text-body text-muted">{t("subheading")}</p>
+              <p className="mt-2 text-body text-muted">
+                {t(marginOfVictory ? "movDescription" : "subheading")}
+              </p>
 
               {error && (
                 <div
@@ -393,21 +404,23 @@ export default function LoginPageClient({
                   Lakeside are hidden inside the store apps, so the rows grow
                   to fill whatever remains. */}
               <div className="mt-7 flex flex-wrap gap-2.5">
-                <button
-                  type="button"
-                  onClick={beginLakesideLogin}
-                  className="store-app-hidden flex min-h-12 basis-full items-center justify-center gap-2.5 rounded-lg border border-white bg-[#f4f4f7] px-4 py-3 text-body font-semibold text-[#14141c] transition-colors hover:bg-white"
-                >
-                  <Image
-                    src="/lakeside-mark.svg"
-                    alt=""
-                    aria-hidden="true"
-                    width={20}
-                    height={20}
-                    className="h-5 w-5 rounded object-contain"
-                  />
-                  {t("continueWithLakeside")}
-                </button>
+                {!marginOfVictory && (
+                  <button
+                    type="button"
+                    onClick={beginLakesideLogin}
+                    className="store-app-hidden flex min-h-12 basis-full items-center justify-center gap-2.5 rounded-lg border border-white bg-[#f4f4f7] px-4 py-3 text-body font-semibold text-[#14141c] transition-colors hover:bg-white"
+                  >
+                    <Image
+                      src="/lakeside-mark.svg"
+                      alt=""
+                      aria-hidden="true"
+                      width={20}
+                      height={20}
+                      className="h-5 w-5 rounded object-contain"
+                    />
+                    {t("continueWithLakeside")}
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -594,7 +607,9 @@ export default function LoginPageClient({
                   })}
                 </p>
               ) : (
-                <p className="mt-5 text-center text-body text-muted lg:hidden">
+                <p
+                  className={`mt-5 text-center text-body text-muted ${marginOfVictory ? "" : "lg:hidden"}`}
+                >
                   {t.rich("newToGame", {
                     link: (chunks) => (
                       <Link

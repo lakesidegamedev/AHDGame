@@ -1,14 +1,34 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import LoginPageClient from "./LoginPageClient";
 import { isMissingRequiredEnvError } from "@/lib/config/validatedEnv";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
+import { isMarginOfVictoryLogin } from "@/lib/auth/lakesideLoginReturn";
 import { computeIntakeStatus } from "@/lib/auth/intakeStatus";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { getLoginImage } from "@/lib/images/staticCdnAssets";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{ returnTo?: string | string[] }>;
+};
+
+function usesMarginOfVictoryBrand(returnTo?: string | string[]): boolean {
+  return isMarginOfVictoryLogin(typeof returnTo === "string" ? returnTo : null);
+}
+
+export async function generateMetadata({ searchParams }: LoginPageProps): Promise<Metadata> {
+  const t = await getTranslations("auth.login");
+  const marginOfVictory = usesMarginOfVictoryBrand((await searchParams).returnTo);
+  return marginOfVictory
+    ? { title: { absolute: t("movTitle") }, description: t("movDescription") }
+    : { title: t("metaTitle"), description: t("metaDescription") };
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const marginOfVictory = usesMarginOfVictoryBrand((await searchParams).returnTo);
   let maintenanceMode = false;
   let registrationOpen = true;
   let wireframeColor: string | undefined;
@@ -44,6 +64,7 @@ export default async function LoginPage() {
 
   return (
     <LoginPageClient
+      marginOfVictory={marginOfVictory}
       initialMaintenanceMode={maintenanceMode}
       registrationOpen={registrationOpen}
       wireframeColor={wireframeColor}
