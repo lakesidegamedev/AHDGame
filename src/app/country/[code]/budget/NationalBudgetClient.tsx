@@ -14,6 +14,9 @@ import {
   type BreakdownLine,
 } from "@/components/budget/treasury/BudgetBreakdownPanel";
 import { DebtCreditPanel } from "@/components/budget/treasury/DebtCreditPanel";
+import { DebtPathChart } from "@/components/budget/treasury/DebtPathChart";
+import { SovereignRatePanel } from "@/components/budget/treasury/SovereignRatePanel";
+import { MaturityLadderPanel } from "@/components/budget/treasury/MaturityLadderPanel";
 import { EconomicIndicators } from "@/components/budget/treasury/EconomicIndicators";
 import { SovereignHealthPanel } from "@/components/budget/treasury/SovereignHealthPanel";
 import { GrantsPanel } from "@/components/budget/treasury/GrantsPanel";
@@ -33,6 +36,10 @@ import { budgetApiUrl } from "@/lib/urls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import {
+  sovereignInputsFromBudget,
+  sovereignInputsFromFiscalClose,
+} from "@/lib/budget/rules/sovereignInputs";
 import {
   lawSpendingCategory,
   otherRevenueParts,
@@ -407,6 +414,9 @@ export function NationalBudgetClient() {
   const fyMax = fyHistory.length > 0 ? fyHistory[fyHistory.length - 1].fy : budget.fiscalYear;
   const isLive = !(data.isSnapshot ?? false);
   const prevFyPoint = fyHistory.find((p) => p.fy === budget.fiscalYear - 1) ?? null;
+  // One derivation for the rate card, the debt path and the economy payload, on
+  // the bases the fiscal-year rollover prices.
+  const sovereignInputs = sovereignInputsFromBudget(budget);
   const treasuryBalance = data.treasuryReserve ?? -(budget.debt?.principal ?? 0);
   // The `??` is load-bearing. `loadFederalBudgetDetail`'s historical-FY branch
   // returns early and never sets `liveGdpUnits`, so a snapshot view falls back
@@ -600,6 +610,26 @@ export function NationalBudgetClient() {
             }
           />
         </div>
+
+        <SovereignRatePanel
+          current={sovereignInputs}
+          previous={sovereignInputsFromFiscalClose(prevFyPoint)}
+        />
+
+        {data.maturityLadder && data.maturityLadder.totalPrincipal > 0 && (
+          <MaturityLadderPanel ladder={data.maturityLadder} sym={moneyPrefix} />
+        )}
+
+        {resolveRatioGdp(budget) > 0 && (
+          <DebtPathChart
+            inputs={sovereignInputs}
+            countryId={countryId}
+            debtPrincipal={budget.debt.principal}
+            gdp={resolveRatioGdp(budget)}
+            storedCeiling={budget.debt.ceiling}
+            fiscalYear={budget.fiscalYear}
+          />
+        )}
 
         <PlannedEconomyPanel
           countryId={countryId}
