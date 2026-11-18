@@ -1,5 +1,8 @@
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 
+/** Purchased inputs per basket for Standard retail in the 2027 preset. */
+export const STANDARD_RETAIL_INPUT_SCALE_2027 = 0.7;
+
 export const RETAIL_STRATEGIES: SectorStrategy[] = [
   {
     id: "ecommerce_fulfillment",
