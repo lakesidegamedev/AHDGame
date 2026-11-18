@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/db/types/gameState";
 
-export function shouldPauseFoundingEvents(
+export function shouldPauseFoundingCrisisOpenings(
   founding: GameState["preIteration"],
   turn: number
 ): boolean {

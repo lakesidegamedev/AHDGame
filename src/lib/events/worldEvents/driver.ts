@@ -341,6 +341,7 @@ export async function processWorldEventsTurn(
   preloaded?: {
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
+    pauseCrisisOpenings?: boolean;
   }
 ): Promise<WorldEventsTurnResult> {
   const currentYear = preloaded?.currentYear;
@@ -356,7 +357,10 @@ export async function processWorldEventsTurn(
     }
   }
 
-  const definitions = await loadScheduledDefinitions(db);
+  const scheduled = await loadScheduledDefinitions(db);
+  const definitions = preloaded?.pauseCrisisOpenings
+    ? scheduled.filter((definition) => !isHighTensionSocietyEvent(definition.kind))
+    : scheduled;
   if (definitions.length === 0) {
     return { offered: 0, skipped: 0, globalHostEventsOffered };
   }
