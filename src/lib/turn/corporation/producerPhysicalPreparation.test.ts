@@ -170,6 +170,26 @@ describe("physical producer preparation", () => {
     sector.sellOutsideFirst = true;
     expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBe(true);
   });
+
+  it("adds financed throughput for fintech while retaining both products and the input recipe", () => {
+    const { input, sector, env } = fixture();
+    sector.strategyId = "fintech";
+    env.currentYear = 2027;
+    env.lookups.preset = "2019-default";
+    const prior = prepareProducerPhysicalSector(input).prepared;
+    env.lookups.preset = "2027-default";
+    const current = prepareProducerPhysicalSector(input).prepared;
+
+    expect(current.plan.outputMultiplier).toBeCloseTo(prior.plan.outputMultiplier * 1.4, 10);
+    expect(current.plan.inputs).toEqual(prior.plan.inputs);
+    expect(current.plan.outputs).toEqual(prior.plan.outputs);
+    expect(current.plan.outputs.map((output) => output.commodity).sort()).toEqual([
+      "financial_services",
+      "software",
+    ]);
+    expect(current.target.capacity).toEqual(prior.target.capacity);
+  });
+
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
     sector.producerInventory!.outputStock = [
