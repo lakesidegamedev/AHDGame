@@ -2,13 +2,15 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+import { preload } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
+import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
 import { mapVariantFor } from "@/lib/world/mapVariant";
-import { mapOverviewUrl, type CountryMapViewConfig } from "./mapViewConfig";
+import type { CountryMapViewConfig } from "./mapViewConfig";
 
 interface CountryMapClientProps {
   countryId: CountryId;
@@ -33,12 +35,14 @@ const UnifiedMapWithModes = dynamic(loadUnifiedMap, { ssr: false, loading: MapLo
 const EconOnlyMapPlaceholder = dynamic(loadEconOnlyMap, { ssr: false, loading: MapLoading });
 
 /**
- * Start the renderer while the overview data preloads.
+ * Starts the renderer chunk (and the US geometry) while the overview request is
+ * still in flight, so the map does not wait for data and then for its own code.
  */
 function warmMapRenderer(countryId: CountryId) {
   const variant = mapVariantFor(countryId);
   if (variant === "us") {
     void loadUSMap();
+    preload(USA_GEO_URL, { as: "fetch", crossOrigin: "anonymous" });
   } else if (variant === "parliamentary") {
     void loadUnifiedMap();
   } else {
@@ -60,7 +64,7 @@ function CountryMapContent({ countryId, config }: CountryMapClientProps) {
   useEffect(() => {
     warmMapRenderer(countryId);
     const controller = new AbortController();
-    fetch(mapOverviewUrl(countryId), { signal: controller.signal })
+    fetch(`/api/map/overview?countryId=${countryId}`, { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) throw new Error("Map unavailable");
         return res.json();

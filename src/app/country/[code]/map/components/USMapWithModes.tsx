@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { RegionalGeoMap } from "@/components/maps/RegionalGeoMap";
 import { MetricsMap } from "./MetricsMap";
 import { AtlasTooltip, AtlasInspector, AtlasBreakdown } from "./AtlasPanels";
 import { ATLAS_STORAGE_KEY, readAtlasPreferences, type AtlasView } from "./atlasModel";
@@ -27,6 +27,7 @@ import {
 import { interpolateLeanHex } from "@/lib/utils/politics";
 import { LeanMapLegend } from "./LeanMapLegend";
 import { StateLeanPanel } from "./StateLeanPanel";
+import { MapFallback } from "./MapFallback";
 import { useResourceMapData } from "./useResourceMapData";
 import { useFreightDemandData } from "./useFreightDemandData";
 import {
@@ -36,6 +37,11 @@ import {
 } from "./freightHaulLoadCopy";
 
 import { USA_GEO_URL, US_REGION_CODES, US_LABEL_OVERRIDES } from "@/lib/maps/usaGeometry";
+
+const RegionalGeoMap = dynamic(
+  () => import("@/components/maps/RegionalGeoMap").then((m) => ({ default: m.RegionalGeoMap })),
+  { loading: MapFallback, ssr: false }
+);
 
 type USMapMode =
   | "electoralAllocation"

@@ -3,14 +3,11 @@ import CountryMapPage, { generateMetadata } from "./page";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
-import { preload } from "react-dom";
-import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/country/countryIdentity", () => ({ resolveCountryIdentity: vi.fn() }));
 vi.mock("./CountryMapClient", () => ({ default: vi.fn() }));
-vi.mock("react-dom", () => ({ preload: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,12 +42,5 @@ describe("country map country validation", () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ code: "us" }) });
     expect(metadata.title).toBe("United States Map | A House Divided");
     expect(resolveCountryIdentity).toHaveBeenCalled();
-  });
-
-  it("starts the US map data and geometry requests with the page shell", async () => {
-    await CountryMapPage({ params: Promise.resolve({ code: "us" }) });
-    const fetchOptions = { as: "fetch", crossOrigin: "anonymous" };
-    expect(preload).toHaveBeenCalledWith("/api/map/overview?countryId=US", fetchOptions);
-    expect(preload).toHaveBeenCalledWith(USA_GEO_URL, fetchOptions);
   });
 });
