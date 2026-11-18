@@ -74,7 +74,6 @@ interface Props {
   officeHolderPartyName: string | null;
   officeHolderPartyAbbreviation: string | null;
   officeHolderPartyColor: string | null;
-  supportsImpeachment: boolean;
   viewerIsAdmin: boolean;
   viewerIsHolder: boolean;
   /**
@@ -266,7 +265,7 @@ export function GovernorOfficeClient(props: Props) {
           </nav>
         </header>
 
-        {props.supportsImpeachment && props.officeHolderName && (
+        {props.officeHolderName && (
           <ImpeachmentPanel
             countryId={props.countryId}
             office="governor"

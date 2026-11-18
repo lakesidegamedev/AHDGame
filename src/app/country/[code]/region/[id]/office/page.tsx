@@ -92,8 +92,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   const { code, id: rawRegionParam } = await params;
   const id = canonicalRegionId(code.toUpperCase(), rawRegionParam);
   const countryId = code.toUpperCase() as CountryId;
-  const config = COUNTRY_CONFIGS[countryId];
-  if (!config) notFound();
+  if (!COUNTRY_CONFIGS[countryId]) notFound();
   const stateId = id.toUpperCase();
 
   const auth = await getAuthUserWithCharacter();
@@ -558,7 +557,6 @@ export default async function GovernorOfficePage({ params }: Props) {
         officeHolderPartyName={officeHolderPartyName}
         officeHolderPartyAbbreviation={officeHolderPartyAbbreviation}
         officeHolderPartyColor={officeHolderPartyColor}
-        supportsImpeachment={config.governmentType === "presidential"}
         viewerIsAdmin={isAdmin}
         viewerIsHolder={viewerIsHolder}
         viewerCanManage={viewerCanManage}

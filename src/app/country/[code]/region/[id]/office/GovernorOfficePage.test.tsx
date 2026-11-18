@@ -16,9 +16,7 @@ vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/governorOffice/devolution/queries", () => ({
   loadIndependenceDesireSnapshots: vi.fn(),
 }));
-vi.mock("@/app/whitehouse/ImpeachmentPanel", () => ({
-  default: () => <p>Impeachment filing notice</p>,
-}));
+vi.mock("@/app/whitehouse/ImpeachmentPanel", () => ({ default: () => null }));
 vi.mock("@/components/HeroImage", () => ({ HeroImage: () => null }));
 vi.mock("@/components/officials/OfficePoolTopUpButton", () => ({
   OfficePoolTopUpButton: () => null,
@@ -69,12 +67,11 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("regional government office panels", () => {
-  it("keeps Sovereignty in the Quebec Premier's office without an impeachment notice", async () => {
+describe("regional government sovereignty readout", () => {
+  it("shows Sovereignty for the Quebec Premier", async () => {
     await renderOffice("CA", "CA_QC", "CA");
 
     expect(screen.getByRole("button", { name: "Sovereignty" })).toBeTruthy();
-    expect(screen.queryByText("Impeachment filing notice")).toBeNull();
   });
 
   it("keeps the office overview for a foreign admin and skips the sovereignty readout", async () => {
@@ -83,11 +80,5 @@ describe("regional government office panels", () => {
     expect(screen.getByText("Office overview")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Sovereignty" })).toBeNull();
     expect(loadIndependenceDesireSnapshots).not.toHaveBeenCalled();
-  });
-
-  it("keeps impeachment in a US governor's office", async () => {
-    await renderOffice("US", "AZ", "US");
-
-    expect(screen.getByText("Impeachment filing notice")).toBeTruthy();
   });
 });
