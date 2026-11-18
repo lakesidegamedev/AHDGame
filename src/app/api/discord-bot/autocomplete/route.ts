@@ -6,7 +6,7 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
-import type { State, GameState } from "@/lib/db/types";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { filterCountryResults } from "./countryResults";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
     const query = url.searchParams.get("q") ?? "";
+    const country = url.searchParams.get("country")?.toUpperCase() as CountryId | undefined;
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "10", 10), 25);
 
     if (type !== "characters" && type !== "states" && type !== "countries") {
@@ -38,6 +39,9 @@ export async function GET(request: Request) {
         400,
         "Unsupported type. Use type=characters, type=states, or type=countries"
       );
+    }
+    if (country && !COUNTRY_CONFIGS[country]) {
+      return errorResponse(400, "Invalid country code");
     }
 
     const db = await getDb();
@@ -64,6 +68,7 @@ export async function GET(request: Request) {
       const states = await statesCollection(db)
         .find(
           {
+            ...(country ? { countryId: country } : {}),
             $or: [
               { name: { $regex: escapeRegex(query), $options: "i" } },
               { _id: { $regex: escapeRegex(query), $options: "i" } },
