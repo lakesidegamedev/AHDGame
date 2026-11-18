@@ -71,7 +71,8 @@ vi.mock("@/lib/banking/bankSovereignClaims", () => ({
   addBankMaturityClaims: vi.fn().mockResolvedValue([]),
   settleBankSovereignClaims: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/banking/settlementJournal", () => ({
+vi.mock("@/lib/banking/settlementJournal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/banking/settlementJournal")>()),
   resumeSettlement: vi.fn(async (_db: unknown, key: string) => ({
     status: "applied",
     key,
@@ -692,9 +693,10 @@ describe("processBondTurn", () => {
     expect(shortWrites.some((op) => op.updateOne?.update?.$set?.matured === true)).toBe(false);
 
     // The same due-turn claim settles once the Treasury can fund it.
+    bond.sovereignMaturityClaim.escrowLocal = 500;
     db.collectionMocks["federalBudget"]!.find.mockReturnValue(
       makeCursor([
-        { _id: "federal", countryId: "US", treasuryCashLocal: 5_000, bankSovereignClaims: [] },
+        { _id: "federal", countryId: "US", treasuryCashLocal: 500, bankSovereignClaims: [] },
       ])
     );
     const paid = await processBondTurn(61, { treasuryCashLedgerEnabled: true });
@@ -707,7 +709,10 @@ describe("processBondTurn", () => {
     );
   });
 
-  it("resumes an overdue maturity with a half-applied funding receipt even when cash is short", async () => {
+  it.each([
+    "sovereign-maturity:frozen-partial:48:fund:59",
+    "sovereign-refunding:sovereign-maturity:frozen-partial:48:holders:59",
+  ])("keeps an overdue maturity with unfinished receipt %s eligible", async (receiptKey) => {
     const bond = {
       _id: new ObjectId(),
       issuerType: "sovereign",
@@ -752,9 +757,7 @@ describe("processBondTurn", () => {
       ])
     );
 
-    db.collectionMocks["bankMoneyMoves"]!.find.mockReturnValue(
-      makeCursor([{ _id: "sovereign-maturity:frozen-partial:48:fund:59" }])
-    );
+    db.collectionMocks["bankMoneyMoves"]!.find.mockReturnValue(makeCursor([{ _id: receiptKey }]));
 
     await processBondTurn(60, { treasuryCashLedgerEnabled: true });
 

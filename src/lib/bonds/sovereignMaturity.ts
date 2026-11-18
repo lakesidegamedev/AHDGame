@@ -26,6 +26,7 @@ import {
   type SettlementResult,
   resumeSettlement,
   settleTransition,
+  unfinishedSettlementFilter,
 } from "@/lib/banking/settlementJournal";
 import { settleSovereignPublicFloatDisposition } from "./publicFloatSovereignNovation";
 import { refundSovereignMaturityShortfall } from "./sovereignMaturityRefunding";
@@ -340,15 +341,30 @@ export async function settleFundedSovereignBondMaturity(
   // payout receipt are answered by one read, not one lookup each.
   const priorReceipts = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
     .find(
-      // Two plain branches, not `^id:(fund:|payout$)`: an alternation is not a
-      // simple prefix, so the server would walk the whole `_id` index for it.
+      // Use separate anchored branches so each receipt lookup can use the _id index.
       {
-        $or: [{ _id: { $regex: `^${claimId}:fund:` } }, { _id: `${claimId}:payout` }],
-        status: "partial",
+        $and: [
+          {
+            $or: [
+              { _id: { $regex: `^${claimId}:fund:` } },
+              { _id: `${claimId}:payout` },
+              { _id: { $regex: `^sovereign-refunding:${claimId}:holders:` } },
+            ],
+          },
+          unfinishedSettlementFilter(),
+        ],
       },
       { projection: { _id: 1, status: 1 } }
     )
+    .sort({ createdAt: 1 })
     .toArray();
+  const refundingPrefix = `sovereign-refunding:${claimId}:holders:`;
+  for (const receipt of priorReceipts) {
+    if (!receipt._id.startsWith(refundingPrefix)) continue;
+    const recovered = await resumeSettlement(db, receipt._id);
+    if (recovered.status !== "applied" && (recovered.status !== "replayed" || recovered.error))
+      return null;
+  }
   const currentBond = await bondsCollection(db).findOne(
     { _id: bond._id },
     { projection: { sovereignMaturityClaim: 1 } }
@@ -372,7 +388,7 @@ export async function settleFundedSovereignBondMaturity(
           : quote.amountLocal,
     };
   }
-  const pendingFunding = priorReceipts.filter((row) => row._id !== `${claimId}:payout`);
+  const pendingFunding = priorReceipts.filter((row) => row._id.startsWith(`${claimId}:fund:`));
   const previousPayoutReceipt = priorReceipts.find((row) => row._id === `${claimId}:payout`);
 
   const sourceCountryId =
@@ -430,10 +446,12 @@ export async function settleFundedSovereignBondMaturity(
     quote.publicFloatDisposition.status !== "applied"
   )
     return null;
+  // Only payout receipts can be resumed by the caller as a holder payment.
   for (const receipt of pendingFunding) {
     const recovered = await resumeSettlement(db, receipt._id);
+    if (recovered.status === "rejected") return recovered;
     if (recovered.status !== "applied" && !(recovered.status === "replayed" && !recovered.error))
-      return recovered;
+      return null;
   }
   if (pendingFunding.length > 0) {
     const refreshed = await bondsCollection(db).findOne(
@@ -465,12 +483,12 @@ export async function settleFundedSovereignBondMaturity(
       { _id: budgetId, ...frozenBudgetIdentity },
       { projection: { treasuryCashLocal: 1 } }
     );
-    const cashOnHand = currentBudget?.treasuryCashLocal ?? 0;
-    if (cashOnHand < cashAmountLocal) {
+    const cashOnHand = Math.max(0, currentBudget?.treasuryCashLocal ?? 0);
+    if (cashOnHand < cashAmountLocal - quote.escrowLocal) {
       // An unfundable maturity first rolls its pool holding into a par
       // replacement bond: the pool takes new paper, not cash. Retry once on
       // the rebased claim.
-      if (!quote.forcedRollover && bond.countryId) {
+      if (!quote.forcedRollover && quote.escrowLocal === 0 && bond.countryId) {
         const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
           bond: (await bondsCollection(db).findOne({ _id: bond._id })) ?? bond,
           claim: quote,
@@ -498,7 +516,11 @@ export async function settleFundedSovereignBondMaturity(
         // total ever raised for them cannot exceed what they are paid.
         scopeOwedLocal: cashAmountLocal,
         scopeRefundedLocal: quote.refundedHolderFaceLocal ?? 0,
-        shortfallLocal: cashAmountLocal - cashOnHand,
+        shortfallLocal: cashAmountLocal - quote.escrowLocal - cashOnHand,
+        holderEscrow: {
+          escrowLocal: quote.escrowLocal,
+          localPerAnchor: quote.treasuryLocalPerAnchor,
+        },
         countryId: budget.countryId,
         budgetId,
         currencyCode: quote.currencyCode,
@@ -509,12 +531,18 @@ export async function settleFundedSovereignBondMaturity(
         consolidateReplacement: input.consolidateRollover === true,
       });
       if (refunded.status === "refused") return null;
-      const refinanced = await federalBudgetCollection(db).findOne(
-        { _id: budgetId, ...frozenBudgetIdentity },
-        { projection: { treasuryCashLocal: 1 } }
+      const refinanced = await bondsCollection(db).findOne(
+        { _id: bond._id },
+        { projection: { sovereignMaturityClaim: 1 } }
       );
-      if ((refinanced?.treasuryCashLocal ?? 0) < cashAmountLocal) return null;
+      const funded = refinanced?.sovereignMaturityClaim;
+      if (!funded || funded.id !== claimId || funded.paid) return null;
+      quote = funded;
+      if (cashOnHand < cashAmountLocal - quote.escrowLocal) return null;
     }
+  }
+  if (quote.escrowLocal < cashAmountLocal) {
+    const treasuryDebitLocal = cashAmountLocal - quote.escrowLocal;
     if (quote.fundingAttemptTurn !== turn) {
       const priorAttemptTurn = quote.fundingAttemptTurn;
       const reservation = await bondsCollection(db).updateOne(
@@ -554,7 +582,7 @@ export async function settleFundedSovereignBondMaturity(
       legs: [
         {
           kind: "debit",
-          amount: cashAmountLocal,
+          amount: treasuryDebitLocal,
           valuation: {
             currencyCode: quote.currencyCode,
             localPerAnchor: quote.treasuryLocalPerAnchor,
@@ -563,14 +591,14 @@ export async function settleFundedSovereignBondMaturity(
           filter: {
             _id: budgetId,
             ...frozenBudgetIdentity,
-            treasuryCashLocal: { $gte: cashAmountLocal },
+            treasuryCashLocal: { $gte: treasuryDebitLocal },
           },
           path: "treasuryCashLocal",
           note: "Fund frozen sovereign maturity claim from Treasury cash",
         },
         {
           kind: "credit",
-          amount: cashAmountLocal,
+          amount: treasuryDebitLocal,
           valuation: {
             currencyCode: quote.currencyCode,
             localPerAnchor: quote.treasuryLocalPerAnchor,
@@ -596,10 +624,11 @@ export async function settleFundedSovereignBondMaturity(
           key: attemptKey,
           country: sourceCountryId,
           currency: quote.currencyCode,
-          amount: cashAmountLocal,
-          rate: treasuryLocalPerAnchor,
+          amount: treasuryDebitLocal,
+          rate: quote.treasuryLocalPerAnchor,
           turn,
           signedPositionOwned: true,
+          signedPositionAmount: cashAmountLocal,
           txType: "gov_bond_maturity_payment",
           now,
         }),
@@ -615,14 +644,15 @@ export async function settleFundedSovereignBondMaturity(
     });
     if (attempt.status === "partial" || (attempt.status === "replayed" && attempt.error))
       attempt = await resumeSettlement(db, attemptKey);
+    if (attempt.status === "rejected") return attempt;
     if (attempt.status !== "applied" && !(attempt.status === "replayed" && !attempt.error))
-      return attempt;
+      return null;
     const fundedBond = await bondsCollection(db).findOne(
       { _id: bond._id },
       { projection: { sovereignMaturityClaim: 1 } }
     );
     const fundedQuote = fundedBond?.sovereignMaturityClaim;
-    if (!fundedQuote || fundedQuote.escrowLocal < cashAmountLocal) return attempt;
+    if (!fundedQuote || fundedQuote.escrowLocal < cashAmountLocal) return null;
     quote = fundedQuote;
   }
 
