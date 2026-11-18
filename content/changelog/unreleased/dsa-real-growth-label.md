@@ -15,6 +15,10 @@ areas: [frontend, backend]
   payload and the public v1 sovereigns response.
 - The input documentation states that the figure excludes inflation, because the
   score reads output and a nominal reading would reward a price spike.
-- The public v1 endpoint description says the DSA scores real growth, so
-  integrators can identify the input before parsing the component list. The
-  published field keeps its name, so existing clients keep working.
+- The public v1 sovereigns response publishes the figure as
+  `realGdpGrowthPct`, in percent with inflation excluded. `annualGdpGrowth`
+  remains as a deprecated alias carrying the same value, so existing clients
+  keep working while new ones can read the unit and basis from the field name.
+- The public v1 endpoint description spells out the real-growth basis and the
+  alias, so integrators can identify both without parsing the DSA component
+  list.

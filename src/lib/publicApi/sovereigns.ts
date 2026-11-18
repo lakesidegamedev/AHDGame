@@ -50,12 +50,12 @@ export async function querySovereignWatch(db: Db) {
       const ratioGdp = resolveRatioGdp(budget);
       // Real annual growth: the DSA reads output, not prices, so inflation
       // cannot look like an improving credit score.
-      const annualGdpGrowth = liveGdpGrowth ?? budget.economicFactors?.gdpGrowth ?? 0;
+      const realGdpGrowthPct = liveGdpGrowth ?? budget.economicFactors?.gdpGrowth ?? 0;
       const dsa = computeDsa({
         debtToGdp: snapshot.debtToGdp,
         primarySurplusToGdp: ratioGdp > 0 ? federalSurplus(budget) / ratioGdp : 0,
         fxDepreciation10t: snapshot.fxDepreciationRate10t,
-        annualGdpGrowth: annualGdpGrowth / 100,
+        annualGdpGrowth: realGdpGrowthPct / 100,
       });
 
       return {
@@ -68,7 +68,10 @@ export async function querySovereignWatch(db: Db) {
         turnsSinceLastDefault: snapshot.turnsSinceLastDefault,
         debtToGdpRatio: snapshot.debtToGdp,
         inflationRate: snapshot.inflationRate * 100,
-        annualGdpGrowth,
+        /** Real annual GDP growth, percent, inflation excluded. */
+        realGdpGrowthPct,
+        /** Deprecated alias of `realGdpGrowthPct`, same value and units. */
+        annualGdpGrowth: realGdpGrowthPct,
         trust: snapshot.trust,
         sovereignCouponRate: snapshot.sovereignCouponRate,
         fxDepreciation10Turn: snapshot.fxDepreciationRate10t,
