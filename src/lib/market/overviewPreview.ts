@@ -4,6 +4,27 @@
  */
 
 export const MAX_PREVIEW_ROWS = 20;
+export const MARKET_OVERVIEW_ROWS = 5;
+
+export interface CommodityMover {
+  commodity: string;
+  label: string;
+  basePrice: number;
+  globalPrice: number;
+}
+
+export function vsBasePct({
+  basePrice,
+  globalPrice,
+}: Pick<CommodityMover, "basePrice" | "globalPrice">): number | null {
+  return basePrice > 0 ? (globalPrice / basePrice - 1) * 100 : null;
+}
+
+export function topCommodityMovers<T extends CommodityMover>(commodities: readonly T[]): T[] {
+  return [...commodities]
+    .sort((a, b) => Math.abs(vsBasePct(b) ?? 0) - Math.abs(vsBasePct(a) ?? 0))
+    .slice(0, MARKET_OVERVIEW_ROWS);
+}
 
 /** `?preview=N` as a row count, or null when absent or invalid. */
 export function parsePreviewRows(raw: string | null): number | null {

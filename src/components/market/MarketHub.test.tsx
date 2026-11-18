@@ -135,7 +135,7 @@ describe("MarketHub", () => {
     expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe(
       "true"
     );
-    expect(screen.getByTestId("market-chart")).toBeTruthy();
+    expect(await screen.findByTestId("market-chart")).toBeTruthy();
     expect(screen.queryByText("Market index")).toBeNull();
     expect(screen.queryByText("Open supply offers")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Hide chart" }));
@@ -148,8 +148,20 @@ describe("MarketHub", () => {
     search = "";
     window.localStorage.setItem("market.chartOpen", "0");
     render(<MarketHub />);
-    await waitFor(() => expect(screen.queryByTestId("market-chart")).toBeNull());
+    await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
+    expect(screen.queryByTestId("market-chart")).toBeNull();
     expect(screen.getByRole("button", { name: "Show chart" })).toBeTruthy();
+  });
+
+  it("renders the server commodity preview without fetching full listings on hydration", async () => {
+    search = "";
+    render(<MarketHub previews={{ stocks: [], movers: [commodity("oil", 120)] }} />);
+    expect(screen.getByRole("link", { name: /oil/ })).toBeTruthy();
+    await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
+    expect(calls.some((u) => u.startsWith("/api/commodities"))).toBe(false);
+    expect(calls.some((u) => u.includes("preview=5") && u.startsWith("/api/stock-exchange"))).toBe(
+      false
+    );
   });
 
   it("does not fetch bonds or funds on an unrelated tab", async () => {
@@ -182,7 +194,9 @@ describe("MarketHub", () => {
   it("restores exchange selection on the chart and writes the selected venue to the URL", async () => {
     search = "tab=stocks";
     render(<MarketHub />);
-    expect(screen.getByTestId("market-chart").getAttribute("data-exchange")).toBe("global");
+    expect((await screen.findByTestId("market-chart")).getAttribute("data-exchange")).toBe(
+      "global"
+    );
     fireEvent.click(screen.getAllByRole("button", { name: "NYSE" })[0]);
     expect(replace).toHaveBeenCalledWith("/market?tab=stocks&exchange=US", { scroll: false });
     await waitFor(() => expect(screen.getByText("No listed corporations yet.")).toBeTruthy());
@@ -191,7 +205,7 @@ describe("MarketHub", () => {
   it("restores a selected exchange from the URL and loads compare totals only when requested", async () => {
     search = "tab=stocks&exchange=JP";
     render(<MarketHub />);
-    expect(screen.getByTestId("market-chart").getAttribute("data-exchange")).toBe("JP");
+    expect((await screen.findByTestId("market-chart")).getAttribute("data-exchange")).toBe("JP");
     await waitFor(() => expect(screen.getByText("No listed corporations yet.")).toBeTruthy());
     const initialNikkeiRequests = calls.filter((url) => url.includes("exchange=nikkei")).length;
     expect(initialNikkeiRequests).toBe(1);
