@@ -7,7 +7,10 @@ import { deliveredFraction } from "../buildDelivery";
 import { productionProductivityMultiplier } from "./productionProductivity";
 
 export function buildAdviceOutputMultiplier(input: {
-  sector: Pick<CorporateSector, "sectorType">;
+  sector: Pick<
+    CorporateSector,
+    "sectorType" | "strategyId" | "transitionFromStrategyId" | "transitionStartTurn"
+  >;
   supply: Partial<Record<CommodityType, number>>;
   owner?: Corporation;
   techEnabled: boolean;
@@ -19,7 +22,7 @@ export function buildAdviceOutputMultiplier(input: {
   const { sector, owner } = input;
   if (input.techEnabled && !owner) return NaN;
   return productionProductivityMultiplier({
-    sectorType: sector.sectorType,
+    sector,
     supply: input.supply,
     outputRateMult:
       input.techEnabled && owner
