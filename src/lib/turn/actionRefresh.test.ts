@@ -1265,7 +1265,7 @@ describe("processActionRefresh", () => {
         baseCharacter({ ceoNiTenure: { corporationId: "corp1", sinceTurn: -12 } })
       );
       expect(later.ceoNiTier).toBe("major");
-      expect(later.nationalInfluence).toBeCloseTo(0.3, 5);
+      expect(later.nationalInfluence).toBeCloseTo(0.2, 5);
     });
 
     it("restarts CEO tenure when the qualifying corporation changes", async () => {

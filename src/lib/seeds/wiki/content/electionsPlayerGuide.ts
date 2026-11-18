@@ -102,12 +102,13 @@ You also receive the highest position bonus you qualify for:
 | National legislator, ceremonial head of state | +1.0 |
 | Acting cabinet member | +0.75 |
 | State or regional legislator | +0.5 |
-| CEO of one of the 10 largest listed corporations in its country by market cap, not on autopilot | +0.3 |
-| CEO of any other listed corporation in the top half of its country by market cap | +0.15 |
+| National party chair | +0.2 x (party organization / 50), at most +0.2 |
+| CEO of one of the 10 largest listed corporations in its country by market cap, not on autopilot | +0.2 |
+| CEO of any other listed corporation in the top half of its country by market cap | +0.05 |
 
 A CEO only qualifies after running the same corporation for 12 turns. Running a corporation grants no extra actions.
 
-Position bonuses do not stack with each other. You get your single highest tier, then the local-influence term is added. Party officers build Party Influence. If they also hold a qualifying public office, they earn that office’s NPI tier.
+Position bonuses do not stack with each other. You get your single highest tier, then the local-influence term is added. Party officers build Party Influence. A national party chair also earns NPI scaled by the party's national organization, reaching the top CEO rate at organization 50. Vice chairs, treasurers and state party chairs earn no NPI from party office. Party officers who also hold a qualifying public office earn that office's tier if it is higher.
 
 The one exception is international leadership. Holding an international organisation's leadership seat (Secretary-General or equivalent) adds **+1.0** on top of your domestic tier.
 

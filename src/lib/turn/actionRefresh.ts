@@ -47,6 +47,7 @@ import {
   loadPresidingOfficerRoles,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
+import { loadPartyChairOrganizations } from "@/lib/actions/positionNiBonus/partyChair";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -91,7 +92,7 @@ export async function processActionRefresh(
   const accountability = await observeGovernmentAccountability(db, executives);
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
-    { projection: { currentTurn: 1 } }
+    { projection: { currentTurn: 1, "preIteration.active": 1 } }
   );
   const currentTurn = gameState?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
@@ -177,10 +178,11 @@ export async function processActionRefresh(
   }
   for (const id of confirmedCabinetIds) actingOnlyCabinetIds.delete(id);
 
-  const [opposition, ceoCandidates, orgHeadIds] = await Promise.all([
+  const [opposition, ceoCandidates, orgHeadIds, partyChairOrgs] = await Promise.all([
     loadOppositionRoles(db),
     loadCeoCandidates(db),
     loadOrgHeadIds(db),
+    loadPartyChairOrganizations(db, gameState?.preIteration?.active === true),
   ]);
 
   // Recover the underlying legislative seat only for the cabinet ministers whose
@@ -294,6 +296,7 @@ export async function processActionRefresh(
       cabinetCountryId: cabinetCountry,
       isActingCabinet: actingOnlyCabinetIds.has(charIdStr),
       ceoTier: ceo.tier,
+      partyChairOrganization: partyChairOrgs.get(charIdStr),
       isOrgHead: orgHeadIds.has(charIdStr),
     });
 
