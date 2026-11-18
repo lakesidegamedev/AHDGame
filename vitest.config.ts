@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { BalancedTestSequencer } from "./scripts/ci/balancedTestSequencer";
 // TODO: Consider adding E2E test configuration support in future iterations
 
 export default defineConfig({
@@ -25,6 +26,7 @@ export default defineConfig({
     // module graph. Sharing the graph leaks that state between files, and which
     // suites break shifts from run to run with worker scheduling.
     pool: "threads",
+    sequence: { sequencer: BalancedTestSequencer },
     include: [
       "src/**/*.test.ts",
       "src/**/*.test.tsx",

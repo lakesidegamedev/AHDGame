@@ -47,7 +47,6 @@ import {
   loadPresidingOfficerRoles,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
-import { loadPartyPositionNiBonuses } from "@/lib/actions/positionNiBonus/partyLeadership";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -92,7 +91,7 @@ export async function processActionRefresh(
   const accountability = await observeGovernmentAccountability(db, executives);
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
-    { projection: { currentTurn: 1, "preIteration.active": 1 } }
+    { projection: { currentTurn: 1 } }
   );
   const currentTurn = gameState?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
@@ -140,8 +139,7 @@ export async function processActionRefresh(
   );
 
   // ── Position-based NI bonuses ────────────────────────────────────────────
-  // Domestic roles compete for the highest NI tier. Party offices begin
-  // granting NI once the full-seating elections finish.
+  // Domestic roles compete for the highest NI tier.
   const congressLeaderRows = await congressLeadersCollection(db)
     .find({ characterId: { $ne: null } }, { projection: { characterId: 1, role: 1 } })
     .toArray();
@@ -179,9 +177,8 @@ export async function processActionRefresh(
   }
   for (const id of confirmedCabinetIds) actingOnlyCabinetIds.delete(id);
 
-  const [opposition, partyBonuses, ceoCandidates, orgHeadIds] = await Promise.all([
+  const [opposition, ceoCandidates, orgHeadIds] = await Promise.all([
     loadOppositionRoles(db),
-    loadPartyPositionNiBonuses(db, gameState?.preIteration?.active === true),
     loadCeoCandidates(db),
     loadOrgHeadIds(db),
   ]);
@@ -292,7 +289,6 @@ export async function processActionRefresh(
       currentOfficeType: character.currentOffice?.type,
       countryId: character.countryId,
       congressLeadershipRoles: leaderRolesByCharId.get(charIdStr),
-      partyPositionNiBonus: partyBonuses.get(charIdStr),
       isSeatedJustice: seatedJusticeCharacterIds.has(charIdStr),
       isCentralBankChair: chairCharacterIds.has(charIdStr),
       cabinetCountryId: cabinetCountry,

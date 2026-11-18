@@ -10,7 +10,7 @@ import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
-import { settleProducerTurn } from "./settlement";
+import { compareProducerInventory, settleProducerTurn } from "./settlement";
 import type { StageTimings } from "./stageTimings";
 import { decodeReceipt, encodeReceipt } from "./receiptStorage";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
@@ -203,6 +203,24 @@ function corporationById(memory: ReturnType<typeof createInMemoryDb>, id: string
 }
 
 describe("frozen producer turn settlement", () => {
+  it("accepts equivalent legacy inventory books while rejecting changed stock", () => {
+    const countryInventory = {
+      outputStock: [{ commodity: "construction_services", book: "country:US", units: 4 }],
+    };
+    const legacyInventory = {
+      outputStock: [{ commodity: "construction_services", book: "state:OH", units: 4 }],
+    };
+
+    expect(compareProducerInventory(countryInventory, countryInventory)).toBe("exact");
+    expect(compareProducerInventory(legacyInventory, countryInventory)).toBe("equivalent");
+    expect(
+      compareProducerInventory(
+        { outputStock: [{ ...legacyInventory.outputStock[0], units: 3 }] },
+        countryInventory
+      )
+    ).toBe("different");
+  });
+
   it("resumes a frozen receipt without a cash-change witness", async () => {
     const { memory, input, db } = fixture();
     const faulty = withInjectedCrash(memory, {
