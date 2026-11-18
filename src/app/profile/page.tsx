@@ -614,7 +614,6 @@ export default async function ProfilePage() {
   const chairActionBonus = chairBankRow ? (gameConfig?.chairActionBonus ?? 3) : 0;
   const roleBonuses = await loadCharacterRoleBonuses(apDb, {
     character,
-    party: party ?? null,
     congressLeadershipRoles: congressLeadershipRows.map((row) => row.role),
     isSeatedJustice: justiceSeat != null,
     isCentralBankChair: chairBankRow != null,

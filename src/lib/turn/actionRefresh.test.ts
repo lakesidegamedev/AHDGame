@@ -22,7 +22,6 @@ const roleFixtures = vi.hoisted(() => ({
   oppositionLeaderIds: new Set<string>(),
   shadowCabinetIds: new Set<string>(),
   presidingOfficers: [] as { characterId: unknown; role: string }[],
-  statePartyChairIds: new Set<string>(),
   orgHeadIds: new Set<string>(),
   ceoCandidates: new Map<string, { corporationId: string; tier: "major" | "standard" }>(),
 }));
@@ -35,7 +34,6 @@ vi.mock("./actionRefreshRoles", async (importOriginal) => {
       shadowCabinetIds: roleFixtures.shadowCabinetIds,
     })),
     loadPresidingOfficerRoles: vi.fn(async () => roleFixtures.presidingOfficers),
-    loadStatePartyChairIds: vi.fn(async () => roleFixtures.statePartyChairIds),
     loadOrgHeadIds: vi.fn(async () => roleFixtures.orgHeadIds),
     loadCeoCandidates: vi.fn(async () => roleFixtures.ceoCandidates),
   };
@@ -132,7 +130,22 @@ describe("processActionRefresh", () => {
   let seatedJusticeRows: { justiceCharacterId: unknown }[] = [];
   let persistFixture = false;
   let characterRows: Character[] = [];
-  let gameStateRow: { currentTurn: number } | null = null;
+  let gameStateRow: { currentTurn: number; preIteration?: { active: boolean } } | null = null;
+  let partyRows: {
+    countryId: string;
+    sequentialId: number;
+    chairId?: string;
+    viceChairId?: string;
+  }[] = [];
+  let statePartyRows: {
+    _id: string;
+    countryId: string;
+    stateId: string;
+    partyId: string;
+    chairId?: string;
+    organization: number;
+    organizationUnits?: number;
+  }[] = [];
   const mockNppBulkWrite = vi.fn();
 
   beforeEach(async () => {
@@ -140,7 +153,6 @@ describe("processActionRefresh", () => {
     roleFixtures.oppositionLeaderIds = new Set();
     roleFixtures.shadowCabinetIds = new Set();
     roleFixtures.presidingOfficers = [];
-    roleFixtures.statePartyChairIds = new Set();
     roleFixtures.orgHeadIds = new Set();
     roleFixtures.ceoCandidates = new Map();
     chairRows = [];
@@ -154,6 +166,8 @@ describe("processActionRefresh", () => {
     persistFixture = false;
     characterRows = [];
     gameStateRow = null;
+    partyRows = [];
+    statePartyRows = [];
     mockBulkWrite.mockImplementation(async (ops: unknown[]) => {
       if (persistFixture) {
         for (const op of ops as {
@@ -227,10 +241,12 @@ describe("processActionRefresh", () => {
             }),
           };
         }
-        if (name === "politicalParties") {
+        if (name === "politicalParties" || name === "statePartyOrg") {
           return {
             find: vi.fn().mockReturnValue({
-              toArray: vi.fn().mockResolvedValue([]),
+              toArray: vi
+                .fn()
+                .mockResolvedValue(name === "politicalParties" ? partyRows : statePartyRows),
             }),
           };
         }
@@ -1234,8 +1250,73 @@ describe("processActionRefresh", () => {
     });
 
     it("gives a state party chair the 0.5 tier", async () => {
-      roleFixtures.statePartyChairIds = new Set(["c1"]);
+      statePartyRows = [
+        {
+          _id: "CA_1",
+          countryId: "US",
+          stateId: "CA",
+          partyId: "1",
+          chairId: "c1",
+          organization: 0,
+        },
+      ];
       expect((await refreshOne(baseCharacter({}))).nationalInfluence).toBeCloseTo(0.5, 5);
+    });
+
+    it("uses the actual Org balance for founding party offices and restores the regular rates", async () => {
+      gameStateRow = { currentTurn: 32, preIteration: { active: true } };
+      partyRows = [{ countryId: "US", sequentialId: 1, chairId: "c1", viceChairId: "c2" }];
+      statePartyRows = [
+        {
+          _id: "US_CA_1",
+          countryId: "US",
+          stateId: "CA",
+          partyId: "1",
+          chairId: "c1",
+          organization: 99,
+          organizationUnits: 900,
+        },
+        {
+          _id: "US_NY_1",
+          countryId: "US",
+          stateId: "NY",
+          partyId: "1",
+          chairId: "c3",
+          organization: 1,
+          organizationUnits: 100,
+        },
+        {
+          _id: "CA_ON_1",
+          countryId: "CA",
+          stateId: "ON",
+          partyId: "1",
+          organization: 99,
+          organizationUnits: 20_000,
+        },
+        {
+          _id: "US_FL_2",
+          countryId: "US",
+          stateId: "FL",
+          partyId: "2",
+          chairId: "c4",
+          organization: 40,
+        },
+      ];
+      async function readBonus(id: string) {
+        mockBulkWrite.mockClear();
+        return (await refreshOne(baseCharacter({ _id: id as never }))).positionNiBonus;
+      }
+
+      expect(await readBonus("c1")).toBeCloseTo(0.5625);
+      expect(await readBonus("c2")).toBeCloseTo(0.375);
+      expect(await readBonus("c3")).toBeCloseTo(0.1875);
+      // A legacy 40% share mints 40/(100-40) times the regional baseline.
+      expect(await readBonus("c4")).toBeCloseTo(0.175);
+
+      gameStateRow.preIteration!.active = false;
+      expect(await readBonus("c1")).toBe(2);
+      expect(await readBonus("c2")).toBe(1.5);
+      expect(await readBonus("c3")).toBe(0.5);
     });
 
     it("waits out the CEO tenure before granting CEO NI, then grants the tier", async () => {
