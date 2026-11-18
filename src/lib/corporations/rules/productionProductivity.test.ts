@@ -45,4 +45,20 @@ describe("plant productivity basis", () => {
     expect(plantThroughputMultiplier(sector, 52, "2027-default")).toBeCloseTo(1.13);
     expect(plantThroughputMultiplier(sector, 58, "2027-default")).toBe(1);
   });
+
+  it("scales projected fintech output in 2027 and phases the increase during a retool", () => {
+    const sector = {
+      sectorType: "financial",
+      strategyId: "fintech",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: 46,
+    };
+    const input = { sector, preset: "2027-default", currentTurn: 58 };
+    expect(productionProductivityMultiplier(input)).toBe(1.4);
+    expect(productionProductivityMultiplier({ ...input, currentTurn: 52 })).toBeCloseTo(1.2);
+    expect(productionProductivityMultiplier({ ...input, preset: "2019-default" })).toBe(1);
+    expect(
+      productionProductivityMultiplier({ ...input, sector: { sectorType: "financial" } })
+    ).toBe(1);
+  });
 });
