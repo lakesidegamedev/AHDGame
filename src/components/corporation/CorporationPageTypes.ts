@@ -1006,6 +1006,12 @@ export interface BondInfo {
    * re-deriving the rules here.
    */
   maxAllowedIssuance?: number;
+  /**
+   * What the bond market would fund today, in ₳. Below `maxAllowedIssuance`
+   * when one issue is larger than the market's appetite: the excess stays
+   * unsold and places slowly. Null when the currency has no bond market pool.
+   */
+  fundableIssuance?: number | null;
   /** Effective minimum issuance in ₳: the flat minimum clamped to the corp's ceiling. */
   minIssuance?: number;
   /** False when the corp's headroom is below the dust floor and bonds are unavailable. */

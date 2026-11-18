@@ -142,6 +142,23 @@ export function planCorporateUnderwriting(input: {
 }
 
 /**
+ * The largest corporate issue the pool would fund in full today, in whole
+ * units. Same plan the issue POST runs, so the number quoted on the issue
+ * screen is the number the POST will actually fund. Anything requested above
+ * this stays unsold and places only slowly, in later turns.
+ */
+export function corporateFundableUnits(input: {
+  poolCashLocal: number;
+  poolM2Local: number | undefined;
+  poolLiquidityTargetLocal?: number;
+  rating: CreditRating;
+  pricePerUnitLocal: number;
+}): number {
+  return planCorporateUnderwriting({ ...input, requestedUnits: Number.MAX_SAFE_INTEGER })
+    .placedUnits;
+}
+
+/**
  * Sovereign capacity: most of the pool's cash (the rollover working balance
  * is there for exactly this), scaled by the demand model's appetite for the
  * issuer relative to its neutral baseline.

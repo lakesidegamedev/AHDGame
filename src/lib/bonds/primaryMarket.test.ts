@@ -18,6 +18,7 @@ vi.mock("@/lib/banking/settlementJournal", async (importOriginal) => {
 import { loadBondQuote } from "@/lib/bonds/marketPool";
 import {
   placeUnsoldBondUnits,
+  corporateFundableUnits,
   planCorporateUnderwriting,
   planSovereignMonetization,
   planSovereignUnderwriting,
@@ -60,6 +61,33 @@ describe("planCorporateUnderwriting", () => {
       pricePerUnitLocal: 1_000,
     });
     expect(plan).toMatchObject({ placedUnits: 3, unsoldUnits: 0, fillRatio: 1 });
+  });
+});
+
+describe("corporateFundableUnits", () => {
+  it("matches what the underwriting plan funds for an oversized request", () => {
+    const input = {
+      poolCashLocal: 100_000,
+      poolM2Local: 1_000_000,
+      rating: "BBB" as const,
+      pricePerUnitLocal: 1_000,
+    };
+    const fundable = corporateFundableUnits(input);
+    expect(fundable).toBe(7);
+    expect(planCorporateUnderwriting({ ...input, requestedUnits: 15_000 }).placedUnits).toBe(
+      fundable
+    );
+  });
+
+  it("is zero when the pool is empty", () => {
+    expect(
+      corporateFundableUnits({
+        poolCashLocal: 0,
+        poolM2Local: 1_000_000,
+        rating: "AAA",
+        pricePerUnitLocal: 1_000,
+      })
+    ).toBe(0);
   });
 });
 

@@ -288,6 +288,10 @@ export default function BondsTab({
               : maxIssuableDebt !== null
                 ? Math.min(perIssuanceCap, maxIssuableDebt)
                 : perIssuanceCap;
+          const fundableCap =
+            typeof bondInfo.fundableIssuance === "number"
+              ? Math.max(0, bondInfo.fundableIssuance)
+              : null;
           const limitedByExitEquity = bondInfo.issuanceLimitedBy === "exitEquity";
           // Server clamps the minimum to the corp's own ceiling, so a small corp
           // can issue below ₳100,000 rather than being locked out. `bondsAvailable`
@@ -407,6 +411,21 @@ export default function BondsTab({
                       {bondActionLoading ? "Issuing..." : "Issue bonds"}
                     </SmallButton>
                   </div>
+
+                  {!bondsUnavailable && fundableCap != null && fundableCap < effectiveCap && (
+                    <p
+                      className={`text-xs ${parsedFaceValue > fundableCap ? "text-warning" : "text-muted"}`}
+                    >
+                      The bond market will fund about{" "}
+                      <span className="font-mono tabular-nums">{inLiquid(fundableCap)}</span> right
+                      now, below the{" "}
+                      <span className="font-mono tabular-nums">{inLiquid(effectiveCap)}</span>{" "}
+                      limit.
+                      {parsedFaceValue > fundableCap
+                        ? " Anything above that is not funded now: you only receive cash for the funded part, the rest places slowly over many turns, and the full cooldown still starts after you issue."
+                        : ""}
+                    </p>
+                  )}
 
                   {bondsUnavailable ? (
                     <p className="text-xs text-error">

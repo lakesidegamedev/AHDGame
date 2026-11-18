@@ -223,6 +223,40 @@ describe("GET /api/corporations/[id]/bonds — ticket #1198 exit-equity ceiling"
   });
 });
 
+describe("GET /api/corporations/[id]/bonds: fundable amount", () => {
+  async function getBody() {
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request(`http://localhost/api/corporations/${CORP_ID.toString()}/bonds`),
+      { params: Promise.resolve({ id: CORP_ID.toString() }) }
+    );
+    return res.json();
+  }
+
+  it("quotes what the pool would fund, below the legal ceiling", async () => {
+    setupDb();
+    db.collection("bondMarketPools");
+    db.collectionMocks["bondMarketPools"]!.findOne.mockResolvedValue({
+      _id: "USD",
+      cashLocal: 10_000_000,
+      m2Local: 1_000_000_000,
+    });
+    const body = await getBody();
+    // 20% of the pool's liquidity cash, scaled by rating, in whole 1,000 units.
+    expect(body.fundableIssuance).toBeGreaterThan(0);
+    expect(body.fundableIssuance).toBeLessThan(body.maxAllowedIssuance);
+    expect(body.fundableIssuance % 1000).toBe(0);
+  });
+
+  it("is null when the currency has no pool", async () => {
+    setupDb();
+    db.collection("bondMarketPools");
+    db.collectionMocks["bondMarketPools"]!.findOne.mockResolvedValue(null);
+    const body = await getBody();
+    expect(body.fundableIssuance).toBeNull();
+  });
+});
+
 describe("POST /api/corporations/[id]/bonds — ticket #1198 exit-equity ceiling", () => {
   it("refuses a raise that clears the 2x equity rule but exceeds realizable assets", async () => {
     setupDb();

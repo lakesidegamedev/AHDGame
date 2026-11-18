@@ -15,6 +15,7 @@ import { withCorpLock } from "@/lib/corporations/corpMoneyLock";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
 import {
+  corporateFundableUnits,
   debitPoolForPrimary,
   planCorporateUnderwriting,
   readPoolForPrimary,
@@ -352,6 +353,30 @@ export async function GET(request: Request, { params }: RouteParams) {
       )
     );
 
+    // What the primary market would fund today, in whole bond units. The legal
+    // ceiling above is not the same thing: one issue only draws a slice of the
+    // pool's cash, so a larger request is funded in part and the rest sits
+    // unsold. Same plan the POST runs. Null when this currency has no pool
+    // (seeds), where the POST funds in full.
+    const corpCurrencyForPool = resolveCorpLiquidCurrencyCode(corporation);
+    const poolForQuote = await readPoolForPrimary(
+      db,
+      bondPoolCurrency({ currencyCode: corpCurrencyForPool ?? undefined })
+    );
+    let fundableIssuance: number | null = null;
+    if (poolForQuote) {
+      const fundableUnits = corporateFundableUnits({
+        poolCashLocal: poolForQuote.cashLocal,
+        poolM2Local: poolForQuote.m2Local,
+        poolLiquidityTargetLocal: poolForQuote.liquidityTargetLocal,
+        rating: creditRating.rating,
+        pricePerUnitLocal: BOND_UNIT_FACE_VALUE,
+      });
+      fundableIssuance = Math.round(
+        corpLiquidCapitalToAnchor(fundableUnits * BOND_UNIT_FACE_VALUE, corporation, corpFxRate)
+      );
+    }
+
     const imfBailoutActive = corporation.imfBailoutActive === true;
     const imfFacility = imfBailoutActive
       ? {
@@ -419,6 +444,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       totalDebt,
       maxPerIssuance: Math.round(maxPerIssuance),
       maxAllowedIssuance: Math.round(maxAllowedIssuance),
+      fundableIssuance,
       minIssuance: Math.round(minIssuance),
       bondsAvailable,
       // What the corp could realize by selling up, and the remaining
