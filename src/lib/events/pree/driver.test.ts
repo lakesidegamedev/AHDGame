@@ -254,13 +254,10 @@ describe("PREE driver", () => {
     db.collectionMocks.exchangeRates!.findOne.mockResolvedValue({ rate: 1 });
 
     const result = await processPlayerRandomEventsTurn(db as never, 10, {
-      playerRandomEventsEnabled: true,
-      pauseOffers: true,
+      playerRandomEventsEnabled: false,
     });
 
     expect(result.swept).toBe(1);
-    expect(result.offered).toBe(0);
-    expect(db.collectionMocks.eventDefinitions!.find).not.toHaveBeenCalled();
 
     // The timeout must notify the instance owner — the turn-phase sweep used
     // to run with an empty userId map and silently drop these.

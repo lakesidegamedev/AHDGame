@@ -30,13 +30,12 @@ export interface DebateChallengeResult {
 export async function processDebateChallenges(
   db: Db,
   currentTurn: number,
-  now: Date,
-  { pauseOffers = false }: { pauseOffers?: boolean } = {}
+  now: Date
 ): Promise<DebateChallengeResult> {
+  const sessions = getDebateSessionsCollection(db);
+
   // 1. Resolve debates past their deadline (seeded rng for replay safety).
   await sweepExpiredDebates(db, now, makeSeededRng(`debate-sweep:${currentTurn}`));
-  if (pauseOffers) return { created: 0, participantCharacterIds: new Set() };
-  const sessions = getDebateSessionsCollection(db);
 
   // 2. Characters already in an awaiting debate are off-limits.
   const active = await sessions.find({ status: "awaitingStrategies" }).toArray();
