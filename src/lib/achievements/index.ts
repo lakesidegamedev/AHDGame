@@ -273,29 +273,33 @@ export async function getAccountAchievements(userId: ObjectId): Promise<
   }>
 > {
   try {
-    const db = await getDb();
-    const cas = await characterAchievementsCollection(db).find({ userId }).toArray();
-
-    const achievementIds = cas.map((ca) => ca.achievementId);
-    if (achievementIds.length === 0) return [];
-
-    const achievements = await achievementsCollection(db)
-      .find({ _id: { $in: achievementIds } })
-      .toArray();
-
-    const aMap = new Map(achievements.map((a) => [a._id.toString(), a]));
-    return cas
-      .map((ca) => {
-        const a = aMap.get(ca.achievementId.toString());
-        if (!a) return null;
-        return { achievement: a, earnedAt: ca.earnedAt };
-      })
-      .filter((x): x is { achievement: Achievement; earnedAt: Date } => x !== null)
-      .sort((x, y) => x.achievement.order - y.achievement.order);
+    return await loadAccountAchievements(userId);
   } catch (error) {
     console.error("[achievements] getAccountAchievements error:", error);
     return [];
   }
+}
+
+export async function loadAccountAchievements(userId: ObjectId) {
+  const db = await getDb();
+  const cas = await characterAchievementsCollection(db).find({ userId }).toArray();
+
+  const achievementIds = cas.map((ca) => ca.achievementId);
+  if (achievementIds.length === 0) return [];
+
+  const achievements = await achievementsCollection(db)
+    .find({ _id: { $in: achievementIds } })
+    .toArray();
+
+  const aMap = new Map(achievements.map((a) => [a._id.toString(), a]));
+  return cas
+    .map((ca) => {
+      const a = aMap.get(ca.achievementId.toString());
+      if (!a) return null;
+      return { achievement: a, earnedAt: ca.earnedAt };
+    })
+    .filter((x): x is { achievement: Achievement; earnedAt: Date } => x !== null)
+    .sort((x, y) => x.achievement.order - y.achievement.order);
 }
 
 /**
