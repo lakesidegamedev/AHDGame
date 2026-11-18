@@ -81,7 +81,7 @@ import {
   getOutputMultiplier,
   trendProductionPolicy,
 } from "@/lib/utils/productionPolicy";
-import { energyProductivityMultiplier } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import {
@@ -695,7 +695,7 @@ export function prepareProducerPhysicalSector(input: {
     policyOutput *
     (outputYield / baseRecipe.unitsPerNominalAnchor) *
     extraction *
-    energyProductivityMultiplier(sector.sectorType, currentTurn, lookups.preset) *
+    plantThroughputMultiplier(sector, currentTurn, lookups.preset) *
     (sector.sectorType === "financial"
       ? commodityProductionCapacityScale(corp.bankCharter, env.privateBankingEnabled === true)
       : 1) *

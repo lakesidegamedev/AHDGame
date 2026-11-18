@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
+import { producerRunBudget } from "@/lib/market/producerMarket/productionPlan";
 import {
   prepareProducerPhysicalSector,
   withStateBooks,
@@ -58,6 +59,27 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("funds the extra 2027 Standard retail throughput with proportional input purchases", () => {
+    const { input, sector, env } = fixture();
+    sector.sectorType = "retail";
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    const { prepared } = prepareProducerPhysicalSector(input);
+    const { plan, target } = prepared;
+    const before = { ...plan, outputMultiplier: plan.outputMultiplier / 1.26 };
+    const billedInputBudget = (p: typeof plan) =>
+      producerRunBudget([p]).variableNeed.get(p.accountId)! -
+      p.labourCost -
+      (p.otherOperatingCost - (p.idleOperatingCost ?? p.otherOperatingCost));
+
+    expect(billedInputBudget(plan)).toBeGreaterThan(0);
+    expect(billedInputBudget(plan)).toBeCloseTo(billedInputBudget(before) * 1.26, 8);
+    expect(plan.outputs).toHaveLength(1);
+    expect(plan.outputs[0]).toMatchObject({ commodity: "retail", unitsPerOutput: 1 });
+    expect(target.capacity.ownedDailyUnits).toBe(sector.capitalStock);
+    expect(target.capacity.paidBookAnchor).toBe(sector.capacityBookAnchor);
+  });
+
   it("reuses era prices without changing regional prices or country-specific plans", () => {
     for (const countryId of ["US", "UK", "JP"] as const) {
       const { input, env } = fixture();
