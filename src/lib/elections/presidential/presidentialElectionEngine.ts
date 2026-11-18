@@ -112,6 +112,10 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import {
+  nationalRegistrationShares,
+  nomineeNationalInfluence,
+} from "@/lib/elections/presidential/nomineeReachFloor";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
@@ -216,6 +220,12 @@ export interface PresidentVoteTurnCalibration {
    */
   favorabilityOverride?: Record<string, number>;
   /**
+   * Force a candidate's national influence (presidential reach), keyed by
+   * candidateId, applied after enrichment. Prices name-recognition rules
+   * against identical live inputs. No-op in production.
+   */
+  nationalInfluenceOverride?: Record<string, number>;
+  /**
    * Scale on the economic-referendum share shift. 1 = production, 0 disables
    * the channel entirely. Used by `scripts/sim/economic-referendum-replay.ts`
    * to A/B the channel against the identical live inputs.
@@ -232,6 +242,7 @@ export interface PresidentVoteTurnCalibration {
       | "applyExplicitLeanMultiplier"
       | "tacticalMovementRate"
       | "incumbentApprovalStateWeight"
+      | "generalNomineeReachFloorNI"
     >
   >;
 }
@@ -370,12 +381,36 @@ export async function accumulatePresidentVoteTurn(
     countryId: (election.countryId ?? "US") as CountryId,
   });
 
+  // Major-party nominees carry their party's recognition into the general:
+  // reach never falls below the ruleset floor. Runs before the calibration
+  // overrides so a harness can still force any value.
+  if (ruleset.generalNomineeReachFloorNI > 0) {
+    const shares = nationalRegistrationShares(
+      statePartyOrgs,
+      new Map(states.map((s) => [s._id as string, s.population ?? 0]))
+    );
+    for (const ec of enriched) {
+      ec.nationalInfluence = nomineeNationalInfluence(
+        ec.nationalInfluence,
+        ec.party,
+        shares,
+        ruleset.generalNomineeReachFloorNI
+      );
+    }
+  }
+
   // Calibration-only: force favorability post-enrichment so a harness can price
   // a coordinated support/attack campaign. No-op in production.
   if (calibration?.favorabilityOverride) {
     for (const ec of enriched) {
       const forced = calibration.favorabilityOverride[ec.candidateId];
       if (typeof forced === "number") ec.favorability = forced;
+    }
+  }
+  if (calibration?.nationalInfluenceOverride) {
+    for (const ec of enriched) {
+      const forced = calibration.nationalInfluenceOverride[ec.candidateId];
+      if (typeof forced === "number") ec.nationalInfluence = forced;
     }
   }
 
