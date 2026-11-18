@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ImpeachmentPanel from "./ImpeachmentPanel";
 const fetchMock = vi.fn();
@@ -16,6 +16,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("NPP impeachment filing", () => {
+  it("does not show a filing window for a Canadian premier", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        impeachments: [],
+        filingWindow: { eligibleOnTurn: 120, remainingTurns: 71 },
+      }),
+    });
+    await act(async () => {
+      render(
+        <ImpeachmentPanel
+          countryId="CA"
+          office="governor"
+          state="QC"
+          targetName="Premier"
+          isViewerTarget={false}
+        />
+      );
+    });
+    expect(screen.queryByText(/filing opens on turn/)).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it.each(["governor", "president"] as const)(
     "submits the explicit party filing mode for %s",
     async (office) => {
