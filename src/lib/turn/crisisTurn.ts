@@ -67,7 +67,8 @@ function truncate(s: string | undefined | null, max: number): string {
 export async function processCrisisTurn(
   db: Db,
   turn: number,
-  currentYear?: number | null
+  currentYear?: number | null,
+  { pauseOpenings = false }: { pauseOpenings?: boolean } = {}
 ): Promise<number> {
   // Aid-bill resolution + penalty reversal run independently of whether any
   // crisis is currently active, so they must execute before the early return.
@@ -84,7 +85,7 @@ export async function processCrisisTurn(
   // the prior year. Non-turn callers omit it and use the persisted value.
   const effectiveYear = currentYear ?? gameState?.currentYear;
   // Emergency kill switch. The system ships on, so only an explicit false stops it.
-  if (gameState?.livingConflictsEnabled !== false) {
+  if (!pauseOpenings && gameState?.livingConflictsEnabled !== false) {
     await processLivingConflictsTurn(db, turn, effectiveYear);
   }
   await retireLegacyVietnamCrises(db);
@@ -95,7 +96,9 @@ export async function processCrisisTurn(
   setVietnamEscalationLevel(normalizeVietnamLevel(vietnam.level));
   // The ladder decides how deep the superpowers are in; the front is what that
   // adds up to on the ground.
-  await announceVietnamFront(await syncVietnamFront(db, vietnam, turn));
+  if (!pauseOpenings) {
+    await announceVietnamFront(await syncVietnamFront(db, vietnam, turn));
+  }
 
   if (crises.length === 0) return 0;
 
