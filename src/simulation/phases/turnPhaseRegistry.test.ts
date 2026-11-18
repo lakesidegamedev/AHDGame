@@ -447,9 +447,10 @@ describe("turn phase registry", () => {
       for (const key of ["resourceAndFinanceStart", "billsCampaignsAndActivity"]) {
         await adapters.find((adapter) => adapter.key === key)!.execute(context, runtime as never);
       }
-      for (const phase of ["autoDisasterTurn", "autoCrisisTurn", "worldEventsScheduler"]) {
+      for (const phase of ["autoCrisisTurn", "worldEventsScheduler"]) {
         expect(ranPhases.includes(phase)).toBe(!paused);
       }
+      expect(ranPhases).toContain("autoDisasterTurn");
       expect(ranPhases).toContain("worldEventsMaintenance");
       expect(ranPhases).toContain("playerRandomEvents");
       expect(ranPhases).toContain("campaignTurn");

@@ -88,13 +88,21 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
         // below, so spawning now would stamp lastDisasterTurn and waste the
         // full-strength onset turn on an inert economy. Deferring keeps the
         // cadence honest, it fires on the next unpaused turn instead.
-        if (!corpActionsPaused && !shouldPauseFoundingEvents(gameState.preIteration, newTurn)) {
+        if (!corpActionsPaused) {
+          const pauseOpenings = shouldPauseFoundingEvents(gameState.preIteration, newTurn);
+          const disasterConfig = {
+            autoCrisisPaused: pauseOpenings || gameState.autoCrisisPaused === true,
+            autoDisastersEnabled: gameState.autoDisastersEnabled,
+            startingYear: gameState.startingYear,
+          };
           await runtime.runPhase("autoDisasterTurn", () =>
-            processAutoDisasterTurn(context.db, newTurn, gameState)
+            processAutoDisasterTurn(context.db, newTurn, disasterConfig)
           );
-          await runtime.runPhase("autoCrisisTurn", () =>
-            processAutoCrisisTurn(context.db, newTurn, gameState)
-          );
+          if (!pauseOpenings) {
+            await runtime.runPhase("autoCrisisTurn", () =>
+              processAutoCrisisTurn(context.db, newTurn, gameState)
+            );
+          }
         }
         // Global cold-war tension relaxes toward its standing-pressure floor.
         // Deliberately OUTSIDE the corpActionsPaused gate: tension is world
