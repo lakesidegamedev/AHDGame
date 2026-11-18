@@ -17,12 +17,14 @@ import { processExecutiveEndorsements } from "@/lib/turn/executiveEndorsements";
 import { processCampaignTurn } from "@/lib/turn/campaignTurn";
 import { preeConfigFlags, processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
-import { shouldPauseFoundingEvents } from "@/lib/events/rules/foundingEventPause";
+import { shouldPauseFoundingCrisisOpenings } from "@/lib/crises/rules/foundingCrisisPause";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
 
 import { COUNTRY_BILL_PHASES } from "@/lib/turn/countryPhases";
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { runCountryBillEntries, selectCountryBillEntries } from "@/lib/turn/countryBillPhase";
+
+import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
 
 import { reconcileResetLawEnactments } from "@/lib/resetLegislation/reconcileEnactments";
 
@@ -36,7 +38,7 @@ export function getBillsCampaignsAndActivityPhases(): TurnPhaseAdapter[] {
     {
       key: "billsCampaignsAndActivity",
       async execute(context, runtime) {
-        const { realNow, phaseResults, newTurn, db, config, gameState, currentYear } = context;
+        const { realNow, phaseResults, newTurn, db, config, gameState } = context;
         // Registered countries only: the registry is keyed on the static country
         // list, and a country dissolved by a merge would otherwise keep running
         // its bill lifecycle (and, for one-party entries, its legitimacy and
@@ -256,13 +258,15 @@ export function getBillsCampaignsAndActivityPhases(): TurnPhaseAdapter[] {
           return processFieldOfficeUpkeep(db);
         });
 
-        const pauseEventOpenings = shouldPauseFoundingEvents(gameState.preIteration, newTurn);
+        // In-game year for era-gated events (same formula as fiscalYearBoundary).
+        const eventsCurrentYear =
+          (gameState.startingYear ?? STARTING_YEAR) + Math.floor((newTurn - 1) / TURNS_PER_YEAR);
+
         const playerRandomEventsResult = await runtime.runPhase("playerRandomEvents", () =>
           processPlayerRandomEventsTurn(db, newTurn, {
             playerRandomEventsEnabled: gameState.playerRandomEventsEnabled,
             ...preeConfigFlags(context.config),
-            currentYear,
-            pauseOffers: pauseEventOpenings,
+            currentYear: eventsCurrentYear,
           })
         );
         if (playerRandomEventsResult) {
@@ -280,19 +284,18 @@ export function getBillsCampaignsAndActivityPhases(): TurnPhaseAdapter[] {
           phaseResults.worldEventsMaintenance = { expiredModifiers: worldEventsMaintenanceResult };
         }
 
-        if (pauseEventOpenings) {
-          await runtime.markPhaseSkipped(
-            "worldEventsScheduler",
-            "conditional",
-            "World events wait until the founding elections are complete."
-          );
-        } else {
-          const worldEventsSchedulerResult = await runtime.runPhase("worldEventsScheduler", () =>
-            processWorldEventsTurn(db, newTurn, { currentYear })
-          );
-          if (worldEventsSchedulerResult) {
-            phaseResults.worldEventsScheduler = worldEventsSchedulerResult;
-          }
+        // World Events v1 Phase 1: deterministic scheduler producer. Runs
+        // right after the maintenance sweep so a definition that just
+        // expired its cooldown modifier can be offered again the same turn.
+        // No-op when there are no scheduled definitions.
+        const worldEventsSchedulerResult = await runtime.runPhase("worldEventsScheduler", () =>
+          processWorldEventsTurn(db, newTurn, {
+            currentYear: eventsCurrentYear,
+            pauseCrisisOpenings: shouldPauseFoundingCrisisOpenings(gameState.preIteration, newTurn),
+          })
+        );
+        if (worldEventsSchedulerResult) {
+          phaseResults.worldEventsScheduler = worldEventsSchedulerResult;
         }
 
         const nppActionResult = await runtime.runPhase("nppActionProcessing", () =>

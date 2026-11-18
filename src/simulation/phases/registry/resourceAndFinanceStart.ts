@@ -7,7 +7,7 @@ import { processActionRefresh } from "@/lib/turn/actionRefresh";
 import { processCaucusTax } from "@/lib/turn/caucusTax";
 import { processFundGeneration } from "@/lib/turn/fundGeneration";
 
-import { shouldPauseFoundingEvents } from "@/lib/events/rules/foundingEventPause";
+import { shouldPauseFoundingCrisisOpenings } from "@/lib/crises/rules/foundingCrisisPause";
 import { processAutoDisasterTurn } from "@/lib/turn/autoDisasterTurn";
 import { processAutoCrisisTurn } from "@/lib/turn/autoCrisisTurn";
 import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
@@ -89,7 +89,7 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
         // full-strength onset turn on an inert economy. Deferring keeps the
         // cadence honest, it fires on the next unpaused turn instead.
         if (!corpActionsPaused) {
-          const pauseOpenings = shouldPauseFoundingEvents(gameState.preIteration, newTurn);
+          const pauseOpenings = shouldPauseFoundingCrisisOpenings(gameState.preIteration, newTurn);
           const disasterConfig = {
             autoCrisisPaused: pauseOpenings || gameState.autoCrisisPaused === true,
             autoDisastersEnabled: gameState.autoDisastersEnabled,

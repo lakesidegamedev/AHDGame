@@ -420,7 +420,7 @@ describe("turn phase registry", () => {
     { founding: { active: false, startedTurn: 1, completedTurn: 10 }, turn: 10, paused: true },
     { founding: { active: false, startedTurn: 1, completedTurn: 10 }, turn: 11, paused: false },
   ])(
-    "gates world event generation from the turn snapshot ($turn, $paused)",
+    "gates crisis openings from the turn snapshot ($turn, $paused)",
     async ({ founding, turn, paused }) => {
       const context = {
         characters: [],
@@ -447,10 +447,9 @@ describe("turn phase registry", () => {
       for (const key of ["resourceAndFinanceStart", "billsCampaignsAndActivity"]) {
         await adapters.find((adapter) => adapter.key === key)!.execute(context, runtime as never);
       }
-      for (const phase of ["autoCrisisTurn", "worldEventsScheduler"]) {
-        expect(ranPhases.includes(phase)).toBe(!paused);
-      }
+      expect(ranPhases.includes("autoCrisisTurn")).toBe(!paused);
       expect(ranPhases).toContain("autoDisasterTurn");
+      expect(ranPhases).toContain("worldEventsScheduler");
       expect(ranPhases).toContain("worldEventsMaintenance");
       expect(ranPhases).toContain("playerRandomEvents");
       expect(ranPhases).toContain("campaignTurn");
