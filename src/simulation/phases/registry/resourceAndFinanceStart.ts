@@ -7,6 +7,7 @@ import { processActionRefresh } from "@/lib/turn/actionRefresh";
 import { processCaucusTax } from "@/lib/turn/caucusTax";
 import { processFundGeneration } from "@/lib/turn/fundGeneration";
 
+import { shouldPauseFoundingEvents } from "@/lib/events/rules/foundingEventPause";
 import { processAutoDisasterTurn } from "@/lib/turn/autoDisasterTurn";
 import { processAutoCrisisTurn } from "@/lib/turn/autoCrisisTurn";
 import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
@@ -87,7 +88,7 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
         // below, so spawning now would stamp lastDisasterTurn and waste the
         // full-strength onset turn on an inert economy. Deferring keeps the
         // cadence honest, it fires on the next unpaused turn instead.
-        if (!corpActionsPaused) {
+        if (!corpActionsPaused && !shouldPauseFoundingEvents(gameState.preIteration, newTurn)) {
           await runtime.runPhase("autoDisasterTurn", () =>
             processAutoDisasterTurn(context.db, newTurn, gameState)
           );

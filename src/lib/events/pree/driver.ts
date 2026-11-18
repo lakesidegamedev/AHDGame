@@ -201,6 +201,7 @@ export async function processPlayerRandomEventsTurn(
   currentTurn: number,
   preloaded?: {
     playerRandomEventsEnabled?: boolean;
+    pauseOffers?: boolean;
     treasuryCashLedgerEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
@@ -221,8 +222,15 @@ export async function processPlayerRandomEventsTurn(
   // Election debates: roll challenges and resolve overdue debates before offering
   // normal events. Participants are excluded from the offer loop so a debate can
   // never collide with a standard random event (the "supersede" rule).
-  const debateParticipants = (await processDebateChallenges(db, currentTurn, new Date()))
-    .participantCharacterIds;
+  const { participantCharacterIds: debateParticipants } = await processDebateChallenges(
+    db,
+    currentTurn,
+    new Date(),
+    { pauseOffers: preloaded?.pauseOffers }
+  );
+  if (preloaded?.pauseOffers) {
+    return { swept: sweepResult.swept.length, offered: 0, skippedOffers: 0 };
+  }
 
   const definitions = await loadApprovedDefinitions(db);
   if (definitions.length === 0) {

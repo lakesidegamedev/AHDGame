@@ -414,6 +414,48 @@ describe("turn phase registry", () => {
     expect(seedIdx).toBeLessThan(regenIdx);
   });
 
+  it.each([
+    { founding: undefined, turn: 11, paused: false },
+    { founding: { active: true, startedTurn: 1 }, turn: 9, paused: true },
+    { founding: { active: false, startedTurn: 1, completedTurn: 10 }, turn: 10, paused: true },
+    { founding: { active: false, startedTurn: 1, completedTurn: 10 }, turn: 11, paused: false },
+  ])(
+    "gates world event generation from the turn snapshot ($turn, $paused)",
+    async ({ founding, turn, paused }) => {
+      const context = {
+        characters: [],
+        config: { baseActionsPerTurn: 4 },
+        engine: resolveTurnEngine({}).engine,
+        realNow: new Date(),
+        gameNow: new Date(),
+        stateMap: new Map(),
+        gameState: { preIteration: founding, forexEnabled: false },
+        newTurn: turn,
+        currentYear: 2027,
+        db: { collection: () => ({ find: () => ({ toArray: async () => [] }) }) },
+        phaseResults: {},
+      } as never;
+      const ranPhases: string[] = [];
+      const runtime = {
+        runPhase: vi.fn(async (name: string) => {
+          ranPhases.push(name);
+          return null;
+        }),
+        markPhaseSkipped: vi.fn(async () => undefined),
+      };
+      const adapters = getTurnPhaseRegistry();
+      for (const key of ["resourceAndFinanceStart", "billsCampaignsAndActivity"]) {
+        await adapters.find((adapter) => adapter.key === key)!.execute(context, runtime as never);
+      }
+      for (const phase of ["autoDisasterTurn", "autoCrisisTurn", "worldEventsScheduler"]) {
+        expect(ranPhases.includes(phase)).toBe(!paused);
+      }
+      expect(ranPhases).toContain("worldEventsMaintenance");
+      expect(ranPhases).toContain("playerRandomEvents");
+      expect(ranPhases).toContain("campaignTurn");
+    }
+  );
+
   // Fix 2: when an admin pauses corporation actions, the corporate turn phase
   // must not run — making the admin toggle's "corporate phases will be skipped
   // during turn processing" promise true. runPhase is a recording stub that does
