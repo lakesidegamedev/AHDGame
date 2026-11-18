@@ -1,18 +1,20 @@
 import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles";
-import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
+import { getCommitteeMemberTitle, getNationalCommitteeName } from "@/lib/parties/partyRoleLabels";
 import type { CommitteeData, PartyData } from "./types";
 
 export function NationalPartyCommitteeRoster({
   countryId,
   committeeResult,
+  committeeTitles,
   showSeatNumbers = false,
 }: {
   countryId: PartyData["countryId"];
   committeeResult: CommitteeData | "unavailable" | null;
+  committeeTitles?: PartyData["committeeTitles"];
   showSeatNumbers?: boolean;
 }) {
-  const title = getPartyRoleLabel(countryId, "committee");
+  const title = getNationalCommitteeName(countryId, committeeTitles);
 
   return (
     <section aria-labelledby="committee-title">
@@ -39,7 +41,8 @@ export function NationalPartyCommitteeRoster({
                 className="min-w-0 rounded-xl border border-card-border bg-card p-3"
               >
                 <OfficeholderPortrait
-                  role={showSeatNumbers ? `Seat ${idx + 1}` : undefined}
+                  role={member ? getCommitteeMemberTitle(member.id, committeeTitles) : undefined}
+                  detail={showSeatNumbers ? `Seat ${idx + 1}` : undefined}
                   holder={
                     member
                       ? { ...member, href: `/character/${member.sequentialId ?? member.id}` }

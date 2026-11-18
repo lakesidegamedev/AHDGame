@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { PartyData } from "./types";
+import type { CommitteeData, PartyData } from "./types";
 import { PartyOverviewPanel } from "./PartyOverviewPanel";
 
 describe("PartyOverviewPanel leadership labels", () => {
@@ -34,6 +34,45 @@ describe("PartyOverviewPanel leadership labels", () => {
     expect(chairLink.querySelector("img")?.closest('[aria-hidden="true"]')).toBeTruthy();
     expect(within(seats[2]).getByText("Vacant")).toBeTruthy();
     expect(within(seats[2]).queryByRole("link")).toBeNull();
+  });
+
+  it("shows the custom committee name, individual titles and the default beneath portraits", () => {
+    const party = {
+      countryId: "US",
+      economicPosition: 0,
+      socialPosition: 0,
+      effectivePsCap: 0,
+      committeeTitles: {
+        name: "National Council",
+        member: "Councillor",
+        byMember: { first: "Rules Convenor" },
+      },
+    } as PartyData;
+    const committeeResult = {
+      committeeSize: 3,
+      committeeMembers: [
+        { id: "first", name: "Taylor Lane" },
+        { id: "second", name: "Casey Morgan" },
+      ],
+    } as CommitteeData;
+
+    const { rerender } = render(
+      <PartyOverviewPanel party={party} committeeResult={committeeResult} />
+    );
+    const committee = screen.getByRole("region", { name: "National Council" });
+    expect(
+      within(committee).getByRole("link", { name: /Rules Convenor Taylor Lane/ })
+    ).toBeTruthy();
+    expect(within(committee).getByText("Rules Convenor").className).toContain("text-body-sm");
+    expect(within(committee).getByRole("link", { name: /Councillor Casey Morgan/ })).toBeTruthy();
+    expect(within(committee).getByText("Vacant")).toBeTruthy();
+    rerender(
+      <PartyOverviewPanel
+        party={{ ...party, committeeTitles: undefined }}
+        committeeResult={committeeResult}
+      />
+    );
+    expect(screen.getByRole("link", { name: /Committeeman Casey Morgan/ })).toBeTruthy();
   });
 
   it("renders custom titles as text", () => {

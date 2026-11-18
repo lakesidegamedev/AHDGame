@@ -29,7 +29,11 @@ export function PartyOverviewPanel({ party, committeeResult }: PartyOverviewPane
   return (
     <div className="space-y-8">
       <NationalPartyOfficerRow party={party} />
-      <NationalPartyCommitteeRoster countryId={party.countryId} committeeResult={committeeResult} />
+      <NationalPartyCommitteeRoster
+        countryId={party.countryId}
+        committeeResult={committeeResult}
+        committeeTitles={party.committeeTitles}
+      />
 
       <section aria-labelledby="platform-title" className="min-w-0">
         <h2 id="platform-title" className={`mb-4 ${PARTY_SECTION_HEADING_CLASS}`}>

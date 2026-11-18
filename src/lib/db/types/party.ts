@@ -4,6 +4,12 @@ import type { CountryId } from "../../constants/countries";
 export type PartyLeadershipTitleKey = "chair" | "viceChair" | "treasurer";
 export type PartyLeadershipTitles = Partial<Record<PartyLeadershipTitleKey, string | null>>;
 
+export interface PartyCommitteeTitles {
+  name?: string | null;
+  member?: string | null;
+  byMember?: Record<string, string>;
+}
+
 /**
  * A single Shadow Cabinet appointment — the character
  * the Leader of the Opposition has named to shadow one cabinet post. A member
@@ -39,6 +45,7 @@ export interface PoliticalParty {
   treasurerId: ObjectId | null;
   /** Optional display-only titles; absent or null values use the country default. */
   leadershipTitles?: PartyLeadershipTitles;
+  committeeTitles?: PartyCommitteeTitles;
   /**
    * Up to 3 chair-assigned campaigner characters. Campaigners gain auth to
    * spend party PS to Build Org on any state-party row owned by this party.

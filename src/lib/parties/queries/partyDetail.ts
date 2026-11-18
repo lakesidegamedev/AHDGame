@@ -419,6 +419,16 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     viceChair,
     treasurer,
     leadershipTitles: party.leadershipTitles,
+    committeeTitles: party.committeeTitles && {
+      ...party.committeeTitles,
+      byMember: Object.fromEntries(
+        (party.committeeIds ?? []).flatMap((id) => {
+          const key = id.toString();
+          const title = party.committeeTitles?.byMember?.[key];
+          return title ? [[key, title] as const] : [];
+        })
+      ),
+    },
     campaigners,
     committeeIds: (party.committeeIds || []).map((id) => id.toString()),
     treasury: party.treasury ?? 0,

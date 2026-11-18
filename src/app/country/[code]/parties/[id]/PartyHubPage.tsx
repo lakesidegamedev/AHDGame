@@ -42,7 +42,7 @@ import { POSITIONS, fmt as nationalFmt } from "./components/helpers";
 import { PartyPageSkeleton } from "./PartyPageSkeleton";
 import { usePartyHubLoaders } from "./usePartyHubLoaders";
 import { resolveTreasuryPermissions } from "./treasuryPermissions";
-import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
+import { getNationalCommitteeName } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
 
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -585,7 +585,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     ? [
         { id: "overview", label: "Overview" },
         { id: "analytics", label: "Analytics" },
-        { id: "committee", label: "Committee" },
+        { id: "committee", label: party.committeeTitles?.name?.trim() || "Committee" },
         { id: "caucuses", label: "Caucuses" },
         { id: "whip-room", label: "Whip room" },
         { id: "slate", label: "Slate" },
@@ -832,6 +832,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
           <NationalPartyCommitteeRoster
             countryId={party.countryId}
             committeeResult={committeeResult}
+            committeeTitles={party.committeeTitles}
             showSeatNumbers
           />
           <CommitteeProposalsSection
@@ -925,7 +926,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
                 {sub === "national"
                   ? "National leadership"
                   : sub === "committee"
-                    ? getPartyRoleLabel(party?.countryId ?? "US", "committee")
+                    ? getNationalCommitteeName(party.countryId, party.committeeTitles)
                     : `${COUNTRY_CLIENT_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabelPlural ?? "State parties"}`}
               </button>
             ))}
@@ -1048,6 +1049,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
             party={party}
             countryId={backCountry}
             characterId={user?.character?.id ?? ""}
+            committeeMembers={committeeData?.committeeMembers}
             onUpdate={fetchParty}
           />
         </>
