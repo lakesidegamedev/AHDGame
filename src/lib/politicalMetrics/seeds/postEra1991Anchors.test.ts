@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import { baselineFor } from "./baselineAnchors";
 import { NATIONAL_BASELINES_1979 } from "./nationalBaselines1979";
 import { NATIONAL_BASELINES_1991 } from "./nationalBaselines1991";
+import { NATIONAL_BASELINES_2027 } from "./nationalBaselines2027";
+import { scoreGovernanceStyle } from "@/lib/governanceStyle/score";
 import { baselineLevelFor, getCatalog } from "@/lib/politicalLegislation/catalog";
 import { BASELINE_LEVEL_OVERRIDES_1991 } from "@/lib/politicalLegislation/seeds/baselineLevels1991";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "../types";
 
-// Presets after 1991 have no authored board. They must keep the values they
-// seeded before the 1991 anchor existed, not clamp to the 1991 opening.
-const LATER_PRESET_YEARS = [1999, 2007, 2019, 2023, 2027];
+// 1999 has no authored board yet and keeps the values it seeded before the
+// 1991 anchor existed. 2007-2023 interpolate toward the authored 2027 board
+// until their own boards are written.
+const LATER_PRESET_YEARS = [1999];
+// Countries the 2027 world seeds. Each must read its own authored 2027 board.
+const COUNTRIES_2027 = ["US", "UK", "RU", "DE", "JP", "CN"] as const;
 
 describe("political baselines after the 1991 opening", () => {
   for (const countryId of POLITICAL_METRIC_COUNTRY_IDS) {
@@ -34,4 +39,24 @@ describe("political baselines after the 1991 opening", () => {
       }
     });
   }
+
+  for (const countryId of COUNTRIES_2027) {
+    it(`${countryId} 2027 seeds its own authored board`, () => {
+      const authored = NATIONAL_BASELINES_2027[countryId];
+      expect(authored).toBeDefined();
+      for (const id of Object.keys(NATIONAL_BASELINES_1979[countryId]) as PoliticalMetricId[]) {
+        expect(baselineFor(countryId, id, 2027)).toBe(authored![id]);
+      }
+    });
+  }
+
+  it("2027 democracies open as functioning democracies", () => {
+    for (const countryId of ["US", "UK", "DE", "JP"] as const) {
+      const values = NATIONAL_BASELINES_2027[countryId]!;
+      expect(scoreGovernanceStyle(values).democraticHealth.value).toBeGreaterThanOrEqual(60);
+    }
+    expect(scoreGovernanceStyle(NATIONAL_BASELINES_2027.RU!).democraticHealth.value).toBeLessThan(
+      40
+    );
+  });
 });

@@ -22,7 +22,13 @@ export async function readResetMetricBoard(
   db: Db,
   countryId: string,
   regionId?: string,
-  ready: ResetV2Readiness = RESET_V2_READY
+  ready: ResetV2Readiness = RESET_V2_READY,
+  /**
+   * Accept the latest board when it lags the current turn. Turn phases that
+   * run before this turn's metric refresh read the previous turn's board
+   * rather than nothing.
+   */
+  options: { acceptStale?: boolean } = {}
 ): Promise<ResetMetricBoardRead> {
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
@@ -83,7 +89,9 @@ export async function readResetMetricBoard(
   } catch {
     return { status: "invalid" };
   }
-  if (board.asOfTurn !== gameState?.currentTurn) return { status: "stale" };
+  if (board.asOfTurn !== gameState?.currentTurn && !options.acceptStale) {
+    return { status: "stale" };
+  }
   // Ready boards belong to the current turn, so use the same calendar year as
   // gameplay, including custom reset dates and the founding-phase clock.
   const year =
