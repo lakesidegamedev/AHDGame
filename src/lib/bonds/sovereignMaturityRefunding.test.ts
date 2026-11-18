@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import type { LedgerLeg } from "@/lib/ledger/types";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { Bond } from "@/lib/db/types/bond";
-import { settleFundedSovereignBondMaturity } from "./sovereign";
+import {
+  freezeFundedSovereignBondMaturityQuote,
+  settleFundedSovereignBondMaturity,
+} from "./sovereign";
+import { commitSovereignPrimary, loadPrimaryAccounting } from "./sovereignPrimarySettlement";
 import { settleSovereignBondMaturityBond } from "./sovereignMaturityBond";
 import { planSovereignMaturityRefunding } from "./rules/sovereignMaturityRefunding";
+import * as settlementJournal from "@/lib/banking/settlementJournal";
 import { settleBankSovereignClaims } from "@/lib/banking/bankSovereignClaims";
 
 vi.mock("@/lib/db/runRequiredTransaction", () => ({
@@ -14,9 +20,16 @@ vi.mock("@/lib/db/runRequiredTransaction", () => ({
 const NOW = new Date("2026-10-27T00:00:00Z");
 const bankId = new ObjectId("650000000000000000000009");
 
-function world(opts: { treasuryCash: number; poolCash?: number }): InMemoryDb {
+function world(opts: { treasuryCash: number; poolCash?: number; stage?: number }): InMemoryDb {
   const memory = createInMemoryDb();
-  memory.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
+  memory.seed("gameConfig", [
+    {
+      _id: "default",
+      treasuryCashLedgerEnabled: true,
+      ledgerShadow: true,
+      fiscalScaleStage: opts.stage,
+    },
+  ]);
   memory.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   memory.seed("federalBudget", [
     {
@@ -25,6 +38,7 @@ function world(opts: { treasuryCash: number; poolCash?: number }): InMemoryDb {
       currencyCode: "USD",
       treasuryBalance: -50_000,
       treasuryCashLocal: opts.treasuryCash,
+      ...(opts.stage === 3 ? { fiscalScale: { scale: 0.1 } } : {}),
       debt: { principal: 10_000, ceiling: 10_000 },
       spending: { total: 800, debtInterest: 800 },
       surplus: 0,
@@ -95,6 +109,14 @@ function cashHolderBond(memory: InMemoryDb) {
 
 function principal(memory: InMemoryDb): number {
   return (memory.collection("federalBudget").docs[0]!.debt as { principal: number }).principal;
+}
+
+function ledgerMovement(memory: InMemoryDb, account: string): number {
+  return memory
+    .collection("ledgerEntries")
+    .docs.flatMap((row) => row.legs as LedgerLeg[])
+    .filter((leg) => leg.account === account && leg.role === "primary")
+    .reduce((sum, leg) => sum + leg.amount, 0);
 }
 
 describe("sovereign maturity refunding plan", () => {
@@ -177,12 +199,228 @@ describe("unfunded sovereign maturity refinances instead of stalling", () => {
     const budget = memory.collection("federalBudget").docs[0]!;
     // 500 + 10_000 raised - 10_000 paid out.
     expect(budget.treasuryCashLocal).toBe(500);
+    expect(ledgerMovement(memory, "government_cash:US:USD")).toBe(0);
     // Refinanced, not added: principal is unchanged and still at the ceiling.
     expect(principal(memory)).toBe(10_000);
     expect(memory.collection("bankMoneyMoves").docs.map((row) => row.status)).not.toContain(
       "rejected"
     );
   });
+
+  it.each([1, 0.1])("escrows two market fills at cash per face %s", async (scale) => {
+    const memory = world({
+      treasuryCash: 500 * scale,
+      poolCash: 5_000 * scale,
+      stage: scale < 1 ? 3 : undefined,
+    });
+    const { args } = cashHolderBond(memory);
+    const db = memory as unknown as Db;
+    const budget = memory.collection("federalBudget").docs[0]!;
+    const pool = memory.collection("bondMarketPools").docs[0]!;
+    const source = memory.collection("bonds").docs[0]!;
+    const scaledArgs = {
+      ...args,
+      nonBankRepaymentLocal: 10_000 * scale,
+      holderLegs: args.holderLegs.map((leg) => ({ ...leg, amount: leg.amount * scale })),
+    };
+
+    expect(await settleFundedSovereignBondMaturity(db, scaledArgs)).toBeNull();
+    expect(source.sovereignMaturityClaim).toMatchObject({
+      escrowLocal: 4_000 * scale,
+      refundedHolderFaceLocal: 4_000 * scale,
+    });
+    expect(budget.treasuryCashLocal).toBe(500 * scale);
+    expect(principal(memory)).toBe(14_000);
+    expect(ledgerMovement(memory, "government_cash:US:USD")).toBe(0);
+
+    budget.treasuryCashLocal = 0;
+    pool.cashLocal = 1_000_000;
+    const settled = await settleFundedSovereignBondMaturity(db, { ...scaledArgs, turn: 31 });
+    expect(settled).toMatchObject({ status: "applied", cashPaidLocal: 10_000 * scale });
+    expect(source.sovereignMaturityClaim).toMatchObject({
+      escrowLocal: 0,
+      refundedHolderFaceLocal: 10_000 * scale,
+      paid: true,
+    });
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000 * scale);
+    expect(memory.collection("npps").docs[0]?.cash).toBe(4_000 * scale);
+    expect(principal(memory)).toBe(10_000);
+    expect(budget).toMatchObject({ treasuryCashLocal: 0, treasuryBalance: -50_000 });
+    expect(pool.cashLocal).toBe(1_000_000 - 6_000 * scale);
+    expect(ledgerMovement(memory, "government_cash:US:USD")).toBe(0);
+    expect(ledgerMovement(memory, "government:US:USD")).toBe(0);
+  });
+
+  it("recovers an interrupted placement before quoting and pays only on completed funding", async () => {
+    const memory = world({ treasuryCash: 0, poolCash: 5_000 });
+    const { bond, args } = cashHolderBond(memory);
+    const db = memory as unknown as Db;
+    const bonds = memory.collection("bonds");
+    const updateOne = bonds.updateOne.bind(bonds);
+    let escrowWritesBlocked = true;
+    vi.spyOn(bonds, "updateOne").mockImplementation(async (filter, update, options) => {
+      const increment = Array.isArray(update)
+        ? undefined
+        : (update.$inc as Record<string, unknown> | undefined);
+      if (escrowWritesBlocked && increment?.["sovereignMaturityClaim.escrowLocal"]) {
+        throw new Error("Interrupted refunding escrow credit");
+      }
+      return updateOne(filter, update, options);
+    });
+    const key = `sovereign-refunding:sovereign-maturity:${bond._id.toHexString()}:24:holders:30`;
+    const receipt = () => memory.collection("bankMoneyMoves").docs.find((row) => row._id === key);
+    const settle = (turn: number) =>
+      settleSovereignBondMaturityBond({
+        db,
+        bond,
+        plan: {
+          treasuryValuation: { anchorRate: 1, anchorRateSource: "observed", anchorRatePreset: "" },
+          bankUnits: 0,
+          nonBankRepaymentLocal: args.nonBankRepaymentLocal,
+          holderLegs: args.holderLegs,
+          currencyCode: "USD",
+          maturityEntries: [],
+        },
+        turn,
+        now: NOW,
+        countryId: "US",
+        budgetId: "federal",
+        bondCcy: "USD",
+        budgetsWithBankClaims: new Set(),
+      });
+
+    expect(await settle(30)).toBeNull();
+    expect(receipt()?.status).toBe("partial");
+    const pool = memory.collection("bondMarketPools").docs[0]!;
+    expect(pool.cashLocal).toBe(1_000);
+    pool.cashLocal = 100_000;
+    const resume = vi.spyOn(settlementJournal, "resumeSettlement").mockResolvedValue({
+      key,
+      status: "partial",
+      appliedLegs: [],
+      appliedProjections: [],
+      newlyAppliedProjections: [],
+      error: "Escrow still unavailable",
+    });
+    expect(await settle(31)).toBeNull();
+    expect(await settle(32)).toBeNull();
+    expect(resume.mock.calls).toEqual([
+      [db, key],
+      [db, key],
+    ]);
+    resume.mockRestore();
+    expect(receipt()?.status).toBe("partial");
+    expect(pool.cashLocal).toBe(100_000);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(0);
+    expect(bonds.docs).toHaveLength(1);
+
+    escrowWritesBlocked = false;
+    const budget = memory.collection("federalBudget").docs[0]!;
+    budget.treasuryCashLocal = 6_000;
+    expect(await settle(33)).toEqual([expect.objectContaining({ amount: -10_000 })]);
+    expect(receipt()?.status).toBe("applied");
+    expect(pool.cashLocal).toBe(100_000);
+    expect(budget).toMatchObject({ treasuryCashLocal: 0, treasuryBalance: -56_000 });
+    expect(ledgerMovement(memory, "government_cash:US:USD")).toBe(-6_000);
+    expect(ledgerMovement(memory, "government:US:USD")).toBe(-6_000);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000);
+    expect(memory.collection("npps").docs[0]?.cash).toBe(4_000);
+    expect(bonds.docs).toHaveLength(2);
+    await settle(34);
+    expect(pool.cashLocal).toBe(100_000);
+    expect(budget.treasuryBalance).toBe(-56_000);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000);
+  });
+
+  it.each(["applied", "legacy incomplete"] as const)(
+    "preserves the cap for a legacy receipt marked %s",
+    async (status) => {
+      const memory = world({ treasuryCash: 0 });
+      const { bond, args } = cashHolderBond(memory);
+      const db = memory as unknown as Db;
+      const quote = (await freezeFundedSovereignBondMaturityQuote(db, args))!;
+      const key = `sovereign-refunding:${quote.id}:holders:30`;
+      const bonds = memory.collection("bonds");
+      const journal = memory.collection("bankMoneyMoves");
+      // Old receipts moved the full placement to spendable cash and set the same cap.
+      const capProjection = {
+        collection: "bonds",
+        filter: { _id: bond._id, "sovereignMaturityClaim.id": quote.id },
+        update: {
+          $inc: {
+            "sovereignMaturityClaim.refundedFaceLocal": 10_000,
+            "sovereignMaturityClaim.refundedHolderFaceLocal": 10_000,
+          },
+        },
+        note: "Record the legacy holder refunding",
+      };
+      const updateOne = bonds.updateOne.bind(bonds);
+      const failure = vi
+        .spyOn(bonds, "updateOne")
+        .mockImplementation(async (filter, update, options) => {
+          const increment = Array.isArray(update)
+            ? undefined
+            : (update.$inc as Record<string, unknown> | undefined);
+          if (
+            status === "legacy incomplete" &&
+            increment?.["sovereignMaturityClaim.refundedHolderFaceLocal"]
+          ) {
+            throw new Error("Interrupted legacy cap projection");
+          }
+          return updateOne(filter, update, options);
+        });
+      const placement = commitSovereignPrimary(
+        db,
+        {
+          key,
+          countryId: "US",
+          turn: 30,
+          currency: "USD",
+          budgetId: "federal",
+          poolCash: 10_000,
+          monetaryCash: 0,
+          face: 10_000,
+          annualCoupon: 0,
+          now: NOW,
+        },
+        [capProjection],
+        await loadPrimaryAccounting(db)
+      );
+      if (status === "legacy incomplete") {
+        await expect(placement).rejects.toThrow();
+        // Older journals marked legs applied before completing the projections.
+        await journal.updateOne({ _id: key }, { $set: { status: "applied" } });
+      } else {
+        await placement;
+      }
+      failure.mockRestore();
+
+      const budget = memory.collection("federalBudget").docs[0]!;
+      expect(budget.treasuryCashLocal).toBe(10_000);
+      budget.treasuryCashLocal = 6_000;
+      const receipt = () => journal.docs.find((row) => row._id === key);
+      const originalLegs = JSON.stringify(receipt()?.legs);
+      expect(await settleFundedSovereignBondMaturity(db, { ...args, turn: 31 })).toBeNull();
+      expect(receipt()).toMatchObject({
+        status: "applied",
+        projectionsCompletedAt: expect.any(Date),
+      });
+      expect(JSON.stringify(receipt()?.legs)).toBe(originalLegs);
+      expect(bonds.docs[0]?.sovereignMaturityClaim).toMatchObject({
+        escrowLocal: 0,
+        refundedHolderFaceLocal: 10_000,
+      });
+      expect(memory.collection("bondMarketPools").docs[0]?.cashLocal).toBe(990_000);
+      expect(journal.docs).toHaveLength(1);
+
+      budget.treasuryCashLocal = 10_000;
+      expect(await settleFundedSovereignBondMaturity(db, { ...args, turn: 32 })).toMatchObject({
+        status: "applied",
+        cashPaidLocal: 10_000,
+      });
+      expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000);
+    }
+  );
 
   it("leaves a funded maturity on the ordinary cash path", async () => {
     const memory = world({ treasuryCash: 10_000 });
@@ -208,6 +446,129 @@ describe("unfunded sovereign maturity refinances instead of stalling", () => {
     expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000);
     expect(principal(memory)).toBe(10_000);
   });
+
+  it.each(["new", "existing"] as const)(
+    "waits for %s partial funding before paying holders and can finish on the next turn",
+    async (funding) => {
+      const memory = world({ treasuryCash: 3_500 });
+      const db = memory as unknown as Db;
+      const { bond, args } = cashHolderBond(memory);
+      await freezeFundedSovereignBondMaturityQuote(db, args);
+      const currentRate = 2;
+      memory.collection("exchangeRates").docs[0]!.rate = currentRate;
+
+      const settle = (turn: number) =>
+        settleSovereignBondMaturityBond({
+          db,
+          bond: memory.collection("bonds").docs[0] as unknown as Bond,
+          plan: {
+            treasuryValuation: {
+              anchorRate: currentRate,
+              anchorRateSource: "observed",
+              anchorRatePreset: "",
+            },
+            currencyCode: args.currencyCode,
+            bankUnits: 0,
+            nonBankRepaymentLocal: args.nonBankRepaymentLocal,
+            holderLegs: args.holderLegs,
+            maturityEntries: [],
+          },
+          turn,
+          now: NOW,
+          countryId: "US",
+          budgetId: "federal",
+          bondCcy: args.currencyCode,
+          budgetsWithBankClaims: new Set(),
+        });
+
+      const ledger = memory.collection("ledgerEntries");
+      const insertOne = ledger.insertOne.bind(ledger);
+      let witnessFailures = 0;
+      const witnessWrite = vi.spyOn(ledger, "insertOne").mockImplementation(async (doc) => {
+        if (doc.emitSite === "budget/treasuryPaymentWitness" && witnessFailures > 0) {
+          witnessFailures -= 1;
+          throw new Error("Treasury witness write unavailable");
+        }
+        return insertOne(doc);
+      });
+
+      const fundingKey = `sovereign-maturity:${bond._id.toHexString()}:24:fund:30`;
+      const receipts = memory.collection("bankMoneyMoves").docs;
+      const fundingReceipt = () => receipts.find((row) => row._id === fundingKey);
+      const fundingWitnesses = () =>
+        ledger.docs.filter((row) => row.emitSite === "budget/treasuryPaymentWitness");
+
+      if (funding === "existing") {
+        witnessFailures = Number.POSITIVE_INFINITY;
+        await settleFundedSovereignBondMaturity(db, {
+          ...args,
+          treasuryLocalPerAnchor: currentRate,
+        });
+        expect(fundingReceipt()?.status).toBe("partial");
+      }
+
+      // The new attempt writes and resumes once. Recovery of an existing
+      // receipt resumes once. Any extra retry by the caller would now succeed.
+      witnessFailures = funding === "new" ? 2 : 1;
+      const pendingTurn = funding === "new" ? 30 : 31;
+      await expect(settle(pendingTurn)).resolves.toBeNull();
+      expect(witnessFailures).toBe(0);
+      expect(fundingReceipt()?.status).toBe("partial");
+      expect(fundingWitnesses()).toHaveLength(0);
+      expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(0);
+      expect(memory.collection("npps").docs[0]?.cash).toBe(0);
+
+      const pool = memory.collection("bondMarketPools").docs[0]!;
+      const budget = memory.collection("federalBudget").docs[0]!;
+      expect(pool.cashLocal).toBe(993_000);
+      expect(budget.treasuryCashLocal).toBe(500);
+      const signedPosition = budget.treasuryBalance;
+
+      const nextTurn = pendingTurn + 1;
+      expect(await settle(nextTurn)).toEqual([
+        expect.objectContaining({ type: "gov_bond_maturity_payment", amount: -10_000 }),
+      ]);
+      expect(fundingReceipt()?.status).toBe("applied");
+      const payoutKey = fundingKey.replace(":fund:30", ":payout");
+      expect(receipts.find((row) => row._id === payoutKey)?.status).toBe("applied");
+
+      await settle(nextTurn + 1);
+      expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(6_000);
+      expect(memory.collection("npps").docs[0]?.cash).toBe(4_000);
+      expect(memory.collection("bonds").docs[0]).toMatchObject({
+        matured: true,
+        sovereignMaturityClaim: { paid: true, escrowLocal: 0 },
+      });
+      expect(pool.cashLocal).toBe(993_000);
+      expect(budget.treasuryCashLocal).toBe(500);
+      expect(budget.treasuryBalance).toBe(signedPosition);
+
+      const fundingValuation = (
+        fundingReceipt()?.legs as { amount: number; valuation: { localPerAnchor: number } }[]
+      )[0]!;
+      expect(fundingValuation.amount).toBe(3_000);
+      expect(fundingValuation.valuation.localPerAnchor).toBe(args.treasuryLocalPerAnchor);
+      expect(fundingWitnesses()).toEqual([
+        expect.objectContaining({
+          legs: expect.arrayContaining([
+            expect.objectContaining({
+              account: "government:US:USD",
+              role: "primary",
+              amount: -10_000,
+              anchorAmount: -10_000 / args.treasuryLocalPerAnchor,
+            }),
+            expect.objectContaining({
+              account: "government_cash:US:USD",
+              role: "primary",
+              amount: -3_000,
+              anchorAmount: -3_000 / args.treasuryLocalPerAnchor,
+            }),
+          ]),
+        }),
+      ]);
+      witnessWrite.mockRestore();
+    }
+  );
 
   it("waits without defaulting when the market has no cash, then refinances later", async () => {
     const memory = world({ treasuryCash: 0, poolCash: 0 });
@@ -350,6 +711,18 @@ describe("bank holder of an unfunded maturity", () => {
     Number(memory.collection("federalBudget").docs[0]!.treasuryCashLocal);
   const refundingIssues = (memory: InMemoryDb) =>
     memory.collection("bonds").docs.filter((row) => row.refundsSovereignMaturityClaimId);
+
+  it("witnesses the actual Treasury cash change on routed bank refunding", async () => {
+    const { memory, settle } = bankWorld("active", 7_000);
+    memory.collection("federalBudget").docs[0]!.treasuryCashLocal = 1_000;
+    const initialCash = treasuryCash(memory);
+    expect(await settle(30)).toBeNull();
+    expect(cashReserves(memory)).toBe(7_000);
+    expect(treasuryCash(memory)).toBe(0);
+    expect(ledgerMovement(memory, "government_cash:US:USD")).toBe(
+      treasuryCash(memory) - initialCash
+    );
+  });
 
   it("pays the bank in the same pass after an earlier sweep spent the turn's funding key", async () => {
     // Turn 29: the market is dry, so the claim freezes and stays unpaid.

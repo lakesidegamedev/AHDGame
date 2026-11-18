@@ -21,6 +21,7 @@ import {
 import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
 import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
 
 /** Everything one sovereign maturity settles, built before any money moves. */
@@ -93,8 +94,16 @@ export async function loadSovereignMaturityWave(
     bankMoneyMovesCollection<{ _id: string }>(db)
       .find(
         {
-          status: "partial",
-          kind: { $in: ["sovereign_maturity_funding", "sovereign_maturity_payout"] },
+          $or: [
+            {
+              status: "partial",
+              kind: { $in: ["sovereign_maturity_funding", "sovereign_maturity_payout"] },
+            },
+            {
+              _id: { $regex: "^sovereign-refunding:sovereign-maturity:" },
+              ...unfinishedSettlementFilter(),
+            },
+          ],
         },
         { projection: { _id: 1 } }
       )
@@ -106,7 +115,11 @@ export async function loadSovereignMaturityWave(
     if ((row.bankSovereignClaims?.length ?? 0) > 0) wave.budgetsWithBankClaims.add(String(row._id));
   }
   for (const row of partialReceipts)
-    wave.inFlightMaturityClaimIds.add(String(row._id).replace(/:(fund:.*|payout)$/, ""));
+    wave.inFlightMaturityClaimIds.add(
+      String(row._id)
+        .replace(/^sovereign-refunding:/, "")
+        .replace(/:(fund:.*|payout|(?:bank|holders):[0-9]+)$/, "")
+    );
   await loadPartialWaveReceipts(db, wave);
   return wave;
 }
@@ -188,13 +201,15 @@ async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Pro
 export function isUnfundableOverdueMaturity(
   bond: Bond,
   bondCurrency: string,
-  wave: SovereignMaturityWave
+  wave: SovereignMaturityWave,
+  poolCashPerFace: number
 ): boolean {
   const claim = bond.sovereignMaturityClaim;
   if (!claim || !bond.countryId) return false;
   const disposition = claim.publicFloatDisposition;
   const requiredCashLocal =
     disposition?.mode === "novation" ? (disposition.residualAmountLocal ?? 0) : claim.amountLocal;
+  const remainingCashLocal = requiredCashLocal - (claim.escrowLocal ?? 0);
   const couldRollOver =
     !claim.forcedRollover &&
     claim.escrowLocal === 0 &&
@@ -209,7 +224,8 @@ export function isUnfundableOverdueMaturity(
   // bond phase, so a claim is only out of reach once its refunding cap (the
   // face it retires) is spent.
   const couldRefund =
-    (claim.refundedFaceLocal ?? 0) + BOND_UNIT_FACE_VALUE <= Math.max(0, bond.totalIssued);
+    (claim.refundedFaceLocal ?? 0) + BOND_UNIT_FACE_VALUE * poolCashPerFace <=
+    Math.max(0, bond.totalIssued);
   const inFlight =
     claim.paid === true ||
     wave.inFlightMaturityClaimIds.has(claim.id) ||
@@ -219,10 +235,10 @@ export function isUnfundableOverdueMaturity(
     !couldRollOver &&
     !couldRefund &&
     !inFlight &&
-    Number.isFinite(requiredCashLocal) &&
-    (claim.escrowLocal ?? 0) < requiredCashLocal &&
+    Number.isFinite(remainingCashLocal) &&
+    remainingCashLocal > 0 &&
     phaseStartCash !== undefined &&
-    phaseStartCash < requiredCashLocal
+    phaseStartCash < remainingCashLocal
   );
 }
 

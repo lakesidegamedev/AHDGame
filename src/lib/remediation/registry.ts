@@ -95,8 +95,7 @@ export const DEFECTS: Defect[] = [
   // this re-points any that still strand.
   sovereignMaturityStrandedPayout,
   // Matured sovereign bonds a short Treasury neither repaid nor refinanced.
-  // The fixed bond turn sells a refunding issue and pays every holder; this
-  // reports the overdue backlog and stamps the approved figures.
+  // Reports the overdue backlog and stamps the estimated funding figures.
   sovereignMaturityUnfundedRollover,
   // Maturity refinancing split each sovereign series into one bond per
   // maturing claim and path, so walls of thousands of identical bonds formed.
