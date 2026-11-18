@@ -4,7 +4,7 @@ import type { Topology, GeometryCollection } from "topojson-specification";
 import type { RegionOverlayShard } from "@/lib/maps/regionOverlay";
 import { useWorldMapState } from "@/app/world/components/useWorldMapState";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 
 import {
   WORLD_GEO_URL,
@@ -50,6 +50,7 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
     blocPalette,
     blocsAvailable,
     cardRef,
+    compareCountryIds,
     compareMode,
     corpsData,
     countryAccess,
@@ -93,6 +94,10 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
     worldEntities,
     worldMetrics,
   } = prepared.context;
+
+  // Lookup form for the renderer: the globe strokes both comparison picks so the
+  // two sides stay visible while the panel is open.
+  const comparedCountryIds = useMemo(() => new Set(compareCountryIds), [compareCountryIds]);
 
   const warBorderFeatureRef = useRef<Feature | null>(null);
   const warBorderInitialDRef = useRef<string>("");
@@ -1097,6 +1102,7 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
             countryAccess={countryAccess}
             worldEntities={worldEntities}
             biCoveredCountries={biCoveredRef.current}
+            comparedCountryIds={comparedCountryIds}
           />
         )}
 

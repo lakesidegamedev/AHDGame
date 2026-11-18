@@ -24,7 +24,15 @@ export interface PulseData {
     neutral: number;
     history: HistoryPoint[];
   };
-  credit: { rating: string | null; debtToGdpRatio: number | null };
+  credit: {
+    rating: string | null;
+    debtToGdpRatio: number | null;
+    /** Optional so older payloads and fixtures still type-check. */
+    debtTrajectory?: "falling" | "stable" | "rising" | null;
+    stabilisingPrimaryBalancePct?: number | null;
+    /** Ladder rate the flat-balance figure is priced at, in percent. */
+    debtPathBasisPct?: number | null;
+  };
 }
 
 interface PulseStripProps {
@@ -83,6 +91,20 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
   const inflationGood = inflation != null && Math.abs(inflation - pulse.inflation.target) <= 1;
   const prime = pulse.primeRate.value;
   const primeDir = historyDirection(pulse.primeRate.history);
+  const credit = pulse.credit;
+  // Which way the ratio is going, and for a rising one, what would stop it.
+  const debtNote =
+    credit.debtTrajectory === "rising"
+      ? credit.stabilisingPrimaryBalancePct != null
+        ? `debt rising, flat at ${credit.stabilisingPrimaryBalancePct.toFixed(1)}% primary surplus${
+            credit.debtPathBasisPct != null ? " (ladder rate)" : ""
+          }`
+        : "debt rising"
+      : credit.debtTrajectory === "falling"
+        ? "debt falling"
+        : credit.debtTrajectory === "stable"
+          ? "debt stable"
+          : null;
 
   return (
     <div className="grid grid-cols-2 divide-x divide-card-border bg-card-muted/60 lg:grid-cols-5">
@@ -170,6 +192,20 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             </span>
           )}
         </span>
+        {debtNote && (
+          <span
+            title={
+              credit.debtPathBasisPct != null
+                ? `Priced at the ${credit.debtPathBasisPct.toFixed(2)}% ladder rate the year-end rollover uses, before premiums`
+                : undefined
+            }
+            className={`text-[11px] ${
+              credit.debtTrajectory === "rising" ? "text-warning" : "text-muted"
+            }`}
+          >
+            {debtNote}
+          </span>
+        )}
         <Link
           href={budgetUrl(countryId)}
           className="mt-auto text-[11px] font-semibold text-primary hover:underline"

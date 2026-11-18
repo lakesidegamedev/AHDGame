@@ -11,155 +11,26 @@
  * to the issuer's country currency before touching these fields.
  */
 import type { Db } from "mongodb";
-import type {
-  CreditRating,
-  FederalBudget,
-  DebtCeilingCrisis,
-  SovereignRiskAnchor,
-} from "@/lib/db/types/budget";
-import {
-  INVESTOR_CONFIDENCE_BASELINE,
-  SOVEREIGN_CONFIDENCE_PREMIUM_MAX,
-} from "@/lib/nationalization/constants";
-import { IMF_SOVEREIGN_DEFAULT_RATE } from "@/lib/sovereignDefault/constants";
+import type { CreditRating, FederalBudget, DebtCeilingCrisis } from "@/lib/db/types/budget";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
 import {
   sovereignStockAnnualService,
   type SovereignCouponBook,
 } from "@/lib/budget/rules/sovereignDebtService";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { federalSurplus } from "@/lib/budget/federalSurplus";
+import type { DebtTrajectory } from "@/lib/budget/rules/sovereignDebtSustainability";
+import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
 
-/**
- * Debt/GDP ratio at which a sovereign degrades from the B band to CCC.
- * 250% is far above any healthy world so this only bites in runaway scenarios.
- */
-export const EXTREME_DISTRESS_DEBT_TO_GDP = 2.5;
-
-export const DEBT_THRESHOLDS = [
-  {
-    maxRatio: 0.6,
-    rating: "AAA" as CreditRating,
-    interestRate: 0.02,
-    gdpPenalty: 0,
-    trustPenalty: 0,
-  },
-  {
-    maxRatio: 0.8,
-    rating: "AA" as CreditRating,
-    interestRate: 0.025,
-    gdpPenalty: 0,
-    trustPenalty: 0,
-  },
-  {
-    maxRatio: 1.0,
-    rating: "A" as CreditRating,
-    interestRate: 0.035,
-    gdpPenalty: 0.1,
-    trustPenalty: 0,
-  },
-  {
-    maxRatio: 1.2,
-    rating: "BBB" as CreditRating,
-    interestRate: 0.05,
-    gdpPenalty: 0.2,
-    trustPenalty: 0,
-  },
-  {
-    maxRatio: 1.5,
-    rating: "BB" as CreditRating,
-    interestRate: 0.07,
-    gdpPenalty: 0.3,
-    trustPenalty: 5,
-  },
-  {
-    maxRatio: EXTREME_DISTRESS_DEBT_TO_GDP,
-    rating: "B" as CreditRating,
-    interestRate: 0.1,
-    gdpPenalty: 0.5,
-    trustPenalty: 10,
-  },
-  // Extreme-distress band: sustained debt/GDP beyond 250% drops the sovereign
-  // to CCC, the floor the rating type supports (post-default repudiation also
-  // stamps CCC). Well above any live-world ratio, so behavior below is unchanged.
-  {
-    maxRatio: Infinity,
-    rating: "CCC" as CreditRating,
-    interestRate: 0.14,
-    gdpPenalty: 0.7,
-    trustPenalty: 15,
-  },
-];
-
-/**
- * Return the current debt/GDP ratio used by the risk ladder.
- *
- * `sovereignRiskAnchor` remains on persisted budgets for seed and migration
- * provenance, and the optional argument is retained for compatibility with
- * older callers. It must not rescale current risk: a country's authored
- * starting position is not its current credit risk.
- *
- * @deprecated Use the current smoothed debt/GDP ratio directly. The name is
- * retained so older integrations do not silently change shape.
- */
-function normalizeDebtToGdpForRisk(debtToGdpRatio: number, _anchor?: SovereignRiskAnchor): number {
-  return Math.max(0, debtToGdpRatio);
-}
-
-export function getDebtThreshold(debtToGdpRatio: number, anchor?: SovereignRiskAnchor) {
-  const assessedRatio = normalizeDebtToGdpForRisk(debtToGdpRatio, anchor);
-  return (
-    DEBT_THRESHOLDS.find((t) => assessedRatio <= t.maxRatio) ||
-    DEBT_THRESHOLDS[DEBT_THRESHOLDS.length - 1]
-  );
-}
-
-export function calculateCreditRating(
-  debtToGdpRatio: number,
-  anchor?: SovereignRiskAnchor
-): CreditRating {
-  return getDebtThreshold(debtToGdpRatio, anchor).rating;
-}
-
-/**
- * Interest rate for a given debt/GDP ratio, capped at the concessional IMF
- * sovereign-facility rate whenever an IMF bailout program is active on the
- * country.
- *
- * The top tier's flat 14% has no ceiling on ratio — by design, since it's
- * meant to price genuine market distress, not to be a stable steady state.
- * The design's escape valve was always the sovereign-default resolution
- * paths, but a bailout only ever bolted on a small IMF facility alongside
- * the untouched legacy debt, which kept accruing at the punitive tier rate
- * forever (the actual spiral). A real IMF program's whole point is
- * cheaper financing than the market will offer — the tier rate should never
- * outrank the program rate while one is in force.
- */
-export function calculateInterestRate(
-  debtToGdpRatio: number,
-  imfBailoutActive?: boolean,
-  _anchor?: SovereignRiskAnchor
-): number {
-  const ladderRate = getDebtThreshold(debtToGdpRatio, _anchor).interestRate;
-  // The current tier is the market rate. Historical seed anchors do not
-  // rescale it; otherwise a low starting ratio can turn a healthy current
-  // debt/GDP level into an artificial distress rate.
-  const tierRate = ladderRate;
-  return imfBailoutActive ? Math.min(tierRate, IMF_SOVEREIGN_DEFAULT_RATE) : tierRate;
-}
-
-/**
- * Sovereign interest-rate premium (decimal) from low investor confidence
- * (spec §12.4 feed 2). 0 at/above baseline; rises to SOVEREIGN_CONFIDENCE_PREMIUM_MAX
- * at confidence 0 — expropriation fear makes the government's own borrowing pricier.
- */
-export function getSovereignConfidencePremium(
-  investorConfidence: number | null | undefined
-): number {
-  if (investorConfidence == null || !Number.isFinite(investorConfidence)) return 0;
-  if (investorConfidence >= INVESTOR_CONFIDENCE_BASELINE) return 0;
-  const below = INVESTOR_CONFIDENCE_BASELINE - Math.max(0, investorConfidence);
-  return SOVEREIGN_CONFIDENCE_PREMIUM_MAX * (below / INVESTOR_CONFIDENCE_BASELINE);
-}
+export {
+  DEBT_THRESHOLDS,
+  EXTREME_DISTRESS_DEBT_TO_GDP,
+  MAX_SOVEREIGN_RATE,
+  calculateCreditRating,
+  calculateInterestRate,
+  getDebtThreshold,
+  getSovereignConfidencePremium,
+} from "@/lib/budget/rules/sovereignRate";
 
 export async function processAnnualDebt(
   db: Db,
@@ -177,6 +48,8 @@ export async function processAnnualDebt(
   debtToGdpRatio: number;
   creditRating: CreditRating;
   interestRate: number;
+  /** Which way the debt ratio is moving, from this year's balance and rates. */
+  debtTrajectory: DebtTrajectory;
   ceilingExceeded: boolean;
 }> {
   // The bond ledger owns the debt stock (see bonds/sovereignPrincipal.ts):
@@ -195,14 +68,23 @@ export async function processAnnualDebt(
         });
 
   const debtToGdpRatio = newPrincipal / nationalGDP;
-  const creditRating = calculateCreditRating(debtToGdpRatio, federalBudget.sovereignRiskAnchor);
-  // Low investor confidence adds a sovereign risk premium (spec §12.4 feed 2).
-  const interestRate =
-    calculateInterestRate(
-      debtToGdpRatio,
-      federalBudget.imfSovereignBailoutActive,
-      federalBudget.sovereignRiskAnchor
-    ) + getSovereignConfidencePremium(federalBudget.investorConfidence);
+  // `spending.total` includes debt service, so adding the interest bill back
+  // gives the PRIMARY balance the debt-dynamics identity wants; feeding it the
+  // total balance would count interest twice and understate the premium. The
+  // same composer attributes the rate on the budget page, so the explanation
+  // and the charge cannot drift apart.
+  const primaryBalance = federalSurplus(federalBudget) + interestPayment;
+  const rate = explainSovereignRate({
+    debtToGdpRatio,
+    primaryBalanceToGdp: nationalGDP > 0 ? primaryBalance / nationalGDP : 0,
+    realGrowthPct: federalBudget.economicFactors?.gdpGrowth,
+    inflationPct: federalBudget.economicFactors?.inflationRate,
+    investorConfidence: federalBudget.investorConfidence,
+    imfBailoutActive: federalBudget.imfSovereignBailoutActive,
+    sovereignRiskAnchor: federalBudget.sovereignRiskAnchor,
+  });
+  const creditRating = rate.ladderRating;
+  const interestRate = rate.effectiveRate;
   const ceilingExceeded =
     newPrincipal >
     effectiveBorrowingLimit({
@@ -217,6 +99,7 @@ export async function processAnnualDebt(
     debtToGdpRatio,
     creditRating,
     interestRate,
+    debtTrajectory: rate.path.trajectory,
     ceilingExceeded,
   };
 }
