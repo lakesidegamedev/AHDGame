@@ -34,7 +34,7 @@ import {
   marketTelemetry,
 } from "@/lib/turn/corporation/sectorTelemetry";
 
-import { energyProductivityMultiplier } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 
 import {
   inputBasketCostIndex,
@@ -83,8 +83,8 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
     policyHeadroomFactor: context.policyHeadroomFactor,
     mothballed: context.mothballed,
     stateId: context.sector.stateId,
-    inputProductivityMultiplier: energyProductivityMultiplier(
-      context.sector.sectorType,
+    inputProductivityMultiplier: plantThroughputMultiplier(
+      context.sector,
       context.currentTurn,
       context.lookups.preset
     ),
