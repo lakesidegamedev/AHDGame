@@ -79,10 +79,23 @@ export function resolveLeadershipActionBonus({
   return bonus;
 }
 
-/** Party offices. */
-const PARTY_CHAIR_NI_BONUS = 2.0;
-const PARTY_SUB_CHAIR_NI_BONUS = 1.5;
-const STATE_PARTY_CHAIR_NI_BONUS = 0.5;
+const PARTY_NI_RATES = {
+  chair: { normal: 2, foundingCap: 0.75, halfSaturationUnits: 1_000 },
+  subChair: { normal: 1.5, foundingCap: 0.5, halfSaturationUnits: 1_000 },
+  stateChair: { normal: 0.5, foundingCap: 0.25, halfSaturationUnits: 100 },
+};
+
+/** Founding officers start at half the cap and earn the rest with diminishing returns. */
+export function resolvePartyPositionNiBonus(
+  role: keyof typeof PARTY_NI_RATES,
+  foundingOrgUnits?: number
+): number {
+  const { normal, foundingCap, halfSaturationUnits } = PARTY_NI_RATES[role];
+  if (foundingOrgUnits === undefined) return normal;
+  const units = Math.max(0, foundingOrgUnits);
+  return foundingCap * (1 - 0.5 * (halfSaturationUnits / (halfSaturationUnits + units)));
+}
+
 /** Central bank chair: the cabinet tier. */
 const CENTRAL_BANK_CHAIR_NI_BONUS = CABINET_NI_BONUS;
 
@@ -102,9 +115,7 @@ export interface PositionNiBonusInput {
   currentOfficeType?: string;
   countryId: CountryId;
   congressLeadershipRoles?: readonly LeadershipRole[];
-  isPartyChair?: boolean;
-  isPartySubChair?: boolean;
-  isStatePartyChair?: boolean;
+  partyPositionNiBonus?: number;
   isSeatedJustice?: boolean;
   isCentralBankChair?: boolean;
   /**
@@ -125,9 +136,7 @@ export function resolvePositionNiBonus({
   currentOfficeType,
   countryId,
   congressLeadershipRoles = [],
-  isPartyChair = false,
-  isPartySubChair = false,
-  isStatePartyChair = false,
+  partyPositionNiBonus = 0,
   isSeatedJustice = false,
   isCentralBankChair = false,
   cabinetCountryId,
@@ -146,12 +155,7 @@ export function resolvePositionNiBonus({
     bonus = Math.max(bonus, CONGRESS_LEADER_NI_BONUS[role] ?? 0);
   }
 
-  if (isPartyChair) {
-    bonus = Math.max(bonus, PARTY_CHAIR_NI_BONUS);
-  } else if (isPartySubChair) {
-    bonus = Math.max(bonus, PARTY_SUB_CHAIR_NI_BONUS);
-  }
-  if (isStatePartyChair) bonus = Math.max(bonus, STATE_PARTY_CHAIR_NI_BONUS);
+  bonus = Math.max(bonus, partyPositionNiBonus);
 
   if (isSeatedJustice) bonus = Math.max(bonus, JUSTICE_NI_BONUS_PER_TURN);
   if (isCentralBankChair) bonus = Math.max(bonus, CENTRAL_BANK_CHAIR_NI_BONUS);
