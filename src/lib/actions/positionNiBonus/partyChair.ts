@@ -5,16 +5,14 @@ import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * National party organization (0-100, population-weighted across the
- * country's states) keyed by the national chair's character id. Empty during
- * the founding phase, when party office carries no passive recognition.
+ * country's states) keyed by the national chair's character id. Applies
+ * during the founding phase too.
  */
 export async function loadPartyChairOrganizations(
   db: Db,
-  founding: boolean,
   characterId?: ObjectId
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
-  if (founding) return out;
   const parties = await politicalPartiesCollection(db)
     .find(
       { chairId: characterId ?? { $ne: null } },
