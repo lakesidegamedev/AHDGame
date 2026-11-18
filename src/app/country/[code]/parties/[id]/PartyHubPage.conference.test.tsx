@@ -317,7 +317,7 @@ describe("PartyHubPage committee portraits", () => {
         within(officers)
           .getAllByRole("link")
           .map((link) => link.getAttribute("href"))
-      ).toEqual(["/character/chair-id", "/character/deputy-id", "/character/treasurer-id"]);
+      ).toEqual(["/character/deputy-id", "/character/chair-id", "/character/treasurer-id"]);
       expect(within(officers).getByText("Party Convenor")).toBeTruthy();
       expect(screen.getByText("Loading committee seats…")).toBeTruthy();
       expect(screen.queryByText("Seat 1")).toBeNull();
