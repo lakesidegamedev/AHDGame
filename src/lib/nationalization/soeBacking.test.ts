@@ -93,7 +93,9 @@ function makeDb(
             bulkWrite: async () => ({}),
           };
         case "exchangeRates":
-          return { find: () => ({ toArray: async () => [] }) };
+          // An unstamped RU corp resolves to the legacy ruble code; give it a live
+          // 1:1 row so the figures below stay in anchor units, not era-rate ones.
+          return { find: () => ({ toArray: async () => [{ currencyCode: "SUR", rate: 1 }] }) };
         case "federalBudget":
           return {
             updateOne: async (filter: unknown, update: Record<string, unknown>) => {

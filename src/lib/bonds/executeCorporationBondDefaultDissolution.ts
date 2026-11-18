@@ -11,7 +11,7 @@ import {
   corpCapitalToAnchor,
   corpLiquidCapitalToAnchor,
   fxRateForCorpFromMap,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
@@ -118,7 +118,7 @@ export async function executeCorporationBondDefaultDissolution(
   const currentTurn = options.turn ?? (await getCurrentTurn(db));
   const forexEnabled = await isForexEnabled();
 
-  const fxByCurrency = await loadFxRatesByCurrency(db);
+  const fxByCurrency = await loadValuationFxRates(db);
 
   await cleanupShareMarketActivityForCorporations(db, [corporation._id], now, forexEnabled);
   await cleanupShareMarketActivityForCorporationTargets(db, [corporation._id], now, forexEnabled);

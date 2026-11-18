@@ -8,7 +8,7 @@ import {
   corpCapitalToAnchor,
   corpLiquidCapitalToAnchor,
   fxRateForCorpFromMap,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -95,7 +95,7 @@ export async function executeCorporationBondRestructure(
   const [sectors, centralBanks, fxByCurrency, marketMode, gameState] = await Promise.all([
     corporateSectorsCollection(db).find({ corporationId: refreshed._id }).toArray(),
     centralBanksCollection(db).find({}).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getMarketSystemModeForDb(db),
     getGameState(db),
   ]);

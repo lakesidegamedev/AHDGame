@@ -60,7 +60,7 @@ import {
   corpCapitalToAnchor,
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { sumNonMaturedBondPrincipal } from "@/lib/bonds/corporateBondDefault";
@@ -102,7 +102,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .toArray(),
       corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
-      loadFxRatesByCurrency(db),
+      loadValuationFxRates(db),
       getMarketSystemModeForDb(db),
     ]);
     const { centralBanks } = refData;
@@ -513,7 +513,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
       corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
-      loadFxRatesByCurrency(db),
+      loadValuationFxRates(db),
       getMarketSystemModeForDb(db),
     ]);
     const { centralBanks } = refData;

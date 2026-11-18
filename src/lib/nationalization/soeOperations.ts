@@ -10,7 +10,7 @@ import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { Corporation, CorporateSector, SectorBuildOrder, StateMetrics } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   corpCapitalToAnchor,
   anchorToCorpCapital,
   fxRateForCorpFromMap,
@@ -384,7 +384,7 @@ export async function processSoeOperations(
   // families, handled below.
   const [mergedMetrics, fxByCurrency] = await Promise.all([
     findMergedRegionMetricsMany(db, { _id: { $in: stateIds } }),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
   ]);
   const metricsById = new Map<string, StateMetrics>(
     mergedMetrics.map((m) => [String(m._id), m] as const)

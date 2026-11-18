@@ -12,7 +12,7 @@ import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   fxRateForCorpFromMap,
   anchorToCorpCapital,
@@ -70,7 +70,7 @@ export async function processSoeRemittance(
     corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     loadPlantsBudgetContext(db),
     // A crash resume replays this sweep with live inputs that have moved on.
     // Receipts the earlier attempt froze are authoritative, so they are read
