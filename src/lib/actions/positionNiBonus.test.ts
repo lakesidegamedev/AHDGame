@@ -1,25 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  resolveLeadershipActionBonus,
-  resolvePartyPositionNiBonus,
-  resolvePositionNiBonus,
-} from "./positionNiBonus";
-
-describe("resolvePartyPositionNiBonus", () => {
-  it.each([
-    ["chair", 0.75, 1_000],
-    ["subChair", 0.5, 1_000],
-    ["stateChair", 0.25, 100],
-  ] as const)(
-    "%s scales from half the founding cap with diminishing returns",
-    (role, cap, midpoint) => {
-      expect(resolvePartyPositionNiBonus(role, 0)).toBe(cap / 2);
-      expect(resolvePartyPositionNiBonus(role, midpoint)).toBe(cap * 0.75);
-      expect(resolvePartyPositionNiBonus(role, midpoint * 2)).toBeGreaterThan(cap * 0.75);
-      expect(resolvePartyPositionNiBonus(role, midpoint * 100)).toBeLessThan(cap);
-    }
-  );
-});
+import { resolveLeadershipActionBonus, resolvePositionNiBonus } from "./positionNiBonus";
 
 describe("resolvePositionNiBonus", () => {
   it("uses the Speaker tier instead of the ordinary House tier", () => {

@@ -79,23 +79,6 @@ export function resolveLeadershipActionBonus({
   return bonus;
 }
 
-const PARTY_NI_RATES = {
-  chair: { normal: 2, foundingCap: 0.75, halfSaturationUnits: 1_000 },
-  subChair: { normal: 1.5, foundingCap: 0.5, halfSaturationUnits: 1_000 },
-  stateChair: { normal: 0.5, foundingCap: 0.25, halfSaturationUnits: 100 },
-};
-
-/** Founding officers start at half the cap and earn the rest with diminishing returns. */
-export function resolvePartyPositionNiBonus(
-  role: keyof typeof PARTY_NI_RATES,
-  foundingOrgUnits?: number
-): number {
-  const { normal, foundingCap, halfSaturationUnits } = PARTY_NI_RATES[role];
-  if (foundingOrgUnits === undefined) return normal;
-  const units = Math.max(0, foundingOrgUnits);
-  return foundingCap * (1 - 0.5 * (halfSaturationUnits / (halfSaturationUnits + units)));
-}
-
 /** Central bank chair: the cabinet tier. */
 const CENTRAL_BANK_CHAIR_NI_BONUS = CABINET_NI_BONUS;
 

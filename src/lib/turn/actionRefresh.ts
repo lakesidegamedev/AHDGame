@@ -140,8 +140,8 @@ export async function processActionRefresh(
   );
 
   // ── Position-based NI bonuses ────────────────────────────────────────────
-  // Domestic roles compete for the highest NI tier. Party offices use the
-  // founding rates until the full-seating elections finish.
+  // Domestic roles compete for the highest NI tier. Party offices begin
+  // granting NI once the full-seating elections finish.
   const congressLeaderRows = await congressLeadersCollection(db)
     .find({ characterId: { $ne: null } }, { projection: { characterId: 1, role: 1 } })
     .toArray();
