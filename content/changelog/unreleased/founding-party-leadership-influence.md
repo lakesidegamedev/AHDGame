@@ -1,15 +1,14 @@
 ---
 date: 2026-11-18
-title: Party leadership influence scales with organization during founding
+title: Party offices grant national influence after founding
 summary: >-
-  Party officers earn less passive National Political Influence during the founding elections.
-  Parties with more accumulated Org give their officers a larger bonus, up to each role's cap.
+  National and state party officers start earning passive National Political
+  Influence from their party office when the founding elections end.
 tags: [politics, parties, balance]
 badges: [patch]
 areas: [engine]
 ---
 
-National chairs can earn up to +0.75 NPI per turn, national vice chairs and treasurers
-up to +0.50, and state chairs up to +0.25. National officers draw on their party's
-countrywide Org, while state chairs draw on the Org in their own region.
-Normal leadership rates resume after the founding phase ends.
+Party leadership continues to grant Party Influence during founding.
+After the founding phase, national chairs earn +2 NPI per turn, national vice
+chairs and treasurers earn +1.5, and state chairs earn +0.5.
