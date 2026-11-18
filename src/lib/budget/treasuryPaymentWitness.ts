@@ -13,12 +13,14 @@ export function treasuryPaymentWitness(input: {
   rate: number;
   turn: number;
   signedPositionOwned: boolean;
+  signedPositionAmount?: number;
   incoming?: boolean;
   txType: FinancialTxType;
   reason?: string;
   now: Date;
 }): TransitionProjection[] {
-  if (input.amount === 0) return [];
+  const legs = fundedTreasuryPaymentLegs(input);
+  if (legs.length === 0) return [];
   return [
     {
       collection: "ledgerEntries",
@@ -35,7 +37,7 @@ export function treasuryPaymentWitness(input: {
         txType: input.txType,
         emitSite: "budget/treasuryPaymentWitness",
         balanced: true,
-        legs: fundedTreasuryPaymentLegs(input),
+        legs,
       },
     },
   ];
