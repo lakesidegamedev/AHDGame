@@ -1,6 +1,10 @@
 "use client";
 
-import type { SovereignMaturityLadder } from "@/lib/budget/rules/maturityLadder";
+import {
+  maturityLadderHighlights,
+  type MaturityLadderYear,
+  type SovereignMaturityLadder,
+} from "@/lib/budget/rules/maturityLadder";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 
 interface MaturityLadderPanelProps {
@@ -9,6 +13,25 @@ interface MaturityLadderPanelProps {
 }
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+const yearLabel = (year: MaturityLadderYear) =>
+  year.fyOffset === 0 ? "This fiscal year" : `FY+${year.fyOffset}`;
+
+const gapBp = (year: MaturityLadderYear) => Math.round(year.repricingGapPct * 100);
+
+/** Names the years worth acting on, not just how much reprices soon. */
+function repricingHeadline(ladder: SovereignMaturityLadder): string {
+  const { largestShare, widestGap } = maturityLadderHighlights(ladder);
+  if (!largestShare) return "No sovereign face matures inside the horizon.";
+  const most = `${yearLabel(largestShare)} reprices the most stock (${pct(largestShare.share)})`;
+  if (!widestGap || gapBp(widestGap) <= 0) {
+    return `${most}; no year reprices meaningfully above its own coupons.`;
+  }
+  if (widestGap.fyOffset === largestShare.fyOffset) {
+    return `${most}, at the widest gap (+${gapBp(widestGap)} bp).`;
+  }
+  return `${most}; ${yearLabel(widestGap)} carries the widest gap (+${gapBp(widestGap)} bp).`;
+}
 
 /**
  * How much of the sovereign stock reprices each fiscal year, the coupon it pays
@@ -25,18 +48,11 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
     ladder.beyondPrincipal,
     1
   );
-  const nearTermShare = ladder.years
-    .filter((year) => year.fyOffset <= 2)
-    .reduce((sum, year) => sum + year.share, 0);
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="text-sm font-semibold text-foreground">Refinancing ladder</div>
-        <div className="text-[11px] tabular-nums text-muted">
-          {pct(nearTermShare)} of the stock reprices within two years
-        </div>
-      </div>
+      <div className="text-sm font-semibold text-foreground">Refinancing ladder</div>
+      <p className="mt-0.5 text-[11px] tabular-nums text-muted">{repricingHeadline(ladder)}</p>
 
       <div className="mt-2 space-y-1.5">
         {years.map((year) => {

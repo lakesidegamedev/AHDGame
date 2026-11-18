@@ -116,3 +116,33 @@ export function sovereignMaturityLadder(
 
   return { years, beyondPrincipal, totalPrincipal, todayRatePct };
 }
+
+export interface MaturityLadderHighlights {
+  /** Year repricing the largest share of the outstanding stock. */
+  largestShare: MaturityLadderYear | null;
+  /** Year whose coupons sit furthest below today's rate, when any does. */
+  widestGap: MaturityLadderYear | null;
+}
+
+/**
+ * The years a treasury can act on: the one repricing the most face, and the one
+ * repricing at the widest gap above its own coupons. A gap at or below zero is
+ * a discount, so it is not reported as a cost to plan for.
+ */
+export function maturityLadderHighlights(
+  ladder: SovereignMaturityLadder
+): MaturityLadderHighlights {
+  let largestShare: MaturityLadderYear | null = null;
+  let widestGap: MaturityLadderYear | null = null;
+  for (const year of ladder.years) {
+    if (year.principal <= 0) continue;
+    if (!largestShare || year.share > largestShare.share) largestShare = year;
+    if (
+      year.repricingGapPct > 0 &&
+      (!widestGap || year.repricingGapPct > widestGap.repricingGapPct)
+    ) {
+      widestGap = year;
+    }
+  }
+  return { largestShare, widestGap };
+}

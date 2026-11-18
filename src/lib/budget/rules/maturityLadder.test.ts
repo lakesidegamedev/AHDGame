@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sovereignMaturityLadder } from "./maturityLadder";
+import { maturityLadderHighlights, sovereignMaturityLadder } from "./maturityLadder";
 
 const bond = (principal: number, couponRatePct: number, maturityTurn: number) => ({
   principal,
@@ -97,5 +97,51 @@ describe("sovereignMaturityLadder", () => {
       turnsPerYear: 10,
     });
     expect(ladder.years[3].principal).toBe(100);
+  });
+});
+
+describe("maturityLadderHighlights", () => {
+  it("names the biggest share and the widest gap when they fall in different years", () => {
+    const ladder = sovereignMaturityLadder(
+      [bond(100, 4, 110), bond(700, 4.5, 160), bond(200, 1, 244)],
+      { currentTurn: 100, todayRatePct: 5 }
+    );
+
+    const { largestShare, widestGap } = maturityLadderHighlights(ladder);
+
+    expect(largestShare?.fyOffset).toBe(1);
+    expect(widestGap?.fyOffset).toBe(3);
+  });
+
+  it("reports one year that carries both", () => {
+    const ladder = sovereignMaturityLadder([bond(500, 1, 110)], {
+      currentTurn: 100,
+      todayRatePct: 5,
+    });
+
+    const { largestShare, widestGap } = maturityLadderHighlights(ladder);
+
+    expect(largestShare?.fyOffset).toBe(0);
+    expect(widestGap?.fyOffset).toBe(0);
+  });
+
+  it("does not call a year that reprices cheaper a widening gap", () => {
+    // Coupons above today's rate: rolling over saves money, so there is no
+    // cost to plan for even though the share is real.
+    const ladder = sovereignMaturityLadder([bond(500, 6, 110)], {
+      currentTurn: 100,
+      todayRatePct: 5,
+    });
+
+    const { largestShare, widestGap } = maturityLadderHighlights(ladder);
+
+    expect(largestShare?.fyOffset).toBe(0);
+    expect(widestGap).toBeNull();
+  });
+
+  it("returns nothing to act on for an empty book", () => {
+    const ladder = sovereignMaturityLadder([], { currentTurn: 100, todayRatePct: 5 });
+
+    expect(maturityLadderHighlights(ladder)).toEqual({ largestShare: null, widestGap: null });
   });
 });

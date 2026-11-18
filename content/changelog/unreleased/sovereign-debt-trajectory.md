@@ -37,7 +37,9 @@ areas: [backend, frontend]
   with a rising repricing cost in the warning tone, so a treasury can see which
   fiscal year the trajectory premium actually lands in. It makes clear the
   premium reaches the budget through rollovers rather than repricing the whole
-  stock at once.
+  stock at once. Its headline names the fiscal year repricing the largest share
+  of the stock and, when a different year carries it, the year with the widest
+  gap above its own coupons, so the year to act on is visible at a glance.
 - The rate card, the debt path chart and the economy page read one shared
   derivation of the primary balance, debt ratio and growth inputs, so none of
   them can price the identity on a different denominator or forget the interest
