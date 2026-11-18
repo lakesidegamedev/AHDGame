@@ -179,6 +179,14 @@ export const THROTTLE_IDLE_UPKEEP_SHARE = 0.33;
  */
 export const PLANT_BUILD_PRICE_SCALE = 1 / 9;
 
+/** Construction basis for standard facilities with low cash earnings per installed unit. */
+export const STANDARD_BUILD_PRICE_SCALE_2027: Readonly<
+  Partial<Record<OperatingSectorType, number>>
+> = {
+  retail: 0.25,
+  financial: 0.2,
+};
+
 /** Legacy first-plant discount. The qualified 1991 preset pays the full basis. */
 export const CAPACITY_FOUNDING_DISCOUNT = 0.1;
 

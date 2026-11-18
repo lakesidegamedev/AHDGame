@@ -6,6 +6,9 @@ import {
   revenuePerCapacityUnit,
   resolvePlantBuildPriceScale,
 } from "@/lib/constants/capacityEconomy";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
+import { quoteFoundingEntry } from "@/lib/corporations/rules/marketEntry";
+import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 
 const base = {
   sectorType: "logistics" as const,
@@ -62,5 +65,58 @@ describe("plant build price scale", () => {
     expect(scaled.buildPriceScaleMultiplier).toBeCloseTo(1 / 3, 10);
     expect(scaled.totalAnchor).toBeCloseTo(unscaled.totalAnchor / 3, 6);
     expect(unscaled.unitPriceAnchor / 3).toBeCloseTo(rpu, 6);
+  });
+});
+
+describe("2027 standard facility build cost", () => {
+  it.each([
+    { sectorType: "retail", basisScale: 0.25, expansion: 12_000, totalEntry: 18_500 },
+    { sectorType: "financial", basisScale: 0.2, expansion: 9_600, totalEntry: 15_800 },
+  ] as const)("prices both entry and expansion for $sectorType", (row) => {
+    const { sectorType, basisScale, expansion, totalEntry } = row;
+    const preset = "2027-default";
+    const units = foundingStarterUnits(sectorType);
+    const existingBasis = capacityPricePerUnit(sectorType, 2027, 1, "standard", preset);
+    const additional = computeBuildCost({
+      ...base,
+      sectorType,
+      strategyId: "standard",
+      preset,
+      units,
+      primeRate: 5,
+    });
+    const founding = quoteFoundingEntry({
+      sectorType,
+      preset,
+      eraUnitScale: 1,
+      currentYear: 2027,
+      techExpansionDiscount: 0,
+      techGrowthCostMultiplier: 1,
+      techDominanceShield: 0,
+      nationalMarketSharePercent: 0,
+      primeRate: 5,
+      acumen: NEUTRAL_STAT,
+      hostCostOfLivingIndex: 100,
+    });
+    expect(additional.unitPriceAnchor).toBeCloseTo(existingBasis * basisScale);
+    expect(additional.totalAnchor).toBeCloseTo(expansion);
+    expect(founding.baseCostAnchor).toBeCloseTo(totalEntry);
+    expect(existingBasis).toBeCloseTo(sectorType === "retail" ? 4_500 : 60_000);
+  });
+
+  it.each([
+    { sectorType: "retail", strategyId: "ecommerce", preset: "2027-default" },
+    { sectorType: "financial", strategyId: "fintech", preset: "2027-default" },
+    { sectorType: "retail", strategyId: "standard", preset: "2019-default" },
+  ] as const)("uses the normal basis for $preset $sectorType $strategyId", (input) => {
+    expect(computeBuildCost({ ...base, ...input }).unitPriceAnchor).toBeCloseTo(
+      capacityPricePerUnit(
+        input.sectorType,
+        base.year,
+        base.eraUnitScale,
+        input.strategyId,
+        input.preset
+      )
+    );
   });
 });
