@@ -67,6 +67,13 @@ describe("computeDsa", () => {
     expect(r.score).toBeGreaterThan(80);
   });
 
+  it("labels the growth input as real, since prices do not raise the score", () => {
+    const growth = computeDsa({ ...healthyBaseline, annualGdpGrowth: 0.05 }).components.find(
+      (component) => component.id === "growth"
+    );
+    expect(growth?.label).toBe("Real GDP growth");
+  });
+
   it("band thresholds: healthy ≥ 80, warning [50,80), at-risk [30,50), crisis < 30", () => {
     // baseline: 80 (healthy)
     expect(computeDsa({ ...healthyBaseline }).band).toBe("healthy");

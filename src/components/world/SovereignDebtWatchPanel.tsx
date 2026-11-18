@@ -142,7 +142,7 @@ export function SovereignDebtWatchPanel() {
       </div>
       <p className="mt-1 text-xs text-muted">
         Forward-looking sustainability indicators across every country. Sustainability index
-        combines D/GDP, primary balance, FX depreciation, and growth.
+        combines D/GDP, primary balance, FX depreciation, and real GDP growth.
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-xs">
