@@ -19,26 +19,13 @@ function board(rows: Rows): Record<PoliticalMetricId, number> {
 }
 
 /**
- * 2027 modeled opening. Scores describe policy capacity and outcomes on the
- * same scale as the authored 1991 board, not opinion polling. Modeled from
- * mid-2020s conditions; not a forecast.
- *
- * US: research, energy and military leader; high cost healthcare, housing
- *     shortage, large deficits; free elections and federalism with weaker
- *     integrity and administrative capacity than peers.
- * UK: universal care under waiting-list strain, weak productivity and tight
- *     fiscal space, expensive energy, strong institutions, centralised state.
- * RU: wartime autocracy: commodity strength, war economy, closed politics,
- *     captured courts, sanctions isolation and demographic decline.
- * DE: strong institutions and social insurance, industrial stagnation,
- *     expensive post-gas energy, ageing rail and digital administration,
- *     rearmament from a low base.
- * JP: top health and schooling, very high public debt, ageing population,
- *     low gender equality, import-dependent energy, constrained defense.
- * CN: one-party state: infrastructure and manufacturing scale, property
- *     slump and local debt, near-total political control, shrinking population.
- *
- * DD has no 2027 opening (the state does not exist in 2027) and is absent here.
+ * 2027 modeled opening on the authored 1991 board's scale: policy capacity and
+ * outcomes, not polling. Modeled from mid-2020s conditions; not a forecast.
+ * US and UK: strong institutions, strained public finances and services.
+ * RU: wartime autocracy with commodity strength. DE: strong institutions,
+ * industrial stagnation, costly energy. JP: top health and schooling, very
+ * high debt, ageing. CN: one-party state with infrastructure scale.
+ * DD does not exist in 2027 and has no entry.
  */
 export const NATIONAL_BASELINES_2027: Partial<
   Record<PoliticalMetricsCountryId, Record<PoliticalMetricId, number>>
