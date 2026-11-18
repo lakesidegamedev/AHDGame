@@ -29,6 +29,7 @@ import { ParliamentaryGovernmentActions } from "@/app/country/[code]/executive/c
 import { NpcscChairPanel } from "./NpcscChairPanel";
 import { CppccChairPanel } from "./CppccChairPanel";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import type { ExecutiveGovernmentResponse } from "@/lib/government/executiveViewerState";
 import type {
   AppointmentVotePayload,
   NoConfidenceVotePayload,
@@ -254,8 +255,7 @@ export function CNNpcPage({ countryId }: { countryId: CountryId }) {
   const [viewerWhippedFrom, setViewerWhippedFrom] = useState<Record<string, string>>({});
 
   const fetchGovernmentData = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchJson<any>(`/api/country/${countryId.toLowerCase()}/executive`, {
+    fetchJson<ExecutiveGovernmentResponse>(`/api/country/${countryId.toLowerCase()}/executive`, {
       cache: "no-store",
       feature: "cn-npc-government",
     })
