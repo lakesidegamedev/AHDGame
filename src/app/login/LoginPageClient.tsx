@@ -23,7 +23,7 @@ import {
   READINESS_CLIENT_TIMEOUT_MS,
   chooseHopNavigation,
 } from "@/lib/auth/centralLogin/hopRules";
-import { Input, Label, Button, SectionLabel } from "@/components/ui";
+import { Input, Label, Button } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 /** Message keys under auth.login.errors, per OAuth failure reason. */
@@ -85,6 +85,7 @@ export default function LoginPageClient({
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [deviceKey, setDeviceKey] = useState("");
   const [formData, setFormData] = useState({
     email: "",
@@ -234,170 +235,254 @@ export default function LoginPageClient({
     }
   };
 
+  const brand = (
+    <Link href="/" className="flex items-center gap-3">
+      <Image
+        src={CDN_LOGO_URL}
+        unoptimized
+        alt={t("logoAlt")}
+        width={36}
+        height={36}
+        className="object-contain"
+      />
+      <span className="text-body-lg font-semibold tracking-tight text-white">A House Divided</span>
+    </Link>
+  );
+
+  const eraImage = loginImageUrl ? (
+    <Image
+      src={loginImageUrl}
+      unoptimized
+      alt=""
+      aria-hidden="true"
+      fill
+      className={
+        wireframeColor
+          ? "object-cover object-[40%_50%] opacity-25 grayscale"
+          : "object-cover object-[40%_50%]"
+      }
+      priority
+      sizes="(min-width: 1024px) 56vw, 100vw"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : null;
+
+  const secondaryButton =
+    "flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-card-border bg-card px-4 py-3 text-body font-medium text-foreground transition-colors hover:border-muted/50 hover:bg-card-elevated";
+
   return (
     <div className="flex min-h-screen bg-background">
-      {wireframeColor ? (
-        /* ── CRT wireframe panel (1953, 1979) ─────────────────────────────── */
-        <aside className="relative hidden w-5/12 flex-col justify-between overflow-hidden border-r border-card-border bg-card-muted p-10 lg:flex xl:w-1/2 xl:p-14">
-          {/* Era-specific image ghosted behind the CRT overlay */}
-          {loginImageUrl && (
-            <Image
-              src={loginImageUrl}
-              unoptimized
-              alt=""
-              aria-hidden="true"
-              fill
-              className="object-cover opacity-10 grayscale"
-              priority
-              sizes="(min-width: 1280px) 50vw, 42vw"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          )}
-          <div aria-hidden="true" className="absolute inset-0 bg-background/40" />
-          {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-2.5">
-            <Image
-              src={CDN_LOGO_URL}
-              unoptimized
-              alt={t("logoAlt")}
-              width={36}
-              height={36}
-              className="object-contain"
-            />
-            <span className="text-body-lg font-semibold tracking-tight text-foreground">
-              A House Divided
-            </span>
-          </Link>
-          {/* Era copy */}
-          <div className="relative z-10 max-w-lg">
-            <p className="mb-3 font-mono text-body-xs uppercase tracking-widest text-primary">
+      {/* Era art panel: full-colour photo for modern eras, ghosted behind
+          the CRT treatment for wireframe eras (1953, 1979). */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-card-muted p-10 lg:flex lg:w-[52%] xl:w-[56%] xl:px-14 xl:py-12">
+        {eraImage}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgb(12_12_18/0.55)_0%,rgb(12_12_18/0)_22%,rgb(12_12_18/0)_45%,rgb(12_12_18/0.85)_80%,rgb(12_12_18/0.96)_100%)]"
+        />
+        <div className="relative z-10">{brand}</div>
+        <div className="relative z-10 max-w-xl">
+          {eraLabel && (
+            <span
+              className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
+                wireframeColor ? "font-mono uppercase tracking-widest" : ""
+              }`}
+            >
               {eraLabel}
-            </p>
-            <p className="font-mono text-heading-lg font-semibold leading-snug text-foreground xl:text-display">
-              {eraTagline}
-            </p>
-          </div>
-        </aside>
-      ) : (
-        /* ── Modern panel (1991+) ──────────────────────────────────────────── */
-        <aside className="relative hidden w-5/12 flex-col justify-between overflow-hidden border-r border-card-border bg-card-muted p-10 lg:flex xl:w-1/2 xl:p-14">
-          {/* Era-specific background image (renders when uploaded to CDN) */}
-          {loginImageUrl && (
-            <Image
-              src={loginImageUrl}
-              unoptimized
-              alt=""
-              aria-hidden="true"
-              fill
-              className="object-cover opacity-30"
-              priority
-              sizes="(min-width: 1280px) 50vw, 42vw"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          )}
-          <div aria-hidden="true" className="absolute inset-0 bg-background/45" />
-          {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-2.5">
-            <Image
-              src={CDN_LOGO_URL}
-              unoptimized
-              alt={t("logoAlt")}
-              width={36}
-              height={36}
-              className="object-contain"
-            />
-            <span className="text-body-lg font-semibold tracking-tight text-foreground">
-              A House Divided
             </span>
-          </Link>
-          {/* Era copy */}
-          <div className="relative z-10 max-w-lg">
-            <p className="mb-3 text-body-sm font-medium text-primary">{eraLabel}</p>
-            <p className="text-heading-lg font-semibold leading-snug tracking-tight text-foreground xl:text-display">
+          )}
+          {eraTagline && (
+            <p
+              className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
+                wireframeColor ? "font-mono" : ""
+              }`}
+            >
               {eraTagline}
             </p>
+          )}
+          <p className="mt-3 max-w-md text-body-lg leading-relaxed text-white/80">
+            {t("eraDescription")}
+          </p>
+        </div>
+      </aside>
+
+      <main className="flex w-full flex-col border-card-border bg-background lg:w-[48%] lg:border-l xl:w-[44%]">
+        {/* New-player link, desktop only (mobile repeats it under the form). */}
+        {!maintenanceMode && registrationOpen && (
+          <div className="hidden items-center justify-end gap-3 px-9 pt-6 text-body-sm text-muted lg:flex">
+            {t("newToGameShort")}
+            <Link
+              href="/register"
+              className="rounded-lg border border-card-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-card-elevated"
+            >
+              {t("createAccount")}
+            </Link>
           </div>
-        </aside>
-      )}
+        )}
 
-      <main className="relative flex w-full flex-col justify-center overflow-hidden bg-background px-4 py-5 sm:px-8 sm:py-10 lg:w-7/12 lg:px-12 xl:w-1/2 xl:px-20">
-        <div className="relative mx-auto w-full max-w-md">
-          <Link href="/" className="mb-5 flex items-center gap-2.5 sm:mb-7 lg:hidden">
-            <Image
-              src={CDN_LOGO_URL}
-              unoptimized
-              alt={t("logoAlt")}
-              width={36}
-              height={36}
-              className="object-contain"
-            />
-            <span className="text-body-lg font-semibold tracking-tight">A House Divided</span>
-          </Link>
+        <div className="flex flex-1 items-start justify-center lg:items-center lg:px-9 lg:py-8">
+          <div className="w-full lg:max-w-[392px]">
+            {/* Mobile art header */}
+            <div className="relative mb-6 h-52 overflow-hidden lg:hidden">
+              {eraImage}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-[linear-gradient(180deg,rgb(20_20_28/0.35)_0%,rgb(20_20_28/0)_35%,rgb(20_20_28/0.6)_70%,var(--background)_100%)]"
+              />
+              <div className="absolute left-5 top-4 z-10">{brand}</div>
+              {eraLabel && (
+                <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white">
+                  {eraLabel}
+                </span>
+              )}
+            </div>
 
-          <section className="relative overflow-hidden rounded-xl border border-card-border bg-card p-5 shadow-panel sm:p-8">
-            {maintenanceMode && (
-              <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
-                <svg
-                  className="mt-0.5 h-4 w-4 shrink-0 text-warning"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-body font-semibold text-warning">{t("maintenanceTitle")}</p>
-                  <p className="text-body-sm text-muted">{t("maintenanceBody")}</p>
+            <div className="px-5 pb-8 lg:px-0 lg:pb-0">
+              {maintenanceMode && (
+                <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+                  <svg
+                    className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-body font-semibold text-warning">{t("maintenanceTitle")}</p>
+                    <p className="text-body-sm text-muted">{t("maintenanceBody")}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="mb-7 border-b border-card-border pb-6">
-              <SectionLabel as="p">{t("sectionLabel")}</SectionLabel>
-              <h1 className="mt-1 text-display font-semibold tracking-tight text-foreground">
+              <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground lg:text-[1.875rem]">
                 {t("heading")}
               </h1>
               <p className="mt-2 text-body text-muted">{t("subheading")}</p>
-            </div>
 
-            {error && (
-              <div
-                role="alert"
-                className="mb-6 flex items-center gap-3 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-body text-error"
-              >
-                <svg
-                  className="h-4 w-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-6 flex items-center gap-3 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-body text-error"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-                {error}
-              </div>
-            )}
+                  <svg
+                    className="h-4 w-4 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                  {error}
+                </div>
+              )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-5">
+              {/* One-click sign-in first: most players use it. Google and
+                  Lakeside are hidden inside the store apps, so the rows grow
+                  to fill whatever remains. */}
+              <div className="mt-7 flex flex-wrap gap-2.5">
+                <button
+                  type="button"
+                  onClick={beginLakesideLogin}
+                  className="store-app-hidden flex min-h-12 basis-full items-center justify-center gap-2.5 rounded-lg border border-white bg-[#f4f4f7] px-4 py-3 text-body font-semibold text-[#14141c] transition-colors hover:bg-white"
+                >
+                  <Image
+                    src="/lakeside-mark.svg"
+                    alt=""
+                    aria-hidden="true"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 rounded object-contain"
+                  />
+                  {t("continueWithLakeside")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={beginAppleOAuth}
+                  className={`${secondaryButton} basis-full`}
+                >
+                  <svg
+                    className="h-[18px] w-[18px]"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
+                  </svg>
+                  {t("continueWithApple")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={beginGoogleOAuth}
+                  aria-label={t("continueWithGoogle")}
+                  className={`store-app-hidden ${secondaryButton} min-w-[40%] flex-1`}
+                >
+                  <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Google
+                </button>
+
+                <button
+                  type="button"
+                  onClick={beginDiscordOAuth}
+                  aria-label={t("continueWithDiscord")}
+                  className={`${secondaryButton} min-w-[40%] flex-1`}
+                >
+                  <svg
+                    className="h-[18px] w-[18px]"
+                    viewBox="0 0 24 24"
+                    fill="#5865F2"
+                    aria-hidden="true"
+                  >
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+                  </svg>
+                  Discord
+                </button>
+              </div>
+
+              <div className="my-6 flex items-center gap-3.5 text-body-sm text-muted">
+                <span aria-hidden="true" className="h-px flex-1 bg-card-border" />
+                {t("orSignInWithEmail")}
+                <span aria-hidden="true" className="h-px flex-1 bg-card-border" />
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="email">{t("emailLabel")}</Label>
                   <Input
                     id="email"
                     type="text"
+                    autoComplete="username"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -411,154 +496,137 @@ export default function LoginPageClient({
                     <Label htmlFor="password">{t("passwordLabel")}</Label>
                     <Link
                       href="/forgot-password"
-                      className="text-body-sm font-medium text-primary transition-colors hover:text-primary-dark link-underline"
+                      className="text-body-sm text-muted transition-colors hover:text-foreground"
                     >
                       {t("forgotPassword")}
                     </Link>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={t("passwordPlaceholder")}
-                    className="bg-card-muted"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={t("passwordPlaceholder")}
+                      className="bg-card-muted pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? t("hidePassword") : t("showPassword")}
+                      aria-pressed={showPassword}
+                      className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted transition-colors hover:text-foreground"
+                    >
+                      <svg
+                        className="h-[18px] w-[18px]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                        {showPassword && <path d="M3 3l18 18" />}
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <Button type="submit" isLoading={isLoading} size="lg" className="w-full">
-                {t("signIn")}
-              </Button>
-            </form>
+                <Button type="submit" isLoading={isLoading} size="lg" className="!mt-6 w-full">
+                  {t("signIn")}
+                </Button>
+              </form>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-card-border" />
-              </div>
-              <div className="relative flex justify-center text-body-sm">
-                <span className="bg-card px-3 text-muted">{t("orContinueWith")}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={beginLakesideLogin}
-                className="store-app-hidden flex min-h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-body font-semibold text-primary shadow-card transition-colors hover:bg-primary/20"
-              >
-                <Image
-                  src="/lakeside-mark.svg"
-                  alt=""
-                  aria-hidden="true"
-                  width={20}
-                  height={20}
-                  className="h-5 w-5 rounded object-contain"
-                />
-                {t("continueWithLakeside")}
-              </button>
-
-              <button
-                type="button"
-                onClick={beginAppleOAuth}
-                className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-black bg-black px-4 py-3 text-body font-semibold text-white shadow-card transition-colors hover:bg-black/85"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
-                </svg>
-                {t("continueWithApple")}
-              </button>
-
-              <button
-                type="button"
-                onClick={beginGoogleOAuth}
-                className="store-app-hidden flex min-h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-card-border bg-card px-4 py-3 text-body font-medium text-foreground shadow-card transition-colors hover:bg-card-muted"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                {t("continueWithGoogle")}
-              </button>
-
-              <button
-                type="button"
-                onClick={beginDiscordOAuth}
-                className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-secondary/40 bg-secondary px-4 py-3 text-body font-semibold text-foreground shadow-card transition-colors hover:bg-secondary-dark"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                </svg>
-                {t("continueWithDiscord")}
-              </button>
-            </div>
-
-            <p className="mt-3 text-center text-body-sm leading-relaxed text-muted">
-              {t.rich("socialTerms", {
-                terms: (chunks) => (
-                  <Link href="/terms" target="_blank" className="text-primary hover:underline">
-                    {chunks}
-                  </Link>
-                ),
-                privacy: (chunks) => (
-                  <Link href="/privacy" target="_blank" className="text-primary hover:underline">
-                    {chunks}
-                  </Link>
-                ),
-              })}
-            </p>
-
-            {maintenanceMode ? (
-              <p className="mt-8 text-center text-body-sm text-muted">
-                {t.rich("maintenanceRegistrationClosed", {
-                  link: (chunks) => (
+              <p className="mt-4 text-center text-body-sm leading-relaxed text-muted">
+                {t.rich("socialTerms", {
+                  terms: (chunks) => (
                     <Link
-                      href="/maintenance"
-                      className="font-medium text-warning transition-colors hover:text-warning/80 link-underline"
-                    >
-                      {chunks}
-                    </Link>
-                  ),
-                })}
-              </p>
-            ) : !registrationOpen ? (
-              <p className="mt-8 text-center text-body-sm text-muted">
-                {t.rich("registrationClosed", {
-                  link: (chunks) => (
-                    <a
-                      href={COMMUNITY_DISCORD_URL}
+                      href="/terms"
                       target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-primary transition-colors hover:text-primary-dark link-underline"
+                      className="text-foreground/85 hover:underline"
                     >
                       {chunks}
-                    </a>
+                    </Link>
                   ),
-                })}
-              </p>
-            ) : (
-              <p className="mt-8 text-center text-body text-muted">
-                {t.rich("newToGame", {
-                  link: (chunks) => (
+                  privacy: (chunks) => (
                     <Link
-                      href="/register"
-                      className="font-medium text-primary transition-colors hover:text-primary-dark link-underline"
+                      href="/privacy"
+                      target="_blank"
+                      className="text-foreground/85 hover:underline"
                     >
                       {chunks}
                     </Link>
                   ),
                 })}
               </p>
-            )}
 
-            <p className="mt-6 border-t border-card-border pt-5 text-center text-body-sm leading-relaxed text-muted/70">
-              {t("cookieNotice")}
-            </p>
-          </section>
+              {maintenanceMode ? (
+                <p className="mt-6 text-center text-body-sm text-muted">
+                  {t.rich("maintenanceRegistrationClosed", {
+                    link: (chunks) => (
+                      <Link
+                        href="/maintenance"
+                        className="font-medium text-warning transition-colors hover:text-warning/80 link-underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  })}
+                </p>
+              ) : !registrationOpen ? (
+                <p className="mt-6 text-center text-body-sm text-muted">
+                  {t.rich("registrationClosed", {
+                    link: (chunks) => (
+                      <a
+                        href={COMMUNITY_DISCORD_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary transition-colors hover:text-primary-dark link-underline"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
+                </p>
+              ) : (
+                <p className="mt-5 text-center text-body text-muted lg:hidden">
+                  {t.rich("newToGame", {
+                    link: (chunks) => (
+                      <Link
+                        href="/register"
+                        className="font-medium text-primary transition-colors hover:text-primary-dark"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
+
+        <footer className="flex flex-col gap-2 border-t border-card-border px-5 py-4 text-center text-body-xs leading-relaxed text-muted/80 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:px-9 lg:text-left">
+          <p className="max-w-md">{t("cookieNotice")}</p>
+          <nav className="flex shrink-0 justify-center gap-4">
+            <a
+              href={COMMUNITY_DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-foreground"
+            >
+              Discord
+            </a>
+            <Link href="/wiki" className="transition-colors hover:text-foreground">
+              {t("wiki")}
+            </Link>
+          </nav>
+        </footer>
       </main>
     </div>
   );
