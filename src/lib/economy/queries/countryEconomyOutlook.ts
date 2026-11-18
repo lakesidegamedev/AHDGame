@@ -54,6 +54,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 import type { DebtTrajectory } from "@/lib/budget/rules/sovereignDebtSustainability";
 import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
+import { sovereignInputsFromBudget } from "@/lib/budget/rules/sovereignInputs";
 
 interface HistoryPoint {
   turn: number;
@@ -256,26 +257,11 @@ export async function buildCountryEconomyOutlook(
   // page. See lib/budget/federalSurplus.
   const surplus = budget ? federalSurplus(budget) : null;
   const ratioGdp = budget ? resolveRatioGdp(budget) : 0;
-  // The same identity the fiscal-year rollover prices: where the ratio goes at
-  // the stored marginal rate and this year's primary balance. Display only.
-  const debtPrincipal = budget?.debt?.principal ?? 0;
-  const storedDebtRate = budget?.debt?.interestRate ?? 0;
-  const primaryBalance = surplus === null ? null : surplus + debtPrincipal * storedDebtRate;
-  // The rollover prices the identity off the ladder rate before premiums, so the
-  // displayed stabilising balance is read from that same breakdown. Pricing it
-  // off the stored effective rate showed a different number than the one charged.
+  // Display only, but on the rollover's own bases: the same helper the budget
+  // page's rate card and debt chart read, priced off the ladder rate before
+  // premiums.
   const debtRate =
-    budget && primaryBalance !== null && ratioGdp > 0
-      ? explainSovereignRate({
-          debtToGdpRatio: debtPrincipal / ratioGdp,
-          primaryBalanceToGdp: primaryBalance / ratioGdp,
-          realGrowthPct: budget.economicFactors?.gdpGrowth,
-          inflationPct: budget.economicFactors?.inflationRate,
-          investorConfidence: budget.investorConfidence,
-          imfBailoutActive: budget.imfSovereignBailoutActive,
-          sovereignRiskAnchor: budget.sovereignRiskAnchor,
-        })
-      : null;
+    budget && ratioGdp > 0 ? explainSovereignRate(sovereignInputsFromBudget(budget)) : null;
   const debtPath = debtRate?.path ?? null;
 
   const publishedBoard = await readResetMetricBoard(db, countryId);

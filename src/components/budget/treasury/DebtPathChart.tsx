@@ -4,7 +4,7 @@ import {
   nominalGrowthFromReal,
   projectDebtPathHorizon,
 } from "@/lib/budget/rules/sovereignDebtSustainability";
-import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
+import { explainSovereignRate, type SovereignRateInputs } from "@/lib/budget/rules/sovereignRate";
 import { debtCeilingBindingYear } from "@/lib/budget/rules/debtCeiling";
 
 const YEARS = 5;
@@ -13,15 +13,8 @@ const VIEW_H = 34;
 const PAD = 3;
 
 interface DebtPathChartProps {
-  /** Debt/GDP as a ratio: 1.2 is 120% of GDP. */
-  debtToGdp: number;
-  /** Primary balance as a share of GDP: +0.02 is a 2% surplus. */
-  primaryBalanceToGdp: number;
-  /** Real growth, as stored on the budget. Inflation is added by the rule. */
-  realGrowthPct: number;
-  inflationPct: number;
-  investorConfidence: number | null;
-  imfBailoutActive: boolean;
+  /** The same debt-dynamics inputs the rate card and the rollover price. */
+  inputs: SovereignRateInputs;
   countryId: string;
   /** Current debt stock, for the ceiling crossing. */
   debtPrincipal: number;
@@ -48,36 +41,26 @@ function flatNeedsLabel(stabilisingBalance: number): string {
  * climbing and a path below is one coming down.
  */
 export function DebtPathChart({
-  debtToGdp,
-  primaryBalanceToGdp,
-  realGrowthPct,
-  inflationPct,
-  investorConfidence,
-  imfBailoutActive,
+  inputs,
   countryId,
   debtPrincipal,
   gdp,
   storedCeiling,
   fiscalYear,
 }: DebtPathChartProps) {
+  const debtToGdp = inputs.debtToGdpRatio;
+  const realGrowthPct = inputs.realGrowthPct ?? 0;
   // Same basis the rollover uses: the ladder rate before premiums. Pricing the
   // path off the stored effective rate made the shown stabilising balance differ
   // from the charged one.
-  const breakdown = explainSovereignRate({
-    debtToGdpRatio: debtToGdp,
-    primaryBalanceToGdp,
-    realGrowthPct,
-    inflationPct,
-    investorConfidence,
-    imfBailoutActive,
-  });
+  const breakdown = explainSovereignRate(inputs);
   const basisPct = breakdown.afterImfCapRate * 100;
   const path = breakdown.path;
   const points = projectDebtPathHorizon(
     {
       debtToGdp,
-      primaryBalanceToGdp,
-      nominalGrowthPct: nominalGrowthFromReal(realGrowthPct, inflationPct),
+      primaryBalanceToGdp: inputs.primaryBalanceToGdp,
+      nominalGrowthPct: nominalGrowthFromReal(realGrowthPct, inputs.inflationPct),
       interestRatePct: basisPct,
     },
     YEARS

@@ -37,6 +37,10 @@ import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import {
+  sovereignInputsFromBudget,
+  sovereignInputsFromFiscalClose,
+} from "@/lib/budget/rules/sovereignInputs";
+import {
   lawSpendingCategory,
   otherRevenueParts,
   otherSpendingParts,
@@ -410,6 +414,9 @@ export function NationalBudgetClient() {
   const fyMax = fyHistory.length > 0 ? fyHistory[fyHistory.length - 1].fy : budget.fiscalYear;
   const isLive = !(data.isSnapshot ?? false);
   const prevFyPoint = fyHistory.find((p) => p.fy === budget.fiscalYear - 1) ?? null;
+  // One derivation for the rate card, the debt path and the economy payload, on
+  // the bases the fiscal-year rollover prices.
+  const sovereignInputs = sovereignInputsFromBudget(budget);
   const treasuryBalance = data.treasuryReserve ?? -(budget.debt?.principal ?? 0);
   // The `??` is load-bearing. `loadFederalBudgetDetail`'s historical-FY branch
   // returns early and never sets `liveGdpUnits`, so a snapshot view falls back
@@ -605,36 +612,8 @@ export function NationalBudgetClient() {
         </div>
 
         <SovereignRatePanel
-          current={{
-            debtToGdpRatio: budget.debtToGdpRatio,
-            primaryBalanceToGdp:
-              (federalSurplus(budget) + budget.debt.principal * budget.debt.interestRate) /
-              Math.max(1, resolveRatioGdp(budget)),
-            realGrowthPct: budget.economicFactors.gdpGrowth,
-            inflationPct: budget.economicFactors.inflationRate ?? 0,
-            investorConfidence: budget.investorConfidence ?? null,
-            imfBailoutActive: budget.imfSovereignBailoutActive ?? false,
-          }}
-          previous={
-            prevFyPoint &&
-            prevFyPoint.debtRate != null &&
-            prevFyPoint.gdpGrowth != null &&
-            prevFyPoint.inflationRate != null &&
-            prevFyPoint.gdp > 0
-              ? {
-                  debtToGdpRatio: prevFyPoint.debtToGdp,
-                  primaryBalanceToGdp:
-                    (prevFyPoint.revenue -
-                      prevFyPoint.spending +
-                      (prevFyPoint.debtPrincipal ?? 0) * prevFyPoint.debtRate) /
-                    prevFyPoint.gdp,
-                  realGrowthPct: prevFyPoint.gdpGrowth,
-                  inflationPct: prevFyPoint.inflationRate,
-                  investorConfidence: prevFyPoint.investorConfidence ?? null,
-                  imfBailoutActive: prevFyPoint.imfBailoutActive ?? false,
-                }
-              : null
-          }
+          current={sovereignInputs}
+          previous={sovereignInputsFromFiscalClose(prevFyPoint)}
         />
 
         {data.maturityLadder && data.maturityLadder.totalPrincipal > 0 && (
@@ -643,15 +622,7 @@ export function NationalBudgetClient() {
 
         {resolveRatioGdp(budget) > 0 && (
           <DebtPathChart
-            debtToGdp={budget.debtToGdpRatio}
-            primaryBalanceToGdp={
-              (federalSurplus(budget) + budget.debt.principal * budget.debt.interestRate) /
-              resolveRatioGdp(budget)
-            }
-            realGrowthPct={budget.economicFactors.gdpGrowth}
-            inflationPct={budget.economicFactors.inflationRate ?? 0}
-            investorConfidence={budget.investorConfidence ?? null}
-            imfBailoutActive={budget.imfSovereignBailoutActive ?? false}
+            inputs={sovereignInputs}
             countryId={countryId}
             debtPrincipal={budget.debt.principal}
             gdp={resolveRatioGdp(budget)}

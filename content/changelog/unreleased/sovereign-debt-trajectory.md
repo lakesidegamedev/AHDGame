@@ -38,6 +38,10 @@ areas: [backend, frontend]
   fiscal year the trajectory premium actually lands in. It makes clear the
   premium reaches the budget through rollovers rather than repricing the whole
   stock at once.
+- The rate card, the debt path chart and the economy page read one shared
+  derivation of the primary balance, debt ratio and growth inputs, so none of
+  them can price the identity on a different denominator or forget the interest
+  add-back.
 - A rate breakdown card shows what the effective sovereign rate is made of:
   the level ladder and rating, the investor confidence premium, the trajectory
   premium, and any IMF or hard-ceiling cap, with the prior fiscal close beside
