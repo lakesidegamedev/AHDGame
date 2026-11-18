@@ -62,7 +62,13 @@ describe("public sovereign watch query", () => {
       debtToGdpRatio: 0.8,
       inflationRate: 3,
       demand: { band: expect.any(String), components: expect.any(Array) },
-      sustainability: { score: expect.any(Number), band: expect.any(String) },
+      sustainability: {
+        score: expect.any(Number),
+        band: expect.any(String),
+        components: expect.arrayContaining([
+          expect.objectContaining({ id: "growth", label: "Real GDP growth" }),
+        ]),
+      },
     });
   });
 

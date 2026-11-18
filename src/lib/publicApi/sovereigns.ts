@@ -48,6 +48,8 @@ export async function querySovereignWatch(db: Db) {
 
       const demand = computeMarketDemand(snapshot);
       const ratioGdp = resolveRatioGdp(budget);
+      // Real annual growth: the DSA reads output, not prices, so inflation
+      // cannot look like an improving credit score.
       const annualGdpGrowth = liveGdpGrowth ?? budget.economicFactors?.gdpGrowth ?? 0;
       const dsa = computeDsa({
         debtToGdp: snapshot.debtToGdp,

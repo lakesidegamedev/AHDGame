@@ -274,7 +274,8 @@ export const ENDPOINTS: PublicEndpointDefinition[] = [
   {
     method: "GET",
     path: "/api/public/v1/sovereigns",
-    description: "Sovereign debt demand, sustainability, ratings, and crisis state.",
+    description:
+      "Sovereign debt demand, sustainability (DSA, which scores real GDP growth), ratings, and crisis state.",
     params: [],
   },
   {
