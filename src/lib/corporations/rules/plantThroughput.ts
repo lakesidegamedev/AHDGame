@@ -10,7 +10,7 @@ export type PlantThroughputSector = {
 
 const THROUGHPUT_2027 = new Map([
   ["retail", { strategyId: "standard", multiplier: 1.26 }],
-  ["financial", { strategyId: "fintech", multiplier: 1.4 }],
+  ["financial", { strategyId: "fintech", multiplier: 3 }],
 ]);
 
 /** Throughput scales the run and its input purchases at the same rate. */
