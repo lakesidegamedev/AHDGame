@@ -476,21 +476,7 @@ export function prepareProducerPhysicalSector(input: {
   if (sector.sellOutsideFirst === true) plan.sellOutsideFirst = true;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
-    const last = (
-      sector as {
-        producerSettlement?: {
-          soldUnits?: number;
-          turn?: number;
-          products?: {
-            commodity: string;
-            book: string;
-            deliveredUnits?: number;
-            soldUnits?: number;
-            askingUnitPrice?: number;
-          }[];
-        };
-      }
-    ).producerSettlement;
+    const last = sector.producerSettlement;
     const current = last && last.turn === openingTurn ? last : null;
     plan.recentSoldUnits = current?.soldUnits ?? 0;
     // A product the last receipt did not list sold nothing; plants without product rows fall back to the plant total.
@@ -501,6 +487,15 @@ export function prepareProducerPhysicalSector(input: {
           x.deliveredUnits ?? x.soldUnits ?? 0,
         ])
       );
+    const advertising = plan.outputs.find((output) => output.commodity === "advertising");
+    if ((env.shortageAskStage ?? 0) >= 1 && advertising) {
+      const priorOffer = current?.products?.find(
+        (line) => line.commodity === advertising.commodity && line.book === advertising.book
+      );
+      plan.recentOfferedByOutput = {
+        [`${advertising.commodity}|${advertising.book}`]: priorOffer?.offeredUnits ?? 0,
+      };
+    }
     // Stage 2 of the shortage ask: a sold-out seller steps from its own last ask.
     if (current?.products && (env.shortageAskStage ?? 0) >= 2)
       plan.recentAskByOutput = Object.fromEntries(
