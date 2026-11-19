@@ -17,7 +17,7 @@ import { plannedArrivalTurns } from "@/lib/corporations/buildDelivery";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
 import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
-import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
+import { limitingBuildOutput } from "@/lib/corporations/rules/buildDemandCapacity";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type {
   ConstructionFinanceChoice,
@@ -227,11 +227,10 @@ export default function BuildCapacityDialog({
   const ownedFacilities =
     plants.plantCount ??
     plantsFromUnitsForSector({ sectorType, strategyId }, plants.capacityUnits ?? 0);
+  const limitingOutput = plants.buildDemand ? limitingBuildOutput(plants.buildDemand) : null;
   const buyersRoomUnits = Math.max(
     0,
-    plants.buildDemand
-      ? (fullMixBuildRoom(plants.buildDemand) ?? 0)
-      : (plants.measuredDemandGapUnits ?? 0)
+    plants.buildDemand ? (limitingOutput?.capacityUnits ?? 0) : (plants.measuredDemandGapUnits ?? 0)
   );
   // A profitable observed extraction pace cannot be scaled beyond finite deposits.
   const resourceSizingUnavailable = sectorType === "extraction";
@@ -290,9 +289,6 @@ export default function BuildCapacityDialog({
   const returns = buildReturnSummary(plants, preview.safeUnits);
   const firstIncomeTurns = arrivals?.firstInTurns ?? plants.buildTurns;
   const marketRoomKnown = sectorType !== "logistics" && plants.measuredDemandGapUnits != null;
-  const limitingOutput = plants.buildDemand?.find(
-    (row) => row.capacityUnits === buyersRoomUnits
-  )?.commodity;
   const recommendation = Math.floor((plants.measuredDemandGapUnits ?? 0) / unitsPerFacility);
   const strategyRoom = plants.strategyBuildRoom;
   const strategyOptions =
@@ -308,7 +304,7 @@ export default function BuildCapacityDialog({
   const roomNote = plants.roomHeldByOwnIdle
     ? t("roomIdle")
     : limitingOutput
-      ? t("roomLimitedBy", { commodity: COMMODITY_LABELS[limitingOutput] })
+      ? t("roomLimitedBy", { commodity: COMMODITY_LABELS[limitingOutput.commodity] })
       : null;
   const staffShort = workersDesired > 0 && plants.workers < workersDesired;
   const poolShort = !!stateLabourMarket && poolOversubscribed(stateLabourMarket);

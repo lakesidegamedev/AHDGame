@@ -97,6 +97,14 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
     buildDemand: [
       {
         commodity: "network_services",
+        scope: "regional",
+        funded: 0,
+        delivered: 0,
+        unmet: 0,
+        capacityUnits: 0,
+      },
+      {
+        commodity: "network_services",
         scope: "national",
         funded: 100,
         delivered: 0,
@@ -113,7 +121,7 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
       },
     ],
   });
-  expect(screen.getByText(/Network Services/)).toBeTruthy();
+  expect(screen.getAllByText(/Network Services/)).toHaveLength(2);
   expect(screen.getByTestId("build-room").textContent).toContain(
     "Sales limited by Software & IT Services"
   );
