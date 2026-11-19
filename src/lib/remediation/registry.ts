@@ -35,6 +35,7 @@ import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sover
 import { defect as sovereignCouponArrears } from "./defects/AHD-sovereign-coupon-arrears";
 import { defect as sovereignRolloverWall } from "./defects/AHD-sovereign-rollover-wall";
 import { defect as wholePlantsConversion } from "./defects/AHD-whole-plants-conversion";
+import { defect as openingBondCash } from "./defects/AHD-2027-bond-pool-opening-cash";
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
@@ -108,6 +109,7 @@ export const DEFECTS: Defect[] = [
   // Whole plants: one-time recount of every sector to whole plants before
   // gameConfig.wholePlantsStage is switched on; part-plants are credited.
   wholePlantsConversion,
+  openingBondCash,
 ];
 
 export function getDefect(id: string): Defect | undefined {

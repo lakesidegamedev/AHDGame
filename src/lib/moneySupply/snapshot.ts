@@ -337,13 +337,18 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       "organizationLiquid",
       fund.balanceLocal
     );
-  // Bond-pool cash is a raw audit component; its QE lifetime legs let
-  // calculateMoneyAggregates net the QE-parked portion back into observed M2 while
-  // settlement inventory stays outside. Pools without flow counters add zero QE legs.
+  // Count deposit-funded opening liquidity and net QE cash in observed M2.
+  // Other settlement inventory stays outside the measure.
   for (const pool of bondPools) {
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolCash", pool.cashLocal ?? 0);
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolQeIn", pool.lifetime?.qeIn ?? 0);
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolQeOut", pool.lifetime?.qtOut ?? 0);
+    addComponent(
+      byCurrency,
+      pool._id as CurrencyCode,
+      "bondPoolOpeningAllocationIn",
+      pool.lifetime?.openingAllocationIn ?? 0
+    );
   }
   for (const pool of equityPools)
     addComponent(byCurrency, pool._id as CurrencyCode, "equityPoolCash", pool.cashLocal ?? 0);
