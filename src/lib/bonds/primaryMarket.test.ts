@@ -157,7 +157,10 @@ describe("placeUnsoldBondUnits", () => {
     db.collection("bondMarketPools");
   });
 
-  it("places up to the per-turn cap within the pool's placement budget and reports proceeds", async () => {
+  it("places company bonds when an older sovereign issue cannot use the cash reserve", async () => {
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+    });
     const corpId = new ObjectId();
     const bond = {
       _id: new ObjectId(),
@@ -173,7 +176,19 @@ describe("placeUnsoldBondUnits", () => {
       defaulted: false,
     };
     db.collectionMocks.bonds.find.mockReturnValue({
-      sort: () => ({ toArray: async () => [bond] }),
+      sort: () => ({
+        toArray: async () => [
+          {
+            ...bond,
+            _id: new ObjectId(),
+            issuerType: "sovereign",
+            countryId: "US",
+            requestedUnits: 1_000_000,
+            unsoldUnits: 1_000_000,
+          },
+          bond,
+        ],
+      }),
     });
     // The target is far above the pool's cash. The 15k budget buys 14 units at the 1,020 ask.
     db.collectionMocks.bondMarketPools.findOne.mockResolvedValue({
@@ -187,6 +202,7 @@ describe("placeUnsoldBondUnits", () => {
     const result = await placeUnsoldBondUnits(db as unknown as Db, 600, new Date());
 
     expect(result.unitsPlaced).toBe(14);
+    expect(result.sovereignFaceByCountry.size).toBe(0);
     expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledWith(
       {
         _id: bond._id,

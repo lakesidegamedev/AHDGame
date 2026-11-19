@@ -64,11 +64,18 @@ const UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN = 0.1;
 const UNSOLD_PLACEMENT_RESERVE_SHARE = 0.5;
 
 /** Cash a pool may spend on placing unsold units this turn. */
-export function unsoldPlacementBudget(cashLocal: number, targetCashLocal: number): number {
+export function unsoldPlacementBudget(
+  cashLocal: number,
+  targetCashLocal: number,
+  reserveForRollover = false
+): number {
   const cash = Number.isFinite(cashLocal) && cashLocal > 0 ? cashLocal : 0;
   const target = Number.isFinite(targetCashLocal) && targetCashLocal > 0 ? targetCashLocal : 0;
-  const reserve = Math.min(cash, target) * UNSOLD_PLACEMENT_RESERVE_SHARE;
-  return (cash - reserve) * UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN;
+  const reserveBase = reserveForRollover ? target : Math.min(cash, target);
+  return (
+    Math.max(0, cash - reserveBase * UNSOLD_PLACEMENT_RESERVE_SHARE) *
+    UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN
+  );
 }
 /** Autonomous central bank monetization of a sovereign shortfall, cap per auction as a share of GDP. */
 const SOVEREIGN_MONETIZATION_GDP_CAP = 0.02;
@@ -321,22 +328,28 @@ export async function placeUnsoldBondUnits(
   ]);
   const bankById = new Map(banks.map((bank) => [bank._id.toHexString(), bank]));
   const issuerById = new Map(issuers.map((issuer) => [issuer._id.toHexString(), issuer]));
-  const budgetByCurrency = new Map<CurrencyCode, number>();
+  const budgetByCurrency = new Map<CurrencyCode, { shared: number; sovereign: number }>();
   // The pool docs read for the budgets double as the quote snapshot for the
   // pass; each placement's debit is mirrored onto them so later quotes see it.
   const poolByCurrency = new Map<CurrencyCode, BondPoolQuoteSnapshot>();
   for (const bond of placing) {
     const currency = bondPoolCurrency(bond);
-    if (!budgetByCurrency.has(currency)) {
+    let budget = budgetByCurrency.get(currency);
+    if (!budget) {
       const pool = await readPoolForPrimary(db, currency);
       if (pool) poolByCurrency.set(currency, pool);
-      budgetByCurrency.set(
-        currency,
-        unsoldPlacementBudget(pool?.cashLocal ?? 0, pool?.targetCashLocal ?? 0)
-      );
+      const cash = pool?.cashLocal ?? 0;
+      const target = pool?.targetCashLocal ?? 0;
+      // Keep underfunded sovereign offers from consuming the company's placement window.
+      budget = {
+        shared: unsoldPlacementBudget(cash, target),
+        sovereign: unsoldPlacementBudget(cash, target, true),
+      };
+      budgetByCurrency.set(currency, budget);
     }
-    let budget = budgetByCurrency.get(currency) ?? 0;
-    if (budget <= 0) continue;
+    const sovereign = bond.issuerType === "sovereign";
+    const spendable = sovereign ? Math.min(budget.shared, budget.sovereign) : budget.shared;
+    if (spendable <= 0) continue;
 
     const quote = await loadBondQuote(db, bond, { pools: poolByCurrency });
     const price = quote.askPerUnit;
@@ -347,12 +360,11 @@ export async function placeUnsoldBondUnits(
     );
     // Under the fiscal scale split the pool pays a Treasury book price times
     // the country's scale, the same rate it is repaid at maturity.
-    const cashPerFace =
-      bond.issuerType === "sovereign" ? poolCashPerFace(accounting, bond.countryId) : 1;
-    const units = Math.min(cap, Math.floor(budget / (price * cashPerFace)));
+    const cashPerFace = sovereign ? poolCashPerFace(accounting, bond.countryId) : 1;
+    const units = Math.min(cap, Math.floor(spendable / (price * cashPerFace)));
     if (units <= 0) continue;
 
-    if (bond.issuerType === "sovereign" && bond.countryId) {
+    if (sovereign && bond.countryId) {
       const key = sovereignPlacementKey(bond._id, turn);
       if (recordedPlacementKeys.has(key) && (await primarySettlementExists(db, key))) continue;
       const paid = Math.round(units * price * cashPerFace * 100) / 100;
@@ -390,7 +402,8 @@ export async function placeUnsoldBondUnits(
       );
       await refreshSovereignDebtTerms(db, getNationalBudgetId(bond.countryId));
       advanceBondPoolSnapshot(poolByCurrency, currency, -paid);
-      budgetByCurrency.set(currency, budget - paid);
+      budget.shared -= paid;
+      budget.sovereign -= paid;
       result.bondsTouched++;
       result.unitsPlaced += units;
       const row = result.sovereignFaceByCountry.get(bond.countryId) ?? {
@@ -407,7 +420,7 @@ export async function placeUnsoldBondUnits(
     }
 
     const paid = Math.round(units * price * 100) / 100;
-    const underwriting = bond.issuerType !== "sovereign" ? bond.primaryUnderwriting : undefined;
+    const underwriting = sovereign ? undefined : bond.primaryUnderwriting;
     if (underwriting?.instrumentId?.equals(bond._id)) {
       const bank = bankById.get(underwriting.bankCorporationId.toHexString());
       const issuer = issuerById.get(bond.corporationId.toHexString());
@@ -435,7 +448,7 @@ export async function placeUnsoldBondUnits(
       });
       if (settlement.status !== "applied" && settlement.status !== "replayed") continue;
       advanceBondPoolSnapshot(poolByCurrency, currency, -paid);
-      budgetByCurrency.set(currency, budget - paid);
+      budget.shared -= paid;
       result.bondsTouched++;
       result.unitsPlaced += units;
       continue;
@@ -468,8 +481,8 @@ export async function placeUnsoldBondUnits(
       advanceBondPoolSnapshot(poolByCurrency, currency, actualPaid);
       continue;
     }
-    budget -= actualPaid;
-    budgetByCurrency.set(currency, budget);
+    budget.shared -= actualPaid;
+    if (sovereign) budget.sovereign -= actualPaid;
     result.bondsTouched++;
     result.unitsPlaced += units;
 
