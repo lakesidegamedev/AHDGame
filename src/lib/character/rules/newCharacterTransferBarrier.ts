@@ -46,15 +46,3 @@ export function getNewCharacterTransferBarrier(
 
   return NOT_BLOCKED;
 }
-
-/** Only corporation creation is exempt during the world founding phase. */
-export function getNewCorporationFoundingBarrier(
-  input: NewCharacterTransferBarrierInput,
-  currentTurn: number,
-  effectiveNowMs: number,
-  foundingPeriodActive: boolean
-): NewCharacterTransferBarrierStatus {
-  return foundingPeriodActive
-    ? NOT_BLOCKED
-    : getNewCharacterTransferBarrier(input, currentTurn, effectiveNowMs);
-}

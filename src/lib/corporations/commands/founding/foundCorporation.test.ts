@@ -6,11 +6,6 @@ vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResol
 vi.mock("@/lib/gameState", () => ({
   getGameState: vi.fn().mockResolvedValue({ _id: "current", currentTurn: 200 }),
 }));
-vi.mock("@/lib/time/gameTime", () => ({
-  getGameTime: vi
-    .fn()
-    .mockResolvedValue({ currentTurn: 200, effectiveNow: new Date("2027-06-01T00:00:00Z") }),
-}));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
   atomicallyDebitCharacterCash: vi.fn(),
   refundCharacterCash: vi.fn().mockResolvedValue(undefined),
