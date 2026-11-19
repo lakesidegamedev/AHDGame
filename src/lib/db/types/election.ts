@@ -81,6 +81,8 @@ export interface Election {
   status: ElectionStatus;
   /** Temporary guard to prevent concurrent resolution processes from corrupting office data. */
   resolving?: boolean;
+  /** When the current `resolving` claim was taken; a claim older than the lease cutoff can be retaken. */
+  resolvingAt?: Date;
   totalSeats?: number;
   startTime?: Date;
   endTime?: Date;

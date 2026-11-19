@@ -21,6 +21,7 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import {
   ELECTION_TYPE_SHORT_LABEL,
   isCommonsGeneralElection,
+  isSpecialCommonsElection,
   officeKeyForElectionType,
 } from "@/lib/utils/electionLabels";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
@@ -46,8 +47,11 @@ import {
   resolveElectionWithNoRankedCandidates,
   resolveElectionWithNoTally,
   resolveElectionWithZeroVotes,
+  electionAlreadySeated,
+  retireClasslessIncumbents,
   type OneElectionResult,
 } from "./generalResolutionHelpers";
+import { resolutionClaimFilter, resolutionReleaseFilter } from "./resolutionLease";
 import { finishFinalizedElectionCleanup } from "./finalizedElectionCleanup";
 import {
   recordJapanShugiinRegionalCapacity,
@@ -89,11 +93,13 @@ export async function resolveOneGeneralElection(
     return { resolved: false, newsOutcomes: [] };
   const newsOutcomes: ElectionNewsOutcome[] = [];
 
-  // Atomic claim: prevent concurrent resolution from corrupting office data.
-  // Only the first process to flip resolving=true proceeds; others bail out.
+  // Atomic lease: only one process resolves an election at a time, and a claim
+  // left behind by a dead process becomes retakeable after the stale cutoff.
   const claimed = await electionsCollection(db).updateOne(
-    { _id: election._id, status: "completed", resolving: { $ne: true } },
-    { $set: { resolving: true, updatedAt: now } }
+    resolutionClaimFilter(election._id, now),
+    {
+      $set: { resolving: true, resolvingAt: now, updatedAt: now },
+    }
   );
   if (claimed.modifiedCount === 0) {
     console.log(
@@ -388,6 +394,8 @@ export async function resolveOneGeneralElection(
       bgOrdinaryAllocation,
       districted,
       runtimeBlocQuota,
+      priorSeating,
+      classlessRetireSeats,
     } = await selectGeneralElectionWinners({
       election,
       db,
@@ -539,6 +547,14 @@ export async function resolveOneGeneralElection(
       winnerOrdinal: number;
     }> = [];
     const rankedVotes = Object.entries(effectiveVotes).sort((a, b) => b[1] - a[1]);
+    // Effects that cannot be undone (notifications, achievements, analytics) fire
+    // only for the run that first records the career event for this election.
+    const careerEventUnseen = (type: CareerEvent["type"]) => ({
+      careerHistory: {
+        $not: { $elemMatch: { type, electionId: election._id.toString() } },
+      },
+    });
+    let classlessToRetire = classlessRetireSeats;
 
     for (const [winnerOrdinal, [candidateId, seats]] of winners.entries()) {
       const candidate = candidateMap.get(candidateId);
@@ -606,6 +622,7 @@ export async function resolveOneGeneralElection(
           };
       }
 
+      let firstRecording = true;
       if (candidate.isNPP && candidate.nppId) {
         // Clear previous position from electedOfficials if held a different office
         const npp = nppLookup.get(candidate.nppId.toString());
@@ -738,11 +755,13 @@ export async function resolveOneGeneralElection(
         };
         await charactersCollection(db).updateOne(
           { _id: candidate.characterId },
-          {
-            $set: { currentOffice: charFinalOfficeType, updatedAt: now },
-            $push: { careerHistory: careerEvent },
-          }
+          { $set: { currentOffice: charFinalOfficeType, updatedAt: now } }
         );
+        const careerPush = await charactersCollection(db).updateOne(
+          { _id: candidate.characterId, ...careerEventUnseen("elected") },
+          { $push: { careerHistory: careerEvent } }
+        );
+        firstRecording = careerPush.modifiedCount > 0;
       }
 
       // Snap winners store as regular officials — normalize snap_commons → commons,
@@ -769,6 +788,7 @@ export async function resolveOneGeneralElection(
           ? { chamberClass: election.chamberClass }
           : {}),
         ...(isMultiSeat ? { seatsHeld: seats } : {}),
+        electionId: election._id,
         ...("constituency" in officeType && officeType.constituency
           ? { constituency: officeType.constituency }
           : {}),
@@ -784,44 +804,47 @@ export async function resolveOneGeneralElection(
         updatedAt: now,
       };
 
+      let skipInsert = false;
       if (!isMultiSeat) {
+        // Read the marker before the delete: a rerun deletes the row its own
+        // earlier run wrote, and must not retire another classless seat.
+        const seatedByEarlierRun =
+          (election.senateClass || election.chamberClass) &&
+          (await electionAlreadySeated(db, election, officialFilter));
         // Delete all existing officials for this seat before writing the winner.
         // The upsert pattern only updated the first matching record, leaving any
         // admin-appointed duplicates in place. deleteMany + insertOne mirrors the
         // multi-seat pattern and prevents stale-admin-appointments accumulation.
         await electedOfficialsCollection(db).deleteMany(officialFilter);
-
         // Seat-class scoping makes the filter above blind to incumbents seeded
-        // WITHOUT a class. Bootstrap seats the historical chamber with no
-        // senateClass, so a class-3 election deleted nothing and simply added a
-        // senator beside the sitting one: measured at turn 150, the US Senate
-        // held 128 members for a 96-seat chamber, with California on 8 seats and
-        // 50 members still carrying a null party from seed day. Retire one
-        // classless incumbent per seat filled, oldest first, so the chamber
-        // converges to its real size as elections cycle rather than growing
-        // without bound.
-        if (election.senateClass || election.chamberClass) {
-          const legacyFilter: Record<string, unknown> = {
+        // WITHOUT a class, so one classless incumbent is retired per seat filled
+        // (after seating, below) and the chamber converges to its real size.
+        if ((election.senateClass || election.chamberClass) && !seatedByEarlierRun) {
+          classlessToRetire += 1;
+        }
+      } else if (priorSeating && isSpecialCommonsElection(election.electionType)) {
+        // By-election seating is additive, so a rerun would stack a second row.
+        skipInsert = !!(await electedOfficialsCollection(db).findOne(
+          {
             officeType: officialOfficeKey,
             state: election.state,
-            ...(election.countryId ? { countryId: election.countryId } : {}),
-            $and: [{ senateClass: { $exists: false } }, { chamberClass: { $exists: false } }],
-          };
-          const legacy = await electedOfficialsCollection(db).findOne(legacyFilter, {
-            sort: { electedAt: 1 },
-          });
-          if (legacy) {
-            await electedOfficialsCollection(db).deleteOne({ _id: legacy._id });
-          }
-        }
+            electionId: election._id,
+            ...(candidate.isNPP
+              ? { nppId: candidate.nppId }
+              : { characterId: candidate.characterId }),
+          },
+          { projection: { _id: 1 } }
+        ));
       }
-      await electedOfficialsCollection(db).insertOne({
-        _id: new ObjectId(),
-        createdAt: now,
-        ...officialDoc,
-      } as ElectedOfficial);
+      if (!skipInsert) {
+        await electedOfficialsCollection(db).insertOne({
+          _id: new ObjectId(),
+          createdAt: now,
+          ...officialDoc,
+        } as ElectedOfficial);
+      }
 
-      if (!candidate.isNPP) {
+      if (!candidate.isNPP && firstRecording) {
         const char = charLookup.get(candidate.characterId?.toString() ?? "");
         if (char) {
           const winnerVotes = effectiveVotes[candidateId] ?? 0;
@@ -897,6 +920,13 @@ export async function resolveOneGeneralElection(
       });
     }
 
+    await retireClasslessIncumbents(
+      db,
+      election,
+      officeKeyForElectionType(election.electionType, election.countryId),
+      classlessToRetire
+    );
+
     await createNotifications(winnerNotifInputs);
 
     // Scope loser-vacate matching by chamberClass for sangiin so losing a Class 1 race
@@ -929,8 +959,8 @@ export async function resolveOneGeneralElection(
           election.electionType === "sangiin"
             ? { type: "sangiin", state: election.state, chamberClass: election.chamberClass }
             : { type: election.electionType, state: election.state };
-        await charactersCollection(db).updateOne(
-          { _id: candidate.characterId },
+        const lossPush = await charactersCollection(db).updateOne(
+          { _id: candidate.characterId, ...careerEventUnseen("lost_election") },
           {
             $push: {
               careerHistory: {
@@ -946,7 +976,7 @@ export async function resolveOneGeneralElection(
           }
         );
         const char = charLookup.get(candidate.characterId?.toString() ?? "");
-        if (char) {
+        if (char && lossPush.modifiedCount > 0) {
           const heldOffice = char.currentOffice;
           if (
             heldOffice?.type ===
@@ -1004,9 +1034,9 @@ export async function resolveOneGeneralElection(
 
     return { resolved: true, newsOutcomes };
   } finally {
-    await electionsCollection(db).updateOne(
-      { _id: election._id },
-      { $set: { resolving: false, updatedAt: now } }
-    );
+    await electionsCollection(db).updateOne(resolutionReleaseFilter(election._id, now), {
+      $set: { resolving: false, updatedAt: now },
+      $unset: { resolvingAt: "" },
+    });
   }
 }

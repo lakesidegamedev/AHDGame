@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import type { Election, ElectionVoteTally, ElectionCandidate, NPP } from "@/lib/db/types";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { NPPContext } from "@/lib/turn/npp/context";
+import { createNotifications } from "@/lib/notifications";
 import { processElectionEntry } from "@/lib/turn/npp/electionEntry";
 import { resolveOneGeneralElection as resolveBulgarianElection } from "./generalResolution";
 import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
@@ -1504,7 +1505,11 @@ describe("resolveOneGeneralElection", () => {
       constituency: "Newcastle upon Tyne Central and West",
       constituencyId: "E14001384",
     });
-    expect(winnerSetCall![1].$push.careerHistory.officeLabel).toBe(
+    const winnerPushCall = charUpdateCalls.find(
+      (c) => c[0]?._id?.toString() === charId.toString() && c[1]?.$push?.careerHistory
+    );
+    expect(winnerPushCall![0].careerHistory).toBeDefined();
+    expect(winnerPushCall![1].$push.careerHistory.officeLabel).toBe(
       "Member of Parliament for Newcastle upon Tyne Central and West"
     );
 
@@ -2269,5 +2274,94 @@ describe("resolveOneGeneralElection", () => {
         (o) => (o.characterId as { $in?: ObjectId[] })?.$in?.[0]?.toString() === winnerId.toString()
       )
     ).toBe(true);
+  });
+
+  // ── Replay safety ────────────────────────────────────────────────────────────
+
+  it("a second run of the same election applies career entries, retirement and notices once", async () => {
+    const election = makeElection({
+      electionType: "senate",
+      state: "OH",
+      senateClass: 3,
+      status: "completed",
+    } as Partial<Election>);
+    const winnerId = new ObjectId();
+    const loserId = new ObjectId();
+    const tally = makeTally(election._id, {
+      [winnerId.toString()]: 900,
+      [loserId.toString()]: 400,
+    });
+    const winner = makeCandidate(election._id, { characterId: winnerId, party: "DEM" });
+    winner._id = new ObjectId(winnerId.toString());
+    const loser = makeCandidate(election._id, { characterId: loserId, party: "GOP" });
+    loser._id = new ObjectId(loserId.toString());
+    db.collectionMocks["electionCandidates"]!.find.mockReturnValue(makeCursor([winner, loser]));
+    db.collectionMocks["characters"]!.find.mockReturnValue(
+      makeCursor([
+        { _id: winnerId, userId: new ObjectId() },
+        { _id: loserId, userId: new ObjectId() },
+      ])
+    );
+
+    const recorded = new Set<string>();
+    const careerPushes: string[] = [];
+    db.collectionMocks["characters"]!.updateOne.mockImplementation(
+      async (filter: Record<string, unknown>, update: Record<string, any>) => {
+        if (!filter.careerHistory) return { modifiedCount: 1, matchedCount: 1 };
+        const key = `${filter._id}:${update.$push.careerHistory.type}`;
+        if (recorded.has(key)) return { modifiedCount: 0, matchedCount: 0 };
+        recorded.add(key);
+        careerPushes.push(key);
+        return { modifiedCount: 1, matchedCount: 1 };
+      }
+    );
+
+    const seats: Array<Record<string, any>> = [];
+    const officials = db.collectionMocks["electedOfficials"]!;
+    officials.insertOne.mockImplementation(async (doc: Record<string, any>) => {
+      seats.push(doc);
+      return {};
+    });
+    officials.deleteMany.mockImplementation(async (filter: Record<string, any>) => {
+      if (filter._id) return {};
+      for (let i = seats.length - 1; i >= 0; i--) {
+        if (
+          seats[i]!.officeType === filter.officeType &&
+          seats[i]!.senateClass === filter.senateClass
+        )
+          seats.splice(i, 1);
+      }
+      return {};
+    });
+    officials.findOne.mockImplementation(async (filter: Record<string, any>) =>
+      filter.electionId
+        ? (seats.find(
+            (r) => r.electionId?.equals(filter.electionId) && r.officeType === filter.officeType
+          ) ?? null)
+        : null
+    );
+    const classlessRoster = [{ _id: new ObjectId() }, { _id: new ObjectId() }];
+    const retiredIds: string[] = [];
+    officials.find.mockImplementation((filter: Record<string, any>, opts: { limit?: number }) =>
+      makeCursor(filter.$and ? classlessRoster.slice(0, opts?.limit ?? 1) : [])
+    );
+    const baseDelete = officials.deleteMany.getMockImplementation()!;
+    officials.deleteMany.mockImplementation(async (filter: Record<string, any>) => {
+      if (filter._id?.$in) retiredIds.push(...filter._id.$in.map(String));
+      return baseDelete(filter);
+    });
+
+    const run = () =>
+      resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
+    await run();
+    const noticesAfterFirst = vi.mocked(createNotifications).mock.calls.flatMap((c) => c[0]).length;
+    await run();
+
+    expect(careerPushes.sort()).toEqual([`${winnerId}:elected`, `${loserId}:lost_election`].sort());
+    expect(retiredIds).toHaveLength(1);
+    expect(seats.filter((r) => r.senateClass === 3)).toHaveLength(1);
+    expect(seats[0]!.characterId.toString()).toBe(winnerId.toString());
+    expect(noticesAfterFirst).toBe(2);
+    expect(vi.mocked(createNotifications).mock.calls.flatMap((c) => c[0])).toHaveLength(2);
   });
 });

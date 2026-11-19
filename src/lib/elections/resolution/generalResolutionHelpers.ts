@@ -73,6 +73,49 @@ export function multiSeatOfficialFilter(election: Election): Record<string, unkn
   return filter;
 }
 
+/** True when an earlier run of this election already wrote a seat row for the same chamber. */
+export async function electionAlreadySeated(
+  db: Db,
+  election: Election,
+  seatFilter: Record<string, unknown>
+): Promise<boolean> {
+  const row = await electedOfficialsCollection(db).findOne(
+    { ...seatFilter, electionId: election._id },
+    { projection: { _id: 1 } }
+  );
+  return row !== null;
+}
+
+/**
+ * Retires the oldest seats seeded without a class, so a class-staggered chamber
+ * converges to its real size. Callers run it after the winners are seated and
+ * skip it when an earlier run already seated this election.
+ */
+export async function retireClasslessIncumbents(
+  db: Db,
+  election: Election,
+  officeKey: string,
+  count: number
+): Promise<void> {
+  if (count <= 0) return;
+  const legacyRows = await electedOfficialsCollection(db)
+    .find(
+      {
+        officeType: officeKey,
+        state: election.state,
+        ...(election.countryId ? { countryId: election.countryId } : {}),
+        $and: [{ senateClass: { $exists: false } }, { chamberClass: { $exists: false } }],
+      },
+      { projection: { _id: 1 }, sort: { electedAt: 1 }, limit: count }
+    )
+    .toArray();
+  if (legacyRows.length > 0) {
+    await electedOfficialsCollection(db).deleteMany({
+      _id: { $in: legacyRows.map((r) => r._id) },
+    });
+  }
+}
+
 export function carryForwardCommonsConstituency(
   nextOffice: OfficeType,
   previousOffice: OfficeType | null
