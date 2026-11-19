@@ -54,8 +54,9 @@ describe("plant productivity basis", () => {
       transitionStartTurn: 46,
     };
     const input = { sector, preset: "2027-default", currentTurn: 58 };
-    expect(productionProductivityMultiplier(input)).toBe(1.4);
-    expect(productionProductivityMultiplier({ ...input, currentTurn: 52 })).toBeCloseTo(1.2);
+    expect(productionProductivityMultiplier(input)).toBe(3);
+    expect(productionProductivityMultiplier({ ...input, currentTurn: 46 })).toBe(1);
+    expect(productionProductivityMultiplier({ ...input, currentTurn: 52 })).toBe(2);
     expect(productionProductivityMultiplier({ ...input, preset: "2019-default" })).toBe(1);
     expect(
       productionProductivityMultiplier({ ...input, sector: { sectorType: "financial" } })

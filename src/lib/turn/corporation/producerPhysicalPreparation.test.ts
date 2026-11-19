@@ -180,7 +180,7 @@ describe("physical producer preparation", () => {
     env.lookups.preset = "2027-default";
     const current = prepareProducerPhysicalSector(input).prepared;
 
-    expect(current.plan.outputMultiplier).toBeCloseTo(prior.plan.outputMultiplier * 1.4, 10);
+    expect(current.plan.outputMultiplier).toBeCloseTo(prior.plan.outputMultiplier * 3, 10);
     expect(current.plan.inputs).toEqual(prior.plan.inputs);
     expect(current.plan.outputs).toEqual(prior.plan.outputs);
     expect(current.plan.outputs.map((output) => output.commodity).sort()).toEqual([
