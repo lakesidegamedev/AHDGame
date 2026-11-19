@@ -295,6 +295,14 @@ export default function BondsTab({
           const effectiveMin = bondInfo.minIssuance ?? 100_000;
           const bondsUnavailable = bondInfo.bondsAvailable === false;
           const cooldown = bondInfo.cooldownTurnsRemaining;
+          // Cash the pool will actually hand over at issuance, in ₳. Null when
+          // the world has no pool for this currency (the whole issue funds).
+          const fundableNow = bondInfo.primaryMarket?.hasPool
+            ? bondInfo.primaryMarket.fundableNowAnchor
+            : null;
+          const placementSharePct = Math.round(
+            (bondInfo.primaryMarket?.unsoldPlacementSharePerTurn ?? 0) * 100
+          );
           // parsedFaceValue is ₳; formatAmountIn takes anchor and formats in a specific currency.
           const inLiquid = (anchor: number) =>
             liquidCode ? formatAmountIn(anchor, liquidCode) : formatFull(anchor);
@@ -330,11 +338,11 @@ export default function BondsTab({
               <div className="grid gap-x-8 gap-y-4 pt-1 md:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="min-w-0 space-y-3">
                   <p className="text-xs text-muted">
-                    You receive the full face value in cash now and pay a fixed coupon every turn,
-                    set by your credit rating. The full face value then comes back out of liquid
-                    capital in a single payment on the maturity turn, not gradually. Coupons and
-                    that repayment are charged on every unit issued, including units that never
-                    sell.
+                    The bond market pool buys part of the issue with its own cash at issuance, and
+                    you are credited for exactly those units. The rest stays unsold and places as
+                    the pool has cash; unsold units carry no coupon and are not debt until they
+                    sell. Coupons and the maturity repayment are charged on the units that placed.
+                    The slider ceiling is a borrowing limit, not cash the pool is holding.
                   </p>
                   {/* The default trigger is the one thing the issue flow never
                       said out loud. `bondTurn` folds the maturity debit into
@@ -429,6 +437,26 @@ export default function BondsTab({
                       .
                     </p>
                   ) : null}
+
+                  {fundableNow !== null && !bondsUnavailable && (
+                    <p className="text-[11px] text-muted">
+                      The bond market pool can fund about{" "}
+                      <span className="font-mono tabular-nums">{inLiquid(fundableNow)}</span> of
+                      this issue now.
+                      {parsedFaceValue > fundableNow && (
+                        <>
+                          {" "}
+                          The remaining{" "}
+                          <span className="font-mono tabular-nums">
+                            {inLiquid(parsedFaceValue - fundableNow)}
+                          </span>{" "}
+                          stays unsold and places at up to {placementSharePct}% of the face value
+                          per turn while the pool has cash, so it arrives over later turns. The
+                          cooldown starts now either way.
+                        </>
+                      )}
+                    </p>
+                  )}
 
                   <InlineStatus message={bondActionError} tone="error" />
                   <InlineStatus message={bondActionSuccess} tone="success" />
