@@ -1377,6 +1377,56 @@ describe("receipt-backed production", () => {
     ).toBeCloseTo(3.3);
   });
 
+  it.each([
+    { previousOffer: 20, previousDelivery: 1, ask: 10 },
+    { previousOffer: 20, previousDelivery: 20, ask: 10.5 },
+    { previousOffer: 0, previousDelivery: 1, ask: 10 },
+    { previousOffer: undefined, previousDelivery: 1, ask: 10.5 },
+  ])(
+    "only raises a non-storable shortage ask on a verified sellout ($previousOffer/$previousDelivery)",
+    ({ previousOffer, previousDelivery, ask }) => {
+      const lane = "advertising|world";
+      const producer = plant({
+        inputs: [],
+        outputs: [
+          {
+            commodity: "advertising",
+            book: "world",
+            unitsPerOutput: 1,
+            policy: { kind: "automatic", targetMarkup: 0 },
+            referenceUnitPrice: 10,
+            storable: false,
+          },
+        ],
+        capacityUnits: 20,
+        recentSoldUnits: previousDelivery,
+        recentSoldByOutput: { [lane]: previousDelivery },
+        ...(previousOffer === undefined
+          ? {}
+          : { recentOfferedByOutput: { [lane]: previousOffer } }),
+      });
+      const result = advanceProducerEconomy({
+        turn: 2,
+        accounts,
+        producers: [producer],
+        clearingPriceByLane: { [lane]: 10 },
+        shortageAsk: { pressureByLane: { [lane]: 2 } },
+        externalOrders: [
+          {
+            id: "buyer",
+            accountId: "households",
+            commodity: "advertising",
+            book: "world",
+            units: 20,
+            maximumUnitPrice: 12,
+          },
+        ],
+      });
+      expect(result.producers[0].products[0].askingUnitPrice).toBeCloseTo(ask);
+      expect(result.producers[0].soldUnits).toBeCloseTo(20);
+    }
+  );
+
   it("settles productive input cycles jointly without selling unsupported output", () => {
     const a = plant({
       id: "power",
