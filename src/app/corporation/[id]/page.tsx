@@ -104,6 +104,7 @@ import type {
   CorporationDefenceView,
   FinancialFogMeta,
 } from "@/components/corporation/CorporationPageTypes";
+import { shouldShowBankTab } from "./bank/showBankTab";
 
 type CorporationResponseError = Error & {
   code: "CLIENT_ERROR";
@@ -354,10 +355,11 @@ function useCorporationDetailPageContext() {
     void fetch(`/api/banking/corporation/${id}`)
       .then(async (res) => {
         const json = (await res.json().catch(() => ({}))) as {
+          visible?: boolean;
           charter?: unknown;
           canIssueCharter?: boolean;
         };
-        if (!cancelled) setShowBankTab(!!json.charter || json.canIssueCharter === true);
+        if (!cancelled) setShowBankTab(shouldShowBankTab(json));
       })
       .catch(() => {
         if (!cancelled) setShowBankTab(false);
