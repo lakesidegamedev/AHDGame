@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { logger } from "@/lib/observability/logger";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -17,6 +18,7 @@ import type { AcquisitionOffer } from "@/lib/db/types/acquisitionOffer";
 import {
   proposeAcquisitionOffer,
   acceptAcquisitionOffer,
+  resumeStrandedAcceptedOffers,
   resolveAcquisitionOfferStatus,
   listDealsForCorp,
 } from "@/lib/corporations/commands/acquisitions/acquisitionOffers";
@@ -83,6 +85,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const body = parsed.data;
     const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 0;
+    // Finish any buyout a dead process left half settled before acting on deals.
+    await resumeStrandedAcceptedOffers(db, currentTurn).catch((err) =>
+      logger.error("corporationDeals", "stranded acquisition offer recovery failed", err)
+    );
 
     if (body.action === "propose") {
       const targetQuery = corporationQueryFromParamId(body.targetCorporationId ?? "");
