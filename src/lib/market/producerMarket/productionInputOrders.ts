@@ -268,14 +268,12 @@ export function buildProducerInputOrders({
       const recentSold = recentSoldOf(p, output.commodity, output.book);
       const lane = laneKeyOf(output.commodity, output.book);
       const lastClearingUnitPrice = input.clearingPriceByLane?.[lane];
-      const priorOffer = p.recentOfferedByOutput?.[lane] ?? 0;
+      const priorOffer = p.recentOfferedByOutput?.[lane];
       const soldOut =
         recentSold != null &&
         recentSold > 0 &&
         stock <= recentSold * 0.01 &&
-        (output.storable ||
-          p.recentOfferedByOutput == null ||
-          (priorOffer > 0 && recentSold >= priorOffer * (1 - 1e-9)));
+        (priorOffer == null || (priorOffer > 0 && recentSold >= priorOffer * (1 - 1e-9)));
       // A seller that sold out into a short lane anchors a step above the
       // clearing (shortageAskRules). Both quote passes read this anchor, so the
       // competitor pass cannot pull the ask back under it.

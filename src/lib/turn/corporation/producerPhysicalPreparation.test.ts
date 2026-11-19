@@ -59,8 +59,9 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
-  it("carries the last settled offer of a service into its shortage-price plan", () => {
+  it("carries the last settled advertising offer into its shortage-price plan", () => {
     const { input, env, sector } = fixture();
+    sector.sectorType = "media";
     env.stockCoverTurns = 1;
     env.shortageAskStage = 2;
     (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
@@ -68,7 +69,7 @@ describe("physical producer preparation", () => {
       soldUnits: 1,
       products: [
         {
-          commodity: "financial_services",
+          commodity: "advertising",
           book: "world",
           offeredUnits: 20,
           soldUnits: 1,
@@ -77,9 +78,9 @@ describe("physical producer preparation", () => {
       ],
     };
     const { plan } = prepareProducerPhysicalSector(input).prepared;
-    expect(plan.recentOfferedByOutput).toEqual({ "financial_services|world": 20 });
-    expect(plan.recentSoldByOutput).toEqual({ "financial_services|world": 1 });
-    expect(plan.recentAskByOutput).toEqual({ "financial_services|world": 10 });
+    expect(plan.recentOfferedByOutput).toEqual({ "advertising|world": 20 });
+    expect(plan.recentSoldByOutput).toEqual({ "advertising|world": 1 });
+    expect(plan.recentAskByOutput).toEqual({ "advertising|world": 10 });
   });
 
   it("funds the extra 2027 Standard retail throughput with proportional input purchases", () => {

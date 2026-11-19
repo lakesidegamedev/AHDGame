@@ -487,13 +487,14 @@ export function prepareProducerPhysicalSector(input: {
           x.deliveredUnits ?? x.soldUnits ?? 0,
         ])
       );
-    if ((env.shortageAskStage ?? 0) >= 1 && plan.outputs.some((output) => !output.storable)) {
-      plan.recentOfferedByOutput = Object.fromEntries(
-        (current?.products ?? []).map((line) => [
-          `${line.commodity}|${line.book}`,
-          line.offeredUnits ?? 0,
-        ])
+    const advertising = plan.outputs.find((output) => output.commodity === "advertising");
+    if ((env.shortageAskStage ?? 0) >= 1 && advertising) {
+      const priorOffer = current?.products?.find(
+        (line) => line.commodity === advertising.commodity && line.book === advertising.book
       );
+      plan.recentOfferedByOutput = {
+        [`${advertising.commodity}|${advertising.book}`]: priorOffer?.offeredUnits ?? 0,
+      };
     }
     // Stage 2 of the shortage ask: a sold-out seller steps from its own last ask.
     if (current?.products && (env.shortageAskStage ?? 0) >= 2)
