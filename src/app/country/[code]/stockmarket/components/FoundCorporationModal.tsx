@@ -49,10 +49,7 @@ export function FoundCorporationModal({
   foundingRate?: number;
   /** The founder's home country — used to fetch investor confidence (feed-3). */
   countryId?: string;
-  /**
-   * Turns remaining on the 168-turn founding cooldown.
-   * 0 = may found now; otherwise disables Found and shows a countdown.
-   */
+  /** Turns remaining before the account can found again after a corporation ends. */
   foundingCooldownTurnsRemaining?: number;
 }) {
   const [founding, setFounding] = useState(false);
