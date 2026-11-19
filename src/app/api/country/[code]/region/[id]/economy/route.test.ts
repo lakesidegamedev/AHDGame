@@ -33,6 +33,33 @@ beforeEach(async () => {
 });
 
 describe("GET /api/country/[code]/region/[id]/economy", () => {
+  it("returns the primary and secondary regional sector margin bonuses in percentage points", async () => {
+    db.collectionMocks.states.findOne.mockResolvedValue({
+      _id: "CA",
+      countryId: "US",
+      name: "California",
+      gdp: 1_000_000_000,
+      sectorSpecializations: { primary: "energy", secondary: "technology" },
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/country/US/region/CA/economy"),
+      ctx()
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.sectorSpecializations).toEqual({
+      primary: "energy",
+      primaryLabel: "Energy",
+      primaryBonus: 5,
+      secondary: "technology",
+      secondaryLabel: "Technology",
+      secondaryBonus: 2.5,
+    });
+  });
+
   it("filters out orphan sectors whose corporation no longer exists", async () => {
     const liveCorpId = new ObjectId();
     const orphanCorpId = new ObjectId(); // not present in `corporations`

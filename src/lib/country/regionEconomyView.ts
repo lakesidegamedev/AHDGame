@@ -27,6 +27,8 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
   ATTACK_OWNED_CONTESTED_FRACTION,
+  STATE_PRIMARY_SECTOR_MARGIN_BONUS,
+  STATE_SECONDARY_SECTOR_MARGIN_BONUS,
   calculateWorkers,
   getDominanceAttackEaseMultiplier,
   getUnderdogAttackAmplifier,
@@ -521,10 +523,10 @@ export async function buildRegionEconomyResponse({
       ? {
           primary: state.sectorSpecializations.primary,
           primaryLabel: OPERATING_SECTOR_TYPE_LABELS[state.sectorSpecializations.primary],
-          primaryBonus: 10,
+          primaryBonus: STATE_PRIMARY_SECTOR_MARGIN_BONUS,
           secondary: state.sectorSpecializations.secondary,
           secondaryLabel: OPERATING_SECTOR_TYPE_LABELS[state.sectorSpecializations.secondary],
-          secondaryBonus: 5,
+          secondaryBonus: STATE_SECONDARY_SECTOR_MARGIN_BONUS,
         }
       : null,
     sectors: economySectors,
