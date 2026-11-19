@@ -60,22 +60,15 @@ const SOVEREIGN_PRIMARY_MIN_APPETITE_FACTOR = 0.1;
 export const UNSOLD_PLACEMENT_SHARE_PER_TURN = 0.02;
 /** Share of the pool's spendable cash one turn of placement may use, across all bonds in the currency. */
 const UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN = 0.1;
-/**
- * Share of the pool's target kept back from placement. The target carries the
- * next quarter's sovereign rollover, and placing old unsold units out of that
- * reserve left Austria's t612 auction facing an empty pool (0.02% fill) in the
- * clone sim. Placement only spends cash above this floor.
- */
+/** Share of the attainable cash target reserved for auctions and trading. */
 const UNSOLD_PLACEMENT_RESERVE_SHARE = 0.5;
 
 /** Cash a pool may spend on placing unsold units this turn. */
 export function unsoldPlacementBudget(cashLocal: number, targetCashLocal: number): number {
   const cash = Number.isFinite(cashLocal) && cashLocal > 0 ? cashLocal : 0;
   const target = Number.isFinite(targetCashLocal) && targetCashLocal > 0 ? targetCashLocal : 0;
-  return (
-    Math.max(0, cash - target * UNSOLD_PLACEMENT_RESERVE_SHARE) *
-    UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN
-  );
+  const reserve = Math.min(cash, target) * UNSOLD_PLACEMENT_RESERVE_SHARE;
+  return (cash - reserve) * UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN;
 }
 /** Autonomous central bank monetization of a sovereign shortfall, cap per auction as a share of GDP. */
 const SOVEREIGN_MONETIZATION_GDP_CAP = 0.02;
