@@ -198,11 +198,11 @@ export const defect: Defect = {
       async (session) => {
         const state = await gameStateCollection(db).findOne(
           { _id: "current", preset: PRESET, currentTurn: turn, isProcessing: false },
-          { session, projection: { nextScheduledTurn: 1, paused: 1 } }
+          { session, projection: { nextScheduledTurn: 1, pausedAt: 1 } }
         );
         if (
           !state ||
-          (!state.paused &&
+          (!state.pausedAt &&
             state.nextScheduledTurn &&
             +state.nextScheduledTurn - Date.now() < 60_000)
         ) {
