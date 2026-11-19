@@ -76,15 +76,10 @@ async function findRetainedCommonsSeat(characterId: ObjectId) {
   return official;
 }
 
-// Constituency data is UK-only. Other countries also have a "primeMinister"
-// office, so a Prime Minister is eligible only when their country is the UK.
 function isUkConstituencyOffice(
-  office: Character["currentOffice"],
-  countryId: unknown
+  office: Character["currentOffice"]
 ): office is UkConstituencyOffice {
-  // eslint-disable-next-line local/no-country-literals -- Westminster constituency data exists only for the UK
-  const isUk = countryId === "UK";
-  return isCommonsOffice(office) || (isUk && isPrimeMinisterOffice(office));
+  return isCommonsOffice(office) || isPrimeMinisterOffice(office);
 }
 
 // GET /api/character/constituency — Returns the current constituency choices for a UK Commons MP, cabinet minister or Prime Minister.
@@ -115,7 +110,7 @@ async function handleGET() {
         constituencies: getConstituenciesForUkRegion(seat.state!),
       });
     }
-    if (!isUkConstituencyOffice(office, auth.user.character.countryId)) {
+    if (!isUkConstituencyOffice(office)) {
       return NextResponse.json({
         eligible: false,
         constituencies: [],
@@ -132,6 +127,16 @@ async function handleGET() {
       });
     }
     const constituencies = getConstituenciesForUkRegion(regionId);
+    // Other countries also have a "primeMinister" office, but Westminster
+    // constituency data exists only for UK regions. No constituencies for the
+    // region means there is nothing to pick, so the picker stays hidden.
+    if (constituencies.length === 0) {
+      return NextResponse.json({
+        eligible: false,
+        constituencies: [],
+        selected: null,
+      });
+    }
     return NextResponse.json({
       eligible: true,
       officeType: office.type,
@@ -167,7 +172,7 @@ export async function POST(request: Request) {
     if (isUkCabinetOffice(office)) {
       return selectCabinetMinisterConstituency(new ObjectId(character._id), constituencyId);
     }
-    if (!isUkConstituencyOffice(office, character.countryId)) {
+    if (!isUkConstituencyOffice(office)) {
       return NextResponse.json(
         badRequest("Only sitting UK MPs and Prime Ministers can choose a constituency").toJson(),
         { status: 400 }
