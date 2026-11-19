@@ -42,6 +42,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
+import { migration as faqPartyLeadership } from "./entries/2026-11-19-faq-party-leadership";
 import { runMigrations, type RunSummary } from "./runner";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
@@ -129,6 +130,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Energy sectors on the removed fracking method must leave it before a turn runs without it.
   moveFrackingToExtraction,
   linearBuildDelivery,
+  faqPartyLeadership,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

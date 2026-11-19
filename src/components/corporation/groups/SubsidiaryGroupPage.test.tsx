@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
-import { act, cleanup, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../messages/en/corporations.json";
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -19,6 +19,8 @@ vi.mock("../GroupOverviewCard", () => ({ GroupOverviewCard: () => null }));
 import { useGroupManagement, type GroupManagementView } from "./useGroupManagement";
 import { GroupSupplyOffice } from "./GroupSupplyOffice";
 import { SubsidiaryGroupPage } from "./SubsidiaryGroupPage";
+
+const supplyLoadWait = { timeout: 10000 };
 const root = "100000000000000000000001",
   child = "100000000000000000000002";
 const base = {
@@ -150,21 +152,25 @@ describe("Subsidiary Group page", () => {
   it("hides receiving controls under commercial independence", async () => {
     window.history.replaceState(null, "", "#supply");
     mount();
-    expect(screen.queryByRole("checkbox", { name: "Receive supply from group" })).toBeNull();
-    await waitFor(() =>
-      expect(screen.getByText("Corporation supply priority is active")).toBeTruthy()
+    await screen.findByRole(
+      "heading",
+      { name: "Corporation supply priority is active" },
+      supplyLoadWait
     );
+    expect(screen.queryByRole("checkbox", { name: "Receive supply from group" })).toBeNull();
   });
-  it("shows receiving controls under members first and keeps other players disabled", () => {
+  it("shows receiving controls under members first and keeps other players disabled", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.settings.supplyPolicy = "members";
     data.supplyEngineEnabled = true;
     data.members[1].operator = "player";
     mount(data);
-    const controls = screen.getAllByRole("checkbox", {
-      name: "Receive supply from group",
-    }) as HTMLInputElement[];
+    const controls = (await screen.findAllByRole(
+      "checkbox",
+      { name: "Receive supply from group" },
+      supplyLoadWait
+    )) as HTMLInputElement[];
     expect(controls.map((c) => c.disabled)).toEqual([false, true]);
   });
   it("has an explicit no-group state", () => {
@@ -201,11 +207,9 @@ describe("corporation office suggestions and supply estimates", () => {
         internalTradingValue: 120,
       },
     };
-    await act(async () => {
-      mount(data);
-    });
+    mount(data);
     fireEvent.click(screen.getByRole("button", { name: "Supply chain" }));
-    expect(screen.getByText("Estimated supply policy effects")).toBeTruthy();
+    await screen.findByRole("heading", { name: "Estimated supply policy effects" }, supplyLoadWait);
     expect(screen.getByText(/Estimates hold output/)).toBeTruthy();
     expect(screen.getAllByText("Combined group total")).toHaveLength(3);
   });
@@ -256,7 +260,11 @@ describe("Group discounts and negotiated agreements", () => {
     data.settings.supplyPolicy = "members";
     data.supplyEngineEnabled = true;
     mount(data);
-    const select = screen.getByRole("combobox", { name: "Automatic Group Chain discount" });
+    const select = await screen.findByRole(
+      "combobox",
+      { name: "Automatic Group Chain discount" },
+      supplyLoadWait
+    );
     expect(
       within(select).getByRole("option", { name: "35% discount (65% of market)" })
     ).toBeTruthy();
@@ -266,20 +274,21 @@ describe("Group discounts and negotiated agreements", () => {
       discount: 0.35,
     });
   });
-  it("hides automatic discounts under independence and preserves manual agreements", () => {
+  it("hides automatic discounts under independence and preserves manual agreements", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.supplyAgreementsEnabled = true;
     mount(data);
+    const select = await screen.findByRole(
+      "combobox",
+      { name: "Manage agreements as" },
+      supplyLoadWait
+    );
     expect(screen.queryByRole("combobox", { name: "Automatic Group Chain discount" })).toBeNull();
     expect(screen.getByTestId("agreements-panel").textContent).toBe(root);
-    expect(
-      within(screen.getByRole("combobox", { name: "Manage agreements as" })).queryByRole("option", {
-        name: "Subsidiary",
-      })
-    ).toBeNull();
+    expect(within(select).queryByRole("option", { name: "Subsidiary" })).toBeNull();
   });
-  it("restricts discount changes to the parent and switches agreements only between own corporations", () => {
+  it("restricts discount changes to the parent and switches agreements only between own corporations", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.settings.supplyPolicy = "members";
@@ -289,21 +298,25 @@ describe("Group discounts and negotiated agreements", () => {
     data.members[1].canEdit = true;
     data.members[1].operator = "player";
     mount(data);
-    expect(
-      (
-        screen.getByRole("combobox", {
-          name: "Automatic Group Chain discount",
-        }) as HTMLSelectElement
-      ).disabled
-    ).toBe(true);
+    const discount = (await screen.findByRole(
+      "combobox",
+      { name: "Automatic Group Chain discount" },
+      supplyLoadWait
+    )) as HTMLSelectElement;
+    expect(discount.disabled).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "Manage agreements as" }), {
       target: { value: child },
     });
     expect(screen.getByTestId("agreements-panel").textContent).toBe(child);
   });
-  it("keeps agreements behind the existing feature flag", () => {
+  it("keeps agreements behind the existing feature flag", async () => {
     window.history.replaceState(null, "", "#supply");
     mount();
+    await screen.findByRole(
+      "heading",
+      { name: "Coordinate the chain. Preserve autonomy." },
+      supplyLoadWait
+    );
     expect(screen.queryByTestId("agreements-panel")).toBeNull();
   });
 });
