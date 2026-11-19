@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import type { ReactElement } from "react";
+import type { ComponentProps, ReactElement } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../../../messages/en/corporations.json";
 import { cleanup, fireEvent, render as renderView, screen, waitFor } from "@testing-library/react";
@@ -61,7 +61,9 @@ const plants = {
 function renderDialog(
   onSubmit = vi.fn(),
   plantData = plants,
-  sectorType: CorporationType = "manufacturing"
+  sectorType: CorporationType = "manufacturing",
+  strategy?: ComponentProps<typeof BuildCapacityDialog>["strategy"],
+  strategySiteActions?: ComponentProps<typeof BuildCapacityDialog>["strategySiteActions"]
 ) {
   render(
     <BuildCapacityDialog
@@ -70,6 +72,8 @@ function renderDialog(
       plants={plantData}
       sectorType={sectorType}
       sectorLabel="Manufacturing"
+      strategy={strategy}
+      strategySiteActions={strategySiteActions}
       submitting={false}
       errorMessage=""
       onSubmit={onSubmit}
@@ -91,11 +95,28 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
     measuredDemandGapUnits: 0,
     buildDemandTurn: 778,
     buildDemand: [
-      { commodity: "network_services", scope: "national", funded: 100, delivered: 0, unmet: 100 },
-      { commodity: "software", scope: "national", funded: 3, delivered: 3, unmet: 0 },
+      {
+        commodity: "network_services",
+        scope: "national",
+        funded: 100,
+        delivered: 0,
+        unmet: 100,
+        capacityUnits: 100,
+      },
+      {
+        commodity: "software",
+        scope: "national",
+        funded: 3,
+        delivered: 3,
+        unmet: 0,
+        capacityUnits: 0,
+      },
     ],
   });
   expect(screen.getByText(/Network Services/)).toBeTruthy();
+  expect(screen.getByTestId("build-room").textContent).toContain(
+    "Sales limited by Software & IT Services"
+  );
   expect(screen.queryByText(/oversupplied/)).toBeNull();
 });
 
@@ -105,9 +126,85 @@ it("keeps the default view to the headline figures and one details disclosure", 
   expect(screen.getByText("First income")).toBeTruthy();
   expect(screen.getByText("Profit per turn")).toBeTruthy();
   expect(screen.getByText("Payback")).toBeTruthy();
-  expect(screen.getByTestId("build-room").textContent).toContain("Room left in the market");
+  expect(screen.getByTestId("build-room").textContent).toContain("recommended");
   expect(document.querySelectorAll("details")).toHaveLength(1);
   expect(screen.queryByText(/Demand today is not guaranteed/)).toBeNull();
+});
+
+it("reveals recommendations for available strategies on request", () => {
+  renderDialog(
+    vi.fn(),
+    {
+      ...plants,
+      measuredDemandGapUnits: 0,
+      strategyBuildRoom: { standard: 0, hardware: 4, software: null, quantum: 10 },
+    },
+    "technology",
+    {
+      currentStrategyId: "standard",
+      currentStrategyName: "Standard",
+      availableStrategies: [
+        { id: "standard", name: "Standard", description: "" },
+        { id: "hardware", name: "Hardware Focus", description: "" },
+        { id: "software", name: "Software Focus", description: "" },
+        { id: "quantum", name: "Quantum Computing", description: "", locked: true },
+      ],
+    }
+  );
+  expect(screen.getByTestId("build-room").textContent).toContain(
+    "Standard · 0 campuses recommended"
+  );
+  expect(screen.queryByText("Hardware Focus")).toBeNull();
+  const compare = screen.getByRole("button", { name: "Compare strategies" });
+  fireEvent.click(compare);
+  expect(compare.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByText("Hardware Focus").parentElement?.textContent).toContain(
+    "4 campuses recommended"
+  );
+  expect(screen.getByText("Software Focus").parentElement?.textContent).toContain("n/a");
+  expect(screen.queryByText("Quantum Computing")).toBeNull();
+  fireEvent.click(compare);
+  expect(screen.queryByText("Hardware Focus")).toBeNull();
+});
+
+it("quotes and submits an alternate strategy as a new site", async () => {
+  const quote = vi.fn().mockResolvedValue({
+    totalCostAnchor: 2000,
+    buildTurns: 12,
+    affordable: true,
+  });
+  const build = vi.fn().mockResolvedValue(true);
+  const currentBuild = vi.fn();
+  renderDialog(
+    currentBuild,
+    plants,
+    "technology",
+    {
+      currentStrategyId: "standard",
+      currentStrategyName: "Standard",
+      availableStrategies: [
+        { id: "standard", name: "Standard", description: "" },
+        { id: "hardware", name: "Hardware Focus", description: "" },
+      ],
+    },
+    { quote, build }
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Compare strategies" }));
+  fireEvent.click(screen.getByRole("button", { name: "New site · Hardware Focus" }));
+  fireEvent.click(screen.getByRole("button", { name: "Get quote" }));
+  const submit = await screen.findByRole("button", { name: "Build new site" });
+  fireEvent.click(submit);
+  expect(quote).toHaveBeenCalledWith(
+    plantSizeUnits("technology"),
+    expect.objectContaining({ strategyId: "hardware" })
+  );
+  const newSite = quote.mock.calls[0][1];
+  expect(build).toHaveBeenCalledWith(
+    plantSizeUnits("technology"),
+    { ...newSite, maximumCostAnchor: 2000 },
+    false
+  );
+  expect(currentBuild).not.toHaveBeenCalled();
 });
 
 it("reports profit per turn and payback from the cash scenario", () => {
@@ -177,10 +274,10 @@ describe("BuildCapacityDialog count control", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Match demand: 3" }));
     expect(input.value).toBe("3");
-    expect(screen.getByTestId("build-room").textContent).toContain("Room left in the market: 0");
-    expect(screen.queryByText(/More than the market has room for/)).toBeNull();
+    expect(screen.getByTestId("build-room").textContent).toContain("3 plants recommended");
     fireEvent.click(screen.getByLabelText(/build one more/i));
-    expect(screen.getByText(/More than the market has room for/)).toBeTruthy();
+    expect(input.value).toBe("4");
+    expect(screen.getByTestId("build-room").textContent).toContain("3 plants recommended");
   });
 
   it("disables shortcuts when cash or buyer room cannot fund one whole facility", () => {

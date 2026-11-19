@@ -27,7 +27,11 @@ import {
   demandAdjustedSharePercent,
   shareCoverages,
 } from "@/lib/corporations/rules/dominanceDemandCoverage";
-import { buildNationalDominanceShareBySectorId } from "@/lib/corporations/marketShare";
+import {
+  buildNationalDominanceShareBySectorId,
+  fetchAttackerDefenderShares,
+} from "@/lib/corporations/marketShare";
+import { isStrategyBuildSite } from "@/lib/corporations/sectorLocation";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -41,6 +45,7 @@ import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemand
 import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import { type CommodityType, eraScaledBasePrices } from "@/lib/constants/commodities";
 import { getSectorStrategies } from "@/lib/constants/sectorStrategies";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   buildAdviceOutputMultiplier,
   buildDemandProducer,
@@ -696,6 +701,52 @@ export async function buildSectorDetailPlantsTier({
         ? { supply, demand }
         : { supply: doc.globalSupply, demand: doc.globalDemand };
     };
+    const strategyOptions = getSectorStrategies(
+      sectorType,
+      governorConfig?.mediaOperatingModelsEnabled === true,
+      sectorDetailPreset
+    );
+    const isStrategyAvailable = (candidate: (typeof strategyOptions)[number]) =>
+      !getStrategyAvailability(
+        techCorpView,
+        candidate,
+        techCurrentYear,
+        techTreesEnabled,
+        strategyWorld
+      ).locked;
+    const strategySupply = (candidate: (typeof strategyOptions)[number]) =>
+      applyExtractionResourceCapacityToSupply(
+        sectorType,
+        candidate.supply,
+        stateResources === undefined ? undefined : (stateResources ?? {})
+      );
+    const strategyBuildRoom =
+      isCeo && fundedBuild?.turn === currentTurn && sectorType !== "logistics"
+        ? Object.fromEntries(
+            strategyOptions.filter(isStrategyAvailable).map((candidate) => {
+              const supply = strategySupply(candidate);
+              const strategyId = candidate.id;
+              const outputMultiplier = buildAdviceOutputMultiplier({
+                ...outputContext,
+                sector: { sectorType, strategyId },
+                supply,
+                owner: corporation,
+              });
+              const capacity = fullMixBuildRoom(
+                sizeBuildDemand({
+                  rows: fundedBuild.rows(supply, sector.stateId, sectorCountryId),
+                  supply,
+                  outputMultiplier,
+                  stateId: sector.stateId,
+                  countryId: sectorCountryId,
+                  producers: existingProducers,
+                })
+              );
+              const facilitySize = plantSizeForSector({ sectorType, strategyId });
+              return [strategyId, capacity == null ? null : Math.floor(capacity / facilitySize)];
+            })
+          )
+        : undefined;
     const retoolHint = computeRetoolHint({
       currentStrategyId: sector.strategyId ?? "standard",
       currentSupply: effectiveSupply,
@@ -705,25 +756,9 @@ export async function buildSectorDetailPlantsTier({
       isTransitioning: effectiveRates.isTransitioning,
       producedUnits: sector.producedUnits,
       capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
-      strategies: getSectorStrategies(
-        sectorType,
-        governorConfig?.mediaOperatingModelsEnabled === true,
-        sectorDetailPreset
-      ),
-      isAvailable: (candidate) =>
-        !getStrategyAvailability(
-          techCorpView,
-          candidate,
-          techCurrentYear,
-          techTreesEnabled,
-          strategyWorld
-        ).locked,
-      supplyFor: (candidate) =>
-        applyExtractionResourceCapacityToSupply(
-          sectorType,
-          candidate.supply,
-          stateResources === undefined ? undefined : (stateResources ?? {})
-        ),
+      strategies: strategyOptions,
+      isAvailable: isStrategyAvailable,
+      supplyFor: strategySupply,
       rescaleRatio: (toStrategyId) =>
         capacityRescaleRatio(sectorType, sector.strategyId, toStrategyId),
       priceRatioFor: marketRatioFor,
@@ -754,6 +789,10 @@ export async function buildSectorDetailPlantsTier({
       }),
       sectorAmountAnchor(1)
     );
+    const buildMarketShare = isStrategyBuildSite(sector)
+      ? (await fetchAttackerDefenderShares(db, sector, corporation, corporation._id))
+          .attackerSharePercent
+      : marketShare;
     plants = buildSectorPlantsSection({
       bankingCommodityScale: commodityProductionCapacityScale(
         corporation.bankCharter,
@@ -769,7 +808,7 @@ export async function buildSectorDetailPlantsTier({
       worldGovernorAnchorTurn: marketCtx.worldGovernorAnchorTurn,
       governorGlideEndTurn: marketCtx.governorGlideEndTurn,
       governorGlide: marketCtx.governorGlide,
-      marketSharePercent: demandAdjustedSharePercent(marketShare, buildShareCoverage.local),
+      marketSharePercent: demandAdjustedSharePercent(buildMarketShare, buildShareCoverage.local),
       nationalMarketSharePercent: demandAdjustedSharePercent(
         nationalMarketShare,
         buildShareCoverage.national
@@ -801,6 +840,7 @@ export async function buildSectorDetailPlantsTier({
       measuredDemandGapUnits,
       buildDemand: sizedDemand,
       buildDemandTurn: fundedBuild?.turn,
+      strategyBuildRoom,
       retoolHint,
       workers: sector.workers ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
       investment: {

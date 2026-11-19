@@ -96,7 +96,7 @@ export interface NationalizationTaking {
 }
 
 export interface CorporateSector {
-  /** Physical state-owned site identity; private holdings leave this absent. */
+  /** Identity for a separately acquired or built site in an occupied market. */
   nationalizationSiteKey?: string;
   /** Physical ownership receipt for replay safety. */
   ownershipTransferKey?: string;

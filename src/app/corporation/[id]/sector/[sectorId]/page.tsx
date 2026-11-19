@@ -73,6 +73,8 @@ const ResourceCapacityPanel = dynamic(() => import("./sections/ResourceCapacityP
 const InputsOutputsPanel = dynamic(() => import("./sections/InputsOutputsPanel"), {
   loading: PanelFallback,
 });
+type StrategySiteActions = import("./components/StrategySiteBuildDialog").StrategySiteActions;
+type StrategySiteQuote = import("./components/StrategySiteBuildDialog").StrategySiteQuote;
 const BuildCapacityDialog = dynamic(() => import("./components/BuildCapacityDialog"), {
   ssr: false,
 });
@@ -294,7 +296,11 @@ export default function SectorDetailPage() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setBuildOpen(false);
-          await fetchData();
+          if (typeof data.newSiteId === "string") {
+            router.push(`/corporation/${corpId}/sector/${data.newSiteId}`);
+          } else {
+            await fetchData();
+          }
           return true;
         }
         setCapacityMessage((data as { error?: string }).error ?? "That did not work. Try again.");
@@ -305,14 +311,38 @@ export default function SectorDetailPage() {
           setReserveRetry({ ...body, overrideOperatingReserve: true });
         return false;
       } catch {
-        setCapacityMessage("Network error. Nothing was changed.");
+        setCapacityMessage(
+          body.newSite ? "Network error. Retry to check your build." : "Network error."
+        );
         return false;
       } finally {
         setCapacityBusy(false);
       }
     },
-    [corpId, sectorId, fetchData]
+    [corpId, sectorId, fetchData, router]
   );
+
+  const strategySiteActions: StrategySiteActions = {
+    quote: async (units, newSite) => {
+      const res = await fetch(`/api/corporations/${corpId}/sectors/${sectorId}/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "build", units, newSite, preview: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.totalCostAnchor !== "number") {
+        throw new Error(apiErrorText(data, "Could not quote that build."));
+      }
+      return data as StrategySiteQuote;
+    },
+    build: (units, newSite, useReserve) =>
+      runCapacityAction({
+        action: "build",
+        units,
+        newSite,
+        ...(useReserve ? { overrideOperatingReserve: true } : {}),
+      }),
+  };
 
   const handleSavePolicy = async () => {
     dispatch({ type: "SET_POLICY_SAVING", value: true });
@@ -1143,6 +1173,8 @@ export default function SectorDetailPage() {
             stateName={sector.stateName}
             sectorType={sector.sectorType}
             sectorLabel={sector.displayName || sector.sectorLabel}
+            strategy={strategy}
+            strategySiteActions={strategySiteActions}
             submitting={capacityBusy}
             errorMessage={capacityMessage}
             onWithdrawFinancing={(claimId) =>

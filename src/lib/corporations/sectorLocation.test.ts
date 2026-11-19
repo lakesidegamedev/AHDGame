@@ -28,4 +28,17 @@ describe("sectorLocation", () => {
       getCorporateSectorLocationKey(staleSector, stateCountryByStateId)
     );
   });
+  it("keeps individually built sites out of the duplicate repair group", () => {
+    const original = {
+      corporationId: new ObjectId(),
+      countryId: "US" as const,
+      stateId: "CA",
+      sectorType: "technology" as const,
+    };
+    const newSite = { ...original, nationalizationSiteKey: "strategy-build:test" };
+
+    expect(getCorporateSectorLocationKey(newSite, new Map())).not.toBe(
+      getCorporateSectorLocationKey(original, new Map())
+    );
+  });
 });
