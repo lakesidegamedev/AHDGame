@@ -76,10 +76,13 @@ async function findRetainedCommonsSeat(characterId: ObjectId) {
   return official;
 }
 
+// Constituency data is UK-only. Other countries also have a "primeMinister"
+// office, so a Prime Minister is eligible only when their country is the UK.
 function isUkConstituencyOffice(
-  office: Character["currentOffice"]
+  office: Character["currentOffice"],
+  countryId: unknown
 ): office is UkConstituencyOffice {
-  return isCommonsOffice(office) || isPrimeMinisterOffice(office);
+  return isCommonsOffice(office) || (countryId === "UK" && isPrimeMinisterOffice(office));
 }
 
 // GET /api/character/constituency — Returns the current constituency choices for a UK Commons MP, cabinet minister or Prime Minister.
@@ -110,7 +113,7 @@ async function handleGET() {
         constituencies: getConstituenciesForUkRegion(seat.state!),
       });
     }
-    if (!isUkConstituencyOffice(office)) {
+    if (!isUkConstituencyOffice(office, auth.user.character.countryId)) {
       return NextResponse.json({
         eligible: false,
         constituencies: [],
@@ -162,7 +165,7 @@ export async function POST(request: Request) {
     if (isUkCabinetOffice(office)) {
       return selectCabinetMinisterConstituency(new ObjectId(character._id), constituencyId);
     }
-    if (!isUkConstituencyOffice(office)) {
+    if (!isUkConstituencyOffice(office, character.countryId)) {
       return NextResponse.json(
         badRequest("Only sitting UK MPs and Prime Ministers can choose a constituency").toJson(),
         { status: 400 }
