@@ -12,7 +12,6 @@
  */
 import type { Db, Document, UpdateFilter } from "mongodb";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
