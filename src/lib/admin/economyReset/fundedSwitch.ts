@@ -53,6 +53,7 @@ const TRANSITION_STAMP_FILTER = {
 
 export interface ApplyFundedSwitchOptions {
   expectedWorldEpoch: string;
+  usePresetOpeningPrices?: boolean;
 }
 
 export interface ApplyFundedSwitchResult {
@@ -102,6 +103,7 @@ export async function applyFundedSwitch(
   // Same turn as the opening, so this cannot reset prices a funded turn has set.
   const prices = await normalizeOpeningPrices(db, {
     expectedWorldEpoch: options.expectedWorldEpoch,
+    usePresetOpeningPrices: options.usePresetOpeningPrices,
   });
 
   const update = fundedSwitchGameConfigUpdate(currentTurn);

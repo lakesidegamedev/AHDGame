@@ -8,10 +8,10 @@ import {
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import type { Document } from "mongodb";
+import { getPresetCommodityOpeningPrice } from "@/lib/commodities/rules/openingPrice";
 
 /**
- * Seed baseline `commodityPrices` rows — one per `CommodityType` — at their
- * configured base price.
+ * Seed one `commodityPrices` row per commodity with its opening quote.
  *
  * Why this exists: pre-Phase-6, `commodityPrices` rows were only created by
  * `commodityPriceTurn.ts` on the first turn that produced supply/demand for a
@@ -32,7 +32,8 @@ export async function seedCommodityPrices(
   db: Db,
   reset: boolean,
   log: (msg: string) => void,
-  preset: string
+  preset: string,
+  options: { usePresetOpeningPrices?: boolean } = {}
 ): Promise<void> {
   log("Seeding baseline commodity prices:");
 
@@ -54,7 +55,9 @@ export async function seedCommodityPrices(
     const seed: CommodityPrice = {
       commodity,
       basePrice,
-      globalPrice: basePrice,
+      globalPrice: options.usePresetOpeningPrices
+        ? getPresetCommodityOpeningPrice(commodity, preset, basePrice)
+        : basePrice,
       globalSupply: 0,
       globalDemand: 0,
       statePrices: {},
