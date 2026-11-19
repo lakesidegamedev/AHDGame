@@ -57,7 +57,7 @@ export const SOVEREIGN_PRIMARY_COMMIT_SHARE = 0.9;
 /** Appetite floor: even a shunned sovereign finds some buyers. */
 const SOVEREIGN_PRIMARY_MIN_APPETITE_FACTOR = 0.1;
 /** Per-turn placement cap for unsold units, as a share of the requested size. */
-const UNSOLD_PLACEMENT_SHARE_PER_TURN = 0.02;
+export const UNSOLD_PLACEMENT_SHARE_PER_TURN = 0.02;
 /** Share of the pool's spendable cash one turn of placement may use, across all bonds in the currency. */
 const UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN = 0.1;
 /**
@@ -106,17 +106,15 @@ function wholeUnits(value: number): number {
 /**
  * Corporate capacity: a slice of the pool's secondary-liquidity cash (the
  * M2-share component, not the sovereign rollover working balance), scaled by
- * the issuer's credit tier.
+ * the issuer's credit tier. Independent of the issue size, which is why the
+ * issuance screen can quote it before the CEO picks a face value.
  */
-export function planCorporateUnderwriting(input: {
-  requestedUnits: number;
+export function corporateUnderwritingCapacityLocal(input: {
   poolCashLocal: number;
   poolM2Local: number | undefined;
   poolLiquidityTargetLocal?: number;
   rating: CreditRating;
-  pricePerUnitLocal: number;
-}): UnderwritingPlan {
-  const requested = wholeUnits(input.requestedUnits);
+}): number {
   const liquidityCash = Math.min(
     Math.max(0, input.poolCashLocal),
     poolLiquidityAllocation({
@@ -128,7 +126,19 @@ export function planCorporateUnderwriting(input: {
   );
   const factor =
     CORPORATE_PRIMARY_RATING_FACTOR[input.rating] ?? CORPORATE_PRIMARY_RATING_FACTOR.CCC;
-  const capacityLocal = liquidityCash * CORPORATE_PRIMARY_COMMIT_SHARE * factor;
+  return liquidityCash * CORPORATE_PRIMARY_COMMIT_SHARE * factor;
+}
+
+export function planCorporateUnderwriting(input: {
+  requestedUnits: number;
+  poolCashLocal: number;
+  poolM2Local: number | undefined;
+  poolLiquidityTargetLocal?: number;
+  rating: CreditRating;
+  pricePerUnitLocal: number;
+}): UnderwritingPlan {
+  const requested = wholeUnits(input.requestedUnits);
+  const capacityLocal = corporateUnderwritingCapacityLocal(input);
   const capacityUnits =
     input.pricePerUnitLocal > 0 ? Math.floor(capacityLocal / input.pricePerUnitLocal) : 0;
   const placed = Math.min(requested, Math.max(0, capacityUnits));

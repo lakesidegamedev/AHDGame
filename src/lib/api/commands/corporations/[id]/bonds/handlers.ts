@@ -15,9 +15,11 @@ import { withCorpLock } from "@/lib/corporations/corpMoneyLock";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
 import {
+  corporateUnderwritingCapacityLocal,
   debitPoolForPrimary,
   planCorporateUnderwriting,
   readPoolForPrimary,
+  UNSOLD_PLACEMENT_SHARE_PER_TURN,
 } from "@/lib/bonds/primaryMarket";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import {
@@ -352,6 +354,41 @@ export async function GET(request: Request, { params }: RouteParams) {
       )
     );
 
+    // What the currency's bond market pool would fund at issuance. The slider
+    // ceiling above is a legal borrowing limit, not cash the pool has: an issue
+    // larger than this places the remainder over later turns, and the CEO is
+    // told which is which before they start the cooldown.
+    const bondCurrencyCode = resolveCorpLiquidCurrencyCode(corporation);
+    const poolCurrency = bondPoolCurrency({ currencyCode: bondCurrencyCode ?? undefined });
+    const primaryPool = await readPoolForPrimary(db, poolCurrency);
+    const primaryCapacityLocal = primaryPool
+      ? corporateUnderwritingCapacityLocal({
+          poolCashLocal: primaryPool.cashLocal,
+          poolM2Local: primaryPool.m2Local,
+          poolLiquidityTargetLocal: primaryPool.liquidityTargetLocal,
+          rating: creditRating.rating,
+        })
+      : null;
+    // Whole ₳1,000 units, then into the corp's capital units: the same rounding
+    // POST applies, so the quote is not a figure the issue cannot reach.
+    const primaryMarket = {
+      hasPool: primaryPool !== null,
+      poolCurrency,
+      // Null means no pool for this currency, in which case POST funds the
+      // whole issue at par.
+      fundableNowAnchor:
+        primaryCapacityLocal === null
+          ? null
+          : Math.round(
+              corpCapitalToAnchor(
+                Math.floor(primaryCapacityLocal / BOND_UNIT_FACE_VALUE) * BOND_UNIT_FACE_VALUE,
+                bondCurrencyCode,
+                corpFxRate
+              )
+            ),
+      unsoldPlacementSharePerTurn: UNSOLD_PLACEMENT_SHARE_PER_TURN,
+    };
+
     const imfBailoutActive = corporation.imfBailoutActive === true;
     const imfFacility = imfBailoutActive
       ? {
@@ -427,6 +464,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       exitEquity: Math.round(exitEquityAnchor),
       debtHeadroom: Math.round(debtHeadroom),
       issuanceLimitedBy,
+      primaryMarket,
       isCeo,
       cooldownTurnsRemaining,
       currentTurn,

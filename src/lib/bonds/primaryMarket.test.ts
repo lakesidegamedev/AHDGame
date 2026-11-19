@@ -17,6 +17,7 @@ vi.mock("@/lib/banking/settlementJournal", async (importOriginal) => {
 
 import { loadBondQuote } from "@/lib/bonds/marketPool";
 import {
+  corporateUnderwritingCapacityLocal,
   placeUnsoldBondUnits,
   planCorporateUnderwriting,
   planSovereignMonetization,
@@ -24,6 +25,32 @@ import {
   unsoldPlacementBudget,
   unsoldPlacementCap,
 } from "./primaryMarket";
+
+describe("corporateUnderwritingCapacityLocal", () => {
+  it("is independent of the requested size, so the issue screen can quote it first", () => {
+    const pool = {
+      poolCashLocal: 100_000,
+      poolM2Local: 1_000_000,
+      rating: "BBB" as const,
+    };
+    // Same 7.5k a 20-unit request would have placed in the plan below.
+    expect(corporateUnderwritingCapacityLocal(pool)).toBe(7_500);
+    expect(
+      planCorporateUnderwriting({ ...pool, requestedUnits: 1_000, pricePerUnitLocal: 1_000 })
+        .capacityLocal
+    ).toBe(corporateUnderwritingCapacityLocal(pool));
+  });
+
+  it("falls back to the pool's own cash when M2 is unknown", () => {
+    expect(
+      corporateUnderwritingCapacityLocal({
+        poolCashLocal: 10_000_000,
+        poolM2Local: undefined,
+        rating: "AAA",
+      })
+    ).toBe(2_000_000);
+  });
+});
 
 describe("planCorporateUnderwriting", () => {
   it("uses calibrated secondary liquidity after reclassification", () => {
