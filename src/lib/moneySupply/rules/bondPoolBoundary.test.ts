@@ -86,6 +86,21 @@ describe("bond-pool settlement boundary in observed M2", () => {
     }
   });
 
+  it("keeps existing deposits in M2 when they fund the opening allocation", () => {
+    const opening = base({ externalBroadMoney: 1_000, bondPoolCash: 20, bondPoolQeIn: 10 });
+    const before = calculateMoneyAggregates(opening);
+    const after = calculateMoneyAggregates({
+      ...opening,
+      externalBroadMoney: 750,
+      bondPoolCash: 270,
+      bondPoolOpeningAllocationIn: 250,
+    });
+    expect(after.m2).toBe(before.m2);
+    expect(after.m1).toBe(before.m1);
+    expect(after.excludedBondPoolCash).toBe(before.excludedBondPoolCash);
+    expect(after.bondPoolQeIn).toBe(before.bondPoolQeIn);
+  });
+
   it("still represents genuine household, corporate, government, deposit and external money", () => {
     const setup = { corporateLiquid: 61_300_000 };
     const before = calculateMoneyAggregates(base(setup)).m2;
