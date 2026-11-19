@@ -48,7 +48,7 @@ A 100 seat Senate: 52 Democratic seats, 46 Republican, 2 independent. A Democrat
 
 ## Playing the vote
 
-- **As President:** nominate, withdraw a nomination before the vote closes (this returns the seat to vacant without a formal rejection), or bridge a vacancy with a 24-turn acting appointment. A nominee the Senate has rejected cannot be installed as acting for the same seat.
+- **As President:** nominate, withdraw a nomination before the vote closes (this returns the seat to vacant without a formal rejection), or bridge a vacancy with a 24-turn acting appointment. If the Senate rejects a nomination, the President cannot appoint that nominee as acting for the same seat during the current presidency. A central bank office conflict or an unanswered seat offer does not count as a Senate rejection.
 - **As a senator:** vote Confirm, Reject or Abstain. If you are your party's chair, vice chair or a chamber leader, you can whip the party's NPP bloc or its player senators while the vote is open, the same way you do on a bill (see [Voting & Whips](/wiki/voting-and-whips)).
 - **As a nominee:** the party label matters most to NPPs. Win goodwill from player senators, who decide for themselves.
 

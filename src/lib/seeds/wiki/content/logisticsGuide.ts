@@ -16,9 +16,9 @@ const gridSurvivalOverSeaHops = Math.pow(1 - GRID_LOSS_PER_HOP, SEA_FREIGHT_HOP_
 
 export const logisticsGuideContent = `# Logistics: Freight, Sourcing, and Supply Chains
 
-Your sector shows a low selling %. Either nobody wants the goods, or buyers exist and the goods cannot reach them. Logistics is how you tell the difference. It connects the commodity market to the map: the game projects how a state with unmet input demand would source locally, across state lines, or from abroad after shipping and tariffs. Logistics sectors provide the freight capacity measured by that projection. Heavy haul becomes real Freight commodity demand, so tight capacity raises freight sold volume and price. Electricity and natural gas are the exception: they travel by wire and pipe, spend no freight capacity, and pay distance in transmission loss instead.
+If your sector shows a low selling %, check demand, pricing, and delivery. The Logistics map and the sector's Freight tag help you spot delivery constraints. It connects the commodity market to the map: the game projects how a state with unmet input demand would source locally, across state lines, or from abroad after shipping and tariffs. Logistics sectors provide the freight capacity measured by that projection. Heavy haul becomes real Freight commodity demand, so tight capacity raises freight sold volume and price. Electricity and natural gas are the exception: they travel by wire and pipe, spend no freight capacity, and pay distance in transmission loss instead.
 
-Freight settlement is switched on per world by an admin, and runs in shadow mode until then. When it is active, it does two things together: it caps a state's sales at what the freight network could actually deliver, and it **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the delivery cap and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
+Freight settlement is switched on per world by an admin, and runs in shadow mode until then. When it is active, it applies measured delivery limits to legacy clearing offers and **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the measured delivery limit and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
 
 For a corporation, logistics answers three questions:
 
@@ -111,14 +111,15 @@ Because haul can now run past nominal capacity, a state's load can exceed its ca
 
 ## When freight limits delivery
 
-A sector's clearing offer is capped by what the freight network could actually place. Output that no route could carry to a buyer is not counted as a sale, and the sector reports the share of its offered output that was produced and could not be delivered. When that share is meaningful, the sector row carries a **Freight** tag and the sector page states how many units had no freight to carry them, and delivery-limited output cuts sector revenue and margin for your [corporation](/wiki/corporations).
+A **Freight** tag signals a delivery constraint on the sector's output. Check the sector's recorded sales, revenue, and margin for the financial results. Selling % alone leaves the reason for a revenue change unclear.
 
-That splits one bad number into two different instructions. Output that could not be delivered and output nobody wanted look the same on selling % alone, so check the delivery-limited share before cutting production:
+Under legacy clearing, measured delivery limits cap the physical offer for each commodity. The legacy revenue calculation adds back the measured freight-limited share, up to 100% of output. A shortage of buyers can still reduce revenue.
 
-- **Low selling %, small delivery-limited share.** The market did not want the goods. Change price, cut output, or move the sector toward a commodity in demand.
-- **Low selling %, large delivery-limited share.** Buyers exist and the goods could not reach them. Add freight capacity out of that state, by opening a logistics sector there yourself or buying into one, or site new production closer to the demand you sell into.
+On turns using the funded producer market, the sector's sales and revenue come from settlement. Sellers are credited for filled, paid orders.
 
-The second case is a route problem, so check the Logistics map for the origin state before touching production. A thin freight network strands whatever is built behind it, however healthy the national commodity balance looks. A dark state on the map may have no freight network simply because it has little industry and little haul, so check the commodity balance too, and remember that sector economics are still local, national, and global: check the exchange and state before building. Freight bills are apportioned onto buyer sectors and credited to origin-state freight sectors each turn as a per-turn billing line, not as a player-to-player invoice per route. Freight contracts that reserve haulage in one state come from [Supply Agreements](/wiki/supply-agreements).
+If the **Freight** tag appears, check the Logistics map for the origin state and the commodity balance on your exchange. If the route is consistently constrained, consider adding freight capacity in that state by opening or buying into a logistics sector, or site new production closer to demand. If selling % is low, also check demand and pricing before cutting output. A dark state on the map can reflect little industry and haul, so check local demand and the exchange before building.
+
+Freight bills are apportioned onto buyer sectors and credited to origin-state freight sectors each turn as a per-turn billing line, not as a player-to-player invoice per route. Freight contracts that reserve haulage in one state come from [Supply Agreements](/wiki/supply-agreements).
 
 ## If you run a logistics corporation
 
@@ -132,7 +133,7 @@ Before opening a sector:
 
 After opening it:
 
-- Watch **selling %** on the sector page together with the **Freight** tag beside it. Low selling with no Freight tag means the market does not need the output. Low selling with a Freight tag means the output could not get out of the state.
+- Watch **selling %** and the **Freight** tag on the sector page, and check recorded sales and revenue for the turn.
 - Watch the Logistics map after each market turn. New industrial capacity can create new haul demand.
 - Compare your freight price with the cost of inputs used by physical industries. A freight shortage can raise costs across manufacturing, agriculture, chemicals, extraction, and construction.
 - Use a focused logistics strategy only when its output and input mix match the shortage you are trying to serve.
