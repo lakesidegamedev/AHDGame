@@ -266,8 +266,8 @@ If a margin is negative, open the sector's margin breakdown and check, in order:
 
 | Modifier | Max Effect | Notes |
 | --- | --- | --- |
-| Sector type match | +5pp primary / +2.5pp secondary / -15pp unrelated | Bonus if sector matches primary type; penalty if neither type matches |
-| Secondary type match | +2.5pp | If sector matches secondary type |
+| Corporate type match | +5pp primary / +2.5pp secondary / -15pp unrelated | Based on the corporation's chosen primary and secondary types. Other types take the penalty. |
+| Regional industry specialization | +5pp primary / +2.5pp secondary | Applies when a sector matches its region's primary or secondary industry. This bonus adds to the corporate type modifier. |
 | Home state | +5% | Sectors in your HQ state |
 | Same country | +2.5% | Sectors in your home country (not HQ state) |
 | State conditions | ±8pp combined | Selected state metrics, among them unemployment, power grid, corruption, workforce skill, crime, broadband, roads, carbon emissions and cost of living, weighted by how much your sector and its strategy rely on it. Each metric is capped at 0.75pp and each cost channel (labour, logistics, grid and so on) at 2pp |

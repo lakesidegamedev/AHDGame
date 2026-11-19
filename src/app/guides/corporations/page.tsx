@@ -108,7 +108,7 @@ export default function CorporationGuidePage() {
               Your corporation has a <strong className="text-foreground">primary type</strong>{" "}
               (required) and an optional <strong className="text-foreground">secondary type</strong>
               , set from the CEO Office. This is the single most impactful structural decision you
-              make. A <Tag variant="negative">−15%</Tag> margin penalty on every off-type sector
+              make. A <Tag variant="negative">−15 pp</Tag> margin penalty on every off-type sector
               will drain any corporation over time.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
@@ -122,23 +122,23 @@ export default function CorporationGuidePage() {
                 </thead>
                 <tbody className="divide-y divide-card-border/60">
                   <tr>
-                    <td className="px-4 py-2.5 text-foreground">Matches primary type</td>
+                    <td className="px-4 py-2.5 text-foreground">Matches your primary type</td>
                     <td className="px-4 py-2.5">
-                      <Tag variant="positive">+10%</Tag>
+                      <Tag variant="positive">+5 pp</Tag>
                     </td>
                     <td className="px-4 py-2.5 text-muted">Core competency bonus</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-2.5 text-foreground">Matches secondary type</td>
+                    <td className="px-4 py-2.5 text-foreground">Matches your secondary type</td>
                     <td className="px-4 py-2.5">
-                      <Tag variant="positive">+5%</Tag>
+                      <Tag variant="positive">+2.5 pp</Tag>
                     </td>
                     <td className="px-4 py-2.5 text-muted">Half-strength diversification bonus</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5 text-foreground">Everything else</td>
                     <td className="px-4 py-2.5">
-                      <Tag variant="negative">−15%</Tag>
+                      <Tag variant="negative">−15 pp</Tag>
                     </td>
                     <td className="px-4 py-2.5 text-muted">Off-focus penalty</td>
                   </tr>
@@ -153,10 +153,10 @@ export default function CorporationGuidePage() {
             </p>
             <SubHeader>Secondary type trade-off</SubHeader>
             <p className="text-sm text-muted leading-relaxed">
-              A secondary type gives you +2.5% on a second sector class instead of −15%. The cost:
-              it <strong className="text-foreground">doubles the sprawl penalty</strong> once you
-              exceed the 15-sector threshold (see Sprawl section). Worth it if you genuinely want
-              two sector classes and invest in Logistics & Operations Strength.
+              A secondary type gives matching sectors a margin bonus of 2.5 percentage points.
+              Choosing one <strong className="text-foreground">doubles the sprawl penalty</strong>{" "}
+              once you exceed the 15-sector threshold (see Sprawl section). Worth it if you
+              genuinely want two sector classes and invest in Logistics & Operations Strength.
             </p>
             <Callout kind="warning" label="Type switching costs you:">
               Changing your primary or secondary type triggers a{" "}
@@ -236,12 +236,29 @@ export default function CorporationGuidePage() {
                 </thead>
                 <tbody className="divide-y divide-card-border/60 text-muted">
                   <tr>
-                    <td className="px-4 py-2.5 text-foreground font-medium">Sector type match</td>
+                    <td className="px-4 py-2.5 text-foreground font-medium">
+                      Corporate type match
+                    </td>
                     <td className="px-4 py-2.5">
-                      <Tag variant="positive">+5%</Tag> / <Tag variant="negative">−15%</Tag>
+                      <Tag variant="positive">+5 pp</Tag> / <Tag variant="negative">−15 pp</Tag>
                     </td>
                     <td className="px-4 py-2.5">All</td>
-                    <td className="px-4 py-2.5">Primary +5%, secondary +2.5%, other −15%</td>
+                    <td className="px-4 py-2.5">
+                      Your primary type +5 pp, your secondary type +2.5 pp, other types −15 pp
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5 text-foreground font-medium">
+                      Regional industry specialization
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Tag variant="positive">+5 pp</Tag> / <Tag variant="positive">+2.5 pp</Tag>
+                    </td>
+                    <td className="px-4 py-2.5">Matching types</td>
+                    <td className="px-4 py-2.5">
+                      Region&apos;s primary industry +5 pp, secondary industry +2.5 pp. Stacks with
+                      corporate type match.
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5 text-foreground font-medium">Home location</td>
