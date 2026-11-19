@@ -83,6 +83,8 @@ export interface MoneySupplyComponents {
   bondPoolQeIn?: number;
   /** Lifetime QT considerations debited from the currency's bond pool. */
   bondPoolQeOut?: number;
+  /** Opening liquidity transferred from deposits already counted in M2. */
+  bondPoolOpeningAllocationIn?: number;
   /** Cash held by the finite public-equity market pool. Institutional M2, not M1. */
   equityPoolCash?: number;
 }
@@ -122,7 +124,8 @@ export function calculateMoneyAggregates(input: MoneySupplyComponents): MoneyAgg
     0,
     money(normalized.bondPoolQeIn ?? 0) - money(normalized.bondPoolQeOut ?? 0)
   );
-  const observedBondPoolCash = Math.min(poolCash, qeFunded);
+  const openingAllocation = money(normalized.bondPoolOpeningAllocationIn ?? 0);
+  const observedBondPoolCash = Math.min(poolCash, qeFunded + openingAllocation);
   const excludedBondPoolCash = poolCash - observedBondPoolCash;
   return {
     ...normalized,
