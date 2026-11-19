@@ -82,7 +82,9 @@ function isUkConstituencyOffice(
   office: Character["currentOffice"],
   countryId: unknown
 ): office is UkConstituencyOffice {
-  return isCommonsOffice(office) || (countryId === "UK" && isPrimeMinisterOffice(office));
+  // eslint-disable-next-line local/no-country-literals -- Westminster constituency data exists only for the UK
+  const isUk = countryId === "UK";
+  return isCommonsOffice(office) || (isUk && isPrimeMinisterOffice(office));
 }
 
 // GET /api/character/constituency — Returns the current constituency choices for a UK Commons MP, cabinet minister or Prime Minister.
