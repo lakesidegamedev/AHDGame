@@ -42,7 +42,12 @@ vi.mock("@/lib/corporations/mergerReview/lifecycle", () => ({
 }));
 
 import { executeAgreedAcquisition } from "./executeAgreedAcquisition";
-import { acceptAcquisitionOffer, resolveAcquisitionOfferStatus } from "./acquisitionOffers";
+import {
+  acceptAcquisitionOffer,
+  resolveAcquisitionOfferStatus,
+  resumeStrandedAcceptedOffers,
+  STRANDED_ACCEPTED_OFFER_MS,
+} from "./acquisitionOffers";
 import { loadAcquisitionSettlement } from "./acquisitionSettlement";
 
 type WriteEntry = { collection: string; op: WriteOp };
@@ -337,6 +342,94 @@ describe("acceptAcquisitionOffer settlement close-out", () => {
     expect(b.charA).toBe(defaultSlices(w.price).charA);
     expect(b.targetGone).toBe(true);
     expect((await loadAcquisitionSettlement(w.db, w.offerId))?.status).toBe("applied");
+  });
+});
+
+describe("accept path writes are guarded on accepted", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("a crash restore does not overwrite an offer someone else withdrew", async () => {
+    const w = buildAcquisitionWorld({ shellCash: ACCEPTABLE_SHELL_CASH });
+    const faulty = withInjectedCrash(w.memory, {
+      collection: "acquisitionSettlements",
+      op: "insertOne",
+      onCall: 1,
+    });
+    const realCollection = faulty.db.collection.bind(faulty.db);
+    const db = {
+      ...faulty.db,
+      collection: (name: string) => {
+        const col = realCollection(name);
+        if (name !== "acquisitionOffers") return col;
+        return new Proxy(col, {
+          get(target, key, receiver) {
+            if (key !== "updateOne") return Reflect.get(target, key, receiver);
+            return async (filter: never, update: { $set?: { status?: string } }, opts: never) => {
+              if (update.$set?.status === "pending") {
+                await target.updateOne({ _id: w.offerId }, { $set: { status: "withdrawn" } });
+              }
+              return target.updateOne(filter, update, opts);
+            };
+          },
+        });
+      },
+    };
+    await expect(
+      acceptAcquisitionOffer(db as never, { offer: w.offer as never, currentTurn: 200 })
+    ).rejects.toBeInstanceOf(InjectedCrash);
+    expect(await offerStatus(w)).toBe("withdrawn");
+  });
+});
+
+describe("resumeStrandedAcceptedOffers", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  async function strand(w: AcquisitionWorld, updatedAt: Date): Promise<void> {
+    await w.memory
+      .collection("acquisitionOffers")
+      .updateOne(
+        { _id: w.offerId },
+        { $set: { status: "accepted", resolvedAtTurn: 200, updatedAt } }
+      );
+  }
+
+  it("finishes a crashed settlement exactly once and leaves the offer accepted", async () => {
+    const w = await crashMidPayout();
+    const now = new Date();
+    await strand(w, new Date(now.getTime() - STRANDED_ACCEPTED_OFFER_MS - 1000));
+
+    const first = await resumeStrandedAcceptedOffers(w.db, 200, now);
+    expect(first).toEqual({ resumed: 1, failed: 0 });
+    expect(await offerStatus(w)).toBe("accepted");
+    expect((await loadAcquisitionSettlement(w.db, w.offerId))?.status).toBe("applied");
+    const b = await readBalances(w);
+    expect(b.acquirer).toBe(ACQUIRER_CASH - w.price + w.shellCash);
+    expect(b.charA).toBe(defaultSlices(w.price).charA);
+    expect(b.targetGone).toBe(true);
+
+    const second = await resumeStrandedAcceptedOffers(w.db, 200, new Date(now.getTime() + 60_000));
+    expect(second).toEqual({ resumed: 0, failed: 0 });
+    expect(await readBalances(w)).toEqual(b);
+  });
+
+  it("leaves a recently touched accepted offer alone", async () => {
+    const w = await crashMidPayout();
+    const now = new Date();
+    await strand(w, new Date(now.getTime() - 1000));
+    const before = await readBalances(w);
+    expect(await resumeStrandedAcceptedOffers(w.db, 200, now)).toEqual({ resumed: 0, failed: 0 });
+    expect(await readBalances(w)).toEqual(before);
+    expect((await loadAcquisitionSettlement(w.db, w.offerId))?.status).toBe("in_progress");
+  });
+
+  it("closes a stranded offer as failed when the settlement ends terminal", async () => {
+    const w = buildAcquisitionWorld({ shellCash: ACCEPTABLE_SHELL_CASH });
+    await w.memory.collection("imperialCharacters").deleteOne({ _id: w.imperial });
+    const now = new Date();
+    await strand(w, new Date(now.getTime() - STRANDED_ACCEPTED_OFFER_MS - 1000));
+    expect(await resumeStrandedAcceptedOffers(w.db, 200, now)).toEqual({ resumed: 0, failed: 1 });
+    expect(await offerStatus(w)).toBe("failed");
+    expect((await readBalances(w)).acquirer).toBe(ACQUIRER_CASH);
   });
 });
 
