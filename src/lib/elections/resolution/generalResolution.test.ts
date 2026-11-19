@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import type { Election, ElectionVoteTally, ElectionCandidate, NPP } from "@/lib/db/types";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { NPPContext } from "@/lib/turn/npp/context";
+import { createNotifications } from "@/lib/notifications";
 import { processElectionEntry } from "@/lib/turn/npp/electionEntry";
 import { resolveOneGeneralElection as resolveBulgarianElection } from "./generalResolution";
 import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
@@ -2269,5 +2270,92 @@ describe("resolveOneGeneralElection", () => {
         (o) => (o.characterId as { $in?: ObjectId[] })?.$in?.[0]?.toString() === winnerId.toString()
       )
     ).toBe(true);
+  });
+
+  // ── Replay safety ────────────────────────────────────────────────────────────
+
+  it("a second run of the same election applies career entries, retirement and notices once", async () => {
+    const election = makeElection({
+      electionType: "senate",
+      state: "OH",
+      senateClass: 3,
+      status: "completed",
+    } as Partial<Election>);
+    const winnerId = new ObjectId();
+    const loserId = new ObjectId();
+    const tally = makeTally(election._id, {
+      [winnerId.toString()]: 900,
+      [loserId.toString()]: 400,
+    });
+    const winner = makeCandidate(election._id, { characterId: winnerId, party: "DEM" });
+    winner._id = new ObjectId(winnerId.toString());
+    const loser = makeCandidate(election._id, { characterId: loserId, party: "GOP" });
+    loser._id = new ObjectId(loserId.toString());
+    db.collectionMocks["electionCandidates"]!.find.mockReturnValue(makeCursor([winner, loser]));
+    const characters = [
+      { _id: winnerId, userId: new ObjectId(), careerHistory: [] as Record<string, any>[] },
+      { _id: loserId, userId: new ObjectId(), careerHistory: [] as Record<string, any>[] },
+    ];
+    db.collectionMocks["characters"]!.find.mockImplementation(() => makeCursor(characters));
+
+    const careerPushes: string[] = [];
+    db.collectionMocks["characters"]!.updateOne.mockImplementation(
+      async (filter: Record<string, any>, update: Record<string, any>) => {
+        const entry = update.$push?.careerHistory;
+        if (entry) {
+          characters.find((c) => c._id.equals(filter._id))!.careerHistory.push(entry);
+          careerPushes.push(`${filter._id}:${entry.type}`);
+        }
+        return { modifiedCount: 1, matchedCount: 1 };
+      }
+    );
+
+    const seats: Array<Record<string, any>> = [];
+    const officials = db.collectionMocks["electedOfficials"]!;
+    officials.insertOne.mockImplementation(async (doc: Record<string, any>) => {
+      seats.push(doc);
+      return {};
+    });
+    officials.deleteMany.mockImplementation(async (filter: Record<string, any>) => {
+      if (filter._id) return {};
+      for (let i = seats.length - 1; i >= 0; i--) {
+        if (
+          seats[i]!.officeType === filter.officeType &&
+          seats[i]!.senateClass === filter.senateClass
+        )
+          seats.splice(i, 1);
+      }
+      return {};
+    });
+    officials.findOne.mockImplementation(async (filter: Record<string, any>) =>
+      filter.electionId
+        ? (seats.find(
+            (r) => r.electionId?.equals(filter.electionId) && r.officeType === filter.officeType
+          ) ?? null)
+        : null
+    );
+    const classlessRoster = [{ _id: new ObjectId() }, { _id: new ObjectId() }];
+    const retiredIds: string[] = [];
+    officials.find.mockImplementation((filter: Record<string, any>, opts: { limit?: number }) =>
+      makeCursor(filter.$and ? classlessRoster.slice(0, opts?.limit ?? 1) : [])
+    );
+    const baseDelete = officials.deleteMany.getMockImplementation()!;
+    officials.deleteMany.mockImplementation(async (filter: Record<string, any>) => {
+      if (filter._id?.$in) retiredIds.push(...filter._id.$in.map(String));
+      return baseDelete(filter);
+    });
+
+    const run = () =>
+      resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
+    await run();
+    const noticesAfterFirst = vi.mocked(createNotifications).mock.calls.flatMap((c) => c[0]).length;
+    await run();
+
+    expect(careerPushes.sort()).toEqual([`${winnerId}:elected`, `${loserId}:lost_election`].sort());
+    expect(retiredIds).toHaveLength(1);
+    expect(seats.filter((r) => r.senateClass === 3)).toHaveLength(1);
+    expect(seats[0]!.characterId.toString()).toBe(winnerId.toString());
+    expect(noticesAfterFirst).toBe(2);
+    expect(vi.mocked(createNotifications).mock.calls.flatMap((c) => c[0])).toHaveLength(2);
   });
 });
