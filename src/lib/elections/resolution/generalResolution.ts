@@ -549,11 +549,25 @@ export async function resolveOneGeneralElection(
     const rankedVotes = Object.entries(effectiveVotes).sort((a, b) => b[1] - a[1]);
     // Effects that cannot be undone (notifications, achievements, analytics) fire
     // only for the run that first records the career event for this election.
-    const careerEventUnseen = (type: CareerEvent["type"]) => ({
-      careerHistory: {
-        $not: { $elemMatch: { type, electionId: election._id.toString() } },
-      },
-    });
+    // The lease makes this the only run, so the prefetched characters show
+    // whether an earlier run already recorded this election on a career.
+    const careerEventRecorded = (type: CareerEvent["type"], characterId: unknown) =>
+      !!charLookup
+        .get(String(characterId ?? ""))
+        ?.careerHistory?.some((e) => e.type === type && e.electionId === election._id.toString());
+    const seatedThisElection =
+      priorSeating && isSpecialCommonsElection(election.electionType)
+        ? new Set(
+            (
+              await electedOfficialsCollection(db)
+                .find(
+                  { state: election.state, electionId: election._id },
+                  { projection: { nppId: 1, characterId: 1 } }
+                )
+                .toArray()
+            ).map((o) => (o.nppId ?? o.characterId)?.toString())
+          )
+        : null;
     let classlessToRetire = classlessRetireSeats;
 
     for (const [winnerOrdinal, [candidateId, seats]] of winners.entries()) {
@@ -753,15 +767,18 @@ export async function resolveOneGeneralElection(
           electionId: election._id.toString(),
           date: now,
         };
-        await charactersCollection(db).updateOne(
-          { _id: candidate.characterId },
-          { $set: { currentOffice: charFinalOfficeType, updatedAt: now } }
-        );
-        const careerPush = await charactersCollection(db).updateOne(
-          { _id: candidate.characterId, ...careerEventUnseen("elected") },
-          { $push: { careerHistory: careerEvent } }
-        );
-        firstRecording = careerPush.modifiedCount > 0;
+        // Office and career entry land in one write, so a recorded entry means
+        // an earlier run already set the office too.
+        firstRecording = !careerEventRecorded("elected", candidate.characterId);
+        if (firstRecording) {
+          await charactersCollection(db).updateOne(
+            { _id: candidate.characterId },
+            {
+              $set: { currentOffice: charFinalOfficeType, updatedAt: now },
+              $push: { careerHistory: careerEvent },
+            }
+          );
+        }
       }
 
       // Snap winners store as regular officials — normalize snap_commons → commons,
@@ -822,19 +839,11 @@ export async function resolveOneGeneralElection(
         if ((election.senateClass || election.chamberClass) && !seatedByEarlierRun) {
           classlessToRetire += 1;
         }
-      } else if (priorSeating && isSpecialCommonsElection(election.electionType)) {
+      } else if (seatedThisElection) {
         // By-election seating is additive, so a rerun would stack a second row.
-        skipInsert = !!(await electedOfficialsCollection(db).findOne(
-          {
-            officeType: officialOfficeKey,
-            state: election.state,
-            electionId: election._id,
-            ...(candidate.isNPP
-              ? { nppId: candidate.nppId }
-              : { characterId: candidate.characterId }),
-          },
-          { projection: { _id: 1 } }
-        ));
+        skipInsert = seatedThisElection.has(
+          (candidate.isNPP ? candidate.nppId : candidate.characterId)?.toString()
+        );
       }
       if (!skipInsert) {
         await electedOfficialsCollection(db).insertOne({
@@ -959,24 +968,26 @@ export async function resolveOneGeneralElection(
           election.electionType === "sangiin"
             ? { type: "sangiin", state: election.state, chamberClass: election.chamberClass }
             : { type: election.electionType, state: election.state };
-        const lossPush = await charactersCollection(db).updateOne(
-          { _id: candidate.characterId, ...careerEventUnseen("lost_election") },
-          {
-            $push: {
-              careerHistory: {
-                type: "lost_election",
-                office: lostOffice,
-                officeLabel: getOfficeLabel(lostOffice, election.countryId),
-                party: candidate.party,
-                partyCountryId: election.countryId,
-                electionId: election._id.toString(),
-                date: now,
-              } as CareerEvent,
-            },
-          }
-        );
+        const lossFirstRecording = !careerEventRecorded("lost_election", candidate.characterId);
+        if (lossFirstRecording)
+          await charactersCollection(db).updateOne(
+            { _id: candidate.characterId },
+            {
+              $push: {
+                careerHistory: {
+                  type: "lost_election",
+                  office: lostOffice,
+                  officeLabel: getOfficeLabel(lostOffice, election.countryId),
+                  party: candidate.party,
+                  partyCountryId: election.countryId,
+                  electionId: election._id.toString(),
+                  date: now,
+                } as CareerEvent,
+              },
+            }
+          );
         const char = charLookup.get(candidate.characterId?.toString() ?? "");
-        if (char && lossPush.modifiedCount > 0) {
+        if (char && lossFirstRecording) {
           const heldOffice = char.currentOffice;
           if (
             heldOffice?.type ===

@@ -1505,11 +1505,7 @@ describe("resolveOneGeneralElection", () => {
       constituency: "Newcastle upon Tyne Central and West",
       constituencyId: "E14001384",
     });
-    const winnerPushCall = charUpdateCalls.find(
-      (c) => c[0]?._id?.toString() === charId.toString() && c[1]?.$push?.careerHistory
-    );
-    expect(winnerPushCall![0].careerHistory).toBeDefined();
-    expect(winnerPushCall![1].$push.careerHistory.officeLabel).toBe(
+    expect(winnerSetCall![1].$push.careerHistory.officeLabel).toBe(
       "Member of Parliament for Newcastle upon Tyne Central and West"
     );
 
@@ -2296,22 +2292,20 @@ describe("resolveOneGeneralElection", () => {
     const loser = makeCandidate(election._id, { characterId: loserId, party: "GOP" });
     loser._id = new ObjectId(loserId.toString());
     db.collectionMocks["electionCandidates"]!.find.mockReturnValue(makeCursor([winner, loser]));
-    db.collectionMocks["characters"]!.find.mockReturnValue(
-      makeCursor([
-        { _id: winnerId, userId: new ObjectId() },
-        { _id: loserId, userId: new ObjectId() },
-      ])
-    );
+    const characters = [
+      { _id: winnerId, userId: new ObjectId(), careerHistory: [] as Record<string, any>[] },
+      { _id: loserId, userId: new ObjectId(), careerHistory: [] as Record<string, any>[] },
+    ];
+    db.collectionMocks["characters"]!.find.mockImplementation(() => makeCursor(characters));
 
-    const recorded = new Set<string>();
     const careerPushes: string[] = [];
     db.collectionMocks["characters"]!.updateOne.mockImplementation(
-      async (filter: Record<string, unknown>, update: Record<string, any>) => {
-        if (!filter.careerHistory) return { modifiedCount: 1, matchedCount: 1 };
-        const key = `${filter._id}:${update.$push.careerHistory.type}`;
-        if (recorded.has(key)) return { modifiedCount: 0, matchedCount: 0 };
-        recorded.add(key);
-        careerPushes.push(key);
+      async (filter: Record<string, any>, update: Record<string, any>) => {
+        const entry = update.$push?.careerHistory;
+        if (entry) {
+          characters.find((c) => c._id.equals(filter._id))!.careerHistory.push(entry);
+          careerPushes.push(`${filter._id}:${entry.type}`);
+        }
         return { modifiedCount: 1, matchedCount: 1 };
       }
     );
