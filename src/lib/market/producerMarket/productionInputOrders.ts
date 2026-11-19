@@ -266,8 +266,14 @@ export function buildProducerInputOrders({
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
       const recentSold = recentSoldOf(p, output.commodity, output.book);
-      const lastClearingUnitPrice =
-        input.clearingPriceByLane?.[laneKeyOf(output.commodity, output.book)];
+      const lane = laneKeyOf(output.commodity, output.book);
+      const lastClearingUnitPrice = input.clearingPriceByLane?.[lane];
+      const priorOffer = p.recentOfferedByOutput?.[lane];
+      const soldOut =
+        recentSold != null &&
+        recentSold > 0 &&
+        stock <= recentSold * 0.01 &&
+        (priorOffer == null || (priorOffer > 0 && recentSold >= priorOffer * (1 - 1e-9)));
       // A seller that sold out into a short lane anchors a step above the
       // clearing (shortageAskRules). Both quote passes read this anchor, so the
       // competitor pass cannot pull the ask back under it.
@@ -276,9 +282,9 @@ export function buildProducerInputOrders({
           ? shortageAsk({
               clearingUnitPrice: lastClearingUnitPrice,
               referenceUnitPrice: output.referenceUnitPrice,
-              pressure: input.shortageAsk.pressureByLane[laneKeyOf(output.commodity, output.book)],
-              soldOut: recentSold != null && recentSold > 0 && stock <= recentSold * 0.01,
-              ownAskUnitPrice: p.recentAskByOutput?.[laneKeyOf(output.commodity, output.book)],
+              pressure: input.shortageAsk.pressureByLane[lane],
+              soldOut,
+              ownAskUnitPrice: p.recentAskByOutput?.[lane],
               ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
               ...(input.shortageAsk.maxMultiplier != null
                 ? { maxMultiplier: input.shortageAsk.maxMultiplier }
