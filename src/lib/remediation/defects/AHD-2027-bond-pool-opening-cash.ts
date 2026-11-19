@@ -10,6 +10,7 @@ import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySuppl
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { accountId } from "@/lib/ledger/accounts";
 import { finalizeLedgerEntry } from "@/lib/ledger/emit";
+import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import type { Defect, HealPlan } from "../types";
 
@@ -170,7 +171,7 @@ export const defect: Defect = {
     if (!transfers.length) return { documentsModified: 0, notes: [] };
     const ledgerRows = transfers.map(({ amount, currency, localPerAnchor, debits }) =>
       finalizeLedgerEntry({
-        turn: turn + 1,
+        turn: ledgerTurnFromClock(turn),
         createdAt: ctx.now,
         txType: "bond_pool_inflow",
         emitSite: DEFECT_ID,

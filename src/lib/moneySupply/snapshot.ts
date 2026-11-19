@@ -190,7 +190,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     bondMarketPoolsCollection<{
       _id: string;
       cashLocal?: number;
-      lifetime?: { qeIn?: number; qtOut?: number };
+      lifetime?: { qeIn?: number; qtOut?: number; openingAllocationIn?: number };
     }>(db)
       .find({}, { projection: { cashLocal: 1, lifetime: 1 } })
       .toArray(),
