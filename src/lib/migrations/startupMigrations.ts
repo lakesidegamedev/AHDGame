@@ -183,8 +183,10 @@ export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> 
     db
   ).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   // A reset preserves historical markers but removes opening pool rows.
-  // Bootstrap only the new 1991 world; never refill an existing cash pool.
-  if (state?.preset === "1991-default" && state.currentTurn === 1) {
+  if (
+    state?.currentTurn === 1 &&
+    (state.preset === "1991-default" || state.preset === "2027-default")
+  ) {
     summaries.push(
       await runMigrations(db, {
         migrations: [bondMarketPools],

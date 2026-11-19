@@ -252,8 +252,8 @@ export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig 
  * the world current with this build.
  *
  * A hosted reset is followed by a server restart, and startup applies these
- * (the opening 1991 bond pools only exist at turn 1 of a fresh 1991 world, and
- * index metadata can disappear on reset). A local "New game" keeps the same
+ * during the opening turn and restores index metadata lost on reset.
+ * A local "New game" keeps the same
  * server running, so it applies them here before the first turn.
  */
 export async function applyStartupRepairsAfterReset(
