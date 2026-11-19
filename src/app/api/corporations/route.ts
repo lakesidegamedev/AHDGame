@@ -249,7 +249,7 @@ export async function POST(request: Request) {
       request: parsed.data,
     });
     if (!result.ok) {
-      return errorResponse(result.status, result.error, { extra: result.extra });
+      return errorResponse(result.status, result.error);
     }
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
