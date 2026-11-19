@@ -867,15 +867,6 @@ export async function settleCorporationTurnPayouts({
       if (err instanceof CorporationTurnStepRefusedError) throw err;
       logger.error("corporationTurn", "NPP insolvency dissolution failed", err);
     }
-
-    // Finish agreed acquisitions whose accepting process died mid-settlement.
-    try {
-      const { resumeStrandedAcceptedOffers } =
-        await import("@/lib/corporations/commands/acquisitions/acquisitionOffers");
-      await resumeStrandedAcceptedOffers(db, turn);
-    } catch (err) {
-      logger.error("corporationTurn", "stranded acquisition offer recovery failed", err);
-    }
   }
   mark("nppInsolvencyDissolution");
 

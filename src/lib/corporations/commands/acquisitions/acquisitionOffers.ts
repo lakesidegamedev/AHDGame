@@ -31,6 +31,7 @@ import {
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
+import { logger } from "@/lib/observability/logger";
 import { acquisitionSettlementsCollection } from "@/lib/db/repositories/acquisitionSettlements";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
@@ -396,7 +397,8 @@ const STRANDED_OFFER_BATCH = 20;
 /**
  * Finishes offers a dead process left at "accepted". The executor resumes from
  * the pinned settlement record, so a rerun never pays a leg twice. An offer
- * whose settlement is already applied is done and is skipped.
+ * whose settlement is already applied is done and is skipped. Runs ahead of
+ * player deal actions, outside the turn.
  */
 export async function resumeStrandedAcceptedOffers(
   db: Db,
@@ -465,7 +467,7 @@ export async function resumeStrandedAcceptedOffers(
       }
     } catch (err) {
       // Left accepted: the next sweep retries after the stale window.
-      console.error("[acquisitionOffers] resume of stranded accepted offer failed:", err);
+      logger.error("acquisitionOffers", "resume of stranded accepted offer failed", err);
     }
   }
   return { resumed, failed };
