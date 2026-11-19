@@ -121,9 +121,9 @@ describe("planSovereignUnderwriting", () => {
 });
 
 describe("unsoldPlacementBudget", () => {
-  it("only spends cash above half the target, a tenth per turn", () => {
+  it("reserves half the attainable target and spends a tenth of the rest", () => {
     expect(unsoldPlacementBudget(150_000, 100_000)).toBe(10_000);
-    expect(unsoldPlacementBudget(40_000, 100_000)).toBe(0);
+    expect(unsoldPlacementBudget(40_000, 100_000)).toBe(2_000);
     expect(unsoldPlacementBudget(150_000, 0)).toBe(15_000);
   });
 });
@@ -175,10 +175,10 @@ describe("placeUnsoldBondUnits", () => {
     db.collectionMocks.bonds.find.mockReturnValue({
       sort: () => ({ toArray: async () => [bond] }),
     });
-    // Pool has 150k against no target: 10% placement budget = 15k -> 14 units at the 1,020 ask.
+    // The target is far above the pool's cash. The 15k budget buys 14 units at the 1,020 ask.
     db.collectionMocks.bondMarketPools.findOne.mockResolvedValue({
-      cashLocal: 150_000,
-      targetCashLocal: 0,
+      cashLocal: 300_000,
+      targetCashLocal: 100_000_000,
     });
     db.collectionMocks.bondMarketPools.findOneAndUpdate.mockResolvedValue({ cashLocal: 100_000 });
     vi.mocked(loadBondQuote).mockResolvedValue({ askPerUnit: 1_020 } as never);
@@ -202,7 +202,7 @@ describe("placeUnsoldBondUnits", () => {
       currency: "USD",
     });
     const quoteSnapshot = vi.mocked(loadBondQuote).mock.calls[0]?.[2]?.pools;
-    expect(quoteSnapshot?.get("USD")?.cashLocal).toBe(135_720);
+    expect(quoteSnapshot?.get("USD")?.cashLocal).toBe(285_720);
   });
 
   it("does nothing when the pool has no cash", async () => {
