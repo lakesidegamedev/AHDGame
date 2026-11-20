@@ -10,12 +10,11 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   speaker_of_the_house: {
     role: "speaker_of_the_house",
     blurb:
-      "The Speaker of the House presides over the lower chamber, sets the legislative agenda, and is second in line for the presidency. Historically one of the most powerful positions in American politics, the Speaker controls which bills reach the floor and shapes the national conversation.",
+      "House members elect the Speaker. Eligible House bills open for a floor vote when filed, without scheduling or committee assignments by the Speaker.",
     responsibilities: [
-      "Presides over House sessions and maintains order",
-      "Controls the legislative calendar and committee assignments",
-      "Represents the House to the President and Senate",
-      "Second in presidential succession after the Vice President",
+      "Can issue whips for their party on House votes",
+      "Receives 3 extra actions per turn on top of the House seat bonus",
+      "Qualifies for the 2.0 national influence tier",
     ],
   },
   majority_leader_house: {
