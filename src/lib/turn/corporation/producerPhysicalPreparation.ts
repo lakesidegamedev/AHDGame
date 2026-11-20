@@ -596,6 +596,7 @@ export function prepareProducerPhysicalSector(input: {
           minimumRunShare: Math.max(runFloor, ownDemandFloor),
           prior: settledLast?.worldEpoch === input.worldEpoch ? settledLast : null,
           outputStock: plan.outputStock,
+          allowPartialStock: !recipe.isTransitioning,
         })
       : normalRunShare;
   if ((env.demandPlanStage ?? 0) >= 1 || runPlan) plan.plannedRunShare = runShare;
