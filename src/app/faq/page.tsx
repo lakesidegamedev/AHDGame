@@ -18,6 +18,7 @@ export const metadata: Metadata = publicPageMetadata({
 interface FAQItem {
   question: string;
   answer: string;
+  link?: { href: string; label: string };
 }
 
 /**
@@ -82,7 +83,11 @@ function buildFaqs(world: MarketedWorld): FAQItem[] {
     {
       question: "Is there a mobile app?",
       answer:
-        "Not yet. The web app is responsive and works well on mobile browsers. A native app is on the long-term roadmap but not currently in active development.",
+        "Yes. There’s an iPhone app in supported App Store regions and an Android test build. You can also play in a mobile browser.",
+      link: {
+        href: "https://lakesidegames.net/download/a-house-divided/",
+        label: "See mobile downloads",
+      },
     },
     {
       question: "What happens to my data if I stop playing?",
@@ -138,7 +143,17 @@ export default async function FAQPage() {
                   </svg>
                 </span>
               </summary>
-              <p className="mt-3 text-sm text-muted leading-relaxed">{faq.answer}</p>
+              <p className="mt-3 text-sm text-muted leading-relaxed">
+                {faq.answer}
+                {faq.link && (
+                  <>
+                    {" "}
+                    <a href={faq.link.href} className="text-primary hover:underline">
+                      {faq.link.label}
+                    </a>
+                  </>
+                )}
+              </p>
             </details>
           ))}
         </div>

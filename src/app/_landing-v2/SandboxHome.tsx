@@ -46,15 +46,6 @@ import type { GovernmentType } from "@/lib/constants/countriesCore";
 import type { EraNation, EraTileKey } from "@/components/landing/eraThemes";
 import type { DiscordInviteStats } from "@/lib/discord/inviteStats";
 
-export type LandingCrisis = {
-  _id: string;
-  name: string;
-  description: string;
-  heroImage?: string;
-  scope: "global" | "country" | "region";
-  countryIds: string[];
-};
-
 // d3-geo relies on browser APIs; skip server render.
 const LandingGlobe = dynamic(
   () => import("@/components/LandingGlobe").then((m) => m.LandingGlobe),
@@ -277,7 +268,6 @@ function LandingListItem({
 export function SandboxHome({
   isSignedIn,
   era = "1979",
-  crises = [],
   playerCounts = {},
   governmentTypes = {},
   discordStats = null,
@@ -289,7 +279,6 @@ export function SandboxHome({
 }: {
   isSignedIn: boolean;
   era?: string | number;
-  crises?: LandingCrisis[];
   playerCounts?: Record<string, number>;
   /** Live-or-static governmentType per country id (from countryState + COUNTRY_CONFIGS). */
   governmentTypes?: Record<string, GovernmentType>;
@@ -662,19 +651,19 @@ export function SandboxHome({
         {/* Flavor cards carousel */}
         <section className="border-t border-card-border">
           <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-            {/* The carousel is leaders PLUS whatever crises are live in the
-                world right now, so it cannot be headed "Leaders of the era":
-                on a world mid-crisis the section promised portraits and
-                delivered freight reroutes. */}
             <LandingSectionHeading>
-              {t("landing.worldInYear", { year: eraConfig.year })}
+              {t(
+                getEraFlavorCards(era).some((card) => card.kind === "brief")
+                  ? "landing.eraFeatures"
+                  : "landing.eraLeaders"
+              )}
             </LandingSectionHeading>
-            <p className="mb-8 mt-2 max-w-2xl text-body-lg leading-relaxed text-muted">
-              {getEraFlavorCards(era).some((card) => card.kind === "brief")
-                ? t("landing.carouselDekBriefs")
-                : t("landing.carouselDek")}
-            </p>
-            <FlavorCardCarousel staticCards={getEraFlavorCards(era)} crises={crises} />
+            <div className="mt-6">
+              <FlavorCardCarousel staticCards={getEraFlavorCards(era)} />
+            </div>
+            <Link href="/world/crises" className="mt-4 inline-block text-primary hover:underline">
+              {t("landing.liveCrises")}
+            </Link>
           </div>
         </section>
 
