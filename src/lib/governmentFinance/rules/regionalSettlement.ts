@@ -73,10 +73,15 @@ function amount(value: number, field: string): number {
  */
 export function settleRegionalBudget(input: {
   availableBudget: number;
+  allowBorrowing?: boolean;
   reservedNonProgramSpending?: number;
   claims: RegionalProgramClaim[];
 }): RegionalBudgetSettlement {
-  const availableBudget = amount(input.availableBudget, "availableBudget");
+  const revenue = amount(input.availableBudget, "availableBudget");
+  const authorized =
+    amount(input.reservedNonProgramSpending ?? 0, "reservedNonProgramSpending") +
+    input.claims.reduce((sum, claim) => sum + amount(claim.authorizedCost, "authorizedCost"), 0);
+  const availableBudget = input.allowBorrowing ? Math.max(revenue, authorized) : revenue;
   const reservedNonProgramSpending = Math.min(
     availableBudget,
     amount(input.reservedNonProgramSpending ?? 0, "reservedNonProgramSpending")
