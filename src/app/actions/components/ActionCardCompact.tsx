@@ -132,11 +132,11 @@ const ActionCardCompact = memo(function ActionCardCompact({
   // Warning text
   let warningText = "";
   if (gdpCostsBlocked) warningText = "State costs unavailable";
-  else if (isMaxed) warningText = "Influence maxed";
+  else if (isMaxed) warningText = "Political Influence is at its maximum";
   else if (noDonor) warningText = "No donor network";
   else if (noCash) warningText = "No cash";
   else if (cantAffordFunds) warningText = "Insufficient funds";
-  else if (cantAffordActions) warningText = "Insufficient AP";
+  else if (cantAffordActions) warningText = "Not enough action points";
 
   return (
     <div
@@ -368,6 +368,7 @@ const ActionCardCompact = memo(function ActionCardCompact({
           ) : (
             <ActionExecuteRow
               actionType={card.type}
+              actionLabel={card.label}
               character={character}
               homeState={homeState}
               blocked={blocked}

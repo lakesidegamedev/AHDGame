@@ -17,17 +17,21 @@ export function RaceEntryButtons({
   canEnter,
   canWithdraw,
   busy,
+  entryMessage,
   onEnter,
   onWithdraw,
 }: {
   canEnter: boolean;
   canWithdraw: boolean;
   busy: boolean;
+  entryMessage?: string;
   onEnter: () => void;
   onWithdraw: () => void;
 }) {
   const t = useTranslations("elections.campaignManager.race");
-  if (!canEnter && !canWithdraw) return null;
+  if (!canEnter && !canWithdraw) {
+    return entryMessage ? <span className="text-body-sm text-muted">{entryMessage}</span> : null;
+  }
   return (
     <>
       {canEnter ? (

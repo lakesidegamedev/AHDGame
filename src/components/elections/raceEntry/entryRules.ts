@@ -12,8 +12,17 @@ export interface EntryRuleRace {
 }
 
 /** Entry is open during the primary to a character not already in the race. */
+export function raceEntryBlock(e: EntryRuleRace, amInRace: boolean) {
+  if (e.isEnded) return "raceEnded";
+  if (amInRace) return "alreadyEntered";
+  if (e.viewerWithdrew) return "alreadyWithdrew";
+  if (!e.inPrimary) return "nominationsUnavailable";
+  if (e.myCharId === null) return "characterRequired";
+  return null;
+}
+
 export function canEnter(e: EntryRuleRace, amInRace: boolean): boolean {
-  return e.inPrimary && !amInRace && !e.isEnded && e.myCharId !== null && !e.viewerWithdrew;
+  return raceEntryBlock(e, amInRace) === null;
 }
 
 export function canWithdraw(e: EntryRuleRace, amInRace: boolean): boolean {

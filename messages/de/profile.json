@@ -262,7 +262,9 @@
       "intro": "Die Welt läuft schon. Mit diesen drei Schritten legst du heute los, egal was du hier vorhast.",
       "campaignTitle": "Wahlkampf in deiner Heimatregion ({done} von {goal})",
       "campaignBody": "Wahlkampf ist die einzige Aktion, die Politischen Einfluss erhöht, und Einfluss vervielfacht jede Spendenaktion und trägt dich in Wahlen. Du hast gerade {influence}.",
-      "campaignButton": "Jetzt Wahlkampf machen",
+      "campaignButton": "Wahlkampf in der Heimatregion",
+      "campaignCost": "{actions, plural, one {# Aktion} other {# Aktionen}} und {funds} aus der Wahlkampfkasse",
+      "campaignCostUnavailable": "Unter Aktionen siehst du, ob du Wahlkampf machen kannst.",
       "campaignFailed": "Der Wahlkampf hat nicht geklappt. Versuche es noch einmal.",
       "allActions": "Alle Aktionen",
       "partyTitle": "Tritt einer Partei bei",
@@ -272,8 +274,9 @@
       "raceBody": "Diese Wahlen in deiner Heimatregion nehmen noch Kandidaten an, die am frühesten schließenden zuerst.",
       "raceCloses": "schließt in {hours} {hours, plural, one {Stunde} other {Stunden}}, {count} {count, plural, one {Kandidat} other {Kandidaten}}",
       "raceCandidates": "{count} {count, plural, one {Kandidat} other {Kandidaten}}",
-      "raceNone": "Gerade nimmt keine Wahl in deiner Heimatregion Kandidaten an. Mach weiter Wahlkampf; die nächste öffnet bald, und du startest mit Vorsprung.",
-      "raceDone": "Du bist im Rennen.",
+      "raceNone": "Derzeit kannst du dich in deiner Region für keine Wahl anmelden.",
+      "raceDone": "Kandidatur eingereicht.",
+      "browseRaces": "Wahlen ansehen",
       "skippedTour": "Du hast die Tour übersprungen. Die <link>Grundlagen in zwei Minuten</link> findest du hier, wann immer du willst."
     }
   }

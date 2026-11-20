@@ -241,19 +241,7 @@ export function FoundCorporationModal({
 
   async function handleFound() {
     if (disabled) return;
-    if (requiresHighFloatAck && !highFloatAck) {
-      setFoundError(
-        `Floating more than ${IPO_MAX_FLOAT_PCT}% permanently dilutes your ownership below 51%. Confirm the checkbox first.`
-      );
-      return;
-    }
-    if (requiresHighFloatAck) {
-      const ownership = ipoPreview?.founderOwnershipPctAfter.toFixed(1) ?? String(100 - floatPct);
-      const ok = window.confirm(
-        `Confirm founding IPO at ${floatPct}% public float?\n\nYou will keep only ~${ownership}% economic ownership (voting control stays via supershares).`
-      );
-      if (!ok) return;
-    }
+    if (requiresHighFloatAck && !window.confirm("Found this public corporation?")) return;
     setFounding(true);
     setFoundError("");
     try {
@@ -581,10 +569,8 @@ export function FoundCorporationModal({
                     <span>
                       <span className="font-medium text-foreground">Dual-class supershares</span>
                       <span className="block text-xs text-muted mt-0.5">
-                        Your founder shares each carry multiple votes, letting you float up to{" "}
-                        {SUPERSHARE_IPO_MAX_FLOAT_PCT}% (instead of {IPO_MAX_FLOAT_PCT}%) while
-                        keeping voting control. Economic ownership still drops with the float %.
-                        Supershares convert to common stock when sold.
+                        Keep voting control while offering up to {SUPERSHARE_IPO_MAX_FLOAT_PCT}% of
+                        the company. Founder shares become ordinary shares when sold.
                       </span>
                     </span>
                   </label>
@@ -610,7 +596,9 @@ export function FoundCorporationModal({
                   )}
                 </div>
                 <div className="mb-1.5 flex items-end justify-between gap-3">
-                  <label className="block text-body-sm font-medium text-muted">Public float</label>
+                  <label className="block text-body-sm font-medium text-muted">
+                    Share offered to the public
+                  </label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
@@ -624,7 +612,7 @@ export function FoundCorporationModal({
                         if (next <= IPO_MAX_FLOAT_PCT) setHighFloatAck(false);
                       }}
                       className="w-16 rounded-md border border-card-border bg-background px-2 py-1 text-right text-sm tabular-nums focus:border-primary/60 focus:outline-none"
-                      aria-label="Public float percent"
+                      aria-label="Share offered to the public (%)"
                     />
                     <span className="text-xs text-muted">%</span>
                   </div>
@@ -655,14 +643,13 @@ export function FoundCorporationModal({
                       className="mt-0.5 accent-primary"
                     />
                     <span className="text-foreground">
-                      I understand I am floating <span className="font-semibold">{floatPct}%</span>{" "}
-                      and will own only ~
+                      I will keep voting control and own about{" "}
                       <span className="font-semibold">
                         {ipoPreview?.founderOwnershipPctAfter.toFixed(1) ??
                           (100 - floatPct).toFixed(1)}
                         %
                       </span>{" "}
-                      economically. Supershares preserve voting control, not ownership %.
+                      of the company.
                     </span>
                   </label>
                 )}

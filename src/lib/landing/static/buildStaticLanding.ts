@@ -82,7 +82,6 @@ export async function buildStaticLandingHtml(now: Date = new Date()): Promise<st
     government: Object.fromEntries(
       Object.entries(governmentTypes).map(([id, type]) => [id, type === "onePartyState"])
     ),
-    crises: snapshot?.crises ?? [],
     discord: discordStats,
     flavorCards: getEraFlavorCards(seedYear),
     posterBase: globePosterBase(era.id, now),
