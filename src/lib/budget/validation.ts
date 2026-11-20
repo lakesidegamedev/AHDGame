@@ -26,6 +26,7 @@ import {
   getSelectedPolicyOption,
   type BudgetCostContext,
 } from "./costs";
+import { resolveProvisionFiscal } from "@/lib/legislature/provisionEnrichment/fiscal";
 import { resolveNationalGdpPerCapita, resolveNationalMedianIncome } from "./spending";
 import { getEraContext } from "@/lib/era/context";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
@@ -232,15 +233,19 @@ export async function validateStateBudgetImpact(
     return { allowed: true, costAmount: 0, newTotalSpending: currentSpending };
   }
 
+  // Revenue the same bill raises through its own tax-rate provisions funds its
+  // spending. Only a net rise is credited, so a tax cut never adds a new refusal.
+  const revenueCredit = await calculateBillTaxRevenueCredit(db, stateId, countryId, bill);
+  const fundsWithBill = availableFunds + revenueCredit;
   const newTotalSpending = currentSpending + costAmount;
 
-  if (newTotalSpending > availableFunds) {
+  if (newTotalSpending > fundsWithBill) {
     return {
       allowed: false,
       error: "INSUFFICIENT_FUNDS",
       costAmount,
       newTotalSpending,
-      shortfall: newTotalSpending - availableFunds,
+      shortfall: newTotalSpending - fundsWithBill,
     };
   }
 
@@ -248,8 +253,51 @@ export async function validateStateBudgetImpact(
     allowed: true,
     costAmount,
     newTotalSpending,
-    newBalance: availableFunds - newTotalSpending,
+    newBalance: fundsWithBill - newTotalSpending,
   };
+}
+
+/**
+ * Net annual revenue the bill's tax-slider provisions add (never negative),
+ * priced the same way the provision preview prices them.
+ */
+async function calculateBillTaxRevenueCredit(
+  db: Db,
+  stateId: string,
+  countryId: CountryId,
+  bill: Pick<Bill, "provisions">
+): Promise<number> {
+  const sliderProvisions = (bill.provisions ?? []).filter(
+    (provision) => isPolicyProvision(provision) && provision.proposedRate !== undefined
+  );
+  if (sliderProvisions.length === 0) return 0;
+
+  const typeIds = [
+    ...new Set(
+      sliderProvisions.map(
+        (provision) => (provision as { legislationTypeId: string }).legislationTypeId
+      )
+    ),
+  ];
+  const legislationTypes = await legislationTypesCollection(db)
+    .find({ _id: { $in: typeIds } })
+    .toArray();
+  const typeMap = new Map(legislationTypes.map((type) => [type._id, type]));
+
+  let net = 0;
+  for (const provision of sliderProvisions) {
+    if (!isPolicyProvision(provision)) continue;
+    const { fiscal } = await resolveProvisionFiscal(
+      db,
+      { scope: "region", countryId, regionId: stateId },
+      typeMap.get(provision.legislationTypeId),
+      { proposedRate: provision.proposedRate },
+      undefined,
+      undefined
+    );
+    net += fiscal?.revenueDelta ?? 0;
+  }
+  return Math.max(0, net);
 }
 
 export async function validateBudgetImpact(
