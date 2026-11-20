@@ -239,6 +239,31 @@ export const MAX_ORG_DUES_RATE_ANNUAL = 0.01;
  */
 const DEFAULT_LEADERSHIP_TERM_TURNS = 96;
 
+/** UN members seeded in the 2019 and 2023 presets (2027 adds CA). */
+const MODERN_UN_ROSTER: OrgMemberId[] = [
+  "US",
+  "UK",
+  "JP",
+  "DE",
+  "IE",
+  "BR",
+  "CN",
+  "NG",
+  "HU",
+  "PL",
+  "RO",
+  "BG",
+  "RU",
+  "FR",
+  "IT",
+  "ES",
+  "SE",
+  "TR",
+  "GR",
+  "AT",
+  "FI",
+];
+
 /**
  * The Non-Aligned Movement's chair passes to the host of each summit, which
  * convened roughly every three years. 144 turns = 3 game years.
@@ -478,6 +503,13 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
         "IE",
         "NG",
       ],
+      // Modern presets: every seeded country is a UN member (RU holds the
+      // Soviet seat; CA is a 1945 founder and is seeded from 2027). Without
+      // these entries the modern presets fell through to the four-country
+      // legacy list. A test pins each roster to the preset's seeded countries.
+      "2019-default": MODERN_UN_ROSTER,
+      "2023-default": MODERN_UN_ROSTER,
+      "2027-default": [...MODERN_UN_ROSTER, "CA"],
     },
     leadership: {
       title: "Secretary-General",
