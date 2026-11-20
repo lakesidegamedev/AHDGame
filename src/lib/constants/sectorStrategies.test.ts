@@ -94,6 +94,33 @@ describe("unknown persisted sector types", () => {
   );
 });
 
+describe("2027 focused mining recipes", () => {
+  it.each(["oil_gas", "natural_gas_drilling", "rare_earth_mining"])(
+    "uses less industrial chemicals for %s in 2027",
+    (id) => {
+      const original = getStrategy("extraction", id, "1991-default");
+      const current = getStrategy("extraction", id, "2027-default");
+      expect(original.demand.chemicals).toBe(0.15);
+      expect(current.demand).toEqual({ ...original.demand, chemicals: 0.12 });
+      expect(current.supply).toEqual(original.supply);
+    }
+  );
+
+  it("blends the chemical requirement during a switch from diversified mining", () => {
+    const result = getEffectiveStrategyRates(
+      "extraction",
+      "natural_gas_drilling",
+      "standard",
+      100,
+      100 + STRATEGY_TRANSITION_TURNS / 2,
+      "2027-default"
+    );
+    expect(result.isTransitioning).toBe(true);
+    expect(result.demand.chemicals).toBeCloseTo(0.1);
+    expect(getStrategy("extraction", "standard", "2027-default").demand.chemicals).toBe(0.08);
+  });
+});
+
 describe("media operating model strategies", () => {
   it.each([
     ["media", "newspaper", 0.5],
