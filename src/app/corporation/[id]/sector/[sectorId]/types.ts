@@ -698,6 +698,7 @@ export interface PlantsData {
   measuredDemandGapUnits?: number | null;
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
+  strategyBuildRoom?: Record<string, number | null>;
   /** This sector's own demand throttle bound last turn, so its room to build reads 0. */
   roomHeldByOwnIdle?: boolean;
   /** Unsold-capacity retirement status. Absent when the plant is not glutted. */
