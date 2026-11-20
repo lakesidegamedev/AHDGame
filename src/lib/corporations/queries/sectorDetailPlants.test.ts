@@ -846,6 +846,8 @@ describe("bank branch capacity attribution", () => {
     depositOffset: 0,
     lendingOffset: 0,
     branchCapacityShare: 0.6,
+    totalDeposits: 1,
+    depositCeiling: 1,
   };
   const args = {
     ...BASE_ARGS,

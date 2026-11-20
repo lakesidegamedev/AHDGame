@@ -16,9 +16,11 @@ export {
   MIN_BRANCH_CAPACITY_SHARE,
   MAX_BRANCH_CAPACITY_SHARE,
   getBranchCapacityShare,
+  getEffectiveBranchCapacityShare,
   computeDepositCeiling,
 } from "@/lib/banking/rules/capacity";
 import {
+  getEffectiveBranchCapacityShare,
   MIN_BRANCH_CAPACITY_SHARE,
   MAX_BRANCH_CAPACITY_SHARE,
   getBranchCapacityShare,
@@ -162,7 +164,10 @@ export function commodityProductionCapacityScale(
   // surrender up to half its financial sector's commodity output to branches it
   // is legally barred from running.
   if (!charterMay(charter, "branchNetwork")) return 1;
-  return Math.max(0, 1 - getBranchCapacityShare(charter));
+  // Branch capacity is charged only as the deposit room fills, so a new or
+  // converting bank keeps its sales until deposits actually arrive, and the
+  // cost tops out at the CEO's set share.
+  return Math.max(0, 1 - getEffectiveBranchCapacityShare(charter));
 }
 
 /**
