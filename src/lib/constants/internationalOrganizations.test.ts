@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { ROSTER_BY_KEY } from "./alignmentRoster";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { COUNTRY_ORDER } from "./countriesCoreTables";
+import { tierFor } from "@/lib/world/eraRoster";
 import {
   INTERNATIONAL_ORGANIZATIONS,
   INTERNATIONAL_ORGANIZATION_ORDER,
@@ -350,5 +352,21 @@ describe("FOREIGN_AFFAIRS_POSITION_BY_COUNTRY", () => {
     for (const seat of Object.values(FOREIGN_AFFAIRS_POSITION_BY_COUNTRY)) {
       if (seat) expect(seat).not.toMatch(/trade/i);
     }
+  });
+});
+
+describe("UN modern preset rosters", () => {
+  it("seats every seeded country in each modern preset, including Canada in 2027", () => {
+    for (const preset of ["2019-default", "2023-default", "2027-default"] as const) {
+      const seeded = COUNTRY_ORDER.filter((id) => tierFor(preset, id) !== "absent");
+      const roster = resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.UN, preset);
+      expect([...roster].sort()).toEqual([...seeded].sort());
+    }
+    expect(resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.UN, "2027-default")).toContain("CA");
+  });
+
+  it("leaves the 1953 and 1991 rosters unchanged", () => {
+    expect(resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.UN, "1953-default")).toHaveLength(60);
+    expect(resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.UN, "1991-default")).toHaveLength(15);
   });
 });
