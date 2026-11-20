@@ -118,9 +118,11 @@ describe("processSector banking capacity split", () => {
     depositOffset: 0,
     lendingOffset: 0,
     branchCapacityShare: 0.4,
+    totalDeposits: 10_000_000,
+    depositCeiling: 10_000_000,
   };
 
-  it("scales financial output by (1 - branchShare) only when chartered and flag on", () => {
+  it("scales financial output by the filled branch share only when chartered and flag on", () => {
     const run = (enabled: boolean, charter?: BankCharter) => {
       const env = makeEnv(enabled);
       processSector(env, makeCorp(charter), makeSector(), 1, undefined, 1);
@@ -138,6 +140,29 @@ describe("processSector banking capacity split", () => {
     expect(uncharteredOn).toBeCloseTo(charteredOff, 2);
     // producedUnits is persisted rounded to 2dp
     expect(charteredOn).toBeCloseTo(charteredOff * 0.6, 1);
+  });
+
+  it("diverts nothing from a new charter until deposits fill its room", () => {
+    const run = (totalDeposits: number) => {
+      const env = makeEnv(true);
+      processSector(
+        env,
+        makeCorp({ ...charter, totalDeposits, depositCeiling: 1_000_000 }),
+        makeSector(),
+        1,
+        undefined,
+        1
+      );
+      const op = env.sectorOps[0] as {
+        updateOne: { update: { $set?: { producedUnits?: number } } };
+      };
+      return op.updateOne.update.$set?.producedUnits ?? 0;
+    };
+
+    const full = run(1_000_000);
+    const empty = run(0);
+    expect(full).toBeGreaterThan(0);
+    expect(empty).toBeCloseTo(full / 0.6, 1);
   });
 
   function runLabour(
