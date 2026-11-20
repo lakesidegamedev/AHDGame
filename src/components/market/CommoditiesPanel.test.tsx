@@ -62,3 +62,23 @@ describe("CommoditiesPanel balance", () => {
     expect(screen.getByText("Short")).toBeTruthy();
   });
 });
+
+it("shows a rising last-turn price alongside a negative annualized change", () => {
+  renderPanel([
+    row({
+      commodity: "chemicals",
+      label: "Industrial Chemicals",
+      lastTurnPriceChange: 1.43,
+      priceChange: -31.3,
+    }),
+  ]);
+
+  const columns = screen.getAllByRole("columnheader");
+  const cells = screen.getAllByRole("cell");
+  expect(
+    cells[columns.indexOf(screen.getByRole("columnheader", { name: "Last turn" }))]?.textContent
+  ).toBe("+1.4%");
+  expect(
+    cells[columns.indexOf(screen.getByRole("columnheader", { name: "Yearly rate" }))]?.textContent
+  ).toBe("-31.3%");
+});
