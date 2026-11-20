@@ -46,6 +46,30 @@ export function getBranchCapacityShare(
 }
 
 /**
+ * Share of branch capacity actually taken, given how full the bank's deposit
+ * room is. A new or converting bank takes nothing until deposits arrive, and
+ * the cost tops out at the CEO's set share once the room is full. Reads the
+ * charter's cached depositCeiling (written each banking turn), so this stays a
+ * pure function over the charter record with no extra query.
+ */
+export function getEffectiveBranchCapacityShare(
+  charter:
+    Pick<BankCharter, "branchCapacityShare" | "totalDeposits" | "depositCeiling"> | null | undefined
+): number {
+  const share = getBranchCapacityShare(charter);
+  const deposits =
+    typeof charter?.totalDeposits === "number" && Number.isFinite(charter.totalDeposits)
+      ? Math.max(0, charter.totalDeposits)
+      : 0;
+  const ceiling =
+    typeof charter?.depositCeiling === "number" && Number.isFinite(charter.depositCeiling)
+      ? Math.max(0, charter.depositCeiling)
+      : 0;
+  if (!(deposits > 0) || !(ceiling > 0)) return 0;
+  return share * Math.min(1, deposits / ceiling);
+}
+
+/**
  * Deposit ceiling from financial-sector capacity allocated to branches:
  *   ceiling = financialSectorCapacity x branchShare x DEPOSIT_CEILING_PER_CAPACITY_UNIT
  */
