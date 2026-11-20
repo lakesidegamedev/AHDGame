@@ -12,7 +12,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryForExchange } from "@/lib/constants/exchangeRegistry";
 import { groupStatesByCountry } from "@/lib/commodity-map/commodityRegionMappings";
-import type { CommodityPrice, CommodityPriceHistory, State } from "@/lib/db/types";
+import type { CommodityPrice, CommodityPriceHistory } from "@/lib/db/types";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   COMMODITY_TYPES,
@@ -44,8 +44,7 @@ export async function GET(request: Request) {
     // Opt-in enrichment for the shortage heat map's scope lens: adds full
     // per-state and per-country supply/demand/price maps, plus the per-country
     // reachable books, so the client can switch Global/Reachable/Country/State
-    // without refetching. Default response shape is untouched (the table fetch
-    // stays byte-identical).
+    // without refetching.
     const scopeFull = searchParams.get("scope") === "full";
 
     // Filter by country access: NYSE→US, FTSE→UK
@@ -68,8 +67,17 @@ export async function GET(request: Request) {
     const targetTurn = Math.max(1, currentTurn - TURNS_PER_YEAR);
     const target24hTurn = Math.max(1, currentTurn - 24);
 
-    const [rawPrices, historyAtOrBeforeTarget, oldestHistory, history24h] = await Promise.all([
+    const [rawPrices, priorPrices, annualHistory, oldest, history24h] = await Promise.all([
       commodityPricesCollection(db).find({}).toArray(),
+      commodityPriceHistoryCollection(db)
+        .find({ commodity: { $in: COMMODITY_TYPES }, turn: currentTurn - 1 })
+        .project<Pick<CommodityPriceHistory, "commodity" | "globalPrice" | "turn">>({
+          commodity: 1,
+          globalPrice: 1,
+          turn: 1,
+          _id: 0,
+        })
+        .toArray(),
       commodityPriceHistoryCollection(db)
         .aggregate<{ _id: string; turn: number; globalPrice: number }>([
           { $match: { turn: { $lte: targetTurn } } },
@@ -124,11 +132,12 @@ export async function GET(request: Request) {
 
     // Build a map for quick lookup
     const priceMap = new Map(prices.map((p) => [p.commodity, p]));
+    const previousTurnPriceByCommodity = new Map(priorPrices.map((p) => [p.commodity, p]));
     const historyAtOrBeforeTargetByCommodity = new Map(
-      historyAtOrBeforeTarget.map((h) => [h._id, { turn: h.turn, globalPrice: h.globalPrice }])
+      annualHistory.map((h) => [h._id, { turn: h.turn, globalPrice: h.globalPrice }])
     );
     const oldestHistoryByCommodity = new Map(
-      oldestHistory.map((h) => [h._id, { turn: h.turn, globalPrice: h.globalPrice }])
+      oldest.map((h) => [h._id, { turn: h.turn, globalPrice: h.globalPrice }])
     );
     const history24hByCommodity = new Map(
       history24h.map((h) => [h._id, { turn: h.turn, globalPrice: h.globalPrice }])
@@ -218,6 +227,13 @@ export async function GET(request: Request) {
             referenceValue: reference?.globalPrice,
             turnSpan: reference ? currentTurn - reference.turn : 0,
           });
+        })(),
+        lastTurnPriceChange: (() => {
+          const previous = previousTurnPriceByCommodity.get(commodity);
+          if (!data || !previous || previous.turn !== data.turn - 1 || previous.globalPrice <= 0) {
+            return null;
+          }
+          return ((data.globalPrice - previous.globalPrice) / previous.globalPrice) * 100;
         })(),
         recentPriceChange: (() => {
           const globalPrice = data?.globalPrice ?? basePrice;
