@@ -1,3 +1,4 @@
+import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
 import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
@@ -129,6 +130,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Energy sectors on the removed fracking method must leave it before a turn runs without it.
   moveFrackingToExtraction,
   linearBuildDelivery,
+  corporationsWikiMargins,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

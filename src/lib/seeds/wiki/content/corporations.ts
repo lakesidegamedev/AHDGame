@@ -1,4 +1,7 @@
-export const corporationsContent = `# Corporations
+import { renderCorporationsContent } from "./corporationsMargins";
+
+// Share the margin copy with the authored-page migration.
+export const corporationsContent = renderCorporationsContent`# Corporations
 
 The first real decision you make as CEO is which industry to commit to, because margin and who you end up fighting both follow from it. A **corporation** is a business a player runs as CEO. It owns **sectors** (the plants it builds in each state), sells what they make on the commodity markets, pays tax, employs workers and pays dividends to its shareholders. It is the main way players earn money and economic influence, and it ties into most other systems: prices, labour, taxes, the stock market and politics. In a command economy the state owns production instead; see [Planned / Command Economies](/wiki/planned-economies).
 
