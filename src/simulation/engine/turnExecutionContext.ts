@@ -4,7 +4,6 @@ import type {
   GameIteration,
   GameState,
   TurnLog,
-  State,
   TurnPhaseTelemetryMap,
 } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -176,6 +175,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     nppActionProcessing: null,
     metricEngine: null,
     regionalBudgetProcessing: null,
+    regionalDebtService: null,
     jpRegionalBudgetProcessing: null,
     deRegionalBudgetProcessing: null,
     crisisTurn: null,

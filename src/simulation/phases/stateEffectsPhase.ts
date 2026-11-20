@@ -1,3 +1,5 @@
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { processRegionalDebt } from "@/lib/budget/regionalDebtTurn";
 /**
  * The `stateEffectsAndNationalAggregation` turn-phase adapter, moved verbatim
  * out of turnPhaseRegistry.ts (pure code motion). getTurnPhaseRegistry splices
@@ -345,6 +347,14 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       // self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS.
       runtime.runPhase("justiceActionReset", () => resetJusticeActions(db, newTurn)),
     ]);
+    const regionalDebtResult = await runtime.runPhase("regionalDebtService", async () => {
+      try {
+        return await processRegionalDebt(db, newTurn);
+      } catch (error) {
+        throw new TurnMustStopError("regionalDebtService", error);
+      }
+    });
+    phaseResults.regionalDebtService = regionalDebtResult;
     phaseResults.policyEffects = { statesProcessed: policyResult ?? 0 };
     phaseResults.demographicEffects = { statesProcessed: demoEffectResult ?? 0 };
     phaseResults.regionalBudgetProcessing = regionalBudgetResult
