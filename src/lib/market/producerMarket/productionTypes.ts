@@ -103,6 +103,8 @@ export type ProducerEconomyInput = {
     pressureByLane: Readonly<Record<string, number>>;
     maxStep?: number;
     maxMultiplier?: number;
+    /** Raise advertising asks from clearing even when the seller last asked more. */
+    advertisingFromClearing?: boolean;
   };
   /** Automatic ask tie-break (quoteProducer buyerTieBreak), producerAskBuyerTieStage >= 1. */
   askBuyerTieBreak?: boolean;
