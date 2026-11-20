@@ -52,6 +52,7 @@ import {
   expectedUnitRevenue,
   type SalesAdvanceLine,
 } from "@/lib/market/producerMarket/salesAdvanceRules";
+import { stockBackedExtractionRunShare } from "@/lib/market/producerMarket/rules/extractionRunShare";
 import {
   demandPlanRunShare,
   liveLineReceipt,
@@ -510,8 +511,7 @@ export function prepareProducerPhysicalSector(input: {
   if (suspended) plan.activeFraction = 0;
   const nominalDaily = plan.capacityUnits * TURNS_PER_DAY * baseRecipe.nominalAnchorPerCapacityUnit;
   // Output follows price: last turn's own settled receipt sets this turn's run.
-  const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
-    .producerSettlement;
+  const priorReceipt = sector.producerSettlement;
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const settledLast = priorReceipt && priorReceipt.turn === openingTurn ? priorReceipt : null;
@@ -580,13 +580,24 @@ export function prepareProducerPhysicalSector(input: {
       : 0;
   const plannedRunShare = Math.max(unpacedRunShare, ownDemandFloor);
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
-  const runShare = pacedRunShare(
+  const normalRunShare = pacedRunShare(
     plannedRunShare,
     lastReceipt,
     env.runPaceDrop ?? 0,
     runFloor,
     runPlan
   );
+  const runShare =
+    operatingType === "extraction" &&
+    lookups.preset === "2027-default" &&
+    (env.runPlanStage ?? 0) >= 3
+      ? stockBackedExtractionRunShare({
+          runShare: normalRunShare,
+          minimumRunShare: Math.max(runFloor, ownDemandFloor),
+          prior: settledLast?.worldEpoch === input.worldEpoch ? settledLast : null,
+          outputStock: plan.outputStock,
+        })
+      : normalRunShare;
   if ((env.demandPlanStage ?? 0) >= 1 || runPlan) plan.plannedRunShare = runShare;
   if (runPlan) plan.priorGlutTurns = glutTurnsThrough(lastReceipt);
   // Wages and site running costs follow the line the plant runs: idle lines
