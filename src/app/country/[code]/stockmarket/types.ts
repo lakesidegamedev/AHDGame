@@ -93,6 +93,7 @@ export interface CommodityData {
   exchangeSupply: number;
   exchangeDemand: number;
   priceChange: number;
+  lastTurnPriceChange?: number | null;
   recentPriceChange?: number | null;
   annualPriceChange?: number;
   /** Additive price explanation from the pricing engine (global scope). */
