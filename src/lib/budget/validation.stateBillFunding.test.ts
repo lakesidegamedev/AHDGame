@@ -19,6 +19,11 @@ vi.mock("@/lib/politicalLegislation/fiscalBase", () => ({
   regionFiscalBase: vi.fn(async () => ({ gdp: 1, population: 1 })),
 }));
 
+vi.mock("@/lib/legislature/provisionEnrichment/fiscal", () => ({
+  resolveProvisionFiscal: vi.fn(async () => ({})),
+}));
+
+import { resolveProvisionFiscal } from "@/lib/legislature/provisionEnrichment/fiscal";
 import { validateStateBudgetImpact } from "./validation";
 
 describe("validateStateBudgetImpact funding source", () => {
@@ -104,5 +109,92 @@ describe("validateStateBudgetImpact funding source", () => {
     expect(result.allowed).toBe(true);
     expect(result.newBalance).toBe(1_000_000_000);
     expect(db.collectionMocks.regionalBudgets.findOne).not.toHaveBeenCalled();
+  });
+
+  describe("revenue raised by the same bill", () => {
+    const taxAndSpendBill = {
+      legislationTypeId: "university",
+      effectDirection: 1,
+      provisions: [
+        {
+          type: "policy" as const,
+          legislationTypeId: "university",
+          effectDirection: 1,
+        },
+        {
+          type: "policy" as const,
+          legislationTypeId: "salesTax",
+          policyOptionId: "rate:10",
+          effectDirection: 1,
+          proposedRate: 10,
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      // Revenue already fully spent: no headroom without the bill's own tax rise.
+      db.collectionMocks.stateBudgets.findOne.mockResolvedValue({
+        _id: "TX",
+        countryId: "US",
+        revenue: { total: 2_000_000_000 },
+        spending: { total: 2_000_000_000 },
+        balance: 0,
+        stateGdp: 100_000_000_000,
+      });
+      db.collectionMocks.legislationTypes.find.mockReturnValue({
+        toArray: vi.fn(async () => [
+          { _id: "university", budgetCost: 0 },
+          { _id: "salesTax", budgetCost: 0 },
+        ]),
+      });
+    });
+
+    it("refuses the spending when no tax revenue is raised", async () => {
+      const result = await validateStateBudgetImpact(
+        db as unknown as Db,
+        "TX",
+        "US",
+        taxAndSpendBill as never
+      );
+      expect(result.allowed).toBe(false);
+    });
+
+    it("passes a bill whose own tax rise funds its spending", async () => {
+      vi.mocked(resolveProvisionFiscal).mockResolvedValueOnce({
+        fiscal: {
+          currencyCode: "USD",
+          currentRate: 6,
+          proposedRate: 10,
+          revenueDelta: 5_000_000_000,
+        },
+      } as never);
+      const result = await validateStateBudgetImpact(
+        db as unknown as Db,
+        "TX",
+        "US",
+        taxAndSpendBill as never
+      );
+      expect(result.allowed).toBe(true);
+      expect(result.newBalance).toBe(3_000_000_000);
+    });
+
+    it("does not let a tax cut add headroom or new refusals", async () => {
+      vi.mocked(resolveProvisionFiscal).mockResolvedValueOnce({
+        fiscal: {
+          currencyCode: "USD",
+          currentRate: 10,
+          proposedRate: 6,
+          revenueDelta: -5_000_000_000,
+        },
+      } as never);
+      const result = await validateStateBudgetImpact(
+        db as unknown as Db,
+        "TX",
+        "US",
+        taxAndSpendBill as never
+      );
+      expect(result.allowed).toBe(false);
+      expect(result.shortfall).toBe(2_000_000_000);
+    });
   });
 });
