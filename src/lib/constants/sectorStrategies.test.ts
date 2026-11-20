@@ -101,7 +101,7 @@ describe("2027 focused mining recipes", () => {
       const original = getStrategy("extraction", id, "1991-default");
       const current = getStrategy("extraction", id, "2027-default");
       expect(original.demand.chemicals).toBe(0.15);
-      expect(current.demand).toEqual({ ...original.demand, chemicals: 0.12 });
+      expect(current.demand.chemicals).toBe(0.12);
       expect(current.supply).toEqual(original.supply);
     }
   );
@@ -118,6 +118,34 @@ describe("2027 focused mining recipes", () => {
     expect(result.isTransitioning).toBe(true);
     expect(result.demand.chemicals).toBeCloseTo(0.1);
     expect(getStrategy("extraction", "standard", "2027-default").demand.chemicals).toBe(0.08);
+  });
+});
+
+describe("2027 diversified and fuel mining inputs", () => {
+  it.each(["standard", "oil_gas", "natural_gas_drilling"])(
+    "uses less electricity and equipment for %s in 2027",
+    (id) => {
+      const baseline = SECTOR_STRATEGIES.extraction.find((strategy) => strategy.id === id)!;
+      const expected = { ...baseline.demand };
+      for (const commodity of ["energy", "steel", "vehicles"] as const) {
+        const amount = expected[commodity];
+        if (amount != null) expected[commodity] = amount * 0.85;
+      }
+      if (id !== "standard") expected.chemicals = 0.12;
+
+      const current = getStrategy("extraction", id, "2027-default");
+      expect(current.demand).toEqual(expected);
+      expect(current.supply).toEqual(baseline.supply);
+      expect(getStrategy("extraction", id, "1973-default").demand).toEqual(baseline.demand);
+    }
+  );
+
+  it("keeps rare-earth electricity and equipment use at the existing rates", () => {
+    const baseline = getStrategy("extraction", "rare_earth_mining", "1973-default");
+    expect(getStrategy("extraction", "rare_earth_mining", "2027-default").demand).toEqual({
+      ...baseline.demand,
+      chemicals: 0.12,
+    });
   });
 });
 
