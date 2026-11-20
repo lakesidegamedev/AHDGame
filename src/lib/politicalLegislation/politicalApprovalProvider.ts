@@ -1,3 +1,5 @@
+import { applyModifiers } from "@/lib/utils/approvalModifiers";
+import { loadRegionalDebtApprovalModifiers } from "@/lib/budget/regionalDebtApproval";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { resetApprovalDirections } from "@/lib/resetMetrics/rules/approval";
 /**
@@ -8,12 +10,9 @@ import { resetApprovalDirections } from "@/lib/resetMetrics/rules/approval";
  */
 
 import { isResetV2Country } from "@/lib/resetVersions/rules";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { loadResetApprovalModifiers } from "@/lib/resetMetrics/loadApprovalModifiers";
 import type { Db } from "mongodb";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import { resolveGameYear } from "@/lib/era/era";
 import {
@@ -108,10 +107,38 @@ export async function loadPoliticalApprovalBases(
     statesCollection(db)
       .find(
         { countryId },
-        { projection: { _id: 1, population: 1, cachedEconomicLean: 1, cachedSocialLean: 1 } }
+        {
+          projection: { _id: 1, population: 1, cachedEconomicLean: 1, cachedSocialLean: 1, gdp: 1 },
+        }
       )
       .toArray(),
   ]);
+  const debtModifiers = await loadRegionalDebtApprovalModifiers(db, countryId, states);
+  const withDebt = (result: PoliticalApprovalBases): PoliticalApprovalBases => {
+    if (!result.modifiersByRegion) {
+      return {
+        ...result,
+        byRegion: new Map(
+          [...result.byRegion].map(([id, value]) => [
+            id,
+            applyModifiers(value, debtModifiers.get(id) ?? []),
+          ])
+        ),
+      };
+    }
+    return {
+      ...result,
+      modifiersByRegion: new Map(
+        states.map((state) => [
+          String(state._id),
+          [
+            ...(result.modifiersByRegion?.get(String(state._id)) ?? []),
+            ...(debtModifiers.get(String(state._id)) ?? []),
+          ],
+        ])
+      ),
+    };
+  };
   const resetInputs = await loadResetApprovalModifiers(
     db,
     countryId,
@@ -148,7 +175,7 @@ export async function loadPoliticalApprovalBases(
             ) / totalPop
           )
         : BASE_APPROVAL;
-    return { byRegion, national, modifiersByRegion: resetInputs.modifiersByRegion };
+    return withDebt({ byRegion, national, modifiersByRegion: resetInputs.modifiersByRegion });
   }
   // Successors in a v1 world still use the original relative metric scorer.
   // Opting approval into successor routing must not replace that base with 50.
@@ -187,7 +214,7 @@ export async function loadPoliticalApprovalBases(
             ) / totalPop
           )
         : BASE_APPROVAL;
-    return { byRegion, national };
+    return withDebt({ byRegion, national });
   }
   const docs = await politicalMetricsCollection(db).find({ countryId }).toArray();
   if (docs.length === 0) return null;
@@ -211,5 +238,5 @@ export async function loadPoliticalApprovalBases(
     }
   }
   const national = totalPop > 0 ? round1(clamp100(weighted / totalPop)) : BASE_APPROVAL;
-  return { byRegion, national };
+  return withDebt({ byRegion, national });
 }

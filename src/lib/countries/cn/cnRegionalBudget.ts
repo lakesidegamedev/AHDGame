@@ -13,17 +13,14 @@
  *      resource-extraction proxy.
  *
  * Enacted regional spending (non-tax provincial legislation) is compared
- * against total revenue. Regions in deficit more than one turn trigger forced
- * austerity (most expensive programme downgraded one tier).
+ * against total revenue. Deficits are financed by the regional debt service phase.
  */
 
 import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { State } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
+import type { LegislationType } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -328,7 +325,6 @@ export async function processOnePartyRegionalBudgets(
 
   let regionsProcessed = 0;
   // Batched per-region writes (see regionalBudget.ts for rationale).
-  const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
   for (const region of regions) {
@@ -371,44 +367,6 @@ export async function processOnePartyRegionalBudgets(
     const isOverBudget = surplus < 0;
     const previousTurnsOver = existingBudget?.turnsOverBudget ?? 0;
     const turnsOverBudget = isOverBudget ? previousTurnsOver + 1 : 0;
-
-    if (turnsOverBudget > 1 && regionPolicies.length > 0) {
-      const policiesWithCost = regionPolicies.map((p) => ({
-        policy: p,
-        cost: getOptionCostPerCapita(p, legTypeMap),
-      }));
-      policiesWithCost.sort((a, b) => b.cost - a.cost);
-
-      const mostExpensive = policiesWithCost[0];
-      if (mostExpensive && mostExpensive.cost > 0) {
-        const legType = legTypeMap.get(mostExpensive.policy.legislationTypeId);
-        if (legType?.policyOptions) {
-          const currentIndex = legType.policyOptions.findIndex(
-            (o) => o.id === mostExpensive.policy.policyOptionId
-          );
-          if (currentIndex > 0) {
-            const newOption = legType.policyOptions[currentIndex - 1] as LegislationPolicyOption;
-            statePolicyOps.push({
-              updateOne: {
-                filter: {
-                  stateId: region._id,
-                  legislationTypeId: mostExpensive.policy.legislationTypeId,
-                },
-                update: {
-                  $set: {
-                    policyOptionId: newOption.id,
-                    policyOptionIndex: currentIndex - 1,
-                    economic: newOption.economic,
-                    social: newOption.social,
-                    effectDirection: newOption.effectDirection,
-                  },
-                },
-              },
-            });
-          }
-        }
-      }
-    }
 
     const budgetDoc: RegionalBudget = {
       _id: region._id,
@@ -455,9 +413,6 @@ export async function processOnePartyRegionalBudgets(
     regionsProcessed++;
   }
 
-  if (statePolicyOps.length > 0) {
-    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
-  }
   if (regionalBudgetOps.length > 0) {
     await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }

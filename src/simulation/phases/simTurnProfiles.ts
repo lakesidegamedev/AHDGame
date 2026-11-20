@@ -43,6 +43,7 @@ export const ECONOMY_ONLY_PHASES: ReadonlySet<string> = new Set<string>([
   "financialSuspectScan",
   "settlement",
   "fiscalYear",
+  "regionalDebtService",
   "policyEffects",
   "demographicEffects",
   "metricDecay",
@@ -96,6 +97,7 @@ export const MACRO_ONLY_PHASES: ReadonlySet<string> = new Set<string>([
   "departmentProgramSettlement",
   "commodityPrices",
   "fiscalYear",
+  "regionalDebtService",
   "policyEffects",
   "demographicEffects",
   "metricDecay",
@@ -189,6 +191,7 @@ export const ELECTIONS_SKIP_PHASES: ReadonlySet<string> = new Set<string>([
   "centralBankChairSelection",
   // fiscalYearBoundary
   "fiscalYear",
+  "regionalDebtService",
   // Economy snapshots
   "interestRateSnapshot",
   "portfolioSnapshot",

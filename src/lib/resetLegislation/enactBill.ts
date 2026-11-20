@@ -1,9 +1,9 @@
+import { bookRegionalLawDemand } from "./regionalEnactmentBudget";
 /** Transactional persistence shell for a server-authored v2 law bill. */
 import { applyV2VoterReactions, type V2BillBallots } from "./voterReactions";
 import type { Db, ObjectId } from "mongodb";
 import type { Bill, ResetLawProvision } from "@/lib/db/types/legislation";
 import type { StateBill } from "@/lib/db/types/stateBill";
-import type { GameState } from "@/lib/db/types/gameState";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
@@ -366,6 +366,7 @@ async function applyRegionalResetLawBillEnactment(
       turn,
     });
     const programIds: string[] = [];
+    const bookedPrograms: ResetLawProgramDocument[] = [];
     for (const [index, transition] of enactment.transitions.entries()) {
       const provision = frozen[index]!;
       const program: ResetLawProgramDocument = {
@@ -385,7 +386,15 @@ async function applyRegionalResetLawBillEnactment(
         { upsert: true, session }
       );
       programIds.push(program._id);
+      bookedPrograms.push(program);
     }
+    await bookRegionalLawDemand(db, {
+      country: resetCountry,
+      regionId,
+      delta: enactment.annualAllocationDelta,
+      programs: bookedPrograms,
+      session,
+    });
     await applyV2VoterReactions(
       db,
       bill,

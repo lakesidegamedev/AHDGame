@@ -84,6 +84,7 @@ export interface TurnLog {
   };
 
   phases: {
+    regionalDebtService?: { regionsProcessed: number } | null;
     actionRefresh: {
       charactersProcessed: number;
       totalActionsGranted: number;
