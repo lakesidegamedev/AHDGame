@@ -38,6 +38,9 @@ const UNKNOWN_SECTOR_STRATEGY: SectorStrategy = {
   demand: {},
 };
 
+const FOCUSED_MINING_CHEMICAL_DEMAND_2027 = 0.12;
+const FOCUSED_MINING_STRATEGIES = new Set(["oil_gas", "natural_gas_drilling", "rare_earth_mining"]);
+
 /**
  * Build the model recipes from existing physical input baskets and output
  * patterns. Output rates retain the default sector's base-value budget; input
@@ -125,6 +128,12 @@ function strategyForPreset(
       resizedDemand[commodity] = (resizedDemand[commodity] ?? 0) * STANDARD_RETAIL_INPUT_SCALE_2027;
     }
     return { ...strategy, demand: resizedDemand };
+  }
+  if (era === "2027" && sectorType === "extraction" && FOCUSED_MINING_STRATEGIES.has(strategy.id)) {
+    return {
+      ...strategy,
+      demand: { ...(demand ?? strategy.demand), chemicals: FOCUSED_MINING_CHEMICAL_DEMAND_2027 },
+    };
   }
   return demand ? { ...strategy, demand: { ...demand } } : strategy;
 }
