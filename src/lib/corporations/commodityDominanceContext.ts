@@ -170,6 +170,7 @@ export async function loadCommodityDominanceContext(
   args: {
     corporation: Pick<Corporation, "_id" | "countryOwnerId">;
     sector: Pick<CorporateSector, "_id">;
+    newSite?: FirmSectorRow;
     turn: number;
     currentYear: number;
   }
@@ -191,7 +192,11 @@ export async function loadCommodityDominanceContext(
       .find({ corporationId: { $in: corporationIds } }, { projection: FIRM_SECTOR_PROJECTION })
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
-    const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
+    const sites: FirmSectorRow[] =
+      args.newSite && !rows.some((row) => row._id.equals(args.newSite!._id))
+        ? [...rows, args.newSite]
+        : rows;
+    const sectors = sites.map((row) => toDominanceSector(row, args.turn));
     const targetIndex = sectors.findIndex((s) => String(s._id) === String(args.sector._id));
     if (targetIndex < 0) return null;
     // Price the toll on the strategy the ORDER will run, not the trailing

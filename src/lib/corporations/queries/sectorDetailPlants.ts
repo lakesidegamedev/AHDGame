@@ -105,6 +105,7 @@ export function buildSectorPlantsSection(args: {
   measuredDemandGapUnits?: number | null;
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
+  strategyBuildRoom?: Record<string, number | null>;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
   retoolHint?: RetoolHint | null;
   workers: number;
@@ -588,6 +589,7 @@ export function buildSectorPlantsSection(args: {
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
     buildDemand: args.buildDemand,
     buildDemandTurn: args.buildDemandTurn,
+    strategyBuildRoom: args.strategyBuildRoom,
     roomHeldByOwnIdle,
     ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {
