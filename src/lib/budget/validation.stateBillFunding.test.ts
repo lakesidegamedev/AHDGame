@@ -74,7 +74,7 @@ describe("validateStateBudgetImpact funding source", () => {
     expect(result.newTotalSpending).toBe(21_000_000_000);
   });
 
-  it("rejects a German regional bill when its cost exceeds the live surplus", async () => {
+  it("allows borrowing for a German regional bill that exceeds its surplus", async () => {
     db.collectionMocks.regionalBudgets.findOne.mockResolvedValue({
       _id: "BY",
       countryId: "DE",
@@ -87,7 +87,8 @@ describe("validateStateBudgetImpact funding source", () => {
       effectDirection: 1,
     });
 
-    expect(result.allowed).toBe(false);
+    expect(result.allowed).toBe(true);
+    expect(result.warning).toBe("HIGH_DEBT");
     expect(result.shortfall).toBe(500_000_000);
   });
 
@@ -149,14 +150,15 @@ describe("validateStateBudgetImpact funding source", () => {
       });
     });
 
-    it("refuses the spending when no tax revenue is raised", async () => {
+    it("allows debt-financed spending when no tax revenue is raised", async () => {
       const result = await validateStateBudgetImpact(
         db as unknown as Db,
         "TX",
         "US",
         taxAndSpendBill as never
       );
-      expect(result.allowed).toBe(false);
+      expect(result.allowed).toBe(true);
+      expect(result.warning).toBe("HIGH_DEBT");
     });
 
     it("passes a bill whose own tax rise funds its spending", async () => {
@@ -193,7 +195,8 @@ describe("validateStateBudgetImpact funding source", () => {
         "US",
         taxAndSpendBill as never
       );
-      expect(result.allowed).toBe(false);
+      expect(result.allowed).toBe(true);
+      expect(result.warning).toBe("HIGH_DEBT");
       expect(result.shortfall).toBe(2_000_000_000);
     });
   });

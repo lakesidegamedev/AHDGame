@@ -1,3 +1,4 @@
+import type { RegionalDebtLedger } from "@/lib/budget/rules/regionalDebt";
 import type {
   CreditRating,
   CurrencyCode,
@@ -158,6 +159,7 @@ export interface StateTaxBases {
 }
 
 export interface StateSpending {
+  interestPayments?: number;
   byCategory: Record<string, number>;
   /**
    * Accumulated geological-survey spend funded by a state government
@@ -173,6 +175,7 @@ export interface StateSpending {
 }
 
 export interface StateBudget {
+  financing?: RegionalDebtLedger;
   /** Monotonic tax-collection proof, reset with the owning world balance. */
   incomeTaxBatchReceipt?: IncomeTaxBatchReceipt | null;
   /** Income-weighted census shares; independent of the numeric tax-base vector. */

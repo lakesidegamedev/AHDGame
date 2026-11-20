@@ -46,6 +46,7 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   ministerialOrders: 2000,
   indexFunds: 18000,
   fiscalYear: 7000,
+  regionalDebtService: 8,
   nppUnionBehavior: 1500,
   nppActionProcessing: 10000,
   approvalSnapshot: 1500,

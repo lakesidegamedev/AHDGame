@@ -38,6 +38,8 @@ describe("applyResetLawBillEnactment", () => {
   });
 
   it("persists a regional program and exactly-once enactment receipt", async () => {
+    db.collection("stateBudgets");
+    db.collectionMocks.stateBudgets.findOne.mockResolvedValue({ _id: "PA", countryId: "US" });
     const worldId = "world-test";
     const board = buildOpeningLawBoards1991(worldId, 1).find(
       (candidate) => candidate._id === "US:PA"
@@ -123,6 +125,16 @@ describe("applyResetLawBillEnactment", () => {
       programs: 1,
     });
     expect(db.collectionMocks.characters!.bulkWrite).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.stateBudgets.updateOne).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.stateBudgets.updateOne).toHaveBeenCalledWith(
+      { _id: "PA", countryId: "US" },
+      expect.objectContaining({
+        $inc: expect.objectContaining({
+          "spending.total": selected.annualAllocationDelta,
+        }),
+      }),
+      { session: {} }
+    );
     db.collectionMocks.resetLawEnactmentReceipts!.findOne.mockResolvedValue({
       programIds: ["existing"],
     });

@@ -10,11 +10,8 @@ import type { Db } from "mongodb";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
 import { COST_INCOME_ANCHORS } from "@/lib/politicalLegislation/costAnchors";
 import { countryFiscalBase, regionFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
-import type { StateBudget } from "@/lib/db/types/budget";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { Bill, LegislationType } from "@/lib/db/types/legislation";
+import type { Bill } from "@/lib/db/types/legislation";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
-import type { State } from "@/lib/db/types/state";
 import {
   COUNTRY_CONFIGS,
   getCountryConfig,
@@ -241,10 +238,11 @@ export async function validateStateBudgetImpact(
 
   if (newTotalSpending > fundsWithBill) {
     return {
-      allowed: false,
-      error: "INSUFFICIENT_FUNDS",
+      allowed: true,
+      warning: "HIGH_DEBT",
       costAmount,
       newTotalSpending,
+      newBalance: fundsWithBill - newTotalSpending,
       shortfall: newTotalSpending - fundsWithBill,
     };
   }

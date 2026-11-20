@@ -296,10 +296,10 @@ describe("processRegionalBudgets", () => {
 
     const setData = written();
     expect(setData.enactedBillCosts).toBe(1_000_000_000);
-    expect(setData.fundedBillCosts).toBeLessThan(1_000_000_000);
-    expect(setData.unfundedBillCosts).toBeGreaterThan(0);
+    expect(setData.fundedBillCosts).toBe(1_000_000_000);
+    expect(setData.unfundedBillCosts).toBe(0);
     expect(setData.programSettlements["world:UK:LON:L10"].implementationFactor).toBeGreaterThan(0);
-    expect(setData.programSettlements["world:UK:LON:L10"].implementationFactor).toBeLessThan(1);
+    expect(setData.programSettlements["world:UK:LON:L10"].implementationFactor).toBe(1);
   });
 
   it("resets turnsOverBudget to 0 when in surplus", async () => {

@@ -1029,10 +1029,9 @@ describe("processFiscalYear", () => {
     expect(updateMany).not.toHaveBeenCalled();
   });
 
-  it("accumulates surplus into state balance correctly", async () => {
+  it("leaves accumulated cash unchanged during annual repricing", async () => {
     const stateBudget = makeStateBudget("US-CA");
-    // existing balance: 50B, revenue: 110B, spending: 100B → new surplus: 10B
-    // new balance: 50B + 10B = 60B
+    // Annual repricing sets demand; per-turn financing settles the cash flow.
     vi.mocked(calculateStateRevenue).mockResolvedValue({
       total: 110_000_000_000,
       byCategory: {},
@@ -1058,10 +1057,10 @@ describe("processFiscalYear", () => {
     const call = db._stateBudgetUpdateOne.mock.calls[1];
     const setOps = (call[1] as { $set: Record<string, unknown> }).$set;
     expect(setOps.surplus).toBe(10_000_000_000);
-    expect(setOps.balance).toBe(60_000_000_000); // 50B + 10B
+    expect(setOps.balance).toBe(50_000_000_000);
   });
 
-  it("funds Canadian standing services without requiring US v2 or creating surplus", async () => {
+  it("retains Canadian standing services and records their deficit demand", async () => {
     const stateBudget = { ...makeStateBudget("CA_ON"), countryId: "CA", balance: 0 };
     vi.mocked(calculateStateRevenue).mockResolvedValue({ total: 100_000_000_000 } as never);
     vi.mocked(calculateStateSpendingDetail).mockResolvedValue({
@@ -1083,10 +1082,10 @@ describe("processFiscalYear", () => {
     const write = db._stateBudgetUpdateOne.mock.calls
       .map((c) => c[1].$set)
       .find((s) => s.fiscalYear === 2028);
-    expect(write.spending.total).toBe(100_000_000_000);
+    expect(write.spending.total).toBe(128_567_355_000);
     expect(write.authorizedSpending.total).toBe(128_567_355_000);
     expect(write.balance).toBe(0);
-    expect(write.surplus).toBe(0);
+    expect(write.surplus).toBe(-28_567_355_000);
     expect(Object.keys(write.regionalProgramSettlements)).toHaveLength(5);
   });
 
@@ -1221,8 +1220,8 @@ describe("processFiscalYear", () => {
       regionalProgramSettlements: Record<string, { implementationFactor: number }>;
     };
     expect(setOps.authorizedSpending.total).toBe(250_000_000);
-    expect(setOps.spending.total).toBe(100_000_000);
-    expect(setOps.regionalProgramSettlements["world:US:US-CA:L10"].implementationFactor).toBe(0.4);
+    expect(setOps.spending.total).toBe(250_000_000);
+    expect(setOps.regionalProgramSettlements["world:US:US-CA:L10"].implementationFactor).toBe(1);
   });
 
   it("processes non-US federal budgets with country-scoped helpers", async () => {
