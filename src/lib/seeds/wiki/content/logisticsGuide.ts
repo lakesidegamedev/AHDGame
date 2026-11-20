@@ -18,7 +18,7 @@ export const logisticsGuideContent = `# Logistics: Freight, Sourcing, and Supply
 
 If your sector shows a low selling %, check demand, pricing, and delivery. The Logistics map and the sector's Freight tag help you spot delivery constraints. It connects the commodity market to the map: the game projects how a state with unmet input demand would source locally, across state lines, or from abroad after shipping and tariffs. Logistics sectors provide the freight capacity measured by that projection. Heavy haul becomes real Freight commodity demand, so tight capacity raises freight sold volume and price. Electricity and natural gas are the exception: they travel by wire and pipe, spend no freight capacity, and pay distance in transmission loss instead.
 
-Freight settlement is switched on per world by an admin, and runs in shadow mode until then. When it is active, it applies measured delivery limits to legacy clearing offers and **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the measured delivery limit and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
+Freight settlement applies measured delivery limits to legacy clearing offers. The Freight market records demand in TEU from the sourcing calculation. Where **freight billing** is enabled, the commodity turn saves separate haul records for billing. The corporation turn uses those records on the next turn to charge buyer sectors in proportion to the inbound inputs they consume and credit freight suppliers in the origin state. Corporate logistics strength can lower an eligible buyer's charge without reducing supplier credit. In a world that is still phasing this in, the measured delivery limit and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
 
 For a corporation, logistics answers three questions:
 
@@ -119,7 +119,7 @@ On turns using the funded producer market, the sector's sales and revenue come f
 
 If the **Freight** tag appears, check the Logistics map for the origin state and the commodity balance on your exchange. If the route is consistently constrained, consider adding freight capacity in that state by opening or buying into a logistics sector, or site new production closer to demand. If selling % is low, also check demand and pricing before cutting output. A dark state on the map can reflect little industry and haul, so check local demand and the exchange before building.
 
-Freight bills are apportioned onto buyer sectors and credited to origin-state freight sectors each turn as a per-turn billing line, not as a player-to-player invoice per route. Freight contracts that reserve haulage in one state come from [Supply Agreements](/wiki/supply-agreements).
+Sector accounts report freight charges and credits as per-turn billing lines. Freight contracts that reserve haulage in one state come from [Supply Agreements](/wiki/supply-agreements).
 
 ## If you run a logistics corporation
 
@@ -147,5 +147,5 @@ These names are easy to confuse:
 
 Spending on corporate logistics strength does not create TEU. Opening and operating a logistics sector does.
 
-Applies in worlds where freight settlement is active; eras and countries without a modelled freight network have no Logistics map. Last checked 2026-10-29, version 1.18.0. This guide has no separate design page.
+Eras and countries without a modelled freight network have no Logistics map. Last checked 2026-10-29, version 1.18.0. This guide has no separate design page.
 `;
