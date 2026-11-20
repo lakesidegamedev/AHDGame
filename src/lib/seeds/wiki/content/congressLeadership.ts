@@ -2,6 +2,8 @@ export const congressLeadershipContent = `# Congress Leadership
 
 Winning the Speaker's gavel is worth +3 actions every turn and a 2.0 national influence tier, and the House picks the Speaker by plurality in a single day. Congressional leadership (Speaker, floor leaders, whips) sits at the top of the US legislature, and holding a role also gives you the authority to whip your party's votes. This page covers who can run, who votes, and what happens when a seat goes empty.
 
+Eligible House bills open for a floor vote when filed. [Bills & Legislation](/wiki/bills-legislation) explains how to file a bill and how it advances.
+
 ## The ballot
 
 Leadership elections are separate from constituency races. They are 24 hour plurality ballots: the candidate with the most votes when the window closes wins, with no majority needed. A tie goes to the candidate who declared first.
