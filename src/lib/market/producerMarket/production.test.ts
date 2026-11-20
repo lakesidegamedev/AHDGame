@@ -1382,9 +1382,10 @@ describe("receipt-backed production", () => {
     { previousOffer: 20, previousDelivery: 20, ask: 10.5 },
     { previousOffer: 0, previousDelivery: 1, ask: 10 },
     { previousOffer: undefined, previousDelivery: 1, ask: 10.5 },
+    { previousOffer: 20, previousDelivery: 20, ask: 11.75, frozen: true },
   ])(
-    "only raises a non-storable shortage ask on a verified sellout ($previousOffer/$previousDelivery)",
-    ({ previousOffer, previousDelivery, ask }) => {
+    "quotes advertising at $ask with $previousDelivery sold out of $previousOffer",
+    ({ previousOffer, previousDelivery, ask, frozen }) => {
       const lane = "advertising|world";
       const producer = plant({
         inputs: [],
@@ -1401,6 +1402,7 @@ describe("receipt-backed production", () => {
         capacityUnits: 20,
         recentSoldUnits: previousDelivery,
         recentSoldByOutput: { [lane]: previousDelivery },
+        recentAskByOutput: { [lane]: 12 },
         ...(previousOffer === undefined
           ? {}
           : { recentOfferedByOutput: { [lane]: previousOffer } }),
@@ -1410,7 +1412,10 @@ describe("receipt-backed production", () => {
         accounts,
         producers: [producer],
         clearingPriceByLane: { [lane]: 10 },
-        shortageAsk: { pressureByLane: { [lane]: 2 } },
+        shortageAsk: {
+          pressureByLane: { [lane]: 2 },
+          ...(frozen ? {} : { advertisingFromClearing: true }),
+        },
         externalOrders: [
           {
             id: "buyer",
@@ -1418,7 +1423,7 @@ describe("receipt-backed production", () => {
             commodity: "advertising",
             book: "world",
             units: 20,
-            maximumUnitPrice: 12,
+            maximumUnitPrice: 11.75,
           },
         ],
       });

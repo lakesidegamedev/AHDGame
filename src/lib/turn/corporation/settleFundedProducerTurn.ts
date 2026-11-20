@@ -132,6 +132,7 @@ export async function settleFundedProducerTurn(
         ? {
             shortageAsk: {
               pressureByLane: context.lastOutcome.bookPressure,
+              advertisingFromClearing: true,
               ...(context.input.env.shortageAskMaxStep != null
                 ? { maxStep: context.input.env.shortageAskMaxStep }
                 : {}),
