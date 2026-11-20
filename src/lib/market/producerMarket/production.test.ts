@@ -1383,7 +1383,7 @@ describe("receipt-backed production", () => {
     { previousOffer: 0, previousDelivery: 1, ask: 10 },
     { previousOffer: undefined, previousDelivery: 1, ask: 10.5 },
   ])(
-    "only raises a non-storable shortage ask on a verified sellout ($previousOffer/$previousDelivery)",
+    "raises the advertising ask from the market price on a sellout ($previousOffer/$previousDelivery)",
     ({ previousOffer, previousDelivery, ask }) => {
       const lane = "advertising|world";
       const producer = plant({
@@ -1401,6 +1401,7 @@ describe("receipt-backed production", () => {
         capacityUnits: 20,
         recentSoldUnits: previousDelivery,
         recentSoldByOutput: { [lane]: previousDelivery },
+        recentAskByOutput: { [lane]: 12 },
         ...(previousOffer === undefined
           ? {}
           : { recentOfferedByOutput: { [lane]: previousOffer } }),
@@ -1418,7 +1419,7 @@ describe("receipt-backed production", () => {
             commodity: "advertising",
             book: "world",
             units: 20,
-            maximumUnitPrice: 12,
+            maximumUnitPrice: 11.75,
           },
         ],
       });

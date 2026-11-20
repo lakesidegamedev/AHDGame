@@ -284,7 +284,10 @@ export function buildProducerInputOrders({
               referenceUnitPrice: output.referenceUnitPrice,
               pressure: input.shortageAsk.pressureByLane[lane],
               soldOut,
-              ownAskUnitPrice: p.recentAskByOutput?.[lane],
+              // An advertising sellout at an above-market ask can exhaust the buyers
+              // able to pay that premium. Raise the next ask from the market price.
+              ownAskUnitPrice:
+                output.commodity === "advertising" ? undefined : p.recentAskByOutput?.[lane],
               ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
               ...(input.shortageAsk.maxMultiplier != null
                 ? { maxMultiplier: input.shortageAsk.maxMultiplier }
