@@ -16,7 +16,10 @@ export function getSectorOperatingCountryId(
 }
 
 export function getCorporateSectorLocationKey(
-  sector: Pick<CorporateSector, "corporationId" | "stateId" | "sectorType" | "countryId">,
+  sector: Pick<
+    CorporateSector,
+    "corporationId" | "stateId" | "sectorType" | "countryId" | "nationalizationSiteKey"
+  >,
   stateCountryByStateId: ReadonlyMap<string, CountryId>
 ): string {
   return [
@@ -24,7 +27,14 @@ export function getCorporateSectorLocationKey(
     getSectorOperatingCountryId(sector, stateCountryByStateId),
     sector.stateId,
     sector.sectorType,
+    sector.nationalizationSiteKey ?? "",
   ].join(":");
+}
+
+export const STRATEGY_BUILD_SITE_PREFIX = "strategy-build:";
+
+export function isStrategyBuildSite(sector: Pick<CorporateSector, "nationalizationSiteKey">) {
+  return sector.nationalizationSiteKey?.startsWith(STRATEGY_BUILD_SITE_PREFIX) === true;
 }
 
 export function isCorporateSectorDuplicateKey(error: unknown): error is MongoServerError {

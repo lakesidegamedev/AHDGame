@@ -64,6 +64,7 @@ vi.mock("@/lib/currency/marketMaker", () => ({
 }));
 vi.mock("@/lib/corporations/marketShare", () => ({
   fetchSectorMarketSharePercent: vi.fn().mockResolvedValue(0),
+  fetchAttackerDefenderShares: vi.fn().mockResolvedValue({ attackerSharePercent: 0 }),
   fetchCorporationNationalSectorSharePercent: vi.fn().mockResolvedValue(0),
   // Crowded, so these cases price at the undiscounted dominance toll and the
   // hand-computed expectations below are unaffected by the density scaling.
@@ -164,6 +165,52 @@ describe("buildCapacity — build", () => {
     db.collection("characters");
     db.collection("gameState");
     db.collection("gameConfig");
+  });
+
+  it("quotes a separate site in the alternate strategy's facility units without writes", async () => {
+    await wireMocks(sectorDoc({ sectorType: "technology", strategyId: "standard" }));
+    const response = await POST(
+      request({
+        action: "build",
+        units: 80,
+        preview: true,
+        newSite: {
+          strategyId: "hardware",
+          requestId: "a92c8fb1-0b79-4aaa-bf04-9caa73ad8f08",
+        },
+      }),
+      { params }
+    );
+    expect(await response.json()).toMatchObject({
+      success: true,
+      preview: true,
+      units: 80,
+      totalCostAnchor: expect.any(Number),
+    });
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("rejects a new site when its strategy is the same as the existing site's", async () => {
+    await wireMocks(sectorDoc({ sectorType: "technology", strategyId: "standard" }));
+    const response = await POST(
+      request({
+        action: "build",
+        units: 80,
+        preview: true,
+        newSite: {
+          strategyId: "standard",
+          requestId: "a92c8fb1-0b79-4aaa-bf04-9caa73ad8f08",
+        },
+      }),
+      { params }
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: "Choose a different strategy to open a separate site.",
+    });
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
   });
 
   it("routes an explicitly consented term loan to the funded build shell without a cash-only debit", async () => {

@@ -17,7 +17,8 @@ import { plannedArrivalTurns } from "@/lib/corporations/buildDelivery";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
 import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
-import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
+import { limitingBuildOutput } from "@/lib/corporations/rules/buildDemandCapacity";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type {
   ConstructionFinanceChoice,
   ConstructionFinanceRequest,
@@ -26,7 +27,7 @@ import { useMemo, useState } from "react";
 import { Modal, Button } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { AlertTriangle, ChevronDown, Info } from "lucide-react";
-import type { PlantsData } from "../types";
+import type { PlantsData, StrategyData } from "../types";
 import { fmtUnits, fmtMult, fmtPct } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
@@ -39,6 +40,8 @@ import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/fa
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import { poolOversubscribed } from "./StateLabourPool";
 
+import StrategySiteBuildDialog, { type StrategySiteActions } from "./StrategySiteBuildDialog";
+
 interface BuildCapacityDialogProps {
   open: boolean;
   onClose: () => void;
@@ -49,6 +52,11 @@ interface BuildCapacityDialogProps {
   /** Drives the facility noun throughout the dialog. */
   sectorType: OperatingSectorType;
   sectorLabel: string;
+  strategy?: Pick<
+    StrategyData,
+    "currentStrategyId" | "currentStrategyName" | "availableStrategies"
+  > | null;
+  strategySiteActions?: StrategySiteActions;
   submitting: boolean;
   /** Server-side error text from the last attempt, or empty. */
   errorMessage: string;
@@ -99,6 +107,8 @@ export default function BuildCapacityDialog({
   stateName,
   sectorType,
   sectorLabel,
+  strategy,
+  strategySiteActions,
   submitting,
   errorMessage,
   onSubmit,
@@ -115,6 +125,10 @@ export default function BuildCapacityDialog({
   // units. One facility = plantSizeForSector(sector) units; see facilityQuantum.ts
   // for why a "power station" is not one ₳92/day unit.
   const [count, setCount] = useState(1);
+  const [compareStrategies, setCompareStrategies] = useState(false);
+  const [selectedSite, setSelectedSite] = useState<{ id: string; name: string } | null>(null);
+  if (!open && compareStrategies) setCompareStrategies(false);
+  if (!open && selectedSite) setSelectedSite(null);
   const [financingChoice, setFinancingChoice] = useState<ConstructionFinanceChoice | null>(null);
   // Drop stale consent before a reopened dialog can submit the previous quote.
   if (!open && financingChoice !== null) setFinancingChoice(null);
@@ -186,7 +200,6 @@ export default function BuildCapacityDialog({
     const transferFee = construction * (q.fxSpreadRate ?? 0);
     const total = construction + transferFee;
     const workersNeeded = plants.laborIntensity * safeUnits;
-    const overHeadroom = safeUnits > Math.max(0, plants.measuredDemandGapUnits ?? 0);
     return {
       safeCount,
       safeUnits,
@@ -200,7 +213,6 @@ export default function BuildCapacityDialog({
       tollRatio,
       tollLabel: tollModel?.label ?? null,
       workersNeeded,
-      overHeadroom,
       affordable: total <= q.corpCapitalAnchor,
     };
   }, [count, unitsPerFacility, q, plants]);
@@ -215,11 +227,10 @@ export default function BuildCapacityDialog({
   const ownedFacilities =
     plants.plantCount ??
     plantsFromUnitsForSector({ sectorType, strategyId }, plants.capacityUnits ?? 0);
+  const limitingOutput = plants.buildDemand ? limitingBuildOutput(plants.buildDemand) : null;
   const buyersRoomUnits = Math.max(
     0,
-    plants.buildDemand
-      ? (fullMixBuildRoom(plants.buildDemand) ?? 0)
-      : (plants.measuredDemandGapUnits ?? 0)
+    plants.buildDemand ? (limitingOutput?.capacityUnits ?? 0) : (plants.measuredDemandGapUnits ?? 0)
   );
   // A profitable observed extraction pace cannot be scaled beyond finite deposits.
   const resourceSizingUnavailable = sectorType === "extraction";
@@ -243,7 +254,6 @@ export default function BuildCapacityDialog({
     forecast: investmentForecastInput(plants, unitsPerFacility),
   });
   const automaticSizingBlocked = financingChoice !== null || !!q.financing?.pendingRequest;
-  const headroomFacilities = Math.floor(buyersRoomUnits / unitsPerFacility);
   const blockedByMothball = plants.mothballed;
   const affordable = financingChoice ? financingChoice.affordable : preview.affordable;
   // Next turn's run once this build has taken its cash. A financed build only
@@ -279,7 +289,23 @@ export default function BuildCapacityDialog({
   const returns = buildReturnSummary(plants, preview.safeUnits);
   const firstIncomeTurns = arrivals?.firstInTurns ?? plants.buildTurns;
   const marketRoomKnown = sectorType !== "logistics" && plants.measuredDemandGapUnits != null;
-  const roomLeftFacilities = Math.max(0, headroomFacilities - preview.safeCount);
+  const recommendation = Math.floor((plants.measuredDemandGapUnits ?? 0) / unitsPerFacility);
+  const strategyRoom = plants.strategyBuildRoom;
+  const strategyOptions =
+    strategy?.availableStrategies.filter(
+      (option) =>
+        !option.locked && (strategySiteActions || Object.hasOwn(strategyRoom ?? {}, option.id))
+    ) ?? [];
+  const roomEstimate = t("roomRecommended", {
+    count: recommendation,
+    facility: site,
+    facilities: sites,
+  });
+  const roomNote = plants.roomHeldByOwnIdle
+    ? t("roomIdle")
+    : limitingOutput
+      ? t("roomLimitedBy", { commodity: COMMODITY_LABELS[limitingOutput.commodity] })
+      : null;
   const staffShort = workersDesired > 0 && plants.workers < workersDesired;
   const poolShort = !!stateLabourMarket && poolOversubscribed(stateLabourMarket);
   const reserveRisk =
@@ -287,6 +313,20 @@ export default function BuildCapacityDialog({
     (afterBuild.cutPercent > 0 ||
       afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0));
   const loanPending = financingChoice !== null && !financingChoice.request;
+
+  if (open && selectedSite && strategySiteActions) {
+    return (
+      <StrategySiteBuildDialog
+        strategy={selectedSite}
+        sectorType={sectorType}
+        stateName={stateName}
+        actions={strategySiteActions}
+        onClose={() => setSelectedSite(null)}
+        submitting={submitting}
+        errorMessage={errorMessage}
+      />
+    );
+  }
 
   return (
     <Modal
@@ -427,21 +467,62 @@ export default function BuildCapacityDialog({
           />
         </dl>
 
-        <p className="text-body-sm text-muted" data-testid="build-room">
-          {sectorType === "logistics"
-            ? t("roomFreight")
-            : marketRoomKnown
-              ? t("roomLeft", {
-                  count: roomLeftFacilities,
-                  facility: site,
-                  facilities: sites,
-                })
-              : t("roomUnknown")}
-        </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-body-sm text-muted" data-testid="build-room">
+            {sectorType === "logistics"
+              ? t("roomFreight")
+              : marketRoomKnown
+                ? [strategy?.currentStrategyName, roomEstimate, roomNote]
+                    .filter(Boolean)
+                    .join(" · ")
+                : t("roomUnknown")}
+          </p>
+          {strategyOptions.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setCompareStrategies((show) => !show)}
+              aria-expanded={compareStrategies}
+              aria-controls={compareStrategies ? "build-strategy-comparison" : undefined}
+              className="text-body-sm font-semibold text-primary hover:underline"
+            >
+              {t("compareStrategies")}
+            </button>
+          )}
+        </div>
 
-        {marketRoomKnown && preview.overHeadroom && (
-          <Warning>{plants.roomHeldByOwnIdle ? t("warnOwnIdle") : t("warnOverRoom")}</Warning>
+        {compareStrategies && (
+          <dl id="build-strategy-comparison" className="space-y-1 text-body-sm">
+            {strategyOptions.map((option) => {
+              const count =
+                option.id === strategy?.currentStrategyId && marketRoomKnown
+                  ? recommendation
+                  : strategyRoom?.[option.id];
+              return (
+                <div key={option.id} className="flex justify-between gap-3">
+                  <dt>{option.name}</dt>
+                  <dd className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-muted">
+                    <span>
+                      {count == null
+                        ? t("notAvailable")
+                        : t("roomRecommended", { count, facility: site, facilities: sites })}
+                    </span>
+                    {strategySiteActions && option.id !== strategy?.currentStrategyId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSite(option)}
+                        className="font-semibold text-primary hover:underline"
+                        aria-label={t("buildStrategySiteTitle", { strategy: option.name })}
+                      >
+                        {t("siteBuild")}
+                      </button>
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
         )}
+
         {staffShort && (
           <Warning>
             {poolShort
