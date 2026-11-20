@@ -56,6 +56,18 @@ describe("GET /api/character/constituency (issue #2115)", () => {
     expect(data.regionId).toBe("LON");
   });
 
+  it("hides the picker from a non-UK Prime Minister", async () => {
+    authAs({
+      _id: new ObjectId(),
+      homeState: "CA_BC",
+      countryId: "CA",
+      currentOffice: { type: "primeMinister", state: "CA_BC" },
+    });
+    const data = await (await GET()).json();
+    expect(data.eligible).toBe(false);
+    expect(data.constituencies).toEqual([]);
+  });
+
   it("stays ineligible without office or region", async () => {
     authAs({ _id: new ObjectId(), countryId: "UK", currentOffice: null });
     const data = await (await GET()).json();
@@ -75,6 +87,17 @@ describe("POST /api/character/constituency (issue #2115)", () => {
       body: JSON.stringify(body),
     });
   }
+
+  it("rejects a non-UK Prime Minister", async () => {
+    authAs({
+      _id: new ObjectId(),
+      homeState: "CA_BC",
+      countryId: "CA",
+      currentOffice: { type: "primeMinister", state: "CA_BC" },
+    });
+    const response = await POST(post({ constituencyId: "anything" }));
+    expect(response.status).toBe(400);
+  });
 
   it("lets a stateless Prime Minister claim a home-region seat", async () => {
     const characterId = new ObjectId();
