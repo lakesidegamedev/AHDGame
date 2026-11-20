@@ -29,7 +29,6 @@ const GUIDELINES = [
   "No external links to harmful, phishing, or malware sites.",
   "No referencing real-world political figures in a defamatory manner.",
   "Content must be related to your in-game activity (faction, party, corporation, campaign, etc.).",
-  "New ads are reviewed by an admin before they start serving, and may be removed without refund for policy violations.",
 ];
 
 function turnLabel(turns: number): string {
@@ -102,8 +101,8 @@ export function PlayerAdsClient() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Place a banner ad</h1>
           <p className="mt-2 text-sm text-muted">
-            Promote your party, faction, or corporation across high-traffic public pages. Ads
-            display indefinitely and rotate in order of lowest view count until equalised.
+            Promote your party, campaign, or company on public game pages. Approved ads stay in
+            rotation, with fewer-viewed ads shown first.
           </p>
         </div>
 
@@ -174,23 +173,6 @@ export function PlayerAdsClient() {
           </p>
         </div>
 
-        {/* Guidelines */}
-        <div className="rounded-xl border border-card-border bg-card p-5 mb-6">
-          <h2 className="text-base font-semibold mb-3">Content guidelines</h2>
-          <p className="text-sm text-muted mb-3">
-            Every ad is reviewed by an admin before it starts serving. Violations are rejected or
-            removed without refund and may lead to account penalties.
-          </p>
-          <ul className="space-y-1.5">
-            {GUIDELINES.map((g) => (
-              <li key={g} className="flex items-start gap-2 text-sm text-muted">
-                <span className="mt-[3px] shrink-0 h-1.5 w-1.5 rounded-full bg-primary/60" />
-                {g}
-              </li>
-            ))}
-          </ul>
-        </div>
-
         {/* Upload form */}
         {submitted ? (
           <div className="rounded-xl border border-card-border bg-card p-6 text-center">
@@ -205,7 +187,10 @@ export function PlayerAdsClient() {
             onSubmit={(e) => void onSubmit(e)}
             className="rounded-xl border border-card-border bg-card p-5 sm:p-6 space-y-5"
           >
-            <h2 className="text-base font-semibold">Upload your banner</h2>
+            <div>
+              <h2 className="text-base font-semibold">Upload your banner</h2>
+              <p className="mt-1 text-sm text-muted">An admin reviews your ad before it appears.</p>
+            </div>
 
             {/* Image upload */}
             <div>
@@ -264,7 +249,7 @@ export function PlayerAdsClient() {
             <div>
               <label htmlFor="linkUrl" className="block text-sm font-medium text-foreground mb-1">
                 Click-through URL{" "}
-                <span className="text-muted font-normal">(optional — must be https://)</span>
+                <span className="text-muted font-normal">(optional, HTTPS only)</span>
               </label>
               <input
                 id="linkUrl"
@@ -280,7 +265,7 @@ export function PlayerAdsClient() {
             <div>
               <label htmlFor="altText" className="block text-sm font-medium text-foreground mb-1">
                 Alt text{" "}
-                <span className="text-muted font-normal">(optional — describes the image)</span>
+                <span className="text-muted font-normal">(optional, describes the image)</span>
               </label>
               <input
                 id="altText"
@@ -293,6 +278,17 @@ export function PlayerAdsClient() {
               />
             </div>
 
+            <details className="rounded-lg border border-card-border p-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                Ad content guidelines
+              </summary>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+                {GUIDELINES.map((guideline) => (
+                  <li key={guideline}>{guideline}</li>
+                ))}
+              </ul>
+            </details>
+
             {/* Agreement */}
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -302,8 +298,8 @@ export function PlayerAdsClient() {
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-card-border accent-primary"
               />
               <span className="text-sm text-muted leading-relaxed">
-                I confirm that this image complies with the content guidelines above, and I
-                understand that policy violations result in removal without refund.
+                My ad follows the content guidelines. Ads that break the rules may be rejected or
+                removed without a refund, and may lead to account penalties.
               </span>
             </label>
 
@@ -317,7 +313,7 @@ export function PlayerAdsClient() {
             )}
             {info?.turnsUntilEligible != null && info.turnsUntilEligible > 0 && (
               <p className="text-sm text-muted">
-                Rate limit active. You can submit again in {turnLabel(info.turnsUntilEligible)}.
+                You can submit another ad in {turnLabel(info.turnsUntilEligible)}.
               </p>
             )}
 

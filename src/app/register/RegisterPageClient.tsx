@@ -284,10 +284,6 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         </div>
         <div className="relative z-10 mx-auto max-w-3xl px-4 py-8 text-left sm:px-6 sm:py-12">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-body-xs font-medium uppercase tracking-wider text-primary">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-            {t("badge")}
-          </div>
           <h1 className="max-w-xl text-display font-semibold tracking-tight text-foreground">
             {t("heading")}
           </h1>
@@ -440,11 +436,7 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
                 />
               </div>
             )}
-            <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-center sm:text-left">
-                <p className="text-body font-medium">{t("readyToStart")}</p>
-                <p className="text-body-sm text-muted">{t("createToBegin")}</p>
-              </div>
+            <div className="flex justify-end">
               <Button
                 type="submit"
                 variant="primary"

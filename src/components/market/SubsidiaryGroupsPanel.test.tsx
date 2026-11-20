@@ -50,8 +50,9 @@ type Listing = Omit<
   "equityValueAnchor" | "cashAnchor" | "revenueAnchor"
 > & { equityValueAnchor: number | null; cashAnchor: number | null; revenueAnchor: number | null };
 let listings: Listing[] = groups;
+let signInRequired = false;
 vi.mock("./useMarketJson", () => ({
-  useMarketJson: () => ({ data: { groups: listings }, loading: false, error: "" }),
+  useMarketJson: () => ({ data: { groups: listings }, loading: false, error: "", signInRequired }),
 }));
 function mount(country = "global") {
   render(
@@ -64,8 +65,17 @@ beforeEach(() => {
   cleanup();
   groups[0].isNpp = false;
   listings = groups;
+  signInRequired = false;
 });
 describe("subsidiary group listings", () => {
+  it("explains the account requirement when the listing returns 401", () => {
+    signInRequired = true;
+    mount();
+    const signIn = screen.getByRole("link", { name: "Sign in to view subsidiary groups" });
+    expect(signIn.getAttribute("href")).toBe("/login?returnTo=%2Fmarket%3Ftab%3Dsub-groups");
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
   it("searches members, filters industries and links the nested group's own overview", () => {
     mount();
     expect(screen.getByRole("link", { name: /Nested Group/ }).getAttribute("href")).toBe(

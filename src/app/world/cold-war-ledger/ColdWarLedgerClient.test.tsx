@@ -122,7 +122,7 @@ describe("ColdWarLedgerClient", () => {
 
   it("filters to the nations in play", () => {
     render(<ColdWarLedgerClient view={COLD} />);
-    fireEvent.click(screen.getByRole("button", { name: "In play" }));
+    fireEvent.click(screen.getByRole("button", { name: "Contested or non-aligned" }));
     // Locked USA drops out; contested and uncommitted remain.
     expect(screen.queryByText("United States")).toBeNull();
     expect(screen.getByText("Yugoslavia")).toBeTruthy();

@@ -74,6 +74,7 @@ export function ConversationShell({
   const active = steps[activeIndex] ?? null;
   const next = steps[activeIndex + 1] ?? null;
   const isLast = activeIndex === steps.length - 1;
+  const blocker = !active?.complete && !isLast ? active?.blocker : undefined;
 
   // Move keyboard focus to the new prompt on every step change, so screen
   // reader and keyboard users land on the question, not the top of the page.
@@ -224,12 +225,18 @@ export function ConversationShell({
             type="button"
             onClick={() => goTo(next.id)}
             disabled={!active.complete}
+            aria-describedby={blocker ? "conversation-step-blocker" : undefined}
             className="min-h-[2.75rem] rounded bg-primary px-6 text-body-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {next.id === "review" ? "Review your file" : "Continue"}
+            {next.id === "review" ? "Review your choices" : "Continue"}
           </button>
         )}
       </div>
+      {blocker && (
+        <p id="conversation-step-blocker" className="mt-2 text-right text-body-sm text-muted">
+          {blocker}
+        </p>
+      )}
     </div>
   );
 }

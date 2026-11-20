@@ -515,6 +515,7 @@ const ActionCard = memo(function ActionCard({
           ) : (
             <ActionExecuteRow
               actionType={card.type}
+              actionLabel={card.label}
               character={character}
               homeState={homeState}
               blocked={blocked}

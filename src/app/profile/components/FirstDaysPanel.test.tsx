@@ -23,10 +23,18 @@ const base: FirstDaysData = {
   skippedTutorial: false,
 };
 
-function renderPanel(data: Partial<FirstDaysData> = {}) {
+function renderPanel(
+  data: Partial<FirstDaysData> = {},
+  campaignCost: { actions: number; funds: string } | null = { actions: 1, funds: "$4,500" }
+) {
   return render(
     <NextIntlClientProvider locale="en" messages={enProfile}>
-      <FirstDaysPanel data={{ ...base, ...data }} year={1993} partiesHref="/country/us/parties" />
+      <FirstDaysPanel
+        data={{ ...base, ...data }}
+        year={1993}
+        campaignCost={campaignCost}
+        partiesHref="/country/us/parties"
+      />
     </NextIntlClientProvider>
   );
 }
@@ -47,7 +55,8 @@ describe("FirstDaysPanel", () => {
   it("runs a Campaign from the panel and refreshes the page", async () => {
     renderPanel();
     expect(screen.getByText("Your first days in 1993")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign now" }));
+    expect(screen.getByText("1 action and $4,500 in campaign funds")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledWith(
       "/api/actions/execute",
@@ -62,7 +71,7 @@ describe("FirstDaysPanel", () => {
       vi.fn(async () => ({ ok: false, json: async () => ({ error: "Not enough actions" }) }))
     );
     renderPanel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
     expect(await screen.findByText(/Not enough actions/)).toBeTruthy();
     expect(router.refresh).not.toHaveBeenCalled();
   });
@@ -77,12 +86,21 @@ describe("FirstDaysPanel", () => {
 
   it("explains when no race is open", () => {
     renderPanel({ races: [] });
-    expect(screen.getByText(/No race in your home region is taking candidates/)).toBeTruthy();
+    expect(screen.getByText(/No local race is taking candidates/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Browse elections" }).getAttribute("href")).toBe(
+      "/elections"
+    );
+  });
+
+  it("links to Actions instead of spending funds when a price is unavailable", () => {
+    renderPanel({}, null);
+    expect(screen.queryByRole("button", { name: "Campaign at home" })).toBeNull();
+    expect(screen.getByRole("link", { name: "All actions" }).getAttribute("href")).toBe("/actions");
   });
 
   it("hides the Campaign button once the goal is met and offers skippers the short tour", () => {
     renderPanel({ campaigns: 3, skippedTutorial: true });
-    expect(screen.queryByRole("button", { name: "Campaign now" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Campaign at home" })).toBeNull();
     expect(screen.getByRole("link", { name: "two-minute basics" }).getAttribute("href")).toBe(
       "/tutorial"
     );
