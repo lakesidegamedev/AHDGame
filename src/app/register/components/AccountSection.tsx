@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Input, Label, Modal, Button, SectionLabel } from "@/components/ui";
+import { Input, Label, Modal, Button } from "@/components/ui";
 import { normalizeReferralCode } from "@/lib/auth/normalizeReferralCode";
 import { isIosStoreAppUserAgent } from "@/lib/displayMode";
 
@@ -131,11 +131,8 @@ export function AccountSection({
   return (
     <div className="overflow-hidden rounded-xl border border-card-border bg-card shadow-panel">
       <div className="relative border-b border-card-border px-5 py-5 sm:px-7 sm:py-6">
-        <SectionLabel as="p">{t("sectionLabel")}</SectionLabel>
-        <h2 className="mt-1 text-heading font-semibold text-foreground">{t("heading")}</h2>
-        <p className="mt-1 text-body-sm text-muted">
-          {bothBlocked ? t("subBothBlocked") : t("subDefault")}
-        </p>
+        <h2 className="text-heading font-semibold text-foreground">{t("heading")}</h2>
+        {bothBlocked && <p className="mt-1 text-body-sm text-muted">{t("subBothBlocked")}</p>}
         {discordLinkRequired && isIosApp && (
           <p className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm text-foreground">
             {t("discordRuleNotice")}
@@ -213,9 +210,7 @@ export function AccountSection({
           {appleBlocked && (
             <p className="text-center text-body-sm text-warning">{reasonFor(apple, "Apple")}</p>
           )}
-          <p className="mt-2 text-center text-body-sm leading-relaxed text-muted">
-            {bothBlocked ? t("socialHintBlocked") : t("socialHint")}
-          </p>
+
           {!bothBlocked && (
             <p className="text-center text-body-sm leading-relaxed text-muted">
               {t.rich("socialTerms", {

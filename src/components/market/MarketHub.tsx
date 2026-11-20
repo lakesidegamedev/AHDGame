@@ -211,9 +211,6 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
               {tab === "stocks" && <WikiHelpLink screen="stock-market" />}
               {tab === "bonds" && <WikiHelpLink screen="bond-market" />}
             </div>
-            <p className="text-sm text-muted">
-              Stocks, bonds, funds, sectors, commodities, supply deals and currencies in one place.
-            </p>
           </div>
           <MarketCorporationAction />
         </div>
