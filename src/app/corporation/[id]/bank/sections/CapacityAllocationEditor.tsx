@@ -102,8 +102,9 @@ export function CapacityAllocationEditor({
       <div className="grid gap-x-8 gap-y-3 py-1.5 md:grid-cols-2">
         <div className="space-y-1.5">
           <p className="text-xs text-muted">
-            Share of your financial-sector capacity running the branch network that holds deposits.
-            The rest produces financial services for the commodity market. Range 10% to 90%.
+            Share of your financial-sector capacity that can run the branch network holding
+            deposits. Branches take that capacity only as deposits fill the ceiling below, and the
+            rest keeps producing financial services for the commodity market. Range 10% to 90%.
           </p>
           <p className="text-xs text-muted">
             Ceiling{" "}
@@ -132,7 +133,8 @@ export function CapacityAllocationEditor({
             aria-label="Deposit network share"
           />
           <span className="block font-mono text-[11px] text-muted">
-            commodity {(100 - share * 100).toFixed(0)}%, branches {(share * 100).toFixed(0)}%
+            at a full ceiling: commodity {(100 - share * 100).toFixed(0)}%, branches{" "}
+            {(share * 100).toFixed(0)}%
           </span>
           {previewCeiling != null && previewBinds != null ? (
             <span className="block text-[11px] text-muted">
