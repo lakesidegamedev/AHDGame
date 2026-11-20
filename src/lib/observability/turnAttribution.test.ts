@@ -26,6 +26,7 @@ describe("classifyPhase", () => {
     expect(classifyPhase("frSenateElections")).toBe("Elections & campaigns");
     expect(classifyPhase("deBillLifecycle")).toBe("Governance & opinion");
     expect(classifyPhase("metricHistory")).toBe("History & integrity scans");
+    expect(classifyPhase("regionalDebtService")).toBe("Governance & opinion");
     expect(classifyPhase("notARealPhase")).toBeNull();
   });
 });
