@@ -123,7 +123,7 @@ describe("2027 focused mining recipes", () => {
 
 describe("2027 diversified and fuel mining inputs", () => {
   it.each(["standard", "oil_gas", "natural_gas_drilling"])(
-    "uses less electricity and equipment for %s in 2027",
+    "uses the 2027 material requirements for %s",
     (id) => {
       const baseline = SECTOR_STRATEGIES.extraction.find((strategy) => strategy.id === id)!;
       const expected = { ...baseline.demand };
@@ -131,7 +131,13 @@ describe("2027 diversified and fuel mining inputs", () => {
         const amount = expected[commodity];
         if (amount != null) expected[commodity] = amount * 0.85;
       }
-      if (id !== "standard") expected.chemicals = 0.12;
+      if (id === "standard") {
+        for (const commodity of ["energy", "vehicles", "freight"] as const) {
+          expected[commodity] = expected[commodity]! * 0.65;
+        }
+      } else {
+        expected.chemicals = 0.12;
+      }
 
       const current = getStrategy("extraction", id, "2027-default");
       expect(current.demand).toEqual(expected);
@@ -139,6 +145,19 @@ describe("2027 diversified and fuel mining inputs", () => {
       expect(getStrategy("extraction", id, "1973-default").demand).toEqual(baseline.demand);
     }
   );
+
+  it("blends diversified freight requirements while a gas site retools", () => {
+    const result = getEffectiveStrategyRates(
+      "extraction",
+      "standard",
+      "natural_gas_drilling",
+      100,
+      100 + STRATEGY_TRANSITION_TURNS / 2,
+      "2027-default"
+    );
+    expect(result.isTransitioning).toBe(true);
+    expect(result.demand.freight).toBeCloseTo(0.0325, 4);
+  });
 
   it("keeps rare-earth electricity and equipment use at the existing rates", () => {
     const baseline = getStrategy("extraction", "rare_earth_mining", "1973-default");
