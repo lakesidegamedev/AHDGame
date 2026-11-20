@@ -765,6 +765,57 @@ describe("physical producer preparation", () => {
     );
   });
 
+  it("trims a loss-making mine's run when partial stock can replace the cut", () => {
+    const { input, env, sector } = fixture();
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    env.runPlanStage = 3;
+    env.demandPlanStage = 1;
+    sector.sectorType = "extraction";
+    sector.strategyId = "iron_mining";
+    env.lookups.stateResourceCapacityByState.set(sector.stateId, { iron: 1000 });
+    const lot = { commodity: "iron", book: "world", units: 5, quoteUnitCost: 10 };
+    sector.producerInventory!.outputStock = [lot];
+    const previous = {
+      worldEpoch: "world",
+      turn: 0,
+      activeUnits: 40,
+      plannedRunShare: 1,
+      producedUnits: 20,
+      offeredUnits: 30,
+      soldUnits: 12,
+      revenue: 200,
+      inputsConsumed: 400,
+      profit: -200,
+      products: [
+        {
+          commodity: "iron",
+          book: "world",
+          producedUnits: 20,
+          offeredUnits: 30,
+          soldUnits: 12,
+          internalDeliveredUnits: 0,
+          revenue: 200,
+        },
+      ],
+    };
+    const record = sector as unknown as { producerSettlement: unknown };
+    record.producerSettlement = { ...previous, profit: 1 };
+    const normal = prepareProducerPhysicalSector(input).prepared.plan;
+
+    record.producerSettlement = previous;
+    const trimmed = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(trimmed.plannedRunShare).toBeCloseTo(normal.plannedRunShare! * 0.8);
+    expect(trimmed.outputMultiplier).toBeCloseTo(normal.outputMultiplier * 0.8);
+    expect(trimmed.labourCost).toBeLessThan(normal.labourCost);
+    expect(trimmed.outputStock).toEqual([lot]);
+
+    sector.producerInventory!.outputStock = [{ ...lot, units: 1 }];
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(
+      normal.plannedRunShare
+    );
+  });
+
   it("bills extraction materials only for the resource share the state can supply", () => {
     const { input, env, sector } = fixture();
     sector.sectorType = "extraction";
