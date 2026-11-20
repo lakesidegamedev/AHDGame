@@ -67,13 +67,19 @@ export function CommoditiesPanel({
           </Link>
         </div>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-card-border text-left text-body-sm text-muted">
                 <th className="px-3 py-2 font-medium">Commodity</th>
                 <th className="px-3 py-2 text-right font-medium">Price</th>
                 <th className="px-3 py-2 text-right font-medium">vs base</th>
-                <th className="px-3 py-2 text-right font-medium">Change</th>
+                <th className="px-3 py-2 text-right font-medium">Last turn</th>
+                <th
+                  className="px-3 py-2 text-right font-medium"
+                  title="Price change over the available history, expressed as a yearly rate."
+                >
+                  Yearly rate
+                </th>
                 <th className="px-3 py-2 text-right font-medium">Supply / demand</th>
                 <th className="px-3 py-2 font-medium">Balance</th>
                 <th className="px-3 py-2 text-right font-medium">Links</th>
@@ -92,6 +98,11 @@ export function CommoditiesPanel({
                     </td>
                     <td className={`px-3 py-2 text-right tabular-nums ${toneClass(base)}`}>
                       {pctText(base)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right tabular-nums ${toneClass(c.lastTurnPriceChange)}`}
+                    >
+                      {pctText(c.lastTurnPriceChange)}
                     </td>
                     <td className={`px-3 py-2 text-right tabular-nums ${toneClass(c.priceChange)}`}>
                       {pctText(c.priceChange)}
