@@ -42,6 +42,7 @@ const FOCUSED_MINING_CHEMICAL_DEMAND_2027 = 0.12;
 const FOCUSED_MINING_STRATEGIES = new Set(["oil_gas", "natural_gas_drilling", "rare_earth_mining"]);
 const MINING_POWER_EQUIPMENT_SCALE_2027 = 0.85;
 const MINING_POWER_EQUIPMENT_STRATEGIES = new Set(["standard", "oil_gas", "natural_gas_drilling"]);
+const DIVERSIFIED_MINING_POWER_HAULAGE_SCALE_2027 = 0.65;
 
 /**
  * Build the model recipes from existing physical input baskets and output
@@ -141,6 +142,13 @@ function strategyForPreset(
         for (const commodity of ["energy", "steel", "vehicles"] as const) {
           const amount = resizedDemand[commodity];
           if (amount != null) resizedDemand[commodity] = amount * MINING_POWER_EQUIPMENT_SCALE_2027;
+        }
+      }
+      if (strategy.id === "standard") {
+        for (const commodity of ["energy", "vehicles", "freight"] as const) {
+          const amount = resizedDemand[commodity];
+          if (amount != null)
+            resizedDemand[commodity] = amount * DIVERSIFIED_MINING_POWER_HAULAGE_SCALE_2027;
         }
       }
       return { ...strategy, demand: resizedDemand };
