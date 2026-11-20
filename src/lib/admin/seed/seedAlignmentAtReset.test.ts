@@ -46,16 +46,21 @@ describe("core seed → country alignments", () => {
 
     await seedCountryAlignments(db as unknown as Db, preset, countries);
 
-    // 2019 has no sphere-macro tier, so the roster is the whole set. Nigeria
-    // used to need a `+ 1` here: it is not playable in 2019 but sits in the
-    // Commonwealth, and every org member is owed a row, yet the hand-written
-    // `RESET_PRESETS["2019-default"].countries` listed only six countries and
-    // left it out. That list is now derived from the era roster and includes
-    // NG, so the special case would double-count it.
+    // 2019 has no sphere-macro tier, so the roster is the preset's countries
+    // plus the members of every organisation that exists in this year. The
+    // alliance seats its background entities (and Albania, a member from
+    // 2009) even though the preset itself does not hold them. Nigeria used to
+    // need a `+ 1` here: every org member is owed a row, and the hand-written
+    // `RESET_PRESETS["2019-default"].countries` left it out. That list is now
+    // derived from the era roster and includes NG, so a special case would
+    // double-count it. Asserting the exact set catches that, and the duplicate
+    // check catches it directly.
+    const allianceBackground = ["CA", "NL", "BE", "LU", "NO", "DK", "PT", "IS", "AL"];
     const keys = inserted().map((r) => r.entityId);
     expect(keys).toEqual(expect.arrayContaining([...countries]));
-    expect(keys).toContain("NG");
-    expect(inserted()).toHaveLength(countries.length);
+    expect(keys).toEqual(expect.arrayContaining(allianceBackground));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(inserted()).toHaveLength(countries.length + allianceBackground.length);
     for (const row of inserted()) expect(row.eraKey).toBe("post-cold-war");
   });
 

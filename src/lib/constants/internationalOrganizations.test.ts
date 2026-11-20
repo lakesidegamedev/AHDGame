@@ -41,14 +41,17 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
     ]);
   });
 
-  it("defines the Commonwealth: UK-led, UK+NG everywhere, never dissolved", () => {
+  it("defines the Commonwealth: UK-led founders, Canada seated in 2027", () => {
     const cw = INTERNATIONAL_ORGANIZATIONS.COMMONWEALTH;
     expect(cw.foundingMembers).toEqual(["UK", "NG"]);
-    expect(cw.foundingMembersByEra).toBeUndefined();
     expect(cw.foundedYear).toBe(1949);
     expect(cw.dissolvedYear).toBeUndefined();
     expect(cw.permanentLeadership).toEqual({ countryId: "UK" });
     expect(cw.category).toBe("political");
+    // Canada is the third Commonwealth member the 2027 world registers.
+    expect(resolveSeedRoster(cw, "2027-default")).toEqual(["UK", "CA", "NG"]);
+    // Presets without Canada keep the founding pair.
+    expect(resolveSeedRoster(cw, "2019-default")).toEqual(["UK", "NG"]);
   });
 
   it("defines the Warsaw Pact: RU-led full Eastern bloc, 1952–1991 window", () => {
@@ -214,6 +217,42 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
     }
   });
 
+  it("seats each modern preset's alliance, with Canada from 2027", () => {
+    const roster = (preset: string) => resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.NATO, preset);
+
+    // The 1999 and 2004 accessions, restricted to the countries the game knows.
+    expect(roster("1999-default")).toContain("PL");
+    expect(roster("1999-default")).toContain("HU");
+    expect(roster("1999-default")).not.toContain("BG");
+    expect(roster("2007-default")).toContain("BG");
+    expect(roster("2007-default")).toContain("RO");
+    expect(roster("2007-default")).not.toContain("AL");
+
+    // Albania joined in 2009; Finland and Sweden after the 2023 start.
+    expect(roster("2019-default")).toContain("AL");
+    expect(roster("2023-default")).not.toContain("FI");
+    expect(roster("2027-default")).toContain("CA");
+    expect(roster("2027-default")).toContain("FI");
+    expect(roster("2027-default")).toContain("SE");
+
+    // Never members, in any era.
+    for (const preset of [
+      "1999-default",
+      "2007-default",
+      "2019-default",
+      "2023-default",
+      "2027-default",
+    ]) {
+      const members = roster(preset);
+      for (const neutral of ["AT", "IE", "JP", "CN", "BR", "NG", "RU"]) {
+        expect(members, `${preset} ${neutral}`).not.toContain(neutral);
+      }
+      expect(members.length).toBeGreaterThan(
+        INTERNATIONAL_ORGANIZATIONS.NATO.foundingMembers.length
+      );
+    }
+  });
+
   it("seats Albania in the Warsaw Pact of 1953 but not of 1979", () => {
     // A founding signatory in 1955, it stopped participating after the 1961
     // Soviet-Albanian split and formally withdrew in September 1968.
@@ -228,7 +267,16 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
   it("only seats entities the alignment roster actually models", () => {
     // A typo here would seed a member that no screen could name.
     for (const org of [INTERNATIONAL_ORGANIZATIONS.NATO, INTERNATIONAL_ORGANIZATIONS.WARSAW_PACT]) {
-      for (const preset of ["1953-default", "1979-default", "1991-default"]) {
+      for (const preset of [
+        "1953-default",
+        "1979-default",
+        "1991-default",
+        "1999-default",
+        "2007-default",
+        "2019-default",
+        "2023-default",
+        "2027-default",
+      ]) {
         for (const id of resolveSeedRoster(org, preset)) {
           expect(
             ROSTER_BY_KEY[id as keyof typeof ROSTER_BY_KEY],
