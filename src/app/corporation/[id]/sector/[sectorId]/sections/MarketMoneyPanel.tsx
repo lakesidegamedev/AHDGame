@@ -350,7 +350,7 @@ export default function MarketMoneyPanel({
             </>
           ) : split ? (
             <>
-              {`Most of it was ${listOutputs(split.stuck)}. ${listOutputs(split.selling)} found buyers. Each product has its own row under "What goes in, what comes out" below.`}
+              {`Most of it was ${listOutputs(split.stuck)}. ${listOutputs(split.selling)} ${split.selling.some((o) => o.ownSites) ? "found buyers or fed your sites" : "found buyers"}. Each product has its own row under "What goes in, what comes out" below.`}
             </>
           ) : (plants.demandGapUnits ?? 0) >= 1 ? (
             <>{t("mixedOutputAppetite")}</>
