@@ -114,10 +114,9 @@ function makeDb(opts: { corp: Record<string, unknown>; issuerBonds: Record<strin
       find: () => mkCursor([]),
       bulkWrite: vi.fn().mockResolvedValue({}),
     },
-    // Market tier resolution (D11 book-vs-NPV settlement basis). Absent doc ⇒
-    // mode "off", i.e. the legacy NPV path these assertions were written for.
-    gameConfig: {
-      findOne: vi.fn().mockResolvedValue(null),
+    // Plants settlement reads the clock for replacement-cost book.
+    gameState: {
+      findOne: vi.fn().mockResolvedValue({ _id: "current", currentYear: 2027, currentTurn: 10 }),
     },
     indexFunds: {
       find: () => mkCursor([{ _id: FUND_ID_FOR_BONDS, name: "Index", anchorCurrencyCode: "USD" }]),

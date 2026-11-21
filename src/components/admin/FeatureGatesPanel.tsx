@@ -347,10 +347,10 @@ export function FeatureGatesPanel() {
       <div className="mb-4">
         <h3 className="text-sm font-semibold">Feature gates</h3>
         <p className="text-xs leading-relaxed text-muted">
-          One control surface for every game feature flag, plus the command economy.
-          Gates marked <span className="font-semibold text-primary">seed default</span> ship enabled
-          on every fresh world; the rest are staged rollouts. NPP economy and line of credit are
-          core systems — always on, no longer gated.
+          One control surface for every game feature flag, plus the command economy. Gates marked{" "}
+          <span className="font-semibold text-primary">seed default</span> ship enabled on every
+          fresh world; the rest are staged rollouts. NPP economy and line of credit are core systems
+          — always on, no longer gated.
         </p>
       </div>
 

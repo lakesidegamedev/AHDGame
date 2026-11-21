@@ -114,6 +114,8 @@ describe("nationalizeSector", () => {
       stateId: "CN-HD",
       sectorType: "energy",
       revenue: 6_000_000,
+      // Plants compensate on replacement-cost book, not earning power.
+      capacityBookAnchor: 20_000,
       profitMargin: 35,
       workers: 500,
       currentGrowthCost: 0,
@@ -159,7 +161,7 @@ describe("nationalizeSector", () => {
     expect(sectorUpdate[1].$set.revenue).toBe(5_100_000);
     expect(sectorUpdate[1].$set.nationalizedAtTurn).toBe(1);
 
-    // Valuation 4000 × fair (1.0) × buyout premium (5) = 20000.
+    // Book 20000 × fair (1.0) × book premium (1) = 20000.
     expect(result.compensationPaid).toBe(20000);
     const donorUpdate = db.collectionMocks.corporations.updateOne.mock.calls.find(
       (c) => JSON.stringify(c[0]) === JSON.stringify({ _id: donorId })
@@ -318,7 +320,7 @@ describe("nationalizeSector", () => {
     expect(debitTreasuryCompensation).toHaveBeenCalledWith(
       db,
       "CN",
-      20000, // valuation 4000 × fair × buyout premium (5)
+      20000, // book 20000 × fair × book premium (1)
       expect.anything(),
       expect.any(Date),
       expect.objectContaining({ flow: "nationalization_compensation" })
@@ -562,16 +564,17 @@ describe("nationalizeWholeCorp", () => {
       consequence: CONSEQ,
     });
 
-    // valuation = max(0, 10000+0) − 9000 = 1000; payout = 1000 × 5 = 5000.
-    // CEO surplus = 10000 − 5000 = 5000; treasury recoups the remaining 5000.
+    // Plants: cash is taken at face, debt nets off it first. valuation = 10000 − 9000 = 1000;
+    // payout = 1000 × 1 (no premium on cash). CEO surplus = 10000 − 1000 = 9000; treasury
+    // recoups the 1000 it paid.
     const ceoPay = db.collectionMocks.characters.updateOne.mock.calls.find(
       (c) => c[0]._id?.toString() === ceoId.toString()
     );
-    expect(ceoPay?.[1].$inc.cashOnHand).toBe(5000);
+    expect(ceoPay?.[1].$inc.cashOnHand).toBe(9000);
     expect(vi.mocked(creditTreasuryProceedsFromAnchor)).toHaveBeenCalledWith(
       db,
       "CN",
-      5000,
+      1000,
       expect.any(Date),
       expect.objectContaining({ flow: "corporation_liquidation" })
     );

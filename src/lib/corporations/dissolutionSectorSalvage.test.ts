@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { computeDissolutionSectorSalvageAnchor } from "@/lib/corporations/dissolutionSectorSalvage";
-import { sumCorporateSectorNpv } from "@/lib/bonds/corporateCredit";
+import { sumSectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
+import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { DISSOLUTION_SECTOR_SALVAGE_FRACTION } from "@/lib/constants/corporations";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 
@@ -50,29 +51,36 @@ describe("computeDissolutionSectorSalvageAnchor", () => {
     });
   }
 
-  it("returns exactly the salvage fraction of the corp's sector NPV", async () => {
-    const sectors = [makeSector(), makeSector({ revenue: 20_000_000 })];
+  it("returns exactly the salvage fraction of the corp's sector book value", async () => {
+    const sectors = [
+      makeSector({ capacityBookAnchor: 40_000_000 } as Partial<CorporateSector>),
+      makeSector({ capacityBookAnchor: 60_000_000 } as Partial<CorporateSector>),
+    ];
     seedSectors(sectors);
+    db.collection("gameState");
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      currentTurn: 10,
+    });
 
-    const expectedNpv = sumCorporateSectorNpv(
+    const expectedBook = sumSectorBookValueAnchor(
       sectors,
-      CORP_ID,
-      new Map([["US", 0.05]]),
-      makeCorp(),
-      fx as ReadonlyMap<string, number> as never
+      2027,
+      await loadWorldEraUnitScale(db as unknown as Db)
     );
-    expect(expectedNpv).toBeGreaterThan(0);
+    expect(expectedBook).toBeGreaterThan(0);
 
     const salvage = await computeDissolutionSectorSalvageAnchor(
       db as unknown as Db,
       makeCorp(),
       fx as never
     );
-    expect(salvage).toBeCloseTo(DISSOLUTION_SECTOR_SALVAGE_FRACTION * expectedNpv, 2);
+    expect(salvage).toBeCloseTo(DISSOLUTION_SECTOR_SALVAGE_FRACTION * expectedBook, 2);
   });
 
-  it("returns 0 when the corp has no positive-NPV sectors", async () => {
-    // Zero-margin sectors: maintenance == revenue, so no positive profit → no NPV.
+  it("returns 0 when the corp has no sector book value", async () => {
+    // Sectors with no capacity book anchor and no build in progress hold no book value.
     seedSectors([makeSector({ profitMargin: 0 }), makeSector({ profitMargin: 0 })]);
 
     const salvage = await computeDissolutionSectorSalvageAnchor(
