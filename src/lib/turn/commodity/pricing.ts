@@ -518,7 +518,7 @@ export function priceCommodity(
 
   const latentShortage = latentShortagePersistence(globalBal, demandTruncated.get(commodity));
   const buildDemandCapGap = ctx.capGaps?.get(commodity);
-  const unset = {
+  const unset: Record<string, ""> = {
     ...latentShortage.unset,
     ...(!buildDemandCapGap && existing?.buildDemandCapGap ? { buildDemandCapGap: "" } : {}),
   };
