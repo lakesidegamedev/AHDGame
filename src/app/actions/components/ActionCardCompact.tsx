@@ -195,7 +195,7 @@ const ActionCardCompact = memo(function ActionCardCompact({
               href={card.href}
               className={`inline-flex w-full items-center justify-center gap-1 px-2.5 py-1.5 text-body-sm font-semibold sm:w-auto ${NEUTRAL_BUTTON}`}
             >
-              View
+              {card.href === "/actions/poll" ? "Open polling" : "Open action"}
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"

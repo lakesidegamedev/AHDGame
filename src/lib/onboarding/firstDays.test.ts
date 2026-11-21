@@ -92,6 +92,15 @@ describe("loadFirstDays", () => {
     expect(await loadFirstDays(db as unknown as Db, character({ party: "4" }), NOW)).toBeNull();
   });
 
+  it("reopens on request after the first days, including completed steps", async () => {
+    const old = character({ createdAt: new Date(NOW.getTime() - 100 * H), party: "4" });
+    db.collection("actionLogs").countDocuments.mockResolvedValue(3);
+    db.collection("electionCandidates").countDocuments.mockResolvedValue(1);
+
+    const data = await loadFirstDays(db as unknown as Db, old, NOW, "requested");
+    expect(data).toMatchObject({ campaigns: 3, joinedParty: true, enteredRace: true });
+  });
+
   it("treats holding office as having entered a race", () => {
     expect(
       firstDaysComplete({

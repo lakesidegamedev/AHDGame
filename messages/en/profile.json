@@ -300,6 +300,7 @@
       "turn": "Turn {turn}"
     },
     "firstDays": {
+      "link": "First steps",
       "aria": "Your first days",
       "title": "Your first days",
       "titleYear": "Your first days in {year}",
@@ -314,14 +315,15 @@
       "partyTitle": "Join a party",
       "partyBody": "A party gives you a primary to win, a shared action pool, and people to plan with. Pick one that admits members from your home region.",
       "partyDone": "You are in a party.",
-      "raceTitle": "Enter a race you can still join",
+      "raceTitle": "Find an open race near you",
       "raceBody": "These races in your home region are still taking candidates, soonest to close first.",
       "raceCloses": "closes in {hours} {hours, plural, one {hour} other {hours}}, {count} {count, plural, one {candidate} other {candidates}}",
       "raceCandidates": "{count} {count, plural, one {candidate} other {candidates}}",
       "raceNone": "No local race is taking candidates right now.",
       "raceDone": "Race entry complete.",
       "browseRaces": "Browse elections",
-      "skippedTour": "You skipped the tour. The <link>two-minute basics</link> are here whenever you want them."
+      "skippedTour": "You skipped the tour. The <link>two-minute basics</link> are here whenever you want them.",
+      "tutorial": "Open the <link>tutorial</link> for more ways to get started."
     },
     "stockHoldings": {
       "all": "All Stock Holdings",
