@@ -196,14 +196,14 @@ describe("owned producer capacity", () => {
     expect(advance(next.state).state.completedTurn).toBe(563);
   });
 
-  it("still refuses an order started after the previous turn when catching up", () => {
+  it("still refuses an order started after the target turn when catching up", () => {
     expect(() =>
       advanceProducerCapacity({
         state: {
           completedTurn: 560,
           ownedDailyUnits: 0,
           paidBookAnchor: 0,
-          buildQueue: [{ unitsOrdered: 1, costPaidAnchor: 1, startTurn: 562, onlineTurn: 570 }],
+          buildQueue: [{ unitsOrdered: 1, costPaidAnchor: 1, startTurn: 563, onlineTurn: 570 }],
         },
         turn: 562,
         activeFraction: 1,
@@ -253,4 +253,39 @@ describe("whole plants: the delivered part of a plant under construction produce
     const next = advance(wholeState(), 0.5);
     expect(next.activeUnits).toBeCloseTo((next.capacityUnits * 1) / 2, 12);
   });
+});
+
+it("keeps a newly paid order intact while catching up older construction", () => {
+  const old = { unitsOrdered: 40, costPaidAnchor: 1000, startTurn: 0, onlineTurn: 4, smooth: true };
+  const fresh = {
+    unitsOrdered: 20,
+    costPaidAnchor: 800,
+    startTurn: 2,
+    onlineTurn: 5,
+    smooth: true,
+    constructionLoanId: "loan",
+    constructionClaimId: "claim",
+  };
+  const result = advanceProducerCapacity({
+    state: { completedTurn: 0, ownedDailyUnits: 0, paidBookAnchor: 0, buildQueue: [old, fresh] },
+    turn: 2,
+    activeFraction: 1,
+    operatingRecipeRatio: 1,
+    recessionCapacityFactor: 1,
+  });
+  expect(result.deliveredDailyUnits).toBe(20);
+  expect(result.state.buildQueue).toEqual([old, fresh]);
+  expect(
+    result.state.paidBookAnchor + result.constructionInProgressAnchor + result.depreciationAnchor
+  ).toBeCloseTo(1800);
+  const invalid = { ...fresh, costPaidAnchor: 0 };
+  expect(() =>
+    advanceProducerCapacity({
+      state: { completedTurn: 0, ownedDailyUnits: 0, paidBookAnchor: 0, buildQueue: [invalid] },
+      turn: 2,
+      activeFraction: 1,
+      operatingRecipeRatio: 1,
+      recessionCapacityFactor: 1,
+    })
+  ).toThrow("Invalid unsettled construction schedule");
 });

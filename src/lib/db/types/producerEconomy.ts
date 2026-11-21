@@ -31,6 +31,8 @@ export interface ProducerEconomyAccount {
 
 /** The sector's authoritative, per-turn, anchor-valued operating receipt. */
 export interface ProducerSectorSettlement extends ProducerOperatingResult {
+  /** Host publication counts the zero-sales streak once per operating receipt. */
+  zeroSalesCounted?: boolean;
   worldEpoch: string;
   turn: number;
 }

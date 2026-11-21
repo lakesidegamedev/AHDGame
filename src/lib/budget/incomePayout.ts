@@ -1,7 +1,8 @@
+import { taxableEarningsAnchor } from "./rules/taxableEarningsAnchor";
 /** Atomic source credit: current tax, old arrears, then spendable income. */
 import { createHash } from "node:crypto";
 import { ObjectId, type Db, type Document, type AnyBulkWriteOperation } from "mongodb";
-import type { Character, GameState, GameConfig } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { PlayerIncomeTaxAssessment as Assessment } from "@/lib/db/types/incomeTax";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
@@ -265,9 +266,8 @@ export async function creditIncomeAfterTax(
             taxable.income - Number(row.meta?.passThroughTaxedAmount ?? 0)
           );
           const fx = rates.get(row.currencyCode);
-          if (!fx || !Number.isFinite(fx)) throw new Error("Earnings exchange rate unavailable");
-          anchor +=
-            row.amount > 0 ? ((row.anchorAmount ?? row.amount / fx) * income) / row.amount : 0;
+          if (row.amount > 0)
+            anchor += taxableEarningsAnchor(row.amount, income, row.anchorAmount, fx);
         }
         const median = medianByState.get(context.stateId);
         if (!median || !Number.isFinite(median) || median <= 0)
