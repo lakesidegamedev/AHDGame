@@ -54,6 +54,8 @@ interface SupplyAgreement {
   offers?: SupplyAgreementOffer[];
   lastDeliveryTurn?: number;
   lastDeliveredUnits?: number;
+  /** "funded" when the last delivery is what the market sold from supplier to buyer. */
+  lastDeliveryBasis?: "funded";
   /** Buyer demand the last delivery was allocated against. */
   lastBuyerConsumptionUnits?: number;
   /** #1147: what the last settlement charged for, and the ceiling it used. */
@@ -481,6 +483,7 @@ export default function SupplyAgreementsSection({
       cap: formatUnits(a.volumeCap),
       achievable: status.code === "supplierProducedLess" ? formatUnits(status.achievable) : "",
       used: status.code === "buyerUsedLess" ? formatUnits(status.used) : "",
+      delivered: status.code === "marketDeliveredLess" ? formatUnits(status.delivered) : "",
     };
     const key =
       status.code === "buyerCannotReceive"

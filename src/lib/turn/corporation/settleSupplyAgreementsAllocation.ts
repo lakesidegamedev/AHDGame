@@ -121,6 +121,8 @@ export interface SupplyAgreementDelivery {
   commodity: CommodityType;
   contractedUnits: number;
   deliveredUnits: number;
+  /** "funded" when `deliveredUnits` is the pair's settled funded trade. */
+  deliveryBasis?: "funded";
   turn: number;
   buyerConsumptionUnits?: number;
   previousTurn?: number;

@@ -869,6 +869,18 @@ export async function processCorporationTurn(
       buyerDemandByCorpCommodity,
       producedByCorpCommodity,
       achievableByCorpCommodity,
+      // A funded turn with no trade record settles no premium rather than
+      // falling back to the clearing pass's assumed deliveries.
+      fundedTradeReceipt:
+        producerPath === "funded"
+          ? (funded?.tradeReceipt ?? {
+              turn: producerTurn,
+              offers: [],
+              orders: [],
+              fills: [],
+              tradeCount: 0,
+            })
+          : undefined,
       domesticIncomeByCountry,
       foreignIncomeByCountry,
       domesticIncomeByOperatingState,
