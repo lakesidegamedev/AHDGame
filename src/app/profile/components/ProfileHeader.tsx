@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -39,6 +39,7 @@ interface ProfileHeaderProps {
   ownProfileHref?: string;
   /** Link shown in the header action area on other players' profiles (e.g. wiki profile) */
   wikiProfileHref?: string;
+  messageAction?: ReactNode;
   /** The viewer blocked this player, so their biography stays hidden. */
   bioHidden?: boolean;
 }
@@ -67,6 +68,7 @@ export function ProfileHeader({
   supporterProvider,
   ownProfileHref,
   wikiProfileHref,
+  messageAction,
   bioHidden = false,
 }: ProfileHeaderProps) {
   const t = useTranslations("profile.header");
@@ -84,11 +86,16 @@ export function ProfileHeader({
         {t("editProfile")}
       </Link>
     </div>
-  ) : wikiProfileHref ? (
-    <Link href={wikiProfileHref} className={`shrink-0 text-body-sm ${PROFILE_LINK_CLASS}`}>
-      {t("viewWikiProfile")}
-    </Link>
-  ) : null;
+  ) : (
+    <div className="flex shrink-0 flex-wrap items-center gap-3">
+      {messageAction}
+      {wikiProfileHref && (
+        <Link href={wikiProfileHref} className={`shrink-0 text-body-sm ${PROFILE_LINK_CLASS}`}>
+          {t("viewWikiProfile")}
+        </Link>
+      )}
+    </div>
+  );
 
   return (
     <header className="space-y-5">
