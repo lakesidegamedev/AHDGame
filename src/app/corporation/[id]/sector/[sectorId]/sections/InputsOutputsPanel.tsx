@@ -73,7 +73,8 @@ export default function InputsOutputsPanel({
   // output row told a gas-and-oil extractor the same number twice and hid which
   // commodity was actually the one sitting unsold. Fall back to the blend only
   // when the per-commodity figure has not been persisted yet.
-  const soldShareFor = (f: CommodityFlow) => f.soldFraction ?? plants.fillRate;
+  const soldShareFor = (f: CommodityFlow) =>
+    f.soldFraction ?? (f.settledSales ? null : plants.fillRate);
   const hasPerOutput = commodities.supplies.some((f) => f.soldFraction != null);
   // What the engine actually applied, floored at THROUGHPUT_MIN, the raw
   // availability ratio on the rows above is uncapped and is not the throttle.
@@ -162,7 +163,9 @@ export default function InputsOutputsPanel({
     soldUnits: plants.soldUnits,
     fallbackSoldFraction: plants.fillRate,
   });
-  const showsRealizedOutput = realizedOutputPrice != null || perProductPrice.size > 0;
+  const hasSettledSales = commodities.supplies.some((flow) => flow.settledSales?.sold);
+  const showsRealizedOutput =
+    hasSettledSales || realizedOutputPrice != null || perProductPrice.size > 0;
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
@@ -172,7 +175,7 @@ export default function InputsOutputsPanel({
         they bought and made last turn, per day. Prices are per unit, in {currencyCode}: what you
         were charged for inputs
         {showsRealizedOutput
-          ? perProductPrice.size > 0
+          ? hasSettledSales || perProductPrice.size > 0
             ? " and what each thing you make sold for"
             : " and what your sales averaged"
           : ""}
@@ -308,9 +311,38 @@ export default function InputsOutputsPanel({
                   key={f.commodity}
                   flow={{ ...f, units: f.units * outputUnitScale }}
                   priceText={price(
-                    realizedOutputPrice ?? perProductPrice.get(f.commodity) ?? f.marketPrice
+                    f.settledSales
+                      ? f.settledSales.sold > 0
+                        ? f.settledSales.revenue / f.settledSales.sold
+                        : f.marketPrice
+                      : (realizedOutputPrice ?? perProductPrice.get(f.commodity) ?? f.marketPrice)
                   )}
                   right={(() => {
+                    const settled = f.settledSales;
+                    if (settled) {
+                      if (!(settled.offered > 0)) return "No units offered last turn";
+                      return (
+                        <InfoTooltip
+                          trigger={
+                            <span className="text-body-xs text-muted">
+                              {settled.ownSites >= settled.offered - 1e-6
+                                ? "Supplied your own sites"
+                                : `${fmtPct(settled.sold / settled.offered)} of offers sold`}
+                            </span>
+                          }
+                          width={300}
+                        >
+                          <p className="text-muted">Last settled turn</p>
+                          <p>{fmtUnits(settled.offered, 2)} offered</p>
+                          <p>
+                            {fmtUnits(settled.sold, 2)} sold outside · {price(settled.revenue)}{" "}
+                            {currencyCode} sales
+                          </p>
+                          <p>{fmtUnits(settled.ownSites, 2)} sent to your sites</p>
+                          <p>{fmtUnits(settled.unsold, 2)} unsold</p>
+                        </InfoTooltip>
+                      );
+                    }
                     const share = soldShareFor(f);
                     const ownSite = f.ownSite;
                     if (share == null && !ownSite) return null;
