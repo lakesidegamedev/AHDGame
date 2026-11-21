@@ -226,6 +226,12 @@ async function executeCharacterActionImpl(
   // ~15ms apart). Collected here and flushed with a single `recordAuditBulk`
   // call after the loop rather than per-iteration.
   const auditEntries: ActionAuditInput[] = [];
+  // Logs are collected and written once after the loop. One insert per
+  // iteration made a count=5/10 batch an N+1 over `actionLogs` (the repeated
+  // write Sentry's N+1 detector flags on POST /api/actions/execute); the
+  // character update below stays per iteration because each one is an atomic,
+  // resource-guarded step.
+  const pendingActionLogs: Omit<ActionLog, "_id">[] = [];
 
   // Batch runs commit each iteration on its own (AP debit + payout in one
   // atomic update). If a later iteration is refused (AP or funds ran out), the
@@ -584,9 +590,7 @@ async function executeCharacterActionImpl(
       // cumulative counts, so checking per iteration repeated the same
       // actionLogs scans and award lookups for every action in a batch.
       const userOid = actor.userId;
-      dbStartedAt = Date.now();
-      const actionLogResult = await actionLogsCollection<Document>(db).insertOne(actionLog);
-      timing.actionLogMs += Date.now() - dbStartedAt;
+      pendingActionLogs.push(actionLog);
       auditEntries.push({
         source: "api",
         action: `character.${actionType}`,
@@ -595,7 +599,7 @@ async function executeCharacterActionImpl(
         subject: { type: "character", id: current._id, name: current.name },
         amount: actionFundsChange || undefined,
         currencyCode: actionFundsChange !== 0 ? homeCurrency : undefined,
-        refs: { actionLogId: actionLogResult.insertedId },
+        refs: {},
         outcome: "ok",
         meta: {
           targetState: targetState || undefined,
@@ -608,6 +612,20 @@ async function executeCharacterActionImpl(
           politicalMediaOrderId,
         },
       });
+    }
+  }
+
+  // One actionLogs insert per request. `insertedIds` comes back in statement
+  // order, so each audit envelope still points at the log row for its own
+  // iteration. Written before the achievement pass, which counts cumulative
+  // actionLogs rows.
+  if (pendingActionLogs.length > 0) {
+    dbStartedAt = Date.now();
+    const insertedLogs = await actionLogsCollection<Document>(db).insertMany(pendingActionLogs);
+    timing.actionLogMs += Date.now() - dbStartedAt;
+    for (let i = 0; i < auditEntries.length; i++) {
+      const actionLogId = insertedLogs.insertedIds[i];
+      if (actionLogId) auditEntries[i]!.refs = { actionLogId };
     }
   }
 
