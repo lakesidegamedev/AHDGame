@@ -16,7 +16,7 @@ import {
 import { plannedArrivalTurns } from "@/lib/corporations/buildDelivery";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
-import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
+import BuildMarketReadout from "@/components/corporation/BuildMarketReadout";
 import { limitingBuildOutput } from "@/lib/corporations/rules/buildDemandCapacity";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type {
@@ -306,6 +306,9 @@ export default function BuildCapacityDialog({
     : limitingOutput
       ? t("roomLimitedBy", { commodity: COMMODITY_LABELS[limitingOutput.commodity] })
       : null;
+  // Per-product buyers replace the single tightest-product count whenever the
+  // funded order book is available.
+  const showReadout = sectorType !== "logistics" && (plants.buildDemand?.length ?? 0) > 0;
   const staffShort = workersDesired > 0 && plants.workers < workersDesired;
   const poolShort = !!stateLabourMarket && poolOversubscribed(stateLabourMarket);
   const reserveRisk =
@@ -471,11 +474,13 @@ export default function BuildCapacityDialog({
           <p className="text-body-sm text-muted" data-testid="build-room">
             {sectorType === "logistics"
               ? t("roomFreight")
-              : marketRoomKnown
-                ? [strategy?.currentStrategyName, roomEstimate, roomNote]
-                    .filter(Boolean)
-                    .join(" · ")
-                : t("roomUnknown")}
+              : showReadout
+                ? (strategy?.currentStrategyName ?? "")
+                : marketRoomKnown
+                  ? [strategy?.currentStrategyName, roomEstimate, roomNote]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : t("roomUnknown")}
           </p>
           {strategyOptions.length > 1 && (
             <button
@@ -489,6 +494,15 @@ export default function BuildCapacityDialog({
             </button>
           )}
         </div>
+
+        {showReadout && plants.buildDemand && (
+          <BuildMarketReadout
+            rows={plants.buildDemand}
+            unitsPerFacility={unitsPerFacility}
+            site={site}
+            sites={sites}
+          />
+        )}
 
         {compareStrategies && (
           <dl id="build-strategy-comparison" className="space-y-1 text-body-sm">
@@ -685,7 +699,6 @@ export default function BuildCapacityDialog({
               />
             )}
             <InvestmentForecast plants={plants} units={preview.safeUnits} />
-            <FundedBuildDemand rows={plants.buildDemand} unitsPerFacility={unitsPerFacility} />
           </div>
         </details>
       </div>

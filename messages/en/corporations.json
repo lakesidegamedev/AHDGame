@@ -230,7 +230,28 @@
       "siteBuildWithReserve": "Build using operating reserve",
       "siteInsufficientFunds": "Insufficient corporate funds.",
       "warnLabour": "This sector fills {percent} of its jobs. New jobs may stay vacant.",
-      "warnLabourPool": "{state} has more jobs than workers. New jobs may stay vacant."
+      "warnLabourPool": "{state} has more jobs than workers. New jobs may stay vacant.",
+      "marketReadout": {
+        "title": "Buyers for what you make",
+        "lastTurn": "Last turn",
+        "headlineAllWaiting": "{count, plural, =0 {Buyers are waiting for everything you make.} one {Buyers are waiting for everything you make. About # more {facility} would sell its whole output.} other {Buyers are waiting for everything you make. About # more {facilities} would sell their whole output.}}",
+        "headlineSomeWaiting": "New {facilities} would mostly sell {waiting}. {covered} buyers are already served.",
+        "headlineNoneWaiting": "Existing producers can already serve every paid order. New {facilities} would have to win sales from them.",
+        "headlineUnknown": "There is not enough sales data yet to say how many buyers are waiting.",
+        "chipWaiting": "Buyers waiting",
+        "chipIdle": "Spare capacity covers it",
+        "chipCovered": "Covered",
+        "chipNoOrders": "No orders",
+        "chipUnknown": "No data yet",
+        "orderedFilled": "{ordered} ordered, {filled} filled a day",
+        "barLabel": "{filled} of {ordered} daily orders filled",
+        "detailWaiting": "{unmet} unfilled, enough for about {count, plural, one {# {facility}} other {# {facilities}}}",
+        "detailIdle": "{unmet} unfilled, but spare and queued capacity can already make that",
+        "detailCovered": "every order filled",
+        "detailNoOrders": "no buyers placed paid orders",
+        "detailUnknown": "not measured yet",
+        "notALimit": "Advice, not a limit: you can build as many as you can afford. Based on last turn's paid orders in this market, after spare and queued capacity. Export sales are not counted, and other companies can build too."
+      }
     },
     "bankConsole": {
       "eyebrow": {
