@@ -392,22 +392,31 @@ export async function clearIneligibleHouseLeadershipNominations(
     "majority_whip",
     "minority_whip",
   ];
+  const policiesByRole = new Map<HouseLeadershipElectionRole, RoleEligibilityPolicy>();
   for (const role of roles) {
     const policy = POLICY_BY_ROLE[houseElectionRoleToLeader(role)];
-    if (policy.kind === "any-seated") continue; // no party can be ineligible
-    const noms = await houseLeadershipNominationsCollection(db)
-      .find({ role, status: { $in: ["open", "voting"] } })
-      .toArray();
-    const toFail = noms
-      .filter((n) => !isPartyEligible(policy, n.nomineeParty ?? null, ctx))
-      .map((n) => n._id);
-    if (toFail.length > 0) {
-      await houseLeadershipNominationsCollection(db).updateMany(
-        { _id: { $in: toFail } },
-        { $set: { status: "failed", updatedAt: now } }
-      );
-    }
+    if (policy.kind !== "any-seated") policiesByRole.set(role, policy);
   }
+  if (policiesByRole.size === 0) return;
+
+  const activeStatuses: HouseLeadershipNomination["status"][] = ["open", "voting"];
+  const nominations = houseLeadershipNominationsCollection(db);
+  const activeNominations = await nominations
+    .find({ role: { $in: [...policiesByRole.keys()] }, status: { $in: activeStatuses } })
+    .toArray();
+
+  const toFail = activeNominations
+    .filter((nomination) => {
+      const policy = policiesByRole.get(nomination.role);
+      return policy !== undefined && !isPartyEligible(policy, nomination.nomineeParty ?? null, ctx);
+    })
+    .map((nomination) => nomination._id);
+  if (toFail.length === 0) return;
+
+  await nominations.updateMany(
+    { _id: { $in: toFail }, status: { $in: activeStatuses } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
 }
 
 /**
