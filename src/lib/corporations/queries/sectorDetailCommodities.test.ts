@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appliedThroughputFloor,
   computeCapitalUsage,
+  outputRevenueShares,
   perUnitAnchorAmount,
   resolveThroughputBindingInput,
 } from "@/lib/corporations/queries/sectorDetailCommodities";
@@ -68,5 +69,26 @@ describe("sector detail throughput attribution", () => {
     expect(resolveThroughputBindingInput(null, undefined, "real_estate_services")).toBe(
       "real_estate_services"
     );
+  });
+});
+
+describe("outputRevenueShares", () => {
+  const clearing = { software: 0.9, electronics: 0.1 };
+
+  it("splits a settled plant's revenue by what each product was paid", () => {
+    const receipt = new Map([
+      ["software", { revenue: 300 }],
+      ["electronics", { revenue: 700 }],
+    ]);
+    expect(outputRevenueShares(receipt, clearing)).toEqual({ software: 0.3, electronics: 0.7 });
+  });
+
+  it("shows no split for a settled plant that earned nothing", () => {
+    expect(outputRevenueShares(new Map([["software", { revenue: 0 }]]), clearing)).toEqual({});
+  });
+
+  it("keeps the clearing split where there is no current receipt", () => {
+    expect(outputRevenueShares(null, clearing)).toBe(clearing);
+    expect(outputRevenueShares(null, undefined)).toEqual({});
   });
 });
