@@ -585,6 +585,7 @@
     "notifications": {
       "title": "Notifications",
       "description": "Choose which alerts reach you. Alerts marked \"Phone and desktop\" also arrive as notifications on your phone and computer; the rest wait in your inbox. Muted alerts stay saved and come back when you turn them on again.",
+      "turnStatusHint": "The in-game status bar tracks live turns. Turn updates do not generate inbox alerts.",
       "loading": "Loading preferences...",
       "loadError": "Could not load notification preferences.",
       "retry": "Retry",
