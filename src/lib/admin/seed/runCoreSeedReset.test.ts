@@ -57,6 +57,8 @@ describe("runSeed reset drops", () => {
         "retailDemandTransitionTurns",
         "commodityNominalPriceIndex",
         "commodityNominalPriceIndexTurn",
+        // Era baseline tech mode: absent means off, which is what a fresh world needs.
+        "legacyTechMode",
       ])
     );
   });
@@ -211,7 +213,7 @@ describe("region-derived catch-up coverage", () => {
   // regressed (24 -> 18) when the ordering was wrong.
   it("the bloc six are the reason the stage is ordered where it is", () => {
     const src = fs.readFileSync(
-      path.resolve(process.cwd(), "src/lib/admin/bootstrapGameWorld.ts"),
+      path.resolve(process.cwd(), "src/lib/admin/seedCountryData.ts"),
       "utf8"
     );
     // Documented, so the next person to move this call knows what it costs.
@@ -227,7 +229,7 @@ describe("region-derived stage placement", () => {
   // 65/6. `runSeed` seeds only the US states bundle and then called them, and
   // each reads `states` for its roster.
   const bootstrapSrc = () =>
-    fs.readFileSync(path.resolve(process.cwd(), "src/lib/admin/bootstrapGameWorld.ts"), "utf8");
+    fs.readFileSync(path.resolve(process.cwd(), "src/lib/admin/seedCountryData.ts"), "utf8");
   const coreSrc = () =>
     fs.readFileSync(path.resolve(process.cwd(), "src/lib/admin/seed/runCoreSeed.ts"), "utf8");
 
@@ -401,7 +403,9 @@ describe("per-country seeder roster", () => {
   // including BLR and BAL, which have no `states` rows at all and are not in the
   // 1953 roster. Both are gone; these pin them shut.
   const bootstrapSrc = () =>
-    fs.readFileSync(path.resolve(process.cwd(), "src/lib/admin/bootstrapGameWorld.ts"), "utf8");
+    ["src/lib/admin/bootstrapGameWorld.ts", "src/lib/admin/seedCountryData.ts"]
+      .map((file) => fs.readFileSync(path.resolve(process.cwd(), file), "utf8"))
+      .join("\n");
 
   const countriesWith = (re: RegExp, src: string) =>
     [...new Set([...src.matchAll(re)].map((m) => m[1].toUpperCase()))].sort();

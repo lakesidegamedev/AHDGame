@@ -1,0 +1,21 @@
+#!/bin/sh
+# Fast checks that fail CI most often and take seconds locally: the file size
+# and module boundary audit, and formatting of the files this branch changed.
+# Typecheck and tests stay in CI. Skip once with `git push --no-verify`.
+
+base=$(git merge-base HEAD origin/development 2>/dev/null || git merge-base HEAD '@{upstream}' 2>/dev/null)
+
+echo "pre-push: architecture audit"
+node scripts/architecture-audit.mjs > /dev/null || {
+  echo "pre-push: architecture audit failed. Run: node scripts/architecture-audit.mjs"
+  exit 1
+}
+
+if [ -n "$base" ]; then
+  echo "pre-push: format check on changed files"
+  git diff -z --name-only --diff-filter=ACMR "$base" HEAD |
+    xargs -0 -r npx --no -- prettier --check --ignore-unknown --log-level warn -- || {
+    echo "pre-push: formatting failed. Run: npx prettier --write <files>"
+    exit 1
+  }
+fi

@@ -9,6 +9,7 @@ interface Settled<T> {
   url: string;
   data: T | null;
   error: string;
+  signInRequired?: boolean;
 }
 
 /**
@@ -37,7 +38,12 @@ export function useMarketJson<T>(url: string | null) {
         const body: unknown = await res.json().catch(() => null);
         if (controller.signal.aborted) return;
         if (!res.ok) {
-          setSettled({ url, data: null, error: "Could not load this section." });
+          setSettled({
+            url,
+            data: null,
+            error: "Could not load this section.",
+            signInRequired: res.status === 401,
+          });
           return;
         }
         cache.set(url, { at: Date.now(), data: body });
@@ -55,6 +61,7 @@ export function useMarketJson<T>(url: string | null) {
   return {
     data: current?.data ?? null,
     error: current?.error ?? "",
+    signInRequired: current?.signInRequired ?? false,
     loading: url !== null && current === null,
     reload,
   };

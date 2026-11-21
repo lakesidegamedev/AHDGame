@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { MONEY_JOURNAL_RETENTION_TURNS, pruneMoneyJournals } from "./moneyJournalPrune";
 
-const CURRENT_TURN = 400;
+const CURRENT_TURN = MONEY_JOURNAL_RETENTION_TURNS + 400;
 const OLD = CURRENT_TURN - MONEY_JOURNAL_RETENTION_TURNS - 1;
 const RECENT = CURRENT_TURN - MONEY_JOURNAL_RETENTION_TURNS;
 

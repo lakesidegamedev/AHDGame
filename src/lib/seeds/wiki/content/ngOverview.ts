@@ -14,7 +14,7 @@ A candidate leads nationally with 38%. Their share is 41%, 33% and 27% in three 
 
 A 2-term limit per character applies: a character who has been elected President twice cannot run again. The limit also reaches the running mate: a character who has served two presidential terms cannot be picked as Vice President. The limit is per-character, not per-party (see [Executive Term Limits](/wiki/executive-term-limits)).
 
-Nigeria has no parliamentary confidence vote. The President serves the full 4-year term regardless of National Assembly composition, and there is no legislative mechanism to remove the President mid-term through a standard vote. **Divided government is common**: one party holds the presidency while a rival controls one or both chambers. Bills require passage in both chambers and then go to the President, who has 10 turns to sign or veto; a bill left alone is signed automatically. See below for what happens after a veto.
+Nigeria has no parliamentary confidence vote. The President serves the full 4-year term regardless of National Assembly composition, and the only legislative way to remove the President mid-term is impeachment, where the House impeaches and the Senate convicts by a two-thirds vote. **Divided government is common**: one party holds the presidency while a rival controls one or both chambers. Bills require passage in both chambers and then go to the President, who has 10 turns to sign or veto; a bill left alone is signed automatically. See below for what happens after a veto.
 
 | Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Nigeria has no parliamentary confidence vote. The President serves the full 4-ye
 | Representative | Multi-seat zone election | 4 years | 360 (136 in 1953) |
 | Assembly Member (State House of Assembly) | Multi-seat zone election | 4 years | 990 |
 | Governor | FPTP zone-wide election | 4 years | 1 per zone (6) |
-| Governor of the CBN | Nominated by the President, then drawn | 4 years | 1 |
+| Governor of the CBN | Drawn from eligible candidates | 5 years | 1 |
 
 The **President** is both head of state and head of government.
 
@@ -32,7 +32,7 @@ The **President** is both head of state and head of government.
 
 Nigeria's legislature has two chambers, and **both participate in the player legislative loop**: bills require passage in both the Senate and the House of Representatives, and both have equal legislative weight.
 
-- **House of Representatives**: 360 Representatives, elected zone by zone and allocated across the six geopolitical zones (North West, North East, North Central, South West, South South, South East) by population. 4-year terms (192 turns, 8 real days). **All seats are contested** each cycle. The House is the primary legislative body and the source of the coalition threshold.
+- **House of Representatives**: 360 Representatives, elected zone by zone and allocated across the six geopolitical zones (North West, North East, North Central, South West, South South, South East) in fixed numbers per zone. 4-year terms (192 turns, 8 real days). **All seats are contested** each cycle. The House is the lower chamber and the source of the coalition threshold.
 - **Senate**: 109 senators, elected zone by zone. 4-year terms. **All seats are contested** each cycle. The Senate reviews legislation from the House and can reject bills.
 
 \`\`\`wiki-chart
@@ -82,7 +82,7 @@ The State House of Assembly is Nigeria's sub-national legislature: a 990-seat bo
 
 ## The naira and a high-inflation baseline
 
-Nigeria's central bank operates in a structurally higher rate environment than most countries. **Why is Nigeria high inflation?** The game anchors its inflation target and neutral rate to the naira's history of weakness, so the central bank treats a higher inflation rate as normal.
+Nigeria's central bank operates in a structurally higher rate environment than most countries. **Why is Nigeria high inflation?** The game anchors its inflation target and neutral rate to the naira's history of weakness, so the central bank works with a higher inflation target and neutral rate, though crisis-level inflation is still not treated as normal.
 
 | Item | Detail |
 | --- | --- |

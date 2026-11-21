@@ -74,29 +74,31 @@ const base = {
 };
 
 describe("explicit plant overhead", () => {
-  it("bills a fully running plant exactly the old per-unit rate", () => {
-    expect(computePlantOverhead({ ...base, producedUnits: 1000 })).toBe(400);
+  it("bills a fully running plant at 3.6% of nominal value", () => {
+    expect(computePlantOverhead({ ...base, producedUnits: 1000 })).toBeCloseTo(360);
     expect(
       computePlantOverhead({ ...base, producedUnits: 1000, nominalDailyRevenue: 480_000 })
-    ).toBe(800);
+    ).toBeCloseTo(720);
   });
 
   it("keeps the fixed half when the plant runs below capacity", () => {
     // 800 of 1000 units: half billed on output (400), half on capacity (500).
     expect(PLANT_OVERHEAD_FIXED_SHARE).toBe(0.5);
-    expect(computePlantOverhead(base)).toBe(360);
+    expect(computePlantOverhead(base)).toBeCloseTo(324);
     // At 40% utilization the bill falls only 30%, not 60%.
-    expect(computePlantOverhead({ ...base, producedUnits: 400 })).toBe(280);
+    expect(computePlantOverhead({ ...base, producedUnits: 400 })).toBeCloseTo(252);
   });
 
   it("is fixed to the nominal basket, so the era price level scales it", () => {
-    expect(computePlantOverhead({ ...base, nominalDailyRevenue: 480_000 })).toBe(720);
+    expect(computePlantOverhead({ ...base, nominalDailyRevenue: 480_000 })).toBeCloseTo(648);
   });
 
   it("bills the fixed half on active capacity only", () => {
     // 400 produced, 500 active: 200 + 250 = 450 billed units.
-    expect(computePlantOverhead({ ...base, activeFraction: 0.5, producedUnits: 400 })).toBe(180);
-    expect(computePlantOverhead({ ...base, activeFraction: Number.NaN })).toBe(360);
+    expect(computePlantOverhead({ ...base, activeFraction: 0.5, producedUnits: 400 })).toBeCloseTo(
+      162
+    );
+    expect(computePlantOverhead({ ...base, activeFraction: Number.NaN })).toBeCloseTo(324);
   });
 
   it("never turns missing, invalid or cold capacity into a credit", () => {
@@ -109,7 +111,13 @@ describe("explicit plant overhead", () => {
   });
 });
 
-describe("transition window upkeep waiver", () => {
+describe("funded producer site bill", () => {
+  it("bills ordinary overhead and the financial crisis charge independently", () => {
+    const base = { nominalHourlyCapacityValue: 1000, activeFraction: 0.5, coldUpkeepWaived: true };
+    expect(standingProducerSiteBill({ ...base, financialPenaltyPercent: 0 })).toBeCloseTo(18);
+    expect(standingProducerSiteBill({ ...base, financialPenaltyPercent: 6 })).toBeCloseTo(48);
+  });
+
   it("charges no cold upkeep on idle capacity when waived", () => {
     const base = { nominalHourlyCapacityValue: 100, activeFraction: 0, financialPenaltyPercent: 0 };
     expect(standingProducerSiteBill(base)).toBeGreaterThan(0);

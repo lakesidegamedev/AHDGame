@@ -17,38 +17,56 @@ export function fundedTreasuryPaymentLegs(input: {
   amount: number;
   rate: number;
   signedPositionOwned: boolean;
+  signedPositionAmount?: number;
   incoming?: boolean;
   reason?: string;
 }): LedgerLeg[] {
   const { country, currency, amount, rate } = input;
-  if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(rate) || rate <= 0)
+  const signedAmount = input.signedPositionAmount ?? amount;
+  if (
+    !Number.isFinite(amount) ||
+    amount < 0 ||
+    !Number.isFinite(signedAmount) ||
+    signedAmount < 0 ||
+    !Number.isFinite(rate) ||
+    rate <= 0
+  )
     throw new Error("Invalid funded Treasury payment witness");
   const code = currency as CurrencyCode;
   const position = `government:${country}:${currency}`;
-  const legs: LedgerLeg[] = [
-    {
-      account: `government_cash:${country}:${currency}`,
-      amount: -amount,
-      currencyCode: code,
-      anchorAmount: -amount / rate,
-      role: "primary",
-    },
-    { account: position, amount, currencyCode: code, anchorAmount: amount / rate, role: "contra" },
-  ];
-  if (input.signedPositionOwned)
+  const legs: LedgerLeg[] =
+    amount > 0
+      ? [
+          {
+            account: `government_cash:${country}:${currency}`,
+            amount: -amount,
+            currencyCode: code,
+            anchorAmount: -amount / rate,
+            role: "primary",
+          },
+          {
+            account: position,
+            amount,
+            currencyCode: code,
+            anchorAmount: amount / rate,
+            role: "contra",
+          },
+        ]
+      : [];
+  if (input.signedPositionOwned && signedAmount > 0)
     legs.push(
       {
         account: position,
-        amount: -amount,
+        amount: -signedAmount,
         currencyCode: code,
-        anchorAmount: -amount / rate,
+        anchorAmount: -signedAmount / rate,
         role: "primary",
       },
       {
         account: `sink:${input.reason ?? "bond_settlement"}:${currency}`,
-        amount,
+        amount: signedAmount,
         currencyCode: code,
-        anchorAmount: amount / rate,
+        anchorAmount: signedAmount / rate,
         role: "contra",
       }
     );

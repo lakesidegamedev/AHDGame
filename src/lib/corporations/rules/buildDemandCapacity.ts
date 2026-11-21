@@ -58,9 +58,17 @@ export function sizeBuildDemand(input: {
   });
 }
 
-/** Capacity whose entire output mix has measured buyers after idle plants and queues. */
-export function fullMixBuildRoom(rows: readonly BuildDemandRow[]): number | null {
+/** The tightest primary market. National totals already include their regional subsets. */
+export function limitingBuildOutput(rows: readonly BuildDemandRow[]): BuildDemandRow | null {
   const primary = [...new Map(rows.map((row) => [row.commodity, row])).values()];
   if (!primary.length || primary.some((row) => row.capacityUnits == null)) return null;
-  return Math.max(0, Math.min(...primary.map((row) => row.capacityUnits!)));
+  return primary.reduce((limiting, row) =>
+    row.capacityUnits! < limiting.capacityUnits! ? row : limiting
+  );
+}
+
+/** Capacity whose entire output mix has measured buyers after idle plants and queues. */
+export function fullMixBuildRoom(rows: readonly BuildDemandRow[]): number | null {
+  const capacityUnits = limitingBuildOutput(rows)?.capacityUnits;
+  return capacityUnits == null ? null : Math.max(0, capacityUnits);
 }

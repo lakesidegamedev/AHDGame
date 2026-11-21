@@ -33,7 +33,7 @@ describe("seedCoreIndexes", () => {
     const uniqueIndexOrder = ensureIndexMock.mock.calls.find(
       (call) =>
         call[1] === "corporateSectors" &&
-        call[3]?.name === "corporateSectors_corporation_state_type_unique"
+        call[3]?.name === "corporateSectors_corporation_state_type_site_unique"
     );
     expect(uniqueIndexOrder).toBeDefined();
   });

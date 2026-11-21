@@ -311,8 +311,50 @@ describe("debt module", () => {
 
       const result = await processAnnualDebt(mockDb, federalBudget, 5000000);
 
-      // Derived principal: 4100000, ratio: 0.82 -> A (0.035)
-      expect(result.interestRate).toBe(0.035);
+      // Ladder rate for A is 0.035. The stock rolls over at 3.5% with no
+      // nominal growth and a primary balance of only +0.46% of GDP, so the
+      // ratio climbs about 2.4 points a year and the trajectory premium adds
+      // 0.24pp on top of the ladder.
+      expect(result.interestRate).toBeCloseTo(0.03741, 5);
+    });
+
+    it("prices from nominal growth, so inflation is not charged as a rising ratio", async () => {
+      const budgetWith = (inflationRate: number) =>
+        ({
+          debt: { principal: 4100000, interestRate: 0.03, ceiling: 6000000 },
+          spending: { total: 500000 },
+          revenue: { total: 400000 },
+          treasuryBalance: -4100000,
+          economicFactors: { gdpGrowth: 2, inflationRate },
+        }) as any;
+
+      const nominal = await processAnnualDebt(mockDb, budgetWith(3), 5000000);
+      const realOnly = await processAnnualDebt(mockDb, budgetWith(0), 5000000);
+
+      // 2% real plus 3% inflation beats the 3.5% ladder rate, so the ratio holds
+      // or falls. Reading real growth alone made the same year look like a climb.
+      expect(nominal.debtTrajectory).not.toBe("rising");
+      expect(realOnly.debtTrajectory).toBe("rising");
+      expect(nominal.interestRate).toBeLessThan(realOnly.interestRate);
+    });
+
+    it("raises the path for a deflating country instead of flooring inflation", async () => {
+      const deflating = await processAnnualDebt(
+        mockDb,
+        {
+          debt: { principal: 4100000, interestRate: 0.03, ceiling: 6000000 },
+          spending: { total: 500000 },
+          revenue: { total: 400000 },
+          treasuryBalance: -4100000,
+          economicFactors: { gdpGrowth: 1, inflationRate: -3 },
+        } as any,
+        5000000
+      );
+
+      // 1% real and 3% deflation is a shrinking nominal economy, so the same
+      // primary balance now leaves the ratio climbing above its ladder rate.
+      expect(deflating.debtTrajectory).toBe("rising");
+      expect(deflating.interestRate).toBeGreaterThan(0.035);
     });
 
     it("detects when debt ceiling is exceeded", async () => {

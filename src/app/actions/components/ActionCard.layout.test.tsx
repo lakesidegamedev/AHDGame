@@ -130,6 +130,6 @@ describe("ActionCard layout", () => {
     });
     expect(container.firstElementChild?.className).not.toContain("opacity-");
     expect(screen.getByText("Insufficient actions.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Execute action" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Campaign" })).toHaveProperty("disabled", true);
   });
 });

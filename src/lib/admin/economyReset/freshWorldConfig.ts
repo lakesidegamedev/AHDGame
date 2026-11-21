@@ -23,6 +23,9 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // Legacy market recovery ladder (price memory damping, margin trim relief,
   // service labour relief): patches for the old formula market.
   marketRecoveryStage: "",
+  // Live rollback override for the plant build price scale; a fresh world uses
+  // the code default.
+  plantBuildPriceScale: "",
   // Launch-safety governor on the plants tier: cap, ramp and every glide field.
   // A rebuilt plants economy starts clean, with no deviation cap to glide off.
   marketGovernorCap: "",
@@ -131,6 +134,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",
   producerTariffStage:
     "fresh-world flag (FRESH_WORLD_GAME_CONFIG_FLAGS): import tariffs are a standing trade rule of every plants economy",
+  producerDemandFloorStage:
+    "fresh-world flag (FRESH_WORLD_GAME_CONFIG_FLAGS): a rebuilt economy starts with almost no plants, so it needs the demand floor to have anything to build into",
   producerShortageBuildFactor: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMove: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMultiplier: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",

@@ -239,6 +239,56 @@ export const MAX_ORG_DUES_RATE_ANNUAL = 0.01;
  */
 const DEFAULT_LEADERSHIP_TERM_TURNS = 96;
 
+/** UN members seeded in the 2019 and 2023 presets (2027 adds CA). */
+const MODERN_UN_ROSTER: OrgMemberId[] = [
+  "US",
+  "UK",
+  "JP",
+  "DE",
+  "IE",
+  "BR",
+  "CN",
+  "NG",
+  "HU",
+  "PL",
+  "RO",
+  "BG",
+  "RU",
+  "FR",
+  "IT",
+  "ES",
+  "SE",
+  "TR",
+  "GR",
+  "AT",
+  "FI",
+];
+
+/** NATO members from the 1999 accession of Poland and Hungary. */
+const NATO_MODERN_1999: OrgMemberId[] = [
+  "US",
+  "UK",
+  "DE",
+  "FR",
+  "IT",
+  "ES",
+  "TR",
+  "GR",
+  "CA",
+  "NL",
+  "BE",
+  "LU",
+  "NO",
+  "DK",
+  "PT",
+  "IS",
+  "PL",
+  "HU",
+];
+
+/** Adds the 2004 accessions (BG, RO) and the 2009 accession (AL). */
+const NATO_MODERN_2009: OrgMemberId[] = [...NATO_MODERN_1999, "BG", "RO", "AL"];
+
 /**
  * The Non-Aligned Movement's chair passes to the host of each summit, which
  * convened roughly every three years. 144 turns = 3 game years.
@@ -279,24 +329,12 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
     logoPath: "/orgs/nato.svg",
     foundingMembers: ["US", "UK", "DE"],
     foundedYear: 1949,
-    // The full historical alliance, not just the countries the game simulates.
-    // Membership is entity-wide, so the eight founders that exist only as
-    // background entities (CA/NL/BE/LU/NO/DK/PT/IS) are seated too — NATO
-    // without Canada and the Benelux was an artifact of the old CountryId-only
-    // roster, not of history. They carry no economy, so they pay no tribute and
-    // hold no vote; they are the alliance's real shape.
-    //
-    // 1953 — 14 members. Twelve founders (Washington Treaty, 4 April 1949) plus
-    //   Greece and Turkey, who both acceded 18 February 1952. West Germany
-    //   joined 9 May 1955, so it is absent here. AT and FI were neutral
-    //   throughout and never joined; ES joined only in 1982.
-    // 1979 — 15 members: the 1953 fourteen plus West Germany (1955). Spain is
-    //   still three years away. Greece had withdrawn from the integrated
-    //   military command (1974-1980) but remained a member throughout.
-    //   Without this entry a 1979 world fell through to the 3-country founding
-    //   list and seated only US/UK/DE — the same bug the 1991 entry fixed.
-    // 1991 — 16 members: the 1979 fifteen plus Spain (30 May 1982). SE excluded
-    //   (Sweden joined 2024); IE neutral; JP/CN/BR/NG never members.
+    // Membership is entity-wide, so the alliance seats members that exist only
+    // as background entities (CA/NL/BE/LU/NO/DK/PT/IS/AL) beside the simulated
+    // countries; background members carry no economy, pay no tribute and hold
+    // no vote.
+    // Accessions: GR/TR 1952, DE 1955, ES 1982, PL/HU 1999, BG/RO 2004,
+    // AL 2009, FI 2023, SE 2024. AT, IE, JP, CN, BR and NG never joined.
     foundingMembersByEra: {
       "1953-default": [
         "US",
@@ -349,6 +387,11 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
         "PT",
         "IS",
       ],
+      "1999-default": NATO_MODERN_1999,
+      "2007-default": [...NATO_MODERN_1999, "BG", "RO"],
+      "2019-default": NATO_MODERN_2009,
+      "2023-default": NATO_MODERN_2009,
+      "2027-default": [...NATO_MODERN_2009, "FI", "SE"],
     },
     leadership: {
       title: "Secretary-General",
@@ -478,6 +521,13 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
         "IE",
         "NG",
       ],
+      // Modern presets: every seeded country is a UN member (RU holds the
+      // Soviet seat; CA is a 1945 founder and is seeded from 2027). Without
+      // these entries the modern presets fell through to the four-country
+      // legacy list. A test pins each roster to the preset's seeded countries.
+      "2019-default": MODERN_UN_ROSTER,
+      "2023-default": MODERN_UN_ROSTER,
+      "2027-default": [...MODERN_UN_ROSTER, "CA"],
     },
     leadership: {
       title: "Secretary-General",
@@ -496,6 +546,12 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
     logoPath: "/orgs/commonwealth.svg",
     foundingMembers: ["UK", "NG"],
     foundedYear: 1949,
+    // The 2027 world registers three Commonwealth members: the UK, Canada and
+    // Nigeria. Earlier presets fall back to the founding pair, Canada being
+    // absent from those worlds.
+    foundingMembersByEra: {
+      "2027-default": ["UK", "CA", "NG"],
+    },
     permanentLeadership: { countryId: "UK" },
     leadership: {
       title: "Head of the Commonwealth",

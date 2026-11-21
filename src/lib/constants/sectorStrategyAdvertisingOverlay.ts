@@ -83,6 +83,14 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
       iron: 0.1,
       software: 0.1,
     },
+    building_materials: {
+      advertising: 0.07,
+      energy: 0.107,
+      timber: 0.074,
+      iron: 0.058,
+      chemicals: 0.041,
+      freight: 0.05,
+    },
     electronics_manufacturing: {
       advertising: 0.07,
       chemicals: 0.082,
@@ -185,12 +193,12 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
     },
     infrastructure: {
       advertising: 0.07,
-      building_materials: 0.044,
-      construction_services: 0.132,
-      electronics: 0.105,
-      energy: 0.105,
-      rare_earth: 0.053,
-      steel: 0.07,
+      building_materials: 0.033,
+      construction_services: 0.097,
+      electronics: 0.078,
+      energy: 0.078,
+      rare_earth: 0.039,
+      steel: 0.052,
     },
     mobile_5g: {
       advertising: 0.07,

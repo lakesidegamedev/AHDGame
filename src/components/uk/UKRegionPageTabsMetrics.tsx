@@ -21,6 +21,8 @@ interface ApprovalHistoryPoint {
 }
 
 interface RegionalBudgetSummary {
+  interestPayments?: number;
+  financing?: { principal: number };
   councilTaxRevenue: number;
   businessRatesRevenue: number;
   westminsterGrant: number;
@@ -51,6 +53,8 @@ function UKBudgetPanel({ budget }: { budget: RegionalBudgetSummary }) {
         { label: "Westminster grant", value: budget.westminsterGrant },
         { label: "Total budget", value: budget.totalBudget },
         { label: "Enacted spending", value: budget.enactedBillCosts },
+        { label: "Interest payments", value: budget.interestPayments ?? 0 },
+        { label: "Debt", value: budget.financing?.principal ?? 0 },
         { label: surplus >= 0 ? "Surplus" : "Deficit", value: surplus, colorClass: balanceColor },
       ]}
     />

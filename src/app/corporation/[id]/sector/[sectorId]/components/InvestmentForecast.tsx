@@ -15,79 +15,40 @@ export default function InvestmentForecast({
 }) {
   const t = useTranslations("corporations.sectorInvestment");
   const { formatAmount } = useCurrency();
-  const assumptions = plants.investment;
   const input = investmentForecastInput(plants, units);
   const forecast = input ? forecastSectorInvestment(input) : null;
+  if (!forecast) return <p className="text-body-sm text-muted">{t("noForecast")}</p>;
   return (
-    <div className="rounded-lg border border-card-border p-3">
+    <div>
       <h3 className="text-body-sm font-semibold text-foreground">{t("forecastTitle")}</h3>
-      {!forecast ? (
-        <p className="mt-2 text-body-sm text-muted">{t("noForecast")}</p>
-      ) : (
-        <>
-          <p className="mt-2 text-body-sm text-foreground">
-            {forecast[2].cashPaybackTurn != null
-              ? t("cashPayback", { turns: forecast[2].cashPaybackTurn })
-              : t("noCashPayback")}
-          </p>
-          <p className="mt-2 text-body-xs text-muted">
-            {assumptions?.bondReference
-              ? t("bondReference", {
-                  issuer: assumptions.bondReference.issuerName,
-                  currency: assumptions.bondReference.currencyCode,
-                  yield: assumptions.bondReference.annualYieldPercent.toFixed(2),
-                  turns: assumptions.bondReference.turnsToMaturity,
-                })
-              : t("noBondReference")}
-          </p>
-          {assumptions?.bondReference && (
-            <p className="mt-1 text-body-xs text-muted">{t("bondReferenceLimits")}</p>
-          )}
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {forecast.map((point) => (
-              <div key={point.turns} className="rounded bg-background/50 p-2">
-                <p className="text-body-sm font-semibold">{t("horizon", { turns: point.turns })}</p>
-                <p
-                  className={`mt-1 text-heading-sm font-bold tabular-nums ${point.availableCashAnchor > 0 ? "text-success" : "text-warning"}`}
-                >
-                  {point.cashReturnPercent.toFixed(1)}%
-                </p>
-                <p className="text-body-xs text-muted">{t("cashReturn")}</p>
-                <dl className="mt-2 space-y-2 text-body-xs">
-                  <div>
-                    <dt>{t("cashAvailable")}</dt>
-                    <dd>{formatAmount(point.availableCashAnchor)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("salesDaily")}</dt>
-                    <dd>{Math.round(point.soldUnitsDaily).toLocaleString()}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("paidBasis")}</dt>
-                    <dd>{formatAmount(point.remainingPaidBasisAnchor)}</dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
-          <details className="mt-3 text-body-xs text-muted">
-            <summary className="cursor-pointer">{t("forecastAssumptions")}</summary>
-            <p className="mt-2">
-              {t("assumptions", { tax: assumptions?.taxRatePercent.toFixed(1) ?? "0" })}
-            </p>
-            <p className="mt-2">
-              {t("deductions96", {
-                overhead: formatAmount(forecast[1].overheadAnchor),
-                tax: formatAmount(forecast[1].taxAnchor),
-                replacement: formatAmount(forecast[1].replacementReserveAnchor),
-              })}
-            </p>
-          </details>
-          {(plants.demandGapUnits ?? 0) <= 0 && (
-            <p className="mt-2 text-body-sm text-warning">{t("noDemand")}</p>
-          )}
-        </>
-      )}
+      <table className="mt-1 w-full text-body-xs tabular-nums">
+        <thead>
+          <tr className="text-left text-muted">
+            <th scope="col" className="py-0.5 font-medium" />
+            <th scope="col" className="py-0.5 text-right font-medium">
+              {t("cashReturn")}
+            </th>
+            <th scope="col" className="py-0.5 text-right font-medium">
+              {t("cashAvailable")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {forecast.map((point) => (
+            <tr key={point.turns} className="border-t border-card-border">
+              <th scope="row" className="py-0.5 text-left font-normal">
+                {t("horizon", { turns: point.turns })}
+              </th>
+              <td
+                className={`py-0.5 text-right ${point.availableCashAnchor > 0 ? "text-success" : "text-warning"}`}
+              >
+                {point.cashReturnPercent.toFixed(1)}%
+              </td>
+              <td className="py-0.5 text-right">{formatAmount(point.availableCashAnchor)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

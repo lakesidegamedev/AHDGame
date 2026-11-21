@@ -1,5 +1,6 @@
 import type { SovereignRiskDisclosure } from "@/lib/bonds/sovereignRiskDisclosure";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { NationalBalanceSource } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
 
 export interface StockListing {
@@ -92,6 +93,7 @@ export interface CommodityData {
   exchangeSupply: number;
   exchangeDemand: number;
   priceChange: number;
+  lastTurnPriceChange?: number | null;
   recentPriceChange?: number | null;
   annualPriceChange?: number;
   /** Additive price explanation from the pricing engine (global scope). */
@@ -112,6 +114,7 @@ export interface CommodityData {
   nationalSupply?: Record<string, number>;
   nationalDemand?: Record<string, number>;
   nationalPrices?: Record<string, number>;
+  nationalBalanceSource?: NationalBalanceSource;
   /**
    * Per-country reachable market book (scope=full only). Drives the Reachable
    * lens, which is the one a build decision should use. `demand` is what this

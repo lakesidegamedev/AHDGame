@@ -21,7 +21,7 @@ import { logWireEvent, wireHeadlineBond } from "@/lib/wireEvent";
 import {
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -96,7 +96,7 @@ export async function executeCorporationBondRefinance(
     .toArray();
   const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeRateByCountry = buildPrimeRateMap(centralBanks);
-  const fxByCurrency = await loadFxRatesByCurrency(db);
+  const fxByCurrency = await loadValuationFxRates(db);
   // Under plants the growth-cost deduction is a phantom charge (growth spend no
   // longer buys capacity), so leaving it in here would understate equity and
   // deny refinances the bond-default panel just told the CEO were available.

@@ -1,8 +1,11 @@
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
-import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
-import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import {
+  campaignLocalRate,
+  loadCampaignCurrencyRates,
+  loadCampaignPriceLevel,
+} from "@/lib/campaigns/campaignCurrency";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -18,7 +21,7 @@ import { loadCharacterRoleBonuses } from "@/lib/actions/characterRoleBonuses";
 import { resolveProfilePositionLabels } from "@/lib/profilePositionLabels";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { resolveGameYear } from "@/lib/era/era";
-import { fundraiseYieldLocal } from "@/lib/actions";
+import { fundraiseYieldLocal, makeFundsFormatter, quoteCampaignAction } from "@/lib/actions";
 import { resolveStartingCountryId } from "@/lib/utils/profileDemographics";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
@@ -391,6 +394,7 @@ async function getCharacterData() {
     firstDays,
     onboardingChecklist,
     fundDistribution,
+    nationalGdpPerCapita,
     [topNPI, topDonor],
     nationalNpiOrdinalRank,
     conflictExtras,
@@ -398,6 +402,7 @@ async function getCharacterData() {
     firstDaysPromise,
     onboardingChecklistPromise,
     fundDistributionPromise,
+    nationalGdpPerCapitaPromise,
     topPromise,
     nationalNpiOrdinalRankPromise,
     conflictExtrasPromise,
@@ -440,6 +445,7 @@ async function getCharacterData() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
+    nationalGdpPerCapita,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -502,6 +508,7 @@ export default async function ProfilePage() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
+    nationalGdpPerCapita,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -614,7 +621,6 @@ export default async function ProfilePage() {
   const chairActionBonus = chairBankRow ? (gameConfig?.chairActionBonus ?? 3) : 0;
   const roleBonuses = await loadCharacterRoleBonuses(apDb, {
     character,
-    party: party ?? null,
     congressLeadershipRoles: congressLeadershipRows.map((row) => row.role),
     isSeatedJustice: justiceSeat != null,
     isCentralBankChair: chairBankRow != null,
@@ -782,6 +788,37 @@ export default async function ProfilePage() {
   );
   const currentOfficeLabel = getOfficeLabel(character.currentOffice, character.countryId);
 
+  const firstCampaign =
+    firstDays && firstDays.campaigns < firstDays.campaignGoal
+      ? quoteCampaignAction(
+          {
+            politicalInfluence: character.politicalInfluence,
+            charisma: character.stats?.charisma,
+            intellect: character.stats?.intellect,
+          },
+          homeState && nationalGdpPerCapita !== undefined
+            ? {
+                gdpMillions: homeState.gdp,
+                population: homeState.population,
+                countryId: character.countryId,
+                preset,
+                nationalGdpPerCapita,
+              }
+            : undefined,
+          campaignPriceLevel
+        )
+      : null;
+  const campaignCost = firstCampaign?.ok
+    ? {
+        actions: firstCampaign.apCost,
+        funds: makeFundsFormatter(
+          getHomeCurrency(character, preset),
+          campaignLocalRate(character.countryId ?? "US", campaignRates, preset),
+          forexEnabled
+        )(firstCampaign.fundCostAnchor),
+      }
+    : null;
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16" data-replay-block>
       <ProfileTabs
@@ -825,6 +862,7 @@ export default async function ProfilePage() {
               <FirstDaysPanel
                 data={firstDays}
                 year={gameYear}
+                campaignCost={campaignCost}
                 partiesHref={partiesUrl(character.countryId)}
               />
             )}

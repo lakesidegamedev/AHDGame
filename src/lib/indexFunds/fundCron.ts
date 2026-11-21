@@ -36,7 +36,7 @@ import {
   queuedRedemptionClaimShare,
 } from "./rules/queuedRedemptionRotation";
 import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
-import { substepMarker } from "@/lib/observability/phaseSubsteps";
+import { recordPhaseSubstep, substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { Db } from "mongodb";
 import type { IndexFund, IndexFundTransaction } from "@/lib/db/types";
 import {
@@ -766,6 +766,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   }
 
   mark("pass3b-crossFund");
+  const redemptionStartedAt = performance.now();
   // Pass 3c: pay redemptions and snapshot after cross-fund market settles.
   funds = await listFundsByIds(db, redemptionServiceFundIds);
   // Snapshots are upserts keyed by (fund, turn); one bulk write replaces one per fund.
@@ -822,6 +823,11 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       claimsLeft -= allotted - share.claimsLeft;
     }
   }
+  const snapshotsStartedAt = performance.now();
+  recordPhaseSubstep(
+    "pass3c-redemptions+snapshot.redemptions",
+    snapshotsStartedAt - redemptionStartedAt
+  );
   const settledRedemptionFunds =
     currentTurn > 0
       ? new Map(
@@ -875,6 +881,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     result.errors.push(`Fund snapshots: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  recordPhaseSubstep(
+    "pass3c-redemptions+snapshot.snapshots",
+    performance.now() - snapshotsStartedAt
+  );
   mark("pass3c-redemptions+snapshot");
   // Step 6: NPP fund investments (GDP-proportional budget allocation).
   // Throttled to every NPP_FUND_INVESTMENT_INTERVAL turns - the biggest

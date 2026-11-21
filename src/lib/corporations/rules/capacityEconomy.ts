@@ -36,6 +36,8 @@ import {
   DEFAULT_STRATEGY_ID,
   HOST_BUILD_PRICE_INDEX_MAX,
   HOST_BUILD_PRICE_INDEX_MIN,
+  PLANT_BUILD_PRICE_SCALE,
+  STANDARD_BUILD_PRICE_SCALE_2027,
 } from "@/lib/constants/capacityEconomyTables";
 
 /**
@@ -470,11 +472,17 @@ export interface BuildCostInputs {
    * toll, so the shield cuts that toll's excess over 1.0. Absent ⇒ 0.
    */
   techDominanceShield?: number;
+  /**
+   * Multiplier on an ordinary build outside the qualified 1991 basis
+   * (`gameConfig.plantBuildPriceScale`). Absent or invalid ⇒ the shipped
+   * default. Founding builds are never scaled.
+   */
+  buildPriceScale?: number | null;
 }
 
 /** Itemized build cost, so UI/tests/NPPs can show WHY a build costs what it does. */
 export interface BuildCostBreakdown {
-  /** Base anchor currency per capacity unit in the world's nominal unit basis. */
+  /** Base construction cost in anchor currency per unit of the selected capacity. */
   unitPriceAnchor: number;
   /** Dominance penalty multiplier (1 below the dominance threshold). */
   dominanceMultiplier: number;
@@ -496,8 +504,22 @@ export interface BuildCostBreakdown {
   foundingMultiplier: number;
   /** Discount for ordinary expansion; founder pricing is unchanged. */
   expansionMultiplier: number;
+  /** Ordinary-build price scale applied (1 for founding and the 1991 basis). */
+  buildPriceScaleMultiplier: number;
   /** Total ₳ charged for the order. */
   totalAnchor: number;
+}
+
+/** A configured scale in (0, 1], else the shipped default. */
+export function resolvePlantBuildPriceScale(configured: number | null | undefined): number {
+  return typeof configured === "number" && Number.isFinite(configured) && configured > 0
+    ? Math.min(1, configured)
+    : PLANT_BUILD_PRICE_SCALE;
+}
+
+/** Founding discount on a sector's first facility in a market (1 under 1991 construction). */
+export function foundingBuildMultiplier(year: number, preset?: string): number {
+  return uses1991Construction(year, preset) ? 1 : CAPACITY_FOUNDING_DISCOUNT;
 }
 
 /**
@@ -573,9 +595,16 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
     hostCostOfLivingIndex = null,
     techGrowthCostMultiplier = 1,
     techDominanceShield = 0,
+    buildPriceScale = null,
   } = inputs;
   const safeUnits = Number.isFinite(units) && units > 0 ? units : 0;
-  const unitPriceAnchor = capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset);
+  // Construction and installed-capacity valuation use separate prices.
+  const standardBuildScale =
+    preset === "2027-default" && (strategyId ?? DEFAULT_STRATEGY_ID) === DEFAULT_STRATEGY_ID
+      ? (STANDARD_BUILD_PRICE_SCALE_2027[sectorType] ?? 1)
+      : 1;
+  const unitPriceAnchor =
+    capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset) * standardBuildScale;
   // Dominance is scaled by how contested the cell is. The factor multiplies the
   // toll's EXCESS over 1.0, so a market with no rivals still pays a monopoly
   // premium, just a smaller one — and a sub-threshold sector (multiplier 1) is
@@ -629,12 +658,16 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
       ? techGrowthCostMultiplier
       : 1;
   const hostPriceMultiplier = hostBuildPriceIndex(hostCostOfLivingIndex);
-  const foundingMultiplier = founding
-    ? uses1991Construction(year, preset)
-      ? 1
-      : CAPACITY_FOUNDING_DISCOUNT
-    : 1;
+  const foundingMultiplier = founding ? foundingBuildMultiplier(year, preset) : 1;
   const expansionMultiplier = expansionCostMultiplier(founding);
+  // The 1991 basis already prices a plant at one day of output, and founding
+  // keeps its own discount, so only the ordinary legacy-basis build is scaled.
+  // The ordinary-build scale keeps early eras above one day of nominal output.
+  const oneDayOfOutputShare = 1 / (GROWTH_COST_MULTIPLIER * capacityEraPriceIndex(year));
+  const buildPriceScaleMultiplier =
+    founding || uses1991Construction(year, preset)
+      ? 1
+      : Math.max(resolvePlantBuildPriceScale(buildPriceScale), Math.min(1, oneDayOfOutputShare));
   return {
     unitPriceAnchor,
     dominanceMultiplier,
@@ -645,6 +678,7 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
     hostPriceMultiplier,
     foundingMultiplier,
     expansionMultiplier,
+    buildPriceScaleMultiplier,
     totalAnchor:
       safeUnits *
       unitPriceAnchor *
@@ -654,6 +688,7 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
       techMultiplier *
       hostPriceMultiplier *
       foundingMultiplier *
-      expansionMultiplier,
+      expansionMultiplier *
+      buildPriceScaleMultiplier,
   };
 }

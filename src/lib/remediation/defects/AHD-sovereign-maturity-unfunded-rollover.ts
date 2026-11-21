@@ -22,34 +22,20 @@
  *
  * THE CODE HALF
  *
- * A short Treasury now refinances: it sells a refunding issue to the bond pool
- * for exactly the cash it lacks (sovereignMaturityRefunding.ts), capped at the
- * face the claim retires, then pays every holder through the ordinary funded
- * journal. Bank claims refinance the same way before the claim book is swept,
- * an open failed estate receives its matured principal in its vault, and the
- * estate liquidation skips bonds that are already in redemption.
+ * Refunding can sell whole units to the pool within market capacity and the
+ * claim's refunding cap. Proceeds fund claim escrow, and holders receive
+ * principal when the funded settlement completes.
  *
  * THIS HEAL
  *
- * Moves no money. Every overdue bond is still a maturity candidate, so the
- * first bond turn on the fixed code refinances and pays each one through the
- * journaled settlement path, with the ledger rows the bond phase emits. Doing
- * the refunding here, outside the bond phase, would park the proceeds in
- * Treasury cash where the budget turn could spend them before the maturity
- * runs, and would skip the phase's ledger rows.
- *
- * `plan` is the operator's statement of what that turn will do: every overdue
- * bond, its holders and amounts, the pool float that rolls in kind, the cash
- * the Treasury lacks, and the refunding face the market is asked for. `apply`
- * stamps that approved figure on each bond under a marker, guarded on its
- * absence, so a re-run is a no-op and the post-turn audit can compare what was
- * approved with what landed. `verify` is clean once no overdue bond remains.
+ * The survey estimates the refunding and lists the overdue bonds. Apply
+ * stamps the approved survey figures for comparison with actual settlement.
+ * The journaled bond turn controls funding and payout.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { BankSovereignClaim } from "@/lib/db/types/budget";
-import type { BondMarketPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { planSovereignUnderwriting } from "@/lib/bonds/primaryMarket";
@@ -100,7 +86,7 @@ export interface OverdueBondPlan {
   holderCashLocal: number;
   /** Treasury cash this bond can draw on, after earlier bonds in the country. */
   treasuryCashAvailableLocal: number;
-  /** Face the next bond turn is planned to sell to the pool. */
+  /** Estimated refunding face from the survey. */
   refundingFaceLocal: number;
   refusal?: string;
 }
@@ -366,14 +352,14 @@ async function plan(db: Db): Promise<HealPlan> {
     affected: bonds.length,
     touched: [{ collection: "bonds", ids: bonds.map((b) => b.bondId) }],
     moneyDelta: 0,
-    summary: `${DEFECT_ID}: ${bonds.length} overdue sovereign bonds in ${new Set(bonds.map((b) => b.countryId)).size} countries; the next bond turn refinances ${fmt(sumBy(bonds, "refundingFaceLocal")) || "nothing"} and pays every holder`,
+    summary: `${DEFECT_ID}: ${bonds.length} overdue sovereign bonds in ${new Set(bonds.map((b) => b.countryId)).size} countries. Estimated refunding face ${fmt(sumBy(bonds, "refundingFaceLocal")) || "none"}. Payout depends on funded settlement`,
     notes: [
       `cash owed to bank claims: ${fmt(sumBy(bonds, "bankCashLocal")) || "none"}`,
       `bank claim cash already escrowed, awaiting release to the bank estate: ${fmt(sumBy(bonds, "bankEscrowedLocal")) || "none"}`,
       `cash owed to other holders: ${fmt(sumBy(bonds, "holderCashLocal")) || "none"}`,
       `pool float rolled in kind (no cash): ${fmt(sumBy(bonds, "poolRolledInKindLocal")) || "none"}`,
-      "money conserving: refunding moves pool cash to the Treasury and on to holders; principal is replaced, never added",
-      "apply stamps a marker only; the next bond turn on the fixed code moves the money through the journaled maturity path",
+      "refunding uses pool cash to fund claim escrow within each claim's borrowing cap",
+      "apply records survey markers. Payout requires funded settlement through the bond turn",
       ...bonds.map(
         (b) =>
           `${b.countryId} ${b.bondId} due t${b.dueTurn} (${b.turnsOverdue} overdue): ` +
@@ -383,9 +369,7 @@ async function plan(db: Db): Promise<HealPlan> {
           `refunding ${Math.round(b.refundingFaceLocal)} ${b.currencyCode}` +
           (b.refusal ? ` REFUSED ${b.refusal}` : "")
       ),
-      ...(refused.length
-        ? [`${refused.length} bonds cannot refinance this turn and need an owner look`]
-        : []),
+      ...(refused.length ? [`${refused.length} bonds have a funding refusal in this survey`] : []),
     ],
     payload,
   };
@@ -423,7 +407,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     documentsScanned: bonds.length,
     documentsUpdated: stamped,
     notes: [
-      `${stamped} overdue bonds stamped; the next bond turn refinances and pays them`,
+      `${stamped} overdue bonds stamped with survey markers. Payout depends on funded settlement`,
       "no money moved by this heal",
     ],
   };
@@ -447,7 +431,7 @@ async function verify(db: Db): Promise<VerifyResult> {
       `${settled.filter((b) => b.matured).length} of ${settled.length} stamped bonds retired`,
       bonds.length === 0
         ? "no sovereign bond is past maturity and unpaid"
-        : `${bonds.length} still overdue; expected until the first bond turn on the fixed code`,
+        : `${bonds.length} still overdue and awaiting funded settlement`,
       ...(overRefunded.length
         ? [`${overRefunded.length} claims refunded more than the face they retire`]
         : []),
@@ -457,7 +441,7 @@ async function verify(db: Db): Promise<VerifyResult> {
 
 export const defect: Defect = {
   id: DEFECT_ID,
-  title: "Matured sovereign bonds left unpaid when the Treasury lacked cash: refinance and pay",
+  title: "Survey sovereign bonds overdue for funded settlement",
   severity: "P1",
   seedFix: {
     status: "not-needed",

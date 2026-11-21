@@ -1,3 +1,4 @@
+import { transferFinancialHoldings } from "./transferFinancialHoldings";
 /**
  * Nationalization preserves the seized corporation's holdings in other corporations.
  * heldStakeValueAnchor values the holdings; transferOwnedSharesToNatCorp moves
@@ -7,7 +8,6 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One corporation the seized corporation holds shares in, as read for the taking. */
 type HeldStake = Pick<
@@ -47,71 +47,8 @@ export async function transferOwnedSharesToNatCorp(
   db: Db,
   seizedCorp: Corporation,
   nationalCorpId: ObjectId,
-  heldStakes: HeldStake[],
+  _heldStakes: HeldStake[],
   now: Date
 ): Promise<void> {
-  const corps = corporationsCollection(db);
-
-  for (const targetCorp of heldStakes) {
-    const shareholderEntry = targetCorp.shareholders?.find((sh) =>
-      sh.corporationId?.equals(seizedCorp._id)
-    );
-
-    if (!shareholderEntry || shareholderEntry.shares <= 0) {
-      continue;
-    }
-    const shares = shareholderEntry.shares;
-
-    // Remove the seized corp's shareholder entry
-    await corps.updateOne(
-      { _id: targetCorp._id },
-      {
-        $pull: {
-          shareholders: { corporationId: seizedCorp._id },
-        },
-        $set: { updatedAt: now },
-      }
-    );
-
-    // Transfer the shares to the National Corporation as a shareholder of the
-    // target corporation (not to the NatCorp's own shareholders array).
-    const existingEntry = targetCorp.shareholders?.find((sh) =>
-      sh.corporationId?.equals(nationalCorpId)
-    );
-
-    if (existingEntry) {
-      const combinedShares = existingEntry.shares + shares;
-      const combinedAvgCost =
-        combinedShares > 0
-          ? (existingEntry.shares * (existingEntry.avgCostPerShare ?? 0) +
-              shares * (shareholderEntry.avgCostPerShare ?? 0)) /
-            combinedShares
-          : 0;
-      await corps.updateOne(
-        { _id: targetCorp._id },
-        {
-          $set: {
-            "shareholders.$[elem].shares": combinedShares,
-            "shareholders.$[elem].avgCostPerShare": combinedAvgCost,
-            updatedAt: now,
-          },
-        },
-        { arrayFilters: [{ "elem.corporationId": nationalCorpId }] }
-      );
-    } else {
-      await corps.updateOne(
-        { _id: targetCorp._id },
-        {
-          $push: {
-            shareholders: {
-              corporationId: nationalCorpId,
-              shares: shares,
-              avgCostPerShare: shareholderEntry.avgCostPerShare,
-            },
-          },
-          $set: { updatedAt: now },
-        }
-      );
-    }
-  }
+  await transferFinancialHoldings(db, seizedCorp._id, nationalCorpId, now);
 }

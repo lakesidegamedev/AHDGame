@@ -22,7 +22,7 @@ A crowded state squeezes everyone: when total demand beats what the ground can y
 
 Say a state can yield 100,000 barrels of oil per turn. The government publishes a tender for a 40% share, 1% royalty, 96-turn term and a minimum signing fee of ₳1,000,000. Corporation A bids ₳1,500,000 and Corporation B bids ₳1,200,000. The bids become public when bidding closes. The official picks A with a public reason and A pays ₳1,500,000.
 
-A now has 40,000 barrels per turn guaranteed. If A wants 55,000, the extra 15,000 competes for the open-access pool alongside other companies' demand. The other 60,000 barrels are open access: if B and a third company ask for 50,000 and 30,000, together 80,000 against a 60,000 pool, every company is scaled to 75%, giving B 37,500 and the other 22,500. Without the contract, A would compete for the whole 100,000 pool against 80,000 of other demand, so the guarantee matters most when open demand is heavy.
+A now has a reserved share of up to 40,000 barrels per turn, limited by what its own operations can produce. If A wants 55,000, the extra 15,000 competes for the open-access pool alongside other companies' demand. The other 60,000 barrels are open access: if B and a third company ask for 50,000 and 30,000, together 80,000 against a 60,000 pool, every company is scaled to 75%, giving B 37,500 and the other 22,500. Without the contract, A would compete for the whole 100,000 pool against 80,000 of other demand, so the guarantee matters most when open demand is heavy.
 
 ## Finding the tenders
 

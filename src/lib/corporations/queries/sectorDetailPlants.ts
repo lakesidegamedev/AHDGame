@@ -35,6 +35,7 @@ import {
 } from "@/lib/corporations/buildDelivery";
 import {
   computeBuildCost,
+  foundingBuildMultiplier,
   MOTHBALL_UPKEEP_FRACTION,
   IDLE_UPKEEP_FRACTION,
   techBuildTurns,
@@ -87,6 +88,8 @@ export function buildSectorPlantsSection(args: {
   techGrowthCostMultiplier: number;
   /** Tech dominance shield (cuts the dominance build toll). Optional for older fixtures. */
   techDominanceShield?: number;
+  /** `gameConfig.plantBuildPriceScale`, resolved. Absent = shipped default. */
+  buildPriceScale?: number;
   /**
    * Commodity-level toll inputs (see `commodityTollModels`): the firm's potential
    * output of each commodity this sector makes against world demand. Empty or
@@ -102,6 +105,7 @@ export function buildSectorPlantsSection(args: {
   measuredDemandGapUnits?: number | null;
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
+  strategyBuildRoom?: Record<string, number | null>;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
   retoolHint?: RetoolHint | null;
   workers: number;
@@ -144,6 +148,7 @@ export function buildSectorPlantsSection(args: {
     hostCostOfLivingIndex,
     techGrowthCostMultiplier,
     techDominanceShield = 0,
+    buildPriceScale,
     eraUnitScale,
     preset,
     corpCapitalAnchor,
@@ -320,6 +325,7 @@ export function buildSectorPlantsSection(args: {
     hostCostOfLivingIndex,
     techGrowthCostMultiplier,
     techDominanceShield,
+    buildPriceScale,
   };
   // The local/national toll alone, then the full quote for one unit. The
   // commodity toll reads the ratio after the order lands, so the dialog
@@ -583,6 +589,7 @@ export function buildSectorPlantsSection(args: {
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
     buildDemand: args.buildDemand,
     buildDemandTurn: args.buildDemandTurn,
+    strategyBuildRoom: args.strategyBuildRoom,
     roomHeldByOwnIdle,
     ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {
@@ -598,6 +605,7 @@ export function buildSectorPlantsSection(args: {
     buildQuote: {
       unitPriceAnchor: oneUnit.unitPriceAnchor,
       expansionMultiplier: oneUnit.expansionMultiplier,
+      foundingMultiplier: foundingBuildMultiplier(currentYear, preset),
       dominanceMultiplier: oneUnit.dominanceMultiplier,
       localDominanceMultiplier: localQuote.dominanceMultiplier,
       ...(tollModels.length > 0

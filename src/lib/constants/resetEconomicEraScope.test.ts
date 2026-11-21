@@ -9,7 +9,7 @@ import { getStrategy, getEffectiveStrategyRates, getSectorStrategies } from "./s
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
-// Release 1.12 recipe values before the 1991 reset calibration. These fixtures
+// Pre-1991-calibration recipe values (retail and defense standard carry the current shared trims). These fixtures
 // deliberately do not derive their expectations from the current recipe table.
 const LEGACY_INPUTS = {
   manufacturing: {
@@ -31,14 +31,15 @@ const LEGACY_INPUTS = {
     vehicles: 0.025,
     plastics: 0.06,
   },
+  // Defense standard follows the base recipe table that these presets share.
   defense: {
-    steel: 0.2,
-    iron: 0.1,
-    rare_earth: 0.05,
-    electronics: 0.2,
-    software: 0.1,
-    construction_services: 0.05,
-    vehicles: 0.03,
+    steel: 0.105,
+    electronics: 0.105,
+    iron: 0.053,
+    software: 0.053,
+    rare_earth: 0.026,
+    construction_services: 0.026,
+    vehicles: 0.016,
   },
   construction: {
     building_materials: 0.13,
@@ -52,23 +53,16 @@ const LEGACY_INPUTS = {
     plastics: 0.06,
   },
   retail: {
-    food: 0.1,
-    electronics: 0.06,
-    energy: 0.05,
-    vehicles: 0.04,
-    freight: 0.06,
-    advertising: 0.08,
-    software: 0.05,
-    chemicals: 0.025,
-    pharmaceuticals: 0.025,
-    financial_services: 0.04,
-    consulting_services: 0.025,
-    building_materials: 0.03,
-    steel: 0.025,
-    oil: 0.025,
-    healthcare_services: 0.03,
-    real_estate_services: 0.035,
-    plastics: 0.035,
+    food: 0.081,
+    electronics: 0.049,
+    energy: 0.041,
+    vehicles: 0.033,
+    freight: 0.049,
+    advertising: 0.065,
+    software: 0.041,
+    financial_services: 0.033,
+    real_estate_services: 0.029,
+    plastics: 0.029,
   },
 };
 
@@ -83,7 +77,14 @@ describe("1991 reset calibration does not change other era presets", () => {
         rpu * revenueDays,
         8
       );
-      const base = { sectorType, strategyId: "standard", year, eraUnitScale: 1, units: 10 };
+      const base = {
+        sectorType,
+        strategyId: "standard",
+        year,
+        eraUnitScale: 1,
+        units: 10,
+        buildPriceScale: 1,
+      };
       expect(computeBuildCost({ ...base, founding: true }).totalAnchor).toBeCloseTo(
         10 * rpu * revenueDays * 0.1,
         8

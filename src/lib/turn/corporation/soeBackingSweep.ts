@@ -49,7 +49,12 @@ export async function runSoeBackingSweep(
         ledger
       );
       args.mark("soeOperations");
-      const { perCorp } = await processSoeRemittance(args.db, args.now, ledger);
+      const { perCorp } = await processSoeRemittance(
+        args.db,
+        args.now,
+        ledger,
+        realizedIncomeAnchorByCorpId
+      );
       args.mark("soeRemittance");
       return { soeBacking: backing, soeRemitted: perCorp };
     }

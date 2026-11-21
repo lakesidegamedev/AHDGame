@@ -9,7 +9,11 @@ vi.mock("@/lib/turnSystem", () => ({
   ensureUKRegionalCouncilElections: vi.fn(),
 }));
 
-import { canonicalTurns, shouldReactivatePrematureElection, effectiveStartTurn } from "./route";
+import {
+  canonicalTurns,
+  shouldReactivatePrematureElection,
+  effectiveStartTurn,
+} from "@/lib/api/commands/admin/elections/recalibrate-timers/handlers";
 import type { Election } from "@/lib/db/types";
 
 function e(electionType: string, cycle: number, extras: Partial<Election> = {}): Election {

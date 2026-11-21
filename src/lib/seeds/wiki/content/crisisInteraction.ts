@@ -8,11 +8,11 @@ Every crisis has a **severity** from 0 to 100 and a **stage**. Severity is how b
 
 Crises come from three places:
 
-- **Scripted events.** Historical and authored shocks that fit the era of your world: wars, pandemics, financial panics, disasters. The long-running international campaigns in [Global Response Crises](/wiki/global-response-crises) are crises of this kind.
+- **Scripted events.** Historical and authored shocks that fit the era of your world: wars, pandemics, financial panics, disasters. The long-running international campaigns in [Global Response Crises](/wiki/global-response-crises) are not scripted. They are opened automatically by the living conflict system.
 - **Disasters on a schedule.** Regional weather and natural disasters, timed per country and shaped by [climate pressure](/wiki/national-metrics).
 - **Spread from other countries.** A crisis abroad can reach you through trade, finance, alliances, migration or climate. See below.
 
-Crises are created by the game, never by players. Players decide how they end.
+Crises are created by the game (or by staff), never by players. Players decide how they end.
 
 ## The four stages
 
@@ -23,20 +23,20 @@ Crises are created by the game, never by players. Players decide how they end.
 | Peak | Full strength. Effects are at their worst and every lever is on the table. |
 | Aftermath | Severity is falling. Emergency pressure eases and recovery starts. A crisis can relapse to peak if severity jumps back up, but a crisis can only do this a limited number of times. |
 
-When severity drops low enough the crisis is resolved and leaves the active list. A stage also has a minimum length, so a crisis does not skip straight from signal to peak unless severity surges well past the normal threshold. Each crisis type sets its own thresholds and stage lengths. Some crises, such as an authored disaster with a fixed duration, move through the stages on a set schedule instead of reacting to severity.
+When severity drops low enough the crisis is resolved and leaves the active list. A stage also has a minimum length, so a crisis never skips straight from signal to peak. It moves one stage per turn, and a big severity surge only lets it move on before the minimum length is up. Each crisis type sets its own thresholds and stage lengths. Some crises, such as an authored disaster with a fixed duration, move through the stages on a set schedule instead of reacting to severity.
 
 ## What moves severity
 
 Each turn severity changes by:
 
-- **Drivers push it up.** These are real numbers from the simulation: unemployment, GDP growth, bank stress, how far safety-net spending or interest rates sit from where they should be. Prior policy matters here. A country that already runs a thin safety net or lets its banks run hot feeds the crises that exploit exactly that.
-- **Responses push it down.** Every response (called a lever) removes severity points. There is a cap on how much can be removed in one turn, so stacking many responses has limits.
+- **Drivers push it up or down.** These are real numbers from the simulation: unemployment, GDP growth, bank stress, how far safety-net spending or interest rates sit from where they should be. Prior policy matters here. A country that already runs a thin safety net or lets its banks run hot feeds the crises that exploit exactly that.
+- **Responses push it down.** Most responses (called levers) remove severity points. Stance choices, such as a lockdown, remove none. There is a cap on how much can be removed in one turn, so stacking many responses has limits.
 - **The stage itself.** Aftermath eases on its own, and some stages shed a little severity each turn.
 - **Inaction pushes it up.** If nobody does anything meaningful for several turns in a row, the crisis starts feeding on itself. After a grace period it adds a growing amount each turn up to a ceiling. Token moves too small to count do not reset the clock.
 
 ## The "if nobody acts" forecast
 
-Every crisis card shows a severity trend and a dashed line for the do-nothing projection: roughly where severity ends up if no one pulls a lever. It holds the current stage and driver pressure fixed, so read it as an estimate ("about"), not a promise. It is there so you can see what waiting costs before you decide.
+Crisis cards that use the stage system show a severity trend and, when a forecast is available, a dashed line for the do-nothing projection: roughly where severity ends up if no one pulls a lever. It holds the current stage and driver pressure fixed, so read it as an estimate ("about"), not a promise. It is there so you can see what waiting costs before you decide.
 
 ## Keeping the load sane
 

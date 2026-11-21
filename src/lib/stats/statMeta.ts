@@ -26,7 +26,7 @@ export const STAT_META: Record<StatKey, { label: string; blurb: string }> = {
   energy: {
     label: "Energy",
     blurb:
-      "Raises the ceiling on your action stockpile (200 → 250) and how far you can bank actions before the hoarding penalty starts biting (100 → 125). It does not change how many actions a turn hands you. A new character starts with 25 and earns a few more each turn, so this only matters once you are saving them up. Grows when you stay active across the turn, and erodes during quiet stretches.",
+      "Raises the ceiling on your action stockpile (200 → 250) and how far you can bank actions before the hoarding penalty starts biting (100 → 125). It does not change how many actions a turn hands you. A new character starts with 25 and earns a few more each turn, so this only matters once you are saving them up. Qualifying actions earn Energy XP, which is applied at turn refresh. Inactivity leaves your Energy unchanged.",
   },
   fundraising: {
     label: "Fundraising",

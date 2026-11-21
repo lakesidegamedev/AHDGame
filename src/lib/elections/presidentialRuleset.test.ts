@@ -52,6 +52,8 @@ describe("presidential ruleset seam (rules freeze)", () => {
     expect(v3.applyExplicitLeanMultiplier).toBe(false);
     expect(v3.tacticalMovementRate).toBe(0.05);
     expect(v3.incumbentApprovalStateWeight).toBe(0.5);
+    expect(v1.generalNomineeReachFloorNI).toBe(0);
+    expect(v3.generalNomineeReachFloorNI).toBe(25);
 
     const {
       version: _v1ver,
@@ -62,6 +64,7 @@ describe("presidential ruleset seam (rules freeze)", () => {
       applyExplicitLeanMultiplier: _v1lean,
       tacticalMovementRate: _v1tactical,
       incumbentApprovalStateWeight: _v1approval,
+      generalNomineeReachFloorNI: _v1floor,
       ...v1Rest
     } = v1;
     const {
@@ -73,6 +76,7 @@ describe("presidential ruleset seam (rules freeze)", () => {
       applyExplicitLeanMultiplier: _v3lean,
       tacticalMovementRate: _v3tactical,
       incumbentApprovalStateWeight: _v3approval,
+      generalNomineeReachFloorNI: _v3floor,
       ...v3Rest
     } = v3;
     expect(v3Rest).toEqual(v1Rest);

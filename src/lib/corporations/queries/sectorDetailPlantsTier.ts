@@ -23,7 +23,15 @@ import {
   explainOwnSupplyReach,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
-import { buildNationalDominanceShareBySectorId } from "@/lib/corporations/marketShare";
+import {
+  demandAdjustedSharePercent,
+  shareCoverages,
+} from "@/lib/corporations/rules/dominanceDemandCoverage";
+import {
+  buildNationalDominanceShareBySectorId,
+  fetchAttackerDefenderShares,
+} from "@/lib/corporations/marketShare";
+import { isStrategyBuildSite } from "@/lib/corporations/sectorLocation";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -37,6 +45,7 @@ import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemand
 import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import { type CommodityType, eraScaledBasePrices } from "@/lib/constants/commodities";
 import { getSectorStrategies } from "@/lib/constants/sectorStrategies";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   buildAdviceOutputMultiplier,
   buildDemandProducer,
@@ -74,10 +83,15 @@ import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondR
 import type { Db, Document, WithId } from "mongodb";
 import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { StrategyAvailabilityWorld, TechCorpView } from "@/lib/constants/techTree";
+import type {
+  LegacyTechContext,
+  StrategyAvailabilityWorld,
+  TechCorpView,
+} from "@/lib/constants/techTree";
 import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
+import { loadPlantBuildPriceScale } from "@/lib/corporations/plantBuildPriceScale";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
@@ -103,6 +117,7 @@ export async function buildSectorDetailPlantsTier({
   ceo,
   techTreesEnabled,
   techCorpView,
+  legacyTech,
   sectorType,
   techCurrentYear,
   effectiveSupply,
@@ -211,6 +226,7 @@ export async function buildSectorDetailPlantsTier({
   ceo: WithId<Document> | WithId<Character> | null;
   techTreesEnabled: boolean;
   techCorpView: TechCorpView;
+  legacyTech: LegacyTechContext;
   sectorType:
     | "financial"
     | "media"
@@ -480,7 +496,7 @@ export async function buildSectorDetailPlantsTier({
       (ceo as { stats?: { businessAcumen?: number } } | null)?.stats?.businessAcumen ??
       NEUTRAL_STAT;
     const techBuildEffects = techTreesEnabled
-      ? getSectorTechEffects(techCorpView, sectorType)
+      ? getSectorTechEffects(techCorpView, sectorType, legacyTech)
       : null;
     const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
     const techDominanceShield = techBuildEffects
@@ -488,7 +504,8 @@ export async function buildSectorDetailPlantsTier({
           techCorpView,
           sectorType,
           techCurrentYear,
-          governorConfig?.strengthUpkeepStage
+          governorConfig?.strengthUpkeepStage,
+          legacyTech
         )
       : 0;
     // The physical input bill: the same demand rows the Inputs panel renders,
@@ -504,6 +521,7 @@ export async function buildSectorDetailPlantsTier({
     const reachableBooks = await loadReachableBooks(db, currentTurn);
     const fundedBuild = await loadFundedBuildDemand(db, gameState);
     const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
+    const buildShareCoverage = shareCoverages(buildDemand);
     const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));
     const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
     const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
@@ -528,6 +546,7 @@ export async function buildSectorDetailPlantsTier({
     );
     const outputContext = {
       techEnabled: techTreesEnabled,
+      legacyTech,
       turn: currentTurn,
       preset: sectorDetailPreset,
     };
@@ -682,6 +701,52 @@ export async function buildSectorDetailPlantsTier({
         ? { supply, demand }
         : { supply: doc.globalSupply, demand: doc.globalDemand };
     };
+    const strategyOptions = getSectorStrategies(
+      sectorType,
+      governorConfig?.mediaOperatingModelsEnabled === true,
+      sectorDetailPreset
+    );
+    const isStrategyAvailable = (candidate: (typeof strategyOptions)[number]) =>
+      !getStrategyAvailability(
+        techCorpView,
+        candidate,
+        techCurrentYear,
+        techTreesEnabled,
+        strategyWorld
+      ).locked;
+    const strategySupply = (candidate: (typeof strategyOptions)[number]) =>
+      applyExtractionResourceCapacityToSupply(
+        sectorType,
+        candidate.supply,
+        stateResources === undefined ? undefined : (stateResources ?? {})
+      );
+    const strategyBuildRoom =
+      isCeo && fundedBuild?.turn === currentTurn && sectorType !== "logistics"
+        ? Object.fromEntries(
+            strategyOptions.filter(isStrategyAvailable).map((candidate) => {
+              const supply = strategySupply(candidate);
+              const strategyId = candidate.id;
+              const outputMultiplier = buildAdviceOutputMultiplier({
+                ...outputContext,
+                sector: { sectorType, strategyId },
+                supply,
+                owner: corporation,
+              });
+              const capacity = fullMixBuildRoom(
+                sizeBuildDemand({
+                  rows: fundedBuild.rows(supply, sector.stateId, sectorCountryId),
+                  supply,
+                  outputMultiplier,
+                  stateId: sector.stateId,
+                  countryId: sectorCountryId,
+                  producers: existingProducers,
+                })
+              );
+              const facilitySize = plantSizeForSector({ sectorType, strategyId });
+              return [strategyId, capacity == null ? null : Math.floor(capacity / facilitySize)];
+            })
+          )
+        : undefined;
     const retoolHint = computeRetoolHint({
       currentStrategyId: sector.strategyId ?? "standard",
       currentSupply: effectiveSupply,
@@ -691,25 +756,9 @@ export async function buildSectorDetailPlantsTier({
       isTransitioning: effectiveRates.isTransitioning,
       producedUnits: sector.producedUnits,
       capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
-      strategies: getSectorStrategies(
-        sectorType,
-        governorConfig?.mediaOperatingModelsEnabled === true,
-        sectorDetailPreset
-      ),
-      isAvailable: (candidate) =>
-        !getStrategyAvailability(
-          techCorpView,
-          candidate,
-          techCurrentYear,
-          techTreesEnabled,
-          strategyWorld
-        ).locked,
-      supplyFor: (candidate) =>
-        applyExtractionResourceCapacityToSupply(
-          sectorType,
-          candidate.supply,
-          stateResources === undefined ? undefined : (stateResources ?? {})
-        ),
+      strategies: strategyOptions,
+      isAvailable: isStrategyAvailable,
+      supplyFor: strategySupply,
       rescaleRatio: (toStrategyId) =>
         capacityRescaleRatio(sectorType, sector.strategyId, toStrategyId),
       priceRatioFor: marketRatioFor,
@@ -740,6 +789,10 @@ export async function buildSectorDetailPlantsTier({
       }),
       sectorAmountAnchor(1)
     );
+    const buildMarketShare = isStrategyBuildSite(sector)
+      ? (await fetchAttackerDefenderShares(db, sector, corporation, corporation._id))
+          .attackerSharePercent
+      : marketShare;
     plants = buildSectorPlantsSection({
       bankingCommodityScale: commodityProductionCapacityScale(
         corporation.bankCharter,
@@ -755,8 +808,11 @@ export async function buildSectorDetailPlantsTier({
       worldGovernorAnchorTurn: marketCtx.worldGovernorAnchorTurn,
       governorGlideEndTurn: marketCtx.governorGlideEndTurn,
       governorGlide: marketCtx.governorGlide,
-      marketSharePercent: marketShare,
-      nationalMarketSharePercent: nationalMarketShare,
+      marketSharePercent: demandAdjustedSharePercent(buildMarketShare, buildShareCoverage.local),
+      nationalMarketSharePercent: demandAdjustedSharePercent(
+        nationalMarketShare,
+        buildShareCoverage.national
+      ),
       // Distinct RIVAL corps in this (state, type) cell. `siblingsSectors` is
       // already scoped to exactly that cell, so this needs no extra read,
       // but it must be distinct CORPS, not sectors, or a rival holding two
@@ -772,6 +828,7 @@ export async function buildSectorDetailPlantsTier({
       hostCostOfLivingIndex: metrics.costOfLiving,
       techGrowthCostMultiplier: techBuildCostMultiplier,
       techDominanceShield,
+      buildPriceScale: await loadPlantBuildPriceScale(db),
       eraUnitScale: sectorDetailUnitScale,
       preset: sectorDetailPreset,
       corpCapitalAnchor: corpLiquidCapitalToAnchor(
@@ -783,6 +840,7 @@ export async function buildSectorDetailPlantsTier({
       measuredDemandGapUnits,
       buildDemand: sizedDemand,
       buildDemandTurn: fundedBuild?.turn,
+      strategyBuildRoom,
       retoolHint,
       workers: sector.workers ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
       investment: {

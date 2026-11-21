@@ -787,7 +787,7 @@ describe("processExtractionAutoStrategy", () => {
   it("caps plants input prices at world while retaining reachable output prices", async () => {
     seedForecastMine({
       mode: "plants",
-      ironReachableRatio: 1.5,
+      ironReachableRatio: 1.4,
       inputPricePartition: true,
     });
 

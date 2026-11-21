@@ -70,6 +70,27 @@ export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMar
   };
 }
 
+export function fundedCountryTradeTotals(market: FundedCountryMarket) {
+  const domesticOrders = market.demand + market.spilloverRequested;
+  return {
+    domesticOrders,
+    supply: market.supply + market.imports,
+    demand: domesticOrders + market.exports,
+    sold:
+      market.filled === null ? null : Math.max(0, market.filled - market.imports + market.exports),
+  };
+}
+
+export function countryBuildOutlook(market?: FundedCountryMarket) {
+  if (!market || market.filled === null) return "unknown";
+  const { sold } = fundedCountryTradeTotals(market);
+  const hasUnsoldOffers = sold !== null && sold < 0.95 * market.supply;
+  const hasUnfilledOrders = market.funded !== null && market.filled < 0.95 * market.funded;
+  if (hasUnfilledOrders) return hasUnsoldOffers ? "mixed" : "unfilled-orders";
+  if (hasUnsoldOffers) return "unsold-offers";
+  return market.supply > 0 ? "strong-sales" : "unknown";
+}
+
 /** commodity -> country -> funded market. */
 export function fundedCountryMarketsByCommodity(
   rows: readonly FundedCountryBookRow[]

@@ -3,13 +3,14 @@ import { useTranslations } from "next-intl";
 import type { BuildDemandRow } from "@/lib/corporations/rules/fundedBuildDemand";
 import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
 
+const numHead = "px-1 py-1 text-right font-medium sm:px-2";
+const numCell = "px-1 py-1 text-right tabular-nums sm:px-2";
+
 export default function FundedBuildDemand({
   rows,
-  turn,
   unitsPerFacility,
 }: {
   rows?: BuildDemandRow[];
-  turn?: number;
   unitsPerFacility?: number;
 }) {
   const t = useTranslations("corporations.sectorInvestment.fundedAdvice");
@@ -20,32 +21,45 @@ export default function FundedBuildDemand({
   const fullMix = fullMixBuildRoom(rows);
   return (
     <section className="rounded-lg border border-border p-3" aria-label={t("title")}>
-      <h3 className="text-body-sm font-semibold">
-        {turn != null ? t("titleTurn", { turn }) : t("title")}
-      </h3>
+      <h3 className="text-body-sm font-semibold">{t("title")}</h3>
       <div className="overflow-x-auto">
-        <table className="mt-2 w-full text-left text-body-xs">
+        <table className="mt-2 w-full table-fixed text-left text-body-xs sm:table-auto">
           <caption className="sr-only">{t("caption")}</caption>
           <thead>
-            <tr>
-              <th>{t("outputMarket")}</th>
-              <th>{t("funded")}</th>
-              <th>{t("delivered")}</th>
-              <th>{t("unfilled")}</th>
-              {sized && <th>{t("buildings")}</th>}
+            <tr className="align-bottom text-muted">
+              <th scope="col" className="w-[34%] py-1 pr-2 font-medium sm:w-auto">
+                {t("outputMarket")}
+              </th>
+              <th scope="col" className={numHead}>
+                {t("funded")}
+              </th>
+              <th scope="col" className={numHead}>
+                {t("delivered")}
+              </th>
+              <th scope="col" className={numHead}>
+                {t("unfilled")}
+              </th>
+              {sized && (
+                <th scope="col" className={numHead}>
+                  {t("buildings")}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={`${row.commodity}:${row.scope}`}>
-                <th scope="row" className="py-1 font-normal">
+              <tr
+                key={`${row.commodity}:${row.scope}`}
+                className="border-t border-border/50 align-top"
+              >
+                <th scope="row" className="break-words py-1 pr-2 font-normal">
                   {COMMODITY_LABELS[row.commodity]} / {t(row.scope)}
                 </th>
-                <td>{number(row.funded)}</td>
-                <td>{number(row.delivered)}</td>
-                <td>{number(row.unmet)}</td>
+                <td className={numCell}>{number(row.funded)}</td>
+                <td className={numCell}>{number(row.delivered)}</td>
+                <td className={numCell}>{number(row.unmet)}</td>
                 {sized && (
-                  <td>
+                  <td className={numCell}>
                     {number(
                       row.capacityUnits == null
                         ? null
@@ -59,20 +73,13 @@ export default function FundedBuildDemand({
         </table>
       </div>
       {sized && (
-        <>
-          <p className="mt-2 text-body-xs font-semibold">
-            {t("fullMix", {
-              count:
-                fullMix == null ? t("unknown") : number(Math.floor(fullMix / unitsPerFacility)),
-            })}
-          </p>
-          <p className="mt-1 text-body-xs text-muted">{t("buildingNote")}</p>
-          <p className="mt-2 text-body-xs text-warning">{t("partialOutput")}</p>
-        </>
+        <p className="mt-2 text-body-xs font-semibold">
+          {t("fullMix", {
+            count: fullMix == null ? t("unknown") : number(Math.floor(fullMix / unitsPerFacility)),
+          })}
+        </p>
       )}
-      <p className="mt-2 text-body-xs text-muted">{t("deliveryNote")}</p>
-      <p className="mt-2 text-body-xs text-muted">{t("scopeNote")}</p>
-      <p className="mt-1 text-body-xs text-muted">{t("salesNote")}</p>
+      <p className="mt-1 text-body-xs text-muted">{t("scopeNote")}</p>
     </section>
   );
 }

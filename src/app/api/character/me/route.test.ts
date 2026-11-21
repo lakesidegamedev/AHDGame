@@ -53,6 +53,7 @@ describe("GET /api/character/me caching", () => {
           homeState: "NY",
           countryId: "US",
           avatarUrl: null,
+          createdTurn: 54,
         },
       },
     } as never);
@@ -69,6 +70,26 @@ describe("GET /api/character/me caching", () => {
     const { getTotalPersonalLiquidWealth } = await import("@/lib/currency/characterFunds");
     vi.mocked(getTotalPersonalLiquidWealth).mockReturnValue(0);
   });
+
+  it.each([
+    { lastCorporationFoundedTurn: undefined, expected: 0 },
+    { lastCorporationFoundedTurn: 40, expected: 80 },
+  ])(
+    "reports only the refounding cooldown for a new character: %j",
+    async ({ lastCorporationFoundedTurn, expected }) => {
+      db.collection("gameState").findOne.mockResolvedValue({
+        _id: "current",
+        currentTurn: 56,
+        preIteration: { active: false },
+      });
+      db.collection("users").findOne.mockResolvedValue({ lastCorporationFoundedTurn });
+
+      const { GET } = await import("./route");
+      const res = await GET();
+      expect(res.status).toBe(200);
+      expect((await res.json()).foundingCooldownTurnsRemaining).toBe(expected);
+    }
+  );
 
   it.each([
     { imfFirst: true, hasBusiness: true, vacant: false, expected: 101 },
@@ -239,9 +260,3 @@ describe("PATCH /api/character/me onboarding step tracking", () => {
     expect(update.$set["onboarding.dismissedAt"]).toBeInstanceOf(Date);
   });
 });
-
-vi.mock("@/lib/time/gameTime", () => ({
-  getGameTime: vi
-    .fn()
-    .mockResolvedValue({ currentTurn: 100, effectiveNow: new Date("2026-10-31T00:00:00Z") }),
-}));

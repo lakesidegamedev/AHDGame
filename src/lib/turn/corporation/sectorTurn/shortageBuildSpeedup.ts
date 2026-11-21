@@ -52,15 +52,20 @@ export function acceleratedBuildWindow(
   if (!(remaining > 1)) return null;
   const onlineTurn = currentTurn + Math.max(1, Math.ceil(remaining * factor));
   if (!(onlineTurn < order.onlineTurn)) return null;
-  if (order.smooth !== true || !(order.onlineTurn - order.startTurn > 0)) {
-    // All-at-once order: nothing delivered yet, only the landing turn moves.
+  if (!(order.onlineTurn - order.startTurn > 0)) {
+    // No ramp window: nothing delivered yet, only the landing turn moves.
     return { startTurn: order.startTurn, onlineTurn };
   }
   const f = deliveredFraction(order, currentTurn);
   if (!(f < 1)) return null;
-  // Solve (currentTurn - s') / (onlineTurn - s') = f for s'.
+  // Solve (currentTurn - s') / (onlineTurn - s') = ramp for s', where ramp is
+  // the share of the linear window done once any re-anchored base is removed.
+  const base = order.deliveryBaseFraction ?? 0;
+  const ramp = base < 1 ? (f - base) / (1 - base) : 0;
   const startTurn =
-    f <= 0 ? Math.min(order.startTurn, currentTurn) : (currentTurn - f * onlineTurn) / (1 - f);
+    ramp <= 0
+      ? Math.min(order.startTurn, currentTurn)
+      : (currentTurn - ramp * onlineTurn) / (1 - ramp);
   return { startTurn, onlineTurn };
 }
 

@@ -169,6 +169,22 @@ describe("processCrisisTurn year boundary (#2059)", () => {
     }
   });
 
+  it("defers living conflicts until the first turn outside founding elections", async () => {
+    const { db, crises, conflicts } = await setupWorld(1956);
+    await processCrisisTurn(db as unknown as Db, 193, 1956, { pauseOpenings: true });
+    expect(conflictState(conflicts, "suez_aftermath")).toBeUndefined();
+    expect(eventIds(crises)).not.toContain(SUEZ_ENTRY);
+
+    await processCrisisTurn(db as unknown as Db, 194, 1956);
+    expect(conflictState(conflicts, "suez_aftermath")).toMatchObject({
+      hasOpened: true,
+      lastProcessedTurn: 194,
+    });
+    expect(eventIds(crises)).toContain(
+      "suez_aftermath:canal_settlement:194:canal_settlement_entry"
+    );
+  });
+
   it("does not double-open on replay or the following turn", async () => {
     const { db, crises, conflicts } = await setupWorld(1955);
 

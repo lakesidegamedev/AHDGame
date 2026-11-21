@@ -105,23 +105,22 @@ describe("BuildQueueBadge", () => {
     expect(label).not.toContain("rises each turn");
   });
 
-  it("names the turn a stepped order next lands when that is before it is done", () => {
-    // Two 100-unit plants over six turns: one lands on turn 3, the last on turn 6.
+  it("says capacity arrives a slice every turn for a multi-plant order", () => {
+    // Two 100-unit plants over six turns: a third of a plant every turn.
     const queue = {
       orders: 1,
       unitsOrdered: 200,
       unitsRemaining: 200,
-      unitsPerTurn: 0,
+      unitsPerTurn: 200 / 6,
       lastOnlineTurn: 6,
       nextOnlineTurn: 6,
-      nextArrivalTurn: 3,
-      turnsRemaining: 5,
+      nextArrivalTurn: 1,
+      turnsRemaining: 6,
     };
     render(<BuildQueueBadge queue={queue} plantUnits={100} />);
-    expect(screen.getByText(/next lands turn 3/)).toBeTruthy();
-    expect(screen.queryByText(/a turn/)).toBeNull();
+    expect(screen.queryByText(/next lands turn/)).toBeNull();
     expect(buildProgressLabel(queue, 100, "plant", "plants")).toContain(
-      "Capacity arrives in steps, not a slice each turn: the next lands on turn 3."
+      "Capacity arrives in a slice every turn"
     );
   });
 });

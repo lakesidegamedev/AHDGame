@@ -290,7 +290,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // Operating strategy: resolve effective supply/demand rates
     const currentTurn = gameState?.currentTurn ?? 0;
     // Tech-tree production-method gating for the strategy picker (inert when off).
-    const { techTreesEnabled, techCurrentYear, techCorpView, strategyWorld } =
+    const { techTreesEnabled, techCurrentYear, techCorpView, legacyTech, strategyWorld } =
       await loadSectorTechContext(db, {
         gameState,
         corporation,
@@ -499,6 +499,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ceo,
         techTreesEnabled,
         techCorpView,
+        legacyTech,
         sectorType,
         techCurrentYear,
         effectiveSupply,
@@ -771,6 +772,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           techTreesEnabled,
           techCurrentYear,
           techCorpView,
+          legacyTech,
           sectorType: sector.sectorType,
         }),
         profit: Math.round(sectorAmountInCorpCurrency(profit)),

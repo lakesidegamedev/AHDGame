@@ -65,3 +65,40 @@ function render(ui: ReactElement) {
     </NextIntlClientProvider>
   );
 }
+
+describe("StrandedPlantBanner on a mixed-output site", () => {
+  it("names the product that is not selling instead of blaming the whole plant", () => {
+    render(
+      <StrandedPlantBanner
+        lowFillTurns={STRANDED_WARN_TURNS}
+        soldFraction={0.45}
+        isCeo
+        outputs={[
+          { label: "Electronics & Semiconductors", soldFraction: 1 },
+          { label: "Software & IT Services", soldFraction: 0.12 },
+        ]}
+      />
+    );
+    const warning = screen.getByRole("status");
+    expect(warning.textContent).toContain("Software & IT Services is not selling");
+    expect(warning.textContent).toContain("Electronics & Semiconductors (100% sold) found buyers");
+    expect(warning.textContent).toContain("makes more Electronics & Semiconductors");
+    expect(warning.textContent).not.toContain("This plant cannot sell its output");
+    expect(warning.textContent).not.toContain("oversupplied");
+  });
+
+  it("keeps the whole-plant wording when every product is weak", () => {
+    render(
+      <StrandedPlantBanner
+        lowFillTurns={STRANDED_WARN_TURNS}
+        soldFraction={0.2}
+        isCeo={false}
+        outputs={[
+          { label: "Electronics & Semiconductors", soldFraction: 0.3 },
+          { label: "Software & IT Services", soldFraction: 0.1 },
+        ]}
+      />
+    );
+    expect(screen.getByRole("status").textContent).toContain("This plant cannot sell its output");
+  });
+});

@@ -31,6 +31,7 @@ describe("runRequiredStartupMigrations", () => {
     await runRequiredStartupMigrations(db);
 
     expect(REQUIRED_STARTUP_MIGRATIONS.map((migration) => migration.id)).toEqual([
+      "2026-11-16-nationalization-site-identity",
       "2026-10-21-backfill-mechanical-law-types",
       "2026-11-09-successor-tax-types",
       "2026-10-14-contest-account-history",
@@ -68,6 +69,10 @@ describe("runRequiredStartupMigrations", () => {
       "2026-11-11-bucket-approvals-rename",
       "2026-11-11-region-group-drift-to-buckets",
       "2026-11-16-split-renewables-power-method",
+      "2026-11-17-move-fracking-to-extraction",
+      "2026-11-17-linear-build-delivery",
+      "2026-11-20-corporations-wiki-margins",
+      "2026-11-21-faq-party-leadership",
     ]);
     expect(REQUIRED_STARTUP_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenNthCalledWith(1, db, {
@@ -100,19 +105,22 @@ describe("runRequiredStartupMigrations", () => {
     );
   });
 
-  it("restores insert-only bond pools on a fresh 1991 world despite surviving markers", async () => {
-    findOne.mockResolvedValue({ preset: "1991-default", currentTurn: 1 });
-    await runRequiredStartupMigrations(db);
-    expect(runMigrationsMock).toHaveBeenNthCalledWith(3, db, {
-      migrations: [expect.objectContaining({ id: "2026-09-03-bond-market-pools" })],
-      only: ["2026-09-03-bond-market-pools"],
-      force: true,
-      dryRun: false,
-    });
-  });
+  it.each(["1991-default", "2027-default"])(
+    "restores insert-only bond pools for a fresh %s world despite surviving markers",
+    async (preset) => {
+      findOne.mockResolvedValue({ preset, currentTurn: 1 });
+      await runRequiredStartupMigrations(db);
+      expect(runMigrationsMock).toHaveBeenNthCalledWith(3, db, {
+        migrations: [expect.objectContaining({ id: "2026-09-03-bond-market-pools" })],
+        only: ["2026-09-03-bond-market-pools"],
+        force: true,
+        dryRun: false,
+      });
+    }
+  );
 
   it("does not bootstrap bond cash into an existing world", async () => {
-    findOne.mockResolvedValue({ preset: "1991-default", currentTurn: 1329 });
+    findOne.mockResolvedValue({ preset: "2027-default", currentTurn: 55 });
     await runRequiredStartupMigrations(db);
     expect(runMigrationsMock).toHaveBeenCalledTimes(2);
   });

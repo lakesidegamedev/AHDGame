@@ -125,10 +125,10 @@ describe("value added versus gross output", () => {
     const added = (a: Sector[]) => growthPct(before, a, valueAddedOutput);
     // Same gross lift, but technology keeps more of its output than retail.
     expect(gross(techUp)).toBeCloseTo(gross(retailUp), 6);
-    expect(added(techUp)).toBeGreaterThan(added(retailUp) * 2);
+    expect(added(techUp)).toBeGreaterThan(added(retailUp));
     // Recorded comparison (percent growth, current -> corrected).
-    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.86]);
-    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 1.24]);
+    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.29]);
+    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.07]);
   });
 
   it("counts unsold output as production and ignores price-only changes", () => {

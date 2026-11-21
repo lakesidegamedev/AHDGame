@@ -1,4 +1,5 @@
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
+import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -16,7 +17,7 @@ import {
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
   resolveSectorHostCurrencyCode,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
       // SP4: merged legacy + political-board read so playable regions' worker
       // counts keep matching the turn's adapter-fed values.
       loadWorkforceSkillByState(db, stateIds),
-      loadFxRatesByCurrency(db),
+      loadValuationFxRates(db),
     ]);
 
     const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
@@ -156,7 +157,7 @@ export async function GET(request: Request) {
         return {
           sector: s,
           revenueAnchor: readCorpEconomicAnchor(
-            s.revenue,
+            sectorEconomicRevenue(s),
             resolveSectorHostCurrencyCode(s, corp),
             fxRateForSectorHostFromMap(s, corp, fxByCurrency)
           ),
@@ -181,7 +182,7 @@ export async function GET(request: Request) {
         corporationSequentialId: corp?.sequentialId ?? null,
         // revenue stays in the corp's own currency — pair with liquidCurrencyCode
         // for display. revenueAnchor is exposed for cross-corp comparisons.
-        revenue: Math.round(s.revenue),
+        revenue: Math.round(sectorEconomicRevenue(s)),
         revenueAnchor: Math.round(revenueAnchor),
         liquidCurrencyCode,
         currentGrowthRate: s.currentGrowthRate ?? s.growthRate ?? 0,

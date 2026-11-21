@@ -223,7 +223,7 @@ Beta 1's most ambitious mid-iteration addition was the **economy-preview** track
 | 🇩🇪 Germany | DE | EUR | 2026-04-22 | Economy preview (beta) |
 | 🇨🇳 China | CN | CNY | 2026-04-28 | Economy preview |
 | 🇧🇷 Brazil | BR | BRL | 2026-04-28 | Economy preview |
-| 🇮🇪 Ireland | IE | EUR | 2026-04-28 | Economy preview |
+| 🇮🇪 Ireland | IE | IEP | 2026-04-28 | Economy preview |
 
 These countries are **not enabled for player politicking** in Beta 1: there are no Bundestags to canvas, no Dáil races to win, no Brazilian governors to bribe. What they *do* contribute is liquidity: their currencies trade in forex, their corporate registrations show up in the global stock and bond markets, and their commodity baselines feed into the trade-flow model. The data plumbing is the dry-run for Alpha 2 / Beta 2 country expansion.
 
@@ -236,7 +236,7 @@ These countries are **not enabled for player politicking** in Beta 1: there are 
 | United Nations | Japan's Foreign Affairs Minister | JP | T384 |
 | NATO | US Secretary of State | US | T384 |
 | European Council | A German politician | DE | T385 |
-| Commonwealth of Nations | UK Prime Minister | UK | T436 |
+| Commonwealth of Nations | UK Prime Minister | UK | Permanent (never elected) |
 | Tropico Alliance | Japan's Prime Minister ("El Presidente") | JP | T400 |
 
 ### Custom international organizations
@@ -244,7 +244,7 @@ These countries are **not enabled for player politicking** in Beta 1: there are 
 Two were founded during Beta 1:
 
 - **The Tropico Alliance (TTA)**: JP-founded, T376. *"Increase and spread Tropico's name and brand."* Charter text: *"Democracy / Dictatorship / Sand."* Membership: JP, plus DE as an economy-preview signatory.
-- **The Commonwealth of Nations (CON)**: UK-founded, T412 by the First Secretary of State. Charter: a literal link to the real-world Commonwealth charter. Membership: UK, plus aspirants.
+- **The Commonwealth of Nations (CON)**: Built-in, founded in 1949, led permanently as Head of the Commonwealth by the UK's sitting head of government. Charter: a short text about free and equal partners who consult and cooperate. Membership: UK, plus aspirants.
 
 ### Trade wars
 
@@ -258,14 +258,14 @@ Currently active tariff regimes range from **0%** (most pairs) to one outlier **
 
 ### Currencies and Forex
 
-Beta 1 introduced (and stress-tested) the in-game **forex system**. Internally, balances are stored in an abstract **anchor unit (₳)**; each local currency has a *local-per-anchor* rate. The three active countries trade live; the economy-preview countries ship FX as well. Ireland and Germany both use the Euro, so the EUR pair covers both. As of T621 the rates were:
+Beta 1 introduced (and stress-tested) the in-game **forex system**. Internally, balances are stored in an abstract **anchor unit (₳)**; each local currency has a *local-per-anchor* rate. The three active countries trade live; the economy-preview countries ship FX as well. Germany uses the Euro and Ireland keeps its own Irish pound, so the EUR pair covers Germany only. As of T621 the rates were:
 
 | Currency | Code | Country / Bloc | Base rate (local per ₳) | Current rate | Drift |
 | --- | --- | --- | --- | --- | --- |
 | US Dollar | USD | US (active) | 1.00 | 1.019 | ▼ (slightly weaker) |
 | British Pound | GBP | UK (active) | 0.75 | **0.55** | ▲ (sterling has strengthened sharply) |
 | Japanese Yen | JPY | JP (active) | 106 | 98.5 | ▲ (yen has strengthened) |
-| Euro | EUR | DE & IE (econ preview) | 0.92 | 0.93 | flat |
+| Euro | EUR | DE (econ preview) | 0.92 | 0.93 | flat |
 | Chinese Yuan | CNY | CN (econ preview) | 7.20 | 7.63 | ▼ |
 | Brazilian Real | BRL | BR (econ preview) | 5.00 | 5.09 | flat |
 
@@ -273,7 +273,7 @@ The headline forex story is a **much stronger pound**: fewer pounds per ₳ mean
 
 ### The 10 most valuable companies in Beta 1
 
-Beta 1's forex system uses an **internal anchor unit (₳)** as the system-of-record. Every local currency has a rate defined as *local-per-anchor*; share prices and market caps are stored against that anchor and rendered to whatever display currency a viewer chooses (the in-game stocks screen lets you view balances in *local*, *home*, *internal*, or a specific currency code). The table below shows USD-equivalent values for portability. That is a display choice, not the anchor.
+Beta 1's forex system uses an **internal anchor unit (₳)** as the system-of-record. Every local currency has a rate defined as *local-per-anchor*; share prices are stored in the listing currency and converted to that anchor for valuation and ranking and share prices are shown in their listing currency, while other amounts follow the display currency a viewer chooses (the in-game stocks screen lets you view balances in *local*, *home*, *internal*, or a specific currency code). The table below shows USD-equivalent values for portability. That is a display choice, not the anchor.
 
 | # | Company | Country | Sector | Market cap (USD-equiv.) | CEO |
 | --- | --- | --- | --- | --- | --- |
@@ -300,7 +300,7 @@ The top two corporations in Beta 1 are not just the largest. They are *categoric
 
 Neither corporation started Beta 1 anywhere near the top. The earliest preserved Wealth Leaderboard snapshot (turn 2, 2026-04-11) ranks the founder of AURORA Group first at **$8.7M** and the founder of GE fourth at **$4.5M**, both modestly-capitalised opening-day founders. Six hundred and twenty turns later, the GE stake is worth $75.6B and the AURORA position is worth $34.6B. The compounding ratios are approximately **17,000× for the GE founder and 4,000× for the AURORA founder**.
 
-Structurally the rise follows the standard *A House Divided* founder-CEO loop: a public corporation's founder retains a controlling stake, which appreciates with every successful sector expansion, share split, earnings cycle, and Wire-amplified narrative. The two giants got there via opposite share-count strategies. **GE has 5.8 billion shares outstanding**, the iteration's broadest industrial-energy distribution. Its growth story is volume, sector breadth, and a long bond-issuance cadence. **AURORA Group has only one million total shares**: a deliberately thin float that produces outsized per-share moves and amplifies every order-flow event. Both stocks were extraordinarily volatile in the 24 hours leading into the iteration pause; the in-game ticker showed GE up roughly **+131%** in a single trading session and AURORA shedding around **$8B** of market cap in the same window.
+Structurally the rise follows the standard *A House Divided* founder-CEO loop: a public corporation's founder retains a controlling stake, which appreciates with every successful sector expansion, earnings cycle, and Wire-amplified narrative. The two giants got there via opposite share-count strategies. **GE has 5.8 billion shares outstanding**, the iteration's broadest industrial-energy distribution. Its growth story is volume, sector breadth, and a long bond-issuance cadence. **AURORA Group has only one million total shares**: a deliberately thin float that produces outsized per-share moves and amplifies every order-flow event. Both stocks were extraordinarily volatile in the 24 hours leading into the iteration pause; the in-game ticker showed GE up roughly **+131%** in a single trading session and AURORA shedding around **$8B** of market cap in the same window.
 
 The political consequence is the iteration's most-cited corporate-political fact: the **Secretary of Agriculture** ended Beta 1 as the wealthiest individual in the game, and the **President of the United States** ended it as the second-wealthiest. The Wire archives, predictably, have not yet decided whether that is a feature or a bug.
 
@@ -333,7 +333,7 @@ The political consequence is the iteration's most-cited corporate-political fact
 
 ### Wealth Leaderboard: top 10 by net worth
 
-Net worth is the in-game *Wealth Leaderboard* convention: stocks + bonds + portfolio + cash, summed and rendered in USD-equivalent. It is dominated almost entirely by **corporate CEOs** whose wealth tracks their stake in the public company they run. Nine of the Beta-1 top ten are corporate executives, and the ten together hold about $173 billion.
+Net worth is the in-game *Wealth Leaderboard* convention: cash + portfolio (stocks + bonds) minus any line-of-credit debt, summed and rendered in USD-equivalent. It is dominated almost entirely by **corporate CEOs** whose wealth tracks their stake in the public company they run. Nine of the Beta-1 top ten are corporate executives, and the ten together hold about $173 billion.
 
 | # | Role | Country / State | Net worth | Source |
 | --- | --- | --- | --- | --- |
@@ -348,9 +348,9 @@ Net worth is the in-game *Wealth Leaderboard* convention: stocks + bonds + portf
 | 9 | Corporate executive | US / Kentucky | $1.99B | CEO, VOSS CORP |
 | 10 | MP and Bank of England Governor | UK / West Midlands | $1.67B | CEO, Unlimited Power (also MP + Bank of England Governor) |
 
-The conspicuous Beta-1 fact: **eight of ten** are American (a function of NYSE listings being denominated in dollars and the iteration's largest corporations being US-listed); the other two are UK CEOs whose FTSE-listed companies are large enough to clear the ₳-anchor cutoff. **Zero** Japanese characters appear in the dollar-denominated top 10, despite the Nikkei hosting the iteration's largest corporation by yen.
+The conspicuous Beta-1 fact: **eight of ten** are American (a function of most NYSE listings being denominated in dollars and the iteration's largest corporations being US-listed); the other two are UK CEOs whose FTSE-listed companies are large enough to clear the ₳-anchor cutoff. **Zero** Japanese characters appear in the dollar-denominated top 10, despite the Nikkei hosting the iteration's largest corporation by yen.
 
-A separate "wealthiest by campaign treasury" measure exists: the **funds** field, stored in anchor units (₳1 ≈ $1.02 / £0.55 / ¥98 at T621 rates) and used to bankroll elections. The UK First Secretary of State tops that leaderboard at ₳144.9M, followed by a US figure (₳93.6M) and a US Senator (₳78.1M). These are different scoreboards: the campaign-funds list ranks who can spend on a *race*; the net-worth list ranks who *owns* the economy.
+A separate "wealthiest by campaign treasury" measure exists: the **funds** field, stored in local currency and compared here in anchor units (₳1 ≈ $1.02 / £0.55 / ¥98 at T621 rates) and used to bankroll elections. The UK First Secretary of State tops that leaderboard at ₳144.9M, followed by a US figure (₳93.6M) and a US Senator (₳78.1M). These are different scoreboards: the campaign-funds list ranks who can spend on a *race*; the net-worth list ranks who *owns* the economy.
 
 ### Most infamous
 

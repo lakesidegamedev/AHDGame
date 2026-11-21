@@ -70,7 +70,7 @@ units = (sector daily revenue * rate) / basePrice
 
 Under the plants tier, other sectors put the units their plants actually produced on the market (a mothballed plant supplies nothing), and their input demand scales with how much of their capacity they used.
 
-Only sectors that a corporation runs participate. Demand that no plant serves yet adds no supply or demand. What every [corporation](/wiki/corporations) runs, including its strategy and production policy, feeds the totals.
+Sectors that a corporation runs provide the supply and most of the demand, and GDP-driven demand and the stabilizer add to the totals. Demand that no plant serves yet still counts in the totals. What every [corporation](/wiki/corporations) runs, including its strategy and production policy, feeds the totals.
 
 **Cross-currency normalization:** Sector revenues are normalized to the anchor currency (₳) before computing commodity flows, so corporations headquartered in different countries contribute consistently to shared global supply and demand curves.
 
@@ -117,7 +117,7 @@ Beyond sector-level supply and demand, several macroeconomic forces inject addit
 
 ### Retail demand
 
-Retail sectors supply **Consumer Goods**. Demand comes independently from the household consumption ledger, based on population, income, employment, consumer confidence, basket share, and bounded price elasticity (see [Household Demand & Price Level](/wiki/household-economy)). Adding Retail supply does not add Retail demand, so overbuilding lowers seller fill while a genuine shortage rewards new capacity. Commodity prices also feed back into the consumer price level, and push inflation up or down in [National Metrics](/wiki/national-metrics).
+Retail sectors supply **Consumer Goods**. Demand comes independently from the household consumption ledger, based on population, income, employment, consumer confidence, basket share, and bounded price elasticity (see [Household Demand & Price Level](/wiki/household-economy)). Until the Retail demand transition completes, part of Retail supply also feeds Retail demand; once it completes, adding Retail supply does not add Retail demand, so overbuilding lowers seller fill while a genuine shortage rewards new capacity. Commodity prices also feed back into the consumer price level, and push inflation up or down in [National Metrics](/wiki/national-metrics).
 
 ## What a price does to your margin
 
@@ -146,7 +146,7 @@ Reference values for a single commodity at rate 1.0:
 
 Each commodity's contribution is soft-capped at **±50pp** before summing. The
 input and surplus legs are capped at **−30pp** and **+30pp**, and their combined
-negative channel is floored at **−15pp** by scaling both legs. These clamps always apply.
+negative channel is floored at **−15pp** by scaling both legs. These clamps govern the legacy margin path. Under the plants model the input modifier is replaced by the actual inputs bill and the surplus modifier is removed.
 
 **Sign convention:**
 - **Buyers** (sectors that consume a commodity): shortage *raises costs* (negative modifier), oversupply *lowers costs* (positive modifier)
@@ -161,7 +161,7 @@ Steel demand is twice supply (D/S 2.0) and electricity demand is 1.5 times suppl
 - Steel input: -40 x 0.2 x ln(2) = **-5.5 points**.
 - Electricity input: -40 x 0.1 x ln(1.5) = **-1.6 points**.
 
-Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming sector helps a steel-producing manufacturing or defense sector. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
+Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming sector helps a steel-producing Manufacturing sector or a Defense sector running Naval Systems. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
 
 **Upstream shortages:** If your sector requires Steel and the global steel D/S ratio rises to 2x, your margin takes about -27.7 points per unit of steel rate (-5.5 at a 0.2 rate). Competitors who are vertically integrated (owning both the steel buyer and a steel-producing sector) partially insulate themselves. **Downstream windfalls:** If you are a steel producer and supply tightens, your producing sector benefits from the shortage while your competitors suffer. Timing sector entries to commodity cycles can significantly boost profits.
 
@@ -233,7 +233,7 @@ Under **clearing**, revenue is no longer guaranteed: your output competes for re
 
 - Set an **aggressive posture** to undercut rivals and sell out ahead of them (thinner margin, fuller sales).
 - Set a **premium posture** to skim for margin, accepting the risk of holding unsold output in a glut.
-- In a shortage everyone sells out and premium pricing pays; in a glut, the undercutters clear and the skimmers are left with stock.
+- In a shortage cheaper sellers sell out first, and premium pricing pays only if you still sell enough of your output; in a glut, the undercutters clear and the skimmers are left with stock.
 
 If a sector's goods don't fully sell, its revenue, and therefore its valuation and share price, reflects that. Watch the sold-fraction badge on the sector page to see why. Contracted volume under a [Supply Agreement](/wiki/supply-agreements) leaves the open market first, and the market price sets the contract price band. The loyal slice reserved under [Brand Loyalty](/wiki/brand-loyalty) comes before cheapest-first clearing, and rival prices decide whether you are contested. Your output also feeds the average quality that downstream sectors consume, and input quality is the average quality of what you consume (see [Output Quality](/wiki/output-quality)).
 
@@ -249,7 +249,7 @@ Under **plants**, the deepest tier, a sector's nameplate revenue is no longer a 
 
 Two knock-on effects reach the commodity market directly. Entering a new market is a **build** with a delivery delay, so new supply arrives on a lag rather than the turn it is ordered. And taking share from a rival moves **real capacity** rather than a revenue figure: an attack that succeeds moves whole plants from the rival to you. Supply responds to shortage more slowly and more permanently than under the earlier tiers. See [Corporations](/wiki/corporations) for the build, split and attack mechanics.
 
-When a new tier is switched on, **nothing changes on the first turn**: the new mechanics fade in gradually over time rather than snapping into place, so valuations drift rather than lurch. The intent is a smooth adjustment, not a shock: you have time to adapt your pricing and investment as the new rules take hold.
+When a new tier is switched on, **little changes on the first turn**: a sector with no stored capacity can step its nameplate up by up to 10%, and the rest of the new mechanics fade in gradually over time rather than snapping into place, so valuations drift rather than lurch. The intent is a smooth adjustment, not a shock: you have time to adapt your pricing and investment as the new rules take hold.
 
 ## Strategies, and what you can hold
 
@@ -262,7 +262,7 @@ Each sector type has **4-8 operating strategies** that change which commodities 
 
 ### Extraction strategies
 
-Extraction sectors choose between a **Diversified** strategy (standard) and six **focused** strategies (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
+Extraction sectors choose between a **Diversified** strategy (standard) and six **focused** strategies plus the tech-unlocked **Hydraulic Fracturing** (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
 
 | Strategy | Supply rate | vs Diversified | Notes |
 | --- | --- | --- | --- |
@@ -270,6 +270,7 @@ Extraction sectors choose between a **Diversified** strategy (standard) and six 
 | Iron & Metals Mining | Iron **0.78** | **~3.1×** iron output | Best when iron is severely scarce (D/S above 2×) |
 | Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~3.1× / ~1.7×** | Best when oil is scarce |
 | Natural Gas Focus | Natural Gas **0.58** + Oil **0.32** | **~3.1× / ~1.7×** | Best when natural gas is scarce and oil is not |
+| Hydraulic Fracturing | Oil **0.64** + Natural Gas **0.40** | **~3.5× / ~2.2×** | Unlocked by the Shale Extraction research (2009). Higher output than Oil & Gas for a heavier steel, chemicals and sand bill |
 | Coal Mining | Coal **0.72** | **~3.3×** | Best when coal is scarce |
 | Timber & Forestry | Timber **0.64** | **~21×** | Best when timber is scarce |
 | Rare Earth Minerals Mining | Rare Earth **0.72** | **~5.1×** | Covers the merged copper + rare-earth market; best when that market is scarce |
@@ -303,7 +304,7 @@ The point for a player is simple: a commodity that stores well can be held throu
 
 | Commodity | Typical suppliers | Typical buyers |
 | --- | --- | --- |
-| Steel & Metals | Manufacturing, Defense | Construction, Defense, Real Estate |
+| Steel & Metals | Manufacturing (steel-producing strategies), Defense (Naval Systems) | Construction, Defense, Real Estate |
 | Electronics & Semiconductors | Technology, Defense | Manufacturing, Healthcare, Telecommunications |
 | Energy (Electricity) | Energy | All sectors (universal input) |
 | Industrial Chemicals | Chemical Industries | Extraction, Manufacturing, Chemical Industries, Energy, Technology, Defense |
@@ -335,5 +336,5 @@ Copper is not a standalone commodity: its market was merged into Rare Earth Mine
 
 You can integrate vertically to insulate yourself (own both the producer and the consumer of a commodity), and lock in supply or demand with a [Supply Agreement](/wiki/supply-agreements).
 
-Applies in every world with private corporations; current worlds run the deepest tier of the market system, which changes the panels you see. Planned economies administer national prices instead of tracking supply and demand. The per-commodity pages, which list suppliers and buyers, are generated from the same constants as the game. Last checked 2026-10-29, version 1.18.0. Exact rules: [Commodities design page](https://docs.lakesidegames.net/design/commodities.html) and [Commodity pricing design page](https://docs.lakesidegames.net/design/commodity-pricing-v2.html)
+Applies in worlds where the market system is switched on; current worlds run the deepest tier of the market system, which changes the panels you see. Planned economies administer national prices instead of tracking supply and demand. The per-commodity pages, which list suppliers and buyers, are generated from the same constants as the game. Last checked 2026-10-29, version 1.18.0. Exact rules: [Commodities design page](https://docs.lakesidegames.net/design/commodities.html) and [Commodity pricing design page](https://docs.lakesidegames.net/design/commodity-pricing-v2.html)
 `;

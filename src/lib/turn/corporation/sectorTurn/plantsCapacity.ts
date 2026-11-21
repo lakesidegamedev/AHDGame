@@ -13,7 +13,7 @@ import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commo
 import type { CorporateSector, Corporation } from "@/lib/db/types";
 import { advanceCapitalStock } from "@/lib/market/capital";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
-import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { applyPlantChange, productiveCapacityUnits } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { healRetoolStockBasis, type RetoolStockBasisHeal } from "@/lib/corporations/retoolRescale";
 import {
@@ -310,7 +310,9 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
     ? unitYieldForSupply(strategySupply ?? {}, eraUnitScale)
     : 0;
   const plantsMixPrice = plantsMixPriceYield > 0 ? 1 / plantsMixPriceYield : 0;
-  const plantsCapacity = plantsOwnedCapacity * retoolCapacityRatio;
+  const plantsCapacity =
+    productiveCapacityUnits(plantsOwnedCapacity, wholePlantChange?.plantUnitRemainder) *
+    retoolCapacityRatio;
   const priorProductionUnitRatio = plantsEnabled ? retoolMeasurementRatio(retoolBasis) : 1;
   // Nameplate plants writes back to `sector.revenue`: owned capacity at mix
   // prices. It must NOT be the realized figure. `sector.revenue` is re-read as

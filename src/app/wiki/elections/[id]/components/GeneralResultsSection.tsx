@@ -34,7 +34,7 @@ export function GeneralResultsSection({
     .sort((a, b) => b.votes - a.votes);
 
   return (
-    <section className="mb-10 rounded-xl border border-card-border bg-card/40 p-6 shadow-panel">
+    <section className="mb-10 ">
       <SectionLabel as="h3">
         {electionType === "president" ? "Popular vote summary" : "General election results"}
       </SectionLabel>
@@ -51,7 +51,7 @@ export function GeneralResultsSection({
               <span className="truncate font-medium text-foreground">
                 {row.name} ({row.party})
               </span>
-              <span className="font-mono text-muted">{formatPct(row.pct)}</span>
+              <span className="tabular-nums text-muted">{formatPct(row.pct)}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-card-elevated">
               <div
@@ -68,15 +68,25 @@ export function GeneralResultsSection({
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-card-elevated">
+          <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="pb-2 pr-4 font-medium text-foreground">Candidate</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Party</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Votes</th>
-              <th className="pb-2 font-medium text-foreground">Share</th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Candidate
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Party
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Votes
+              </th>
+              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Share
+              </th>
               {generalResults.seatsEstimate &&
                 Object.keys(generalResults.seatsEstimate).length > 0 && (
-                  <th className="pb-2 font-medium text-foreground">Seats</th>
+                  <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                    Seats
+                  </th>
                 )}
             </tr>
           </thead>
@@ -102,13 +112,23 @@ export function GeneralResultsSection({
                   key={row.candId}
                   className="border-b border-card-border/50 last:border-0 hover:bg-card-elevated/30 transition-colors"
                 >
-                  <td className="py-2 pr-4 font-medium text-foreground">{row.name}</td>
-                  <td className="py-2 pr-4 text-muted">{row.party}</td>
-                  <td className="py-2 pr-4 text-muted">{row.votes.toLocaleString("en-US")}</td>
-                  <td className="py-2 text-muted">{formatPct(row.pct)}</td>
+                  <td className="border-b border-card-border/60 py-2 pr-4 font-medium text-foreground">
+                    {row.name}
+                  </td>
+                  <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
+                    {row.party}
+                  </td>
+                  <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
+                    {row.votes.toLocaleString("en-US")}
+                  </td>
+                  <td className="border-b border-card-border/60 py-2 text-muted">
+                    {formatPct(row.pct)}
+                  </td>
                   {generalResults.seatsEstimate &&
                     Object.keys(generalResults.seatsEstimate).length > 0 && (
-                      <td className="py-2 text-foreground">{row.seats ?? "-"}</td>
+                      <td className="border-b border-card-border/60 py-2 text-foreground">
+                        {row.seats ?? "-"}
+                      </td>
                     )}
                 </tr>
               ))}

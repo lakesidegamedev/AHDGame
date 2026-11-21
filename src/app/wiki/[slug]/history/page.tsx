@@ -27,7 +27,7 @@ export default async function WikiHistoryPage({ params }: HistoryPageProps) {
   if (!isStaff && page.submittedBy?.toString() !== user.userId.toString()) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <div className="mb-6">
         <Link href={`/wiki/${slug}`} className="text-sm text-primary hover:underline">
           Back to the page

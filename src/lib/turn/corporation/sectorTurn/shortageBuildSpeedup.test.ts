@@ -18,6 +18,7 @@ const order = (o: Partial<SectorBuildOrder> = {}): SectorBuildOrder => ({
   startTurn: 155,
   onlineTurn: 203,
   smooth: true,
+  deliveryBaseFraction: 0,
   ...o,
 });
 
@@ -48,9 +49,9 @@ describe("acceleratedBuildWindow", () => {
     expect(acceleratedBuildWindow(o, 191)).toEqual({ startTurn: 191, onlineTurn: 215 });
   });
 
-  it("moves only the landing turn of an all-at-once order", () => {
+  it("keeps a legacy order's delivered share and ramps the rest over the shorter window", () => {
     const o = order({ smooth: undefined });
-    expect(acceleratedBuildWindow(o, 191)).toEqual({ startTurn: 155, onlineTurn: 197 });
+    expect(acceleratedBuildWindow(o, 191)).toEqual({ startTurn: 173, onlineTurn: 197 });
   });
 
   it("never re-accelerates, and leaves orders due within a turn alone", () => {

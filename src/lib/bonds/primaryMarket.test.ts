@@ -17,6 +17,7 @@ vi.mock("@/lib/banking/settlementJournal", async (importOriginal) => {
 
 import { loadBondQuote } from "@/lib/bonds/marketPool";
 import {
+  corporateUnderwritingCapacityLocal,
   placeUnsoldBondUnits,
   planCorporateUnderwriting,
   planSovereignMonetization,
@@ -24,6 +25,32 @@ import {
   unsoldPlacementBudget,
   unsoldPlacementCap,
 } from "./primaryMarket";
+
+describe("corporateUnderwritingCapacityLocal", () => {
+  it("is independent of the requested size, so the issue screen can quote it first", () => {
+    const pool = {
+      poolCashLocal: 100_000,
+      poolM2Local: 1_000_000,
+      rating: "BBB" as const,
+    };
+    // Same 7.5k a 20-unit request would have placed in the plan below.
+    expect(corporateUnderwritingCapacityLocal(pool)).toBe(7_500);
+    expect(
+      planCorporateUnderwriting({ ...pool, requestedUnits: 1_000, pricePerUnitLocal: 1_000 })
+        .capacityLocal
+    ).toBe(corporateUnderwritingCapacityLocal(pool));
+  });
+
+  it("falls back to the pool's own cash when M2 is unknown", () => {
+    expect(
+      corporateUnderwritingCapacityLocal({
+        poolCashLocal: 10_000_000,
+        poolM2Local: undefined,
+        rating: "AAA",
+      })
+    ).toBe(2_000_000);
+  });
+});
 
 describe("planCorporateUnderwriting", () => {
   it("uses calibrated secondary liquidity after reclassification", () => {
@@ -94,9 +121,9 @@ describe("planSovereignUnderwriting", () => {
 });
 
 describe("unsoldPlacementBudget", () => {
-  it("only spends cash above half the target, a tenth per turn", () => {
+  it("reserves half the attainable target and spends a tenth of the rest", () => {
     expect(unsoldPlacementBudget(150_000, 100_000)).toBe(10_000);
-    expect(unsoldPlacementBudget(40_000, 100_000)).toBe(0);
+    expect(unsoldPlacementBudget(40_000, 100_000)).toBe(2_000);
     expect(unsoldPlacementBudget(150_000, 0)).toBe(15_000);
   });
 });
@@ -130,7 +157,10 @@ describe("placeUnsoldBondUnits", () => {
     db.collection("bondMarketPools");
   });
 
-  it("places up to the per-turn cap within the pool's placement budget and reports proceeds", async () => {
+  it("places company bonds when an older sovereign issue cannot use the cash reserve", async () => {
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+    });
     const corpId = new ObjectId();
     const bond = {
       _id: new ObjectId(),
@@ -146,12 +176,24 @@ describe("placeUnsoldBondUnits", () => {
       defaulted: false,
     };
     db.collectionMocks.bonds.find.mockReturnValue({
-      sort: () => ({ toArray: async () => [bond] }),
+      sort: () => ({
+        toArray: async () => [
+          {
+            ...bond,
+            _id: new ObjectId(),
+            issuerType: "sovereign",
+            countryId: "US",
+            requestedUnits: 1_000_000,
+            unsoldUnits: 1_000_000,
+          },
+          bond,
+        ],
+      }),
     });
-    // Pool has 150k against no target: 10% placement budget = 15k -> 14 units at the 1,020 ask.
+    // The target is far above the pool's cash. The 15k budget buys 14 units at the 1,020 ask.
     db.collectionMocks.bondMarketPools.findOne.mockResolvedValue({
-      cashLocal: 150_000,
-      targetCashLocal: 0,
+      cashLocal: 300_000,
+      targetCashLocal: 100_000_000,
     });
     db.collectionMocks.bondMarketPools.findOneAndUpdate.mockResolvedValue({ cashLocal: 100_000 });
     vi.mocked(loadBondQuote).mockResolvedValue({ askPerUnit: 1_020 } as never);
@@ -160,6 +202,7 @@ describe("placeUnsoldBondUnits", () => {
     const result = await placeUnsoldBondUnits(db as unknown as Db, 600, new Date());
 
     expect(result.unitsPlaced).toBe(14);
+    expect(result.sovereignFaceByCountry.size).toBe(0);
     expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledWith(
       {
         _id: bond._id,
@@ -175,7 +218,7 @@ describe("placeUnsoldBondUnits", () => {
       currency: "USD",
     });
     const quoteSnapshot = vi.mocked(loadBondQuote).mock.calls[0]?.[2]?.pools;
-    expect(quoteSnapshot?.get("USD")?.cashLocal).toBe(135_720);
+    expect(quoteSnapshot?.get("USD")?.cashLocal).toBe(285_720);
   });
 
   it("does nothing when the pool has no cash", async () => {

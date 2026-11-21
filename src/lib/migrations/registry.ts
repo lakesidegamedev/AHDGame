@@ -1,3 +1,7 @@
+import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
+import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
+import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
+import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
 import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as canadianCensusDivisions } from "./entries/2026-11-14-canadian-census-divisions";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
@@ -144,6 +148,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
+import { migration as faqPartyLeadership } from "./entries/2026-11-21-faq-party-leadership";
 import { migration as backfillSpinOffTechBaselines } from "./entries/2026-10-08-backfill-spinoff-tech-baselines";
 import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-media-product-projects-v1-index";
 import { migration as bankTreasuryTradeIndexes } from "./entries/2026-10-04-bank-treasury-trade-indexes";
@@ -152,6 +157,7 @@ import { migration as advertisingAgreementIndexes } from "./entries/2026-10-05-a
 import { migration as activateLiveDemographicsV2 } from "./entries/2026-10-07-activate-live-demographics-v2";
 
 export const MIGRATIONS: Migration[] = [
+  nationalizationSiteIdentity,
   // v0.2.6 currency cutover (declarative - shipped via standalone scripts)
   bondCurrencyStamp,
   corpEconomyToLocalCurrency,
@@ -418,6 +424,10 @@ export const MIGRATIONS: Migration[] = [
   providerLinkHistoryIndexes,
   splitRenewablesPowerMethod,
   wikiRevisionsIndexes,
+  moveFrackingToExtraction,
+  linearBuildDelivery,
+  corporationsWikiMargins,
+  faqPartyLeadership,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

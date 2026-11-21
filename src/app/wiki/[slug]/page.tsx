@@ -20,7 +20,7 @@ import { realLifeDateRange, tenureRangeWeekYear } from "@/lib/wiki/officeTenureD
 import { OfficeHistoryAdmin } from "@/components/wiki/OfficeHistoryAdmin";
 import { WikiWriterProvider } from "@/components/wiki/WikiViewerContext";
 import { WikiTrustStrip } from "@/components/wiki/WikiTrustStrip";
-import { WikiTableOfContents } from "@/components/wiki/WikiTableOfContents";
+import { WikiArticleFrame } from "@/components/wiki/layout/WikiArticleFrame";
 import { Breadcrumbs } from "@/components/wiki/layout/Breadcrumbs";
 import { PageMetadata } from "@/components/wiki/layout/PageMetadata";
 import { getAuthUserWithCharacter } from "@/lib/auth";
@@ -156,20 +156,20 @@ export default async function WikiPage({ params }: WikiPageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl min-w-0 overflow-x-hidden px-4 py-8">
+    <WikiArticleFrame content={content} headings={headings}>
       <Breadcrumbs items={[{ label: "Wiki", href: "/wiki" }, { label: page.title }]} />
 
       {canWrite && (
         <div className="mb-4 flex justify-end gap-2">
           <Link
             href={`/wiki/${slug}/history`}
-            className="rounded-md border border-card-border bg-card/40 px-4 py-2 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary"
+            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
           >
             History
           </Link>
           <Link
             href={`/wiki/${slug}/edit`}
-            className="rounded-md border border-card-border bg-card/40 px-4 py-2 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary"
+            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
           >
             Edit page
           </Link>
@@ -190,9 +190,7 @@ export default async function WikiPage({ params }: WikiPageProps) {
         reportSlug={slug}
       />
 
-      {headings.length > 0 && <WikiTableOfContents headings={headings} className="mb-8" />}
-
-      <article className="prose prose-invert max-w-none overflow-x-hidden">
+      <article data-wiki-article className="max-w-none overflow-x-clip">
         <WikiWriterProvider isWriter={canWrite}>
           <MarkdownContent content={content} headings={headings} />
         </WikiWriterProvider>
@@ -203,7 +201,7 @@ export default async function WikiPage({ params }: WikiPageProps) {
         currentCategory={page.category}
         currentTags={page.tags}
       />
-    </div>
+    </WikiArticleFrame>
   );
 }
 
@@ -225,7 +223,7 @@ function GeneratedOfficeWikiPage({
   const current = page.currentHolder;
 
   return (
-    <div className="mx-auto max-w-4xl min-w-0 overflow-x-hidden px-4 py-8">
+    <WikiArticleFrame content={content} headings={headings}>
       <Breadcrumbs
         items={[
           { label: "Wiki", href: "/wiki" },
@@ -238,19 +236,23 @@ function GeneratedOfficeWikiPage({
         <div className="mb-4 flex justify-end">
           <Link
             href={`/wiki/${slug}/edit`}
-            className="rounded-md border border-card-border bg-card/40 px-4 py-2 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary"
+            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
           >
             Edit article text
           </Link>
         </div>
       )}
 
-      <header className="mb-6 border-b border-card-border pb-5">
-        <p className="section-label mb-2">Generated office page</p>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+      <header className="mb-5">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+          Generated office page
+        </p>
+        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {page.definition.title}
         </h1>
-        <p className="mt-2 max-w-3xl text-muted">{page.definition.description}</p>
+        <p className="mt-3 max-w-[62ch] text-base leading-[1.6] text-foreground">
+          {page.definition.description}
+        </p>
       </header>
 
       <PageMetadata
@@ -260,16 +262,16 @@ function GeneratedOfficeWikiPage({
         reportSlug={slug}
       />
 
-      {headings.length > 0 && <WikiTableOfContents headings={headings} className="mb-8" />}
-
-      <article className="prose prose-invert max-w-none overflow-x-hidden">
+      <article data-wiki-article className="max-w-none overflow-x-clip">
         <MarkdownContent content={content} headings={headings} />
       </article>
 
-      <section className="mt-8 rounded-xl border border-card-border bg-card/60 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Current holder</h2>
+      <section className="mt-8">
+        <h2 className="mb-3 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Current holder
+        </h2>
         {current ? (
-          <div className="rounded-lg border border-card-border bg-card/40 p-4">
+          <div className="border-b border-card-border/60 py-2">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 {current.profileHref ? (
@@ -290,9 +292,9 @@ function GeneratedOfficeWikiPage({
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-card-border bg-card/40 p-6 text-center">
-            <p className="font-medium text-muted">Vacant or not yet recorded</p>
-            <p className="mt-1 text-sm text-muted">
+          <div className="py-2">
+            <p className="font-medium text-foreground">Vacant or not yet recorded</p>
+            <p className="mt-1 text-[13px] text-muted">
               The live history table will populate when the office is filled or when transition
               records are written.
             </p>
@@ -300,31 +302,43 @@ function GeneratedOfficeWikiPage({
         )}
       </section>
 
-      <section className="mt-8 rounded-xl border border-card-border bg-card/60 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Office holder history</h2>
+      <section className="mt-8">
+        <h2 className="mb-3 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Office holder history
+        </h2>
         <div className="space-y-8">
           {page.tenureGroups.map((group) => (
             <div key={`${group.iteration.type}-${group.iteration.number}`}>
-              <h3 className="mb-3 text-sm font-semibold text-primary">{group.label}</h3>
+              <h3 className="mb-2 text-[15px] font-bold tracking-[-0.01em] text-foreground">
+                {group.label}
+              </h3>
               {group.entries.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[680px] text-sm">
                     <thead>
-                      <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
-                        <th className="pb-2 pr-4 font-semibold">Holder</th>
-                        <th className="pb-2 pr-4 font-semibold">Party</th>
-                        <th className="pb-2 pr-4 font-semibold">Tenure</th>
-                        <th className="pb-2 pr-4 font-semibold">Dates</th>
-                        <th className="pb-2 font-semibold">Source</th>
+                      <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                        <th className="border-b border-card-border py-1.5 pr-4 font-semibold">
+                          Holder
+                        </th>
+                        <th className="border-b border-card-border py-1.5 pr-4 font-semibold">
+                          Party
+                        </th>
+                        <th className="border-b border-card-border py-1.5 pr-4 font-semibold">
+                          Tenure
+                        </th>
+                        <th className="border-b border-card-border py-1.5 pr-4 font-semibold">
+                          Dates
+                        </th>
+                        <th className="border-b border-card-border py-1.5 font-semibold">Source</th>
                       </tr>
                     </thead>
                     <tbody>
                       {group.entries.map((entry, index) => (
                         <tr
                           key={`${entry.name}-${entry.startWeekYear ?? entry.manualId ?? index}`}
-                          className="border-b border-card-border/50 last:border-0"
+                          className="border-b border-card-border/60 last:border-0"
                         >
-                          <td className="py-3 pr-4 font-medium text-foreground">
+                          <td className="py-2 pr-4 font-medium text-foreground">
                             {entry.profileHref ? (
                               <Link href={entry.profileHref} className="hover:text-primary">
                                 {entry.name}
@@ -333,30 +347,28 @@ function GeneratedOfficeWikiPage({
                               entry.name
                             )}
                             {entry.isCurrent && (
-                              <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                              <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--wiki-link)]">
                                 Incumbent
                               </span>
                             )}
                           </td>
-                          <td className="py-3 pr-4 text-muted">
+                          <td className="py-2 pr-4 text-muted">
                             {entry.partyLabel ?? entry.party ?? "-"}
                           </td>
-                          <td className="py-3 pr-4 font-mono text-xs text-muted">
+                          <td className="py-2 pr-4 font-mono text-xs text-muted">
                             {tenureRangeWeekYear(entry)}
                           </td>
-                          <td className="py-3 pr-4 text-xs text-muted">
+                          <td className="py-2 pr-4 text-xs text-muted">
                             {realLifeDateRange(entry)}
                           </td>
-                          <td className="py-3 text-muted">{entry.source.replace(/-/g, " ")}</td>
+                          <td className="py-2 text-muted">{entry.source.replace(/-/g, " ")}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p className="rounded-lg border border-dashed border-card-border bg-card/40 px-4 py-3 text-sm text-muted">
-                  No recorded holders yet.
-                </p>
+                <p className="py-2 text-[13px] text-muted">No recorded holders yet.</p>
               )}
               {isAdmin && (
                 <OfficeHistoryAdmin
@@ -390,7 +402,7 @@ function GeneratedOfficeWikiPage({
       </section>
 
       <RelatedPagesFooter currentSlug={slug} currentCategory="reference" />
-    </div>
+    </WikiArticleFrame>
   );
 }
 
@@ -435,14 +447,16 @@ async function RelatedPagesFooter({
     .slice(0, 8);
 
   return (
-    <footer className="mt-12 border-t border-card-border pt-6">
-      <h3 className="mb-3 text-sm font-semibold text-muted">Related pages</h3>
-      <div className="flex flex-wrap gap-2">
+    <footer className="mt-10 border-t border-card-border pt-5">
+      <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+        Related pages
+      </h3>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
         {scored.map(({ slug, title }) => (
           <Link
             key={slug}
             href={`/wiki/${slug}`}
-            className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-all hover:-translate-y-px hover:border-primary/40 hover:text-primary"
+            className="text-[13px] text-[var(--wiki-link)] hover:underline"
           >
             {title}
           </Link>

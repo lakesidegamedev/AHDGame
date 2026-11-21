@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const findOne = vi.fn();
 const aggregateToArray = vi.fn();
 const countryStateToArray = vi.fn();
-const listCrises = vi.fn();
 const getEnabledCountryIdsFromDb = vi.fn();
 
 vi.mock("@/lib/mongodb", () => ({
@@ -24,10 +23,6 @@ vi.mock("@/lib/mongodb", () => ({
   })),
 }));
 
-vi.mock("@/lib/crises/queries/crisisQueries", () => ({
-  listCrises: (...a: unknown[]) => listCrises(...a),
-}));
-
 vi.mock("@/lib/countryAccess", () => ({
   getEnabledCountryIdsFromDb: (...a: unknown[]) => getEnabledCountryIdsFromDb(...a),
 }));
@@ -41,11 +36,9 @@ describe("getCachedLandingData", () => {
     findOne.mockReset();
     aggregateToArray.mockReset();
     countryStateToArray.mockReset();
-    listCrises.mockReset();
     getEnabledCountryIdsFromDb.mockReset();
 
     findOne.mockResolvedValue({ seedYear: 1979 });
-    listCrises.mockResolvedValue({ crises: [], currentTurn: 1, startingYear: 1979 });
     getEnabledCountryIdsFromDb.mockResolvedValue(["US", "UK"]);
     aggregateToArray.mockResolvedValue([
       { _id: "US", count: 12 },
@@ -121,7 +114,6 @@ describe("getCachedLandingData", () => {
     expect(a.playerCounts).toEqual({ US: 12, UK: 3 });
     expect(b).toBe(a);
     expect(aggregateToArray).toHaveBeenCalledTimes(1);
-    expect(listCrises).toHaveBeenCalledTimes(1);
   });
 
   it("coalesces concurrent misses onto one in-flight load", async () => {

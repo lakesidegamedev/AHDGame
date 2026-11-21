@@ -2,9 +2,9 @@ export const generalsGuideContent = `# Generals & the Officer Corps
 
 A general is not an NPC. **A general is a player character** (one of your own, or one of your countrymen's) wearing a second hat.
 
-Every character profile has a **Political** tab, the career you already know, and a **Military** tab, which holds their general (business owners also get a Business tab). The Military tab stays locked until somebody commissions them, and in a world with the conflict system switched off. After that, it is a full progression system running in parallel with their political life: rank, experience, skill points, and a trait tree of 115 nodes.
+Every character profile has a **Political** tab, the career you already know, and a **Military** tab, which holds their general (business owners also get a Business tab). The Military tab stays locked until somebody commissions them. After that, it is a full progression system running in parallel with their political life: rank, experience, skill points, and a trait tree of 115 nodes.
 
-This matters more than it sounds. **Generals are the only thing that makes your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder. Generals carry units to fronts and lead them, which is how they fit into [Conflicts & the Military System](/wiki/conflicts-overview).
+This matters more than it sounds. **Generals are one of the things that make your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder. Generals carry units to fronts and lead them, which is how they fit into [Conflicts & the Military System](/wiki/conflicts-overview).
 
 ## A general's life in outline
 
@@ -22,7 +22,7 @@ A general starts at Brigadier with 4 skill points. They earn experience (XP) fro
 | Tenure points | 1 per 24 turns, lifetime cap 20 |
 | Post-Field-Marshal points | 1 per 200 XP past 740, lifetime cap 15 |
 | Maximum lifetime points | 55, against 115 trait nodes |
-| Cost of every trait node | 1 point |
+| Cost of a trait node | Set per node, 1 point for a basic up to 4 for a capstone |
 | Command fit | 50 + 8 per rank + 2 per trained trait, kept between 40 and 98 |
 
 ### One general, start to finish
@@ -57,7 +57,7 @@ Five ranks, earned by cumulative XP:
 
 Promotion is **automatic**: hit the threshold and it happens on the turn the XP lands. XP is cumulative and never spent, so your progress within a rank is the distance between two thresholds.
 
-The corps roster and your own profile both show this as \`Lt. General · 84/210 XP to General\`.
+The corps roster shows this as \`Lt. General · 84/210 XP to General\`.
 
 ### Earning XP
 
@@ -66,7 +66,7 @@ XP comes from **fighting**, and battle wins and losses are the main source (see 
 - A **flat participation bonus** for every battle: **45 XP** for a win, **20 XP** for a loss.
 - Plus a **per-unit share** for each formation they personally led in the engagement, scaled by how that formation did.
 
-Notice that losing still pays. A general who fights and loses develops; one who never deploys does not.
+Notice that losing still pays. A general who fights and loses develops; one who never deploys gains only tenure points, or Theater Commander XP.
 
 The flat bonus is deliberately large relative to the per-unit share. For a country fielding one or two formations, it is most of the award, which means **small armies level their generals nearly as fast as superpowers do**, rather than being permanently outpaced.
 
@@ -80,7 +80,7 @@ The measure is deliberately "one average formation," not the front's total. Othe
 
 ## Skill points
 
-Points are the currency you spend on traits. **Every trait node costs exactly 1 point**, so points and nodes are the same thing and the whole budget is legible.
+Points are the currency you spend on traits. **Each trait node has its own cost**, from 1 point for a basic node up to 4 for a capstone, so the whole budget is legible.
 
 \`\`\`wiki-chart
 general-skill-point-sources
@@ -141,7 +141,7 @@ Each node shows one of four statuses:
 
 ### Era gating
 
-Nodes carry a decade, from the 1900s to the 2010s, and are gated against **the live game year**. In a 1953 world, *Shock Commander* (1950s) is trainable while *Adaptive Commander* (2000s) is not, no matter how many points you have banked.
+Nodes carry a decade, from the 1900s to the 2040s, and are gated against **the live game year**. In a 1953 world, *Shock Commander* (1950s) is trainable while *Adaptive Commander* (2000s) is not, no matter how many points you have banked.
 
 This shapes long campaigns: banking points early lets you take newly unlocked capstones the moment their decade arrives.
 
@@ -186,11 +186,11 @@ The Commands page below is the org chart your generals sit in; see [Commands & C
 | See another character's general | **Their profile → Military tab** (read-only) |
 | Post generals to conflicts | \`/country/<code>/general/commands\` (Commanding Generals only) |
 
-If you are a Commanding General, a **"Manage your command →"** link appears on your own profile's Military tab. It only shows for actual CGs, so it never dead-ends.
+If you are a Commanding General, a **"Manage your command →"** link appears on your own profile's Military tab. It shows for whoever is recorded as the lead of a Command, so if you were dismissed or moved abroad while still named as lead, it can still appear and the page will refuse your actions.
 
 ## Building a general worth having
 
-**Commission early and broadly.** Tenure points accrue from the day of commissioning and cap at 20. A general commissioned in peacetime arrives at the war already developed; one commissioned the week war breaks out starts from four points.
+**Commission early and broadly.** Tenure points accrue from the day of commissioning and cap at 20. A general commissioned in peacetime arrives at the war already developed; one commissioned the week war breaks out starts from the four starting points with no tenure.
 
 **Pick a lane in the first few points.** With 55 lifetime points against 115 nodes, spreading thin produces a general who is mediocre at everything. Chains are strict, so a deep path costs you the early nodes anyway, and committing is the whole point.
 
@@ -204,5 +204,5 @@ If you are a Commanding General, a **"Manage your command →"** link appears on
 
 See also: [National Doctrine](/wiki/national-doctrine) for what boosts their traits.
 
-Works in every world and era; later-decade nodes show as Future until their decade arrives, and Scotland and Wales have no defence seat to commission from. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under the military layer
+Works in every world and era; later-decade nodes show as Future until their decade arrives. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under the military layer
 `;

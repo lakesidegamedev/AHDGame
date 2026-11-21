@@ -19,20 +19,20 @@ export function ElectionFooter({ election }: ElectionFooterProps) {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/wiki/elections"
-              className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               ← Election history
             </Link>
             <Link
               href={`/wiki/elections/browse/${election.year}/${election.electionType}`}
-              className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               {election.year} {typeLabel(election.electionType, true)}
             </Link>
             {election.electionType !== "president" && (
               <Link
                 href={`/wiki/elections/browse/${election.state}/${election.electionType}`}
-                className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+                className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
               >
                 {election.stateName} {typeLabel(election.electionType)}
               </Link>
@@ -44,21 +44,21 @@ export function ElectionFooter({ election }: ElectionFooterProps) {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/wiki/election-mechanics"
-              className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               Election mechanics
             </Link>
             {election.electionType !== "president" && (
               <Link
                 href={`/state/${election.state}`}
-                className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+                className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
               >
                 {election.stateName}
               </Link>
             )}
             <Link
               href="/wiki/parties"
-              className="rounded-lg border border-card-border bg-card/40 px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               Political parties
             </Link>

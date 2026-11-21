@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
@@ -51,6 +52,7 @@ import {
   expectedUnitRevenue,
   type SalesAdvanceLine,
 } from "@/lib/market/producerMarket/salesAdvanceRules";
+import { stockBackedExtractionRunShare } from "@/lib/market/producerMarket/rules/extractionRunShare";
 import {
   demandPlanRunShare,
   liveLineReceipt,
@@ -80,7 +82,7 @@ import {
   getOutputMultiplier,
   trendProductionPolicy,
 } from "@/lib/utils/productionPolicy";
-import { energyProductivityMultiplier } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import {
@@ -125,6 +127,7 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** gameConfig.producerOwnSitesFirstStage >= 1: own sites take own output first, nearest first. */
   ownSitesFirst?: boolean;
+  electricityNetworkMode?: import("@/lib/electricityNetwork/rules/types").ElectricityNetworkMode;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
   /** gameConfig.producerPublicCarryReleaseStage >= 1: release carry over several turns. */
@@ -157,6 +160,8 @@ export type ProducerPhysicalEnv = Pick<
   nationalPublicDemandStage?: number;
   /** gameConfig.producerPublicHomeFirstStage: >= 1 lets public buyers clear their own country's sellers first. */
   publicHomeFirstStage?: number;
+  /** gameConfig.producerDemandFloorStage: >= 1 floors the plant share that scales public buying and household transfers. */
+  demandFloorStage?: number;
   /** gameConfig.producerPublicFairShareStage: >= 1 shares world-book levels across public buyers pro rata. */
   publicFairShareStage?: number;
   /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
@@ -232,6 +237,8 @@ export type ProducerPhysicalEnv = Pick<
     | "stateOwnershipConcentrationByCountry"
     | "energyTransition"
     | "automationPolicyByCountry"
+    | "legacyTechStartingYear"
+    | "legacyTechMode"
   >;
 };
 
@@ -314,7 +321,12 @@ export function prepareProducerPhysicalSector(input: {
   const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
-          getSectorTechEffectsForYear(corp, sector.sectorType, currentYear),
+          getSectorTechEffectsForYear(
+            corp,
+            sector.sectorType,
+            currentYear,
+            legacyTechContextFromLookups(lookups)
+          ),
           operatingType,
           sector.strategyId,
           currentYear
@@ -465,21 +477,7 @@ export function prepareProducerPhysicalSector(input: {
   if (sector.sellOutsideFirst === true) plan.sellOutsideFirst = true;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
-    const last = (
-      sector as {
-        producerSettlement?: {
-          soldUnits?: number;
-          turn?: number;
-          products?: {
-            commodity: string;
-            book: string;
-            deliveredUnits?: number;
-            soldUnits?: number;
-            askingUnitPrice?: number;
-          }[];
-        };
-      }
-    ).producerSettlement;
+    const last = sector.producerSettlement;
     const current = last && last.turn === openingTurn ? last : null;
     plan.recentSoldUnits = current?.soldUnits ?? 0;
     // A product the last receipt did not list sold nothing; plants without product rows fall back to the plant total.
@@ -490,6 +488,15 @@ export function prepareProducerPhysicalSector(input: {
           x.deliveredUnits ?? x.soldUnits ?? 0,
         ])
       );
+    const advertising = plan.outputs.find((output) => output.commodity === "advertising");
+    if ((env.shortageAskStage ?? 0) >= 1 && advertising) {
+      const priorOffer = current?.products?.find(
+        (line) => line.commodity === advertising.commodity && line.book === advertising.book
+      );
+      plan.recentOfferedByOutput = {
+        [`${advertising.commodity}|${advertising.book}`]: priorOffer?.offeredUnits ?? 0,
+      };
+    }
     // Stage 2 of the shortage ask: a sold-out seller steps from its own last ask.
     if (current?.products && (env.shortageAskStage ?? 0) >= 2)
       plan.recentAskByOutput = Object.fromEntries(
@@ -504,8 +511,7 @@ export function prepareProducerPhysicalSector(input: {
   if (suspended) plan.activeFraction = 0;
   const nominalDaily = plan.capacityUnits * TURNS_PER_DAY * baseRecipe.nominalAnchorPerCapacityUnit;
   // Output follows price: last turn's own settled receipt sets this turn's run.
-  const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
-    .producerSettlement;
+  const priorReceipt = sector.producerSettlement;
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const settledLast = priorReceipt && priorReceipt.turn === openingTurn ? priorReceipt : null;
@@ -574,13 +580,25 @@ export function prepareProducerPhysicalSector(input: {
       : 0;
   const plannedRunShare = Math.max(unpacedRunShare, ownDemandFloor);
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
-  const runShare = pacedRunShare(
+  const normalRunShare = pacedRunShare(
     plannedRunShare,
     lastReceipt,
     env.runPaceDrop ?? 0,
     runFloor,
     runPlan
   );
+  const runShare =
+    operatingType === "extraction" &&
+    lookups.preset === "2027-default" &&
+    (env.runPlanStage ?? 0) >= 3
+      ? stockBackedExtractionRunShare({
+          runShare: normalRunShare,
+          minimumRunShare: Math.max(runFloor, ownDemandFloor),
+          prior: settledLast?.worldEpoch === input.worldEpoch ? settledLast : null,
+          outputStock: plan.outputStock,
+          allowPartialStock: !recipe.isTransitioning,
+        })
+      : normalRunShare;
   if ((env.demandPlanStage ?? 0) >= 1 || runPlan) plan.plannedRunShare = runShare;
   if (runPlan) plan.priorGlutTurns = glutTurnsThrough(lastReceipt);
   // Wages and site running costs follow the line the plant runs: idle lines
@@ -684,7 +702,7 @@ export function prepareProducerPhysicalSector(input: {
     policyOutput *
     (outputYield / baseRecipe.unitsPerNominalAnchor) *
     extraction *
-    energyProductivityMultiplier(sector.sectorType, currentTurn, lookups.preset) *
+    plantThroughputMultiplier(sector, currentTurn, lookups.preset) *
     (sector.sectorType === "financial"
       ? commodityProductionCapacityScale(corp.bankCharter, env.privateBankingEnabled === true)
       : 1) *

@@ -10,7 +10,7 @@ Levels are cumulative: v2 includes v0 and v1, and v6 includes everything below i
 
 | Level | What NPPs gain | What you may notice |
 | --- | --- | --- |
-| **off** | Reactive cross-pressure voting and elections only | NPPs only react; nothing is proposed by them |
+| **off** | No NPP autonomy anywhere | NPPs do nothing on their own |
 | **v0** | Bill sponsorship, international organization votes and a stalled prime minister filled in countries nobody plays; a caretaker central bank chair in any country except the US when no eligible player is available | Empty top jobs get filled |
 | **v1** | Executive formation, ministerial governance and governing agendas; government agenda bills, opposition rival bills and opposition bloc voting | NPP-led cabinets act coherently instead of sponsoring one-off bills |
 | **v2** | **Comingle tier**: caretaker ministers, caretaker CEOs for vacant corporations, NPP corporate attacks | NPPs staff vacant ministries and companies even where players play |
@@ -24,7 +24,7 @@ Levels are cumulative: v2 includes v0 and v1, and v6 includes everything below i
 ## Where it applies
 
 - **Countries nobody plays:** the world's level applies as-is, from v0 to v6.
-- **Player countries:** autonomy only acts at **v2 and above**. Below v2 it counts as off there, so humans stay in charge of countries people actually play. A few things never reach a player country at any level: the stalled prime minister fill, international organization votes and NPP presidential entry. Bill sponsorship reaches them only from v4. The caretaker central bank chair is the one exception the other way: it can be seated in a player country at any level above off.
+- **Player countries:** autonomy only acts at **v2 and above**. Below v2 it counts as off there, so humans stay in charge of countries people actually play. A few things never reach a player country at any level: the stalled prime minister fill, international organization votes. NPP presidential entry is also blocked there, except in the first round of a bound Russian direct presidential ballot. Bill sponsorship reaches them only from v4. The caretaker central bank chair is the one exception the other way: it can be seated in a player country at any level above off.
 
 A world is set to v3. In a country nobody plays, NPP sponsorship, cabinets, savings, union bargaining, investing and primary challengers all run. In a country players play, the same level counts as v3 and acts, because it is above v2, but NPPs there sponsor no bills until v4. At v1, the first country would still see sponsorship and cabinets, but the player country would see no NPP autonomy beyond a caretaker central bank chair.
 
@@ -50,5 +50,5 @@ v6 changes how well NPPs pursue the v5 activities and what they cost to run each
 | Standing goals a v5 government keeps | 3 (2 easy, 5 hard singleplayer) |
 | NPP rally frequency (v6) | One every 4 turns |
 
-Depends on the world: other worlds keep the level they were set to. Last checked 2026-10-30, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html) and each engine change in the [NPP changelog](/changelog/npp)
+Depends on the world: singleplayer worlds keep the level their player chose, and hosted worlds set below v4 keep theirs. Last checked 2026-10-30, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html) and each engine change in the [NPP changelog](/changelog/npp)
 `;

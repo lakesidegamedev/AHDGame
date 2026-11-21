@@ -4,7 +4,8 @@
  * `gameConfig.wholePlantsStage` (0 or absent = off). With the stage on:
  *
  *   capitalStock === plantCount * size
- *   0 <= plantUnitRemainder < size   construction credit, does not produce
+ *   0 <= plantUnitRemainder < size   delivered part of the plant under construction;
+ *                                    it produces, but is not a plant yet
  *   0 <= plantWearUnits     < size   wear toward the next plant coming off
  *
  * Losses fill the wear counter; free/partial gains fill the credit; a whole
@@ -28,6 +29,18 @@ function finiteNonNegative(value: number | null | undefined): number {
 
 function validSize(size: number): number {
   return Number.isFinite(size) && size > 0 ? size : 1;
+}
+
+/**
+ * Units that run: the finished plants plus the delivered part of the plant
+ * still being built. Plant counts stay whole; output, crew, upkeep and inputs
+ * follow this figure.
+ */
+export function productiveCapacityUnits(
+  ownedUnits: number | null | undefined,
+  creditUnits: number | null | undefined
+): number {
+  return finiteNonNegative(ownedUnits) + finiteNonNegative(creditUnits);
 }
 
 /** Whole plants in `units`, tolerant of float noise just below a boundary. */
@@ -135,9 +148,9 @@ export function applyPlantChange(
 }
 
 /**
- * Plant steps for a build order. An order stamped with `plantUnits` delivers
- * whole plants: plant k of p lands on the first turn the linear ramp passes
- * k/p, the last on `onlineTurn`. Returns the stepped delivered fraction.
+ * The whole-plant step curve: plant k of p lands on the first turn the linear
+ * ramp passes k/p. Live delivery is linear; this only reconstructs what an
+ * in-flight order had already delivered under the step curve.
  */
 export function steppedDeliveredFraction(
   linearFraction: number,

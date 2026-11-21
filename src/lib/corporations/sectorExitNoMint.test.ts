@@ -276,7 +276,7 @@ describe("C1 — sectorTurn maintains the paid basis", () => {
     founding: true,
   }).totalAnchor;
 
-  function newborn(currentTurn: number): CorporateSector {
+  function newborn(currentTurn: number, startTurn = 1000): CorporateSector {
     return {
       _id: SECTOR_ID,
       corporationId: CORP_ID,
@@ -301,22 +301,25 @@ describe("C1 — sectorTurn maintains the paid basis", () => {
         {
           unitsOrdered: UNITS,
           costPaidAnchor: paid,
-          startTurn: 1000,
+          startTurn,
           onlineTurn: 1000 + CAPACITY_BUILD_TURNS(TYPE),
+          deliveryBaseFraction: 0,
         },
       ],
       createdAt: new Date(),
     } as unknown as CorporateSector;
   }
 
-  it("holds the basis at 0 while the build is in flight", () => {
+  it("moves only the delivered slice of paid cash into the basis while the build is in flight", () => {
     const set = runTurn(newborn(1001), 1001);
-    expect(set.capacityBookAnchor).toBe(0);
+    const book = set.capacityBookAnchor as number;
+    expect(book).toBeGreaterThan(0);
+    expect(book).toBeLessThan(paid / 2);
   });
 
   it("moves the order's PAID cash into the basis on the turn it lands", () => {
     const landTurn = 1000 + CAPACITY_BUILD_TURNS(TYPE);
-    const set = runTurn(newborn(landTurn), landTurn);
+    const set = runTurn(newborn(landTurn, landTurn - 1), landTurn);
     const book = set.capacityBookAnchor as number;
     const stock = set.capitalStock as number;
     expect(stock).toBeGreaterThan(0);

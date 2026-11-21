@@ -153,6 +153,7 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
           startTurn: currentTurn,
           onlineTurn: currentTurn + CAPACITY_BUILD_TURNS(sector.sectorType, true),
           smooth: true,
+          deliveryBaseFraction: 0,
         }
       : null;
   const nextBuildQueue: SectorBuildOrder[] = flipGrowthCreditOrder

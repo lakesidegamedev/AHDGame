@@ -78,7 +78,7 @@ Trifecta holders use the state redistricting editor to:
 
 - Paint squares left, right or grey by hand (click to cycle a square, or drag to paint several), keeping the state's totals unchanged.
 - Apply **auto-map strategies** within legal caps: Competitive (maximize toss-ups), Fair (low efficiency gap), Lean Left, Lean Right, Max Left and Max Right.
-- Review a **composition summary**: seat lean breakdown, compactness indicators, and efficiency-gap readout before committing.
+- Review a **composition summary**: seat lean breakdown, efficiency-gap readout against its cap, and a seat projection before committing.
 
 A committed map is used by the next House race in that state to resolve.
 

@@ -21,7 +21,7 @@ The shared ballot framework and eligibility rules come from the same system as [
 | **Any seated member** | Every party with at least one seat may run and vote. | US Speaker, German Bundestagspräsident, Nigerian Speaker and Senate President, China's NPCSC Chairman |
 | **Largest single party only** | Only the chamber's biggest party may run and vote. | China's CPPCC Chairman |
 
-Majority and Minority Leader are stricter and are covered on [Congress Leadership](/wiki/congress-leadership). Under "any seated member" bloc and party do not matter, though in practice the biggest party's numbers usually decide the result. (When the majority bloc matters, it is set by [Coalitions](/wiki/coalitions), which decides which parties can run for the minority posts.)
+Majority Leader uses the largest single party rule, Minority Leader is open to parties outside the majority bloc, and both are covered on [Congress Leadership](/wiki/congress-leadership). Under "any seated member" bloc and party do not matter, though in practice the biggest party's numbers usually decide the result. (When the majority bloc matters, it is set by [Coalitions](/wiki/coalitions), which decides which parties can run for the minority posts.)
 
 Two things can knock an incumbent off the ballot. One who loses their chamber seat (a House seat for the US Speaker, an NPC delegate seat for either Chinese chair) drops off even mid-term. And a party that loses its majority status can knock its own incumbent off when the rule is party-gated.
 
@@ -45,7 +45,7 @@ The modern Bundestag has 630 seats and three candidates: A gets 250 votes, B get
 
 **Germany, Bundestagspräsident.** Opens automatically once the Bundestag is filled through direct mandates and list seats. Any seated member may declare and vote.
 
-**Nigeria.** Two officers are elected separately: the Speaker of the House of Representatives and the Senate President. An admin opens and closes each ballot. Each ballot draws votes only from that chamber's members, so a House member cannot vote in the Senate President race.
+**Nigeria.** Two officers are elected separately: the Speaker of the House of Representatives and the Senate President. An admin can start each ballot, which then runs for 24 hours. Each ballot draws votes only from that chamber's members, so a House member cannot vote in the Senate President race.
 
 **China.** Two chairs, both drawn from seated National People's Congress delegates. The NPCSC Chairman is open to any seated delegate. The CPPCC Chairman is restricted to the largest single party, the same rule as the US Majority Leader.
 

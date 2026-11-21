@@ -17,7 +17,7 @@ A trade deal, a sanction or a call to arms only happens here if enough other cou
 
 ## Organizations and their ballots
 
-Every organization has members, a leader, a charter, a category and a treasury. Which actions it can take depends on its category. Members vote on each action in a ballot that stays open for **24 turns**.
+Every organization has a charter, a category and a leadership office, and it gains members as countries are admitted. Which actions it can take depends on its category. Voting members vote on each action in a ballot that stays open for **24 turns**.
 
 ### Built-in organizations
 
@@ -81,7 +81,7 @@ Five countries sit in an Economic organization: A, B, C, D, E. A and B want an F
 
 ### Joint statements, aid and trade
 
-A joint statement about a country shifts its approval for 24 turns, and aid and statements change a member's approval and growth (see [Government Approval](/wiki/government-approval)). Shared membership multiplies trade affinity by 1.25 and a free trade agreement by 1.6, so organizations feed directly into [International Trade](/wiki/trade-system). An FTA also sets the tariff between its parties to zero; see [Tariffs](/wiki/tariffs).
+A joint statement about a country shifts its approval for 24 turns, and aid changes a member's approval and growth (see [Government Approval](/wiki/government-approval)). Shared membership multiplies trade affinity by 1.25 and a free trade agreement by 1.6, so organizations feed directly into [International Trade](/wiki/trade-system). An FTA also sets the tariff between its parties to zero; see [Tariffs](/wiki/tariffs).
 
 ### Leadership
 
@@ -118,7 +118,7 @@ Some newer treaty organizations pass **terms** as a directive. The terms last 24
 ## Using it as foreign minister
 
 - **Open the page.** World, then International Organizations, then pick an organization to see members, leader, charter, active resolutions with live tallies, and history.
-- **Table a resolution** as your country's foreign minister (see [Cabinet](/wiki/cabinet); the trade minister sets embargoes). It costs 1 diplomatic action, or 1 agenda action if you head that organization.
+- **Table a resolution** as your country's foreign minister or head of government, or as the head of that organization (see [Cabinet](/wiki/cabinet); the trade minister sets embargoes). It costs 1 diplomatic action, or 1 agenda action if you head that organization.
 - **Vote** as foreign minister. Voting is free, on any open ballot your country is entitled to.
 - **Apply to join or propose to leave** as foreign minister. Your legislature must also pass the bill.
 - **Nominate a leadership candidate** as foreign minister when the term ends.

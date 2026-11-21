@@ -1,6 +1,10 @@
+import { fundedSiteSlice } from "./rules/fundedSiteSlice";
+import { transferFundedSite } from "./fundedSiteTransfer";
+import { producerDebtAnchor } from "./rules/fundedOwnership";
+import { TIER_MULTIPLIER } from "./constants";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
@@ -319,6 +323,11 @@ export async function nationalizeSectorWide(
     const corpSectors = await sectors
       .find({ countryId: params.countryId, ...sectorLane })
       .toArray();
+    const completedTransfers = new Set(
+      corpSectors
+        .filter((s) => s.corporationId?.equals(dest._id))
+        .map((s) => s.ownershipTransferKey)
+    );
     // Cache donor corps so each is loaded once.
     const donorById = new Map<string, Corporation | null>();
     for (const sec of corpSectors) {
@@ -338,6 +347,7 @@ export async function nationalizeSectorWide(
       if (isWithinRenationalizeCooldown(donor, params.consequence.turn)) continue;
       const transitionKey = `nationalize-sector-wide:${params.consequence.turn}:${sec._id.toHexString()}`;
       const compensationKey = `nationalize-sector-wide:${params.countryId}:${sec._id.toString()}:${params.consequence.turn}`;
+      if (sec.producerInventory && completedTransfers.has(compensationKey)) continue;
       let compensationLedger: Awaited<ReturnType<typeof resolveTreasuryCashOptions>> | undefined;
       if (sec.pendingFundedNationalization) {
         compensationLedger = await resolveTreasuryCashOptions(db);
@@ -369,8 +379,9 @@ export async function nationalizeSectorWide(
       // nationalization payout — see ownershipTransition.nationalizeSector.
       // D11: under plants the base is replacement-cost book, with the matching
       // premium applied inside applyTier.
+      const quotedSlice = plantsEnabled && sec.producerInventory ? fundedSiteSlice(sec, f) : null;
       const valuationAnchor = sectorCompensationValuationAnchor(
-        sec,
+        quotedSlice ? { ...sec, ...quotedSlice.acquired } : sec,
         computeSectorNpvSum([sec], primeMap, donor, fxByCurrency, {
           excludeGrowthCost: true,
           plantsEnabled,
@@ -379,11 +390,17 @@ export async function nationalizeSectorWide(
           plantsEnabled,
           currentYear: sweepCurrentYear,
           currentTurn: params.consequence.turn,
-          fraction: f,
+          fraction: quotedSlice ? 1 : f,
           eraUnitScale: sweepEraUnitScale,
         }
       );
-      const payoutAnchor = applyTier(valuationAnchor, params.tier, { plantsEnabled });
+      const payoutAnchor = Math.max(
+        0,
+        applyTier(valuationAnchor, params.tier, { plantsEnabled }) -
+          producerDebtAnchor(donor.producerPayables, sec._id.toHexString()) *
+            (quotedSlice?.liabilityFraction ?? f) *
+            TIER_MULTIPLIER[params.tier]
+      );
       compensationLedger ??= await resolveTreasuryCashOptions(db);
       let fundedCompensationLocal: number | undefined;
       let fundedCompensationNewlySettled = false;
@@ -526,6 +543,54 @@ export async function nationalizeSectorWide(
           })()
         : null;
 
+      if (sec.producerInventory && carvedPlant) {
+        const keptPlant = carveSectorPlantFields(
+          readSectorPlantFields(sec),
+          1 - f,
+          plantCountSplit.kept
+        );
+        await transferFundedSite(db, {
+          source: sec,
+          toId: dest._id,
+          key: compensationKey,
+          transitionKey,
+          fraction: f,
+          liabilityFraction: openingPlantCount > 0 ? plantCountSplit.carved / openingPlantCount : f,
+          acquired: {
+            ...carvedPlant,
+            revenue: Math.round(sec.revenue * f * (1 - NATIONALIZATION_REVENUE_HAIRCUT)),
+            workers: carvedWorkers,
+            currentGrowthCost: Math.round(sec.currentGrowthCost * f),
+            absorbedAtTurn: params.consequence.turn,
+            nationalizedAtTurn: params.consequence.turn,
+            nationalizationTransitionMultiplier: transitionMultiplier,
+            sectorNationalizationScope: params.scope,
+            sectorNationalizationCarveFraction: f,
+            nationalizationProvenance: {
+              formerCorporationId: donor._id,
+              formerCountryId: sec.countryId,
+              formerRevenue: sec.revenue * f,
+              formerCapitalStock: carvedPlant.capitalStock / (1 - NATIONALIZATION_REVENUE_HAIRCUT),
+              takenAtTurn: params.consequence.turn,
+              compensationAnchor: payoutAnchor,
+              compensationCountryId: params.countryId,
+            },
+            updatedAt: now,
+          },
+          retained: {
+            ...keptPlant,
+            revenue: Math.round(sec.revenue * (1 - f)),
+            workers: Math.round(sec.workers * (1 - f)),
+            currentGrowthCost: Math.round(sec.currentGrowthCost * (1 - f)),
+            updatedAt: now,
+          },
+        });
+        await releaseConstructionPropertyTransition(db, sec._id, transitionKey);
+        affectedCorpIds.add(donorKey);
+        sectorsCarved++;
+        totalPayoutAnchor += fundedPayoutAnchor ?? payoutAnchor;
+        continue;
+      }
       await addToNatCorp(
         sec.stateId,
         carvedRevAnchor,

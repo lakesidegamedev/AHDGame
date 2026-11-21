@@ -1,9 +1,12 @@
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { processRegionalDebt } from "@/lib/budget/regionalDebtTurn";
 /**
  * The `stateEffectsAndNationalAggregation` turn-phase adapter, moved verbatim
  * out of turnPhaseRegistry.ts (pure code motion). getTurnPhaseRegistry splices
  * it back into the registry array at the exact same position, so phase
  * registration ORDER — which is behavior — is unchanged.
  */
+import { shouldPauseFoundingCrisisOpenings } from "@/lib/crises/rules/foundingCrisisPause";
 import type { CountryId } from "@/lib/constants/countries";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
@@ -104,12 +107,15 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     // Order: crisisTurn -> ministerialOrders -> policyEffects. The $inc writers are
     // commutative; policyEffects runs LAST so its read observes the shocked values
     // and bill effects apply on top, the intended semantics.
+    const pauseCrisisOpenings = shouldPauseFoundingCrisisOpenings(gameState.preIteration, newTurn);
     const serializedStateMetricsPrerequisites = (async () => {
       // Pass the authoritative turn-context year: gameState.currentYear is only
       // stamped at turn end, so reading it here would gate year-boundary openings
       // one turn late.
       const crisisResult = await runtime.runPhase("crisisTurn", async () => {
-        const processed = await processCrisisTurn(db, newTurn, currentYear);
+        const processed = await processCrisisTurn(db, newTurn, currentYear, {
+          pauseOpenings: pauseCrisisOpenings,
+        });
         // A failed inbox alert must never fail the crisis phase.
         await notifyCrisisChanges(db, newTurn).catch((err) =>
           console.error("[crisisTurn] inbox alerts failed:", err)
@@ -118,7 +124,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       });
       // Same stateMetrics writers as crisisTurn, so it stays inside this chain.
       const crisisV2Result = await runtime.runPhase("crisisV2Turn", () =>
-        processCrisisV2Turn(db, newTurn)
+        processCrisisV2Turn(db, newTurn, { pauseOpenings: pauseCrisisOpenings })
       );
       // Winners and licences write approval through the same state writers.
       await runtime.runPhase("frontierRaces", () => processFrontierRaces(db, newTurn));
@@ -341,6 +347,14 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       // self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS.
       runtime.runPhase("justiceActionReset", () => resetJusticeActions(db, newTurn)),
     ]);
+    const regionalDebtResult = await runtime.runPhase("regionalDebtService", async () => {
+      try {
+        return await processRegionalDebt(db, newTurn);
+      } catch (error) {
+        throw new TurnMustStopError("regionalDebtService", error);
+      }
+    });
+    phaseResults.regionalDebtService = regionalDebtResult;
     phaseResults.policyEffects = { statesProcessed: policyResult ?? 0 };
     phaseResults.demographicEffects = { statesProcessed: demoEffectResult ?? 0 };
     phaseResults.regionalBudgetProcessing = regionalBudgetResult

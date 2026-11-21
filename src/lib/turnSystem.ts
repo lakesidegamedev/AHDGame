@@ -1,3 +1,8 @@
+import { localTurnLock } from "@/lib/turn/turnInitialization";
+import type { ObjectId } from "mongodb";
+export { toggleFastMode } from "@/lib/turn/turnFastMode";
+
+export { initializeGameState, releaseLocalProcessingLock } from "@/lib/turn/turnInitialization";
 import { corporationTurnRerunSet, startFreshJournal } from "@/simulation/engine/corporationResume";
 import { resilienceStageOf } from "@/lib/turn/corporation/resume/rules";
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
@@ -11,14 +16,12 @@ import {
   markServerTurnAnalyticsCommitted,
 } from "@/lib/analytics/serverPosthog";
 import * as Sentry from "@sentry/nextjs";
-import { randomUUID } from "node:crypto";
+
 import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
-import { ObjectId } from "mongodb";
-import { getGameState, invalidateGameStateCache } from "@/lib/gameState";
+
+import { invalidateGameStateCache } from "@/lib/gameState";
 import type {
-  GameConfig,
-  GameState,
   TurnLog,
   GameIteration,
   TurnPhaseTelemetryMap,
@@ -26,21 +29,13 @@ import type {
 } from "@/lib/db/types";
 import { invalidateGameTimeCache, reconcileGameStateClock } from "@/lib/time/gameTime";
 import { emit } from "@/lib/events";
-import { resolveGeneralElections } from "@/lib/turn/electionResolution";
-import { recordPrimarySnapshots } from "@/lib/turn/primaryResolution";
-import {
-  ensurePerpetualElections,
-  ensureUKElections,
-  ensureUKRegionalCouncilElections,
-} from "@/lib/elections/scheduling";
+
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
-import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
-import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
+
 import { processGameHealthSnapshot } from "@/lib/turn/gameHealthSnapshot";
 import {
   TURN_LOCK_STALE_MS,
   shouldRecoverCrashedTurn,
-  turnHasCommittedWrites,
   TURN_BOOTSTRAP_PHASE,
 } from "@/lib/turn/processingLock";
 import { getLatestCompletedTurnRealTime } from "@/lib/turn/turnLogQueries";
@@ -123,158 +118,14 @@ import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 const turnBuild = currentTurnBuild();
 
 // Re-export public helpers consumed by other modules
+export { recordPrimarySnapshots } from "@/lib/turn/primaryResolution";
+export { resolveGeneralElections } from "@/lib/turn/electionResolution";
 export {
-  recordPrimarySnapshots,
-  resolveGeneralElections,
   ensurePerpetualElections,
   ensureUKElections,
   ensureUKRegionalCouncilElections,
-};
-export { getGameState, invalidateGameStateCache };
-
-// ─── Game state helpers ───────────────────────────────────────────────────────
-
-// Compatibility exports live above; turn orchestration state begins below.
-
-export async function initializeGameState(): Promise<GameState> {
-  const db = await getDb();
-  const existing = await getGameState(db);
-  if (existing) return existing;
-
-  const now = new Date();
-  const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
-
-  const initialState: GameState = {
-    _id: "current",
-    worldEpochId: new ObjectId().toHexString(),
-    resetWorldId: randomUUID(),
-    currentTurn: 1,
-    hardwareInputReliefStartTurn: 1,
-    stockHoldingTaxStartTurn: 1,
-    currentYear: STARTING_YEAR,
-    // Always pair `startingYear` with the matching `preset`. Writing only
-    // `startingYear` previously left `preset` undefined, which made
-    // `cycleAnchorContextFromGameState` silently fall back to 2019-default
-    // even when the row's `startingYear` was updated to 1991 — producing
-    // the "2023 NPC Delegate in a 1991 game" symptom on sandbox.
-    // `resetGameWorld` still overwrites both when an admin selects a preset.
-    startingYear: DEFAULT_CYCLE_ANCHOR_CONTEXT.startingYear,
-    preset: DEFAULT_CYCLE_ANCHOR_CONTEXT.preset,
-    isActive: false,
-    lastTurnProcessed: now,
-    nextScheduledTurn: nextHour,
-    pausedAt: null,
-    corporationActionsPaused: false,
-    playerTransfersPaused: false,
-    fastMode: false,
-    processingKind: null,
-    processingStartedAt: null,
-    processingTargetTurn: null,
-    processingHeartbeatAt: null,
-    processingPhase: null,
-    processingPhaseStatuses: null,
-    processingPhaseResults: null,
-    createdAt: now,
-    updatedAt: now,
-    // Fresh worlds start with the production feature-flag posture instead of
-    // everything-off (see featureFlagDefaults.ts for the rationale).
-    ...DEFAULT_GAME_STATE_FLAGS,
-  };
-
-  const gameStateCol = await getGameStateCollection(db);
-  await gameStateCol.insertOne(initialState);
-  return initialState;
-}
-
-// ─── Main turn processor ─────────────────────────────────────────────────────
-
-// True only while THIS process holds the turn-processing lock. Used by the
-// graceful-shutdown handler (src/lib/turn/shutdownHandler.ts) to release the
-// lock when Railway sends SIGTERM mid-turn on a redeploy — otherwise the lock
-// strands with a frozen heartbeat and no turn runs until the 20-min stale
-// takeover on a later cron tick (2026-07 stuck-turn incident). Scoping the
-// release to the acquiring process makes it safe across concurrent containers:
-// a process never clears a lock it did not set.
-let localTurnLockHeld = false;
-
-/**
- * Best-effort release of a turn-processing lock held by THIS process. No-op if
- * this process does not currently hold the lock. Called on graceful shutdown so
- * a redeploy mid-turn recovers instantly instead of waiting out the stale TTL.
- * Guarded by `isProcessing: true` so it never resurrects a lock a newer process
- * already re-acquired and cleared.
- */
-export async function releaseLocalProcessingLock(reason: string): Promise<boolean> {
-  if (!localTurnLockHeld) return false;
-  try {
-    const db = await getDb();
-
-    // How far did this turn get? A full release wipes `processingPhase` and
-    // `processingPhaseStatuses`, which are exactly the fields `shouldRecoverCrashedTurn`
-    // reads to decide whether re-running would double-apply. Releasing a turn that had
-    // already committed writes therefore made the NEXT cron re-run it from the start and
-    // pay every additive income phase twice: fund generation, corp dividends, savings
-    // interest, bond coupons, treasury. The guard exists to prevent precisely that,
-    // and a clean shutdown was defeating it.
-    const live = await (
-      await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
-    const committed = turnHasCommittedWrites(live?.processingPhase);
-
-    if (committed) {
-      // Keep the lock held and the evidence intact. `processingAbandonedAt` makes the
-      // lock read as stale IMMEDIATELY, so the next cron consumes this turn rather than
-      // serving the full 20-minute wait first. A deploy then costs the remainder of one
-      // turn instead of that turn plus the next slot.
-      await (
-        await getGameStateCollection(db)
-      ).updateOne(
-        { _id: "current", isProcessing: true },
-        { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
-      );
-      localTurnLockHeld = false;
-      invalidateGameStateCache();
-      console.warn(
-        `[Turn System] Abandoned in-flight turn on ${reason} at phase ${live?.processingPhase}. ` +
-          `Lock left held with evidence intact; the next tick will consume the turn rather ` +
-          `than re-running and double-applying it.`
-      );
-      return true;
-    }
-
-    // Nothing committed yet, so the turn is losslessly re-runnable: release outright and
-    // let the next container simply run it.
-    await (
-      await getGameStateCollection(db)
-    ).updateOne(
-      { _id: "current", isProcessing: true },
-      {
-        $set: {
-          isProcessing: false,
-          processingKind: null,
-          processingStartedAt: null,
-          processingTargetTurn: null,
-          processingHeartbeatAt: null,
-          processingPhase: null,
-          processingPhaseStatuses: null,
-          processingPhaseResults: null,
-          processingAbandonedAt: null,
-          updatedAt: new Date(),
-        },
-      }
-    );
-    localTurnLockHeld = false;
-    invalidateGameStateCache();
-    console.warn(`[Turn System] Released in-flight processing lock on ${reason}.`);
-    return true;
-  } catch (err) {
-    console.error(`[Turn System] Failed to release processing lock on ${reason}:`, err);
-    Sentry.captureException(err, {
-      tags: { component: "turnSystem", op: "shutdownLockRelease" },
-    });
-    return false;
-  }
-}
+} from "@/lib/elections/scheduling";
+export { getGameState, invalidateGameStateCache } from "@/lib/gameState";
 
 function phasesStarted(phase: string | null): boolean {
   return phase != null && phase !== TURN_BOOTSTRAP_PHASE;
@@ -529,7 +380,7 @@ async function processTurnImpl(
     }
 
     // This process now owns the lock — allow graceful shutdown to release it.
-    localTurnLockHeld = true;
+    localTurnLock.held = true;
     // With the fast takeover on, a holder that lost its lock must not write over
     // the new holder's state: every lock-owner write below is conditional on it.
     setTurnLockFence(resilienceStage >= 1 ? TURN_HOLDER_ID : null);
@@ -836,7 +687,7 @@ async function processTurnImpl(
     if (turnLockFenceActive() && completionWrite.matchedCount === 0) {
       throw new TurnLockLostError("completion write found the lock gone");
     }
-    localTurnLockHeld = false;
+    localTurnLock.held = false;
     markServerTurnAnalyticsCommitted({ emit: !localSingleplayer && config?.simSandbox !== true });
 
     invalidateGameTimeCache();
@@ -1117,7 +968,7 @@ async function processTurnImpl(
               },
         }
       );
-      localTurnLockHeld = false;
+      localTurnLock.held = false;
 
       if (
         !isSingleplayer() &&
@@ -1188,7 +1039,7 @@ async function processTurnImpl(
     } catch (releaseError) {
       // A failed release is reclaimed by the 20-min stale takeover, but
       // surface it rather than swallow: a silently-stranded lock wedges turns.
-      // Do NOT clear localTurnLockHeld, so graceful shutdown can retry.
+      // Do NOT clear localTurnLock.held, so graceful shutdown can retry.
       console.error("[Turn System] Failed to release lock after turn error:", releaseError);
       Sentry.captureException(releaseError, {
         tags: { component: "turnSystem", op: "lockReleaseAfterError" },
@@ -1319,55 +1170,6 @@ export async function stopTurnSystem(): Promise<{ success: boolean; message: str
     return {
       success: false,
       message: `Failed to stop: ${error instanceof Error ? error.message : "Unknown error"}`,
-    };
-  }
-}
-
-// ─── Fast mode toggle ─────────────────────────────────────────────────────────
-
-export async function toggleFastMode(): Promise<{
-  success: boolean;
-  message: string;
-  fastMode: boolean;
-}> {
-  try {
-    const db = await getDb();
-    const gameState = await getGameState(db);
-
-    if (!gameState) {
-      return { success: false, message: "Game state not found", fastMode: false };
-    }
-
-    const newFastModeState = !gameState.fastMode;
-
-    await (
-      await getGameStateCollection(db)
-    ).updateOne(
-      { _id: "current" },
-      { $set: { fastMode: newFastModeState, updatedAt: new Date() } }
-    );
-
-    invalidateGameStateCache();
-
-    // Rebuild the schedule if this process owns it; otherwise the worker must restart.
-    const { restartCronWithSchedule } = await import("./cron");
-    const restarted = await restartCronWithSchedule();
-
-    console.log(`[Turn System] Fast mode ${newFastModeState ? "enabled" : "disabled"}`);
-    return {
-      success: true,
-      message:
-        `Fast mode ${newFastModeState ? "enabled" : "disabled"}. Turns will run ${newFastModeState ? "every 30 minutes" : "every hour"}` +
-        (restarted ? "." : " once the turn worker restarts."),
-      fastMode: newFastModeState,
-    };
-  } catch (error) {
-    console.error("[Turn System] Error toggling fast mode:", error);
-    Sentry.captureException(error, { tags: { component: "turnSystem", op: "toggleFastMode" } });
-    return {
-      success: false,
-      message: `Failed to toggle fast mode: ${error instanceof Error ? error.message : "Unknown error"}`,
-      fastMode: false,
     };
   }
 }

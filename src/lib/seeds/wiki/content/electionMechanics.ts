@@ -4,11 +4,11 @@ No office in A House Divided ever sits empty for long. Every seat runs on a cont
 
 ## Two phases, one seat
 
-Every election has two phases.
+A normal election has two phases.
 
 1. **Primary phase.** Candidates from the same party compete for one nomination.
    - **Down-ballot races** (House, Senate, Governor, State Senate and their equivalents abroad) count real primary ballots. Over the closing stretch of the primary, each party's registered voters release a slice of ballots every turn, split between that party's candidates by their standing that turn. The cumulative count names the nominee, so a sustained lead beats a late surge. See [Primaries](/wiki/primaries).
-   - **Presidential** primaries run staggered state voting that hands out pledged delegates. The delegate leader is nominated; in races on the reworked rules (1964 onward) a [convention](/wiki/nominating-convention) settles it if nobody holds a majority.
+   - **Presidential** primaries run staggered state voting that hands out pledged delegates. A delegate majority wins the nomination; in races on the reworked rules (1964 onward) a [convention](/wiki/nominating-convention) settles it if nobody holds a majority.
 2. **General phase.** Nominees from different parties compete. Votes accumulate turn by turn, and the final 4 turns carry 30% of the pool. Only registered voters cast general ballots, and a race can never certify more ballots than it has voters. See [General Elections](/wiki/general-elections).
 
 When the general resolves, winners take office and the next cycle spawns.
@@ -46,7 +46,7 @@ Durations are in real hours, and one real hour is one game week.
 | State Senate | 192h (4 game years) | 168h | 24h |
 | President | 192h (4 game years) | 168h | 24h |
 
-Senate seats are split into three classes per state, staggered about a third of the cycle apart, so one third of the Senate is up at any time. The UK, Germany and Japan use different cycle lengths; see each country hub.
+Senate seats are split into three classes, and each state holds two seats from two of them, staggered about a third of the cycle apart, so one third of the Senate is up at any time. The UK, Germany and Japan use different cycle lengths; see each country hub.
 
 ### The primary score (state races)
 
@@ -61,17 +61,17 @@ The score is a candidate's standing in their own party's primary. It sets how ea
 
 A final infamy penalty cuts the total by 5% at infamy 100. NPP candidates (computer-run politicians) get half score when a player is in the same party's primary, and no infamy penalty. Presidential nominations are decided by delegates instead. With no delegates yet, the national sum of state primary votes decides; only when there are no recorded votes either does the fallback score rank them, weighting party alignment 40, party influence 20, national reach 15 and favorability 25.
 
-Presidential primary states vote in six waves modelled on the 2020 calendar: Iowa, New Hampshire, Nevada and South Carolina, a 14-state Super Tuesday, mid-March, then everyone left. Races from 1964 onward space the waves 8 turns apart over the last 41 turns of the primary, and older races squeeze them into the last 6 turns.
+Presidential primary states vote in six waves modelled on the 2020 calendar: Iowa, then New Hampshire, then Nevada and South Carolina together, a 14-state Super Tuesday, mid-March, then everyone left. Races from 1964 onward space the waves 8 turns apart over the last 41 turns of the primary, and older races squeeze them into the last 6 turns.
 
 ### How general votes are built
 
 Each turn, a pool of votes is split between groups of voters (see [Demographics](/wiki/demographics)) in proportion to their size. Inside each group, candidates share that group's slice by relative weight, which multiplies these parts:
 
 - **Reach:** the square root of your political influence, capped at 1.0 when influence hits 100. Even at influence 0 you keep a floor of 0.1, so a new character is weak and never erased.
-- **Appeal:** how close your positions are to the group's. A perfect match is worth about 25.5 points, and agreeing in direction on both axes adds up to 10 more. Each point of distance costs 5.
+- **Appeal:** how close your positions are to the group's. A perfect match is worth about 25.5 points, and agreeing in direction on both axes adds up to 10 more. Each point of distance takes 5 off a 50 point position score, which a curve then scales down to 25 points.
 - **Approval:** your favorability (plus half of the group's approval of you), raised to the 0.8 power. At 0% you get no votes.
 - **Party organization:** your party's share of the state's organization, raised to the 0.2 power. A 3 to 1 organization lead is only worth about 1.25 to 1 in votes. A candidate with no organization still gets a small floor from personal pull.
-- **Infamy:** up to 5% off for player characters with high infamy.
+- **Infamy:** up to 5% off for any candidate with high infamy.
 - **Voter mood and loyalty:** registration makes a party's own voters 1.0x to 1.3x harder to persuade away, and short-term support moves your swing between 0.6x and 1.4x.
 
 \`\`\`wiki-chart
@@ -88,7 +88,7 @@ A takes 8.0 / 12.9 = 62% of the group, or about 6,180 of 10,000 votes. In a 24-t
 
 ### Third parties and spoilers
 
-Most states use first past the post. A third-party candidate draws 4% of their group votes from the nearest major-party candidate (2% in presidential races, adjusted for who has more organization in the state). A Green candidate bleeds Democrats, which can hand a seat to the Republican. Ranked choice states have no spoiler effect; changing a state's voting system needs legislation.
+Most states use first past the post. A third-party candidate draws 4% of their group votes from the nearest major-party candidate (2% in presidential races, adjusted by the third party's organization compared with the nearest major party's). A Green candidate bleeds Democrats, which can hand a seat to the Republican. Ranked choice states have no spoiler effect; changing a state's voting system needs legislation.
 
 ### National Mood
 
@@ -132,7 +132,7 @@ House, State Senate and other multi-seat contests allocate seats by the largest 
 ## Entering and leaving a race
 
 - **Declare** for one office in your home state or region (President is national). Your home country must match the election's country.
-- **Pick a party.** Independents run in the independent party primary under the same rules.
+- **Party.** You run under your character's current party. Independents nominate through their own voter groups, and cannot run at all in one-party states.
 - **Withdraw** any time before the election resolves. Your votes are removed for good, your campaign is archived and you cannot re-enter that election. During a primary this is almost always wrong; during a general you are losing it can free your actions for the next cycle.
 - **Campaign** with your character's actions (see [Fundraising and Ads](/wiki/fundraising-ads)), and in a presidential race also from the race page's Campaign mode (see [Campaign Manager](/wiki/campaign-manager)).
 - **Build presence, travel, suspend or endorse** in presidential races, as described above.
@@ -148,7 +148,7 @@ Common questions:
 
 The size and positions of voter groups, from [Demographics](/wiki/demographics), set how each turn's pool splits. [Government Approval](/wiki/government-approval) scales how many ballots each state casts per turn, for every candidate alike, so it changes turnout rather than shares, and [National Metrics](/wiki/national-metrics) (unemployment, poverty, inflation and income) set National Mood. Your own side of it comes from [Political Operations](/wiki/political-operations), where Campaign Presence raises vote weight in presidential races, from the actions and strength you build in the [Campaign Manager](/wiki/campaign-manager), and from the money in [Fundraising and Ads](/wiki/fundraising-ads) that pays for them. [Stats & Actions](/wiki/stats-actions) explains where PI, NPI and Favorability, which feed vote reach, appeal and primary scores, come from.
 
-The calendar around the vote matters too. [Core Systems](/wiki/core-systems) is where turns count the ballots and term lengths set the cycle, and [the game loop](/wiki/the-game-loop) shows when the primary and general windows and the vote-weight curve make timing decisive. A move through [Relocation](/wiki/relocation) withdraws open candidacies and vacates seats, which spawn new races. A [snap election](/wiki/snap-elections) resets the next regular election date and runs on the same rules. A passing independence vote in [Referendums](/wiki/referendums) stands up new elections, and [US House Redistricting](/wiki/us-house-redistricting) draws the district maps that decide which House seats are close.
+The calendar around the vote matters too. [Core Systems](/wiki/core-systems) is where turns count the ballots and term lengths set the cycle, and [the game loop](/wiki/the-game-loop) shows when the primary and general windows and the vote-weight curve make timing decisive. A move through [Relocation](/wiki/relocation) withdraws open candidacies and vacates state and region seats (every seat on a move to another country), which spawn new races. A [snap election](/wiki/snap-elections) resets the next regular election date and runs on the same rules. A passing independence vote in [Referendums](/wiki/referendums) stands up new elections, and [US House Redistricting](/wiki/us-house-redistricting) draws the district maps that decide which House seats are close.
 
 Going the other way, this page sets the phases and scoring that [Primaries](/wiki/primaries) follow and the vote accumulation each of [General Elections](/wiki/general-elections) uses. [Polling](/wiki/polling) reuses the same vote model for state races, and the [Vote Factor Ledger](/wiki/vote-factor-ledger) breaks that model into its factors. Winners take office and shift party strength in [Political Parties](/wiki/political-parties), and [Player Progression](/wiki/player-progression) is built on winning a primary and general to get each office. Election night's vote totals appear in [live election results](/wiki/live-election-results). A presidential race with no electoral majority starts the [contingent election](/wiki/contingent-election), whose House or Senate result replaces the Electoral College winner.
 

@@ -365,6 +365,7 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "PL:PL_MAL": { countryId: "PL", resources: { coal: 45000 } }, // Kraków/Jaworzno basin
   "PL:PL_POM": { countryId: "PL", resources: { timber: 22500 } }, // Pomeranian forests
   "PL:PL_EAS": { countryId: "PL", resources: { timber: 30000 } }, // Białowieża/eastern forests
+  "PL:PL_LOD": { countryId: "PL", resources: { coal: 90000 } }, // Bełchatów lignite
 
   // ── Czechoslovakia ────────────────────────────────────────────────────
   "CS:CS_BOH": { countryId: "CS", resources: { coal: 120000 } }, // North Bohemian lignite
@@ -375,6 +376,7 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   // (Bauxite, Hungary's real 1953 headline mineral, has no engine resource.)
   "HU:HU_TRW": { countryId: "HU", resources: { coal: 60000 } }, // Tatabánya/Veszprém brown coal
   "HU:HU_NOR": { countryId: "HU", resources: { coal: 45000, iron: 9000 } }, // Borsod coal; Miskolc-area iron
+  "HU:HU_ALF": { countryId: "HU", resources: { natural_gas: 30000, oil: 15000 } }, // Algyő field, Great Plain
 
   // ── Romania ───────────────────────────────────────────────────────────
   // Ploiești was Europe's largest oil district outside the USSR in 1953.
@@ -382,10 +384,14 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "RO:RO_TRA": { countryId: "RO", resources: { natural_gas: 90000, timber: 22500 } }, // Transylvanian methane fields
   "RO:RO_OLT": { countryId: "RO", resources: { coal: 45000, oil: 15000 } }, // Jiu Valley coal
   "RO:RO_MOL": { countryId: "RO", resources: { oil: 15000 } }, // Bacău oil
+  "RO:RO_DOB": { countryId: "RO", resources: { natural_gas: 30000 } }, // Black Sea offshore gas
 
   // ── Bulgaria ──────────────────────────────────────────────────────────
-  "BG:BG_THR": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite
+  "BG:BG_THR": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (pre-1999 regions)
   "BG:BG_SW": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber
+  // 2027 regions use NUTS ids.
+  "BG:BG34": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (Yugoiztochen)
+  "BG:BG41": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber (Yugozapaden)
 
   // ── Byelorussia ───────────────────────────────────────────────────────
   "BLR:BLR_MIN": { countryId: "BLR", resources: { timber: 9000 } },
@@ -487,6 +493,40 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "TR:TR_ESA": { countryId: "TR", resources: { iron: 45000 } }, // Divriği iron ore
   "TR:TR_SEA": { countryId: "TR", resources: { oil: 30000, natural_gas: 7500 } }, // Batman oilfields
   "TR:TR_CEN": { countryId: "TR", resources: { coal: 22500 } }, // Anatolian lignite
+
+  // ── Canada ────────────────────────────────────────────────────────────
+  // 2027 opening. Ceilings are sized against the US entries above by recent
+  // provincial output (oil in barrels per day, gas in cubic feet per day,
+  // coal and iron ore in tonnes, timber in harvested volume), so a Canadian
+  // sector clears local demand with the same headroom a US state does.
+  "CA:CA_ON": {
+    countryId: "CA",
+    resources: { iron: 15000, timber: 60000, rare_earth: 300, coal: 1500 },
+  }, // Algoma and Sudbury-belt ore; boreal forestry; Ring of Fire and Elk Lake claims
+  "CA:CA_QC": {
+    countryId: "CA",
+    resources: { iron: 350000, timber: 105000, rare_earth: 750, natural_gas: 1500 },
+  }, // Fermont and Labrador Trough ore; Abitibi forests; Strange Lake REE
+  "CA:CA_BC": {
+    countryId: "CA",
+    resources: { natural_gas: 400000, coal: 75000, timber: 150000, oil: 6000 },
+  }, // Montney gas; Elk Valley metallurgical coal; coastal and interior forests
+  "CA:CA_AB": {
+    countryId: "CA",
+    resources: { oil: 300000, natural_gas: 750000, coal: 45000, timber: 45000 },
+  }, // Oil sands and Western Canada Sedimentary Basin; foothills coal; boreal forests
+  "CA:CA_SK": {
+    countryId: "CA",
+    resources: { oil: 40000, natural_gas: 12000, coal: 6000, timber: 12000, rare_earth: 1500 },
+  }, // Bakken and Lloydminster heavy oil; Estevan lignite; Saskatoon rare earth processing
+  "CA:CA_MB": { countryId: "CA", resources: { oil: 4500, timber: 12000, iron: 4500 } }, // Waskada oil; boreal timber; Thompson belt
+  "CA:CA_NS": { countryId: "CA", resources: { coal: 3000, timber: 15000 } }, // Cape Breton coal measures; Acadian forests
+  "CA:CA_NB": { countryId: "CA", resources: { timber: 37500, natural_gas: 3000 } }, // Acadian forests; Sussex gas
+  "CA:CA_NL": { countryId: "CA", resources: { oil: 20000, iron: 250000, timber: 7500 } }, // Jeanne d'Arc offshore oil; Labrador City ore
+  "CA:CA_PE": { countryId: "CA", resources: { timber: 1500 } }, // small woodlots
+  "CA:CA_YT": { countryId: "CA", resources: { timber: 3000, coal: 750 } }, // Southern Yukon forests; small coal seams
+  "CA:CA_NT": { countryId: "CA", resources: { timber: 3000, rare_earth: 750, natural_gas: 3000 } }, // Nechalacho rare earths; Cameron Hills gas
+  "CA:CA_NU": { countryId: "CA", resources: { iron: 70000 } }, // Mary River iron ore
 };
 
 /**

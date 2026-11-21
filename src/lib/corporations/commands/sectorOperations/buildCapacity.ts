@@ -1,7 +1,13 @@
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
+import {
+  placeStrategyBuildSite,
+  prepareStrategyBuildSite,
+  strategyBuildSiteIdentity,
+} from "./strategyBuildSite";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { loadPlantBuildPriceScale } from "@/lib/corporations/plantBuildPriceScale";
 import { isWholePlantOrder } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
@@ -30,6 +36,7 @@ import type {
   State,
   StateMetrics,
 } from "@/lib/db/types";
+import { isStrategyBuildSite } from "@/lib/corporations/sectorLocation";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
@@ -50,7 +57,14 @@ import {
   operatingReserveMessage,
   type ReserveReceipt,
 } from "@/lib/corporations/rules/operatingReserve";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import {
+  demandAdjustedSharePercent,
+  shareCoverages,
+} from "@/lib/corporations/rules/dominanceDemandCoverage";
+import {
+  fetchAttackerDefenderShares,
   fetchCorporationNationalSectorSharePercent,
   fetchSectorCompetitorCount,
   fetchSectorMarketSharePercent,
@@ -73,6 +87,7 @@ import { classifyCorporationManagement } from "@/lib/corporations/balanceAudit/r
 import { getMarketSystemMode, isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import {
   CAPACITY_BUILD_CANCEL_REFUND,
   CAPACITY_BUILD_TURNS,
@@ -140,6 +155,13 @@ const buildCapacitySchema = z.discriminatedUnion("action", [
     units: z.number().int().min(1).max(MAX_BUILD_UNITS_PER_ORDER),
     /** Price-only: compute and return the cost without charging or queueing. */
     preview: z.boolean().optional(),
+    newSite: z
+      .object({
+        strategyId: z.string().min(1).max(80),
+        requestId: z.string().uuid(),
+        maximumCostAnchor: z.number().finite().positive().optional(),
+      })
+      .optional(),
     /** The CEO confirmed building past the operating reserve (operatingReserve.ts). */
     overrideOperatingReserve: z.literal(true).optional(),
     financing: z
@@ -239,7 +261,10 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     // Plants gate. Same read shape as setSectorPricing's clearing gate.
     const mode = await getMarketSystemMode();
     if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-      return errorResponse(400, "Capacity building is not enabled in this world");
+      return errorResponse(
+        400,
+        "Building is switched off in this world right now, so no capacity can be ordered."
+      );
     }
 
     const resolved = await resolveCorporation(db, id);
@@ -300,6 +325,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
           userId: auth.user.userId,
           units: body.units,
           preview: body.preview,
+          newSite: body.newSite,
           financing: body.financing,
           overrideOperatingReserve: body.overrideOperatingReserve,
         })
@@ -684,6 +710,7 @@ export interface PlaceCapacityBuildInput {
   userId: string;
   units: number;
   preview?: boolean;
+  newSite?: Extract<BuildCapacityBody, { action: "build" }>["newSite"];
   financing?: CapacityBuildFinancing;
   /** Build past the operating reserve; the CEO confirmed it. */
   overrideOperatingReserve?: boolean;
@@ -701,7 +728,7 @@ export async function placeCapacityBuild(
   db: Db,
   input: PlaceCapacityBuildInput
 ): Promise<CapacityBuildOutcome> {
-  const { corporation, sector } = input;
+  const { corporation, sector: sourceSector } = input;
   if (corporation.ceoType === "npp")
     return fail(
       403,
@@ -718,7 +745,43 @@ export async function placeCapacityBuild(
     now,
     corpCurrencyCode,
     eraUnitScale,
-  } = await loadCapacityContext(db, corporation, sector);
+  } = await loadCapacityContext(db, corporation, sourceSector);
+  const newSite = input.newSite;
+  let sector = sourceSector;
+  if (newSite) {
+    if (input.financing) return fail(400, "finance", "A new strategy site requires a cash build.");
+    if (!input.preview && newSite.maximumCostAnchor == null)
+      return fail(400, "blocked", "Get a quote for the new site before building.");
+
+    const identity = strategyBuildSiteIdentity(corporation._id, newSite.requestId);
+    if (!input.preview) {
+      const existing = await corporateSectorsCollection(db).findOne(identity, {
+        projection: { _id: 1 },
+      });
+      if (existing)
+        return {
+          ok: true,
+          status: 200,
+          body: { success: true, newSiteId: existing._id.toHexString() },
+          chargedLocal: 0,
+          queueFull: false,
+        };
+    }
+    const prepared = await prepareStrategyBuildSite(db, {
+      identity,
+      corporation,
+      source: sourceSector,
+      strategyId: newSite.strategyId,
+      countryId,
+      gameState,
+      currentTurn,
+      currentYear,
+      now,
+    });
+    if (!prepared.site) return fail(400, "blocked", prepared.error);
+    sector = prepared.site;
+  }
+  const buildQueue = newSite ? [] : queue;
 
   if (sector.sectorType === "retail") {
     const transition = await gameConfigCollection(db).findOne(
@@ -752,7 +815,7 @@ export async function placeCapacityBuild(
     status,
     body,
     chargedLocal,
-    queueFull: queue.length >= MAX_OUTSTANDING_BUILD_ORDERS,
+    queueFull: buildQueue.length >= MAX_OUTSTANDING_BUILD_ORDERS,
   });
 
   const { units, preview } = input;
@@ -769,7 +832,11 @@ export async function placeCapacityBuild(
   // Dominance multiplier: fetched the same way setSectorGrowth does, so a
   // dominant sector pays the same premium to build as it does to grow.
   const [marketSharePct, nationalMarketSharePct, competitorCount] = await Promise.all([
-    fetchSectorMarketSharePercent(db, sector, corporation),
+    isStrategyBuildSite(sector)
+      ? fetchAttackerDefenderShares(db, sector, corporation, corporation._id).then(
+          ({ attackerSharePercent }) => attackerSharePercent
+        )
+      : fetchSectorMarketSharePercent(db, sector, corporation),
     fetchCorporationNationalSectorSharePercent(db, {
       corporationId: corporation._id,
       countryId,
@@ -780,6 +847,17 @@ export async function placeCapacityBuild(
   // How contested the cell is, which scales that dominance toll. Resolved
   // here AND in the sector-detail quote from the same helper, so the price the
   // dialog shows is the price this command charges.
+  // A market the buyers want far more of than anyone delivers is not dominated
+  // by its first seller: measure share against max(supply, funded demand).
+  const buildSupply = getEffectiveStrategyRates(
+    sector.sectorType,
+    sector.strategyId ?? "standard",
+    sector.transitionFromStrategyId,
+    sector.transitionStartTurn,
+    currentTurn
+  ).supply;
+  const fundedBook = await loadFundedBuildDemand(db);
+  const shareCoverage = shareCoverages(fundedBook?.rows(buildSupply, sector.stateId, countryId));
   const ceoChar = corporation.ceoId
     ? await charactersCollection(db).findOne(
         { _id: corporation.ceoId },
@@ -803,7 +881,8 @@ export async function placeCapacityBuild(
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const techBuildEffects = getSectorTechEffects(techView, sector.sectorType);
+  const legacyTech = await loadLegacyTechContext(db);
+  const techBuildEffects = getSectorTechEffects(techView, sector.sectorType, legacyTech);
   const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
   // Strength upkeep: from its shield stage the dominance shield counts only
   // current and previous decade techs and is capped at 50%.
@@ -812,7 +891,8 @@ export async function placeCapacityBuild(
         techView,
         sector.sectorType,
         currentYear,
-        await loadStrengthUpkeepStage(db)
+        await loadStrengthUpkeepStage(db),
+        legacyTech
       )
     : 0;
 
@@ -821,6 +901,7 @@ export async function placeCapacityBuild(
   const commodityDominanceCtx = await loadCommodityDominanceContext(db, {
     corporation,
     sector,
+    newSite: newSite ? sector : undefined,
     turn: currentTurn,
     currentYear,
   });
@@ -836,8 +917,11 @@ export async function placeCapacityBuild(
     year: currentYear,
     preset: resolvePresetIdFromGameState(gameState),
     eraUnitScale,
-    marketSharePercent: marketSharePct,
-    nationalMarketSharePercent: nationalMarketSharePct,
+    marketSharePercent: demandAdjustedSharePercent(marketSharePct, shareCoverage.local),
+    nationalMarketSharePercent: demandAdjustedSharePercent(
+      nationalMarketSharePct,
+      shareCoverage.national
+    ),
     competitorCount: competitorCount ?? undefined,
     commodityDominanceRatio: commodityDominance?.ratio ?? 0,
     primeRate,
@@ -845,6 +929,7 @@ export async function placeCapacityBuild(
     hostCostOfLivingIndex,
     techGrowthCostMultiplier: techBuildCostMultiplier,
     techDominanceShield,
+    buildPriceScale: await loadPlantBuildPriceScale(db),
   });
   // The same research that discounts the price also shortens the build.
   const buildTurns = techBuildTurns(
@@ -854,6 +939,9 @@ export async function placeCapacityBuild(
   const corpFxRate = await getCorpFxRate(db, corporation);
   const spread = corpToSectorCountrySpread(corporation, countryId, cost.totalAnchor);
   const totalCostAnchor = cost.totalAnchor + spread.spreadAnchor;
+  if (newSite?.maximumCostAnchor != null && totalCostAnchor > newSite.maximumCostAnchor) {
+    return fail(409, "concurrent_change", "The build price changed. Get a new quote.");
+  }
   const corpCapitalAnchor = corpLiquidCapitalToAnchor(
     corporation.liquidCapital,
     corporation,
@@ -941,6 +1029,8 @@ export async function placeCapacityBuild(
       preview: true,
       units,
       costAnchor: Math.round(cost.totalAnchor),
+      totalCostAnchor,
+      affordable: corpCapitalAnchor >= totalCostAnchor,
       totalCostLocal: anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
       collateralCostLocal: anchorToCorpLiquidCapital(cost.totalAnchor, corporation, corpFxRate),
       currency: corpCurrencyCode,
@@ -972,6 +1062,7 @@ export async function placeCapacityBuild(
     // as one lump on `onlineTurn`. See `buildDelivery.ts`. Only orders placed
     // through this path ramp; legacy in-flight orders keep all-at-once landing.
     smooth: true,
+    deliveryBaseFraction: 0,
     ...(wholePlants ? { plantUnits } : {}),
   };
   if (input.financing) {
@@ -1024,7 +1115,7 @@ export async function placeCapacityBuild(
     });
   }
 
-  if (queue.length >= MAX_OUTSTANDING_BUILD_ORDERS) {
+  if (buildQueue.length >= MAX_OUTSTANDING_BUILD_ORDERS) {
     void observe("order", "queue_full");
     return fail(
       400,
@@ -1066,59 +1157,69 @@ export async function placeCapacityBuild(
     };
   }
 
-  const nextQueue = [...queue, order];
+  const nextQueue = [...buildQueue, order];
 
   // Charge FIRST, with the balance condition IN THE FILTER. The JS check
   // above races: two concurrent builds both read the same starting balance,
   // both pass, and both $inc down through zero. `$gte` makes the loser's
   // write match nothing.
   const costInCorpCapital = anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate);
-  const debit = await corporationsCollection(db).updateOne(
-    {
-      _id: corporation._id,
-      liquidCapital: { $gte: costInCorpCapital },
-      ...corporateDiscretionaryCashGuard(),
-    },
-    { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-  );
-  if (debit.modifiedCount !== 1) {
-    void observe("order", "insufficient_cash");
-    return fail(
-      400,
-      "insufficient_cash",
-      insufficientCapitalMessage(
-        "This build",
-        anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
-        corporation.liquidCapital,
-        resolveCorpLiquidCurrencyCode(corporation)
-      )
-    );
-  }
-  // Then queue the order under the same CAS the cancel path uses. If another
-  // writer (a concurrent build/cancel, or the turn processor) touched the
-  // queue since we read it, our $set would silently erase their work, so
-  // fail instead, and hand the money back rather than charging for an order
-  // that was never queued.
-  const queueWrite = await corporateSectorsCollection(db).updateOne(
-    { _id: sector._id, ...queueCasFilter(sector) },
-    {
-      $set: {
-        buildQueue: nextQueue,
-        updatedAt: now,
-      },
+  if (newSite) {
+    const placed = await placeStrategyBuildSite(db, sector, order, costInCorpCapital);
+    if (placed === "existing") {
+      return succeed(200, { success: true, newSiteId: sector._id.toHexString() });
     }
-  );
-  if (queueWrite.modifiedCount !== 1) {
-    await corporationsCollection(db).updateOne(
-      { _id: corporation._id },
-      { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
+    if (placed === "insufficient_cash") {
+      return fail(409, "insufficient_cash", "Available corporate cash changed. Get a new quote.");
+    }
+  } else {
+    const debit = await corporationsCollection(db).updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: costInCorpCapital },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
     );
-    void observe("order", "concurrent_change");
-    return fail(
-      409,
-      "concurrent_change",
-      "That build queue changed while you were ordering. Try again."
+    if (debit.modifiedCount !== 1) {
+      void observe("order", "insufficient_cash");
+      return fail(
+        400,
+        "insufficient_cash",
+        insufficientCapitalMessage(
+          "This build",
+          anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
+          corporation.liquidCapital,
+          resolveCorpLiquidCurrencyCode(corporation)
+        )
+      );
+    }
+    // Then queue the order under the same CAS the cancel path uses. If another
+    // writer (a concurrent build/cancel, or the turn processor) touched the
+    // queue since we read it, our $set would silently erase their work, so
+    // fail instead, and hand the money back rather than charging for an order
+    // that was never queued.
+    const queueWrite = await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id, ...queueCasFilter(sector) },
+      {
+        $set: {
+          buildQueue: nextQueue,
+          updatedAt: now,
+        },
+      }
     );
+    if (queueWrite.modifiedCount !== 1) {
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
+      );
+      void observe("order", "concurrent_change");
+      return fail(
+        409,
+        "concurrent_change",
+        "That build queue changed while you were ordering. Try again."
+      );
+    }
   }
   if (spread.spreadAnchor > 0 && spread.from && spread.to) {
     const feeInCorp = Math.round(
@@ -1179,6 +1280,7 @@ export async function placeCapacityBuild(
       units,
       costAnchor: Math.round(cost.totalAnchor),
       chargedAnchor: Math.round(totalCostAnchor),
+      ...(newSite ? { newSiteId: sector._id.toHexString() } : {}),
       onlineTurn: order.onlineTurn,
       constructionInProgressAnchor: Math.round(cipTotal(nextQueue, currentTurn)),
       message: `Build ordered. ${Math.round(units)} units come online in ${buildTurns} turns.`,

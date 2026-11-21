@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 
 export interface FoundingTechEffects {
@@ -30,7 +31,8 @@ export async function loadFoundingTechEffects(
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const effects = getSectorTechEffects(techView, sectorType);
+  const legacy = await loadLegacyTechContext(db);
+  const effects = getSectorTechEffects(techView, sectorType, legacy);
   return {
     expansionDiscount: effects.expansionDiscount ?? 0,
     growthCostMultiplier: effects.growthCostMultiplier ?? 1,
@@ -38,7 +40,8 @@ export async function loadFoundingTechEffects(
       techView,
       sectorType,
       currentYear,
-      await loadStrengthUpkeepStage(db)
+      await loadStrengthUpkeepStage(db),
+      legacy
     ),
   };
 }

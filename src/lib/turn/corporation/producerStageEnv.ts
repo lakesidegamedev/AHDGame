@@ -1,3 +1,4 @@
+import { electricityMode, type ElectricityNetworkMode } from "@/lib/electricityNetwork/rules/types";
 import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { PUBLIC_CARRY_DEFAULT_SHARE } from "@/lib/market/producerMarket/publicCarryRules";
 import { PROCUREMENT_SPILL_DEFAULT_SHARE } from "@/lib/market/producerMarket/procurementSpillRules";
@@ -36,6 +37,7 @@ export function labourWageParams(
 export function producerStageEnv(
   config:
     | ({
+        electricityNetworkMode?: ElectricityNetworkMode;
         producerDemandPlanStage?: number;
         producerDemandCurveStage?: number;
         producerLowUseCostStage?: number;
@@ -56,6 +58,7 @@ export function producerStageEnv(
         producerFundedBookStage?: number;
         producerNationalPublicDemandStage?: number;
         producerPublicHomeFirstStage?: number;
+        producerDemandFloorStage?: number;
         producerPublicFairShareStage?: number;
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
@@ -87,6 +90,7 @@ export function producerStageEnv(
 ) {
   const labourWage = labourWageParams(config);
   return {
+    electricityNetworkMode: electricityMode(config),
     demandPlanStage: config?.producerDemandPlanStage,
     demandCurve: (config?.producerDemandCurveStage ?? 0) >= 1,
     lowUseCostStage: config?.producerLowUseCostStage,
@@ -95,6 +99,7 @@ export function producerStageEnv(
     fundedBookStage: config?.producerFundedBookStage,
     nationalPublicDemandStage: config?.producerNationalPublicDemandStage,
     publicHomeFirstStage: config?.producerPublicHomeFirstStage,
+    demandFloorStage: config?.producerDemandFloorStage,
     publicFairShareStage: config?.producerPublicFairShareStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,

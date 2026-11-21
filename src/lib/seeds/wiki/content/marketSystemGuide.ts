@@ -21,7 +21,7 @@ You do not choose the tier. Your job is to understand each layer so you can pric
 
 ## When scarcity pays
 
-Every commodity has a price that moves each turn based on how much of it corporations produce (supply) versus how much they consume (demand). Scarcity pushes prices up; a glut pushes them down. The full mechanic (the 27 commodities, the curves, the three-tier blend) lives in Commodities. Copper is merged into rare earth; it is not a separate commodity. The market system is what turns those prices into your revenue.
+Every commodity has a price that moves each turn based on how much of it corporations produce (supply) versus how much they consume (demand). Scarcity pushes prices up; a glut pushes them down. The full mechanic (the 28 commodities, the curves, the three-tier blend) lives in Commodities. Copper is merged into rare earth; it is not a separate commodity. The market system is what turns those prices into your revenue.
 
 The first economic tier is **price realization**. Instead of only nudging your margin percentage, commodity prices now **scale your top-line revenue**:
 
@@ -69,7 +69,7 @@ There's also a physical limit: **input throughput can gate output**. If you can'
 
 ### Who gets served first
 
-Demand is filled in this order each turn: **contracted** volume from [Supply Agreements](/wiki/supply-agreements) first, then the **loyal slice**, a 40% share of each market reserved for sellers with strong [Brand Loyalty](/wiki/brand-loyalty), then **cheapest-first** for the rest. A steady, reliable seller keeps part of its sales even when a rival undercuts, and your posture and fill rate are the loyalty inputs.
+Demand is filled in this order each turn: **contracted** volume from [Supply Agreements](/wiki/supply-agreements) first, then the **loyal slice**, a 40% share of each market shared out among sellers in proportion to their [Brand Loyalty](/wiki/brand-loyalty), then **cheapest-first** for the rest. A steady, reliable seller keeps part of its sales even when a rival undercuts, and your posture and fill rate are the loyalty inputs.
 
 ## Capacity you own and maintain
 
@@ -94,7 +94,7 @@ The **plants** tier is the end of the road, and it closes the last gap between w
 
 Three consequences follow, and they change how you play:
 
-- **Output grows only when capacity does.** There is no passive revenue drift to lean on. If you want a bigger sector next year, you have to commission plant this year and wait for it to arrive. A sector you stop funding is a sector you are slowly closing.
+- **Output grows only when capacity does.** There is no passive revenue growth to lean on, and capacity slowly depreciates if you do nothing. If you want a bigger sector next year, you have to commission plant this year and wait for it to arrive. A sector you stop funding is a sector you are slowly closing.
 - **Entering a market is a build.** Founding a sector charges an era-scaled entry fee *and* a starter build of one facility, and that facility sits in a build queue before it produces anything. A brand-new sector earns nothing on its first turn.
 - **Taking share moves plant.** There is no unowned market to buy a slice of. An attack on a rival is a sector split: your marketing strength against theirs sets how many of their plants are at stake (1% up to 20%, and they always keep one) and your odds of success. You pay half the book value of those plants plus marketing strength whether or not it works, and on success the plants move to you intact. See [Corporations](/wiki/corporations) for the attack formulas.
 
@@ -102,7 +102,7 @@ The practical upshot: growth is slower, more deliberate and more defensible than
 
 ## What this does to your valuation
 
-Because capacity is a **real, owned asset**, your company is valued for the durable capacity it owns, not just this turn's earnings. Valuation leans on **tangible book** (your liquid capital + sector value + an owned-capacity floor) weighted *above* raw earnings power.
+Because capacity is a **real, owned asset**, your company is valued for the durable capacity it owns, not just this turn's earnings. Valuation leans on **tangible book** (your liquid capital + sector value + construction in progress + tech assets + bank equity and bond holdings, minus bond debt) weighted *above* raw earnings power.
 
 That capacity floor is a **depreciated high-water mark** on the sector's going-concern value: it's seeded at the moment a tier flips (so it changes nothing at first) and ratchets up as the sector's value rises. When value falls, the floor closes about 4% of the gap each turn, so a short dip is smoothed while a stale peak fades over about a game year, and it can never exceed five times the sector's current value. The practical effect: **a company holds its value through a transient profit dip**, because the assets it owns are still worth something even in a bad quarter. Your share price reflects **owned assets + earnings power**, not a single turn's profit, so think in assets, not just this turn: a dip in profit isn't a collapse if you own real capacity, and rivals who stop investing are quietly getting weaker. More on how shares are priced in [Stock Market](/wiki/stock-market).
 

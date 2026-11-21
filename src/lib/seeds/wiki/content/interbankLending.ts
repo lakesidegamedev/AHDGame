@@ -20,7 +20,7 @@ Why it exists: banks route cash to where it is needed without each one holding e
 interbank-arrears-write-off
 \`\`\`
 
-![Liquidity map: a lender bank lends to a borrower bank, the borrower can also draw a central bank margin line, and missed interest leads to a write-off.](/wiki-images/diagrams/interbank-lending-liquidity-map.svg)
+![Liquidity map: a lender bank lends to a borrower bank, the borrower can also draw a central bank margin line, and 8 turns in a row of missed interest lead to a write-off.](/wiki-images/diagrams/interbank-lending-liquidity-map.svg)
 
 ## Lending to another bank
 
@@ -28,7 +28,7 @@ You must be the CEO of the bank. Open the bank's page for the corporation, then 
 
 **Lendable headroom** is your deposits less what you must hold in reserve, less your loans: deposits x (1 - reserve requirement) - loans. You also need the cash itself in your reserves.
 
-Cash moves from your reserves to the borrower's, and a loan record tracks principal, balance and rate. It is separate from your ordinary loan book and does not count in your loan total. The borrower pays interest every turn. The loan is **interest only** and has no maturity: the lender cannot call it in, and the bank console has no control for the borrower to repay principal either, so the principal stays out until the loan is written off or the borrowing bank fails and its estate pays its lenders.
+Cash moves from your reserves to the borrower's, and a loan record tracks principal, balance and rate. It is separate from your ordinary loan book and does not count in your loan total. The borrower pays interest every turn. The loan is **interest only** and has no maturity: the lender cannot call it in, but the borrower can repay principal with the repay interbank command, and the loan is marked repaid once nothing is left. Principal that is not repaid stays out until the loan is written off or the borrowing bank fails and its estate pays its lenders.
 
 There is no market rate, so look at the prime rate and at how risky the borrower is. A higher rate earns more per turn but a borrower who cannot pay it will miss interest. The loans table shows each loan's balance and rate but not missed payments, so judge the borrower before you lend rather than counting on a warning before the 8th miss. Keep some headroom unlent so withdrawals do not catch you short.
 

@@ -72,20 +72,15 @@ export default function TermsOfServicePage() {
             <h2 className="text-lg font-bold mb-3">5. Game &amp; Community Rules</h2>
             <p className="text-sm text-muted leading-relaxed mb-4">
               The following rules apply in-game and in all official A House Divided Discord servers.
-              Violations may result in a warning, temporary suspension, or permanent ban at admin
-              discretion.
+              Moderators remove content that breaks these rules. Players may receive a warning,
+              suspension, or ban.
             </p>
             <div className="space-y-5 text-sm text-muted leading-relaxed">
               <div>
-                <p className="font-semibold text-foreground mb-1">
-                  Zero tolerance for objectionable content and abusive players
-                </p>
+                <p className="font-semibold text-foreground mb-1">Content moderation</p>
                 <p>
-                  There is no tolerance for objectionable content or abusive players anywhere in the
-                  Service, including news posts, party and legislative discussions, mail, names,
-                  profiles and uploaded images. Content that breaks these rules is removed and the
-                  player who posted it is warned, suspended or banned. Text is checked against a
-                  filter before it is published, and moderators review what the filter misses.
+                  These rules cover posts, discussions, mail, names, profiles, and images. Published
+                  text is screened by a filter and reviewed by moderators.
                 </p>
               </div>
               <div>
@@ -93,8 +88,7 @@ export default function TermsOfServicePage() {
                 <p>
                   You can report a player or their content, and block a player, from their character
                   profile. Blocked players cannot send you mail. Moderators review reports and act
-                  on them within 24 hours, removing objectionable content and removing the player
-                  who posted it where the rules call for it. You can also report a problem to{" "}
+                  on them within 24 hours. You can also report a problem to{" "}
                   <a
                     href="mailto:admin@ahousedividedgame.com"
                     className="text-primary hover:underline"
@@ -123,8 +117,14 @@ export default function TermsOfServicePage() {
                 </p>
               </div>
               <div>
-                <p className="font-semibold text-foreground mb-1">No automation</p>
-                <p>Account automation (auto clickers, bots, etc.) are strictly prohibited.</p>
+                <p className="font-semibold text-foreground mb-1">Account automation</p>
+                <p>
+                  Use automation only for operations allowed in the{" "}
+                  <Link href="/guides/api-automation" className="text-primary hover:underline">
+                    API automation guide
+                  </Link>
+                  . Using bots or auto-clickers to operate an account is prohibited.
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-foreground mb-1">Protect personal information</p>
@@ -170,9 +170,16 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-lg font-bold mb-3">6. Intellectual Property</h2>
             <p className="text-sm text-muted leading-relaxed">
-              All game content, code, design, and assets are owned by A House Divided. You may not
-              reproduce, redistribute, or create derivative works from any game content without
-              prior written permission.
+              The{" "}
+              <a
+                href="https://github.com/lakesidegamedev/AHDGame"
+                className="text-primary hover:underline"
+              >
+                A House Divided source repository
+              </a>{" "}
+              lists the licences for published code and assets. Follow the applicable licence.
+              Reproduction, redistribution, or derivative works of other game content require prior
+              written permission.
             </p>
           </section>
 

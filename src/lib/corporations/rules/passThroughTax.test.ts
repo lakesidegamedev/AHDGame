@@ -7,6 +7,7 @@ import {
   blendedOwnerRate,
   corporateTaxMultiplierFor,
   legalStructureTaxLabel,
+  netPassThroughProfit,
   passThroughOwnerTax,
   passThroughReformPhase,
   passThroughStatus,
@@ -124,5 +125,20 @@ describe("distributions and labels", () => {
       legalStructureTaxLabel(byId("us_llc"), 1, { ...privateOwned, isPrivate: false })
     ).toMatch(/trade publicly/);
     expect(legalStructureTaxLabel(byId("us_c_corp"), 1)).toBe("standard tax");
+  });
+});
+
+describe("netPassThroughProfit", () => {
+  it("lets an operating loss offset coupon income", () => {
+    expect(netPassThroughProfit(-686, 2500)).toBe(1814);
+  });
+  it("floors at zero when the loss exceeds coupons", () => {
+    expect(netPassThroughProfit(-5000, 2500)).toBe(0);
+  });
+  it("adds profit and coupons", () => {
+    expect(netPassThroughProfit(1000, 500)).toBe(1500);
+  });
+  it("treats non-finite inputs as zero", () => {
+    expect(netPassThroughProfit(Number.NaN, 300)).toBe(300);
   });
 });

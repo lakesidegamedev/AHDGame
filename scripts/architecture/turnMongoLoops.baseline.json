@@ -167,8 +167,6 @@
     "3cf41ffd8ac5ccd39b275bf713df35ae94e2ad2022d16199c475762acfb6a71d": 1,
     "7854b47db626843d30fa632369bd2f6dcf14d6fcbc5395804fd14a9d2abecade": 1,
     "066f9390b2c8bd60a8ab4e2f6d0a01501233e0ba59ec0a820382cf22ce61651f": 1,
-    "94f1b2d981615fc3db41dc40a58a04631465db2eae47dc1b1db3655cb0fa9577": 1,
-    "4b032f506d43563de28532b93be7d9978727393b7a4f0f201f0989e1955d688b": 1,
     "e54ef0dc8a1525b6ea8904bb3e860c6282b9e49f23a9f687633ba83328afd1ad": 1,
     "a9ede6674d692d5180505a301712299bb9a0fadd03e15dd1923e2a5d29194472": 1,
     "b01237a2c973ff213cf09cc49ce278b0dbb5621444c05a102feffdf9545595fb": 1,
@@ -244,8 +242,6 @@
     "df3fcebbade80ab23c3ea92b2d0c52d572452024d3d6a7c5db985ebf392d728a": 1,
     "e731a00b14031b065410c82ccbc2917ce9589167389dceba4b3af1dfa78bb467": 1,
     "4a48c6fd3af1b4fd655f6d0ba024d2f9289001b14cf0704178bc905f02add2ce": 1,
-    "366f34444d8f0a1321a78139386a88bab96780f904d24f182dd5334131b07853": 1,
-    "28a68ce1a29b39a8fb44964080a961da100f27e7e68b33bacc5f5b754b79d09c": 1,
     "0abf09b9c3f64f022631a320545c999d7d605ca9291159a6ee38b1da3d8b7b72": 1,
     "e0dcd686b5aae26b5f2e798f633f9de48ece861340608bc38082a653367f9ebb": 1,
     "7c494a57afc572397bca34f03e8d0f63a81684045a9cc2c616c0d1a2f9bcafe1": 1,
@@ -626,7 +622,11 @@
     "0fd114d47bbff2b8c74d0783b9fb551e749fbdbf6019355eb6e2a4b46f875c7d": 1,
     "21f38e44a48a7f2757b05d6a3f78dc94807e46e3250008c55867230b75c792ea": 1,
     "242218b33639a821b23a0e1fc72c8802ddac272ae6fe1430302d2803dbba8c9f": 1,
-    "af3ff91cadd690c4b909fe944036d2130bb40bfb5af8226c462dd9ee609e354c": 1
+    "af3ff91cadd690c4b909fe944036d2130bb40bfb5af8226c462dd9ee609e354c": 1,
+    "0affa6518a5090bbf5817f79bb94acfbb803341df024b5b470283591e1e38699": 1,
+    "d9f863b9c85f93901128145029c34def1af0be3b0151c9fde6dcb52242a8a8be": 1,
+    "ffa93418771bdf9b4bc6b24c57ba68dfe0833eda74bf06a493afbc586592cbbd": 1,
+    "34e7c623add5ec6ee438b50e08226a94d38b254edbab2f60fee54a3933ea1827": 1
   },
   "locations": [
     {
@@ -3287,7 +3287,7 @@
       "file": "src/lib/sovereignDefault/legislative/legislativeTurn.ts",
       "operation": "updateOne",
       "owner": "processSovereignLegislativeTurn",
-      "expression": "db.collection<SovereignCrisisDecision>(\"sovereignCrisisDecisions\").updateOne({ _id: decision._id as ObjectId }, { $set: { state: \"rejected\", currentChamberIndex: null, legislativePhases: updatedPhases, resolvedAt: new Date(realtimeMs), resolvedReason: \"Legislative deadlock \u2014 auto-Repudiate (phase 9b)\", }, })",
+      "expression": "db.collection<SovereignCrisisDecision>(\"sovereignCrisisDecisions\").updateOne({ _id: decision._id as ObjectId }, { $set: { state: \"rejected\", currentChamberIndex: null, legislativePhases: updatedPhases, resolvedAt: new Date(realtimeMs), resolvedReason: \"Legislative deadlock — auto-Repudiate (phase 9b)\", }, })",
       "fingerprint": "4e8be196a9e074fcca6078089c4d06cf45a38d82c7504b78e890d3ea171cd198"
     },
     {

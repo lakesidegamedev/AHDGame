@@ -8,6 +8,7 @@ import {
   computeDepositCeiling,
   financialSectorCapacityUnits,
   getBranchCapacityShare,
+  getEffectiveBranchCapacityShare,
 } from "../capacityAllocation";
 import type { BankCharter } from "@/lib/db/types/bank";
 
@@ -64,7 +65,42 @@ describe("capacityAllocation pure math", () => {
     expect(commodityProductionCapacityScale(active, false)).toBe(1);
     expect(commodityProductionCapacityScale(undefined, true)).toBe(1);
     expect(commodityProductionCapacityScale({ ...active, status: "revoked" }, true)).toBe(1);
-    expect(commodityProductionCapacityScale(active, true)).toBeCloseTo(0.6, 10);
+    // A charter with no deposits yet diverts nothing.
+    expect(commodityProductionCapacityScale(active, true)).toBe(1);
+  });
+
+  it("branch cost tracks how full the deposit room is", () => {
+    const charter: BankCharter = {
+      type: "retail",
+      status: "active",
+      currency: "USD",
+      charteredTurn: 1,
+      postedCapital: 1,
+      depositOffset: 0,
+      lendingOffset: 0,
+      branchCapacityShare: 0.4,
+      depositCeiling: 1_000_000,
+    };
+    expect(getEffectiveBranchCapacityShare({ ...charter, totalDeposits: 0 })).toBe(0);
+    expect(getEffectiveBranchCapacityShare({ ...charter, totalDeposits: 250_000 })).toBeCloseTo(
+      0.1,
+      10
+    );
+    expect(getEffectiveBranchCapacityShare({ ...charter, totalDeposits: 2_000_000 })).toBeCloseTo(
+      0.4,
+      10
+    );
+    expect(
+      commodityProductionCapacityScale({ ...charter, totalDeposits: 500_000 }, true)
+    ).toBeCloseTo(0.8, 10);
+    expect(
+      commodityProductionCapacityScale({ ...charter, totalDeposits: 1_000_000 }, true)
+    ).toBeCloseTo(0.6, 10);
+    expect(
+      commodityProductionCapacityScale({ ...charter, totalDeposits: 5_000_000 }, true)
+    ).toBeCloseTo(0.6, 10);
+    // No cached ceiling yet (just chartered): nothing diverted.
+    expect(commodityProductionCapacityScale(charter, true)).toBe(1);
   });
 
   it("CEO slider band is 0.1..0.9", () => {

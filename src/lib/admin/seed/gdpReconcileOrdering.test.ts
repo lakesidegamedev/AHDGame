@@ -34,25 +34,29 @@ function read(rel: string): string {
 
 describe("state-GDP reconcile ordering", () => {
   it("runs exactly once, from seedAllCountryData", () => {
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("bootstrapGameWorld.ts") + "\n" + read("seedCountryData.ts");
     const calls = source.match(/await reconcileStateGdpWithNationalSeeds\(/g) ?? [];
     expect(calls).toHaveLength(1);
   });
 
   it("the bloc budget block runs after the reconcile", () => {
     // The whole basis for dropping the per-country repeat.
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("seedCountryData.ts");
     const reconcile = source.indexOf("await reconcileStateGdpWithNationalSeeds(");
-    const blocBudgets = source.indexOf("seedEasternBlocBudget:");
     expect(reconcile).toBeGreaterThan(-1);
+    const bootstrap = read("bootstrapGameWorld.ts");
+    expect(bootstrap).toContain('from "@/lib/admin/seedCountryData"');
+    const countryData = bootstrap.indexOf("await seedAllCountryData(");
+    const blocBudgets = bootstrap.indexOf("seedEasternBlocBudget:");
+    expect(countryData).toBeGreaterThan(-1);
     expect(blocBudgets).toBeGreaterThan(-1);
-    expect(blocBudgets).toBeGreaterThan(reconcile);
+    expect(blocBudgets).toBeGreaterThan(countryData);
   });
 
   it("bloc regions are seeded before the reconcile", () => {
     // The other half: the pass can only cover bloc countries if their regions
     // already exist when it runs.
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("seedCountryData.ts");
     // The six satellites are seeded concurrently inside the country-pack block,
     // so this is a `.map(...)` rather than a bare await. The ORDERING it pins is
     // unchanged: bloc regions still exist before the reconcile runs.

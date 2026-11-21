@@ -45,20 +45,23 @@ export interface SectorBuildOrder {
    */
   accelerated?: boolean;
   /**
-   * When true, the order delivers capacity LINEARLY across
-   * `[startTurn, onlineTurn]`, a slice per turn, instead of the whole
-   * `unitsOrdered` landing at once on `onlineTurn`. Absent on legacy orders and
-   * on the flip-compensation credit, which keep all-at-once landing. See
-   * `src/lib/corporations/buildDelivery.ts`.
+   * Marks orders placed under the per-turn delivery model. Every order with a
+   * positive window delivers linearly across `[startTurn, onlineTurn]` whether
+   * or not this is set. See `src/lib/corporations/buildDelivery.ts`.
    */
   smooth?: boolean;
   /**
-   * Whole plants: units in one plant of this order's sector, stamped when the
-   * order was placed or recounted under `gameConfig.wholePlantsStage`. A smooth
-   * order with this set delivers whole plants, never a part-plant slice.
-   * Absent = today's linear slices.
+   * Units in one plant of this order's sector, stamped at placement. Orders
+   * are placed in whole plants; delivery is still a per-turn slice, so this
+   * does not shape the delivery curve.
    */
   plantUnits?: number;
+  /**
+   * Share of the order already delivered when `startTurn` was last re-anchored.
+   * Set once for orders that were mid-build when delivery became linear, so the
+   * rest ramps in from there without repaying what already landed. Absent = 0.
+   */
+  deliveryBaseFraction?: number;
   /** Paid, secured construction loan. Absent on ordinary cash-funded orders. */
   constructionLoanId?: string;
   constructionClaimId?: string;
@@ -93,6 +96,10 @@ export interface NationalizationTaking {
 }
 
 export interface CorporateSector {
+  /** Identity for a separately acquired or built site in an occupied market. */
+  nationalizationSiteKey?: string;
+  /** Physical ownership receipt for replay safety. */
+  ownershipTransferKey?: string;
   /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
   /**

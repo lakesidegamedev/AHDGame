@@ -114,7 +114,7 @@ export default function WikiRoadmapPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
@@ -124,7 +124,9 @@ export default function WikiRoadmapPage() {
       </nav>
 
       <header className="mb-10">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">Product roadmap</h1>
+        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          Product roadmap
+        </h1>
         <p className="text-lg text-muted">
           Track what&apos;s planned, in progress, and completed across each release phase.
         </p>
@@ -154,9 +156,9 @@ export default function WikiRoadmapPage() {
             const uncategorized = phaseItems.filter((i) => !i.category);
 
             return (
-              <section key={phase.id} className="rounded-xl border border-card-border bg-card p-6">
+              <section key={phase.id} className="">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">
+                  <h2 className="text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
                     {phase.label}{" "}
                     <span className="text-sm font-normal text-muted">({phase.version})</span>
                   </h2>

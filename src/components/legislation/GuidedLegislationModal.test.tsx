@@ -116,7 +116,11 @@ const metricBoard = {
   ],
 };
 
-function stubCatalog(response: unknown = catalog, legislationTypes: unknown[] = []) {
+function stubCatalog(
+  response: unknown = catalog,
+  legislationTypes: unknown[] = [],
+  metricsResponse: unknown = metricBoard
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -127,7 +131,7 @@ function stubCatalog(response: unknown = catalog, legislationTypes: unknown[] = 
           url.includes("reset-legislation")
             ? response
             : url.includes("reset-metrics")
-              ? metricBoard
+              ? metricsResponse
               : legislationTypes,
       };
     })
@@ -136,7 +140,7 @@ function stubCatalog(response: unknown = catalog, legislationTypes: unknown[] = 
 
 function renderModal(
   onSuccess = vi.fn(),
-  countryId: "US" | "JP" | "UK" = "US",
+  countryId: "US" | "JP" | "UK" | "CA" | "IE" | "SCO" | "WAL" = "US",
   onClose = vi.fn(),
   options: {
     canSubmit?: boolean;
@@ -191,6 +195,60 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it.each(["US", "UK", "JP", "CA", "IE", "SCO", "WAL"] as const)(
+    "shows observed metric directions for %s through policy selection and review",
+    async (countryId) => {
+      stubCatalog({ ...catalog, year: 2027 });
+      renderModal(vi.fn(), countryId);
+      fireEvent.change(await screen.findByLabelText("Policy domain"), {
+        target: { value: "Health and care" },
+      });
+      fireEvent.click(screen.getByText("Primary care access").closest("button")!);
+      expect(screen.getByText("At equilibrium")).toBeTruthy();
+      expect(screen.getByText("▲")).toBeTruthy();
+      expect(screen.queryByText(/Direction unavailable/)).toBeNull();
+      fireEvent.click(screen.getByText("Community clinic expansion").closest("button")!);
+      expect(screen.getByText("▲")).toBeTruthy();
+      expect(screen.queryByText(/Direction unavailable/)).toBeNull();
+    }
+  );
+
+  it("keeps Canadian directions unavailable when the observation is missing", async () => {
+    stubCatalog({ ...catalog, year: 2027 }, [], { metrics: [] });
+    renderModal(vi.fn(), "CA");
+    fireEvent.change(await screen.findByLabelText("Policy domain"), {
+      target: { value: "Health and care" },
+    });
+    fireEvent.click(screen.getByText("Primary care access").closest("button")!);
+    expect(screen.getByText(/Direction unavailable/)).toBeTruthy();
+    expect(screen.getByText("At equilibrium")).toBeTruthy();
+    expect(screen.queryByText("▲")).toBeNull();
+  });
+
+  it("shows a downward direction for a Canadian option worse than current law", async () => {
+    stubCatalog({
+      ...catalog,
+      year: 2027,
+      families: catalog.families.map((family) => ({
+        ...family,
+        options: family.options.map((option) => ({
+          ...option,
+          primaryMetricEffects: option.primaryMetricEffects.map((effect) => ({
+            ...effect,
+            favorableNormalizedPoints: -effect.favorableNormalizedPoints,
+          })),
+        })),
+      })),
+    });
+    renderModal(vi.fn(), "CA");
+    fireEvent.change(await screen.findByLabelText("Policy domain"), {
+      target: { value: "Health and care" },
+    });
+    fireEvent.click(screen.getByText("Primary care access").closest("button")!);
+    expect(screen.getByText("▼")).toBeTruthy();
+    expect(screen.queryByText(/Direction unavailable/)).toBeNull();
+  });
+
   it("shows both leans for privacy options and preserves them through review", async () => {
     const fixture = {
       ...catalog,

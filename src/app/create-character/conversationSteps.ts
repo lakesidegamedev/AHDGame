@@ -28,6 +28,7 @@ export interface ConversationStep {
   prompt: string;
   /** Complete under the existing validation rules for this step. */
   complete: boolean;
+  blocker?: string;
   /** One-line answer shown in the transcript once complete. */
   summary: string | null;
 }
@@ -67,11 +68,11 @@ function promptFor(id: ConversationStepId, regionNoun: string): string {
     case "compass":
       return "Where do you stand? Place yourself on the compass.";
     case "party":
-      return "Which party will carry your name? Independent is a real choice, so pick one on purpose.";
+      return "Choose a party or run as an independent.";
     case "stats":
-      return "How is your politician built? Spend every point.";
+      return "Allocate your politician’s stat points.";
     case "review":
-      return "Read your file before you file it. Anything can still change.";
+      return "Review your choices before creating your character.";
   }
 }
 
@@ -79,6 +80,7 @@ export function buildConversationSteps(args: {
   regionNoun: string;
   partySelectorVisible?: boolean;
   complete: Record<ConversationStepId, boolean>;
+  blockers?: Partial<Record<ConversationStepId, string>>;
   summary: Record<ConversationStepId, string | null>;
 }): ConversationStep[] {
   return visibleConversationStepIds(args.partySelectorVisible).map((id) => ({
@@ -86,6 +88,7 @@ export function buildConversationSteps(args: {
     title: titleFor(id, args.regionNoun),
     prompt: promptFor(id, args.regionNoun),
     complete: args.complete[id],
+    ...(args.blockers?.[id] && { blocker: args.blockers[id] }),
     summary: args.summary[id],
   }));
 }

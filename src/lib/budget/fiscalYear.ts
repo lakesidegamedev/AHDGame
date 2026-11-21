@@ -7,15 +7,12 @@ import type { RegionalProgramClaim } from "@/lib/governmentFinance/rules/regiona
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   FederalBudget,
-  StateBudget,
   EconomicGrowthFactors,
   FederalBudgetSnapshot,
   EnactedLaw,
   FiscalConsolidationRecord,
 } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { State } from "@/lib/db/types/state";
 import {
   calculateFederalRevenue,
   calculateStateRevenue,
@@ -23,7 +20,6 @@ import {
   normalizeStateTaxRates,
   loadLatestSourcedImportAggregates,
 } from "./revenue";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { calculateFederalSpending, calculateStateSpendingDetail } from "./spending";
 import { applyLegacyTrustDelta } from "@/lib/sovereignDefault/sideEffects/trustHit";
 import { processAnnualDebt, resolveDebtCeilingCrisis, getDebtThreshold } from "./debt";
@@ -35,7 +31,6 @@ import {
   countryTurnTariffInflationExposure,
   loadTurnTariffInflationExposure,
 } from "@/lib/tariffs/tariffInflationExposure";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { getNationalDocId, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { resolvePipelineGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { smoothNationalGdp } from "@/lib/metricEngine/gdpLevel";
@@ -937,8 +932,8 @@ async function processStateFiscalYear(
   // Calculate surplus/deficit
   const surplus = revenue.total - spending.total;
 
-  // Update balance (accumulated surplus/deficit over time)
-  const newBalance = (stateBudget.balance ?? 0) + surplus;
+  // Cash and borrowing settle per turn, not at annual budget repricing.
+  const newBalance = stateBudget.balance ?? 0;
 
   await stateBudgetsCollection(db).updateOne(
     { _id: stateId, countryId },

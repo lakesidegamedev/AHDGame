@@ -15,7 +15,7 @@ import {
   AUTOPILOT_GROWTH_STEP_OF_RUN,
   AUTOPILOT_PAYBACK_HORIZON_TURNS,
   evaluateAutopilotGrowthGate,
-} from "./rules/autopilotReinvest";
+} from "@/lib/corporations/rules/autopilotReinvest";
 import { getNppCashFloorAnchor } from "./nppCashReserve";
 
 const CASH = 36_800_000;
@@ -132,10 +132,10 @@ describe("autopilot reinvestment", () => {
     const total = (decision.reinvestments ?? []).reduce((sum, b) => sum + b.units, 0);
     // Numbers captured before the autopilot change: growth is half of run capacity.
     expect((decision.reinvestments ?? []).map((b) => [b.units, Math.round(b.costLocal)])).toEqual([
-      [27014.988, 5984859],
-      [26290.264, 5824305],
-      [17583.566, 3895436],
-      [1546.545, 1532037],
+      [27014.988, 1994953],
+      [26290.264, 1941435],
+      [17583.566, 1298479],
+      [1546.545, 510679],
     ]);
     expect(total).toBeCloseTo(72435.363, 3);
   });

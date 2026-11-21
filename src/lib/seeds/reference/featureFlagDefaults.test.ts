@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_GAME_STATE_FLAGS,
@@ -20,30 +21,53 @@ import { MARKET_MODE_ORDER } from "@/lib/market/modes";
  * remembering to register it.
  */
 function flagFieldsOf(file: string, iface: string): string[] {
-  const src = readFileSync(path.resolve(__dirname, "../../db/types", file), "utf8");
-  const start = src.indexOf(`export interface ${iface} {`);
-  expect(start).toBeGreaterThanOrEqual(0);
-  let depth = 0;
-  let body = "";
-  for (let i = src.indexOf("{", start); i < src.length; i++) {
-    const c = src[i];
-    if (c === "{") depth++;
-    if (c === "}") depth--;
-    if (depth === 1 && c !== "{") body += c;
-    if (depth === 0) break;
-  }
   const fields: string[] = [];
-  for (const match of body.matchAll(/^ {2}([A-Za-z0-9_]+)\??:\s*([^;]+);/gm)) {
-    const [, name, type] = match;
-    const isBoolean = /\bboolean\b/.test(type);
-    const isMode = /(Mode|Stage|Level)$/.test(name) && !/^(string|number)$/.test(type.trim());
-    if (isBoolean || isMode) fields.push(name);
+  const sources =
+    iface === "GameConfig"
+      ? ([
+          [file, iface, ["ProducerGameConfig"]],
+          ["producerGameConfig.ts", "ProducerGameConfig", []],
+        ] as const)
+      : ([[file, iface, []]] as const);
+  for (const [filename, name, bases] of sources) {
+    const fullPath = path.resolve(__dirname, "../../db/types", filename);
+    const source = ts.createSourceFile(
+      fullPath,
+      readFileSync(fullPath, "utf8"),
+      ts.ScriptTarget.Latest,
+      true
+    );
+    const declaration = source.statements.find(
+      (node): node is ts.InterfaceDeclaration =>
+        ts.isInterfaceDeclaration(node) && node.name.text === name
+    );
+    expect(declaration, "Missing interface " + name).toBeDefined();
+    expect(
+      declaration!.heritageClauses?.flatMap((clause) =>
+        clause.types.map((base) => base.expression.getText(source))
+      ) ?? [],
+      "Every inherited config interface must participate in flag coverage"
+    ).toEqual(bases);
+    for (const member of declaration!.members) {
+      if (!ts.isPropertySignature(member) || !member.type) continue;
+      const fieldName = member.name.getText(source),
+        type = member.type.getText(source);
+      const isBoolean =
+        member.type.kind === ts.SyntaxKind.BooleanKeyword ||
+        (ts.isUnionTypeNode(member.type) &&
+          member.type.types.some((part) => part.kind === ts.SyntaxKind.BooleanKeyword));
+      const isMode =
+        /(Mode|Stage|Level)$/.test(fieldName) && !/^(string|number)$/.test(type.trim());
+      if (isBoolean || isMode) fields.push(fieldName);
+    }
   }
   return fields;
 }
 
 const LADDER_TOPS: Record<string, string | number> = {
   producerTariffStage: 1,
+  // Stage 1 is the standing floor; higher stages are live-only raises an operator sets.
+  producerDemandFloorStage: 1,
   outputBasis: "value_added",
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
@@ -53,9 +77,19 @@ const LADDER_TOPS: Record<string, string | number> = {
 
 describe("fresh-world flag policy", () => {
   it("seeds NPP autonomy at v6", () => {
-    expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual(["nppAutonomyLevel"]);
+    expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual([
+      "electricityNetworkMode",
+      "nppAutonomyLevel",
+    ]);
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v6");
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyEnabled).toBe(true);
+  });
+
+  it("keeps fresh-world electrical enforcement behind an explicit administrator choice", () => {
+    expect(referenceGameConfig.electricityNetworkMode).toBe("shadow");
+    expect(FRESH_WORLD_FLAG_EXCLUSIONS.electricityNetworkMode.reason).toContain(
+      "explicit administrator"
+    );
   });
 
   it("turns every gameState gameplay flag on, at the top of every ladder", () => {
@@ -71,11 +105,13 @@ describe("fresh-world flag policy", () => {
     for (const [key, value] of Object.entries(FRESH_WORLD_GAME_CONFIG_FLAGS)) {
       // New economic routing remains opt-in until integrated world qualification is reviewed.
       const expected =
-        key === "groupSupplyCoordinationEnabled"
-          ? false
-          : typeof value === "boolean"
-            ? true
-            : LADDER_TOPS[key];
+        key === "electricityNetworkMode"
+          ? "shadow"
+          : key === "groupSupplyCoordinationEnabled"
+            ? false
+            : typeof value === "boolean"
+              ? true
+              : LADDER_TOPS[key];
       expect([key, value]).toEqual([key, expected]);
     }
   });

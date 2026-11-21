@@ -54,7 +54,8 @@ export function CharterIssueForm({
   };
 
   const types = data.eligibleTypes;
-  if (!canMutate || types.length === 0) return null;
+  if (!canMutate) return null;
+  if (types.length === 0) return <CharterUnavailableNotice data={data} />;
 
   return (
     <BankPanel kind="ceoControl" title="Issue bank charter" className="max-w-2xl">
@@ -70,43 +71,26 @@ export function CharterIssueForm({
           from the corporation treasury. Legal types follow this nation&apos;s banking separation
           law.
         </p>
-        {data.eligibilityReasons.length > 0 && data.eligibleTypes.length === 0 && (
-          <ul className="list-disc space-y-0.5 pl-5 text-xs text-error">
-            {data.eligibilityReasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        )}
         <div className="flex flex-wrap items-end gap-3">
-          {types.length === 0 ? (
-            <p className="text-xs text-muted">
-              No private bank charters are legal in this jurisdiction.
-            </p>
-          ) : (
-            <label className="flex flex-col gap-1 text-xs text-muted">
-              Charter type
-              <select
-                className="h-8 min-w-48 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
-                value={type}
-                onChange={(e) => updateCharterState({ type: e.target.value as BankCharterType })}
-                disabled={!canMutate}
-                aria-label="Charter type"
-              >
-                {types.map((t) => (
-                  <option key={t} value={t} disabled={!data.eligibleTypes.includes(t) && canMutate}>
-                    {charterLabel(t)}
-                    {!data.eligibleTypes.includes(t) ? " (not eligible)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {canMutate && (
-            <SmallButton
-              tone="primary"
-              onClick={() => void issue()}
-              disabled={busy || data.eligibleTypes.length === 0}
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            Charter type
+            <select
+              className="h-8 min-w-48 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+              value={type}
+              onChange={(e) => updateCharterState({ type: e.target.value as BankCharterType })}
+              disabled={!canMutate}
+              aria-label="Charter type"
             >
+              {types.map((t) => (
+                <option key={t} value={t} disabled={!data.eligibleTypes.includes(t) && canMutate}>
+                  {charterLabel(t)}
+                  {!data.eligibleTypes.includes(t) ? " (not eligible)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {canMutate && (
+            <SmallButton tone="primary" onClick={() => void issue()} disabled={busy}>
               {busy ? "Issuing..." : "Issue charter"}
             </SmallButton>
           )}
@@ -117,6 +101,51 @@ export function CharterIssueForm({
             {formatBankMoney(data.corporation.liquidCapital, data.currency)}
           </span>
           , currency {data.currency}
+        </p>
+      </div>
+    </BankPanel>
+  );
+}
+
+/** Shown to a CEO with no charter when no charter type can be issued right now. */
+function CharterUnavailableNotice({ data }: { data: ConsolePayload }) {
+  const treasury = formatBankMoney(data.corporation.liquidCapital, data.currency);
+  const types = data.legalCharterTypes;
+  return (
+    <BankPanel kind="ceoControl" title="Bank charter" className="max-w-2xl">
+      <div className="space-y-3 py-1.5">
+        <p className="text-xs text-muted">
+          This corporation has no bank charter, and none can be issued right now.
+        </p>
+        {data.eligibilityReasons.length > 0 && (
+          <ul className="list-disc space-y-0.5 pl-5 text-xs text-error">
+            {data.eligibilityReasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        )}
+        {types.length === 0 ? (
+          <p className="text-xs text-muted">
+            No private bank charters are legal in this jurisdiction.
+          </p>
+        ) : (
+          <ul className="space-y-0.5 text-xs" aria-label="Capital required per charter type">
+            {types.map((t) => (
+              <li key={t} className="flex justify-between gap-4">
+                <span className="text-muted">{charterLabel(t)} charter capital</span>
+                <span className="font-mono text-foreground">
+                  {formatBankMoney(
+                    data.capitalRequirementByType?.[t] ?? data.capitalRequirement,
+                    data.currency
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-muted">
+          Treasury <span className="font-mono text-foreground">{treasury}</span>, currency{" "}
+          {data.currency}
         </p>
       </div>
     </BankPanel>

@@ -4,7 +4,7 @@ If you hold a cabinet seat you can build things: schools, hospitals, embassies, 
 
 ## What you can build
 
-Buildings belong to the seat, not to you personally, and each sits in one region for good. There are three kinds, depending on which seat you hold.
+Buildings belong to the seat, not to you personally, and each sits in one region for good (foreign-sited estates such as embassies sit in another country). There are three kinds, depending on which seat you hold.
 
 | System | Who gets it | Assets |
 | --- | --- | --- |
@@ -47,11 +47,11 @@ An **estate** is a facility tied to your portfolio. Every estate has four things
 estate-condition-drift
 \`\`\`
 
-Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are capped per turn, so stacking has diminishing returns.
+Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are summed and then held under a hard cap per turn, so stacking past the cap adds nothing.
 
 ### What a school costs
 
-A Public School has base upkeep of 60 and nudges high school graduation by 0.02 and test performance by 0.015 per turn in its region. At Basic tier and Standard funding it costs 60 per turn. A Flagship school at Enhanced funding costs 60 x 2.5 x 1.5 = 225 per turn but delivers a stronger effect once its condition has climbed to 90. Condition moves slowly, so after switching from Standard to Enhanced it takes several turns before the extra output shows. With an envelope of 3,500 to 5,000, ten Basic schools (600 per turn) are comfortably under it.
+A Public School has base upkeep of 60 and nudges high school graduation by 0.02 and test performance by 0.015 per turn in its region. At Basic tier and Standard funding it costs 60 per turn. A Flagship school at Enhanced funding costs 60 x 2.5 x 1.5 = 225 per turn but delivers a stronger effect once its condition has climbed to 90. Condition moves slowly, so after switching from Standard to Enhanced the higher output multiplier applies at once, but condition climbs only 4 points per turn toward 90, so the full effect takes several turns to show. With an envelope of 3,500 to 5,000, ten Basic schools (600 per turn) are comfortably under it.
 
 ## Building a power plant
 
@@ -84,11 +84,11 @@ Projects take several turns to build and then give fixed standing effects.
 | Freight | 7 | 150 | 50 | Road condition up (its listed GDP growth lift currently has no effect) |
 | Airport | 7 | 200 | 70 | Public transit up (its listed GDP growth lift currently has no effect) |
 
-While a project is under construction you set its funding level. A highway takes 12 turns at Slowed funding and spends 72 per turn, 6 turns at Standard and spends 120, and about 4 turns at Crashed and spends 192. Once operational it is permanent and pays only upkeep. Unlike plants, infrastructure effects are flat bonuses that do not fade as the region improves.
+While a project is under construction you set its funding level. A highway takes 12 turns at Slowed funding and spends 72 per turn, 6 turns at Standard and spends 120, and about 4 turns at Crashed and spends 192. Once operational it pays only upkeep until you retire it, which frees the upkeep and removes its effect. Unlike plants, infrastructure effects are flat bonuses that do not fade as the region improves.
 
 ## Before you commit
 
-- Open or expand an estate, and change its funding for free.
+- Open or expand an estate (1 ministerial action each), and change its funding for free.
 - Build or upgrade a plant, or decommission it.
 - Start an infrastructure project, change its funding, or cancel it.
 - Read your total upkeep against your envelope on the seat's build panel before you commit.

@@ -12,10 +12,8 @@ import {
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
-import {
-  energyProductivityMultiplier,
-  plantUtilizationForInputs,
-} from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantUtilizationForInputs } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { getOutputMultiplier, getInputMultiplier } from "@/lib/utils/productionPolicy";
 import { TRADE_EMBARGO_EXPORT_LOSS_SHARE } from "@/lib/trade/constants";
 import {
@@ -1181,7 +1179,7 @@ export function computeRawSupplyDemand(
         : null;
     // Utilization scales INPUT demand: producedUnits / capacity. A plant running
     // at 60% of nameplate consumes ~60% of its inputs rather than 100%.
-    // The energy productivity ramp lifts the cap with the output gain, so a plant
+    // The throughput multiplier lifts the cap with the output gain, so a plant
     // that makes more from the same capacity buys proportionally more inputs.
     const plantsUtilization =
       plantsEnabled &&
@@ -1191,7 +1189,7 @@ export function computeRawSupplyDemand(
         ? plantUtilizationForInputs(
             sector.producedUnits,
             sector.capacityUnits,
-            energyProductivityMultiplier(sector.sectorType, currentTurn, preset)
+            plantThroughputMultiplier(sector, currentTurn, preset)
           )
         : 1;
     const plantsSupplyRates: Partial<Record<CommodityType, number>> | null =

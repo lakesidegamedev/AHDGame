@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, it, expect, vi } from "vitest";
 import { act, cleanup, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../messages/en/corporations.json";
@@ -73,6 +73,9 @@ function mount(data: GroupManagementView | null = structuredClone(base)) {
     </NextIntlClientProvider>
   );
 }
+beforeAll(async () => {
+  await import("./GroupSupplyChain");
+});
 beforeEach(() => {
   window.history.replaceState(null, "", "#overview");
   vi.stubGlobal(
@@ -150,21 +153,19 @@ describe("Subsidiary Group page", () => {
   it("hides receiving controls under commercial independence", async () => {
     window.history.replaceState(null, "", "#supply");
     mount();
+    await screen.findByText("Corporation supply priority is active");
     expect(screen.queryByRole("checkbox", { name: "Receive supply from group" })).toBeNull();
-    await waitFor(() =>
-      expect(screen.getByText("Corporation supply priority is active")).toBeTruthy()
-    );
   });
-  it("shows receiving controls under members first and keeps other players disabled", () => {
+  it("shows receiving controls under members first and keeps other players disabled", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.settings.supplyPolicy = "members";
     data.supplyEngineEnabled = true;
     data.members[1].operator = "player";
     mount(data);
-    const controls = screen.getAllByRole("checkbox", {
+    const controls = (await screen.findAllByRole("checkbox", {
       name: "Receive supply from group",
-    }) as HTMLInputElement[];
+    })) as HTMLInputElement[];
     expect(controls.map((c) => c.disabled)).toEqual([false, true]);
   });
   it("has an explicit no-group state", () => {
@@ -205,7 +206,7 @@ describe("corporation office suggestions and supply estimates", () => {
       mount(data);
     });
     fireEvent.click(screen.getByRole("button", { name: "Supply chain" }));
-    expect(screen.getByText("Estimated supply policy effects")).toBeTruthy();
+    await screen.findByText("Estimated supply policy effects");
     expect(screen.getByText(/Estimates hold output/)).toBeTruthy();
     expect(screen.getAllByText("Combined group total")).toHaveLength(3);
   });
@@ -256,7 +257,7 @@ describe("Group discounts and negotiated agreements", () => {
     data.settings.supplyPolicy = "members";
     data.supplyEngineEnabled = true;
     mount(data);
-    const select = screen.getByRole("combobox", { name: "Automatic Group Chain discount" });
+    const select = await screen.findByRole("combobox", { name: "Automatic Group Chain discount" });
     expect(
       within(select).getByRole("option", { name: "35% discount (65% of market)" })
     ).toBeTruthy();
@@ -266,20 +267,20 @@ describe("Group discounts and negotiated agreements", () => {
       discount: 0.35,
     });
   });
-  it("hides automatic discounts under independence and preserves manual agreements", () => {
+  it("hides automatic discounts under independence and preserves manual agreements", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.supplyAgreementsEnabled = true;
     mount(data);
+    expect((await screen.findByTestId("agreements-panel")).textContent).toBe(root);
     expect(screen.queryByRole("combobox", { name: "Automatic Group Chain discount" })).toBeNull();
-    expect(screen.getByTestId("agreements-panel").textContent).toBe(root);
     expect(
       within(screen.getByRole("combobox", { name: "Manage agreements as" })).queryByRole("option", {
         name: "Subsidiary",
       })
     ).toBeNull();
   });
-  it("restricts discount changes to the parent and switches agreements only between own corporations", () => {
+  it("restricts discount changes to the parent and switches agreements only between own corporations", async () => {
     window.history.replaceState(null, "", "#supply");
     const data = structuredClone(base);
     data.settings.supplyPolicy = "members";
@@ -291,9 +292,9 @@ describe("Group discounts and negotiated agreements", () => {
     mount(data);
     expect(
       (
-        screen.getByRole("combobox", {
+        (await screen.findByRole("combobox", {
           name: "Automatic Group Chain discount",
-        }) as HTMLSelectElement
+        })) as HTMLSelectElement
       ).disabled
     ).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "Manage agreements as" }), {
@@ -301,9 +302,10 @@ describe("Group discounts and negotiated agreements", () => {
     });
     expect(screen.getByTestId("agreements-panel").textContent).toBe(child);
   });
-  it("keeps agreements behind the existing feature flag", () => {
+  it("keeps agreements behind the existing feature flag", async () => {
     window.history.replaceState(null, "", "#supply");
     mount();
+    await screen.findByText("Corporation supply priority is active");
     expect(screen.queryByTestId("agreements-panel")).toBeNull();
   });
 });

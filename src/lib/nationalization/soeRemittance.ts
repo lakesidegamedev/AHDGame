@@ -12,7 +12,7 @@ import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
   fxRateForCorpFromMap,
   anchorToCorpCapital,
@@ -28,7 +28,7 @@ import { resolveTreasuryCashOptions, type TreasuryCashOptions } from "./treasury
 import { snapshotCorporationCurrency } from "@/lib/ledger/balanceSnapshot";
 import { loadSoeGovernanceInputs } from "./soeGovernanceInputs";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { SOE_REPORTING_SECTOR_FIELDS } from "@/lib/nationalization/soeReadProjections";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -42,7 +42,8 @@ export interface SoeRemittedCorp {
 export async function processSoeRemittance(
   db: Db,
   now: Date,
-  ledger?: TreasuryCashOptions
+  ledger?: TreasuryCashOptions,
+  realizedIncomeAnchorByCorpId?: ReadonlyMap<string, number>
 ): Promise<{ remitted: number; perCorp: SoeRemittedCorp[] }> {
   const corps = await corporationsCollection(db)
     .find(
@@ -67,9 +68,9 @@ export async function processSoeRemittance(
   const turn = options.context?.treasuryCashLedgerEnabled ? options.context.turn : null;
   const [allSectors, fxByCurrency, plants, receipts] = await Promise.all([
     corporateSectorsCollection(db)
-      .find({ corporationId: { $in: corpIds } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
+      .find({ corporationId: { $in: corpIds } }, { projection: SOE_REPORTING_SECTOR_FIELDS })
       .toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     loadPlantsBudgetContext(db),
     // A crash resume replays this sweep with live inputs that have moved on.
     // Receipts the earlier attempt froze are authoritative, so they are read
@@ -98,20 +99,22 @@ export async function processSoeRemittance(
   const perCorp: SoeRemittedCorp[] = [];
   for (const corp of corps) {
     if (!isStateOwned(corp)) continue;
-    const incomeAnchor = estimateNationalizedOperatingIncome(
-      corp,
-      sectorsByCorp.get(corp._id.toString()) ?? [],
-      fxByCurrency,
-      metricsById,
-      // Positional filler. The SOCI concentration multiplier is a SEPARATE,
-      // pre-existing divergence from the budget line (which passes the
-      // country's real multiplier); it is left at the identity here so this fix
-      // changes nothing below plants, and is deliberately not folded in as a
-      // silent side effect of the plants threading.
-      1,
-      plants.plantsEnabled,
-      plants
-    );
+    const incomeAnchor =
+      realizedIncomeAnchorByCorpId?.get(corp._id.toString()) ??
+      estimateNationalizedOperatingIncome(
+        corp,
+        sectorsByCorp.get(corp._id.toString()) ?? [],
+        fxByCurrency,
+        metricsById,
+        // Positional filler. The SOCI concentration multiplier is a SEPARATE,
+        // pre-existing divergence from the budget line (which passes the
+        // country's real multiplier); it is left at the identity here so this fix
+        // changes nothing below plants, and is deliberately not folded in as a
+        // silent side effect of the plants threading.
+        1,
+        plants.plantsEnabled,
+        plants
+      );
     const receipt = turn === null ? undefined : receipts?.get(soeRemittanceKey(turn, corp._id));
     // losses are treasury-backed in processSoeOperations
     if (incomeAnchor <= 0 && !receipt) continue;

@@ -4,10 +4,6 @@
     "src/app/api/admin/financial-logs/reconcile/route.ts": {
       "dynamic": 1
     },
-    "src/app/api/admin/leadership-elections/route.ts": {
-      "dynamic": 9,
-      "untyped": 9
-    },
     "src/app/api/admin/migrations/create-indexes/diagnose/route.ts": {
       "dynamic": 1,
       "untyped": 1
@@ -16,23 +12,7 @@
       "dynamic": 1,
       "untyped": 1
     },
-    "src/app/api/bonds/[bondId]/sell/route.ts": {
-      "dynamic": 2,
-      "untyped": 2
-    },
-    "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
-      "dynamic": 2,
-      "untyped": 2
-    },
-    "src/app/api/corporations/[id]/shares/self-issue/route.ts": {
-      "dynamic": 2,
-      "untyped": 2
-    },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/[memberId]/route.ts": {
-      "dynamic": 1,
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/route.ts": {
       "dynamic": 1,
       "untyped": 1
     },
@@ -123,9 +103,6 @@
     "src/lib/banking/cancelConversionUnderwriting.ts": {
       "dynamic": 3
     },
-    "src/lib/banking/fundedSovereignCoupons.ts": {
-      "dynamic": 2
-    },
     "src/lib/banking/legacyDepositInterest.ts": {
       "dynamic": 2,
       "untyped": 2
@@ -192,11 +169,6 @@
       "dynamic": 2,
       "untyped": 2
     },
-    "src/lib/corporations/commands/acquisitions/acquisitionSettlementWorld.ts": {
-      "corporations": 3,
-      "federalBudget": 1,
-      "untyped": 4
-    },
     "src/lib/corporations/commands/acquisitions/controllerTransferBarrier.ts": {
       "dynamic": 1
     },
@@ -205,9 +177,6 @@
     },
     "src/lib/corporations/commands/shareTrading/quoteSaleTax.ts": {
       "dynamic": 1
-    },
-    "src/lib/corporations/commands/shareTrading/shareFillAudit.ts": {
-      "dynamic": 3
     },
     "src/lib/corporations/commands/shareTrading/shareFillMoney.ts": {
       "dynamic": 1
@@ -281,9 +250,6 @@
     "src/lib/currency/marketMaker.ts": {
       "dynamic": 2,
       "untyped": 2
-    },
-    "src/lib/db/collections/activityLog.ts": {
-      "untyped": 1
     },
     "src/lib/db/sessionDb.ts": {
       "dynamic": 1,
@@ -429,9 +395,6 @@
       "dynamic": 2,
       "untyped": 1
     },
-    "src/lib/politicalMedia/journal.ts": {
-      "dynamic": 4
-    },
     "src/lib/propagateNameChange.ts": {
       "dynamic": 2,
       "untyped": 2
@@ -543,6 +506,43 @@
     },
     "src/lib/world/succession/materializeTerritory.ts": {
       "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/api/commands/bonds/[bondId]/sell/handlers.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/api/commands/corporations/[id]/bond-default/cash/handlers.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/api/commands/admin/leadership-elections/handlers.ts": {
+      "dynamic": 9,
+      "untyped": 9
+    },
+    "src/lib/api/commands/country/[code]/parties/[id]/caucuses/[slug]/members/handlers.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/api/commands/corporations/[id]/shares/self-issue/handlers.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/banking/sovereignCouponBatchPayout.ts": {
+      "dynamic": 2
+    },
+    "src/lib/corporations/commands/shareTrading/shareFillAudit.ts": {
+      "dynamic": 3
+    },
+    "src/lib/politicalMedia/journal.ts": {
+      "dynamic": 4
+    },
+    "src/lib/corporations/commands/acquisitions/acquisitionSettlementWorld.ts": {
+      "untyped": 4,
+      "corporations": 3,
+      "federalBudget": 1
+    },
+    "src/lib/db/collections/activityLog.ts": {
       "untyped": 1
     }
   }

@@ -1,6 +1,6 @@
 export const backgroundCountriesContent = `# Background Countries
 
-Not every country in a 2027 world is played out region by region. Sixteen of them are **background countries**: Ireland, Brazil, Nigeria, Russia, Poland, Hungary, Romania, Bulgaria, France, Italy, Spain, Sweden, Turkey, Austria, Finland and Greece. They run as whole economies with a government, a currency, a trading account and a stance abroad, but they have no regions, legislature or politicians you can play. The United States is the player country, and the UK, Germany, Japan and China are run by computer-controlled parties that players can take over later (see [NPPs Overview](/wiki/npps-overview)). Other start dates and the older worlds do not have background countries.
+Not every country in a 2027 world is played out region by region. Sixteen of them are **background countries**: Ireland, Brazil, Nigeria, Russia, Poland, Hungary, Romania, Bulgaria, France, Italy, Spain, Sweden, Turkey, Austria, Finland and Greece. They run as whole economies with a government, a currency, a trading account and a stance abroad, but they have no regions, legislature or politicians you can play. The United States is the player country, and the UK, Germany, Japan and China are run by computer-controlled parties that players can take over later (see [NPPs Overview](/wiki/npps-overview)). Other start dates and the older worlds have background countries too, but 2027 is the only one where they are authored trading economies with a national state.
 
 ## The country page
 
@@ -15,7 +15,7 @@ Open a background country and you see one overview page instead of the full coun
 - **Invest.** The government bonds and the national index fund you can buy.
 - **Alliances and crises** the country is part of.
 
-Links to the legislature, map, parties and similar pages take you back to the overview, because there is nothing behind them. The currency market works for every country.
+Links to the legislature, map, parties and similar pages take you back to the overview, because there is nothing behind them. The currency market works for most countries, but not for non-convertible command-economy currencies.
 
 ## Briefs
 
@@ -40,11 +40,11 @@ A background country that cannot cover its interest runs through austerity: it c
 - **Sanctions and war.** When a country goes to war against one of a background country's partners, the background government may sanction it. Sanctions last half a game year, are renewed only while the war goes on, and end early if the war ends or a more dovish government takes over. When an alliance calls its members to a war they are not bound to join, a background government decides once. Weak or dovish governments say no. Background countries never start wars.
 - **Organizations.** They vote on sanctions, trade agreements, statements, aid, dues and chair elections in the organizations they belong to, following their bloc, their government's economic stance, what the measure costs them and how the rest of the bloc voted. A country never votes to sanction or condemn itself. Admissions and war votes are for player countries only (see [International Organizations](/wiki/international-organizations)).
 - **Cyber operations.** A hawkish background government can run cyber operations against the leader of the rival bloc, and can stand down. See [Cyber Operations](/wiki/cyber-operations). A background country cannot be a cyber target, because it models no network data.
-- **Crises.** A background country is hit by crises by its size and passes shocks on to others (see [Crises](/wiki/crisis-interaction)).
+- **Crises.** A background country passes shocks on to others harder the larger it is (see [Crises](/wiki/crisis-interaction)).
 
 ## Trade and currency
 
-Every turn a background country offers the traded part of what its economy makes and bids for the traded part of what it needs, in its own currency, in the same market that companies, households and governments use (see [International Trade](/wiki/trade-system)). A country that sells more than it buys sees its currency strengthen over time, and one running a deficit sees it weaken (see [Currency Exchange](/wiki/currency-exchange)).
+Every turn a background country offers the traded part of what its economy makes and bids for the traded part of what it needs, at the shared world reference price, in the same market that companies, households and governments use (see [International Trade](/wiki/trade-system)). A country that sells more than it buys sees its currency strengthen over time, and one running a deficit sees it weaken (see [Currency Exchange](/wiki/currency-exchange)).
 
 ## Why it matters to you
 

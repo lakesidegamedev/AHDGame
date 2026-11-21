@@ -162,9 +162,8 @@ const FOSSIL_INPUTS: readonly CommodityType[] = ["coal", "oil", "natural_gas"];
  * Share of these sites' input basket that is coal, oil or gas.
  *
  * The design asked for "fuel mix" on energy and it is the one energy metric
- * that falls straight out of the strategies: Conventional and Hydraulic
- * Fracturing buy hydrocarbons, Renewables Focus buys electronics and rare
- * earths instead.
+ * that falls straight out of the strategies: Conventional power buys hydrocarbons,
+ * Renewables Focus buys electronics and rare earths instead.
  */
 export function typeFossilShare(sectors: SectorDetail[]): number | null {
   let fossil = 0;

@@ -1,5 +1,8 @@
 "use client";
 
+import type { BuildDemandRow } from "@/lib/corporations/rules/fundedBuildDemand";
+import { buildMarketReadout } from "@/lib/corporations/rules/buildMarketReadout";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import {
   CAPACITY_UNIT_LABEL,
   roomInPlantsLabel,
@@ -37,6 +40,9 @@ interface MarketPositionPanelProps {
     measuredDemandGapUnits?: number | null;
     /** This sector's own demand throttle bound last turn; its idle capacity fills buyers first. */
     roomHeldByOwnIdle?: boolean;
+    /** Per-product funded orders; when present the room reads per product. */
+    buildDemand?: BuildDemandRow[];
+    unitsPerFacility?: number;
   } | null;
 }
 
@@ -135,6 +141,24 @@ export default function MarketPositionPanel({
   const buyersRoomUnits =
     room?.measuredDemandGapUnits != null ? Math.max(0, room.measuredDemandGapUnits) : null;
   const fmtUnits = (v: number) => Math.round(v).toLocaleString();
+  // A mixed-output site whose products split reads "0 plants" on the
+  // full-mix count; name the products with waiting buyers instead.
+  const readoutText = useTranslations("corporations.sectorInvestment.marketReadout");
+  const readout =
+    room?.buildDemand?.length && room.unitsPerFacility
+      ? buildMarketReadout(room.buildDemand, room.unitsPerFacility)
+      : null;
+  const roomValue =
+    readout?.summary === "some-waiting"
+      ? readoutText("sidebarSome", {
+          products: readout.products
+            .filter((p) => p.verdict === "waiting")
+            .map((p) => COMMODITY_LABELS[p.commodity])
+            .join(", "),
+        })
+      : readout?.summary === "none-waiting"
+        ? readoutText("sidebarNone")
+        : null;
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
@@ -245,18 +269,20 @@ export default function MarketPositionPanel({
                   </span>
                 </Tooltip>
                 <span
-                  className={`ml-auto tabular-nums font-medium ${(buyersRoomUnits ?? 0) > 0 ? "text-foreground" : "text-muted"}`}
+                  className={`ml-auto text-right tabular-nums font-medium ${(buyersRoomUnits ?? 0) > 0 || readout?.summary === "some-waiting" ? "text-foreground" : "text-muted"}`}
                   title={
                     buyersRoomUnits != null
                       ? `${fmtUnits(buyersRoomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`
                       : undefined
                   }
                 >
-                  {buyersRoomUnits == null
-                    ? t("estimateUnavailable")
-                    : t("estimatedBuildPlants", {
-                        plants: roomInPlantsLabel(buyersRoomUnits, sector),
-                      })}
+                  {roomValue
+                    ? roomValue
+                    : buyersRoomUnits == null
+                      ? t("estimateUnavailable")
+                      : t("estimatedBuildPlants", {
+                          plants: roomInPlantsLabel(buyersRoomUnits, sector),
+                        })}
                 </span>
               </div>
             </>

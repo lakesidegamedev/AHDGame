@@ -17,6 +17,11 @@ import type { GameState } from "@/lib/db/types/gameState";
 
 /** Gameplay flags held below their maximum on fresh worlds, and why. */
 export const FRESH_WORLD_FLAG_EXCLUSIONS = {
+  electricityNetworkMode: {
+    value: "shadow",
+    reason:
+      "Grid comparisons start without changing settlement; enforcement requires an explicit administrator choice.",
+  },
   nppAutonomyLevel: {
     value: "v6",
     reason:
@@ -58,6 +63,7 @@ export type DefaultGameStateFlagKey = keyof typeof DEFAULT_GAME_STATE_FLAGS;
 
 /** Gameplay gates and rollout modes on `gameConfig` for every fresh world. */
 export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
+  electricityNetworkMode: FRESH_WORLD_FLAG_EXCLUSIONS.electricityNetworkMode.value,
   nppEconomyEnabled: true,
   nppCorpsAttackable: true,
   nppFundRedemptionEnabled: true,
@@ -105,6 +111,9 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   // Import tariffs in the funded producer market. Fresh worlds only: a running
   // world switches it on as a deliberate staged change.
   producerTariffStage: 1,
+  // Minimum plant share for public buying and household transfers. Fresh worlds
+  // only: a running world switches it on as a deliberate staged change.
+  producerDemandFloorStage: 1,
   // Growth signal measured as value added. A running world keeps gross output
   // so a basis switch cannot show up as a recession.
   outputBasis: "value_added",
@@ -135,6 +144,8 @@ export const NON_GAMEPLAY_GAME_STATE_FIELDS: Readonly<Record<string, string>> = 
 /** gameConfig fields shaped like flags that this policy deliberately does not set. */
 export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> = {
   maintenanceMode: "ops maintenance switch",
+  legacyTechMode:
+    "era baseline tech switch: absent means off, which fresh worlds want; an operator sets baseline on a late-start world and a reset clears it",
   producerMarketShadowEnabled:
     "telemetry only: runs the unified producer market in memory beside the live engine; changes no gameplay",
   producerTransitionPackageEnabled:

@@ -1,10 +1,10 @@
 export const mailContent = `# Mail
 
-When you want to say something to one person and nobody else, you use Mail. It is private, one-to-one messaging between player characters, and it sits inside the [Notification Center](/wiki/notifications) inbox as its own segment, separate from system notifications, where unread mail also adds to your counts. Use it to negotiate with an ally, ask a party chair a question, or arrange a deal without posting in public.
+When you want to say something to one person and nobody else, you use Mail. It is private, one-to-one messaging between player characters, and it sits inside the [Notification Center](/wiki/notifications) inbox as its own segment, separate from system notifications, where unread mail has its own separate count. Use it to negotiate with an ally, ask a party chair a question, or arrange a deal without posting in public.
 
 ## Writing a message
 
-You write a message to another character and it appears in their inbox at once. Each message has a subject and a body, and is private to the sender and the recipient. Mail is for talking to people. Anything you do not want in the public [News](/wiki/news) feed belongs here. Most automatic game events (election results, bill status, wires) arrive as notifications instead.
+You write a message to another character and it appears in their inbox at once. Each message has a subject and a body, and is seen only by the sender and the recipient, unless a message is reported to moderators. Mail is for talking to people. Anything you do not want in the public [News](/wiki/news) feed belongs here. Most automatic game events (election results, bill status, wires) arrive as notifications instead.
 
 | Limit | Value |
 | --- | --- |
@@ -18,9 +18,9 @@ You write a message to another character and it appears in their inbox at once. 
 
 ## Where it lives
 
-Open **Notifications**, then the **Mail** segment. New mail starts from a character's profile, on its Mail tab. Your sent messages appear inside each thread next to the replies. Everything that is not mail sits in the **Notifications** segment, while **All** and **Needs action** mix both. The Notification Center hosts the inbox and the archive, mute and snooze controls.
+Open **Notifications**, then the **Mail** segment. New mail starts from a character's profile, on its Mail tab. Your sent messages appear inside each thread next to the replies. Everything that is not mail sits in the **Notifications** segment, while **All** and **Needs action** mix both. The Notification Center hosts the inbox and the archive and snooze controls. Mute controls are in Settings.
 
-Some mail is automatic. At character creation, where the starter checklist is on, a welcome mail from the Game Guide arrives. Forex order fills send mail from the Forex Market ([Currency Exchange](/wiki/currency-exchange)), and a failed currency defence mails the central bank chair. A hard party whip mails the members it binds, a bank mails its decision on your loan, and an IMF restructuring mails the affected bondholders. These have no player behind them, so there is nobody to reply to.
+Some mail is automatic. At character creation, a welcome mail from the Game Guide arrives. Forex order fills send mail from the Forex Market ([Currency Exchange](/wiki/currency-exchange)), and a failed currency defence mails the central bank chair. A hard party whip mails the members it binds, a bank mails its decision on your loan, and an IMF restructuring mails the affected bondholders. These have no player behind them, so there is nobody to reply to.
 
 ## Reading and deleting
 
@@ -37,5 +37,5 @@ Say you want to propose a joint fundraiser to the chair of your state party. Sub
 
 What does not work: you cannot mail a non-player politician (NPP), a retired character, or someone who is banned or has blocked you. In the last two cases you see the same generic refusal. A prohibited-language filter, the same one used on news posts, rejects messages with slurs. Do not use mail to share real-world personal data.
 
-Applies in every world for characters in good standing; automatic mail such as the welcome message depends on whether the starter checklist is on there. Last checked 2026-10-29, version 1.18.0. Exact rules: [Mail (design)](https://docs.lakesidegames.net/design/mail.html)
+Applies in every world for characters in good standing. Last checked 2026-10-29, version 1.18.0. Exact rules: [Mail (design)](https://docs.lakesidegames.net/design/mail.html)
 `;

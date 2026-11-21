@@ -79,3 +79,18 @@ export function isValuelessNonErrorRejection(message: string, originalException:
     normalized === "Non-Error promise rejection captured"
   );
 }
+
+/** Browser page translators rewrite text nodes into nested `font` wrappers and tag the root element. */
+export function isPageTranslated(root: { className?: string } | null | undefined): boolean {
+  return /\btranslated-(ltr|rtl)\b/.test(root?.className ?? "");
+}
+
+/**
+ * A translator re-wrapping React-managed text can recurse without bound inside
+ * the framework. These errors have no cause in our code, so they are dropped
+ * only when the page is actually translated.
+ */
+export function isTranslatorDomRecursion(message: string, translated: boolean): boolean {
+  if (!translated) return false;
+  return message === "Maximum call stack size exceeded." || /^Na$/.test(message);
+}

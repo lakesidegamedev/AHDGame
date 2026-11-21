@@ -17,7 +17,7 @@ import {
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -171,7 +171,7 @@ export async function corpDailyGrossRevenuePricingLocal(
       .toArray(),
     getMarketSystemModeForDb(db).then((m) => marketAtLeast(m, "plants")),
     loadWorldEraUnitScale(db),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
   ]);
 
   return {

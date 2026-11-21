@@ -24,8 +24,6 @@ import {
 } from "@/lib/countries/uk/northernIreland/rules";
 import type { Db } from "mongodb";
 import type { EnactedLaw, FederalBudget, StateBudget } from "@/lib/db/types/budget";
-import type { State } from "@/lib/db/types/state";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
@@ -36,7 +34,6 @@ import { getEraContext, type EraContext } from "@/lib/era/context";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
 import { nonLawSpendingAmount } from "./rules/nonLawSpending";
 import { applyCategoryScale } from "./rules/fiscalStabilizer";
@@ -149,11 +146,13 @@ export function normalizeStateSpending(
   // recompute (the spending-side mirror of revenue.resourceRoyalties). Folded
   // into `total` so a state-funded survey stays booked as spending.
   const resourceProspecting = safeSpending.resourceProspecting ?? 0;
+  const interestPayments = safeSpending.interestPayments ?? 0;
 
   return {
     byCategory,
     resourceProspecting,
-    total: sumSpendingByCategory(byCategory) + resourceProspecting,
+    ...(safeSpending.interestPayments !== undefined ? { interestPayments } : {}),
+    total: sumSpendingByCategory(byCategory) + resourceProspecting + interestPayments,
   };
 }
 
@@ -488,6 +487,9 @@ export async function calculateStateSpendingDetail(
       // Read the persisted state-prospecting spend back so it survives this
       // rebuild-from-laws recompute (same treatment as revenue.resourceRoyalties).
       resourceProspecting: budget.spending?.resourceProspecting ?? 0,
+      ...(budget.spending?.interestPayments !== undefined
+        ? { interestPayments: budget.spending.interestPayments }
+        : {}),
       total: 0,
     }),
     lawCosts,

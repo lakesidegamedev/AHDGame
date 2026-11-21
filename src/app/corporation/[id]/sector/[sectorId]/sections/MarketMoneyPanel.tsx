@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  listOutputs,
+  outputSalesSplit,
+  type OutputSale,
+} from "@/lib/corporations/rules/outputSalesSplit";
 import { useTranslations } from "next-intl";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -31,6 +36,8 @@ interface MarketMoneyPanelProps {
    * products that can be priced far apart and is labelled as covering all.
    */
   outputCount?: number;
+  /** Each product this site makes, with its own sold share. */
+  outputs?: readonly OutputSale[];
 }
 
 /**
@@ -50,6 +57,7 @@ export default function MarketMoneyPanel({
   financials,
   corporation,
   outputCount,
+  outputs,
 }: MarketMoneyPanelProps) {
   const t = useTranslations("corporations.sectorInvestment");
   const supplyText = useTranslations("corporations.internalSupply");
@@ -70,6 +78,7 @@ export default function MarketMoneyPanel({
   const offered = plants.producedUnits ?? 0;
   const sold = plants.soldUnits ?? 0;
   const unsold = plants.unsoldUnits ?? 0;
+  const split = outputSalesSplit(outputs);
   const ownSite = plants.ownSiteUnits ?? 0;
   // Delivery-limited share: made, offered, and no freight network could carry
   // it. Without naming it this reads as a demand failure on every surface, and
@@ -339,6 +348,10 @@ export default function MarketMoneyPanel({
               but could not reach them. {deliveryExplanation} Cutting production does not fix that.{" "}
               {deliveryAction}
             </>
+          ) : split ? (
+            <>
+              {`Most of it was ${listOutputs(split.stuck)}. ${listOutputs(split.selling)} found buyers. Each product has its own row under "What goes in, what comes out" below.`}
+            </>
           ) : (plants.demandGapUnits ?? 0) >= 1 ? (
             <>{t("mixedOutputAppetite")}</>
           ) : (
@@ -353,7 +366,7 @@ export default function MarketMoneyPanel({
       {/* Glut explainer: below half fill the missing sales are not a pricing
           tweak away, the market simply does not want the output. Say so plainly
           (same tone as the demand-gap copy above, ticket #1027 follow-up). */}
-      {truth?.soldFraction != null && truth.soldFraction < 0.5 && (
+      {truth?.soldFraction != null && truth.soldFraction < 0.5 && !split && (
         <p className="mt-2 text-body-sm text-muted">
           {deliveryLimitedShown
             ? "The rest of the shortfall is demand. Output beyond what buyers need goes unsold, and extra sales have to be won from rivals on price."

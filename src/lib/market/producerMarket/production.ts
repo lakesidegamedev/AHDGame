@@ -1,4 +1,5 @@
 import { productionOrderOutcomes } from "./productionOrderOutcomes";
+import { markStateServiceSpill } from "./stateServiceSpillRules";
 import { closingProducerCash, ProducerCashChanges } from "./cashChangesRules";
 import { settleProducerMarket, type ProducerOffer } from "./rules";
 import { settlePriorProducerPayables } from "./payablesRules";
@@ -448,6 +449,8 @@ export function advanceProducerEconomy(
       ...householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
     );
   }
+  // Unmet local healthcare demand may buy from neighbouring states (stateServiceSpillRules).
+  markStateServiceSpill(consumerOrders);
   const orders = [...consumerOrders];
   const originalCash = new Map(input.accounts.map((a) => [a.id, a.cash]));
   const plannedById = new Map(
@@ -505,6 +508,7 @@ export function advanceProducerEconomy(
       }
     return settleProducerMarket({
       checkBudget: execution?.checkBudget,
+      ...(input.electricityNetwork ? { electricityNetwork: input.electricityNetwork } : {}),
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
@@ -814,6 +818,7 @@ export function advanceProducerEconomy(
     producers: results,
     planning,
     tradeReceipt: market.tradeReceipt,
+    ...(market.electricity ? { electricity: market.electricity } : {}),
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),

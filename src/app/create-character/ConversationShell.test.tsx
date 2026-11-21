@@ -26,6 +26,7 @@ function Harness() {
       stats: true,
       review: true,
     },
+    blockers: { politician: "Enter a name with at least two characters." },
     summary: {
       country: "United States",
       politician: answer.trim().length >= 2 ? answer.trim() : null,
@@ -63,13 +64,13 @@ function Harness() {
 }
 
 function continueButton(): HTMLElement {
-  return screen.getByRole("button", { name: /Continue|Review your file/ });
+  return screen.getByRole("button", { name: /Continue|Review your choices/ });
 }
 
 /** Walk forward until the review step renders (intermediate steps are complete). */
 function advanceToReview(): void {
   for (let i = 0; i < 10; i++) {
-    const reviewButton = screen.queryByRole("button", { name: "Review your file" });
+    const reviewButton = screen.queryByRole("button", { name: "Review your choices" });
     if (reviewButton) {
       fireEvent.click(reviewButton);
       return;
@@ -93,6 +94,7 @@ describe("ConversationShell player flow", () => {
 
     // Empty answer: Continue stays disabled under the 2+ character rule.
     expect(continueButton()).toHaveProperty("disabled", true);
+    expect(screen.getByText("Enter a name with at least two characters.")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Politician name"), {
       target: { value: "Al" },
     });
@@ -109,7 +111,7 @@ describe("ConversationShell player flow", () => {
 
     expect(screen.getByText("Content for review")).toBeTruthy();
     // No Continue on the final step: review owns submission.
-    expect(screen.queryByRole("button", { name: /Continue|Review your file/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Continue|Review your choices/ })).toBeNull();
 
     const transcript = screen.getByRole("list", { name: "Your answers so far" });
     expect(transcript.textContent).toContain("United States");
@@ -167,7 +169,7 @@ describe("ConversationShell player flow", () => {
     advanceToReview();
 
     expect(screen.getByText("Content for review")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Continue|Review your file/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Continue|Review your choices/ })).toBeNull();
     expect(screen.getByRole("button", { name: "File character" })).toBeTruthy();
   });
 

@@ -28,7 +28,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
   if (!data) notFound();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
@@ -42,7 +42,9 @@ export default async function WikiSeatPage({ params }: PageProps) {
       </nav>
 
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">{data.title}</h1>
+        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          {data.title}
+        </h1>
         <p className="mt-2 text-muted">
           {data.type === "governor" &&
             "The governor is the chief executive of the state, with significant powers over appointments and legislation."}
@@ -53,10 +55,12 @@ export default async function WikiSeatPage({ params }: PageProps) {
         </p>
       </header>
 
-      <section className="rounded-xl border border-card-border bg-card/60 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Current officeholder(s)</h2>
+      <section className="">
+        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Current officeholder(s)
+        </h2>
         {data.holders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-card-border bg-card/40 p-6 text-center">
+          <div className="border-b border-card-border/60 py-2.5 text-center">
             <p className="font-medium text-muted">Vacant</p>
             <p className="mt-1 text-sm text-muted">
               {data.type === "governor"
@@ -71,7 +75,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
             {data.holders.map((h, i) => (
               <div
                 key={h.id || i}
-                className="flex items-center gap-4 rounded-lg border border-card-border bg-card/40 p-4"
+                className="flex items-center gap-4 border-b border-card-border/60 py-2.5"
               >
                 <Avatar
                   url={h.avatarUrl}

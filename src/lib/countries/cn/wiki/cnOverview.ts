@@ -4,7 +4,7 @@ In China the ruling party cannot lose an election, so the thing that can end a l
 
 ## What keeps a Premier in office
 
-Leader transitions run through a separate **ruling-party confidence model**, which every one-party state now shares (China was the first country modelled with it). The game recomputes confidence every turn, and it replaces the parliamentary confidence vote.
+Leader transitions run through a separate **ruling-party confidence model**, which only some one-party states share (China was the first country modelled with it). The game recomputes confidence every turn, and it replaces the parliamentary confidence vote.
 
 - **Priority profile**: fixed ideological weights that every enacted law is scored against.
 - **Per-turn drift**: the game recomputes two scores every turn from policy effects, popular mood and the economy. **Popular legitimacy** is how the public reads the regime. **Party confidence** is how stable the ruling party is inside.
@@ -53,7 +53,7 @@ China uses the shared **regime-conversion** system with its own collapse target:
 | Former ruling party's votes | Scaled down by 20% | No penalty |
 | Time to the first election | 12 turns | 12, 24 or 48 turns (24 by default) |
 
-Conversion, whether forced, negotiated through a convention, or imposed as a regime-change peace term, is one-way. Once converted, there is no path back to one-party rule, and the conversion dissolves the NPC and holds the election it promises.
+Conversion, whether forced or negotiated through a convention, is one-way: neither path can pick one-party rule. A regime-change peace term can still install a one-party state. The conversion does not dissolve the NPC itself; it queues the election it promises, and the NPC keeps sitting until that election runs.
 
 ## Playing outside the CCP
 
@@ -70,7 +70,7 @@ The **National People's Congress** is the national legislature. Despite a bicame
 - **National People's Congress (NPC)**: 2,980 delegates representing provinces, municipalities, autonomous regions, the armed forces, and special administrative regions. **5-year terms. All seats contested** each cycle. This is the sole legislative body where player-contestable bills originate.
 - **CPPCC** (Chinese People's Political Consultative Conference): 2,169 members representing diverse social and economic constituencies. The CPPCC is an **advisory body** and is **not part of the player legislative loop**. It cannot block or amend bills.
 
-The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 + 1; 614 of 1,226 in the 1953 preset). Since the CCP is the ruling party by design and no other party competes, this threshold is a formality: the ruling party always holds the NPC majority.
+The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 + 1; 614 of 1,226 in the 1953 preset). Since the CCP is the ruling party by design and the other approved parties hold only a minority of seats, this threshold is a formality: the ruling party always holds the NPC majority.
 
 | Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 +
 | NPC Delegate | Regional election | 5 years | 2,980 (1,226 in 1953) |
 | Provincial Delegate (People's Congress) | Sub-national election | 5 years | 4,000 total (3,781 in 1953) |
 | Governor (provincial executive) | FPTP provincial election | 5 years | 1 per province |
-| Governor of the PBoC | Nominated by the Premier, then drawn | 4 years | 1 |
+| Governor of the PBoC | Nominated by the Premier, then drawn | 5 years | 1 |
 
 The **President** is a **ceremonial head of state**: not elected and not appointed through the Premier flow. The office is auto-populated as whoever currently holds the **CCP chair**, and updates automatically whenever the chair changes. The President carries **+0 actions per turn** and **0 party strength weight**, so the office has no mechanical weight beyond its ceremonial label.
 
@@ -120,7 +120,7 @@ Take a China of 1 billion people across 8 provinces: the transfer pool is 35 bil
 | Mid-game | Governor | +2 actions/turn; controls provincial executive; 5-year term |
 | Top | Premier | +4 actions/turn; heads State Council; internal-party confidence |
 
-The Premier is the top of the ladder, but it requires internal-party confidence, not a legislative vote. The ceremonial President carries no mechanical weight (+0 actions, 0 party strength). See [Player Progression](/wiki/player-progression) and the [Cabinet Guide](/wiki/cabinet-guide).
+The Premier is the top of the ladder, but it requires an NPC confirmation vote, and then internal-party confidence to stay in office. The ceremonial President carries no mechanical weight (+0 actions, 0 party strength). See [Player Progression](/wiki/player-progression) and the [Cabinet Guide](/wiki/cabinet-guide).
 
 ## Money and four starting years
 
@@ -133,7 +133,7 @@ The Premier is the top of the ladder, but it requires internal-party confidence,
 | Stock exchange | SSE |
 | Finance Minister | Minister of Finance |
 
-China appears in every preset, with four authored metric baselines: 1953, 1979, 1991 and 2019. Its starting economic model depends only on whether the world starts before 2005:
+China appears in every preset, with five authored metric baselines: 1953, 1979, 1991, 2019 and 2027. Its starting economic model depends only on whether the world starts before 2005:
 
 | Start | Model | Description |
 | --- | --- | --- |

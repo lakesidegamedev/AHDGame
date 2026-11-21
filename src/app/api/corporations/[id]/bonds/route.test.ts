@@ -102,8 +102,10 @@ function makeCursor(docs: unknown[]) {
 
 /**
  * @param heldBondUnits creditor holdings, which count toward exit equity.
+ * @param poolCash local cash in the USD bond market pool; null means the world
+ *   has no pool for the currency.
  */
-function setupDb(opts: { heldBondUnits?: number } = {}) {
+function setupDb(opts: { heldBondUnits?: number; poolCash?: number | null } = {}) {
   const held =
     opts.heldBondUnits && opts.heldBondUnits > 0
       ? [
@@ -130,6 +132,11 @@ function setupDb(opts: { heldBondUnits?: number } = {}) {
   db.collectionMocks["corporateSectors"]!.find.mockReturnValue(makeCursor([RICH_NPV_THIN_BOOK]));
   db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
   db.collectionMocks["corporationHistory"]!.findOne.mockResolvedValue({ income: 1_000_000 });
+  db.collectionMocks["bondMarketPools"]!.findOne.mockResolvedValue(
+    opts.poolCash === null
+      ? null
+      : { _id: "USD", cashLocal: opts.poolCash ?? 0, m2Local: undefined }
+  );
 }
 
 beforeEach(async () => {
@@ -143,6 +150,7 @@ beforeEach(async () => {
     "corporationHistory",
     "exchangeRates",
     "gameState",
+    "bondMarketPools",
   ]) {
     db.collection(name);
   }
@@ -220,6 +228,43 @@ describe("GET /api/corporations/[id]/bonds — ticket #1198 exit-equity ceiling"
     const body = await res.json();
     expect(body.exitEquity).toBe(16_000_000);
     expect(body.maxAllowedIssuance).toBe(16_000_000);
+  });
+
+  it("quotes the cash the bond market pool would actually fund at issuance", async () => {
+    const { GET } = await import("./route");
+    const quote = async () => {
+      const res = await GET(
+        new Request(`http://localhost/api/corporations/${CORP_ID.toString()}/bonds`),
+        { params: Promise.resolve({ id: CORP_ID.toString() }) }
+      );
+      return res.json();
+    };
+
+    setupDb({ poolCash: 0 });
+    const empty = await quote();
+    expect(empty.primaryMarket).toMatchObject({ hasPool: true, poolCurrency: "USD" });
+    expect(empty.primaryMarket.fundableNowAnchor).toBe(0);
+
+    // A slider ceiling inside the debt limit tells a CEO nothing about cash the
+    // pool has; the preview has to track pool cash, not the borrowing ceiling.
+    setupDb({ poolCash: 10_000_000 });
+    const small = await quote();
+    setupDb({ poolCash: 20_000_000 });
+    const large = await quote();
+    expect(small.primaryMarket.fundableNowAnchor).toBeGreaterThan(0);
+    expect(large.primaryMarket.fundableNowAnchor).toBe(small.primaryMarket.fundableNowAnchor * 2);
+    expect(large.primaryMarket.fundableNowAnchor).toBeLessThanOrEqual(large.maxAllowedIssuance);
+  });
+
+  it("reports no pool as full funding, which is what POST does without one", async () => {
+    setupDb({ poolCash: null });
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request(`http://localhost/api/corporations/${CORP_ID.toString()}/bonds`),
+      { params: Promise.resolve({ id: CORP_ID.toString() }) }
+    );
+    const body = await res.json();
+    expect(body.primaryMarket).toMatchObject({ hasPool: false, fundableNowAnchor: null });
   });
 });
 

@@ -43,7 +43,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
         <div className="text-muted">Loading election…</div>
       </div>
     );
@@ -51,7 +51,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
   if (error || !election) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
         <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center text-error">
           {error ?? "Election not found"}
         </div>
@@ -76,7 +76,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
   const campaignNarrative = generateCampaignNarrative(election);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <Breadcrumbs
         items={[
           { label: "Wiki", href: "/" },
@@ -88,7 +88,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
       <article className="prose prose-invert max-w-none">
         {/* Header with title */}
         <header className="mb-8 border-b border-card-border pb-6">
-          <h1 className="mb-3 text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="mb-3 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
             {election.label}
           </h1>
           <p className="text-sm text-muted">
@@ -142,10 +142,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
             </p>
             <div className="space-y-5">
               {candidates.map((candidate, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-card-border bg-card/30 p-5 shadow-sm"
-                >
+                <div key={idx} className="">
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-foreground mb-1">{candidate.name}</h3>
@@ -332,7 +329,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
       )}
 
       {!election.generalResults && election.primaryResults.length === 0 && (
-        <div className="rounded-xl border border-card-border bg-card/40 p-8 text-center">
+        <div className=" text-center">
           <div className="mb-4 text-4xl opacity-30">📊</div>
           <p className="text-base text-foreground mb-2 font-medium">Election data pending</p>
           <p className="text-sm text-muted">

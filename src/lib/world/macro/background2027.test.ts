@@ -19,6 +19,7 @@ import {
   backgroundCountryContributions,
   placeBackgroundBooksInStates,
 } from "./rules/countryBooks";
+import { computeMacroContribution, MACRO_RESOURCE_ENDOWMENT_SCALE } from "./kernel";
 import { seedMacroCountries } from "./seedMacroCountries";
 import type { MacroCountryState, MacroMarketContribution } from "./types";
 
@@ -219,5 +220,38 @@ describe("background countries in the national books", () => {
     // An embargo-style zero affinity stops the flow.
     const blocked = clearAllCommodities(countries, byCountry, () => 0);
     expect(blocked.get("software")!.perCountry.US.exports).toBe(0);
+  });
+});
+
+describe("2027 background raw-resource balance", () => {
+  const RAW = ["iron", "coal", "timber", "rare_earth", "oil", "natural_gas"] as const;
+
+  it("keeps world raw supply near 90% of demand and leaves natural gas unscaled", async () => {
+    const docs = await seed("2027-default");
+    const totals = new Map<string, { supply: number; demand: number }>(
+      RAW.map((r) => [r, { supply: 0, demand: 0 }])
+    );
+    for (const doc of docs) {
+      const byCommodity = computeMacroContribution(doc, 1).byCommodity;
+      for (const raw of RAW) {
+        const row = byCommodity[raw];
+        if (!row) continue;
+        const t = totals.get(raw)!;
+        t.supply += row.supply;
+        t.demand += row.demand;
+      }
+    }
+    for (const raw of RAW) {
+      const { supply, demand } = totals.get(raw)!;
+      const ratio = supply / demand;
+      if (raw === "natural_gas") {
+        expect(MACRO_RESOURCE_ENDOWMENT_SCALE[raw]).toBeUndefined();
+        expect(ratio).toBeGreaterThan(0.95);
+      } else {
+        expect(MACRO_RESOURCE_ENDOWMENT_SCALE[raw]).toBeDefined();
+        expect(ratio).toBeGreaterThanOrEqual(0.85);
+        expect(ratio).toBeLessThanOrEqual(0.97);
+      }
+    }
   });
 });

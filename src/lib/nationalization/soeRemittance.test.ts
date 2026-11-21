@@ -24,6 +24,7 @@ vi.mock("./treasuryLedger", () => ({
 }));
 vi.mock("@/lib/currency/corporationCapital", () => ({
   loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
+  loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
   resolveCorpLiquidCurrencyCode: vi.fn(() => "CNY"),
   fxRateForCorpFromMap: vi.fn(() => 1),
   anchorToCorpCapital: vi.fn((v: number) => v), // identity at rate 1
@@ -118,6 +119,23 @@ describe("processSoeRemittance", () => {
     await processSoeRemittance(db as unknown as Db, now);
 
     expect(vi.mocked(remitToTreasury)).not.toHaveBeenCalled();
+  });
+
+  it("uses booked funded income instead of a profitable nameplate estimate", async () => {
+    seed(40);
+    const { estimateNationalizedOperatingIncome } =
+      await import("@/lib/budget/publicEnterpriseRevenue");
+    vi.mocked(estimateNationalizedOperatingIncome).mockReturnValue(1_000_000);
+    const { remitToTreasury } = await import("./treasury");
+    const { processSoeRemittance } = await import("./soeRemittance");
+    await processSoeRemittance(
+      db as unknown as Db,
+      now,
+      undefined,
+      new Map([[corpId.toHexString(), -24]])
+    );
+    expect(vi.mocked(remitToTreasury)).not.toHaveBeenCalled();
+    expect(vi.mocked(estimateNationalizedOperatingIncome)).not.toHaveBeenCalled();
   });
 
   it("caps remittance at available liquidCapital — never overdraws an SOE", async () => {

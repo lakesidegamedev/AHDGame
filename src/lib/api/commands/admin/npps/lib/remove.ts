@@ -1,0 +1,52 @@
+import { NextResponse } from "next/server";
+
+import type { Db } from "@/lib/mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+
+export async function handleRemoveNPPs(
+  db: Db,
+  stateFilter: string[] | undefined
+): Promise<NextResponse> {
+  const electionQuery: Record<string, unknown> = {
+    status: { $in: ["upcoming", "active"] },
+  };
+
+  if (stateFilter && stateFilter.length > 0) {
+    electionQuery.state = { $in: stateFilter };
+  }
+
+  const elections = await electionsCollection(db).find(electionQuery).toArray();
+
+  const electionIds = elections.map((e) => e._id);
+
+  const nppCandidates = await electionCandidatesCollection(db)
+    .find({
+      electionId: { $in: electionIds },
+      isNPP: true,
+    })
+    .toArray();
+
+  const removeResult = await electionCandidatesCollection(db).deleteMany({
+    electionId: { $in: electionIds },
+    isNPP: true,
+  });
+
+  const nppIds = nppCandidates.filter((c) => c.nppId).map((c) => c.nppId!);
+
+  if (nppIds.length > 0) {
+    await nppsCollection(db).updateMany(
+      { _id: { $in: nppIds } },
+      { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
+    );
+  }
+
+  const stateDesc =
+    stateFilter && stateFilter.length > 0 ? `in ${stateFilter.join(", ")}` : "in all states";
+
+  return NextResponse.json({
+    message: `Removed ${removeResult.deletedCount} NPP candidate(s) ${stateDesc}`,
+    removed: removeResult.deletedCount,
+  });
+}

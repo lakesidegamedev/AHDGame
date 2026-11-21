@@ -25,8 +25,8 @@ This is the longest-horizon goal in the game. The presidential primary and Elect
 
 **For UK/JP Prime Minister:**
 1. Win a Commons/Shūgiin seat
-2. Become your party's leader (through internal leadership elections)
-3. Your party must win (or coalition to) a parliamentary majority
+2. Hold chair authority: be your party's chair (or the vice-chair while the chair seat is vacant), or chair a qualifying coalition
+3. Your party or coalition must hold enough lower-chamber seats to form a government; a majority is not required, because a minority government also qualifies
 4. You are appointed PM
 
 The parliamentary path is more dependent on collective party success than individual stats. A party that can't win seats cannot put you in Number 10 or the Kantei no matter how strong your character is individually.
@@ -47,7 +47,7 @@ Economic dominance means controlling:
 
 4. **Bond portfolio**: holding large sovereign bond positions in countries with healthy economies generates coupon income. Timing bond purchases around fiscal year and credit rating changes maximizes yield.
 
-**Measuring progress:** Check the wealth rankings page (visible via the stock market / investor ranking snapshot). Your corporation's valuation and your character's total net worth are tracked across turns.
+**Measuring progress:** Check the wealth rankings page (visible via the wealth list snapshot, which is separate from the investor ranking page). Your corporation's valuation and your character's total net worth are tracked across turns.
 
 ---
 
