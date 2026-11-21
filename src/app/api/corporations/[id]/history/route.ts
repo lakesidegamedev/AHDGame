@@ -8,6 +8,7 @@ import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCor
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import type { CorporationHistory } from "@/lib/db/types";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { getGameState } from "@/lib/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -236,9 +237,22 @@ export async function GET(request: Request, { params }: RouteParams) {
       latestPoint.marketCapCurrencyCode = corporation.liquidCurrencyCode ?? null;
     }
 
+    // The live balance and turn let the Charts tab tell a reader when the
+    // recorded history has stopped short of the current turn, instead of
+    // presenting the last snapshot's cash as the latest figure.
+    const gameState = await getGameState().catch(() => null);
+    const live =
+      gameState && Number.isFinite(corporation.liquidCapital)
+        ? {
+            turn: gameState.currentTurn,
+            liquidCapital: corporation.liquidCapital,
+            currencyCode: corporation.liquidCurrencyCode ?? null,
+          }
+        : null;
+
     return compressedJson(
       request,
-      { history: responseHistory },
+      { history: responseHistory, live },
       {
         headers: {
           "Cache-Control": historyCacheControl,
