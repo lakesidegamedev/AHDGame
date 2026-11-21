@@ -1,3 +1,7 @@
+import {
+  estimatedFullMixBuildRoom,
+  fullMixBuildRoom,
+} from "@/lib/corporations/rules/buildDemandCapacity";
 import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
@@ -461,20 +465,28 @@ export async function buildRegionEconomyResponse({
 
     // Plants-tier room to build in output units/day: buyers not being served,
     // less capacity already under construction.
-    let room: { units: number; scope: "state" | "country" } | null = null;
+    let room: {
+      units: number | null;
+      estimatedUnits: number | null;
+      scope: "state" | "country";
+    } | null = null;
     if (buildRoom) {
       const supplyMix = getStrategy(sectorType, "standard").supply ?? {};
       const countryShared = supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
+      const scopedRows = buildRoom.demandRows?.(supplyMix, stateId, state.countryId ?? countryId);
       room = {
-        units: buildRoomUnits(
-          buildRoom.demandGapUnits(supplyMix, stateId, state.countryId ?? countryId),
-          countryShared
-            ? (countryQueuedByLane.get(sectorType) ?? 0)
-            : typeSectors.reduce(
-                (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
-                0
-              )
-        ),
+        estimatedUnits: scopedRows ? estimatedFullMixBuildRoom(scopedRows) : null,
+        units: scopedRows
+          ? fullMixBuildRoom(scopedRows)
+          : buildRoomUnits(
+              buildRoom.demandGapUnits(supplyMix, stateId, state.countryId ?? countryId),
+              countryShared
+                ? (countryQueuedByLane.get(sectorType) ?? 0)
+                : typeSectors.reduce(
+                    (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
+                    0
+                  )
+            ),
         scope: countryShared ? "country" : "state",
       };
     }
@@ -487,6 +499,7 @@ export async function buildRegionEconomyResponse({
       // Room to build: buyers here not being served, less capacity already
       // under construction.
       roomToBuildUnits: room?.units ?? null,
+      estimatedRoomToBuildUnits: room?.estimatedUnits ?? null,
       // "country" when the figure above is shared by every state in the country.
       roomToBuildScope: room?.scope ?? null,
       owners: redactedOwners,

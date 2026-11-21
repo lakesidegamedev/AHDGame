@@ -1,6 +1,7 @@
 import type { CommodityPriceTurnResult } from "@/lib/turn/commodityPriceTurn";
 import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand";
 
+import { buildDemandCapGaps } from "@/lib/market/rules/buildDemandCap";
 import type { CommodityPrice } from "@/lib/db/types";
 
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
@@ -292,6 +293,16 @@ export async function settleCommodityPrices(
     byCountry,
     context.byState
   );
+
+  const capGaps =
+    context.producerPath === "funded"
+      ? buildDemandCapGaps({
+          global: context.global,
+          states: context.byState,
+          countries: byCountry,
+          removed: context.demandTruncated,
+        })
+      : undefined;
 
   // ── Inter-country trade clearing + whole-market dampened convergence ──
   // (Ordering and influence-lever notes live with the original; the WTO/FTA /
@@ -604,6 +615,7 @@ export async function settleCommodityPrices(
     allStates: context.allStates,
     stateToCountry: context.stateToCountry,
     demandTruncated: context.demandTruncated,
+    capGaps,
     scarcityMultByCommodity,
     appliedGlobalPrices,
     appliedStatePrices,

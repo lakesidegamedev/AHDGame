@@ -131,6 +131,33 @@ describe("priceCommodity", () => {
     expect(ctx.appliedNationalPrices.get("food")!["US"]).toBe(nationalPrices?.["US"]);
   });
 
+  it("preserves build-only cap evidence on a funded surplus and clears it on the next turn", () => {
+    const gap = { byState: { s1: 4 }, byCountry: { US: 7 } };
+    const balance = { supply: 130, demand: 100 };
+    const ctx = pricingContext(balance, {
+      fundedPricing: true,
+      demandTruncated: new Map([["food", 50]]),
+      capGaps: new Map([["food", gap]]),
+    });
+    const active = priceCommodity(ctx, "food", new Set()).priceOp.updateOne.update;
+    const next = priceCommodity(
+      pricingContext(balance, {
+        fundedPricing: true,
+        existingPriceMap: new Map([["food", commodityPrice({ buildDemandCapGap: gap })]]),
+      }),
+      "food",
+      new Set()
+    ).priceOp.updateOne.update;
+
+    expect(active.$set).toMatchObject({
+      globalDemand: 100,
+      globalSupply: 130,
+      buildDemandCapGap: gap,
+    });
+    expect(active.$set.demandTruncatedUnits).toBeUndefined();
+    expect(next.$unset).toMatchObject({ buildDemandCapGap: "" });
+  });
+
   it("moves the scarcity multiplier by the funded rule on a funded turn, not the momentum ratchet", () => {
     const existing = new Map([
       [

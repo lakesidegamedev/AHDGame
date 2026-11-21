@@ -82,6 +82,7 @@ interface EconomySector {
   ownedRevenue: number;
   /** Unmet demand in this market, output units per day. */
   roomToBuildUnits?: number | null;
+  estimatedRoomToBuildUnits?: number | null;
   /** "country" when that room is one figure shared across the whole country. */
   roomToBuildScope?: "state" | "country" | null;
   owners: SectorOwner[];

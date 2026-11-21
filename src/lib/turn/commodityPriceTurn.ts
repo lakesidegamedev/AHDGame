@@ -345,6 +345,7 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
             // trailing imbalance window back from the previous turn.
             scarcityImbalanceHistory: 1,
             scarcityImbalanceHistoryByCountry: 1,
+            buildDemandCapGap: 1,
             // Plants household re-anchor: prior global supply for the
             // PLANTS_HOUSEHOLD_SUPPLY_CAP clamp.
             globalSupply: 1,

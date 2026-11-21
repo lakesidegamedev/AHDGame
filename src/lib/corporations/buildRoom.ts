@@ -66,7 +66,7 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
         }
       )
       .toArray(),
-    loadFundedBuildDemand(db),
+    loadFundedBuildDemand(db, undefined, true),
   ]);
   const capacity = funded ? await loadBuildDemandProducers(db) : null;
   const demandRows = (

@@ -2,6 +2,7 @@
  * Funded build advice reads the latest compact settlement summary in the current
  * world. loadFundedBuildDemand exposes its source turn and scoped buyer demand.
  */
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
@@ -16,7 +17,8 @@ import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producer
 /** One small indexed summary read, never decode full producer receipts on a page. */
 export async function loadFundedBuildDemand(
   db: Db,
-  observed?: Pick<GameState, "currentTurn" | "worldEpochId"> | null
+  observed?: Pick<GameState, "currentTurn" | "worldEpochId"> | null,
+  includeCapEstimates = false
 ) {
   const state =
     observed ??
@@ -41,6 +43,16 @@ export async function loadFundedBuildDemand(
     { sort: { turn: -1 }, projection: { turn: 1, books: 1, regionalBuildBooks: 1 } }
   );
   if (!doc) return null;
+  const capPrices = includeCapEstimates
+    ? await commodityPricesCollection(db)
+        .find(
+          { turn: doc.turn, buildDemandCapGap: { $exists: true } },
+          { projection: { commodity: 1, buildDemandCapGap: 1 } }
+        )
+        .toArray()
+    : [];
+  const capGaps = new Map(capPrices.map((p) => [p.commodity, p.buildDemandCapGap!]));
+
   return {
     turn: doc.turn,
     rows: (
@@ -55,6 +67,7 @@ export async function loadFundedBuildDemand(
         countries: doc.books ?? [],
         regions: doc.regionalBuildBooks,
         regionalUnitScale: TURNS_PER_DAY,
+        capGaps,
       }),
   };
 }
