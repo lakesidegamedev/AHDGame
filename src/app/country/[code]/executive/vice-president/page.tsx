@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { Skeleton } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -12,34 +11,30 @@ import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 
 function HolderRow({ label, holder }: { label: string; holder: VpOfficeHolder | null }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-28 shrink-0 text-body-sm font-medium text-muted">{label}</span>
-      {holder ? (
-        <span className="inline-flex min-w-0 items-center gap-2">
-          <Avatar
-            url={holder.avatarUrl}
-            name={holder.characterName}
-            size="h-7 w-7"
-            className="shrink-0 rounded-md"
-          />
-          <Link
-            href={`/character/${holder.sequentialId ?? holder.characterId}`}
-            className="truncate text-sm font-medium text-foreground hover:underline"
-          >
-            {holder.characterName}
-          </Link>
-          {holder.partyName && holder.partyColor && (
-            <PartyChip
-              partyName={holder.partyName}
-              partyColor={holder.partyColor}
-              partyId={holder.party}
-            />
-          )}
-        </span>
-      ) : (
-        <span className="inline-flex items-center rounded-full border border-warning/40 px-2.5 py-1 text-xs font-semibold text-warning">
-          Vacant
-        </span>
+    <div className="flex flex-wrap items-center gap-3">
+      <OfficeholderPortrait
+        compact
+        role={label}
+        holder={
+          holder && {
+            name: holder.characterName,
+            avatarUrl: holder.avatarUrl,
+            href: holder.isNPP
+              ? holder.sequentialId != null
+                ? `/politicians/npp/${holder.sequentialId}`
+                : undefined
+              : holder.characterId
+                ? `/character/${holder.sequentialId ?? holder.characterId}`
+                : undefined,
+          }
+        }
+      />
+      {holder?.partyName && holder.partyColor && (
+        <PartyChip
+          partyName={holder.partyName}
+          partyColor={holder.partyColor}
+          partyId={holder.party}
+        />
       )}
     </div>
   );

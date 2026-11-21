@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { PartyChip, formatPartyState } from "./CongressShared";
 import { ElectionDropdown, type CandidacyLike } from "./LeadershipShared";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
@@ -72,36 +71,20 @@ export function HouseLeadershipRoleSection({
     <div className="space-y-2">
       <h3 className="text-sm font-semibold">{title}</h3>
       {current ? (
-        <div className="flex items-center gap-4 rounded-xl border border-card-border bg-card p-4">
-          <Avatar
-            url={current.avatarUrl}
-            name={current.characterName}
-            size="h-10 w-10"
-            borderKey={current.borderKey}
-            tintColor={current.tintColor}
-          />
-          <div className="flex-1 min-w-0">
-            {current.characterId ? (
-              <Link
-                href={`/character/${current.sequentialId ?? current.characterId}`}
-                className="font-semibold hover:text-primary"
-              >
-                {current.characterName}
-                <span className="text-muted font-normal ml-1">
-                  {formatPartyState(current.party, current.state, current.partyName)}
-                </span>
-              </Link>
-            ) : (
-              <span className="font-semibold">
-                {current.characterName}
-                <span className="text-muted font-normal ml-1">
-                  {formatPartyState(current.party, current.state, current.partyName)}
-                </span>
-              </span>
-            )}
-            <p className="text-xs text-muted">
-              {title} · {electionState.partyLabel}
-            </p>
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-card-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <OfficeholderPortrait
+              compact
+              role={`${title} · ${electionState.partyLabel}`}
+              detail={formatPartyState(current.party, current.state, current.partyName)}
+              holder={{
+                ...current,
+                name: current.characterName,
+                href: current.characterId
+                  ? `/character/${current.sequentialId ?? current.characterId}`
+                  : undefined,
+              }}
+            />
           </div>
           <PartyChip
             partyName={current.partyName}
@@ -232,36 +215,20 @@ export function SenateLeadershipRoleSection({
     <div className="space-y-2">
       <h3 className="text-sm font-semibold">{title}</h3>
       {current ? (
-        <div className="flex items-center gap-4 rounded-xl border border-card-border bg-card p-4">
-          <Avatar
-            url={current.avatarUrl}
-            name={current.characterName}
-            size="h-10 w-10"
-            borderKey={current.borderKey}
-            tintColor={current.tintColor}
-          />
-          <div className="flex-1 min-w-0">
-            {current.characterId ? (
-              <Link
-                href={`/character/${current.sequentialId ?? current.characterId}`}
-                className="font-semibold hover:text-primary"
-              >
-                {current.characterName}
-                <span className="text-muted font-normal ml-1">
-                  {formatPartyState(current.party, current.state, current.partyName)}
-                </span>
-              </Link>
-            ) : (
-              <span className="font-semibold">
-                {current.characterName}
-                <span className="text-muted font-normal ml-1">
-                  {formatPartyState(current.party, current.state, current.partyName)}
-                </span>
-              </span>
-            )}
-            <p className="text-xs text-muted">
-              {title} · {electionState.partyLabel}
-            </p>
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-card-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <OfficeholderPortrait
+              compact
+              role={`${title} · ${electionState.partyLabel}`}
+              detail={formatPartyState(current.party, current.state, current.partyName)}
+              holder={{
+                ...current,
+                name: current.characterName,
+                href: current.characterId
+                  ? `/character/${current.sequentialId ?? current.characterId}`
+                  : undefined,
+              }}
+            />
           </div>
           <PartyChip
             partyName={current.partyName}

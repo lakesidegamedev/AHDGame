@@ -55,7 +55,15 @@ function membersFor(chamber: string) {
   };
 }
 
-function mockFetch() {
+function mockFetch(
+  speaker: {
+    characterId: string;
+    characterName: string;
+    party: string;
+    avatarUrl: string;
+    profileHref: string;
+  } | null = null
+) {
   global.fetch = vi.fn().mockImplementation((url: unknown) => {
     const u = String(url);
     if (u.includes("/members")) {
@@ -80,7 +88,7 @@ function mockFetch() {
     if (u.includes("/presiding-officers"))
       return Promise.resolve(jsonResponse({ speaker: null, senatePresident: null }));
     // Leadership tab: NgChamberLeadershipPanel renders both presiding-officer
-    // roles from this endpoint, both vacant here.
+    // roles from this endpoint.
     if (u.includes("/ng-chamber-leadership"))
       return Promise.resolve(
         jsonResponse({
@@ -88,7 +96,7 @@ function mockFetch() {
             {
               role: "speaker_ng_reps",
               label: "Speaker of the House of Representatives",
-              leader: null,
+              leader: speaker,
               election: null,
               nominations: [],
               canRun: false,
@@ -133,11 +141,25 @@ describe("NGAssemblyPage", () => {
     render(<NGAssemblyPage countryId="NG" />);
     await waitFor(() => expect(screen.getByText("National Assembly")).toBeTruthy());
     screen.getByRole("button", { name: "Leadership" }).click();
-    const speakerCard = await waitFor(() =>
-      screen.getByText("Speaker of the House of Representatives").closest("div")
-    );
-    const senateCard = screen.getByText("President of the Senate").closest("div");
-    expect(within(speakerCard!).getByText("Vacant")).toBeTruthy();
-    expect(within(senateCard!).getByText("Vacant")).toBeTruthy();
+    const speakerRole = await screen.findByText("Speaker of the House of Representatives");
+    const senateRole = screen.getByText("President of the Senate");
+    expect(within(speakerRole.parentElement!).getByText("Vacant")).toBeTruthy();
+    expect(within(senateRole.parentElement!).getByText("Vacant")).toBeTruthy();
+  });
+
+  it("links the sitting speaker portrait to the character profile", async () => {
+    mockFetch({
+      characterId: "speaker-id",
+      characterName: "Speaker One",
+      party: "APC",
+      avatarUrl: "/speaker.png",
+      profileHref: "/character/44",
+    });
+    render(<NGAssemblyPage countryId="NG" />);
+    await screen.findByText("National Assembly");
+    screen.getByRole("button", { name: "Leadership" }).click();
+    const link = await screen.findByRole("link", { name: /Speaker One/ });
+    expect(link.getAttribute("href")).toBe("/character/44");
+    expect(link.querySelector("img")?.getAttribute("src")).toContain("speaker.png");
   });
 });

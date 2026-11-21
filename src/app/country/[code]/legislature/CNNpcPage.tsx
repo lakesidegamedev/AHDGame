@@ -12,8 +12,7 @@ import {
 } from "./components/shared/legislaturePresentation";
 
 import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { LeaderCard } from "@/components/legislature/LeaderCard";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -30,6 +29,7 @@ import { ParliamentaryGovernmentActions } from "@/app/country/[code]/executive/c
 import { NpcscChairPanel } from "./NpcscChairPanel";
 import { CppccChairPanel } from "./CppccChairPanel";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import type { ExecutiveGovernmentResponse } from "@/lib/government/executiveViewerState";
 import type {
   AppointmentVotePayload,
   NoConfidenceVotePayload,
@@ -150,40 +150,6 @@ function BillsTab({
 
 // ─── Leadership Tab ───────────────────────────────────────────────────────────
 
-function PremierLeaderCard({
-  label,
-  emptyLabel,
-  character,
-}: {
-  label: string;
-  emptyLabel: string;
-  character: LeadersData["primeMinister"];
-}) {
-  return (
-    <div className="rounded-xl border border-card-border bg-card p-5">
-      <p className="text-body-sm font-medium text-muted mb-2">{label}</p>
-      {character ? (
-        <div className="flex items-center gap-3">
-          <Avatar
-            url={character.avatarUrl}
-            name={character.characterName}
-            size="h-12 w-12"
-            className="rounded-lg"
-          />
-          <Link
-            href={`/character/${character.sequentialId ?? character.characterId}`}
-            className="font-semibold hover:text-primary transition-colors"
-          >
-            {character.characterName}
-          </Link>
-        </div>
-      ) : (
-        <p className="text-sm italic text-muted">{emptyLabel}</p>
-      )}
-    </div>
-  );
-}
-
 function LeadershipTab({
   countryId,
   leaders,
@@ -239,13 +205,13 @@ function LeadershipTab({
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <PremierLeaderCard
-          label="Premier"
+        <LeaderCard
+          title="Premier"
           emptyLabel="No Premier"
           character={leaders?.primeMinister ?? null}
         />
-        <PremierLeaderCard
-          label="Opposition leader"
+        <LeaderCard
+          title="Opposition leader"
           emptyLabel="Vacant"
           character={leaders?.oppositionLeader ?? null}
         />
@@ -289,8 +255,7 @@ export function CNNpcPage({ countryId }: { countryId: CountryId }) {
   const [viewerWhippedFrom, setViewerWhippedFrom] = useState<Record<string, string>>({});
 
   const fetchGovernmentData = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchJson<any>(`/api/country/${countryId.toLowerCase()}/executive`, {
+    fetchJson<ExecutiveGovernmentResponse>(`/api/country/${countryId.toLowerCase()}/executive`, {
       cache: "no-store",
       feature: "cn-npc-government",
     })

@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/en/parties.json";
 import { PartyHubPage as PartyHubPageInner } from "./PartyHubPage";
@@ -122,6 +122,7 @@ function stubHub(opts: {
   party?: unknown;
   conference?: unknown;
   stateParty?: unknown;
+  committee?: Promise<unknown> | "unavailable";
 }) {
   const handler = vi.fn(async (url: string, init: RequestInit = {}) => {
     const u = String(url);
@@ -137,6 +138,16 @@ function stubHub(opts: {
     }
     if (u.includes("/region/") && u.endsWith("/party/2")) {
       return { ok: true, json: async () => ({ stateParty: opts.stateParty }) };
+    }
+    if (u.endsWith("/parties/2/committee")) {
+      if (opts.committee === "unavailable") return { ok: false };
+      return {
+        ok: true,
+        json: async () => opts.committee ?? { committeeSize: 6, committeeMembers: [] },
+      };
+    }
+    if (u.includes("/activity-feed?") || u.endsWith("/discipline-watch")) {
+      return { ok: true, json: async () => ({ threshold: 40, items: [] }) };
     }
     if (u.endsWith("/election")) {
       return { ok: true, json: async () => ({ isCandidate: {} }) };
@@ -277,5 +288,71 @@ describe("PartyHubPage conference tab (issue #862)", () => {
     expect(await screen.findByRole("button", { name: "Overview" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Conference" })).toBeNull();
     expect(screen.queryByText(/conference 1:/)).toBeNull();
+  });
+});
+
+describe("PartyHubPage committee portraits", () => {
+  it.each(["overview", "committee"])(
+    "shows officers and committee in order on the %s tab",
+    async (tab) => {
+      query = "tab=" + tab;
+      let resolveSeats!: (data: unknown) => void;
+      const committee = new Promise((resolve) => {
+        resolveSeats = resolve;
+      });
+      const fetch = stubHub({
+        user: makeUser(),
+        party: makeParty({
+          chair: { id: "chair-id", name: "Chair One" },
+          viceChair: { id: "deputy-id", name: "Deputy One" },
+          treasurer: { id: "treasurer-id", name: "Treasurer One" },
+          leadershipTitles: { chair: "Party Convenor" },
+        }),
+        committee,
+      });
+      render(<PartyHubPage scope={{ kind: "national", countryCode: "uk", partyId: "2" }} />);
+
+      const officers = await screen.findByRole("region", { name: "National leadership" });
+      expect(
+        within(officers)
+          .getAllByRole("link")
+          .map((link) => link.getAttribute("href"))
+      ).toEqual(["/character/deputy-id", "/character/chair-id", "/character/treasurer-id"]);
+      expect(within(officers).getByText("Party Convenor")).toBeTruthy();
+      expect(screen.getByText("Loading committee seats…")).toBeTruthy();
+      expect(screen.queryByText("Seat 1")).toBeNull();
+      expect(screen.queryByText("Vacant")).toBeNull();
+
+      resolveSeats({
+        committeeSize: 2,
+        committeeMembers: [
+          { id: "member-id", sequentialId: 42, name: "Member One", avatarUrl: "/member.png" },
+        ],
+      });
+      const profile = await screen.findByRole("link", { name: /Member One/ });
+      expect(profile.getAttribute("href")).toBe("/character/42");
+      expect(profile.querySelector("img")?.getAttribute("src")).toContain("member.png");
+      expect(
+        officers.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      if (tab === "committee") expect(screen.getByText("Seat 2")).toBeTruthy();
+      else expect(screen.queryByText("Seat 2")).toBeNull();
+      const secondSeat = profile.closest("li")!.nextElementSibling as HTMLElement;
+      expect(within(secondSeat).getByText("Vacant")).toBeTruthy();
+      expect(within(secondSeat).queryByRole("link")).toBeNull();
+      expect(fetch.mock.calls.filter(([url]) => url.endsWith("/parties/2/committee"))).toHaveLength(
+        1
+      );
+    }
+  );
+
+  it("reports unavailable committee data on Overview without showing vacancies", async () => {
+    query = "tab=overview";
+    stubHub({ party: makeParty(), committee: "unavailable" });
+    render(<PartyHubPage scope={{ kind: "national", countryCode: "uk", partyId: "2" }} />);
+
+    const status = await screen.findByText("Committee seats are unavailable.");
+    const roster = status.closest("section")!;
+    expect(within(roster).queryByText("Vacant")).toBeNull();
   });
 });

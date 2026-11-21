@@ -16,7 +16,7 @@ interface Args {
   setParty: Dispatch<SetStateAction<PartyData | null>>;
   setLinkedStateIds: Dispatch<SetStateAction<string[]>>;
   setElectionData: Dispatch<SetStateAction<NationalElectionsState | null>>;
-  setCommitteeData: Dispatch<SetStateAction<CommitteeData | null>>;
+  setCommitteeResult: Dispatch<SetStateAction<CommitteeData | "unavailable" | null>>;
   setEligibleStates: Dispatch<SetStateAction<Array<{ id: string; name: string }>>>;
   setAnalyticsData: Dispatch<SetStateAction<PartyAnalyticsPayload | null>>;
   setLoading: Dispatch<SetStateAction<boolean>>;
@@ -32,7 +32,7 @@ export function usePartyHubLoaders({
   setParty,
   setLinkedStateIds,
   setElectionData,
-  setCommitteeData,
+  setCommitteeResult,
   setEligibleStates,
   setAnalyticsData,
   setLoading,
@@ -109,11 +109,16 @@ export function usePartyHubLoaders({
         `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/committee`,
         { credentials: "same-origin" }
       );
-      if (r.ok) setCommitteeData(await r.json());
+      if (r.ok) {
+        setCommitteeResult(await r.json());
+      } else {
+        setCommitteeResult((current) => current ?? "unavailable");
+      }
     } catch {
+      setCommitteeResult((current) => current ?? "unavailable");
       setMsg("✗ Could not load committee details. Check your connection and refresh.");
     }
-  }, [id, requestedCountry, setCommitteeData, setMsg]);
+  }, [id, requestedCountry, setCommitteeResult, setMsg]);
 
   const fetchEligibleStates = useCallback(async () => {
     try {

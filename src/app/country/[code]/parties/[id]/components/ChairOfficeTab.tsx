@@ -6,7 +6,7 @@ import { PartyRegimeBadge } from "@/components/parties/PartyRegimeBadge";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { partyApiUrl } from "@/lib/urls";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
-import type { PartyData, PartyMember } from "./types";
+import type { CommitteeData, PartyData, PartyMember } from "./types";
 import { UPLOAD_IMAGE_HINTS } from "@/lib/constants/uploadImageHints";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
 import { PARTY_PURGE_ENABLED, PURGE_COOLDOWN_TURNS } from "@/lib/constants/partyActions";
@@ -16,6 +16,7 @@ import { MembershipModeCard } from "./MembershipModeCard";
 import { BulkStateOrgControl } from "./BulkStateOrgControl";
 import { HuListVacanciesCard } from "./HuListVacanciesCard";
 import { PartyLeadershipTitlesControl } from "./PartyLeadershipTitlesControl";
+import { PartyCommitteeTitlesControl } from "./PartyCommitteeTitlesControl";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
@@ -23,10 +24,17 @@ interface ChairOfficeTabProps {
   party: PartyData;
   countryId: string;
   characterId: string;
+  committeeMembers?: CommitteeData["committeeMembers"];
   onUpdate: () => void;
 }
 
-export function ChairOfficeTab({ party, countryId, characterId, onUpdate }: ChairOfficeTabProps) {
+export function ChairOfficeTab({
+  party,
+  countryId,
+  characterId,
+  committeeMembers,
+  onUpdate,
+}: ChairOfficeTabProps) {
   const [color, setColor] = useState(party.color);
   const [discordInviteUrl, setDiscordInviteUrl] = useState(party.discordInviteUrl ?? "");
   const [savingColor, setSavingColor] = useState(false);
@@ -247,6 +255,15 @@ export function ChairOfficeTab({ party, countryId, characterId, onUpdate }: Chai
             partyId={party.id}
             countryId={countryId}
             leadershipTitles={party.leadershipTitles}
+            onUpdate={onUpdate}
+          />
+
+          <PartyCommitteeTitlesControl
+            key={JSON.stringify(party.committeeTitles ?? {})}
+            partyId={party.id}
+            countryId={countryId}
+            titles={party.committeeTitles}
+            members={committeeMembers}
             onUpdate={onUpdate}
           />
 

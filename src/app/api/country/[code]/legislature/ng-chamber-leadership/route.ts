@@ -147,6 +147,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
             ? {
                 characterId: leader.characterId || null,
                 characterName: leader.characterName,
+                avatarUrl: leader.avatarUrl,
+                profileHref: leader.isNPP
+                  ? leader.sequentialId != null
+                    ? `/politicians/npp/${leader.sequentialId}`
+                    : undefined
+                  : `/character/${leader.sequentialId ?? leader.characterId}`,
                 party: resolvePartyLabel(leader.party),
               }
             : null,

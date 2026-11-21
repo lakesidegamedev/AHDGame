@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useReducer, useState } from "react";
 import Link from "next/link";
 import { HeroImage } from "@/components/HeroImage";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { Skeleton, Button } from "@/components/ui";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { useToast } from "@/contexts/ToastContext";
@@ -407,8 +407,47 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                         key={pos.id}
                         className="rounded-xl border border-card-border bg-card p-4 shadow-card"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-semibold text-foreground">{pos.name}</h3>
+                        <OfficeholderPortrait
+                          role={<h3 className="font-semibold text-muted">{pos.name}</h3>}
+                          holder={
+                            member && {
+                              ...member,
+                              name: member.characterName,
+                              href: member.characterId
+                                ? `/character/${member.sequentialId ?? member.characterId}`
+                                : undefined,
+                            }
+                          }
+                          detail={member && !member.characterId ? "(NPP)" : undefined}
+                        />
+                        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                          {member?.partyName && member.partyColor && (
+                            <PartyChip
+                              partyName={member.partyName}
+                              partyColor={member.partyColor}
+                              partyId={member.party}
+                              logoUrl={member.partyLogoUrl}
+                              countryId={countryId}
+                            />
+                          )}
+                          {isOnCooldown && !member && (
+                            <span className="text-amber-600 text-sm">
+                              Cooldown: {formatCooldownRemaining(cooldownUntil!)}
+                            </span>
+                          )}
+                          {state.data!.isPrimeMinister &&
+                            !member &&
+                            !isOnCooldown &&
+                            positionData &&
+                            !positionData.isHeadOfGovernment && (
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleOpenAppointModal(positionData)}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? "..." : "Appoint"}
+                              </Button>
+                            )}
                           {state.data!.isPrimeMinister &&
                             member &&
                             !positionData?.isHeadOfGovernment && (
@@ -439,65 +478,6 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                               </Button>
                             )}
                         </div>
-
-                        {member ? (
-                          <div className="mt-2 flex items-center gap-2">
-                            <Avatar
-                              url={member.avatarUrl}
-                              name={member.characterName}
-                              size="h-8 w-8"
-                              className="rounded-lg shrink-0"
-                              borderKey={member.borderKey}
-                              tintColor={member.tintColor}
-                            />
-                            {member.characterId ? (
-                              <Link
-                                href={`/character/${member.sequentialId ?? member.characterId}`}
-                                className="text-sm text-primary hover:underline truncate"
-                              >
-                                {member.characterName}
-                              </Link>
-                            ) : (
-                              // NPP-held seat — no player profile to link to.
-                              <span className="text-sm text-foreground truncate">
-                                {member.characterName}
-                                <span className="ml-1 text-xs text-muted">(NPP)</span>
-                              </span>
-                            )}
-                            {member.partyName && member.partyColor && (
-                              <PartyChip
-                                partyName={member.partyName}
-                                partyColor={member.partyColor}
-                                partyId={member.party}
-                                logoUrl={member.partyLogoUrl}
-                                countryId={countryId}
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                            {isOnCooldown ? (
-                              <span className="text-amber-600 text-sm">
-                                Cooldown: {formatCooldownRemaining(cooldownUntil!)}
-                              </span>
-                            ) : (
-                              <p className="text-sm text-muted italic">Vacant</p>
-                            )}
-                            {state.data!.isPrimeMinister &&
-                              !isOnCooldown &&
-                              positionData &&
-                              !positionData.isHeadOfGovernment && (
-                                <Button
-                                  variant="secondary"
-                                  onClick={() => handleOpenAppointModal(positionData)}
-                                  disabled={isLoading}
-                                  className="mt-2"
-                                >
-                                  {isLoading ? "..." : "Appoint"}
-                                </Button>
-                              )}
-                          </>
-                        )}
 
                         {/* The head-of-government seat is auto-assigned, not a
                         portfolio ministry — it has no ministerial office page. */}

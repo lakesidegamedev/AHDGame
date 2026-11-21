@@ -1,6 +1,10 @@
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import type { PartyLeadershipTitleKey, PartyLeadershipTitles } from "@/lib/db/types/party";
+import type {
+  PartyCommitteeTitles,
+  PartyLeadershipTitleKey,
+  PartyLeadershipTitles,
+} from "@/lib/db/types/party";
 
 export type PartyRoleLabelKey = PartyLeadershipTitleKey | "committee";
 
@@ -32,4 +36,16 @@ export function getPartyRoleLabel(
   const config = COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId];
   const override = config?.partyRoleLabels?.[key];
   return override ?? DEFAULT_PARTY_ROLE_LABELS[key];
+}
+
+export const DEFAULT_COMMITTEE_MEMBER_TITLE = "Committeeman";
+
+export function getNationalCommitteeName(countryId: string, titles?: PartyCommitteeTitles): string {
+  return titles?.name?.trim() || getPartyRoleLabel(countryId, "committee");
+}
+
+export function getCommitteeMemberTitle(memberId: string, titles?: PartyCommitteeTitles): string {
+  return (
+    titles?.byMember?.[memberId]?.trim() || titles?.member?.trim() || DEFAULT_COMMITTEE_MEMBER_TITLE
+  );
 }
