@@ -1,5 +1,6 @@
 "use client";
 
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
 import { useEffect, useCallback, useState } from "react";
 import dynamic from "next/dynamic";
@@ -840,6 +841,12 @@ export default function SectorDetailPage() {
                         demandGapUnits: plants.demandGapUnits,
                         measuredDemandGapUnits: plants.measuredDemandGapUnits,
                         roomHeldByOwnIdle: plants.roomHeldByOwnIdle,
+                        buildDemand:
+                          sector.sectorType === "logistics" ? undefined : plants.buildDemand,
+                        unitsPerFacility: plantSizeForSector({
+                          sectorType: sector.sectorType,
+                          strategyId: plants.strategyId,
+                        }),
                       }
                     : null
                 }
