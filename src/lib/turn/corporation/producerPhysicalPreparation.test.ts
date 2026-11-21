@@ -921,3 +921,21 @@ describe("carried country-book stock", () => {
     expect(withStateBooks(plain)).toBe(plain);
   });
 });
+
+it("catches up a receipt-excluded entrant on its real opening without rebasing paid work", () => {
+  const { input, env, sector } = fixture();
+  sector.capitalStock = 0;
+  sector.capacityBookAnchor = 0;
+  sector.buildQueue = [
+    { startTurn: 0, onlineTurn: 4, unitsOrdered: 40, costPaidAnchor: 1000, smooth: true },
+  ];
+  env.currentTurn = 2;
+  env.producerOpeningTurn = 1;
+  expect(() => prepareProducerPhysicalSector(input)).toThrow("reconciled opening generation");
+  env.producerOpeningTurnsBySector = new Map([[sector._id.toHexString(), 0]]);
+  const { target, plan } = prepareProducerPhysicalSector(input).prepared;
+  expect(target.capacity.completedTurn).toBe(0);
+  expect(target.capacity.buildQueue).toEqual(sector.buildQueue);
+  expect(plan.capacityUnits).toBeGreaterThan(0);
+  expect(sector.producerCapacity?.turn).toBe(0);
+});

@@ -457,3 +457,73 @@ describe("source income settlement", () => {
     });
   });
 });
+
+describe("historical payout currency recovery", () => {
+  it("uses witnessed earnings after their currency is absent and pays the source only once", async () => {
+    const f = fixture();
+    f.memory.seed("financialTxLog", [
+      {
+        _id: new ObjectId(),
+        subjectType: "character",
+        subjectId: f.characterId,
+        type: "corp_salary",
+        turn: 1,
+        amount: 125,
+        anchorAmount: 100,
+        currencyCode: "EUR",
+        meta: {},
+      },
+    ]);
+    const credits = [
+      {
+        characterId: f.characterId,
+        ownerCollection: f.ownerCollection,
+        currency: "USD" as const,
+        gross: 100,
+        income: 100,
+      },
+    ];
+    const first = await creditIncomeAfterTax(
+      f.db,
+      "corporation-currency-regression",
+      2,
+      now,
+      credits
+    );
+    const balance = f.memory.collection("characters").docs[0].currencyBalances;
+    const saved = JSON.stringify(balance);
+    expect(
+      await creditIncomeAfterTax(f.db, "corporation-currency-regression", 2, now, credits)
+    ).toEqual(first);
+    expect(JSON.stringify(f.memory.collection("characters").docs[0].currencyBalances)).toBe(saved);
+  });
+  it("fails closed without a witnessed anchor or an observed rate", async () => {
+    const f = fixture();
+    f.memory.seed("financialTxLog", [
+      {
+        _id: new ObjectId(),
+        subjectType: "character",
+        subjectId: f.characterId,
+        type: "corp_salary",
+        turn: 1,
+        amount: 125,
+        currencyCode: "EUR",
+        meta: {},
+      },
+    ]);
+    await expect(
+      creditIncomeAfterTax(f.db, "unknown-currency", 2, now, [
+        {
+          characterId: f.characterId,
+          ownerCollection: f.ownerCollection,
+          currency: "USD",
+          gross: 100,
+          income: 100,
+        },
+      ])
+    ).rejects.toThrow("Earnings exchange rate unavailable");
+    expect(f.memory.collection("characters").docs[0]).toMatchObject({
+      currencyBalances: { personal: { USD: 0 } },
+    });
+  });
+});

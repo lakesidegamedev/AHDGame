@@ -896,5 +896,6 @@ export async function resumeProducerTurn(db: Db, input: { worldEpoch: string; tu
     bindings: frozen.bindings,
     targets: frozen.targets,
     openingAccounts: frozen.request.accounts,
+    request: frozen.request,
   };
 }
