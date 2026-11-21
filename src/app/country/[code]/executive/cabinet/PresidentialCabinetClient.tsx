@@ -1,5 +1,6 @@
 "use client";
 
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import Link from "next/link";
 import { HeroImage } from "@/components/HeroImage";
 import { Button, Skeleton } from "@/components/ui";
@@ -148,7 +149,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
                 succession. Confirmed members use the shared cabinet office system for cabinet
                 actions, standing orders, emergency powers, and department settings.
               </p>
-              {countryId === "US" && data.isPresident && (
+              {countryHasFeature("usUi", countryId) && data.isPresident && (
                 <p>
                   Non-player senators support nominees from their own party. A nominee from another
                   party can draw support from that party&apos;s senators.
