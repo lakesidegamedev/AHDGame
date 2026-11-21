@@ -31,6 +31,8 @@ import { MapFallback } from "./MapFallback";
 import { useResourceMapData } from "./useResourceMapData";
 import { useFreightDemandData } from "./useFreightDemandData";
 import {
+  formatFreightTeu,
+  freightHaulExceedsCapacity,
   freightHaulLoadCaption,
   freightHaulLoadLabel,
   freightHaulLoadTooltip,
@@ -200,6 +202,9 @@ export function USMapWithModes({
 
   const resourceData = useResourceMapData(mode, config.id, resourceType);
   const freightData = useFreightDemandData(mode, config.id);
+  const freightOverCapacity = Object.entries(freightData.states)
+    .filter(([, entry]) => freightHaulExceedsCapacity(entry))
+    .sort(([, a], [, b]) => b.total - (b.capacity ?? 0) - (a.total - (a.capacity ?? 0)));
 
   const { stateData, senateSplitData, senateSplitMode } = useMemo(() => {
     const stateData: Record<string, { color: string; label?: string; tooltip?: string[] }> = {};
@@ -863,9 +868,47 @@ export function USMapWithModes({
                     </div>
                   )}
                   {mode === "logistics" && (
-                    <p className="px-5 pb-4 text-xs text-muted">
-                      {freightHaulLoadCaption(Object.keys(freightData.states).length > 0)}
-                    </p>
+                    <div className="space-y-3 px-5 pb-4">
+                      {freightOverCapacity.length > 0 && (
+                        <details open className="text-sm">
+                          <summary className="cursor-pointer font-medium text-amber-400">
+                            Haul above capacity ({freightOverCapacity.length})
+                          </summary>
+                          <div className="mt-2 max-h-56 overflow-auto">
+                            <table className="mt-2 w-full tabular-nums">
+                              <thead className="text-left text-xs text-muted">
+                                <tr>
+                                  <th scope="col">State</th>
+                                  <th scope="col" className="text-right">
+                                    Haul (TEU/turn)
+                                  </th>
+                                  <th scope="col" className="text-right">
+                                    Capacity (TEU)
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {freightOverCapacity.map(([id, entry]) => (
+                                  <tr key={id}>
+                                    <th scope="row" className="text-left font-normal">
+                                      {mapData?.regions?.find((region) => region.id === id)?.name ??
+                                        id}
+                                    </th>
+                                    <td className="text-right">{formatFreightTeu(entry.total)}</td>
+                                    <td className="text-right">
+                                      {formatFreightTeu(entry.capacity ?? 0)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </details>
+                      )}
+                      <p className="text-xs text-muted">
+                        {freightHaulLoadCaption(Object.keys(freightData.states).length > 0)}
+                      </p>
+                    </div>
                   )}
                 </Card>
                 {mode === "lean" && leanDetailId && (

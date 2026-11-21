@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FREIGHT_HAUL_LOAD_MODE_DESCRIPTION,
   formatFreightTeu,
+  freightHaulExceedsCapacity,
   freightHaulLoadCaption,
   freightHaulLoadLabel,
   freightHaulLoadTooltip,
@@ -40,6 +41,15 @@ describe("freightHaulLoadCopy", () => {
     const tip = freightHaulLoadTooltip("NY", { bulk: 3.6, special: 0, total: 3.6 });
     expect(tip[1]).toBe("Projected haul load: 3.6 TEU/turn");
     expect(freightHaulLoadLabel(3.6)).toBe("3.6 TEU");
+  });
+
+  it("flags excess haul only when capacity is known", () => {
+    const haul = { bulk: 21, special: 0, total: 21 };
+    expect(freightHaulExceedsCapacity(haul)).toBe(false);
+    expect(freightHaulExceedsCapacity({ ...haul, capacity: 21 })).toBe(false);
+    expect(freightHaulLoadTooltip("OH", { ...haul, capacity: 14 })).toContain(
+      "Haul above capacity"
+    );
   });
 
   it("explains that haul feeds freight prices and sold %", () => {

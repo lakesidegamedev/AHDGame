@@ -9,6 +9,7 @@ import type { BlocMapData } from "@/lib/world/blocMembership";
 
 import type { CountryAccessMap } from "@/app/world/page";
 import { useWorldMetricFilter } from "@/app/world/WorldMetricFilterContext";
+import { getWorldMetricsCountry } from "@/app/world/worldMetricFilterHighlight";
 import { ISO_TO_COUNTRY_ID } from "@/app/world/worldMetricHighlight";
 
 import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -197,7 +198,8 @@ export function useWorldMapState({
       }
 
       // All other filters require world metrics data
-      const country = worldMetrics?.countries[id];
+      const countryId = id.startsWith("bi:") ? id.slice(3).split(":")[0] : ISO_TO_COUNTRY_ID[id];
+      const country = getWorldMetricsCountry(worldMetrics, countryId, id);
       if (!country?.hasData) return defaultColor;
 
       if (metricFilter.type === "overall") {
