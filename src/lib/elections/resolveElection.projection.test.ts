@@ -198,6 +198,47 @@ describe("issue #2168 summary projections", () => {
     expect(db.collectionMocks.states!.findOne).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { seatRegion: "CA", regionExists: true, expectedRegions: ["CA"] },
+    { seatRegion: "CA", regionExists: false, expectedRegions: ["CA"] },
+    { seatRegion: "NY", regionExists: true, expectedRegions: ["NY", "CA"] },
+  ])(
+    "looks up each state once for a targeted-ad primary (seat $seatRegion, state exists $regionExists)",
+    async ({ seatRegion, regionExists, expectedRegions }) => {
+      const { db, election, playerCandidate } = setupSummaryWorld();
+      election.seatId = `US-senate-${seatRegion}-1`;
+      playerCandidate.targetedAds = [
+        {
+          stateId: "CA",
+          dimension: "race",
+          bucket: "white",
+          exposure: 1,
+          lastPurchaseTurn: 10,
+          throughTurn: 10,
+        },
+      ];
+      const states = db.collection("states");
+      states.findOne.mockImplementation(
+        async ({ _id, countryId }: { _id: string; countryId: string }) =>
+          regionExists ? { _id, countryId } : null
+      );
+
+      const result = await resolveElection(db as unknown as Db, election, {
+        view: "summary",
+        userId: null,
+      });
+
+      expect(result?.inPrimary).toBe(true);
+      expect(db.collection("stateDemographics").findOne).toHaveBeenCalledExactlyOnceWith({
+        _id: "CA",
+        countryId: "US",
+      });
+      expect(states.findOne.mock.calls).toEqual(
+        expectedRegions.map((_id) => [{ _id, countryId: "US" }])
+      );
+    }
+  );
+
   it("resolveElections summary omits policies.domainPositions from every NPP read", async () => {
     const { db, election } = setupSummaryWorld();
     await resolveElections(db as unknown as Db, [election], {

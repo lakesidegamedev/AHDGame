@@ -315,26 +315,18 @@ describe("clearIneligibleHouseLeadershipNominations", () => {
     db.collection("houseLeadershipNominations");
   });
 
-  it("fails minority_leader nominations whose party joined the majority bloc", async () => {
-    const republicanNomId = new ObjectId();
-    const democratNomId = new ObjectId();
-
-    // Find() returns one republican (now-ineligible) and one democrat (still
-    // eligible) nomination on the minority_leader role; all other role queries
-    // return empty.
-    db.collectionMocks["houseLeadershipNominations"]!.find.mockImplementation((query) => {
-      const matchesMinority =
-        (query as { role?: string }).role === "minority_leader" &&
-        (query as { status?: { $in?: string[] } }).status?.$in?.includes("voting");
-      const data = matchesMinority
-        ? [
-            { _id: republicanNomId, role: "minority_leader", nomineeParty: "republican" },
-            { _id: democratNomId, role: "minority_leader", nomineeParty: "democrat" },
-          ]
-        : [];
-      return { toArray: vi.fn().mockResolvedValue(data) } as unknown as ReturnType<
-        typeof db.collectionMocks.houseLeadershipNominations.find
-      >;
+  it("batches the cleanup using each House role's party policy", async () => {
+    const ineligibleMinorityId = new ObjectId();
+    const ineligibleMajorityId = new ObjectId();
+    const { find, updateMany } = db.collectionMocks.houseLeadershipNominations!;
+    find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { _id: ineligibleMinorityId, role: "minority_leader", nomineeParty: "republican" },
+        { _id: new ObjectId(), role: "majority_leader", nomineeParty: "republican" },
+        { _id: ineligibleMajorityId, role: "majority_whip", nomineeParty: "democrat" },
+        { _id: new ObjectId(), role: "minority_whip", nomineeParty: "democrat" },
+        { _id: new ObjectId(), role: "minority_leader", nomineeParty: "democrat" },
+      ]),
     });
 
     const ctx = buildChamberLeadershipContext({
@@ -359,20 +351,24 @@ describe("clearIneligibleHouseLeadershipNominations", () => {
     const now = new Date();
     await clearIneligibleHouseLeadershipNominations(db as unknown as Db, ctx, now);
 
-    expect(db.collectionMocks["houseLeadershipNominations"]!.updateMany).toHaveBeenCalledWith(
-      { _id: { $in: [republicanNomId] } },
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(find).toHaveBeenCalledWith({
+      role: { $in: ["majority_leader", "minority_leader", "majority_whip", "minority_whip"] },
+      status: { $in: ["open", "voting"] },
+    });
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        _id: { $in: [ineligibleMinorityId, ineligibleMajorityId] },
+        status: { $in: ["open", "voting"] },
+      },
       { $set: { status: "failed", updatedAt: now } }
     );
   });
 
-  it("is a no-op for any-seated policy roles (Speaker / Bundestagspraesident)", async () => {
-    // The function only iterates House election roles, none of which are
-    // currently any-seated. But within the loop the early-`continue` for
-    // any-seated should never call find()/updateMany() for those roles.
-    // We assert that no updateMany is called when all nominations are eligible.
-    db.collectionMocks["houseLeadershipNominations"]!.find.mockImplementation(() => ({
-      toArray: vi.fn().mockResolvedValue([]),
-    }));
+  it("skips the update when no active nominations are returned", async () => {
+    const { find, updateMany } = db.collectionMocks.houseLeadershipNominations!;
+    find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
 
     const ctx = buildChamberLeadershipContext({
       composition: [{ party: "republican" }, { party: "democrat" }],
@@ -383,6 +379,6 @@ describe("clearIneligibleHouseLeadershipNominations", () => {
     const { clearIneligibleHouseLeadershipNominations } = await import("./leadershipElections");
     await clearIneligibleHouseLeadershipNominations(db as unknown as Db, ctx, new Date());
 
-    expect(db.collectionMocks["houseLeadershipNominations"]!.updateMany).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });
