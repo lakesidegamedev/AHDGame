@@ -10,6 +10,7 @@ import { sumOutstandingSovereignPrincipal } from "@/lib/bonds/sovereignPrincipal
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 const TAX_RATES = { incomeTax: 20, salesTax: 5, tariffs: 3, foreignCorporateTax: 15 };
+const GDP = 1e13;
 const BASES = {
   taxableIncome: 1_000_000_000,
   wagesAndSalaries: 1_000_000_000,
@@ -39,10 +40,10 @@ function coherentBudget(
     // Bond-owned stock, deliberately NOT a mirror of the cash balance (GR):
     // a country may hold cash assets and bond debt at the same time.
     debt: { principal, interestRate: 0.02, ceiling: 1e15 },
-    debtToGdpRatio: 0.1,
+    debtToGdpRatio: principal / GDP,
     creditRating: "AAA",
-    gdp: 1e13,
-    gdpSmoothed: 1e13,
+    gdp: GDP,
+    gdpSmoothed: GDP,
     economicFactors: { inflationRate: 2 },
   };
 }
@@ -184,6 +185,7 @@ describe("federal budget end-of-turn coherence (#1975 slice: surplus + bond-ledg
           const key = String(b.countryId ?? b._id);
           expect(b.debt?.principal).toBe(before.get(String(b._id)));
           expect(b.debt?.principal).toBe(ledger.get(key) ?? 0);
+          expect(b.debtToGdpRatio).toBe((ledger.get(key) ?? 0) / GDP);
         }
       }
     }

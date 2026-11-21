@@ -98,6 +98,7 @@ export function FiscalStatStrip({
   const deficitBasis = ratioGdp && ratioGdp > 0 ? ratioGdp : gdp;
   const deficitToGdp = deficitBasis > 0 ? (surplus / deficitBasis) * 100 : 0;
   const money = (n: number) => formatFundsCompact1dp(n, sym);
+  const budgetGdp = ratioGdp && ratioGdp > 0 ? `Budget GDP ${money(ratioGdp)}` : undefined;
   const usdNote = (local: number, existing?: string): string | undefined => {
     if (!toUsd) return existing;
     const usd = toUsd(local);
@@ -130,7 +131,12 @@ export function FiscalStatStrip({
         label={surplus >= 0 ? "Surplus" : "Deficit"}
         value={money(Math.abs(surplus))}
         tone={surplus >= 0 ? "up" : "down"}
-        sub={usdNote(surplus, `${deficitToGdp.toFixed(1)}% of GDP`)}
+        sub={usdNote(
+          surplus,
+          deficitBasis > 0
+            ? `${deficitToGdp.toFixed(1)}% of ${budgetGdp ? "budget " : ""}GDP`
+            : undefined
+        )}
         delta={
           compare ? <Delta now={surplus} prev={prevSurplus} kind="money" sym={sym} /> : undefined
         }
@@ -140,6 +146,7 @@ export function FiscalStatStrip({
         labelTitle="Outstanding sovereign bond principal divided by smoothed national GDP. Treasury cash and the signed fiscal position are not part of the numerator."
         value={`${(debtToGdp * 100).toFixed(1)}%`}
         tone={debtTone(debtToGdp)}
+        sub={budgetGdp}
         delta={
           compare ? (
             <Delta

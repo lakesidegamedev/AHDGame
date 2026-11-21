@@ -3,6 +3,7 @@ import { federalSurplus, type SurplusInputs } from "./federalSurplus";
 import { sovereignBondOutstanding, sovereignDebtTerms } from "@/lib/bonds/sovereignPrincipal";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { resolveRatioGdp } from "./gdpDenominator";
 
 /**
  * Stored fiscal fields that must agree with their definitions at every close:
@@ -25,6 +26,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
  * sub-unit float noise is not a breach.
  */
 const TOLERANCE = 1;
+const RATIO_TOLERANCE = 1e-9;
 
 export interface InvariantInputs extends SurplusInputs {
   surplus?: number;
@@ -129,6 +131,7 @@ export async function reconcileFederalBudgetInvariants(
               surplus: 1,
               treasuryBalance: 1,
               "debt.principal": 1,
+              debtToGdpRatio: 1,
               gdp: 1,
               gdpSmoothed: 1,
               investorConfidence: 1,
@@ -180,8 +183,6 @@ export async function reconcileFederalBudgetInvariants(
         ...budget,
         outstandingSovereignPrincipal: outstanding,
       });
-      if (breaches.length === 0) continue;
-
       const set: Record<string, number | string> = {};
       for (const breach of breaches) {
         const scale = Math.abs(breach.derived);
@@ -200,28 +201,55 @@ export async function reconcileFederalBudgetInvariants(
         if (breach.field === "surplus") {
           set.surplus = breach.derived;
         } else {
-          const terms = sovereignDebtTerms(breach.derived, {
+          set["debt.principal"] = Math.round(breach.derived);
+        }
+      }
+
+      const storedPrincipal = budget.debt?.principal;
+      const correctedPrincipal = set["debt.principal"];
+      const ratioGdp = resolveRatioGdp(budget);
+      const storedRatio = budget.debtToGdpRatio;
+      // Bond transitions can update principal correctly without refreshing its derived terms.
+      const staleRatio =
+        typeof storedPrincipal === "number" &&
+        typeof storedRatio === "number" &&
+        ratioGdp > 0 &&
+        Math.abs(storedRatio - Math.max(0, storedPrincipal) / ratioGdp) > RATIO_TOLERANCE &&
+        !breaches.some((breach) => breach.field === "debtPrincipal");
+
+      if (typeof correctedPrincipal === "number" || staleRatio) {
+        const terms = sovereignDebtTerms(
+          typeof correctedPrincipal === "number" ? correctedPrincipal : (storedPrincipal ?? 0),
+          {
             gdp: budget.gdp ?? 0,
             gdpSmoothed: budget.gdpSmoothed,
             investorConfidence: budget.investorConfidence,
             imfBailoutActive: budget.imfSovereignBailoutActive,
             sovereignRiskAnchor: budget.sovereignRiskAnchor,
-          });
-          set["debt.principal"] = Math.round(breach.derived);
-          set["debt.interestRate"] = terms.interestRate;
-          set.debtToGdpRatio = terms.debtToGdpRatio;
-          set.creditRating = terms.creditRating;
-        }
+          }
+        );
+        set["debt.interestRate"] = terms.interestRate;
+        set.debtToGdpRatio = terms.debtToGdpRatio;
+        set.creditRating = terms.creditRating;
       }
 
       if (Object.keys(set).length > 0) {
-        ops.push({ updateOne: { filter: { _id: budget._id }, update: { $set: set } } });
+        const filter =
+          set.debtToGdpRatio === undefined
+            ? { _id: budget._id }
+            : {
+                _id: budget._id,
+                "debt.principal": storedPrincipal,
+                gdp: budget.gdp ?? { $exists: false },
+                gdpSmoothed: budget.gdpSmoothed ?? { $exists: false },
+              };
+        ops.push({ updateOne: { filter, update: { $set: set } } });
       }
     }
 
     if (ops.length > 0) {
-      await federalBudgetCollection(db).bulkWrite(ops, { ordered: false });
-      result.corrected = ops.length;
+      const written = await federalBudgetCollection(db).bulkWrite(ops, { ordered: false });
+      result.corrected = written.modifiedCount;
       console.info(
         `[BudgetInvariant] turn ${turn}: reconciled ${result.corrected} of ${result.checked} ` +
           `federal budgets to their derived values`
