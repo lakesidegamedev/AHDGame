@@ -65,6 +65,22 @@ export function ventureTargetAnchor(baselineRevenueAnchor: number): number {
   );
 }
 
+/**
+ * Share of the lifted business a hit may boost: the revenue the target was
+ * priced on divided by the lifted revenue at release, at most 1. A product
+ * started on a small business lifts that business's size, not whatever the
+ * sectors grew into during development.
+ */
+export function liftCapRatio(
+  targetAnchor: number,
+  liftedRevenueAnchor: number | null | undefined
+): number {
+  const lifted = finite(liftedRevenueAnchor ?? 0);
+  if (!(lifted > 0)) return 1;
+  const pricedRevenue = Math.max(0, finite(targetAnchor)) / VENTURE_TARGET_TURNS_OF_REVENUE;
+  return clamp(pricedRevenue / lifted, 0, 1);
+}
+
 /** Funding that exactly reaches the target at the end of development. */
 export function referenceFundingPerTurn(targetAnchor: number): number {
   return targetAnchor / VENTURE_DEVELOPMENT_TURNS;
@@ -203,10 +219,11 @@ export interface VentureTurnInput {
   /** Corporation quality score for the brand bonus. */
   averageQuality?: number | null;
   /**
-   * Current per-turn revenue of the sectors this product would lift. At
-   * completion the product is judged against the larger of its original
-   * target and one priced on this revenue, so expanding the lifted sectors
-   * after a cheap start cannot buy a lift on a much larger business.
+   * Current per-turn revenue of the sectors this product would lift. The
+   * product is judged against the target fixed when development started; a
+   * hit lifts revenue only up to the business size that target was priced on
+   * (see {@link liftCapRatio}), so growing the lifted sectors after a cheap
+   * start cannot buy a lift on a much larger business.
    */
   liftedRevenueAnchor?: number | null;
 }
@@ -288,8 +305,6 @@ export function advanceDevelopment(
       ),
     };
     resolveDefaults(true);
-    const repriced = ventureTargetAnchor(finite(input.liftedRevenueAnchor ?? 0));
-    if (repriced > next.targetAnchor) next = { ...next, targetAnchor: repriced };
     const quality = finalQuality(next, brandQualityBonus(input.averageQuality));
     const probability = hitProbability(quality);
     const hit = rollOutcome(next._id) < probability;
@@ -303,7 +318,10 @@ export function advanceDevelopment(
       hitProbability: round3(probability),
       ...(hit
         ? {
-            boostFraction: round3(boostFractionForQuality(quality)),
+            boostFraction: round3(
+              boostFractionForQuality(quality) *
+                liftCapRatio(next.targetAnchor, input.liftedRevenueAnchor)
+            ),
             boostEndsTurn: turn + VENTURE_BOOST_TURNS,
             upliftToDateAnchor: 0,
             lastUpliftAnchor: 0,
