@@ -1,5 +1,6 @@
 "use client";
 
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import Link from "next/link";
 import { useParams, notFound } from "next/navigation";
 import { Skeleton } from "@/components/ui";
@@ -67,7 +68,9 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
         <div style={orgAccentStyle(org.identity)} className="space-y-5">
           <OrgMasthead org={org} viewer={viewer} />
           {org.members.some(
-            (member) => member.countryId === "US" && (member.hasVote || member.hasPolicyVote)
+            (member) =>
+              countryHasFeature("usUi", member.countryId) &&
+              (member.hasVote || member.hasPolicyVote)
           ) && <UsRepresentationNotice status={viewer?.usRepresentation} />}
           <OrgProvider
             value={{

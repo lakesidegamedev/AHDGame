@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
@@ -52,7 +53,9 @@ export async function loadViewerOrganizationRoles(params: {
       )
     ) ?? null;
 
-  const usPositionId = homeCountryId === "US" ? FOREIGN_AFFAIRS_POSITION_BY_COUNTRY.US : null;
+  const usPositionId = countryHasFeature("usLib", homeCountryId)
+    ? FOREIGN_AFFAIRS_POSITION_BY_COUNTRY.US
+    : null;
   const [headOfGovernmentOf, usForeignMinister] = await Promise.all([
     findCountryHeadedBy(db, characterId),
     usPositionId
