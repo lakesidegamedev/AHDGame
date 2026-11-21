@@ -270,6 +270,10 @@ export function buildDesktopMenus({
               stateLegislatureLabel,
               regionLegislatureUrl(homeState.countryId, homeState.id)
             ),
+            ...(governorOffice?.stateId === homeState.id &&
+            governorOffice.countryCode.toLowerCase() === homeState.countryId.toLowerCase()
+              ? [desktopLink("governorOffice", t("state.governorOffice"), `${region}/office`)]
+              : []),
           ],
         },
         {
@@ -287,9 +291,6 @@ export function buildDesktopMenus({
                 campaignManagerHref({ race: activeElection.id })
               ),
             ]
-          : []),
-        ...(governorOffice && governorOffice.stateId === homeState.id
-          ? [desktopLink("governorOffice", t("state.governorOffice"), `${region}/office`)]
           : []),
         ...(cabinetOffice
           ? [
