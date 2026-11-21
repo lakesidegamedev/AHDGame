@@ -258,7 +258,13 @@ describe("processSoeOperations", () => {
     );
 
     const { processSoeOperations } = await import("./soeOperations");
-    const result = await processSoeOperations(db as unknown as Db, NOW);
+    // Plants cover up to the realized operating loss, so report one that exceeds the hole.
+    const result = await processSoeOperations(
+      db as unknown as Db,
+      NOW,
+      undefined,
+      new Map([[corpId.toString(), -5000]])
+    );
 
     expect(result.soeCorps).toBe(1);
     // Treasury covered the loss: the loaded hole (-1000) is credited back as a
@@ -310,7 +316,12 @@ describe("processSoeOperations", () => {
     db.collectionMocks.politicalMetrics.find.mockReturnValue(cursor([]));
 
     const { processSoeOperations } = await import("./soeOperations");
-    const result = await processSoeOperations(db as unknown as Db, NOW);
+    const result = await processSoeOperations(
+      db as unknown as Db,
+      NOW,
+      undefined,
+      new Map([[corpId.toString(), -5000]])
+    );
 
     expect(result.soeCorps).toBe(1);
     const calls = db.collectionMocks.federalBudget.updateOne.mock.calls;
@@ -321,9 +332,10 @@ describe("processSoeOperations", () => {
   it("loads the 2027 EUR treasury denomination once for two French SOEs", async () => {
     const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
     vi.mocked(loadValuationFxRates).mockResolvedValue(new Map([["EUR", 1.2]]));
+    const frenchCorpIds = [new ObjectId(), new ObjectId()];
     db.collectionMocks.corporations.find.mockReturnValue(
       cursor(
-        [new ObjectId(), new ObjectId()].map((_id) => ({
+        frenchCorpIds.map((_id) => ({
           _id,
           countryId: "FR",
           countryOwnerId: "FR",
@@ -343,7 +355,12 @@ describe("processSoeOperations", () => {
     });
 
     const { processSoeOperations } = await import("./soeOperations");
-    const result = await processSoeOperations(db as unknown as Db, NOW);
+    const result = await processSoeOperations(
+      db as unknown as Db,
+      NOW,
+      undefined,
+      new Map(frenchCorpIds.map((id) => [id.toString(), -5000]))
+    );
 
     expect(result.soeCorps).toBe(2);
     expect(db.collectionMocks.federalBudget.findOne).toHaveBeenCalledTimes(1);

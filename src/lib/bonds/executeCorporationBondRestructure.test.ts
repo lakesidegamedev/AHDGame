@@ -70,15 +70,20 @@ describe("executeCorporationBondRestructure", () => {
       matchedCount: 1,
     } as never);
 
-    // NPV by sector = revenue. Salvage = npv×0.85 → B 850, A 680, C 340.
+    // Plants exit value = book = capacityBookAnchor. Salvage = book×0.85 → B 850, A 680, C 340.
     db.collection("corporateSectors").find.mockReturnValue(
       makeCursor([
-        { _id: idA, corporationId: corpId, revenue: 800 },
-        { _id: idB, corporationId: corpId, revenue: 1000 },
-        { _id: idC, corporationId: corpId, revenue: 400 },
+        { _id: idA, corporationId: corpId, revenue: 800, capacityBookAnchor: 800 },
+        { _id: idB, corporationId: corpId, revenue: 1000, capacityBookAnchor: 1000 },
+        { _id: idC, corporationId: corpId, revenue: 400, capacityBookAnchor: 400 },
       ])
     );
     db.collection("centralBanks").find.mockReturnValue(makeCursor([]));
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      currentTurn: 10,
+    });
     db.collection("characters").find.mockReturnValue(
       makeCursor([{ _id: charId, countryId: "US", name: "Alice" }])
     );
@@ -150,8 +155,8 @@ describe("executeCorporationBondRestructure", () => {
     );
     db.collection("corporateSectors").find.mockReturnValue(
       makeCursor([
-        { _id: idA, corporationId: corpId, revenue: 2000 },
-        { _id: idB, corporationId: corpId, revenue: 300 },
+        { _id: idA, corporationId: corpId, revenue: 2000, capacityBookAnchor: 2000 },
+        { _id: idB, corporationId: corpId, revenue: 300, capacityBookAnchor: 300 },
       ])
     );
     db.collection("indexFunds").find.mockReturnValue(
@@ -159,9 +164,6 @@ describe("executeCorporationBondRestructure", () => {
     );
     const defaults = await import("@/lib/bonds/corporateBondDefault");
     vi.mocked(defaults.sumDefaultedBondPrincipal).mockReturnValue(1000);
-    vi.mocked(defaults.computeSectorNpvSum).mockImplementation(
-      (sectors: { revenue: number }[]) => sectors[0]?.revenue ?? 0
-    );
     const { executeCorporationBondRestructure } =
       await import("./executeCorporationBondRestructure");
     const { creditBondPool } = await import("@/lib/bonds/marketPool");
@@ -199,7 +201,7 @@ describe("executeCorporationBondRestructure", () => {
   it("throws (caller falls back to dissolve) when sectors can't cover the debt", async () => {
     // Shrink every sector so total salvage < 1000.
     db.collection("corporateSectors").find.mockReturnValue(
-      makeCursor([{ _id: idA, corporationId: corpId, revenue: 100 }])
+      makeCursor([{ _id: idA, corporationId: corpId, revenue: 100, capacityBookAnchor: 100 }])
     );
     const { executeCorporationBondRestructure } =
       await import("./executeCorporationBondRestructure");

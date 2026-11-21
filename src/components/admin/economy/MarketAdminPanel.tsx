@@ -1,12 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  MARKET_MODE_INFO as MODE_INFO,
-  MARKET_MODE_ORDER as MODE_ORDER,
-  type MarketSystemMode as MarketMode,
-} from "@/lib/market/modes";
-
 interface MarketFlags {
   scarcityDriftEnabled: boolean;
   stockCoverCapEnabled: boolean;
@@ -27,7 +21,6 @@ const FEATURE_TOGGLES: Array<{
   label: string;
   description: string;
   requires?: Array<keyof MarketFlags>;
-  requiresMode?: MarketMode;
 }> = [
   {
     key: "brandLoyaltyEnabled",
@@ -76,7 +69,6 @@ const FEATURE_TOGGLES: Array<{
       "brandLoyaltySliceEnabled",
       "qualityPremiumPricingEnabled",
     ],
-    requiresMode: "clearing",
   },
   {
     key: "supplyAgreementsEnabled",
@@ -108,7 +100,6 @@ const FEATURE_TOGGLES: Array<{
 ];
 
 export function MarketAdminPanel() {
-  const [mode, setMode] = useState<MarketMode | null>(null);
   const [flags, setFlags] = useState<MarketFlags | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,8 +110,7 @@ export function MarketAdminPanel() {
     try {
       const res = await fetch("/api/admin/config/market");
       if (res.ok) {
-        const data = (await res.json()) as { mode: MarketMode } & MarketFlags;
-        setMode(data.mode);
+        const data = (await res.json()) as MarketFlags;
         setFlags({
           scarcityDriftEnabled: data.scarcityDriftEnabled === true,
           stockCoverCapEnabled: data.stockCoverCapEnabled === true,
@@ -137,10 +127,10 @@ export function MarketAdminPanel() {
         });
         setError("");
       } else {
-        setError(`Couldn't load the current market mode (HTTP ${res.status}).`);
+        setError(`Couldn't load the market settings (HTTP ${res.status}).`);
       }
     } catch {
-      setError("Couldn't load the current market mode (network error).");
+      setError("Couldn't load the market settings (network error).");
     } finally {
       setLoading(false);
     }
@@ -174,16 +164,10 @@ export function MarketAdminPanel() {
     }
   };
 
-  const handleSetMode = async (newMode: MarketMode) => {
-    if (mode === null || mode === newMode) return;
-    const ok = await patchConfig({ mode: newMode });
-    if (ok) setMessage(`Market system set to "${newMode}".`);
-  };
-
   const handleToggleFlag = async (key: keyof MarketFlags) => {
-    if (!flags || !mode) return;
+    if (!flags) return;
     const next = !flags[key];
-    const body: Record<string, unknown> = { mode, [key]: next };
+    const body: Record<string, unknown> = { [key]: next };
     if (key === "brandLoyaltyEnabled" && !next) {
       body.brandLoyaltySliceEnabled = false;
     }
@@ -205,87 +189,24 @@ export function MarketAdminPanel() {
     );
   }
 
-  const currentMode = mode ?? "off";
-  const modeUnknown = mode === null;
-
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-        <div className="mb-1 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold">Market system</h3>
-          <span
-            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-              modeUnknown
-                ? "bg-destructive/15 text-destructive"
-                : currentMode === "off"
-                  ? "bg-warning/15 text-warning"
-                  : "bg-success/15 text-success"
-            }`}
-          >
-            {modeUnknown ? "Unknown" : MODE_INFO[currentMode].label}
-          </span>
-        </div>
-        <p className="mb-4 text-xs leading-relaxed text-muted">
-          {MODE_INFO[currentMode].description} Graduated — each tier is a superset of the previous.
-          Enable clearing or higher for posted pricing; ledger for stockpile visibility.
+      {error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
         </p>
-
-        {error ? (
-          <p className="mb-3 text-xs text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {message ? (
-          <p className="mb-3 text-xs text-success" role="status">
-            {message}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          {MODE_ORDER.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => void handleSetMode(m)}
-              disabled={saving || modeUnknown || currentMode === m || !MODE_INFO[m].live}
-              title={MODE_INFO[m].description}
-              className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                currentMode === m
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-card-border bg-background hover:bg-card"
-              }`}
-            >
-              {MODE_INFO[m].label}
-              {!MODE_INFO[m].live ? (
-                <span className="ml-1.5 text-body-sm font-medium text-muted">soon</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-
-        <ul className="mt-4 space-y-1.5 border-t border-card-border pt-3">
-          {MODE_ORDER.map((m) => (
-            <li key={m} className="flex gap-2 text-xs leading-relaxed">
-              <span
-                className={`w-20 shrink-0 font-semibold ${
-                  currentMode === m ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {MODE_INFO[m].label}
-                {!MODE_INFO[m].live ? " *" : ""}
-              </span>
-              <span className="text-muted">{MODE_INFO[m].description}</span>
-            </li>
-          ))}
-          <li className="text-[10px] text-muted pt-1">* not implemented yet — button disabled.</li>
-        </ul>
-      </div>
+      ) : null}
+      {message ? (
+        <p className="text-xs text-success" role="status">
+          {message}
+        </p>
+      ) : null}
 
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <h3 className="text-sm font-semibold">Premium & loyalty features</h3>
         <p className="mt-1 mb-4 text-xs text-muted">
-          Package A/B market mechanics — toggled independently of the mode ladder. Posted pricing
-          requires clearing; supply agreements fill before open-market clearing when enabled.
+          Package A/B market mechanics — toggled independently. Supply agreements fill before
+          open-market clearing when enabled.
         </p>
 
         <div className="space-y-3">
@@ -293,10 +214,7 @@ export function MarketAdminPanel() {
             const enabled = flags?.[toggle.key] === true;
             const missingRequirements =
               toggle.requires?.filter((requirement) => flags?.[requirement] !== true) ?? [];
-            const modeRequirementMissing =
-              toggle.requiresMode !== undefined &&
-              (mode === null || MODE_ORDER.indexOf(mode) < MODE_ORDER.indexOf(toggle.requiresMode));
-            const blocked = missingRequirements.length > 0 || modeRequirementMissing;
+            const blocked = missingRequirements.length > 0;
             return (
               <div
                 key={toggle.key}
@@ -313,7 +231,6 @@ export function MarketAdminPanel() {
                           (requirement) =>
                             FEATURE_TOGGLES.find((feature) => feature.key === requirement)?.label
                         ),
-                        ...(modeRequirementMissing ? [`${toggle.requiresMode} market tier`] : []),
                       ].join(", ")}{" "}
                       first.
                     </p>
@@ -323,7 +240,7 @@ export function MarketAdminPanel() {
                   type="button"
                   role="switch"
                   aria-checked={enabled}
-                  disabled={saving || modeUnknown || !!blocked}
+                  disabled={saving || !!blocked}
                   onClick={() => void handleToggleFlag(toggle.key)}
                   className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
                     enabled ? "bg-primary" : "bg-card-border"
