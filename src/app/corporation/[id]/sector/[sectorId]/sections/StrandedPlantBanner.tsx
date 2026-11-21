@@ -9,6 +9,11 @@ import {
   freightClassExplanation,
   type FreightClass,
 } from "@/lib/logistics/freightClass";
+import {
+  listOutputs,
+  outputSalesSplit,
+  type OutputSale,
+} from "@/lib/corporations/rules/outputSalesSplit";
 
 interface StrandedPlantBannerProps {
   /** Consecutive turns the sector cleared under half its output. */
@@ -25,6 +30,8 @@ interface StrandedPlantBannerProps {
   /** The route type that prevented delivery, when known. */
   deliveryLimitedFreightClass?: FreightClass | null;
   isCeo: boolean;
+  /** Each product this site makes, with its own sold share. */
+  outputs?: readonly OutputSale[];
 }
 
 /**
@@ -41,10 +48,13 @@ export default function StrandedPlantBanner({
   deliveryLimitedFraction = 0,
   deliveryLimitedFreightClass = null,
   isCeo,
+  outputs,
 }: StrandedPlantBannerProps) {
   const t = useTranslations("corporations.sectorInvestment");
   if (lowFillTurns < STRANDED_WARN_TURNS) return null;
 
+  // A mixed site whose products split: name them instead of blaming the site.
+  const split = outputSalesSplit(outputs);
   const soldPct = soldFraction != null ? Math.round(soldFraction * 100) : null;
   const deliveryLimited = deliveryLimitedFraction > DELIVERY_LIMITED_MIN_SHARE;
   const deliveryPct = Math.round(deliveryLimitedFraction * 100);
@@ -72,21 +82,29 @@ export default function StrandedPlantBanner({
           <p className="text-sm font-semibold text-foreground">
             {deliveryLimited
               ? "This plant cannot deliver its output"
-              : "This plant cannot sell its output"}
+              : split
+                ? `${split.stuck.map((o) => o.label).join(" and ")} ${split.stuck.length === 1 ? "is" : "are"} not selling`
+                : "This plant cannot sell its output"}
           </p>
           <p className="mt-0.5 text-xs text-muted">
             For {lowFillTurns} turns in a row this sector has sold less than half of what it makes
             {soldPct != null ? ` (last turn: ${soldPct}%)` : ""}.{" "}
             {deliveryLimited
               ? `Last turn ${deliveryLabel} limited ${deliveryPct}% of what it offered, so that output earned no revenue while its production costs still landed. Buyers still want it. ${deliveryExplanation}`
-              : "The local market is oversupplied for its goods, so extra output earns no revenue this turn while its production costs still land."}{" "}
+              : split
+                ? `${listOutputs(split.selling)} found buyers, but ${listOutputs(split.stuck)} did not. The unsold part earns no revenue while its production costs still land.`
+                : "The local market is oversupplied for its goods, so extra output earns no revenue this turn while its production costs still land."}{" "}
             Its margin still looks healthy because margin only counts the units that do sell.
           </p>
           {isCeo && (
             <p className="mt-1.5 text-xs text-muted">
               {deliveryLimited
                 ? `Options: ${deliveryAction} Shrinking this plant gives up output the market is still short of.`
-                : t("strandedOptions")}
+                : split
+                  ? t("strandedMixedOptions", {
+                      selling: split.selling.map((o) => o.label).join(" and "),
+                    })
+                  : t("strandedOptions")}
             </p>
           )}
         </div>
