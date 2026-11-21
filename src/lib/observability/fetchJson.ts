@@ -17,6 +17,7 @@
  * codes (e.g. 403 for a disabled feature) as a normal `null`-ish outcome the
  * caller handles, by checking `HttpError.status` in the catch.
  */
+import { readJsonResponse } from "@/lib/client/readJsonResponse";
 import { parseErrorBody } from "@/lib/errors/catalog";
 import { isGatewayStatus, isTransportFailure } from "@/lib/errors/transient";
 import { captureClientException } from "@/lib/observability/sentryClientLazy";
@@ -90,5 +91,5 @@ export async function fetchJson<T = unknown>(
     throw err;
   }
 
-  return (await res.json()) as T;
+  return await readJsonResponse<T>(res);
 }
