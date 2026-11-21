@@ -19,7 +19,10 @@ import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
 import { canActAsChair } from "@/lib/parties/actingChair";
-import { MAX_PARTY_LEADERSHIP_TITLE_LENGTH } from "@/lib/parties/partyRoleLabels";
+import {
+  MAX_PARTY_LEADERSHIP_TITLE_LENGTH,
+  partyRoleTitleConflicts,
+} from "@/lib/parties/partyRoleLabels";
 import { COMMITTEE_SIZE } from "@/lib/elections/party/nationalCommitteeElections";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
@@ -127,11 +130,22 @@ export async function PATCH(
     }
 
     if (parsed.data.leadershipTitles !== undefined) {
-      updates.leadershipTitles = {
-        chair: parsed.data.leadershipTitles.chair?.trim() || null,
-        viceChair: parsed.data.leadershipTitles.viceChair?.trim() || null,
-        treasurer: parsed.data.leadershipTitles.treasurer?.trim() || null,
+      const titles = {
+        chair: parsed.data.leadershipTitles.chair || null,
+        viceChair: parsed.data.leadershipTitles.viceChair || null,
+        treasurer: parsed.data.leadershipTitles.treasurer || null,
       };
+      if (
+        (["chair", "viceChair", "treasurer"] as const).some((role) =>
+          partyRoleTitleConflicts(countryId, role, titles)
+        )
+      ) {
+        return errorResponse(
+          400,
+          "Give each national office a distinct title. An office cannot use another office's default title."
+        );
+      }
+      updates.leadershipTitles = titles;
     }
 
     const filter: Filter<PoliticalParty> = { _id: party._id };

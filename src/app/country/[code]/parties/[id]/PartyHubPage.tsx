@@ -20,7 +20,7 @@ import { AgendaBannerWithEdit } from "@/components/party-hub/AgendaBannerWithEdi
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { parseCountryParam } from "@/lib/db/partyLookup";
-import { partyApiUrl } from "@/lib/urls";
+import { partyApiUrl, partyUrl } from "@/lib/urls";
 import { PlainPositionLabel } from "@/components/party/PlainPositionLabel";
 import { PartySwitchElectionWarning } from "@/components/party/PartySwitchElectionWarning";
 import {
@@ -580,6 +580,12 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     user?.isAdmin || isInParty || modViewEnabled || isChamberLeaderForParty;
   const sortedMembers = [...party.members].sort((a, b) => a.name.localeCompare(b.name));
   const candidatePositions = POSITIONS.filter((p) => electionData?.isCandidate[p]);
+  const hasOpenNationalBallot =
+    (electionData?.canVote || electionData?.canRun) &&
+    POSITIONS.some((position) => {
+      const ballot = electionData.elections[position];
+      return ballot?.status === "voting" && ballot.endTurn > currentTurn;
+    });
 
   const MAIN_TABS: { id: NationalMainTab; label: string }[] = canViewExtendedTabs
     ? [
@@ -772,6 +778,14 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     >
       {activeTab === "overview" && (
         <div className="space-y-12">
+          {hasOpenNationalBallot && (
+            <Link
+              href={`${partyUrl(backCountry, party.id)}?tab=elections`}
+              className="inline-block text-body-sm font-semibold text-primary underline"
+            >
+              View open national ballots
+            </Link>
+          )}
           <PartyOverviewPanel party={party} committeeResult={committeeResult} />
           <RegimeOffersInbox countryCode={backCountry} partySequentialId={String(party.id)} />
           {canViewExtendedTabs && (

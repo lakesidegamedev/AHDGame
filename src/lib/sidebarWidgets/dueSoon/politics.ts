@@ -1,4 +1,4 @@
-import { regionUrl } from "@/lib/urls";
+import { partyUrl, regionPartyUrl, regionUrl } from "@/lib/urls";
 import type { ObjectId } from "mongodb";
 import type { CabinetNomination } from "@/lib/db/types/cabinet";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
@@ -96,7 +96,6 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
     ),
   ]);
 
-  const code = countryId.toLowerCase();
   return [
     ...openNational
       .filter((election) => !votedNational.has(election._id.toString()))
@@ -105,7 +104,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
         id: `partyElection:${election._id.toString()}`,
         subject: party.name,
         position: election.position,
-        href: `/country/${code}/parties/${canonicalId}`,
+        href: `${partyUrl(countryId, canonicalId)}?tab=elections`,
         dueTurn: election.endTurn,
         dueAt: null,
       })),
@@ -116,7 +115,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
         id: `statePartyElection:${election._id.toString()}`,
         subject: `${party.name} · ${election.stateId}`,
         position: election.position,
-        href: `${regionUrl(code, election.stateId.toLowerCase())}/party/${canonicalId}`,
+        href: `${regionPartyUrl(countryId, election.stateId, canonicalId)}?tab=elections`,
         dueTurn: election.endTurn,
         dueAt: null,
       })),
