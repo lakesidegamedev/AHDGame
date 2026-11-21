@@ -10,8 +10,10 @@
  * taxed as ordinary revenue; this side-payment is not taxed again.
  *
  * Per settled agreement:
- *   qty        = supplier's contracted units that cleared, split across its
- *                agreements for that commodity pro-rata by volumeCap
+ *   qty        = on a funded turn, what the funded market delivered from the
+ *                supplier to the buyer (rules/contractFundedDeliveries.ts);
+ *                otherwise the supplier's contracted units that cleared, split
+ *                across its agreements for that commodity pro-rata by volumeCap
  *   unitPrice  = COMMODITY_BASE_PRICES[commodity] * priceRealizationFactor(laggedRatio)
  *                / TURNS_PER_DAY  (per daily-basis unit, per turn)
  *   premium    = qty * unitPrice * pricePremium
@@ -44,6 +46,7 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk } from "@/lib/financialTxLog/emit";
 import { getNppCashFloorAnchor } from "@/lib/turn/npp/nppCashReserve";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
+import { fundedContractDeliveries, type FundedPairFlows } from "./rules/contractFundedDeliveries";
 import {
   resolveCorpLiquidCurrencyCode,
   fxRateForCorpFromMap,
@@ -165,6 +168,14 @@ export function computeSupplyAgreementSettlements(args: {
    * pass the plants check while handing the guard a nameplate.
    */
   plantsEnabled?: boolean;
+  /**
+   * Settled funded sales between contract pairs this turn. Present only when
+   * the funded market ran: the premium is then priced on what the pair really
+   * traded, capped at each contract's volume. Absent, the premium is priced on
+   * the clearing pass's contracted units as before. Shortfall damages never
+   * read this.
+   */
+  fundedPairFlows?: FundedPairFlows;
   turn: number;
   now: Date;
 }): SupplyAgreementSettlements {
@@ -208,6 +219,13 @@ export function computeSupplyAgreementSettlements(args: {
   const settledPremiums: SettledPremium[] = [];
   const deliveries: SupplyAgreementDelivery[] = [];
   const damages: SupplyAgreementDamages[] = [];
+  const fundedDeliveries = args.fundedPairFlows
+    ? fundedContractDeliveries({
+        agreements,
+        flows: args.fundedPairFlows,
+        turnsPerDay: TURNS_PER_DAY,
+      })
+    : null;
   const buyerAllocations = args.buyerDemandByCorpCommodity
     ? allocateDeliveriesToBuyers({
         agreements,
@@ -297,7 +315,9 @@ export function computeSupplyAgreementSettlements(args: {
     if (totalCap <= 0) continue;
     const capShare = a.volumeCap / totalCap;
 
-    const qty = buyerAllocations?.get(agreementIndex) ?? filled * capShare;
+    const qty = fundedDeliveries
+      ? (fundedDeliveries.get(agreementIndex) ?? 0)
+      : (buyerAllocations?.get(agreementIndex) ?? filled * capShare);
     // Held so the shortfall computed below can be written back onto it. The
     // record is pushed here, before any of the `continue` gates, because a
     // delivery happened whether or not the settlement wires cash.
@@ -310,6 +330,7 @@ export function computeSupplyAgreementSettlements(args: {
         commodity: a.commodity,
         contractedUnits: a.volumeCap,
         deliveredUnits: qty,
+        ...(fundedDeliveries ? { deliveryBasis: "funded" as const } : {}),
         turn,
         ...(args.buyerDemandByCorpCommodity
           ? {
@@ -352,7 +373,8 @@ export function computeSupplyAgreementSettlements(args: {
       (((COMMODITY_BASE_PRICES[a.commodity] ?? 0) / safeUnitScale(args.eraUnitScale)) *
         priceRealizationFactor(priceRatioByCommodity.get(a.commodity))) /
       TURNS_PER_DAY;
-    const premiumAnchor = filled > 0 ? qty * unitPriceAnchor * a.pricePremium : 0;
+    const priced = fundedDeliveries ? qty > 0 : filled > 0;
+    const premiumAnchor = priced ? qty * unitPriceAnchor * a.pricePremium : 0;
 
     // C5: record the priced position before any of the damages, solvency or
     // rounding gates below can drop this agreement from the settlement. The tax
@@ -579,6 +601,8 @@ export async function settleSupplyAgreements(args: {
   achievableByCorpCommodity?: AchievableByCorpCommodity;
   /** Required alongside `producedByCorpCommodity` — see the guard in the pure fn. */
   plantsEnabled?: boolean;
+  /** Funded turns only: settled sales between contract pairs. */
+  fundedPairFlows?: FundedPairFlows;
   turn: number;
   now: Date;
   thresholds: TxThresholds;
@@ -645,6 +669,7 @@ export async function settleSupplyAgreements(args: {
     producedByCorpCommodity: args.producedByCorpCommodity,
     achievableByCorpCommodity: args.achievableByCorpCommodity,
     plantsEnabled: args.plantsEnabled,
+    fundedPairFlows: args.fundedPairFlows,
     corpInfo: (corpId) => {
       const corp = lookups.corpById.get(corpId);
       if (!corp) return undefined;
@@ -699,6 +724,7 @@ export async function settleSupplyAgreements(args: {
       const setFields = {
         lastDeliveryTurn: delivery.turn,
         lastDeliveredUnits: delivery.deliveredUnits,
+        ...(delivery.deliveryBasis ? { lastDeliveryBasis: delivery.deliveryBasis } : {}),
         ...(delivery.buyerConsumptionUnits !== undefined
           ? { lastBuyerConsumptionUnits: delivery.buyerConsumptionUnits }
           : {}),

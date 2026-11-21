@@ -827,6 +827,7 @@ export async function publishFundedProducerTurn(
     settledProfitByCorp,
     headcountBySectorId,
     deferredDistributions,
+    tradeReceipt: settled.result.tradeReceipt,
     turnWarnings: [...(settled.result.turnWarnings ?? []), ...context.background.warnings],
   };
 }

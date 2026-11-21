@@ -13,7 +13,8 @@ export type AgreementDeliveryStatus =
   | { code: "buyerCannotReceive"; stateScoped: boolean }
   | { code: "supplierProducedNone" }
   | { code: "supplierProducedLess"; achievable: number; cap: number }
-  | { code: "buyerUsedLess"; used: number; cap: number };
+  | { code: "buyerUsedLess"; used: number; cap: number }
+  | { code: "marketDeliveredLess"; delivered: number; cap: number };
 
 /**
  * Why the last settlement delivered less than the contract promised, read
@@ -27,12 +28,15 @@ export function agreementDeliveryStatus(args: {
   lastDeliveredUnits?: number;
   lastAchievableUnits?: number;
   lastBuyerConsumptionUnits?: number;
+  /** "funded" when the delivery is the pair's settled funded trade. */
+  lastDeliveryBasis?: "funded";
 }): AgreementDeliveryStatus | null {
   if (!Number.isFinite(args.lastDeliveryTurn)) return null;
   const cap = Math.max(0, args.volumeCap);
   const delivered = Math.max(0, args.lastDeliveredUnits ?? 0);
   if (!(cap > 0) || delivered >= cap - DELIVERY_EPSILON) return null;
-  const used = args.lastBuyerConsumptionUnits;
+  const funded = args.lastDeliveryBasis === "funded";
+  const used = funded ? undefined : args.lastBuyerConsumptionUnits;
   if (typeof used === "number" && used <= DELIVERY_EPSILON && delivered <= DELIVERY_EPSILON) {
     return { code: "buyerCannotReceive", stateScoped: isStateScopedCommodity(args.commodity) };
   }
@@ -46,6 +50,9 @@ export function agreementDeliveryStatus(args: {
       return { code: "supplierProducedLess", achievable, cap };
     }
   }
+  // The funded market matches buyers and sellers on its own; the buyer
+  // estimate did not limit this delivery, so it is not offered as the reason.
+  if (funded) return { code: "marketDeliveredLess", delivered, cap };
   if (typeof used === "number" && used < cap - DELIVERY_EPSILON) {
     return { code: "buyerUsedLess", used, cap };
   }
