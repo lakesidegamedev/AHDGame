@@ -138,6 +138,30 @@ describe("SupplyDealsPanel controls", () => {
     expect(lastQuery().get("side")).toBeNull();
   });
 
+  it("requires an explicit choice when several corporations could take the offer", async () => {
+    response = {
+      ...response,
+      offers: [offer("a", "sell", 50)],
+      myCorporations: [
+        { id: "trader-1", name: "First buyer" },
+        { id: "trader-2", name: "Second buyer" },
+      ],
+    };
+    render(<SupplyDealsPanel />);
+
+    const select = (await screen.findByLabelText("Take with")) as HTMLSelectElement;
+    const take = screen.getByRole<HTMLButtonElement>("button", { name: "Take offer" });
+    expect(select.value).toBe("");
+    expect(take.disabled).toBe(true);
+    expect(screen.queryByRole("link", { name: "Negotiate" })).toBeNull();
+
+    fireEvent.change(select, { target: { value: "trader-2" } });
+    expect(take.disabled).toBe(false);
+    expect(screen.getByRole("link", { name: "Negotiate" }).getAttribute("href")).toContain(
+      "/corporation/trader-2"
+    );
+  });
+
   it("says plainly when there are no offers at all", async () => {
     response = { ...response, offers: [], total: 0, totalAll: 0 };
     render(<SupplyDealsPanel />);
