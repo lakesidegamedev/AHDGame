@@ -20,6 +20,7 @@ import {
 } from "@/lib/corporations/rules/plantAccountTotals";
 import type { PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   activeCapacityFraction,
@@ -474,7 +475,13 @@ export function buildSectorPlantsSection(args: {
   // Offered / Sold / Unsold rows print. The engine's soldFraction is only the
   // fallback when the unit counts are missing.
   const soldFraction = fillRate ?? num(sector.soldFraction);
-  const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
+  const receiptSales = settledProductSales(sector.producerSettlement, currentTurn);
+  const productFractions = receiptSales
+    ? [...receiptSales].flatMap(([commodity, sales]): [string, number][] =>
+        sales.offered > 0 ? [[commodity, sales.sold / sales.offered]] : []
+      )
+    : Object.entries(sector.soldByCommodity ?? {});
+  const soldByCommodity = productFractions
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
       commodity,

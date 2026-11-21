@@ -1,4 +1,5 @@
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
+import type { SettledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
@@ -157,6 +158,8 @@ export interface CommodityFlow {
    * multi-output sector which commodity is the one sitting unsold.
    */
   soldFraction?: number;
+  /** CEO-only physical settlement, per turn. */
+  settledSales?: SettledProductSales;
   /**
    * Supply rows, CEO only: output this plant handed to the company's own other
    * sites last turn. Not a sale, so no revenue; `valueAnchor` is the units at
