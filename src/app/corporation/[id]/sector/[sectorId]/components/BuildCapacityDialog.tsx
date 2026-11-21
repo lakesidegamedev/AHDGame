@@ -287,7 +287,7 @@ export default function BuildCapacityDialog({
     (!financingChoice || !!financingChoice.request);
 
   const returns = buildReturnSummary(plants, preview.safeUnits);
-  const firstIncomeTurns = arrivals?.firstInTurns ?? plants.buildTurns;
+  const firstOpeningTurns = arrivals?.firstInTurns ?? plants.buildTurns;
   const marketRoomKnown = sectorType !== "logistics" && plants.measuredDemandGapUnits != null;
   const recommendation = Math.floor((plants.measuredDemandGapUnits ?? 0) / unitsPerFacility);
   const strategyRoom = plants.strategyBuildRoom;
@@ -309,6 +309,8 @@ export default function BuildCapacityDialog({
   // Per-product buyers replace the single tightest-product count whenever the
   // funded order book is available.
   const showReadout = sectorType !== "logistics" && (plants.buildDemand?.length ?? 0) > 0;
+  const hasCapEstimate =
+    showReadout && plants.buildDemand?.some((row) => row.capHiddenUnmet != null);
   const staffShort = workersDesired > 0 && plants.workers < workersDesired;
   const poolShort = !!stateLabourMarket && poolOversubscribed(stateLabourMarket);
   const reserveRisk =
@@ -434,6 +436,7 @@ export default function BuildCapacityDialog({
                 resourceSizingUnavailable || automaticSizingBlocked || sizing.demandFacilities < 1
               }
               title={sizingNote}
+              aria-describedby={hasCapEstimate ? "build-match-demand-basis" : undefined}
               className="mt-2 rounded-lg border border-card-border px-3 py-1.5 text-body-xs font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
             >
               {t("matchDemand", {
@@ -443,6 +446,11 @@ export default function BuildCapacityDialog({
               })}
             </button>
           )}
+          {hasCapEstimate && (
+            <p id="build-match-demand-basis" className="mt-1 text-body-xs text-muted">
+              {t("matchDemandPaidOrders")}
+            </p>
+          )}
         </div>
 
         <dl className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-4">
@@ -451,7 +459,7 @@ export default function BuildCapacityDialog({
             value={money(preview.total)}
             tone={affordable ? "default" : "error"}
           />
-          <Stat label={t("firstIncome")} value={t("inTurns", { turns: firstIncomeTurns })} />
+          <Stat label={t("firstOpening")} value={t("inTurns", { turns: firstOpeningTurns })} />
           <Stat
             label={t("profitPerTurn")}
             value={returns ? money(returns.profitPerTurn) : t("notAvailable")}
