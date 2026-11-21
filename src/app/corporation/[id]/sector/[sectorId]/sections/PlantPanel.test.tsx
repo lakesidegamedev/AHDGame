@@ -115,7 +115,7 @@ describe("PlantPanel facility sizing", () => {
     );
 
     // 40 units ordered is 40 assembly plants, not floor(40 / 25) = 1.
-    expect(screen.getByText("0 of 40 plants built")).toBeTruthy();
+    expect(screen.getByText("0 of 40 plants finished")).toBeTruthy();
     expect(screen.queryByText(/0 of 1 plant built/)).toBeNull();
   });
 });
@@ -159,8 +159,12 @@ describe("PlantPanel vehicle recipe", () => {
     );
 
     // Same size as the ledger and the build dialog: one vehicle unit per plant.
-    expect(screen.getByText("12 of 40 plants built")).toBeTruthy();
-    expect(screen.getByText(/about 2 plants arriving each turn · done on turn 551/)).toBeTruthy();
+    expect(screen.getByText("12 of 40 plants finished")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /about 2 plants arriving each turn · done on turn 551 \(\d+ to go\) · only finished plants run/
+      )
+    ).toBeTruthy();
     expect(screen.getByText("41")).toBeTruthy();
     expect(screen.getByText(/28 more being built/)).toBeTruthy();
     expect(screen.queryByText(/units per day/)).toBeNull();
