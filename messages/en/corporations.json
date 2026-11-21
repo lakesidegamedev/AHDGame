@@ -250,7 +250,9 @@
         "detailCovered": "every order filled",
         "detailNoOrders": "no buyers placed paid orders",
         "detailUnknown": "not measured yet",
-        "notALimit": "Advice, not a limit: you can build as many as you can afford. Based on last turn's paid orders in this market, after spare and queued capacity. Export sales are not counted, and other companies can build too."
+        "notALimit": "Advice, not a limit: you can build as many as you can afford. Based on last turn's paid orders in this market, after spare and queued capacity. Export sales are not counted, and other companies can build too.",
+        "sidebarSome": "Buyers waiting for {products}",
+        "sidebarNone": "No buyers waiting"
       }
     },
     "bankConsole": {
