@@ -1,10 +1,12 @@
 "use client";
 
 import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button, Modal, Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { CORP_LANE_EFFECT_SCALE } from "@/lib/constants/techTree/effects";
 import { useTranslations } from "next-intl";
 import { DenseSection, InlineStatus, KVList, KVRow, SmallButton } from "./dense/DenseKit";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -80,6 +82,7 @@ interface TechResponse {
     dailyGrossOperatingScale: number;
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
+    minimumCashCost?: number;
   } | null;
   plantOutputPct?: number | null;
   plantOutputCapPct?: number | null;
@@ -113,6 +116,11 @@ interface TechTabProps {
 function decadeLabel(label: string): string {
   return label.replace(/\s*[–—]\s*/g, " to ");
 }
+
+const formatResearchRate = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 3,
+  signDisplay: "exceptZero",
+});
 
 export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   const { toInternalFrom, formatFull, formatAmount } = useCurrency();
@@ -281,11 +289,11 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           <div className="space-y-2 py-1 text-xs text-muted">
             <p>
               Spend R&amp;D points and cash to research technologies. Each decade splits into two
-              tracks: the Corporate track boosts <em>all</em> your sectors at reduced strength,
-              while the Sector track gives full-strength bonuses to your primary{" "}
-              {data.sectorLabel?.toLowerCase()} sectors only. Commit to one track per decade and
-              research its branch in order. {t("firstUnlockCommits")} {t("futureDecadesLocked")}{" "}
-              {t("baselineResearchGrant")}
+              tracks: the Corporate track applies operating bonuses at{" "}
+              {CORP_LANE_EFFECT_SCALE * 100}% strength across your sectors, while the Sector track
+              gives full-strength bonuses to your primary {data.sectorLabel?.toLowerCase()} sectors
+              only. Commit to one track per decade and research its branch in order.{" "}
+              {t("firstUnlockCommits")} {t("futureDecadesLocked")} {t("baselineResearchGrant")}
             </p>
             {current && (
               <p>
@@ -302,9 +310,15 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               <p>
                 <span className="font-medium text-foreground">How cash prices work</span>{" "}
                 <span>
-                  Most technologies cost {Math.round(data.cashPricing.defaultRevenueFraction * 100)}
-                  % of the corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)}{" "}
-                  daily gross operating scale. Market cap and profit do not set the price.
+                  When a technology has an estimated running benefit, its price targets one game
+                  year of savings or extra operating profit, subject to a minimum. Other
+                  technologies start at {Math.round(data.cashPricing.defaultRevenueFraction * 100)}%
+                  of the corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)}{" "}
+                  daily gross operating scale
+                  {data.cashPricing.minimumCashCost != null
+                    ? `, with a minimum of ${fmtCash(data.cashPricing.minimumCashCost)}`
+                    : ", subject to a minimum"}
+                  .
                   {data.cashPricing.capacityFloorApplied && (
                     <>
                       {" "}
@@ -312,8 +326,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                       make research free.
                     </>
                   )}{" "}
-                  Foreign sectors are converted into {code}. Exchange rates can move the converted
-                  total.
+                  Foreign sectors are converted into {code} at current exchange rates.
                 </span>
               </p>
             )}
@@ -332,13 +345,29 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={(data.rdScore ?? 0).toLocaleString("en-US")}
               hint={
                 data.rdGainPerTurn != null
-                  ? `${data.rdGainPerTurn >= 0 ? "+" : ""}${data.rdGainPerTurn}/turn`
+                  ? `${formatResearchRate.format(data.rdGainPerTurn)}/turn after decay`
                   : undefined
               }
             />
-            {data.rdFundedProduct && (
+            {data.rdBudget != null && (
               <KVRow
                 label="R&D budget"
+                value={`${fmtCash(data.rdBudget)}/day`}
+                hint={
+                  viewerIsCeo ? (
+                    <Link
+                      href={`/corporation/${corporationId}?tab=ceo#ceo-budget`}
+                      className="underline"
+                    >
+                      Open CEO budget
+                    </Link>
+                  ) : undefined
+                }
+              />
+            )}
+            {data.rdFundedProduct && (
+              <KVRow
+                label="Product development"
                 value={`${data.rdFundedProduct.sharePct}% goes to ${data.rdFundedProduct.label} development`}
                 hint={`${fmtCash(data.rdFundedProduct.remainingCost)} still to pay. The rest goes to research.`}
               />
@@ -526,6 +555,13 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                   </>
                 )}
               {confirmNode.node.exclusiveGroup && <> {t("specializationConfirmation")}</>}
+            </p>
+            <p className="text-sm text-muted">
+              R&amp;D points left after unlocking{" "}
+              <strong className="text-foreground">
+                {((data.rdScore ?? 0) - confirmNode.node.cost).toLocaleString("en-US")}
+              </strong>
+              .
             </p>
             <div className="flex justify-end gap-2">
               <Button
