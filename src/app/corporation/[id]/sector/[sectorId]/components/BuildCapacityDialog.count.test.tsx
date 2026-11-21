@@ -121,10 +121,16 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
       },
     ],
   });
-  expect(screen.getAllByText(/Network Services/)).toHaveLength(2);
-  expect(screen.getByTestId("build-room").textContent).toContain(
-    "Sales limited by Software & IT Services"
+  // Each product reads on its own; a covered product no longer zeroes the whole site.
+  expect(screen.getByTestId("build-market-row-network_services").textContent).toContain(
+    "Buyers waiting"
   );
+  expect(screen.getByTestId("build-market-row-software").textContent).toContain("Covered");
+  expect(screen.getByTestId("build-market-headline").textContent).toContain(
+    "New plants would mostly sell Network Services."
+  );
+  expect(screen.getByText(/Advice, not a limit/)).toBeTruthy();
+  expect(screen.getByTestId("build-room").textContent).not.toContain("recommended");
   expect(screen.queryByText(/oversupplied/)).toBeNull();
 });
 
@@ -242,10 +248,12 @@ it("sizes funded building counts from the funded build room", () => {
     },
     "telecommunications"
   );
-  expect(screen.getByText("Room for buyers of every product: 4 buildings")).toBeTruthy();
+  expect(screen.getByTestId("build-market-headline").textContent).toContain(
+    "About 4 more network hubs would sell their whole output."
+  );
   expect(screen.queryByText(/share is fully claimed/i)).toBeNull();
   expect(
-    screen.getByRole("region", { name: "Buyer demand" }).closest(".overscroll-contain")
+    screen.getByRole("region", { name: "Buyers for what you make" }).closest(".overscroll-contain")
   ).toBeTruthy();
   expect(document.body.style.overflow).toBe("hidden");
 });
