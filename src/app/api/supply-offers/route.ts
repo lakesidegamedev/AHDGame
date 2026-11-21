@@ -81,7 +81,11 @@ export async function GET(request: Request) {
       getCurrentTurn(db),
       ObjectId.isValid(auth.user.userId)
         ? corporationsCollection(db)
-            .find({ userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } })
+            .find({
+              userId: new ObjectId(auth.user.userId),
+              ceoVacant: { $ne: true },
+              imfInstitution: { $ne: true },
+            })
             .project<Pick<Corporation, "_id" | "name" | "countryId">>({
               name: 1,
               countryId: 1,

@@ -152,6 +152,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
               <p className="mt-0.5 text-sm text-muted">
                 {corporation.name}
                 <span className="mx-2 text-card-border">·</span>
+                <span>Reference price </span>
                 <span className="tabular-nums text-foreground font-medium">
                   {formatPrice(toInternalFrom(corporation.sharePrice, corpCurrency), corpCurrency)}
                 </span>
