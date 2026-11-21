@@ -119,6 +119,16 @@ export interface CorporateSector {
   cutoverConvertedAtTurn?: number;
   /** Funded market: consecutive settled turns this sector sold nothing. */
   producerZeroSalesTurns?: number;
+  /**
+   * Funded market: consecutive settled turns this sector sold less than
+   * STRANDED_LOW_FILL_THRESHOLD of what it offered (sold over offered, the
+   * fundedSellThrough reading). Written by the funded settlement only; absent
+   * reads as 0. A turn at or above the threshold resets it. A turn with
+   * nothing offered, and a turn the plant did not settle (mothballed, idle),
+   * leaves it as it was: no offer is no evidence either way. Reset to 0 when
+   * a mothballed plant restarts. The funded counterpart of `lowFillTurns`.
+   */
+  fundedLowSaleTurns?: number;
   /** Physical opening generation, advanced atomically with the operating receipt. */
   producerCapacity?: import("./producerEconomy").ProducerGenerationStamp;
   producerInventory?: import("./producerEconomy").ProducerInventoryState;

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ACCRUAL_RATE, DECAY_IDLE } from "@/lib/market/brandLoyalty";
-import { computeBrandLoyaltyUpdates, type CorpLoyaltyInput } from "./brandLoyaltyTurn";
+import {
+  computeBrandLoyaltyUpdates,
+  computeFundedBrandLoyaltyUpdates,
+  type CorpLoyaltyInput,
+  type FundedCorpLoyaltyInput,
+} from "./brandLoyaltyTurn";
 
 function corp(over: Partial<CorpLoyaltyInput>): CorpLoyaltyInput {
   return {
@@ -139,5 +144,76 @@ describe("computeBrandLoyaltyUpdates", () => {
     ]);
     const premium = updates.find((u) => u.corpId === "premium")!;
     expect(premium.outcome).toBe("underdelivered");
+  });
+});
+
+describe("computeFundedBrandLoyaltyUpdates", () => {
+  function funded(over: Partial<FundedCorpLoyaltyInput>): FundedCorpLoyaltyInput {
+    return {
+      corpId: "c",
+      priorLoyalty: 40,
+      priorNorm: -0.05,
+      sectors: [{ revenueAnchor: 100, fill: 0.9, commodities: ["steel"] }],
+      ...over,
+    };
+  }
+
+  it("accrues on a contested corp that really sold, and never applies a pricing penalty", () => {
+    const updates = computeFundedBrandLoyaltyUpdates([
+      funded({ corpId: "a" }),
+      funded({ corpId: "b", priorNorm: 0.2 }),
+    ]);
+    for (const u of updates) {
+      expect(u.outcome).toBe("accrued");
+      expect(u.loyalty).toBe(40 + ACCRUAL_RATE);
+    }
+    // The stored norm is carried forward unchanged.
+    expect(updates.find((u) => u.corpId === "a")!.postureNorm).toBe(-0.05);
+    expect(updates.find((u) => u.corpId === "b")!.postureNorm).toBe(0.2);
+  });
+
+  it("revenue-weights the real fill: a big low seller under-delivers", () => {
+    const [u] = computeFundedBrandLoyaltyUpdates([
+      funded({
+        sectors: [
+          { revenueAnchor: 100, fill: 0.2, commodities: ["a"] },
+          { revenueAnchor: 10, fill: 1, commodities: ["b"] },
+        ],
+      }),
+    ]);
+    expect(u.outcome).toBe("underdelivered");
+    expect(u.loyalty).toBe(39);
+  });
+
+  it("drifts idly for an uncontested seller", () => {
+    const [u] = computeFundedBrandLoyaltyUpdates([funded({})]);
+    expect(u.outcome).toBe("idle-decay");
+    expect(u.loyalty).toBe(40 - DECAY_IDLE);
+  });
+
+  it("skips a corp with no selling sector, leaving its stored loyalty", () => {
+    expect(computeFundedBrandLoyaltyUpdates([funded({ sectors: [] })])).toEqual([]);
+  });
+
+  it("seeds a missing norm at list price", () => {
+    const [u] = computeFundedBrandLoyaltyUpdates([funded({ priorNorm: null })]);
+    expect(u.postureNorm).toBe(0);
+  });
+
+  it("moves at most one point from the stored value on the first funded-scored turn", () => {
+    // A corp the legacy figures gave 63.5 lands within one point of it,
+    // whatever its real fill.
+    for (const fill of [0, 0.34, 0.35, 0.5, 1]) {
+      const updates = computeFundedBrandLoyaltyUpdates([
+        funded({
+          corpId: "x",
+          priorLoyalty: 63.5,
+          sectors: [{ revenueAnchor: 5, fill, commodities: ["k"] }],
+        }),
+        funded({ corpId: "y", sectors: [{ revenueAnchor: 5, fill: 1, commodities: ["k"] }] }),
+      ]);
+      const x = updates.find((u) => u.corpId === "x")!;
+      expect(Math.abs(x.loyalty - 63.5)).toBeLessThanOrEqual(1);
+    }
   });
 });
