@@ -107,13 +107,13 @@ export default function DislocationPanel({
     <div className="mb-6 rounded-xl border border-card-border bg-card p-4">
       <h3 className="text-sm font-semibold text-foreground">Where this market is out of balance</h3>
       <p className="mt-0.5 text-xs text-muted">
-        Goods do not move for free, so one map can hold both a shortage and a glut. Building supply
-        in a short state, or shipping out of a glutted one, is what closes the gap.
+        Shipping costs money, so one map can be short in one state and cheap in another. Short
+        states pay more for every unit; cheap states have more on offer than local buyers order.
       </p>
       <div className="mt-3 grid gap-4">
         {short.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-foreground">Short: paying a premium</p>
+            <p className="text-xs font-medium text-foreground">Short: buyers pay a premium</p>
             <ul className="mt-1 divide-y divide-card-border/60">
               {short.map((s) =>
                 stateRow(s.id, `${s.ratio.toFixed(2)}x base price${shortDetail(s.id)}`)
@@ -123,9 +123,16 @@ export default function DislocationPanel({
         )}
         {stranded.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-foreground">Oversupplied: cannot sell locally</p>
+            <p className="text-xs font-medium text-foreground">
+              Cheap: more offered than local buyers order
+            </p>
+            <p className="text-[10px] text-muted">
+              The extra can still ship to other states or abroad, at lower margins.
+            </p>
             <ul className="mt-1 divide-y divide-card-border/60">
-              {stranded.map((s) => stateRow(s.id, `+${formatUnits(s.surplus, unit)} surplus`))}
+              {stranded.map((s) =>
+                stateRow(s.id, `${formatUnits(s.surplus, unit)} beyond local orders`)
+              )}
             </ul>
           </div>
         )}

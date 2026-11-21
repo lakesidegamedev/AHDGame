@@ -19,7 +19,7 @@ import {
   type FundedCountryMarket,
 } from "@/lib/market/producerMarket/fundedCountryViewRules";
 
-const BUILD_OUTLOOK_COPY = {
+export const BUILD_OUTLOOK_COPY = {
   "unfilled-orders":
     "Worth scouting states where buyers could pay but didn’t get their orders filled.",
   mixed: "Build selectively. Some buyers went unserved while local offers went unsold.",

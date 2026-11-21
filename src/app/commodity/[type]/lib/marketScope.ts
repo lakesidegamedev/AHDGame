@@ -5,6 +5,7 @@ import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { isStateRegister } from "@/lib/constants/exchangeRegistry";
 import { importCoverage, stateImportsShare } from "@/lib/trade/postImportGap";
 import type { CommodityDetail, CorpVolume, SyntheticDemandSource } from "../types";
+import type { FundedCountryMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
 
 export interface CommodityMarketScope {
   activeCountry: CountryId | null;
@@ -32,6 +33,8 @@ export interface CommodityMarketScope {
   filled: number | null;
   /** Household substitution orders left out of `demand`, units per day; 0 when none. */
   spilloverRequested: number;
+  /** The country's funded book with trade both ways; null outside a funded country view. */
+  fundedMarket: FundedCountryMarket | null;
   /** Imports attributed to each state in scope (deficit-weighted); empty when unknown. */
   stateImports: Record<string, number>;
   regionCount: number;
@@ -143,6 +146,7 @@ export function buildCommodityMarketScope(
       demandBasis: "stored",
       filled: null,
       spilloverRequested: 0,
+      fundedMarket: null,
       imports: activeStateImports,
       stateImports: activeStateImports === null ? {} : { [activeState]: activeStateImports },
       regionCount: 1,
@@ -178,6 +182,7 @@ export function buildCommodityMarketScope(
       demandBasis: "stored",
       filled: null,
       spilloverRequested: 0,
+      fundedMarket: null,
       imports: null,
       stateImports: {},
       regionCount: Object.keys(stateCountryMap).length,
@@ -263,6 +268,7 @@ export function buildCommodityMarketScope(
     demandBasis: funded !== undefined ? "funded_orders" : "stored",
     filled: funded?.filled ?? null,
     spilloverRequested: funded?.spilloverRequested ?? 0,
+    fundedMarket: funded ?? null,
     imports: countryImports(data, activeCountry),
     stateImports: allocateStateImports(data, activeCountry, Object.keys(countryStateCountryMap)),
     regionCount: Object.keys(countryStateCountryMap).length,

@@ -14,6 +14,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import FundedBuildDemand from "./FundedBuildDemand";
+import BuildMarketReadout from "./BuildMarketReadout";
 import { CAPACITY_UNIT_LABEL, formatUnits, roomInPlantsLabel } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 
@@ -627,10 +628,19 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                         )}
                       </div>
 
-                      <FundedBuildDemand
-                        rows={activeSuggestion.buildDemand}
-                        unitsPerFacility={foundingQuote?.starterUnits}
-                      />
+                      {activeSuggestion.buildDemand?.length && foundingQuote?.starterUnits ? (
+                        <BuildMarketReadout
+                          rows={activeSuggestion.buildDemand}
+                          unitsPerFacility={foundingQuote.starterUnits}
+                          site={facilitySingular(selectedType)}
+                          sites={facilityPlural(selectedType)}
+                        />
+                      ) : (
+                        <FundedBuildDemand
+                          rows={activeSuggestion.buildDemand}
+                          unitsPerFacility={foundingQuote?.starterUnits}
+                        />
+                      )}
                       {/* Stats row — plants */}
                       {plantsMode && foundingQuote && (
                         <div className="grid grid-cols-3 gap-2">
