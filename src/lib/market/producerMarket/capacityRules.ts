@@ -2,6 +2,7 @@
 import type { SectorBuildOrder } from "@/lib/db/types";
 import {
   costReleasedThisTurn,
+  deliveredFraction,
   queueUndeliveredCost,
   unitsDeliveredThisTurn,
 } from "@/lib/corporations/buildDelivery";
@@ -47,12 +48,13 @@ function nonNegative(value: number, label: string): number {
 
 /**
  * Validate the reconciled opening without advancing or consuming construction.
- * `openTurn` is the last turn an order may have started: the opening turn, or
- * the previous turn when the opening lags and orders were placed in between.
+ * `openTurn` bounds orders already in flight. An adjacent advance can also
+ * admit a paid order placed on `pendingOrderTurn` with its full value undelivered.
  */
 export function validateProducerCapacityState(
   state: ProducerCapacityState,
-  openTurn: number = state.completedTurn
+  openTurn: number = state.completedTurn,
+  pendingOrderTurn?: number
 ): void {
   if (!Number.isSafeInteger(state.completedTurn) || state.completedTurn < 0)
     throw new Error("Invalid capacity opening turn");
@@ -67,7 +69,10 @@ export function validateProducerCapacityState(
       !Number.isFinite(order.startTurn) ||
       !Number.isSafeInteger(order.onlineTurn) ||
       order.startTurn < 0 ||
-      order.startTurn > openTurn ||
+      (order.startTurn > openTurn &&
+        (order.startTurn !== pendingOrderTurn ||
+          order.costPaidAnchor === 0 ||
+          deliveredFraction(order, order.startTurn) !== 0)) ||
       order.onlineTurn < order.startTurn ||
       order.onlineTurn <= state.completedTurn ||
       (order.unitsOrdered === 0 && order.costPaidAnchor !== 0)
@@ -94,7 +99,8 @@ export function advanceProducerCapacity(input: {
     turn > state.completedTurn + 1 + PRODUCER_CATCH_UP_TURNS
   )
     throw new Error("Capacity requires the next unsettled turn");
-  validateProducerCapacityState(state, turn - 1);
+  const pendingOrderTurn = turn === state.completedTurn + 1 ? turn : undefined;
+  validateProducerCapacityState(state, turn - 1, pendingOrderTurn);
   nonNegative(input.activeFraction, "active fraction");
   nonNegative(input.operatingRecipeRatio, "operating recipe ratio");
   nonNegative(input.recessionCapacityFactor, "recession factor");

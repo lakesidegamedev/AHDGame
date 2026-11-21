@@ -179,14 +179,14 @@ function CommodityItem({
                         : "text-error"
                   }`}
                 >
-                  {Math.round(flow.soldFraction * 100)}% of this output sold
+                  {Math.round(flow.soldFraction * 100)}% of this output’s offers sold
                 </span>
               }
             >
-              How much of THIS commodity cleared last turn. The Pricing panel shows one blended
-              figure across every output this sector makes, so a sector that sells one commodity out
-              completely and another barely at all still reads as a middling number there. Use this
-              row to see which output is the one not selling.
+              Share of this commodity’s offers that sold last turn. The Pricing panel shows one
+              blended figure across every output this sector makes, so a sector that sells one
+              commodity out completely and another barely at all still reads as a middling number
+              there. Use this row to see which output is the one not selling.
             </InfoTooltip>
           </div>
         )}
