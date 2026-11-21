@@ -35,6 +35,7 @@ export default function BuildMarketReadout({
     (p) => p.verdict !== "waiting" && p.verdict !== "unknown"
   );
 
+  const capSignal = readout.products.some((product) => product.capHiddenUnmet != null);
   const headline =
     readout.summary === "all-waiting"
       ? t("headlineAllWaiting", {
@@ -49,7 +50,9 @@ export default function BuildMarketReadout({
             facilities: sites,
           })
         : readout.summary === "none-waiting"
-          ? t("headlineNoneWaiting", { facilities: sites })
+          ? capSignal
+            ? t("headlinePaidOrdersCovered")
+            : t("headlineNoneWaiting", { facilities: sites })
           : t("headlineUnknown");
 
   return (
@@ -70,6 +73,13 @@ export default function BuildMarketReadout({
           <ProductRow key={product.commodity} product={product} site={site} sites={sites} />
         ))}
       </ul>
+      {capSignal && (
+        <p className="mt-3 text-body-xs text-muted">
+          {readout.estimatedFullMixFacilities != null && readout.estimatedFullMixFacilities > 0
+            ? t("capRoom", { count: readout.estimatedFullMixFacilities, site, sites })
+            : t("capEstimate")}
+        </p>
+      )}
       <p className="mt-3 text-body-xs text-muted">{t("notALimit")}</p>
     </section>
   );
@@ -146,6 +156,11 @@ function ProductRow({
         )}
         {detail}
       </p>
+      {product.capHiddenUnmet != null && (
+        <p className="mt-1 text-body-xs text-muted">
+          {t("capProduct", { units: units(product.capHiddenUnmet) })}
+        </p>
+      )}
     </li>
   );
 }

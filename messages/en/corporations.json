@@ -253,7 +253,12 @@
         "detailUnknown": "not measured yet",
         "notALimit": "Advice, not a limit: you can build as many as you can afford. Based on last turn's paid orders in this market, after spare and queued capacity. Export sales are not counted, and other companies can build too.",
         "sidebarSome": "Buyers waiting for {products}",
-        "sidebarNone": "No buyers waiting"
+        "sidebarNone": "No buyers waiting",
+        "sidebarCapEstimate": "Possible demand hidden by the cap",
+        "headlinePaidOrdersCovered": "Last turn’s paid orders were covered. The cap may have hidden other demand.",
+        "capEstimate": "The cap figures are estimates from the demand model. Paid orders show what buyers actually placed.",
+        "capProduct": "Estimated demand hidden by the cap after existing supply: {units} units a day.",
+        "capRoom": "Including the estimate, there may be room for {count, plural, one {# {site}} other {# {sites}}} after idle and queued capacity. Paid orders show what buyers actually placed."
       }
     },
     "bankConsole": {

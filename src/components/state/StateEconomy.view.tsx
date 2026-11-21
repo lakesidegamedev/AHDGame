@@ -356,6 +356,12 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             >
               {roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })}
             </span>
+            {sector.estimatedRoomToBuildUnits != null && (
+              <span className="block text-body-xs text-muted">
+                Estimated with capped demand restored:{" "}
+                {roomInPlantsLabel(sector.estimatedRoomToBuildUnits, { sectorType: sector.type })}
+              </span>
+            )}
           </div>
           <div>
             <span className="block text-body-sm font-medium text-muted">Corporations</span>
@@ -712,6 +718,18 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
 
         {/* Room to build: demand in this market that nobody is currently
             serving, in units/day, the figure a player sizes a build against. */}
+        {sector.estimatedRoomToBuildUnits != null && (
+          <div className="rounded-xl border border-card-border bg-card px-4 py-3">
+            <h4 className="text-sm font-semibold text-foreground">
+              Possible demand hidden by the cap
+            </h4>
+            <p className="mt-1 text-xs text-muted">
+              Estimated room for{" "}
+              {roomInPlantsLabel(sector.estimatedRoomToBuildUnits, { sectorType: sector.type })}{" "}
+              after idle and queued capacity. This is modeled demand, separate from paid orders.
+            </p>
+          </div>
+        )}
         {(sector.roomToBuildUnits ?? 0) > 0 && (
           <div className="rounded-xl border border-card-border bg-card overflow-hidden">
             {/* Header */}
@@ -768,9 +786,15 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             <div className="rounded-xl border border-card-border bg-card px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground">No untapped demand</h4>
+                  <h4 className="text-sm font-semibold text-foreground">
+                    {sector.estimatedRoomToBuildUnits != null
+                      ? "No unfilled paid orders"
+                      : "No untapped demand"}
+                  </h4>
                   <p className="mt-1 text-xs text-muted">
-                    A new plant here would compete with current producers for sales.
+                    {sector.estimatedRoomToBuildUnits != null
+                      ? "The estimate above depends on buyers placing more orders."
+                      : "A new plant here would compete with current producers for sales."}
                   </p>
                 </div>
                 <Link

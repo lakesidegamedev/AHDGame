@@ -28,32 +28,31 @@ export function sizeBuildDemand(input: {
   return input.rows.map((row) => {
     const weight = commodityMixWeight(input.supply, COMMODITY_BASE_PRICES, row.commodity);
     const outputPerUnit = weight * input.outputMultiplier;
+    if (!Number.isFinite(outputPerUnit) || outputPerUnit <= 0) {
+      return { ...row, capacityUnits: null };
+    }
+    const producers = input.producers
+      .filter(
+        (p) =>
+          (p.supply[row.commodity] ?? 0) > 0 &&
+          (row.scope === "regional" ? p.stateId === input.stateId : p.countryId === input.countryId)
+      )
+      .map((p) => ({
+        capacity: p.capacity,
+        produced: p.produced ?? NaN,
+        queued: p.queued,
+        weight: commodityMixWeight(p.supply, COMMODITY_BASE_PRICES, row.commodity),
+      }));
     const remaining =
-      row.unmet == null
-        ? null
-        : expansionGapAfterExistingCapacity(
-            row.unmet,
-            input.producers
-              .filter(
-                (p) =>
-                  (p.supply[row.commodity] ?? 0) > 0 &&
-                  (row.scope === "regional"
-                    ? p.stateId === input.stateId
-                    : p.countryId === input.countryId)
-              )
-              .map((p) => ({
-                capacity: p.capacity,
-                produced: p.produced ?? NaN,
-                queued: p.queued,
-                weight: commodityMixWeight(p.supply, COMMODITY_BASE_PRICES, row.commodity),
-              }))
-          );
+      row.unmet == null ? null : expansionGapAfterExistingCapacity(row.unmet, producers);
+    // Modeled and paid demand can overlap. Use the larger gap.
+    const estimated = row.capHiddenUnmet
+      ? expansionGapAfterExistingCapacity(Math.max(row.unmet ?? 0, row.capHiddenUnmet), producers)
+      : null;
     return {
       ...row,
-      capacityUnits:
-        remaining != null && Number.isFinite(outputPerUnit) && outputPerUnit > 0
-          ? remaining / outputPerUnit
-          : null,
+      capacityUnits: remaining != null ? remaining / outputPerUnit : null,
+      ...(estimated != null ? { estimatedCapacityUnits: estimated / outputPerUnit } : {}),
     };
   });
 }
@@ -65,6 +64,16 @@ export function limitingBuildOutput(rows: readonly BuildDemandRow[]): BuildDeman
   return primary.reduce((limiting, row) =>
     row.capacityUnits! < limiting.capacityUnits! ? row : limiting
   );
+}
+
+/** Full-mix estimate when the cap signal increases the room above paid orders. */
+export function estimatedFullMixBuildRoom(rows: readonly BuildDemandRow[]): number | null {
+  const withEstimates = rows.map((row) => ({
+    ...row,
+    capacityUnits: row.estimatedCapacityUnits ?? row.capacityUnits,
+  }));
+  const estimated = fullMixBuildRoom(withEstimates);
+  return estimated != null && estimated > (fullMixBuildRoom(rows) ?? 0) ? estimated : null;
 }
 
 /** Capacity whose entire output mix has measured buyers after idle plants and queues. */

@@ -107,6 +107,10 @@ export interface CommodityPricingContext {
   allStates: Pick<State, "_id">[];
   stateToCountry: Map<string, string>;
   demandTruncated: Map<CommodityType, number>;
+  capGaps?: ReadonlyMap<
+    CommodityType,
+    import("@/lib/market/rules/buildDemandCap").BuildDemandCapGap
+  >;
   /** Mutated: per-commodity world scarcity multiplier, for history rows. */
   scarcityMultByCommodity: Map<CommodityType, number>;
   /** Mutated: actual applied prices, for history rows and trade valuation. */
@@ -513,6 +517,11 @@ export function priceCommodity(
   })();
 
   const latentShortage = latentShortagePersistence(globalBal, demandTruncated.get(commodity));
+  const buildDemandCapGap = ctx.capGaps?.get(commodity);
+  const unset: Record<string, ""> = {
+    ...latentShortage.unset,
+    ...(!buildDemandCapGap && existing?.buildDemandCapGap ? { buildDemandCapGap: "" } : {}),
+  };
 
   return {
     commodity,
@@ -526,6 +535,7 @@ export function priceCommodity(
             globalSupply: Math.round(globalBal.supply * 100) / 100,
             globalDemand: Math.round(globalBal.demand * 100) / 100,
             ...latentShortage.set,
+            ...(buildDemandCapGap ? { buildDemandCapGap } : {}),
             statePrices,
             stateSupply,
             stateDemand,
@@ -554,7 +564,7 @@ export function priceCommodity(
             priceAttribution,
             updatedAt: now,
           },
-          ...(Object.keys(latentShortage.unset).length > 0 ? { $unset: latentShortage.unset } : {}),
+          ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}),
         },
         upsert: true,
       },

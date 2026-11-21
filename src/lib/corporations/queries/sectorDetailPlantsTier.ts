@@ -519,7 +519,7 @@ export async function buildSectorDetailPlantsTier({
     // Funded domestic buyers determine demand room, independently of unclaimed
     // market share. Older worlds retain their reachable-book estimate.
     const reachableBooks = await loadReachableBooks(db, currentTurn);
-    const fundedBuild = await loadFundedBuildDemand(db, gameState);
+    const fundedBuild = await loadFundedBuildDemand(db, gameState, true);
     const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
     const buildShareCoverage = shareCoverages(buildDemand);
     const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));

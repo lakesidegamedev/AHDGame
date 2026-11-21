@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sizeBuildDemand, fullMixBuildRoom } from "./buildDemandCapacity";
+import {
+  sizeBuildDemand,
+  estimatedFullMixBuildRoom,
+  fullMixBuildRoom,
+} from "./buildDemandCapacity";
 import type { BuildDemandRow } from "./fundedBuildDemand";
 import { commodityMixWeight, COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 
@@ -72,6 +76,36 @@ describe("shared funded build sizing", () => {
       expect(fullMixBuildRoom(result)).toBe(25);
     });
   }
+  it("shows possible room from the cap apart from paid demand and reserves spare capacity once", () => {
+    const rows = sizeBuildDemand({
+      supply: { electronics: 1 },
+      outputMultiplier: 1,
+      stateId: "GA",
+      countryId: "US",
+      rows: [
+        {
+          commodity: "electronics",
+          scope: "national",
+          funded: 100,
+          delivered: 100,
+          unmet: 0,
+          capHiddenUnmet: 30,
+        },
+      ],
+      producers: [
+        {
+          stateId: "CT",
+          countryId: "US",
+          supply: { electronics: 1 },
+          capacity: 20,
+          produced: 15,
+          queued: 5,
+        },
+      ],
+    });
+    expect(fullMixBuildRoom(rows)).toBe(0);
+    expect(estimatedFullMixBuildRoom(rows)).toBe(20);
+  });
   it("uses the physical output mix, not the recipe coefficient, and keeps missing capacity unknown", () => {
     const supply = { software: 4, network_services: 2 };
     const rows: BuildDemandRow[] = [
