@@ -122,3 +122,47 @@ it("charts gross interest as a cost, even when a subsidy removes net bond drag",
   const props = vi.mocked(DenseLineChart).mock.calls.at(-1)![0];
   expect(props.series[1].values).toEqual([40, 50]);
 });
+
+describe("ChartsTab stale history", () => {
+  const row = (turn: number) => ({
+    turn,
+    sharePrice: 40,
+    marketCap: 500,
+    liquidCapital: 618683,
+    revenue: 200,
+    totalCosts: 80,
+    income: 120,
+    currencyCode: "USD",
+    fxRateAtWrite: 1,
+    marketingStrength: 30,
+    dividendRate: 5,
+  });
+
+  async function show(liveTurn: number) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          history: [row(106), row(107)],
+          live: { turn: liveTurn, liquidCapital: -158269.73, currencyCode: "USD" },
+        }),
+      })
+    );
+    render(<ChartsTab corpId="16" />);
+    await screen.findByRole("button", { name: "Share price" });
+    return screen.getByRole("button", { name: "Cash on hand" }).closest("tr")!;
+  }
+
+  it("shows the live balance and where history ends when history lags", async () => {
+    const cashRow = await show(113);
+    expect(within(cashRow).getByText(/money:-158269.73:USD/)).toBeTruthy();
+    expect(within(cashRow).getByText(/history ends T107/)).toBeTruthy();
+    expect(within(cashRow).queryByText("money:618683:USD")).toBeNull();
+  });
+
+  it("keeps the snapshot figure when history is current", async () => {
+    const cashRow = await show(108);
+    expect(within(cashRow).getByText("money:618683:USD")).toBeTruthy();
+  });
+});

@@ -69,6 +69,16 @@ function sumRecord(rec: Record<string, number> | undefined): number {
   return total;
 }
 
+/** Current balance and turn, sent so a lagging history is never shown as live. */
+interface LiveBalance {
+  turn: number;
+  liquidCapital: number;
+  currencyCode: string | null;
+}
+
+/** History is written once per turn, so one turn behind is normal. */
+const HISTORY_LAG_TOLERANCE_TURNS = 1;
+
 interface MetricSeries {
   values: number[];
   values2?: number[];
@@ -91,6 +101,7 @@ export default function ChartsTab({
 }) {
   const { formatAmount, formatPrice: fmtPrice, toInternalFrom } = useCurrency();
   const [history, setHistory] = useState<CorpHistoryPoint[]>([]);
+  const [live, setLive] = useState<LiveBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeMetric, setActiveMetric] = useState<ChartMetric>("sharePrice");
   const marketShareDiscovery = useFeatureSeen(CORP_PAGE_FEATURE_KEYS.marketShareChart);
@@ -121,6 +132,7 @@ export default function ChartsTab({
         if (res.ok) {
           const data = await res.json();
           setHistory(data.history ?? []);
+          setLive(data.live ?? null);
         }
       } catch {
         // ignore
@@ -258,6 +270,13 @@ export default function ChartsTab({
   }
 
   const hasHistory = history.length >= 2;
+  // The recorded history stopped short of the current turn: the last snapshot
+  // is not the current balance, so the cash row shows the live figure and says
+  // where the record ends.
+  const historyLagging =
+    live != null &&
+    latestPoint != null &&
+    live.turn - latestPoint.turn > HISTORY_LAG_TOLERANCE_TURNS;
 
   const changeText = (s: MetricSeries): { text: string; value: number | null } => {
     const first = s.values[0];
@@ -313,6 +332,18 @@ export default function ChartsTab({
                   <Td align="right">
                     {m.key === "marketShare" ? (
                       <span className="font-sans text-xs text-muted">by commodity</span>
+                    ) : m.key === "cashOnHand" && s && historyLagging && live ? (
+                      <span
+                        title={`Current balance. The recorded history ends at turn ${latestPoint.turn}.`}
+                      >
+                        {formatAmount(
+                          live.liquidCapital,
+                          (live.currencyCode ?? undefined) as CurrencyCode | undefined
+                        )}
+                        <span className="ml-1 font-sans text-[10px] text-muted">
+                          now (history ends T{latestPoint.turn})
+                        </span>
+                      </span>
                     ) : s ? (
                       s.format(s.values[s.values.length - 1])
                     ) : (
