@@ -7,6 +7,15 @@ import {
 import type { MetricFilter } from "./components/GlobeMetricPanel";
 import type { WorldMetricsData } from "./WorldMetricFilterContext";
 
+export function getWorldMetricsCountry(
+  data: WorldMetricsData | null,
+  countryId: string,
+  isoCode?: string
+) {
+  const legacy = isoCode ? data?.countries[isoCode] : undefined;
+  return data?.countriesById?.[countryId] ?? (legacy?.countryId === countryId ? legacy : undefined);
+}
+
 /**
  * Per-nation one-line summary for the active globe metric filter.
  *
@@ -31,16 +40,16 @@ export function getMetricFilterHighlight(
   partyData: Record<string, { partyName: string; partyColor: string; count: number }>,
   corpsData: { countries: Record<string, { count: number }> } | null
 ): { label: string; value: string } | null {
-  if (filter.type === "none" || !isoCode) return null;
+  if (filter.type === "none") return null;
 
   if (filter.type === "party") {
-    const p = partyData[isoCode];
+    const p = isoCode ? partyData[isoCode] : undefined;
     if (!p?.partyName) return null;
     return { label: "Largest party", value: p.partyName };
   }
 
   if (filter.type === "corps") {
-    const n = corpsData?.countries[isoCode]?.count;
+    const n = isoCode ? corpsData?.countries[isoCode]?.count : undefined;
     if (n === undefined || n <= 0) return null;
     return {
       label: "Corporations",
@@ -48,7 +57,7 @@ export function getMetricFilterHighlight(
     };
   }
 
-  const country = worldMetrics?.countries[isoCode];
+  const country = getWorldMetricsCountry(worldMetrics, countryId, isoCode);
   if (!country?.hasData) return null;
 
   if (filter.type === "overall") {

@@ -533,7 +533,7 @@ export default function MapSVGContent({
         if (id.startsWith("bi:")) {
           const owner = feature.properties?.ownerCountryId as CountryId | undefined;
           let biFill: string =
-            owner && countryAccess
+            !hasActiveFilter && owner && countryAccess
               ? countryIdentityColor(owner, countryAccess)
               : getCountryColor(id, MAP_COLORS.default);
           let biStroke: string = MAP_COLORS.stroke;

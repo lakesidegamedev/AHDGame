@@ -1,3 +1,7 @@
+import {
+  STATE_PRIMARY_SECTOR_MARGIN_BONUS,
+  STATE_SECONDARY_SECTOR_MARGIN_BONUS,
+} from "@/lib/constants/corporationsTables";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 
@@ -80,8 +84,8 @@ export function sectorSpecializationMapEntry(
     label: spec.primaryLabel,
     tooltip: spec.tooltip ?? [
       name,
-      `Primary: ${spec.primaryLabel} (+10pp)`,
-      `Secondary: ${spec.secondaryLabel} (+5pp)`,
+      `Primary: ${spec.primaryLabel} (+${STATE_PRIMARY_SECTOR_MARGIN_BONUS}pp)`,
+      `Secondary: ${spec.secondaryLabel} (+${STATE_SECONDARY_SECTOR_MARGIN_BONUS}pp)`,
     ],
   };
 }
