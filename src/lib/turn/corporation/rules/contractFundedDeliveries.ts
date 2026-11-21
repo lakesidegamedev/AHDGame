@@ -1,26 +1,13 @@
 /**
- * What the funded market delivered under each supply agreement.
+ * What the funded market delivered under each supply agreement. Plain data in,
+ * plain data out.
  *
- * Plain data in, plain data out: no clock, rng or ambient state.
- *
- * "Delivered under this contract" means: units the funded settlement recorded
- * as sold by the contract's supplier to the contract's buyer, of the contract's
- * commodity, in the settled turn. Own-site transfers never count, and neither
- * do sales to or from anyone else. For a state-scoped contract only sales from
- * the supplier's plants in the contract's state count. The funded market does
- * not route goods because of a contract, so this is the pair's real trade,
- * whatever made the market match it.
- *
- * Funded trades are per-turn units; contract volumes are on the daily basis,
- * so a pair's trade is scaled by turns per day before it is compared with a
- * volume cap.
- *
- * When one supplier holds several contracts with the same buyer for the same
- * commodity, the pair's delivery is split between them in proportion to their
- * volume caps, and no contract is credited more than its own cap. State-scoped
- * contracts are credited first from sales in their state; corporation-wide
- * contracts for the same pair then share what is left of the pair's total, so
- * no unit is credited twice.
+ * "Delivered under this contract" means units the funded settlement recorded
+ * as sold by the contract's supplier to its buyer, of its commodity, in the
+ * settled turn. Own-site transfers and sales to or from anyone else never
+ * count. For a state-scoped contract only sales from the supplier's plants in
+ * that state count. The market does not route goods because of a contract, so
+ * this is the pair's real trade, whatever made the market match it.
  */
 
 import { producerTrades, type ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
@@ -133,6 +120,12 @@ function creditByCap(
 /**
  * Daily-basis units credited to each agreement, by its index in `agreements`.
  * Every agreement gets an entry; one whose pair did not trade gets 0.
+ *
+ * Funded trades are per turn and volume caps are daily, so trade is scaled by
+ * turns per day. Several contracts of one pair and commodity share the pair's
+ * delivery by volume cap, none above its own cap. State-scoped contracts are
+ * credited first from sales in their state; corporation-wide contracts share
+ * what is left of the pair's total, so no unit is credited twice.
  */
 export function fundedContractDeliveries(args: {
   agreements: readonly FundedDeliveryAgreement[];
