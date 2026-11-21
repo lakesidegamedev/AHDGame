@@ -51,14 +51,16 @@ describe("commodity country card", () => {
 
     expect(screen.getAllByText("Total supply")).toHaveLength(2);
     expect(screen.getAllByText("170.5K units/day")).toHaveLength(2);
-    expect(screen.getAllByText("164.7K units offered locally + 5.8K units imported")).toHaveLength(
-      2
-    );
+    expect(screen.getAllByText("Local offers")).toHaveLength(2);
+    expect(screen.getAllByText("164.7K units")).toHaveLength(2);
+    expect(screen.getAllByText("Imports")).toHaveLength(2);
+    expect(screen.getAllByText("5.8K units")).toHaveLength(2);
     expect(screen.getAllByText("Total demand")).toHaveLength(2);
     expect(screen.getAllByText("166.2K units/day")).toHaveLength(2);
-    expect(screen.getAllByText("74.7K units ordered locally + 91.5K units exported")).toHaveLength(
-      2
-    );
+    expect(screen.getAllByText("Local orders")).toHaveLength(2);
+    expect(screen.getAllByText("74.7K units")).toHaveLength(2);
+    expect(screen.getAllByText("Exports")).toHaveLength(2);
+    expect(screen.getAllByText("91.5K units")).toHaveLength(2);
     expect(screen.getAllByText("161.9K units/day")).toHaveLength(2);
     expect(screen.getAllByText("98% of local offers sold")).toHaveLength(2);
     expect(screen.queryByText(/surplus/i)).toBeNull();
@@ -69,13 +71,13 @@ describe("commodity country card", () => {
 
     expect(screen.getAllByText("Estimated domestic demand")).toHaveLength(2);
     expect(screen.getAllByText("Unavailable")).toHaveLength(2);
-    expect(screen.queryByText(/exported/i)).toBeNull();
+    expect(screen.queryByText("Exports")).toBeNull();
   });
 
   it("shows known exports without inventing total sales for books without fills", () => {
     renderCard({ ...market, filled: null });
 
     expect(screen.getAllByText("Unavailable")).toHaveLength(2);
-    expect(screen.getAllByText(/91.5K units exported/)).toHaveLength(2);
+    expect(screen.getAllByText("91.5K units")).toHaveLength(2);
   });
 });

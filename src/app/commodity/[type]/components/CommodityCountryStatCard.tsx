@@ -88,11 +88,11 @@ export default function CommodityCountryStatCard({
       {/* Desktop overlay card */}
       <div
         ref={desktopRef}
-        className="hidden md:block absolute z-30 w-72 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+        className="hidden md:block absolute z-30 w-80 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200"
         style={
           position
             ? {
-                left: Math.min(position.x + 16, window.innerWidth - 320),
+                left: Math.min(position.x + 16, window.innerWidth - 336),
                 top: Math.max(position.y - 60, 16),
               }
             : { right: 16, top: 60 }
@@ -234,26 +234,32 @@ function CardContent({
         </button>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-px bg-card-border/30">
-        <StatRow
+      <div className="grid grid-cols-2 gap-2 px-3 pt-3">
+        <TradeTotal
           label={trade ? "Total supply" : "Estimated local supply"}
           value={`${formatUnits(trade?.supply ?? data.supply, unit)}/day`}
-          color="text-foreground"
-          sub={
-            market &&
-            `${formatUnits(market.supply, unit)} offered locally + ${formatUnits(market.imports, unit)} imported`
+          tone="supply"
+          parts={
+            market && [
+              { label: "Local offers", value: formatUnits(market.supply, unit) },
+              { label: "Imports", value: formatUnits(market.imports, unit) },
+            ]
           }
         />
-        <StatRow
+        <TradeTotal
           label={trade ? "Total demand" : "Estimated domestic demand"}
           value={`${formatUnits(trade?.demand ?? data.demand, unit)}/day`}
-          color="text-foreground"
-          sub={
-            market &&
-            `${formatUnits(market.demand, unit)} ordered locally + ${formatUnits(market.exports, unit)} exported`
+          tone="demand"
+          parts={
+            market && [
+              { label: "Local orders", value: formatUnits(market.demand, unit) },
+              { label: "Exports", value: formatUnits(market.exports, unit) },
+            ]
           }
         />
+      </div>
+
+      <div className="grid grid-cols-2">
         {activePrice != null && (
           <StatRow
             label={mode === "price" ? "National price" : "Avg price"}
@@ -283,7 +289,7 @@ function CardContent({
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
-            S
+            Supply
           </button>
           <button
             onClick={(e) => {
@@ -296,7 +302,7 @@ function CardContent({
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
-            D
+            Demand
           </button>
           <button
             onClick={(e) => {
@@ -350,6 +356,39 @@ function CardContent({
       <div className="px-4 pb-2 text-[10px] text-muted">
         {data.stateCount} {data.stateCount === 1 ? "region" : "regions"} with commodity data
       </div>
+    </div>
+  );
+}
+
+function TradeTotal({
+  label,
+  value,
+  tone,
+  parts,
+}: {
+  label: string;
+  value: string;
+  tone: "supply" | "demand";
+  parts?: { label: string; value: string }[];
+}) {
+  const accent =
+    tone === "supply"
+      ? "border-success/35 bg-success/5 text-success"
+      : "border-info/35 bg-info/5 text-info";
+  return (
+    <div className={`rounded-lg border px-2.5 py-2.5 ${accent}`}>
+      <div className="text-xs font-semibold">{label}</div>
+      <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{value}</div>
+      {parts && (
+        <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-1 gap-y-1 border-t border-card-border pt-1.5 text-[11px] leading-tight">
+          {parts.map((part) => (
+            <div key={part.label} className="contents">
+              <dt className="text-muted">{part.label}</dt>
+              <dd className="text-right tabular-nums text-foreground">{part.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }
