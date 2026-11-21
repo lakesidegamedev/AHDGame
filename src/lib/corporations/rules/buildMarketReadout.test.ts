@@ -69,7 +69,7 @@ describe("buildMarketReadout", () => {
     const r = buildMarketReadout(
       [
         {
-          commodity: "power",
+          commodity: "energy",
           scope: "regional",
           funded: 100,
           delivered: 90,
