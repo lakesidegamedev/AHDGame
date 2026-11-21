@@ -36,7 +36,7 @@ export function leverCooldownText(cooldownTurns: number): string {
 export function forecastText(
   severity: number,
   forecast: readonly number[],
-  graceTurns?: number
+  graceTurns?: number | null
 ): string | null {
   if (forecast.length === 0) return null;
   const end = forecast[forecast.length - 1];
@@ -45,7 +45,7 @@ export function forecastText(
   const later = Math.round(end);
   const grace =
     graceTurns != null && graceTurns > 0
-      ? ` Doing nothing for more than ${graceTurns} ${graceTurns === 1 ? "turn" : "turns"} makes it worse.`
+      ? ` After ${graceTurns} idle ${graceTurns === 1 ? "turn" : "turns"}, inaction can add to severity.`
       : "";
   if (Math.abs(later - now) < 1)
     return `If nobody acts: holds near ${now} for ${turns} turns.${grace}`;
@@ -65,5 +65,5 @@ export function noResponseText(responders: readonly ResponderView[]): string {
   const who = responders.map((r) => `${r.role.toLowerCase()} (${r.actions.join(", ")})`);
   const list =
     who.length === 1 ? who[0] : `${who.slice(0, -1).join("; ")} and ${who[who.length - 1]}`;
-  return `Your office has no response to this crisis. It can be answered by the ${list}. If none of them acts, it keeps escalating.`;
+  return `Your office has no response to this crisis. It can be answered by the ${list}.`;
 }

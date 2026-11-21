@@ -18,6 +18,7 @@ import {
   optionsForGlobalResponder,
   visibleGlobalResponses,
 } from "@/lib/livingConflict/globalResponse";
+import { PANDEMIC_KEY } from "@/lib/livingConflict/rules/pandemic";
 import { getGameState } from "@/lib/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { crisesCollection } from "@/lib/db/repositories/crises";
@@ -72,7 +73,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         : false;
 
     const canInteract =
-      crisis.interactionDefinition && interaction && activeNode && !interaction.resolvedAt
+      crisis.status === "active" &&
+      crisis.v2?.stage !== "resolved" &&
+      crisis.interactionDefinition &&
+      interaction &&
+      activeNode &&
+      !interaction.resolvedAt
         ? canCharacterInteract(
             activeNode,
             characterRoles,
@@ -140,6 +146,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       };
     }
 
+    const hasFixedCost = serializedTree?.some(
+      (node) =>
+        node.nodeId === interaction?.currentNodeId &&
+        node.options?.some((option) => option.requiredBudget)
+    );
+    const responseCurrency = hasFixedCost
+      ? ((
+          await federalBudgetCollection(db).findOne(
+            { countryId: character.countryId },
+            { projection: { currencyCode: 1 } }
+          )
+        )?.currencyCode ?? null)
+      : null;
+
     // Per-character interaction state — private ETag/304 only, never shared.
     return conditionalJson(request, {
       crisis: {
@@ -164,6 +184,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       characterRoles,
       responseRole,
       campaignBrief,
+      showCampaignBrief: crisis.globalResponse?.conflictKey !== PANDEMIC_KEY,
+      responseCurrency,
       visibleDecisionTree,
       aidContext,
     });
