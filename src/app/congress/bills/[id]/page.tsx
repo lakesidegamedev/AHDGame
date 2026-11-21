@@ -197,6 +197,12 @@ function BillDetailContent() {
   // thresholds stay seat-based for display.
   const heroRequiredPctOfCast =
     !supermajority && !isJpOverride && filibustered && bill.currentChamber === "senate";
+  const heroPassRule =
+    !heroRequiredPctOfCast && (resolvedCountryId === "US" || isJpOverride)
+      ? supermajority || isJpOverride
+        ? "twoThirds"
+        : "majority"
+      : undefined;
 
   // Dispatch seating-chart hero: live vote-colored chamber diagram for the
   // chamber currently voting, in the country's seating style (hemicycle /
@@ -430,6 +436,7 @@ function BillDetailContent() {
                         width={460}
                         requiredPct={heroRequiredPct}
                         requiredPctOfCast={heroRequiredPctOfCast}
+                        passRule={heroPassRule}
                       />
                     )}
                     <div className="min-w-0 space-y-4">
