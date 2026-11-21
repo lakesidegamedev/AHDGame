@@ -161,6 +161,9 @@ export function computeRetoolHint(input: RetoolHintInput): RetoolHint | null {
       }
     }
     if (!main || !(weightSum > 0)) continue;
+    // Retooling into the same main product cannot fix a main product that is not
+    // selling, and the two market readings would contradict each other.
+    if (main.commodity === currentMain.commodity) continue;
     main.valueShare = mainWeight / weightSum;
     const fill = soldSum / weightSum;
     if (!best || fill > best.fill) best = { strategy, fill, main };

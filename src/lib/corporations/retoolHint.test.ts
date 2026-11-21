@@ -95,4 +95,26 @@ describe("computeRetoolHint", () => {
     );
     expect(hint).toBeNull();
   });
+
+  it("never suggests a strategy whose main product is the one that is not selling", () => {
+    const healthcare = strategy("standard", { healthcare_services: 0.6, pharmaceuticals: 0.1 });
+    const outpatient = strategy("outpatient", { healthcare_services: 0.5, pharmaceuticals: 0.2 });
+    const hint = computeRetoolHint(
+      input({
+        currentStrategyId: "standard",
+        currentSupply: healthcare.supply,
+        strategies: [healthcare, outpatient],
+        soldByCommodity: { healthcare_services: 0.55, pharmaceuticals: 1 },
+        demandThrottleFactor: 0.95,
+        priceRatioFor: () => 1,
+        balanceFor: (c) =>
+          c === "healthcare_services"
+            ? { supply: 8_000_000, demand: 10_000_000 }
+            : { supply: 1_000_000, demand: 10_000_000 },
+        producedUnits: 600,
+        capacityUnits: 620,
+      })
+    );
+    expect(hint).toBeNull();
+  });
 });

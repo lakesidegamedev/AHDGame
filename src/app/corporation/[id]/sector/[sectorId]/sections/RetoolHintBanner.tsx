@@ -29,20 +29,19 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
       className="rounded-xl border border-info/40 bg-info/10 p-4"
     >
       <p className="text-sm font-semibold text-foreground">
-        This plant&apos;s main product is oversupplied here
+        Most of this plant&apos;s main product went unsold last turn
       </p>
       <p className="mt-1 text-xs text-muted">
         {current} is {pct(hint.currentMain.valueShare)} of this plant&apos;s output by value, and
-        buyers took {pct(hint.currentMain.fill)} of it last turn because this market has more than
-        it needs. Overall the plant sold {pct(hint.currentValueFill)} of its output by value, so it
-        is running below capacity.
+        buyers took {pct(hint.currentMain.fill)} of it last turn. Overall the plant sold{" "}
+        {pct(hint.currentValueFill)} of its output by value, so it is running below capacity.
       </p>
       <p className="mt-1 text-xs text-muted">
-        The {hint.suggestedStrategyName} strategy makes mostly {suggested}, and this market is{" "}
-        {pct(hint.suggestedMain.unmetShare)} short of it. On {hint.suggestedStrategyName} this plant
-        would sell about {pct(hint.suggestedValueFill)} of its output by value, enough to climb back
-        toward full capacity. Changing strategy costs money and takes a few turns to complete; the
-        strategy panel shows both.
+        The {hint.suggestedStrategyName} strategy makes mostly {suggested}, and the market for it is{" "}
+        {pct(hint.suggestedMain.unmetShare)} short of supply, going by the latest market book. On{" "}
+        {hint.suggestedStrategyName} this plant would sell about {pct(hint.suggestedValueFill)} of
+        its output by value, enough to climb back toward full capacity. Changing strategy costs
+        money and takes a few turns to complete; the strategy panel shows both.
       </p>
       {isCeo && (
         <button
