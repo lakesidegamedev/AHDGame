@@ -1,3 +1,4 @@
+import { loadCampaignActionPrices } from "@/lib/actions/campaignActionPrices";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -79,25 +80,32 @@ async function handleGET(request?: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    const includeHomeState = request
-      ? new URL(request.url).searchParams.get("include")?.split(",").includes("homeState")
-      : false;
-    if (!includeHomeState || !character.homeState) {
-      return NextResponse.json(character);
-    }
+    const include = request
+      ? (new URL(request.url).searchParams.get("include")?.split(",") ?? [])
+      : [];
+    const includeHomeState = include.includes("homeState") && !!character.homeState;
+    const includeActionPrices = include.includes("actionPrices");
+    if (!includeHomeState && !includeActionPrices) return NextResponse.json(character);
 
-    // Only the economics the cost quotes read, projected out of the state doc.
-    const state = await statesCollection(db).findOne(
-      { _id: character.homeState, countryId: character.countryId },
-      { projection: { gdp: 1, population: 1 } }
-    );
+    const [state, actionPrices] = await Promise.all([
+      includeHomeState
+        ? statesCollection(db).findOne(
+            { _id: character.homeState, countryId: character.countryId },
+            { projection: { gdp: 1, population: 1 } }
+          )
+        : null,
+      includeActionPrices ? loadCampaignActionPrices(db, character) : null,
+    ]);
 
     return NextResponse.json({
       ...character,
-      homeStateEconomics:
-        state && typeof state.gdp === "number" && typeof state.population === "number"
-          ? { gdp: state.gdp, population: state.population }
-          : null,
+      ...(includeHomeState && {
+        homeStateEconomics:
+          state && typeof state.gdp === "number" && typeof state.population === "number"
+            ? { gdp: state.gdp, population: state.population }
+            : null,
+      }),
+      ...(includeActionPrices && { actionPrices }),
     });
   } catch (error) {
     return handleRouteError(error);

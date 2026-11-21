@@ -76,6 +76,7 @@ export interface PollData {
   fundCostLarge: number;
   /** LOCAL campaign-currency twins at the frozen campaign rate: what POST debits. */
   fundCostLocal: number;
+  priceAvailable?: boolean;
   fundCostSmallLocal: number;
   fundCostLargeLocal: number;
   /** Canonical flat AP cost per tier, from getPollActionCost (display both tier cards). */

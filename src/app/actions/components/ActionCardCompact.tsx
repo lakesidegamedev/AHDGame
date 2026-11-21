@@ -44,6 +44,7 @@ const ActionCardCompact = memo(function ActionCardCompact({
   fundraiseYield,
   campaignCurrency,
   displayCampaignFunds,
+  quotedFundCost,
   displayPersonalWealth,
   blockGdpScaledCosts,
   forexEnabled,
@@ -113,13 +114,23 @@ const ActionCardCompact = memo(function ActionCardCompact({
   else if (isConvertCash) {
     effectiveFundLabel =
       displayPersonalWealth > 0 ? `${formatAmount(personalAnchor)} to convert` : "No cash";
+  } else if (quotedFundCost !== undefined) {
+    effectiveFundLabel =
+      quotedFundCost === null
+        ? "Price unavailable"
+        : formatCurrencyFaceAmount(quotedFundCost, campaignCurrency);
   } else effectiveFundLabel = card.fundLabel(character);
   const fundKind = fundLineKind(card.type);
 
   const noDonor = card.requiresDonorBase && !isFundraiseEligible(character.donorBaseLevel);
   const noCash = isConvertCash && displayPersonalWealth <= 0;
   const fundNeeded = effectiveFundCost;
-  const fundNeededConverted = fundNeeded !== null ? politicalLocal(fundNeeded) : fundNeeded;
+  const fundNeededConverted =
+    quotedFundCost !== undefined
+      ? quotedFundCost
+      : fundNeeded !== null
+        ? politicalLocal(fundNeeded)
+        : null;
   const cantAffordFunds =
     fundNeededConverted !== null && displayCampaignFunds < fundNeededConverted;
   const cantAffordActions = character.actions < effectiveActionCost;
