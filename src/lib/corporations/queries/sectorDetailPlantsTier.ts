@@ -212,6 +212,7 @@ export async function buildSectorDetailPlantsTier({
   pricing:
     | {
         posture: number | null;
+        salesBasis?: "settlement" | "estimate";
         effectivePosture: number | null;
         soldFraction: number | null;
         ownSiteFraction?: number | null;
