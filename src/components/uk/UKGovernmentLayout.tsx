@@ -111,16 +111,8 @@ export function UKGovernmentLayout({
       ? "warning"
       : "success";
   const seatsChip = commonsLine.isPending
-    ? `— / ${commonsLine.threshold} ${lowerChamberShort}`
-    : `${commonsLine.seatsSupporting} / ${commonsLine.threshold} ${lowerChamberShort}${
-        commonsLine.isMinority
-          ? " (minority)"
-          : commonsLine.lostMajority
-            ? " (lost majority)"
-            : commonsLine.formationType === "coalition"
-              ? " (coalition)"
-              : ""
-      }`;
+    ? `${commonsLine.threshold} ${lowerChamberShort} seats needed for a majority`
+    : `${commonsLine.seatsSupporting} supporting · ${commonsLine.threshold} needed for a majority`;
   const identity = getExecutiveIdentity(cid);
 
   return (

@@ -13,7 +13,7 @@ import {
   FOREX_SPREAD_STRENGTH_COOLDOWN_TURNS,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
-import { getEraMonetaryBaseline, getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
+import { getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getGameStateCore } from "@/lib/gameState";
@@ -42,6 +42,7 @@ import {
   calculateInflationWithBreakdown,
   computeEffectivePrimeRate,
   getInflationTarget,
+  getNeutralPrimeRate,
 } from "@/lib/budget/inflation";
 import type { InflationBreakdown } from "@/lib/budget/inflation";
 import { savingsFlowPressureRatio } from "@/lib/budget/savingsFlowPressure";
@@ -677,9 +678,7 @@ export async function loadCountryCentralBankDetail(params: {
       neutralPrimeRate:
         policyCurrency === "EUR"
           ? undefined
-          : (getEraMonetaryBaseline(bankHomeCountryId, gameState?.currentYear)?.neutralPrimeRate ??
-            COUNTRY_CONFIGS[bankHomeCountryId]?.centralBank.defaultPrimeRate ??
-            config.centralBank.defaultPrimeRate),
+          : getNeutralPrimeRate(bankHomeCountryId, gameState?.currentYear),
       isSharedPolicyArea: policyCurrency === "EUR",
       inflationBreakdownTotal,
       inflationBreakdown,
