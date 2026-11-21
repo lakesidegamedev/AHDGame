@@ -260,6 +260,7 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
           { _id: "TX", population: 10_000_000 },
         ],
       }),
+      toArray: async () => [],
     });
     db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
     // The region's own value comes from its own doc; the NATIONAL figure comes
@@ -303,6 +304,7 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
     });
     db.collectionMocks.states.find.mockReturnValue({
       project: vi.fn().mockReturnValue({ toArray: async () => [] }),
+      toArray: async () => [],
     });
     db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
     db.collectionMocks.macroMetrics.find.mockReturnValue({
@@ -337,6 +339,7 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
       project: vi.fn().mockReturnValue({
         toArray: async () => [{ _id: "CA", name: "California", gdp: 0, population: 30 }],
       }),
+      toArray: async () => [],
     });
     db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
     db.collectionMocks.macroMetrics.find.mockReturnValue({
@@ -573,7 +576,7 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
     expect(owner!.productionLevel).toBe(-12);
   });
 
-  it("keeps attack estimates visible for private corps (needed for Attack button to render) while hiding revenue/workers/MS", async () => {
+  it("hides revenue, workers and marketing strength for private corps", async () => {
     const privateCorpId = new ObjectId();
     const privateOwnerUserId = new ObjectId();
     const viewerUserId = new ObjectId();
@@ -686,10 +689,9 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
     expect(owner!.defenderMarketingStrength).toBeNull();
     expect(owner!.revenue).toBeNull();
     expect(owner!.workers).toBeNull();
-    // attackCost and attackEstimatedCapture are kept visible so the Attack
-    // button renders — nulling them made private corps immune to attack.
-    expect(owner!.attackCost).toBeGreaterThan(0);
-    expect(owner!.attackEstimatedCapture).toBeGreaterThan(0);
+    // Attack estimates are not quoted at plants, so a private corp carries none.
+    expect(owner!.attackCost ?? null).toBeNull();
+    expect(owner!.attackEstimatedCapture ?? null).toBeNull();
     expect(owner!.marketShare).toBeGreaterThan(0);
   });
 });

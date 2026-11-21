@@ -29,43 +29,20 @@ export function marketAtLeast(mode: MarketSystemMode, tier: MarketSystemMode): b
 }
 
 /**
- * Resolve the current market-system mode.
- * Pass a preloaded config from the same request to avoid an extra read.
- * Returns "off" for absent/unknown values.
+ * The economy runs at the plants tier. A stored `marketSystemMode` is ignored
+ * on every read, so no configuration can put a world on a lower tier.
+ * The preloaded-config argument is accepted so existing call sites keep
+ * compiling while they are migrated off the tier ladder.
  */
 export async function getMarketSystemMode(
-  preloadedConfig?: Pick<GameConfig, "marketSystemMode"> | null
+  _preloadedConfig?: Pick<GameConfig, "marketSystemMode"> | null
 ): Promise<MarketSystemMode> {
-  let mode: unknown;
-  if (preloadedConfig !== undefined) {
-    mode = preloadedConfig?.marketSystemMode;
-  } else {
-    const db = await getDb();
-    const config = await gameConfigCollection(db).findOne(
-      { _id: "default" },
-      { projection: { marketSystemMode: 1 } }
-    );
-    mode = config?.marketSystemMode;
-  }
-  return isMarketSystemMode(mode) ? mode : "off";
+  return "plants";
 }
 
-/**
- * Resolve the mode from an EXPLICIT Db handle.
- *
- * {@link getMarketSystemMode} opens its own connection via `getDb()`, which is
- * wrong for any routine that was handed a `db` (a turn phase, a command, a test
- * running against a mock): it either hits the wrong database or, in tests, has
- * no connection string at all. Use this wherever a `db` is already in scope.
- * Returns "off" for an absent/unknown value, so a mock without a `gameConfig`
- * collection resolves to legacy behaviour rather than throwing.
- */
-export async function getMarketSystemModeForDb(db: Db): Promise<MarketSystemMode> {
-  const config = await gameConfigCollection(db).findOne(
-    { _id: "default" },
-    { projection: { marketSystemMode: 1 } }
-  );
-  return isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
+/** Explicit-handle variant of {@link getMarketSystemMode}; the handle is unused. */
+export async function getMarketSystemModeForDb(_db: Db): Promise<MarketSystemMode> {
+  return "plants";
 }
 
 /**

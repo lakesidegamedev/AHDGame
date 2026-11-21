@@ -144,7 +144,8 @@ describe("abandon construction settlement", () => {
         countryId: "US",
         sectorType: "energy",
         revenue: 10000,
-        capitalStock: 500,
+        // No built stock, so the abandoned plant has nothing for an NPP operator to take over.
+        capitalStock: 0,
         capacityBookAnchor: 200000,
         buildQueue: [
           {

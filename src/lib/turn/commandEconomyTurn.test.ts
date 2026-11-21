@@ -61,7 +61,6 @@ function makeDb(
   config: {
     commandEconomyEnabled?: boolean;
     commandEconomySecondEconomyTolerance?: number;
-    marketSystemMode?: string;
   } | null,
   budgets: BudgetDoc[],
   commodityFlows: Array<{ turn: number; byCountry: Record<string, unknown> }> = []
@@ -218,11 +217,7 @@ describe("processCommandEconomyTurn", () => {
         },
       },
     ];
-    const { db, updateOnes } = makeDb(
-      { commandEconomyEnabled: true, marketSystemMode: "ledger" },
-      [cn, ru],
-      flows
-    );
+    const { db, updateOnes } = makeDb({ commandEconomyEnabled: true }, [cn, ru], flows);
 
     await processCommandEconomyTurn(db, TURN + 1, YEAR_1953);
 
@@ -255,7 +250,7 @@ describe("processCommandEconomyTurn", () => {
       },
     });
     const { db, updateOnes } = makeDb(
-      { commandEconomyEnabled: true, marketSystemMode: "ledger" },
+      { commandEconomyEnabled: true },
       [cn],
       [decoy(TURN - 1), prior, decoy(TURN + 1)]
     );
@@ -278,7 +273,7 @@ describe("processCommandEconomyTurn", () => {
     });
     // No doc for the prior turn (TURN): only an older doc and a same-turn doc.
     const { db, updateOnes } = makeDb(
-      { commandEconomyEnabled: true, marketSystemMode: "ledger" },
+      { commandEconomyEnabled: true },
       [cn],
       [stale(TURN - 1), stale(TURN + 1)]
     );
@@ -422,6 +417,9 @@ function makeSoeDb(
         return { find: () => ({ toArray: async () => sectors }), updateOne: async () => ({}) };
       // Registered-country gate — nothing dissolved in these fixtures.
       if (name === "countryGameStates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "commodityFlows") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "gameState") return { findOne: async () => null };
       throw new Error(`unexpected collection: ${name}`);
     },
   } as unknown as Db;
@@ -537,6 +535,9 @@ function makeGovDb(
         return { find: () => ({ toArray: async () => sectors }), updateOne: async () => ({}) };
       // Registered-country gate — nothing dissolved in these fixtures.
       if (name === "countryGameStates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "commodityFlows") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "gameState") return { findOne: async () => null };
       throw new Error(`unexpected collection: ${name}`);
     },
   } as unknown as Db;

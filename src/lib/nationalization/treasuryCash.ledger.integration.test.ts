@@ -167,10 +167,12 @@ for (const native of [false, true]) {
         await writeBalanceSnapshot(db, 1);
         const context = await loadTreasuryCashContext(db, 2);
         const result = await withTreasuryCashBatch(db, context, (ledger) =>
-          processSoeOperations(db, NOW, 1991, undefined, ledger)
+          processSoeOperations(db, NOW, 1991, new Map([[corpId.toString(), -50_000]]), ledger)
         );
         expect(result.backing).toHaveLength(1);
-        expect(await cash(db, corpId)).toEqual({ corp: 0, treasury: 995_678 });
+        // Cover is whole currency units: the 4,321.5 hole is covered by 4,322, and the
+        // treasury pays exactly what the corporation receives.
+        expect(await cash(db, corpId)).toEqual({ corp: 0.5, treasury: 995_678 });
         await close(db, 2);
       });
 
@@ -245,7 +247,8 @@ for (const native of [false, true]) {
             now: NOW,
             turn: 2,
             currentYear: 1991,
-            corpSnapshots: [],
+            // Plants cover up to the realized loss, so report one larger than the hole.
+            corpSnapshots: [{ corpId, income: -50_000 } as never],
             corpById: new Map(),
             mark: () => {},
           })

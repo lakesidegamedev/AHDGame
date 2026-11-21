@@ -11,7 +11,6 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import { runLaunchGuard } from "@/lib/market/launchGuard";
 import { computeMarketIndex } from "./marketIndex";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import type { Document } from "mongodb";
@@ -146,10 +145,6 @@ export async function snapshotMarketCap(
   dividendTaxPaidByCountry?: Map<string, Map<string, number>>
 ): Promise<void> {
   let globalCap = 0;
-  // Aggregate fundamental valuation, and the slice of globalCap it accounts
-  // for — both consumed by the launch guard below.
-  let fundamentalCap = 0;
-  let fundamentalCoveredCap = 0;
   // Per-exchange accumulation — keyed by apiKey (e.g. "nyse", "ftse", "nikkei")
   const exchangeCaps: Record<string, number> = {};
   for (const ex of ALL_EXCHANGES) exchangeCaps[ex.apiKey] = 0;
@@ -180,18 +175,6 @@ export async function snapshotMarketCap(
     // and hidden corporations have no tradeable listing and must not move the market chart.
     if (isStockMarketCorporation(corp)) {
       globalCap += capAnchor;
-
-      // Parallel sum at the model's fundamental price, so the launch guard can
-      // tell an honest repricing (price and value fall together, e.g. a prime-rate
-      // rise discounting sectorNPV) from a market break (price alone falls).
-      // Corps with no fundamental price are excluded and tracked as missing
-      // coverage rather than counted at zero, which would fake a collapse.
-      const fundamentalPrice = corp.fundamentalSharePrice;
-      if (typeof fundamentalPrice === "number" && fundamentalPrice > 0) {
-        fundamentalCap +=
-          readCorpEconomicAnchor(fundamentalPrice, fx?.code, fx?.rate ?? 1) * totalShares;
-        fundamentalCoveredCap += capAnchor;
-      }
 
       // No `?? "US"`: a corp with no countryId must not be counted toward NYSE's
       // market cap.
@@ -325,20 +308,6 @@ export async function snapshotMarketCap(
       })
     );
   }
-
-  // Launch guard: automated kill switch for the clearing/capital flip. Cheap
-  // no-op unless opt-in (marketGuardEnabled) and the mode is clearing/capital.
-  await runLaunchGuard(
-    db,
-    turn,
-    globalCap,
-    fundamentalCap > 0
-      ? {
-          aggregateFundamentalMcap: fundamentalCap,
-          coverage: globalCap > 0 ? fundamentalCoveredCap / globalCap : 0,
-        }
-      : undefined
-  );
 
   // Simulate intra-turn price range for candlestick charting (0.3–1.5% spread).
   function candleSpread(close: number): { high: number; low: number } {

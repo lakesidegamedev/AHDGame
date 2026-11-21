@@ -272,9 +272,10 @@ describe("convertCorpCurrency", () => {
     // Both sectors rescaled by scale = 0.8/130
     const opA = bulkCall[0].updateOne.update.$set;
     const opB = bulkCall[1].updateOne.update.$set;
-    expect(opA.revenue).toBeCloseTo(1_000_000 * (0.8 / 130), 1);
+    // At plants the turn processor restates revenue, so conversion leaves it alone.
+    expect(opA.revenue).toBeUndefined();
     expect(opA.currentGrowthCost).toBeCloseTo(50_000 * (0.8 / 130), 2);
-    expect(opB.revenue).toBeCloseTo(2_500_000 * (0.8 / 130), 1);
+    expect(opB.revenue).toBeUndefined();
     expect(opB.currentGrowthCost).toBeCloseTo(75_000 * (0.8 / 130), 2);
   });
 

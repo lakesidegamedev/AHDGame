@@ -1,8 +1,3 @@
-// Canonical tier lists, not local literals: a local literal silently omitted
-// every tier added after it was written (it stopped at "capital", so a
-// "plants" job was rejected as invalid). Pure constant modules: no Mongo, no
-// env, safe to import eagerly.
-import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
 import { SIM_ACTOR_MODES } from "@/lib/sim/syntheticActors";
 import type { SimActorMode } from "@/lib/sim/actorCoverage";
 import { frontierEntryExperimentCliArgs } from "@/lib/sim/economicExperiment";
@@ -14,7 +9,6 @@ export interface SimJobExperimentFields {
   preparedSandbox?: PreparedSandbox;
   sovereignIssuanceConsolidationEnabled?: boolean;
   domesticSovereignBondCoverageEnabled?: boolean;
-  marketSystemMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;
@@ -85,12 +79,6 @@ export function parseActorsField(value: unknown): SimActorMode | undefined {
  * stays the only caller in production. */
 export function buildRunWorldArgs(job: SimJobExperimentFields): string[] {
   const args: string[] = [];
-  if (job.marketSystemMode) {
-    if (!MARKET_MODE_ORDER.includes(job.marketSystemMode as MarketSystemMode)) {
-      throw new Error(`invalid marketSystemMode "${job.marketSystemMode}"`);
-    }
-    args.push(`--market-mode=${job.marketSystemMode}`);
-  }
   booleanFlag(job, "canonicalFreightBillingEnabled", "canonical-freight-billing", args);
   booleanFlag(job, "shortageResponsiveSourcingEnabled", "shortage-responsive-sourcing", args);
   booleanFlag(job, "indexFundBondLiquidityEnabled", "index-fund-bond-liquidity", args);
