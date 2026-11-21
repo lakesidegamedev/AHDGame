@@ -961,8 +961,7 @@ export default function SectorDetailPage() {
 
             {plants?.truth && (
               <StrandedPlantBanner
-                lowFillTurns={plants.truth.lowFillTurns ?? 0}
-                soldFraction={plants.truth.soldFraction}
+                warning={plants.truth.strandedWarning}
                 deliveryLimitedFraction={plants.truth.deliveryLimitedFraction ?? 0}
                 deliveryLimitedFreightClass={plants.truth.deliveryLimitedFreightClass ?? null}
                 isCeo={isCeo}

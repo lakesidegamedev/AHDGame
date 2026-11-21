@@ -180,6 +180,7 @@ function CommodityItem({
                   }`}
                 >
                   {Math.round(flow.soldFraction * 100)}% of this output’s offers sold
+                  {flow.soldFractionBasis === "estimate" ? " (market estimate)" : ""}
                 </span>
               }
             >
@@ -187,6 +188,9 @@ function CommodityItem({
               blended figure across every output this sector makes, so a sector that sells one
               commodity out completely and another barely at all still reads as a middling number
               there. Use this row to see which output is the one not selling.
+              {flow.soldFractionBasis === "estimate"
+                ? " This plant has no settled sales record yet, so this is the market's estimate, not a count of units buyers paid for."
+                : ""}
             </InfoTooltip>
           </div>
         )}

@@ -21,7 +21,8 @@ import {
 import type { PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
-import { STRANDED_LOW_FILL_THRESHOLD } from "@/lib/corporations/strandedPlant";
+import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
+import { strandedWarning } from "@/lib/corporations/rules/strandedWarning";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   activeCapacityFraction,
@@ -178,7 +179,12 @@ export function buildSectorPlantsSection(args: {
 
   // Output handed free to the company's own sites is used, not unsold: a Kanto plant that fed its owner's US mines read "75 units went
   // unsold, the market is oversupplied" on a fully used turn.
-  const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
+  // The funded settlement, when it is the plant's latest sales record. Every
+  // sales figure below comes from it when present; the legacy market fields are
+  // read only for a plant with no funded record, and labelled as an estimate.
+  const fundedRecord = fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn);
+  const salesTurn = fundedRecord?.turn ?? currentTurn;
+  const ownSite = ownSiteDeliveries(fundedRecord ?? sector.producerSettlement, salesTurn);
   const ownSiteShare = ownSite?.share ?? 0;
   const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
@@ -475,20 +481,21 @@ export function buildSectorPlantsSection(args: {
   // One definition: market sales over units made, the same two numbers the
   // Offered / Sold / Unsold rows print. The engine's soldFraction is only the
   // fallback when the unit counts are missing.
-  const soldFraction = fillRate ?? num(sector.soldFraction);
-  const receiptSales = settledProductSales(sector.producerSettlement, currentTurn);
+  const soldFraction = fillRate ?? (fundedRecord ? null : num(sector.soldFraction));
+  const receiptSales = fundedRecord ? settledProductSales(fundedRecord, fundedRecord.turn) : null;
   const productFractions = receiptSales
     ? [...receiptSales].flatMap(([commodity, sales]): [string, number][] =>
         sales.offered > 0 ? [[commodity, sales.sold / sales.offered]] : []
       )
-    : Object.entries(sector.soldByCommodity ?? {});
+    : fundedRecord
+      ? []
+      : Object.entries(sector.soldByCommodity ?? {});
   let settledOffered = 0;
   let settledTaken = 0;
   for (const sales of receiptSales?.values() ?? []) {
     settledOffered += sales.offered;
     settledTaken += sales.sold + sales.ownSites;
   }
-  const settledTakenShare = settledOffered > 0 ? settledTaken / settledOffered : null;
   const soldByCommodity = productFractions
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
@@ -497,17 +504,20 @@ export function buildSectorPlantsSection(args: {
     }));
   // Share of the shortfall that is a DELIVERY failure, not a demand failure.
   // Absent on every sector until the freight pass writes it, so it reads as 0
-  // and the surfaces render nothing extra.
-  const deliveryLimitedFraction = Math.max(
-    0,
-    Math.min(1, num(sector.deliveryLimitedFraction) ?? 0)
-  );
+  // and the surfaces render nothing extra. The legacy pass measures it against
+  // its own fill, which a funded plant was not paid on, so a funded plant shows
+  // none.
+  const deliveryLimitedFraction = fundedRecord
+    ? null
+    : Math.max(0, Math.min(1, num(sector.deliveryLimitedFraction) ?? 0));
   const deliveryLimitedFreightClass =
-    sector.deliveryLimitedFreightClass === "bulk" ||
-    sector.deliveryLimitedFreightClass === "special" ||
-    sector.deliveryLimitedFreightClass === "grid"
+    !fundedRecord &&
+    (sector.deliveryLimitedFreightClass === "bulk" ||
+      sector.deliveryLimitedFreightClass === "special" ||
+      sector.deliveryLimitedFreightClass === "grid")
       ? sector.deliveryLimitedFreightClass
       : null;
+  const legacyLowFillTurns = fundedRecord ? null : (num(sector.lowFillTurns) ?? 0);
   // Full operating bill: maintenanceNet carries inputs, upkeep on idle capacity,
   // compliance and other opex; labour is billed beside it. Floor the SUM, not
   // each leg: maintenanceNet is routinely negative (a credit) under plants, and
@@ -606,7 +616,9 @@ export function buildSectorPlantsSection(args: {
     buildDemandTurn: args.buildDemandTurn,
     strategyBuildRoom: args.strategyBuildRoom,
     roomHeldByOwnIdle,
-    ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
+    // The idle streak is counted on the legacy fill and a funded plant's
+    // capacity is not retired by it, so a funded plant shows none.
+    ...(!fundedRecord && !mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {
           idleRetirement: {
             turns: num(sector.demandIdleTurns) ?? 0,
@@ -673,12 +685,13 @@ export function buildSectorPlantsSection(args: {
       soldByCommodity,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
-      // The streak is counted on the clearing fill. A settled plant whose offer
-      // mostly found takers last turn is not stranded, whatever that says.
-      lowFillTurns:
-        settledTakenShare != null && settledTakenShare >= STRANDED_LOW_FILL_THRESHOLD
-          ? 0
-          : (num(sector.lowFillTurns) ?? 0),
+      salesBasis: fundedRecord ? "settlement" : "estimate",
+      lowFillTurns: legacyLowFillTurns,
+      strandedWarning: strandedWarning({
+        settled: fundedRecord ? { offered: settledOffered, taken: settledTaken } : null,
+        legacyLowFillTurns,
+        soldShare: soldFraction,
+      }),
       sellOutsideFirst: sector.sellOutsideFirst === true,
       inventory: {
         stockpileUnsold: sector.stockpileUnsold === true,

@@ -1,9 +1,10 @@
 /**
  * What the Pricing panel says about last turn's sales on a funded producer
- * market. The legacy clearing pass writes `soldFraction` and `clearingFactor`,
- * but a funded turn never runs it, so those fields keep whatever they last held
- * and a plant that sold nothing could read "100% sold" at x1.00. The funded
- * receipt is the record of what actually happened, so the panel reads it.
+ * market. The legacy clearing pass still writes `soldFraction` and
+ * `clearingFactor` on funded turns, but measures its own lagged book, not what
+ * the plant was paid on, so a plant that sold nothing could read "100% sold" at
+ * x1.00. The funded receipt is the record of what actually happened, so the
+ * panel reads it.
  *
  * Pure: a settled receipt in, display figures out.
  */

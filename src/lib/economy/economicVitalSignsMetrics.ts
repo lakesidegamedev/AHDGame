@@ -28,6 +28,7 @@ import {
   clampShare,
 } from "@/lib/stockExchange/listingEligibility";
 import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
+import { countLowSaleSectors } from "@/lib/economy/lowSaleSectors";
 import { MONEY_ACCOUNTING_VERSION } from "@/lib/moneySupply/calculate";
 import {
   ECONOMIC_VITAL_SIGNS_WINDOW_TURNS,
@@ -249,6 +250,7 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
     (sum, sector) => sum + Math.max(0, sector.producedUnits ?? 0),
     0
   );
+  const lowSale = countLowSaleSectors(input.sectors);
   const soldWeight = input.sectors.reduce(
     (sum, sector) => sum + Math.max(0, sector.soldUnits ?? 0),
     0
@@ -571,12 +573,9 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
         "desired_workers_weighted"
       ),
       chronicLowFillShare: metric(
-        ratio(
-          input.sectors.filter((sector) => (sector.lowFillTurns ?? 0) >= 12).length,
-          input.sectors.length
-        ),
+        ratio(lowSale.count, input.sectors.length),
         input.sectors.length,
-        "sector_count_low_fill_12_turns"
+        lowSale.basis
       ),
       stockpilingShare: metric(
         ratio(

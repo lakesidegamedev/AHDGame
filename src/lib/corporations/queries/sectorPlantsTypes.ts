@@ -161,7 +161,8 @@ export interface SectorPlantsSection {
   /**
    * Present while the plant is selling under its demand-limited run. Once
    * `turns` passes `graceTurns`, active capacity the market will not buy
-   * retires a little each turn. Parked capacity is exempt.
+   * retires a little each turn. Parked capacity is exempt. Absent for a plant
+   * with a funded sale record: the streak is counted on the legacy fill.
    */
   idleRetirement?: {
     /** Consecutive turns the plant has been demand-limited into a glut. */
@@ -326,16 +327,25 @@ export interface SectorPlantsSection {
      * turn. The other half of the shortfall `soldFraction` reports: on screen
      * the two look identical and they mean opposite things, because a demand
      * shortfall says cut output while a delivery shortfall says buy freight or
-     * build somewhere else. 0 when the engine wrote nothing.
+     * build somewhere else. 0 when the engine wrote nothing. Null for a plant
+     * with a funded sale record: the legacy pass measures it against a fill the
+     * plant was not paid on.
      */
-    deliveryLimitedFraction: number;
+    deliveryLimitedFraction: number | null;
     deliveryLimitedFreightClass: "bulk" | "special" | "grid" | null;
     /**
-     * Consecutive turns the sector cleared under half its output (see
-     * strandedPlant.ts). Drives the stranded-plant warning on the sector page
-     * once it reaches STRANDED_WARN_TURNS.
+     * Which record the sales figures come from: the funded settlement the plant
+     * was paid on, or the legacy market estimate where there is none.
      */
-    lowFillTurns: number;
+    salesBasis?: "settlement" | "estimate";
+    /**
+     * Consecutive turns the legacy market estimate put the plant under half its
+     * output (see strandedPlant.ts). Null for a plant with a funded sale record,
+     * which is judged on the settlement instead.
+     */
+    lowFillTurns: number | null;
+    /** The not-selling warning the sector page shows, or null (see rules/strandedWarning.ts). */
+    strandedWarning?: import("@/lib/corporations/rules/strandedWarning").StrandedWarning | null;
     /** The CEO's opt-in to sell to outside buyers before the company's own plants. */
     sellOutsideFirst?: boolean;
     /**
