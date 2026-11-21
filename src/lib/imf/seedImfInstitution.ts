@@ -91,6 +91,7 @@ export async function seedImfInstitution(
   const now = new Date();
   const baseOwnership = {
     ceoId: ceo._id,
+    ceoType: "character" as const,
     ceoVacant: false,
     userId: ceo.userId,
     totalShares: halfShares * 2,

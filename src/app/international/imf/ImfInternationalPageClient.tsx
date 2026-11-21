@@ -10,6 +10,8 @@ import { PendingBoardOverridesPanel } from "@/components/imf/PendingBoardOverrid
 import { GlobalBondMarketDemandPanel } from "@/components/imf/GlobalBondMarketDemandPanel";
 import { fetchJson, HttpError } from "@/lib/observability/fetchJson";
 
+type ImfOfficial = { characterId: string; name: string; sequentialId: number | null };
+
 interface OverviewResponse {
   currentTurn: number | null;
   imfCorp: {
@@ -18,7 +20,10 @@ interface OverviewResponse {
     liquidCapital: number;
     liquidCurrencyCode: string;
   } | null;
-  boardMembers: Array<{ characterId: string; name: string; sequentialId: number | null }>;
+  boardMembers: ImfOfficial[];
+  managingDirector: ImfOfficial | null;
+  viewerIsBoardMember: boolean;
+  viewerIsManagingDirector: boolean;
   totalReceivedAnchor: number;
   activeSovereignBailouts: Array<{
     countryCode: string;
@@ -50,22 +55,15 @@ function formatCapital(value: number, code: string): string {
 export function ImfInternationalPageClient() {
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const [overview, me] = await Promise.all([
-          fetchJson<OverviewResponse>("/api/imf/overview", { feature: "imf-overview" }),
-          fetchJson<{ user?: { character?: { id?: string } } }>("/api/auth/me", {
-            feature: "imf-auth-me",
-          }).catch((): { user?: { character?: { id?: string } } } => ({})),
-        ]);
-        if (!cancelled) {
-          setData(overview);
-          setCurrentCharacterId(me.user?.character?.id ?? null);
-        }
+        const overview = await fetchJson<OverviewResponse>("/api/imf/overview", {
+          feature: "imf-overview",
+        });
+        if (!cancelled) setData(overview);
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -106,20 +104,19 @@ export function ImfInternationalPageClient() {
       </div>
     );
 
-  const isBoardMember = data.boardMembers.some((b) => b.characterId === currentCharacterId);
-
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <ImfHero data={data} />
-      <ActiveSovereignBailoutsPanel bailouts={data.activeSovereignBailouts} />
       <PendingBoardOverridesPanel
         overrides={data.pendingBoardOverrides}
         currentTurn={data.currentTurn}
-        isBoardMember={isBoardMember}
+        isBoardMember={data.viewerIsBoardMember}
+        isManagingDirector={data.viewerIsManagingDirector}
         onActioned={() => {
           window.location.reload();
         }}
       />
+      <ActiveSovereignBailoutsPanel bailouts={data.activeSovereignBailouts} />
       <GlobalBondMarketDemandPanel />
     </div>
   );
@@ -193,6 +190,19 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
           <span className="text-body-sm font-medium text-muted">Liquid capital</span>
           <span className="text-lg font-bold tabular-nums text-foreground">{liquid ?? "—"}</span>
         </div>
+        <div className="flex min-w-[160px] flex-col justify-between p-4">
+          <span className="text-body-sm font-medium text-muted">Managing director</span>
+          {data?.managingDirector ? (
+            <Link
+              href={`/character/${data.managingDirector.sequentialId ?? data.managingDirector.characterId}`}
+              className="text-sm font-semibold text-foreground hover:text-primary"
+            >
+              {data.managingDirector.name}
+            </Link>
+          ) : (
+            <span className="text-sm text-muted">{data?.imfCorp ? "Vacant" : "—"}</span>
+          )}
+        </div>
         <div className="flex min-w-[180px] flex-1 flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Board members</span>
           {board.length === 0 ? (
@@ -218,7 +228,7 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
           </span>
         </div>
         <div className="flex min-w-[120px] flex-col justify-between p-4">
-          <span className="text-body-sm font-medium text-muted">Pending board votes</span>
+          <span className="text-body-sm font-medium text-muted">Open board decisions</span>
           <span className="text-lg font-bold tabular-nums text-foreground">
             {data?.pendingBoardOverrides.length ?? 0}
           </span>
