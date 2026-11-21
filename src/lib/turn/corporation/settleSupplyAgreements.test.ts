@@ -17,6 +17,7 @@ import {
   CONTRACT_SHORTFALL_PENALTY,
 } from "@/lib/db/types/supplyAgreement";
 import { createAsyncIterableCursor, createMockDb } from "@/lib/test-utils/mockDb";
+import { fundedPairFlowKey } from "./rules/contractFundedDeliveries";
 import type { CorporationLookups } from "./types";
 
 const createNotifications = vi.fn();
@@ -1474,5 +1475,115 @@ describe("computeSupplyAgreementSettlements: premium sizing", () => {
     expect(Math.abs(r.deltaByCorp.get(S) ?? 0)).toBeLessThanOrEqual(
       Math.ceil(buyerSpendAtMarket * 0.1)
     );
+  });
+});
+
+describe("computeSupplyAgreementSettlements: funded deliveries", () => {
+  const agreement = {
+    agreementId: new ObjectId().toString(),
+    supplierCorpId: S,
+    buyerCorpId: B,
+    commodity,
+    volumeCap: 100,
+    pricePremium: 0.2,
+  };
+  // The clearing pass believes all 100 contracted units were delivered.
+  const legacy = {
+    agreements: [agreement],
+    contractSettlementByCorp: new Map([[S, new Map([[commodity, 100]])]]),
+    eraUnitScale: 1,
+    priceRatioByCommodity: ratio,
+    corpInfo: makeInfo(),
+    turn: 5,
+    now,
+  };
+  const pairFlow = (perTurnUnits: number) =>
+    new Map([[fundedPairFlowKey(S, B, commodity), perTurnUnits]]);
+
+  it("prices the premium on the pair's real funded trade, not the clearing pass", () => {
+    // 1 unit a turn is 24 on the daily basis the contract is written in.
+    const r = computeSupplyAgreementSettlements({ ...legacy, fundedPairFlows: pairFlow(1) });
+    const expected = Math.round(24 * base * 0.2);
+    expect(r.deltaByCorp.get(S)).toBe(expected);
+    expect(r.deltaByCorp.get(B)).toBe(-expected);
+    expect(r.deliveries[0]).toMatchObject({ deliveredUnits: 24, deliveryBasis: "funded" });
+    expect(r.txEntries[0]!.meta).toMatchObject({ unitsSettled: 24 });
+  });
+
+  it("caps the credited delivery at the contracted volume", () => {
+    const r = computeSupplyAgreementSettlements({ ...legacy, fundedPairFlows: pairFlow(50) });
+    expect(r.deliveries[0]!.deliveredUnits).toBe(100);
+    expect(r.deltaByCorp.get(S)).toBe(Math.round(100 * base * 0.2));
+  });
+
+  it("settles no premium or discount when the pair never traded directly", () => {
+    for (const pricePremium of [0.2, -0.2]) {
+      const r = computeSupplyAgreementSettlements({
+        ...legacy,
+        agreements: [{ ...agreement, pricePremium }],
+        fundedPairFlows: new Map([[fundedPairFlowKey(S, "someone-else", commodity), 40]]),
+      });
+      expect(r.settledCount).toBe(0);
+      expect(r.deltaByCorp.size).toBe(0);
+      expect(r.txEntries).toHaveLength(0);
+      expect(r.settledPremiums).toHaveLength(0);
+      expect(r.deliveries[0]).toMatchObject({ deliveredUnits: 0, deliveryBasis: "funded" });
+    }
+  });
+
+  it("leaves the shortfall penalty on production, exactly as before", () => {
+    const damagesOnly = {
+      ...legacy,
+      agreements: [{ ...agreement, pricePremium: 0 }],
+      producedByCorpCommodity: new Map([[S, new Map([[commodity, 60]])]]),
+      plantsEnabled: true,
+    };
+    const before = computeSupplyAgreementSettlements(damagesOnly);
+    const after = computeSupplyAgreementSettlements({
+      ...damagesOnly,
+      fundedPairFlows: pairFlow(0),
+    });
+    const penalty = Math.round(40 * base * CONTRACT_SHORTFALL_PENALTY);
+    expect(before.deltaByCorp.get(S)).toBe(-penalty);
+    expect(after.deltaByCorp.get(S)).toBe(-penalty);
+    expect(after.deltaByCorp.get(B)).toBe(penalty);
+    expect(after.damages).toEqual(before.damages);
+    expect(after.deliveries[0]!.shortfallUnits).toBe(before.deliveries[0]!.shortfallUnits);
+    expect(after.deliveries[0]!.penaltyAnchor).toBe(before.deliveries[0]!.penaltyAnchor);
+  });
+
+  it("still limits the payer to the cash it has", () => {
+    const poorBuyer = (id: string): SettleCorpInfo | undefined =>
+      id === S
+        ? { _id: supId, name: "Sup", ccy: "USD" as CurrencyCode, fxRate: 1 }
+        : id === B
+          ? {
+              _id: buyId,
+              name: "Buy",
+              ccy: "USD" as CurrencyCode,
+              fxRate: 1,
+              liquidCapitalAnchor: 3,
+            }
+          : undefined;
+    const r = computeSupplyAgreementSettlements({
+      ...legacy,
+      corpInfo: poorBuyer,
+      fundedPairFlows: pairFlow(1),
+    });
+    expect(r.deltaByCorp.get(S)).toBe(3);
+    expect(r.deltaByCorp.get(B)).toBe(-3);
+    expect(r.deliveries[0]!.unpaidSettlementAnchor).toBeCloseTo(24 * base * 0.2 - 3);
+  });
+
+  it("is unchanged without funded flows (legacy and single-player worlds)", () => {
+    const withoutKey = computeSupplyAgreementSettlements(legacy);
+    const withUndefined = computeSupplyAgreementSettlements({
+      ...legacy,
+      fundedPairFlows: undefined,
+    });
+    expect(withUndefined).toEqual(withoutKey);
+    expect(withoutKey.deliveries[0]).not.toHaveProperty("deliveryBasis");
+    expect(withoutKey.deliveries[0]!.deliveredUnits).toBe(100);
+    expect(withoutKey.deltaByCorp.get(S)).toBe(Math.round(100 * base * 0.2));
   });
 });
