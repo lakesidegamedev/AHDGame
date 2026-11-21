@@ -110,6 +110,7 @@ export function NotificationPreferencesPanel() {
     <section className="rounded-2xl border border-card-border bg-background/45 p-4 md:col-span-3 md:p-5">
       <h3 className="text-sm font-semibold">{t("title")}</h3>
       <p className="mt-1 text-xs leading-5 text-muted">{t("description")}</p>
+      <p className="mt-2 text-xs leading-5 text-muted">{t("turnStatusHint")}</p>
       {loadingError ? (
         <p role="alert">
           {t("loadError")}{" "}
@@ -143,8 +144,11 @@ export function NotificationPreferencesPanel() {
           <div className="max-h-[28rem] overflow-y-auto pr-1">
             {(() => {
               const query = search.trim().toLowerCase();
-              const visible = NOTIFICATION_TYPES.filter((type) =>
-                t(`types.${type}`).toLowerCase().includes(query)
+              // Keep this legacy type readable in the inbox API and saved preferences.
+              // The turn engine only publishes live status updates.
+              const visible = NOTIFICATION_TYPES.filter(
+                (type) =>
+                  type !== "turn_advance" && t(`types.${type}`).toLowerCase().includes(query)
               );
               if (visible.length === 0)
                 return <p className="py-3 text-sm text-muted">{t("noMatch")}</p>;
