@@ -622,10 +622,11 @@ function BillDetailContent() {
                       the bill becomes law (pocket signature).
                     </p>
                   </div>
-                  {bill.presidentActionDeadline && (
+                  {(bill.presidentActionDeadlineOnTurn != null || bill.presidentActionDeadline) && (
                     <DeadlineCountdown
                       deadline={bill.presidentActionDeadline}
                       deadlineTurn={bill.presidentActionDeadlineOnTurn}
+                      kind="presidentialAction"
                     />
                   )}
                 </div>
