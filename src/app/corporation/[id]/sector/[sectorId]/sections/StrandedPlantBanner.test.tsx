@@ -102,3 +102,24 @@ describe("StrandedPlantBanner on a mixed-output site", () => {
     expect(screen.getByRole("status").textContent).toContain("This plant cannot sell its output");
   });
 });
+
+describe("StrandedPlantBanner with output sent to own sites", () => {
+  it("does not name a product that fed the company's own sites", () => {
+    render(
+      <StrandedPlantBanner
+        lowFillTurns={STRANDED_WARN_TURNS}
+        soldFraction={0.3}
+        isCeo
+        outputs={[
+          {
+            label: "Energy",
+            soldFraction: 0,
+            settledSales: { offered: 860, ownSites: 860 },
+          },
+          { label: "Steel & Metals", soldFraction: 1 },
+        ]}
+      />
+    );
+    expect(screen.getByRole("status").textContent).not.toContain("Energy is not selling");
+  });
+});
