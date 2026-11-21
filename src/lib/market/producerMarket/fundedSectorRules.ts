@@ -161,6 +161,8 @@ export function fundedSectorOpsAll(
       receipt: FundedReceipt;
       result: LegacySectorResultLike;
       daily: (anchorPerTurn: number) => number;
+      /** Recent settled profit the valuation averaged, stored for the next turn. */
+      valuationProfitHistory?: readonly { turn: number; profit: number }[];
     }
   >,
   /** Turns per day: receipt units are per turn, the sector fields are daily. */
@@ -176,7 +178,7 @@ export function fundedSectorOpsAll(
       out.push(op);
       continue;
     }
-    const { receipt, result, daily } = entry;
+    const { receipt, result, daily, valuationProfitHistory } = entry;
     const update = op.updateOne.update as Record<string, Record<string, unknown> | undefined>;
     const set = Object.fromEntries(
       Object.entries(update.$set ?? {}).filter(([f]) => !owned.has(rootOf(f)))
@@ -184,6 +186,7 @@ export function fundedSectorOpsAll(
     if (!stamped.has(id) && update.$set) {
       Object.assign(set, {
         realizedRevenue: daily(result.hourlyRevenue),
+        ...(valuationProfitHistory ? { valuationProfitHistory } : {}),
         producedUnits: Math.round(receipt.producedUnits * turnsPerDay * 100) / 100,
         soldUnits: Math.round(receipt.soldUnits * turnsPerDay * 100) / 100,
         effectiveProfitMargin: Math.round(result.effectiveMargin * 100) / 100,

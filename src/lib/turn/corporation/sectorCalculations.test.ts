@@ -4113,13 +4113,21 @@ describe("funded valuation (fundedValuationStage)", () => {
   const run = (opts: {
     stage: number;
     priceRatio: number;
-    receipt: { revenue: number; profit: number; producedUnits: number; soldUnits: number };
+    receipt: {
+      turn?: number;
+      revenue: number;
+      profit: number;
+      producedUnits: number;
+      soldUnits: number;
+    };
+    valuationProfitHistory?: { turn: number; profit: number }[];
   }) => {
     const corp = makeCorp();
     const sector = makeSector(corp._id, {
       revenue: 24_000,
       profitMargin: 50,
       capacityBookAnchor: 500_000,
+      valuationProfitHistory: opts.valuationProfitHistory,
     } as Partial<CorporateSector>);
     const lookups = baseLookups([corp], [sector]);
     lookups.fundedValuationStage = opts.stage;
@@ -4142,7 +4150,7 @@ describe("funded valuation (fundedValuationStage)", () => {
         settledProfitByCorp: new Map([[corp._id.toString(), opts.receipt.profit]]),
       }
     );
-    return result.corpSnapshots[0];
+    return Object.assign(result.corpSnapshots[0], { sectorOps: result.sectorOps });
   };
   const noSales = { revenue: 0, profit: -10, producedUnits: 0, soldUnits: 0 };
 
@@ -4173,6 +4181,28 @@ describe("funded valuation (fundedValuationStage)", () => {
     const after = sells(8_000);
     expect(before.sectorNPV).toBeGreaterThan(500_000);
     expect(after.sectorNPV).toBeGreaterThan(before.sectorNPV);
+  });
+
+  it("on: values the average of recent settled turns and stores it for the next turn", () => {
+    const good = [
+      { turn: 7, profit: 8_000 },
+      { turn: 8, profit: 4_000 },
+      { turn: 9, profit: 8_000 },
+    ];
+    const starved = { turn: 10, revenue: 20_000, profit: 4_000, producedUnits: 5, soldUnits: 5 };
+    const smoothed = run({
+      stage: 1,
+      priceRatio: 1,
+      receipt: starved,
+      valuationProfitHistory: good,
+    });
+    const single = run({ stage: 1, priceRatio: 1, receipt: starved });
+    // A bad turn after good ones values the four-turn average, not the bad turn alone.
+    expect(smoothed.sectorNPV).toBeGreaterThan(single.sectorNPV);
+    const stored = smoothed.sectorOps
+      .map((op) => (op.updateOne.update.$set as Record<string, unknown>).valuationProfitHistory)
+      .find(Boolean) as { turn: number; profit: number }[];
+    expect(stored.map((e) => e.turn)).toEqual([7, 8, 9, 10]);
   });
 });
 
