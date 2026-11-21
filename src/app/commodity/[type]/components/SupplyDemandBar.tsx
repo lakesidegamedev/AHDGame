@@ -56,7 +56,7 @@ export default function SupplyDemandBar({
     : importsKnown
       ? [
           { label: "Local offers", units: supply, className: "bg-success" },
-          { label: "Imports", units: imports, className: "bg-success/45" },
+          { label: "Imports", units: imports ?? 0, className: "bg-success/45" },
         ]
       : [{ label: "Offered", units: supply, className: "bg-success" }];
   const demandParts: Segment[] = trade

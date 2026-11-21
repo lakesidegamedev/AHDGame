@@ -17,6 +17,7 @@ import {
   getCommodityDisplayCurrency,
 } from "@/lib/commodity-map/commodityPriceDisplay";
 import { postImportBalance } from "@/lib/trade/postImportGap";
+import { fundedCountryTradeTotals } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
@@ -67,20 +68,18 @@ export default function HeroPanel({
     ? formatCommodityPrice(data.basePrice, selectedCurrency, forexEnabled, exchangeRates)
     : formatCurrencyPrecise(data.basePrice);
 
-  // National and state figures count imports that reach the market, so a gap
-  // imports already fill is not reported as a shortage.
+  // A funded country book carries trade both ways: show what local producers
+  // actually sold. Without one, show the plain gap between offers and orders.
+  // Never label a gap "surplus": exports and shipments to other states can
+  // absorb it, which is what made an exporting country read as a glut.
+  const funded = marketScope.fundedMarket;
+  const trade = funded ? fundedCountryTradeTotals(funded) : null;
   const importsKnown = marketScope.imports !== null;
-  const balance = importsKnown
+  const gap = importsKnown
     ? postImportBalance(marketScope.supply, marketScope.demand, marketScope.imports).balance
     : marketScope.balance;
-  const afterImports = importsKnown ? " after imports" : "";
-  const balanceLabel =
-    balance > 0
-      ? "Surplus" + afterImports
-      : balance < 0
-        ? "Shortage" + afterImports
-        : "Balanced" + afterImports;
-  const balanceColor = balance > 0 ? "text-success" : balance < 0 ? "text-error" : "text-muted";
+  const soldShare =
+    trade?.sold != null && funded && funded.supply > 0 ? trade.sold / funded.supply : null;
 
   return (
     <header className="relative overflow-hidden rounded-2xl border border-card-border bg-card shadow-lg mb-6">
@@ -215,6 +214,11 @@ export default function HeroPanel({
           <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
             {t("supplyIncludesStock")}
           </span>
+          {funded && funded.imports > 0 ? (
+            <span className="text-[10px] text-muted">
+              plus {formatUnits(funded.imports, data.unit)} imported
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">
@@ -226,6 +230,11 @@ export default function HeroPanel({
           <span className="text-xs text-muted">
             {marketScope.demandBasis === "funded_orders" ? "ordered per day" : "per day"}
           </span>
+          {funded && funded.exports > 0 ? (
+            <span className="text-[10px] text-muted">
+              plus {formatUnits(funded.exports, data.unit)} exported
+            </span>
+          ) : null}
           {marketScope.filled !== null ? (
             <span className="text-[10px] text-muted">
               {formatUnits(marketScope.filled, data.unit)} received
@@ -239,14 +248,35 @@ export default function HeroPanel({
             </span>
           ) : null}
         </div>
-        <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
-          <span className="text-body-sm font-medium text-muted">Balance</span>
-          <span className={`text-base font-bold tabular-nums ${balanceColor}`}>
-            {balance > 0 ? "+" : ""}
-            {formatUnits(Math.abs(balance), data.unit)}
-          </span>
-          <span className={`text-xs ${balanceColor}`}>{balanceLabel}</span>
-        </div>
+        {trade?.sold != null && soldShare != null ? (
+          <div className="flex flex-1 flex-col px-5 py-3 min-w-max" data-testid="hero-sold">
+            <span className="text-body-sm font-medium text-muted">Local producers sold</span>
+            <span className="text-base font-bold tabular-nums text-foreground">
+              {formatUnits(trade.sold, data.unit)}
+            </span>
+            <span className="text-xs text-muted">
+              {Math.round(soldShare * 100)}% of offers, at home and abroad
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col px-5 py-3 min-w-max" data-testid="hero-gap">
+            <span className="text-body-sm font-medium text-muted">Offers vs orders</span>
+            <span className="text-base font-bold tabular-nums text-foreground">
+              {gap === 0 ? "Even" : formatUnits(Math.abs(gap), data.unit)}
+            </span>
+            <span className="text-xs text-muted">
+              {gap > 0
+                ? importsKnown
+                  ? "more offered, counting imports"
+                  : "more offered than ordered"
+                : gap < 0
+                  ? importsKnown
+                    ? "more ordered, counting imports"
+                    : "more ordered than offered"
+                  : "offers matched orders"}
+            </span>
+          </div>
+        )}
       </div>
     </header>
   );

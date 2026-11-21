@@ -67,6 +67,60 @@ describe("HeroPanel supply card", () => {
   });
 });
 
+describe("HeroPanel balance cell", () => {
+  it("shows local producer sales instead of a surplus for an exporting country", () => {
+    render(
+      <HeroPanel
+        data={data}
+        marketScope={
+          {
+            ...scope,
+            supply: 164_700,
+            demand: 74_700,
+            balance: 90_000,
+            imports: 5_800,
+            demandBasis: "funded_orders",
+            filled: 76_200,
+            spilloverRequested: 1_500,
+            fundedMarket: {
+              supply: 164_700,
+              demand: 74_700,
+              spilloverRequested: 1_500,
+              filled: 76_200,
+              funded: 65_400,
+              imports: 5_800,
+              exports: 91_500,
+            },
+          } as unknown as CommodityMarketScope
+        }
+        activeCountry="US"
+        forexEnabled={false}
+        exchangeRates={{}}
+        onSelectExchange={() => {}}
+      />
+    );
+    expect(screen.getByTestId("hero-sold").textContent).toContain("161.9K units");
+    expect(screen.getByTestId("hero-sold").textContent).toContain("98% of offers");
+    expect(screen.getByText("plus 91.5K units exported")).toBeTruthy();
+    expect(screen.queryByText(/surplus/i)).toBeNull();
+  });
+
+  it("describes a plain gap without calling it a surplus", () => {
+    render(
+      <HeroPanel
+        data={data}
+        marketScope={scope}
+        activeCountry={null}
+        forexEnabled={false}
+        exchangeRates={{}}
+        onSelectExchange={() => {}}
+      />
+    );
+    expect(screen.getByTestId("hero-gap").textContent).toContain("more offered than ordered");
+    expect(screen.queryByText(/surplus/i)).toBeNull();
+  });
+});
+
 describe("supply copy catalogs", () => {
   it("has the supply keys in every locale", () => {
     for (const catalog of [enCorporations, deCorporations]) {
