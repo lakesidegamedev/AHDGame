@@ -309,9 +309,9 @@ export interface SectorPlantsSection {
    */
   truth: {
     /**
-     * Share of output that found a buyer, 0-1. The engine's weighted
-     * `soldFraction` when clearing wrote one, else the same soldUnits /
-     * producedUnits ratio as `fillRate`. Null before the first plants turn.
+     * Share of output that found a buyer, 0-1: soldUnits / producedUnits, as
+     * `fillRate`, falling back to the engine's `soldFraction` only when the
+     * unit counts are missing. Null before the first plants turn.
      */
     soldFraction: number | null;
     /**
