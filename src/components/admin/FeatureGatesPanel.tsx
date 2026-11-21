@@ -3,7 +3,6 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
-import { gameConfig as gameConfigDefaults } from "@/lib/seeds/reference/gameConfig";
 import type { ResetSystem, ResetSystemVersion } from "@/lib/resetVersions/rules";
 import type { NppAutonomyLevel } from "@/lib/db/types/gameState";
 
@@ -189,40 +188,6 @@ const NPP_ENTRY_VIABILITY_MODES: {
   },
 ];
 
-/**
- * Graduated system modes that live on gameConfig instead of gameState. Writes
- * go through the existing per-system PATCH routes (NOT /feature-gates).
- */
-interface SystemMode {
-  key: "marketSystemMode";
-  label: string;
-  desc: string;
-  endpoint: string;
-  defaultValue: string;
-  levels: { value: string; label: string; blurb: string }[];
-}
-
-const SYSTEM_MODES: SystemMode[] = [
-  {
-    key: "marketSystemMode",
-    label: "Market structure",
-    desc: "Structural market rework — staged tiers.",
-    endpoint: "/api/admin/config/market",
-    defaultValue: gameConfigDefaults.marketSystemMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Legacy market behavior." },
-      {
-        value: "realization",
-        label: "Realization",
-        blurb: "Corp revenue passes price realization.",
-      },
-      { value: "ledger", label: "Ledger", blurb: "Realization + double-entry financial ledger." },
-      { value: "clearing", label: "Clearing", blurb: "Order-book market clearing." },
-      { value: "capital", label: "Capital", blurb: "Full capital-markets tier." },
-    ],
-  },
-];
-
 interface GatesState {
   booleans: Record<string, boolean>;
   nppAutonomyLevel: NppAutonomyLevel;
@@ -248,7 +213,6 @@ function DefaultBadge() {
 
 export function FeatureGatesPanel() {
   const [state, setState] = useState<GatesState | null>(null);
-  const [modes, setModes] = useState<Record<string, string> | null>(null);
   const [commandEconomyEnabled, setCommandEconomyEnabled] = useState(false);
   const [commandEconomyTolerance, setCommandEconomyTolerance] = useState(
     COMMAND_ECONOMY_DEFAULT_TOLERANCE
@@ -259,34 +223,25 @@ export function FeatureGatesPanel() {
 
   const fetchState = useCallback(async () => {
     try {
-      const [gatesRes, ...modeRes] = await Promise.all([
+      const [gatesRes, marketRes] = await Promise.all([
         fetch("/api/admin/feature-gates"),
-        ...SYSTEM_MODES.map((m) => fetch(m.endpoint)),
+        fetch("/api/admin/config/market"),
       ]);
       if (gatesRes.ok) setState((await gatesRes.json()) as GatesState);
-      const next: Record<string, string> = {};
-      for (let i = 0; i < SYSTEM_MODES.length; i++) {
-        const res = modeRes[i];
-        if (res.ok) {
-          const data = (await res.json()) as {
-            mode?: string;
-            commandEconomyEnabled?: boolean;
-            commandEconomySecondEconomyTolerance?: number;
-          };
-          next[SYSTEM_MODES[i].key] = data.mode ?? "off";
-          // Command-economy flags live on the market config route (gameConfig),
-          // not /feature-gates — pull them from that GET response.
-          if (SYSTEM_MODES[i].key === "marketSystemMode") {
-            setCommandEconomyEnabled(data.commandEconomyEnabled === true);
-            setCommandEconomyTolerance(
-              typeof data.commandEconomySecondEconomyTolerance === "number"
-                ? data.commandEconomySecondEconomyTolerance
-                : COMMAND_ECONOMY_DEFAULT_TOLERANCE
-            );
-          }
-        }
+      // Command-economy flags live on the market config route (gameConfig),
+      // not /feature-gates.
+      if (marketRes.ok) {
+        const data = (await marketRes.json()) as {
+          commandEconomyEnabled?: boolean;
+          commandEconomySecondEconomyTolerance?: number;
+        };
+        setCommandEconomyEnabled(data.commandEconomyEnabled === true);
+        setCommandEconomyTolerance(
+          typeof data.commandEconomySecondEconomyTolerance === "number"
+            ? data.commandEconomySecondEconomyTolerance
+            : COMMAND_ECONOMY_DEFAULT_TOLERANCE
+        );
       }
-      setModes(next);
     } catch {
       // silent
     } finally {
@@ -340,59 +295,33 @@ export function FeatureGatesPanel() {
     }
   }, []);
 
-  const patchMode = useCallback(async (mode: SystemMode, value: string) => {
-    setSavingKey(mode.key);
+  /** PATCH market config flags. */
+  const patchMarketFlags = useCallback(async (body: Record<string, unknown>, savingId: string) => {
+    setSavingKey(savingId);
     setError("");
     try {
-      const res = await fetch(mode.endpoint, {
+      const res = await fetch("/api/admin/config/market", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: value }),
+        body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { mode?: string; error?: string };
+      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(apiErrorText(data, `Failed to update ${mode.label}`));
+        setError(apiErrorText(data, "Failed to update command economy"));
         return;
       }
-      setModes((prev) => ({ ...(prev ?? {}), [mode.key]: data.mode ?? value }));
+      if (typeof body.commandEconomyEnabled === "boolean") {
+        setCommandEconomyEnabled(body.commandEconomyEnabled);
+      }
+      if (typeof body.commandEconomySecondEconomyTolerance === "number") {
+        setCommandEconomyTolerance(body.commandEconomySecondEconomyTolerance);
+      }
     } catch {
       setError("Network error");
     } finally {
       setSavingKey(null);
     }
   }, []);
-
-  /** PATCH market config flags; route requires `mode` on every write (same as MarketAdminPanel). */
-  const patchMarketFlags = useCallback(
-    async (body: Record<string, unknown>, savingId: string) => {
-      const currentMode = modes?.marketSystemMode ?? "off";
-      setSavingKey(savingId);
-      setError("");
-      try {
-        const res = await fetch("/api/admin/config/market", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: currentMode, ...body }),
-        });
-        const data = (await res.json()) as { error?: string };
-        if (!res.ok) {
-          setError(apiErrorText(data, "Failed to update command economy"));
-          return;
-        }
-        if (typeof body.commandEconomyEnabled === "boolean") {
-          setCommandEconomyEnabled(body.commandEconomyEnabled);
-        }
-        if (typeof body.commandEconomySecondEconomyTolerance === "number") {
-          setCommandEconomyTolerance(body.commandEconomySecondEconomyTolerance);
-        }
-      } catch {
-        setError("Network error");
-      } finally {
-        setSavingKey(null);
-      }
-    },
-    [modes]
-  );
 
   if (loading) {
     return (
@@ -418,10 +347,10 @@ export function FeatureGatesPanel() {
       <div className="mb-4">
         <h3 className="text-sm font-semibold">Feature gates</h3>
         <p className="text-xs leading-relaxed text-muted">
-          One control surface for every game feature flag, including the graduated system modes.
-          Gates marked <span className="font-semibold text-primary">seed default</span> ship enabled
-          on every fresh world; the rest are staged rollouts. NPP economy and line of credit are
-          core systems — always on, no longer gated.
+          One control surface for every game feature flag, plus the command economy. Gates marked{" "}
+          <span className="font-semibold text-primary">seed default</span> ship enabled on every
+          fresh world; the rest are staged rollouts. NPP economy and line of credit are core systems
+          — always on, no longer gated.
         </p>
       </div>
 
@@ -681,59 +610,8 @@ export function FeatureGatesPanel() {
         </p>
       </div>
 
-      {/* Graduated system modes (gameConfig) */}
+      {/* Market configuration flags (gameConfig) */}
       <div className="mb-5 space-y-3">
-        {SYSTEM_MODES.map((mode) => {
-          const current = modes?.[mode.key] ?? "off";
-          const saving = savingKey === mode.key;
-          return (
-            <div
-              key={mode.key}
-              className="rounded-lg border border-card-border bg-background/40 p-4"
-            >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{mode.label}</span>
-                  {mode.defaultValue !== "off" ? <DefaultBadge /> : null}
-                </div>
-                <span className="text-body-sm font-medium text-muted">
-                  {mode.levels.find((l) => l.value === current)?.label ?? current}
-                </span>
-              </div>
-              <p className="mb-3 text-xs text-muted">
-                {mode.desc}
-                {mode.defaultValue !== "off" ? (
-                  <>
-                    {" "}
-                    Fresh seeds start at <span className="font-semibold">{mode.defaultValue}</span>.
-                  </>
-                ) : null}
-              </p>
-              <div className="inline-flex flex-wrap gap-1 rounded-lg border border-card-border bg-card p-1">
-                {mode.levels.map((lvl) => {
-                  const active = current === lvl.value;
-                  return (
-                    <button
-                      key={lvl.value}
-                      type="button"
-                      disabled={saving}
-                      title={lvl.blurb}
-                      onClick={() => void patchMode(mode, lvl.value)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                        active
-                          ? "bg-primary text-white"
-                          : "text-muted hover:bg-background hover:text-foreground"
-                      }`}
-                    >
-                      {lvl.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
         {/* Command economy — gameConfig flags via /api/admin/config/market (not /feature-gates). */}
         <div className="rounded-lg border border-card-border bg-background/40 p-4">
           <div className="mb-1 flex items-center justify-between gap-2">

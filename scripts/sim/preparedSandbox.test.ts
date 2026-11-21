@@ -18,7 +18,6 @@ describe("prepared world arguments and provenance", () => {
   });
 
   it.each([
-    { marketSystemMode: "plants" },
     { autonomyLevel: "v4" },
     { allFeatureFlags: true },
     { campaignEraPriceLevelEnabled: true },

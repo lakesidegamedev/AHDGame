@@ -7,13 +7,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
-
-import {
-  getMarketSystemMode,
-  marketAtLeast,
-  type MarketSystemMode,
-} from "@/lib/market/featureFlag";
-import { MARKET_MODE_INFO, MARKET_MODE_ORDER } from "@/lib/market/modes";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import {
   economicInterventionPlanSchema,
@@ -23,16 +16,10 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
-// Enum derived from the canonical order so route validation can never drift
-// from the client selector or the engine.
+// The economy runs at the plants tier only; a request naming any other tier is
+// refused rather than ignored, so a stale client cannot believe it changed it.
 const patchSchema = z.object({
-  mode: z.enum(MARKET_MODE_ORDER as [MarketSystemMode, ...MarketSystemMode[]]),
-  // Escape hatch for setting a tier whose MARKET_MODE_INFO.live is false. The
-  // admin selector disables those options, but `live: false` was UI-ONLY — a
-  // direct PATCH (curl, a stale tab, a script) could flip the live world onto
-  // an unlaunched tier with nothing to stop it. Explicit opt-in, so enabling a
-  // non-live tier is always a deliberate act that shows up in the admin log.
-  allowNonLive: z.boolean().optional(),
+  mode: z.literal("plants").optional(),
   // Launch-safety governor (optional): bound + fade-in for the clearing/throughput
   // legs. Tunable live so the flip can be tightened/loosened without a deploy.
   governorCap: z.number().min(0).max(1).optional(),
@@ -85,7 +72,7 @@ const patchSchema = z.object({
   commandEconomySecondEconomyTolerance: z.number().min(0).max(1).optional(),
 });
 
-// GET /api/admin/config/market — Structural market rework mode + feature flags
+// GET /api/admin/config/market — Market feature flags
 // Auth: requireAdmin
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
@@ -94,7 +81,6 @@ export const GET = withAdminRoute(async (_auth) => {
     { _id: "default" },
     {
       projection: {
-        marketSystemMode: 1,
         commodityScarcityDriftEnabled: 1,
         stockCoverCapEnabled: 1,
         brandLoyaltyEnabled: 1,
@@ -120,9 +106,7 @@ export const GET = withAdminRoute(async (_auth) => {
     }
   );
 
-  const mode = await getMarketSystemMode();
   return NextResponse.json({
-    mode,
     scarcityDriftEnabled: config?.commodityScarcityDriftEnabled === true,
     stockCoverCapEnabled: config?.stockCoverCapEnabled === true,
     brandLoyaltyEnabled: config?.brandLoyaltyEnabled === true,
@@ -150,15 +134,9 @@ export const GET = withAdminRoute(async (_auth) => {
   });
 });
 
-// PATCH /api/admin/config/market — Set market system mode
+// PATCH /api/admin/config/market — Set market feature flags
 // Auth: requireAdmin
 // Errors: 400, 403
-//
-// Tier 1 ("realization") is live: realized sector revenue is scaled by the
-// lagged market price of its outputs. Higher tiers (ledger/clearing/capital/
-// plants) are scaffolding until their phases land and read the flag (see
-// docs/plans/2026-07-03-market-structural-plan.md). "off" reverts the economy
-// to baseline behaviour.
 export async function PATCH(request: Request) {
   try {
     const auth = await requireAdmin();
@@ -170,8 +148,6 @@ export async function PATCH(request: Request) {
     }
 
     const {
-      mode,
-      allowNonLive,
       governorCap,
       governorRampTurns,
       scarcityDriftEnabled,
@@ -203,8 +179,6 @@ export async function PATCH(request: Request) {
       commandEconomySecondEconomyTolerance,
       mediaRegulationEnabled,
     } = parsed.data as {
-      mode: MarketSystemMode;
-      allowNonLive?: boolean;
       governorCap?: number;
       governorRampTurns?: number;
       scarcityDriftEnabled?: boolean;
@@ -237,30 +211,12 @@ export async function PATCH(request: Request) {
       mediaRegulationEnabled?: boolean;
     };
 
-    // Server-side launch gate. MARKET_MODE_INFO[mode].live is the single source
-    // of truth for "has this tier actually shipped"; enforce it here so the API
-    // agrees with the selector instead of trusting the client.
-    if (MARKET_MODE_INFO[mode].live !== true && allowNonLive !== true) {
-      return errorResponse(
-        400,
-        `Market mode "${mode}" is not live yet. ` +
-          `Pass allowNonLive: true to set it deliberately.`
-      );
-    }
-
     const db = await getDb();
     const gameConfig = gameConfigCollection(db);
-    if (productLinesV2Enabled === true && !marketAtLeast(mode, "plants")) {
-      return errorResponse(400, "Product lines require the plants market tier.");
-    }
-    if (mediaProductSlatesEnabled === true && !marketAtLeast(mode, "clearing")) {
-      return errorResponse(400, "Media product slates require the clearing market tier.");
-    }
     const existingConfig = await gameConfig.findOne(
       { _id: "default" },
       {
         projection: {
-          marketSystemMode: 1,
           mediaRegulationEnabled: 1,
           commandEconomyEnabled: 1,
           mediaOperatingModelsEnabled: 1,
@@ -291,17 +247,10 @@ export async function PATCH(request: Request) {
         "Media product slates require brand loyalty, loyalty clearing, and quality pricing."
       );
     }
-    const priorMode = await getMarketSystemMode(existingConfig);
     const effectiveMediaRegulationEnabled =
       mediaRegulationEnabled ?? existingConfig?.mediaRegulationEnabled === true;
-    if (effectiveMediaRegulationEnabled && !marketAtLeast(mode, "clearing")) {
-      return errorResponse(400, "Media regulation requires the clearing market tier.");
-    }
-    // Stamp the turn, not just the clock. See `marketSystemModeUpdatedTurn` in
-    // the GameConfig type for why: the whole soak/rollback vocabulary is
-    // turn-indexed, and a wall-clock timestamp cannot be mapped back to a turn
-    // on a world whose cadence paused. Read before the write so the recorded
-    // turn is the one the world was on when the operator acted.
+    // Read before the write so activation plans are validated against the turn the
+    // world was on when the operator acted.
     const currentTurn = await getCurrentTurn(db);
     if (shortageResponsiveSourcingEnabled === true) {
       if (!intervention) {
@@ -465,7 +414,7 @@ export async function PATCH(request: Request) {
     const gameState = gameStateCollection(db);
     const snapshot = (enabled: boolean) => ({
       enabled,
-      marketSystemMode: mode,
+      marketSystemMode: "plants" as const,
       commandEconomyEnabled:
         commandEconomyEnabled ?? existingConfig?.commandEconomyEnabled === true,
     });
@@ -481,10 +430,6 @@ export async function PATCH(request: Request) {
         guard,
         {
           $set: {
-            marketSystemMode: mode,
-            marketSystemModeUpdatedBy: auth.admin.username,
-            marketSystemModeUpdatedAt: new Date().toISOString(),
-            marketSystemModeUpdatedTurn: currentTurn,
             ...governorSet,
           },
         },
@@ -537,21 +482,14 @@ export async function PATCH(request: Request) {
 
     await createAdminLog({
       category: "system",
-      action: mode === "off" ? "market_system_disabled" : "market_system_set",
+      action: "market_system_set",
       username: auth.admin.username,
       adminUsername: auth.admin.username,
-      details:
-        mode === "off"
-          ? `Market system disabled (was "${priorMode}") at turn ${currentTurn}. Economy reverts to baseline behavior.`
-          : `Market system mode set to "${mode}" (was "${priorMode}") at turn ${currentTurn}` +
-            (MARKET_MODE_INFO[mode].live !== true ? " [NON-LIVE tier, forced]" : "") +
-            ".",
+      details: `Market configuration updated at turn ${currentTurn}.`,
     });
 
     return NextResponse.json({
       success: true,
-      mode,
-      priorMode,
       mediaRegulationEnabled: effectiveMediaRegulationEnabled,
     });
   } catch (error) {

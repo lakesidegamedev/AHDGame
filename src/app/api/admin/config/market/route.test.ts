@@ -68,7 +68,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
 
     const { PATCH } = await import("./route");
     const res = await PATCH(
-      makePatchRequest({ mode: "capital", extractionOutputScaleEnabled: true })
+      makePatchRequest({ mode: "plants", extractionOutputScaleEnabled: true })
     );
 
     expect(res.status).toBe(200);
@@ -76,7 +76,6 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
       { _id: "default" },
       {
         $set: expect.objectContaining({
-          marketSystemMode: "capital",
           extractionOutputScaleEnabled: true,
         }),
       },
@@ -91,7 +90,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     });
 
     const { PATCH } = await import("./route");
-    await PATCH(makePatchRequest({ mode: "capital" }));
+    await PATCH(makePatchRequest({ mode: "plants" }));
 
     const setArg = db.collectionMocks.gameConfig!.updateOne.mock.calls[0]?.[1]?.$set as Record<
       string,
@@ -109,7 +108,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     });
 
     const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "clearing", mediaRegulationEnabled: true }));
+    const res = await PATCH(makePatchRequest({ mode: "plants", mediaRegulationEnabled: true }));
 
     expect(res.status).toBe(200);
     expect(db.collectionMocks.gameState!.updateOne).toHaveBeenNthCalledWith(
@@ -119,7 +118,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
         $set: {
           mediaRegulationSnapshot: {
             enabled: false,
-            marketSystemMode: "clearing",
+            marketSystemMode: "plants",
             commandEconomyEnabled: false,
           },
         },
@@ -132,7 +131,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
         $set: {
           mediaRegulationSnapshot: {
             enabled: true,
-            marketSystemMode: "clearing",
+            marketSystemMode: "plants",
             commandEconomyEnabled: false,
           },
         },
@@ -153,7 +152,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
       .mockImplementationOnce(async () => ({ acknowledged: true }) as never);
 
     const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "clearing", mediaRegulationEnabled: true }));
+    const res = await PATCH(makePatchRequest({ mode: "plants", mediaRegulationEnabled: true }));
 
     expect(res.status).toBeGreaterThanOrEqual(500);
     expect(db.collectionMocks.gameConfig!.updateOne).toHaveBeenCalledTimes(2);
@@ -166,21 +165,6 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
       { _id: "current" },
       { $set: { mediaRegulationSnapshot: expect.objectContaining({ enabled: false }) } }
     );
-  });
-
-  it("refuses to enable media regulation below clearing", async () => {
-    db.collectionMocks.gameConfig!.findOne.mockResolvedValue({
-      _id: "default",
-      marketSystemMode: "plants",
-      mediaRegulationEnabled: false,
-    });
-
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "ledger", mediaRegulationEnabled: true }));
-
-    expect(res.status).toBe(400);
-    expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.gameState!.updateOne).not.toHaveBeenCalled();
   });
 
   it("exposes the v2 product flag and keeps it false when absent", async () => {
@@ -199,25 +183,6 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     });
     const absent = (await (await GET()).json()) as { productLinesV2Enabled: boolean };
     expect(absent.productLinesV2Enabled).toBe(false);
-  });
-
-  it("allows the product flag only at the plants tier or above", async () => {
-    const { PATCH } = await import("./route");
-    const rejected = await PATCH(
-      makePatchRequest({ mode: "capital", productLinesV2Enabled: true })
-    );
-    expect(rejected.status).toBe(400);
-    expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
-
-    const accepted = await PATCH(
-      makePatchRequest({ mode: "plants", allowNonLive: true, productLinesV2Enabled: true })
-    );
-    expect(accepted.status).toBe(200);
-    expect(db.collectionMocks.gameConfig!.updateOne).toHaveBeenCalledWith(
-      { _id: "default" },
-      { $set: expect.objectContaining({ productLinesV2Enabled: true }) },
-      { upsert: true }
-    );
   });
 
   it("GET reflects shortage-responsive sourcing and defaults it off", async () => {
@@ -250,7 +215,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     const { PATCH } = await import("./route");
     await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         shortageResponsiveSourcingEnabled: true,
         intervention: {
           id: "issue-968-shortage-sourcing",
@@ -299,7 +264,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     });
     const { PATCH } = await import("./route");
     const res = await PATCH(
-      makePatchRequest({ mode: "capital", shortageResponsiveSourcingEnabled: true })
+      makePatchRequest({ mode: "plants", shortageResponsiveSourcingEnabled: true })
     );
 
     expect(res.status).toBe(400);
@@ -313,7 +278,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     });
     const { PATCH } = await import("./route");
     const refused = await PATCH(
-      makePatchRequest({ mode: "capital", indexFundBondLiquidityEnabled: true })
+      makePatchRequest({ mode: "plants", indexFundBondLiquidityEnabled: true })
     );
     expect(refused.status).toBe(400);
 
@@ -336,7 +301,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     };
     const accepted = await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         indexFundBondLiquidityEnabled: true,
         bondLiquidityIntervention,
       })
@@ -353,7 +318,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
   it("requires and persists governance for bounded equity liquidity", async () => {
     const { PATCH } = await import("./route");
     const refused = await PATCH(
-      makePatchRequest({ mode: "capital", equityLiquidityFacilityEnabled: true })
+      makePatchRequest({ mode: "plants", equityLiquidityFacilityEnabled: true })
     );
     expect(refused.status).toBe(400);
 
@@ -376,7 +341,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     };
     const accepted = await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         equityLiquidityFacilityEnabled: true,
         equityLiquidityIntervention,
       })
@@ -393,7 +358,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
   it("requires and persists governance for NPP market coverage", async () => {
     const { PATCH } = await import("./route");
     const refused = await PATCH(
-      makePatchRequest({ mode: "capital", nppMarketCoverageEnabled: true })
+      makePatchRequest({ mode: "plants", nppMarketCoverageEnabled: true })
     );
     expect(refused.status).toBe(400);
 
@@ -416,7 +381,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     };
     const accepted = await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         nppMarketCoverageEnabled: true,
         marketCoverageIntervention,
       })
@@ -433,7 +398,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
   it("requires and persists governance for fragile-market supply routing", async () => {
     const { PATCH } = await import("./route");
     const refused = await PATCH(
-      makePatchRequest({ mode: "capital", nppFragileMarketSupplyEnabled: true })
+      makePatchRequest({ mode: "plants", nppFragileMarketSupplyEnabled: true })
     );
     expect(refused.status).toBe(400);
 
@@ -456,7 +421,7 @@ describe("GET/PATCH /api/admin/config/market — extractionOutputScaleEnabled", 
     };
     const accepted = await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         nppFragileMarketSupplyEnabled: true,
         fragileMarketSupplyIntervention,
       })
@@ -490,75 +455,6 @@ vi.mock("@/lib/market/modes", async (importOriginal) => {
       plants: { ...actual.MARKET_MODE_INFO.plants, live: false },
     },
   };
-});
-
-describe("PATCH /api/admin/config/market — non-live tier gate", () => {
-  let db: MockDb;
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    db = createMockDb();
-    db.collection("gameConfig");
-    db.collectionMocks.gameConfig!.findOne.mockResolvedValue({
-      _id: "default",
-      marketSystemMode: "capital",
-    });
-
-    const { getDb } = await import("@/lib/mongodb");
-    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
-
-    const { requireAdmin } = await import("@/lib/api/requireAdmin");
-    vi.mocked(requireAdmin).mockResolvedValue({
-      ok: true,
-      admin: { username: "admin" },
-    } as never);
-  });
-
-  it("rejects a non-live mode (plants) with 400 and writes nothing", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "plants" }));
-
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toContain("not live");
-    expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
-  });
-
-  it("accepts a non-live mode when allowNonLive is true", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "plants", allowNonLive: true }));
-
-    expect(res.status).toBe(200);
-    expect(db.collectionMocks.gameConfig!.updateOne).toHaveBeenCalledWith(
-      { _id: "default" },
-      { $set: expect.objectContaining({ marketSystemMode: "plants" }) },
-      { upsert: true }
-    );
-  });
-
-  it("does not require allowNonLive for a live mode", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "capital" }));
-
-    expect(res.status).toBe(200);
-    expect(db.collectionMocks.gameConfig!.updateOne).toHaveBeenCalled();
-  });
-
-  it("allowNonLive does not bypass the enum — an unknown mode is still 400", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "teleportation", allowNonLive: true }));
-
-    expect(res.status).toBe(400);
-    expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
-  });
-
-  // "off" must never be gated — it is the escape hatch back to baseline.
-  it("never gates the off tier", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "off" }));
-
-    expect(res.status).toBe(200);
-  });
 });
 
 describe("GET/PATCH /api/admin/config/market — #1001 sandbox-only gates", () => {
@@ -614,7 +510,7 @@ describe("GET/PATCH /api/admin/config/market — #1001 sandbox-only gates", () =
     const { PATCH } = await import("./route");
     const res = await PATCH(
       makePatchRequest({
-        mode: "capital",
+        mode: "plants",
         sovereignIssuanceConsolidationEnabled: false,
         domesticSovereignBondCoverageEnabled: false,
       })
@@ -635,7 +531,7 @@ describe("GET/PATCH /api/admin/config/market — #1001 sandbox-only gates", () =
 
   it("PATCH omits both gates from $set when not provided", async () => {
     const { PATCH } = await import("./route");
-    await PATCH(makePatchRequest({ mode: "capital" }));
+    await PATCH(makePatchRequest({ mode: "plants" }));
 
     const setArg = db.collectionMocks.gameConfig!.updateOne.mock.calls[0]?.[1]?.$set as Record<
       string,
@@ -649,7 +545,7 @@ describe("GET/PATCH /api/admin/config/market — #1001 sandbox-only gates", () =
     "PATCH rejects enabling %s live (sandbox-only) and writes nothing",
     async (flag) => {
       const { PATCH } = await import("./route");
-      const res = await PATCH(makePatchRequest({ mode: "capital", [flag]: true }));
+      const res = await PATCH(makePatchRequest({ mode: "plants", [flag]: true }));
 
       expect(res.status).toBe(400);
       const body = (await res.json()) as { error: string };
@@ -662,7 +558,7 @@ describe("GET/PATCH /api/admin/config/market — #1001 sandbox-only gates", () =
     "PATCH rejects a non-boolean %s with 400",
     async (flag) => {
       const { PATCH } = await import("./route");
-      const res = await PATCH(makePatchRequest({ mode: "capital", [flag]: "yes" }));
+      const res = await PATCH(makePatchRequest({ mode: "plants", [flag]: "yes" }));
 
       expect(res.status).toBe(400);
       expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
@@ -699,7 +595,7 @@ describe("PATCH /api/admin/config/market: media slate prerequisites", () => {
     });
     const { PATCH } = await import("./route");
     const response = await PATCH(
-      makePatchRequest({ mode: "clearing", mediaProductSlatesEnabled: true })
+      makePatchRequest({ mode: "plants", mediaProductSlatesEnabled: true })
     );
 
     expect(response.status).toBe(400);
@@ -714,7 +610,7 @@ describe("PATCH /api/admin/config/market: media slate prerequisites", () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(
       makePatchRequest({
-        mode: "clearing",
+        mode: "plants",
         mediaOperatingModelsEnabled: true,
         mediaProductSlatesEnabled: true,
         brandLoyaltyEnabled: true,
@@ -752,7 +648,7 @@ describe("PATCH /api/admin/config/market: media slate prerequisites", () => {
     db.collectionMocks.gameConfig!.updateOne.mockResolvedValue({ matchedCount: 0 } as never);
     const { PATCH } = await import("./route");
     const response = await PATCH(
-      makePatchRequest({ mode: "clearing", mediaProductSlatesEnabled: true })
+      makePatchRequest({ mode: "plants", mediaProductSlatesEnabled: true })
     );
 
     expect(response.status).toBe(409);
@@ -770,90 +666,26 @@ describe("PATCH /api/admin/config/market: media slate prerequisites", () => {
  * timestamp cannot be mapped back to one after the fact. The route reads the
  * turn at the moment of the flip and stamps it alongside the who and the when.
  */
-describe("PATCH /api/admin/config/market — mode-change provenance", () => {
-  let db: MockDb;
 
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    db = createMockDb();
-    db.collection("gameConfig");
-    db.collection("gameState");
-    db.collectionMocks.gameConfig!.findOne.mockResolvedValue({
-      _id: "default",
-      marketSystemMode: "capital",
-    });
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({
-      _id: "current",
-      currentTurn: 1234,
-    });
+describe("PATCH /api/admin/config/market: the tier is not selectable", () => {
+  it.each(["off", "realization", "ledger", "clearing", "capital"])(
+    "refuses %s and writes nothing",
+    async (mode) => {
+      const db = createMockDb();
+      db.collection("gameConfig");
+      const { getDb } = await import("@/lib/mongodb");
+      vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+      const { requireAdmin } = await import("@/lib/api/requireAdmin");
+      vi.mocked(requireAdmin).mockResolvedValue({
+        ok: true,
+        admin: { username: "admin" },
+      } as never);
 
-    const { getDb } = await import("@/lib/mongodb");
-    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+      const { PATCH } = await import("./route");
+      const res = await PATCH(makePatchRequest({ mode }));
 
-    const { requireAdmin } = await import("@/lib/api/requireAdmin");
-    vi.mocked(requireAdmin).mockResolvedValue({
-      ok: true,
-      admin: { username: "operator" },
-    } as never);
-  });
-
-  it("stamps who, when and on WHICH TURN the mode changed", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "plants", allowNonLive: true }));
-
-    expect(res.status).toBe(200);
-    const setArg = db.collectionMocks.gameConfig!.updateOne.mock.calls[0]?.[1]?.$set as Record<
-      string,
-      unknown
-    >;
-    expect(setArg.marketSystemMode).toBe("plants");
-    expect(setArg.marketSystemModeUpdatedBy).toBe("operator");
-    expect(setArg.marketSystemModeUpdatedTurn).toBe(1234);
-    expect(typeof setArg.marketSystemModeUpdatedAt).toBe("string");
-  });
-
-  it("records the prior mode and the turn in the admin log", async () => {
-    const { PATCH } = await import("./route");
-    await PATCH(makePatchRequest({ mode: "plants", allowNonLive: true }));
-
-    const { createAdminLog } = await import("@/lib/adminLog");
-    expect(createAdminLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "market_system_set",
-        adminUsername: "operator",
-        details: expect.stringContaining('was "capital"'),
-      })
-    );
-    const details = vi.mocked(createAdminLog).mock.calls[0]?.[0]?.details as string;
-    expect(details).toContain("turn 1234");
-  });
-
-  it("returns the prior mode to the caller so a flip is confirmable", async () => {
-    const { PATCH } = await import("./route");
-    const res = await PATCH(makePatchRequest({ mode: "plants", allowNonLive: true }));
-    const body = (await res.json()) as { mode: string; priorMode: string };
-
-    expect(body).toMatchObject({ mode: "plants", priorMode: "capital" });
-  });
-
-  it("stamps the turn on a rollback flip too (plants -> capital)", async () => {
-    db.collectionMocks.gameConfig!.findOne.mockResolvedValue({
-      _id: "default",
-      marketSystemMode: "plants",
-    });
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({
-      _id: "current",
-      currentTurn: 1300,
-    });
-
-    const { PATCH } = await import("./route");
-    await PATCH(makePatchRequest({ mode: "capital" }));
-
-    const setArg = db.collectionMocks.gameConfig!.updateOne.mock.calls[0]?.[1]?.$set as Record<
-      string,
-      unknown
-    >;
-    expect(setArg.marketSystemMode).toBe("capital");
-    expect(setArg.marketSystemModeUpdatedTurn).toBe(1300);
-  });
+      expect(res.status).toBe(400);
+      expect(db.collectionMocks.gameConfig!.updateOne).not.toHaveBeenCalled();
+    }
+  );
 });

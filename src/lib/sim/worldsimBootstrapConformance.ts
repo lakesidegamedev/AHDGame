@@ -66,7 +66,6 @@ export interface WorldsimFeatureManifestInput {
   demographicsDemand: boolean;
   macroGrowth: boolean;
   allFeatureFlags: boolean;
-  marketMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;
@@ -100,7 +99,6 @@ export function buildWorldsimFeatureManifest(
     demographicsDemand: input.demographicsDemand,
     macroGrowth: input.macroGrowth,
     allFeatureFlags: input.allFeatureFlags,
-    marketMode: input.marketMode ?? null,
     canonicalFreightBillingEnabled: input.canonicalFreightBillingEnabled ?? null,
     shortageResponsiveSourcingEnabled: input.shortageResponsiveSourcingEnabled ?? null,
     indexFundBondLiquidityEnabled: input.indexFundBondLiquidityEnabled ?? null,

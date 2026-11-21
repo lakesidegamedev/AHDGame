@@ -45,7 +45,6 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameHealthSummary } from "@/lib/db/types/gameHealthSnapshot";
 import type { TurnLog } from "@/lib/db/types/turnLog";
 import type { WorldsimCorporationBootstrapResult } from "@/lib/sim/worldsimCorporationBootstrap";
-import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { applyCloneControllerPolicy } from "@/lib/sim/cloneControllers";
 import {
@@ -228,22 +227,6 @@ if (!SIM_MONGODB_URI) {
 const seed = arg("seed") ?? "default";
 const preset = arg("preset") ?? DEFAULT_SEED_PRESET;
 const turns = Number(arg("turns") ?? "500");
-// Structural market rework rollout tier. Defaults to unset (leaves the
-// bootstrap default, i.e. "off") so existing runs are unchanged. Patched onto
-// the sandbox gameConfig right after bootstrap so the whole run exercises it.
-//
-// Sourced from MARKET_MODE_ORDER rather than a local literal: the literal
-// silently omitted every tier added after it was written (it stopped at
-// "capital", so the harness could not run "plants" at all — the one tier that
-// most needs sim validation before its flip). @/lib/market/modes is a pure
-// constant module — no imports, no Mongo, no env — so importing it eagerly
-// cannot race the env-var setup below, unlike @/lib/market/featureFlag.
-const marketModeRaw = arg("market-mode");
-if (marketModeRaw && !MARKET_MODE_ORDER.includes(marketModeRaw as MarketSystemMode)) {
-  console.error(`--market-mode must be one of ${MARKET_MODE_ORDER.join(", ")}`);
-  process.exit(1);
-}
-const marketMode = marketModeRaw as MarketSystemMode | undefined;
 
 const canonicalFreightBillingEnabled = parseOptionalBoolean(
   arg("canonical-freight-billing"),
@@ -340,7 +323,7 @@ const preIterationOverride = hasFlag("pre-iteration")
 
 // SIM-ONLY turn-phase profile. The elections-only and economy-only modes isolate
 // one side of the simulation for faster balance runs. Applied to the sandbox
-// gameConfig below (like --market-mode). Default: full turn.
+// gameConfig below. Default: full turn.
 const SIM_TURN_PHASE_MODES = ["full", "elections-only", "economy-only", "macro-only"];
 const modeRaw = arg("mode");
 if (modeRaw && !SIM_TURN_PHASE_MODES.includes(modeRaw)) {
@@ -645,7 +628,6 @@ async function main() {
         demographicsDemand,
         macroGrowth,
         allFeatureFlags,
-        marketMode,
         canonicalFreightBillingEnabled,
         shortageResponsiveSourcingEnabled,
         indexFundBondLiquidityEnabled,
@@ -668,20 +650,6 @@ async function main() {
       );
     }
 
-    // Apply the structural-market rollout tier for this run (if requested).
-    // Sim-only: patches the sandbox gameConfig so every turn resolves
-    // getMarketSystemMode() to this tier — the NPP auto-posture path in the
-    // clearing engine then drives pricing for all AI/unowned sectors.
-    if (marketMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { marketSystemMode: marketMode } },
-          { upsert: true }
-        );
-      log(`Set marketSystemMode="${marketMode}" on sandbox gameConfig`);
-    }
     if (scarcityDrift) {
       await db
         .collection<GameConfig>("gameConfig")
@@ -936,22 +904,12 @@ async function main() {
 
   if (cloneMode && !preserveLiveConfig) {
     // The DB is a restore of the live world. By default make it AI-driven:
-    // patch the market tier, flip every human-run corp to an NPP-run one, and
+    // flip every human-run corp to an NPP-run one, and
     // open the world-level autonomy gates (forceFullAutonomy). With
     // --preserve-player-rail, retain existing corporation controllers while
-    // still applying the world-level gates. Order: market mode and any corp
+    // still applying the world-level gates. Order: any corp
     // conversion before autonomy gates, so the first turn sees the requested
     // controller and economy posture.
-    if (marketMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { marketSystemMode: marketMode } },
-          { upsert: true }
-        );
-      log(`[clone] set marketSystemMode="${marketMode}" on cloned gameConfig`);
-    }
     if (scarcityDrift) {
       await db
         .collection<GameConfig>("gameConfig")
@@ -1032,7 +990,7 @@ async function main() {
 
   // ── SIM-ONLY: elections-only turn profile + country scope ──────────────────
   // Runs for fresh, resumed AND clone worlds (idempotent) so the profile always
-  // takes effect before the turn loop, mirroring how --market-mode is applied.
+  // takes effect before the turn loop.
   if (simTurnPhaseMode) {
     await db
       .collection<GameConfig>("gameConfig")

@@ -24,7 +24,6 @@ describe("sim worker runWorld argument emission", () => {
 
   it("emits every experiment override end to end", () => {
     const job: SimJobExperimentFields = {
-      marketSystemMode: "capital",
       canonicalFreightBillingEnabled: true,
       shortageResponsiveSourcingEnabled: false,
       indexFundBondLiquidityEnabled: true,
@@ -38,7 +37,6 @@ describe("sim worker runWorld argument emission", () => {
       countries: "US,UK",
     };
     expect(buildRunWorldArgs(job)).toEqual([
-      "--market-mode=capital",
       "--canonical-freight-billing=true",
       "--shortage-responsive-sourcing=false",
       "--index-fund-bond-liquidity=true",
@@ -109,10 +107,7 @@ describe("sim worker runWorld argument emission", () => {
     expect(() => buildRunWorldArgs(job)).toThrow("frontierEntryExperimentEnabled must be boolean");
   });
 
-  it("rejects unknown tiers and unsafe country tokens", () => {
-    expect(() => buildRunWorldArgs({ marketSystemMode: "nope" })).toThrow(
-      'invalid marketSystemMode "nope"'
-    );
+  it("rejects unsafe country tokens", () => {
     expect(() => buildRunWorldArgs({ countries: "US;rm" })).toThrow(
       'Job field "countries[]" failed validation'
     );

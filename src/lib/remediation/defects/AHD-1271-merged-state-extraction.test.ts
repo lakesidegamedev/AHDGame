@@ -274,40 +274,6 @@ describe(DEFECT_ID, () => {
     }
   });
 
-  it("applies none of the three plants stamps on a world below the plants tier", async () => {
-    // They are answers to questions that only exist under plants, and each is
-    // actively wrong below it: `sectorTurn` takes a stored `capitalStock`
-    // verbatim in capital mode, so the headroom would make these plants ~10%
-    // LARGER than their siblings rather than equal, and a `plantsStartTurn` on a
-    // non-plants world makes the row skip the migration every sibling takes when
-    // the world is later flipped. `expandSector` gates the same fields the same
-    // way.
-    const { db, inserted } = productionIncidentDb({ marketSystemMode: "capital" });
-    const plan = await defect.plan(db, ctx);
-    await defect.apply(db, plan, ctx);
-
-    expect(inserted).toHaveLength(3);
-    const seedEntry = generateCountryOwnedSeedData(
-      inserted.map((d) => ({
-        id: d.stateId as string,
-        population: 5_000_000,
-        gdp: 20_000_000_000,
-        countryId: "DD" as const,
-      })),
-      "1953-default",
-      true
-    ).find((e) => e.corporation.soe && e.corporation.assignedSectorTypes?.[0] === "extraction");
-
-    for (const doc of inserted) {
-      expect(doc.capacityBookAnchor).toBeUndefined();
-      expect(doc.plantsStartTurn).toBeUndefined();
-      // The seed path's own figure, un-headroomed: what a capital-tier world
-      // gives every other sector.
-      const seeded = seedEntry!.sectors.find((sec) => sec.stateId === doc.stateId)!;
-      expect(doc.capitalStock).toBe(seeded.capitalStock);
-    }
-  });
-
   it("never writes the plan target, and reports what the chair would need to add", async () => {
     // `soe.planTarget` is a PLAYER-SET number. Raising it here would change what
     // the plan demands of an enterprise as a side effect of repairing its

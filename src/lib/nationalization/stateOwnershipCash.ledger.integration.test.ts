@@ -303,9 +303,9 @@ for (const native of [false, true]) {
           tier: "discounted",
           consequence: { method: "executive", triggers: [], turn: 2 },
         });
-        // Valuation: 80,000 cash + 500 held shares - 70,000 debt, discounted (0.5) at
-        // the 5x buyout premium. The held shares are paid for in the buyout (#3041).
-        expect(result.shareholderPayoutAnchor).toBeCloseTo(26_250, 6);
+        // Valuation: 80,000 cash + 500 held shares - 70,000 debt, discounted (0.5), with
+        // no premium on cash under plants. The held shares are paid for in the buyout.
+        expect(result.shareholderPayoutAnchor).toBeCloseTo(5_250, 6);
         expect(await db.collection("corporations").countDocuments({ _id: ids.target })).toBe(0);
         // Pool, three holder rows, float, CEO surplus, recoup, dissolution.
         await close(db, 8);
@@ -352,6 +352,7 @@ for (const native of [false, true]) {
             stateId: "LON",
             sectorType: "energy",
             revenue: 1_000_000,
+            capacityBookAnchor: 1_000_000,
             profitMargin: 0.5,
             workers: 10,
             currentGrowthCost: 0,
@@ -429,6 +430,7 @@ for (const native of [false, true]) {
             stateId: "LON",
             sectorType: "energy",
             revenue: 1_000_000,
+            capacityBookAnchor: 1_000_000,
             profitMargin: 0.5,
             workers: 10,
             currentGrowthCost: 0,
@@ -483,7 +485,10 @@ for (const native of [false, true]) {
 
           await db
             .collection("corporateSectors")
-            .updateOne({ _id: sectorId }, { $set: { revenue: 0, profitMargin: 0 } });
+            .updateOne(
+              { _id: sectorId },
+              { $set: { revenue: 0, profitMargin: 0, capacityBookAnchor: 0 } }
+            );
           const result = await nationalizeSector(db, params);
 
           expect(result.nationalCorporationId).toEqual(natCorpId);
@@ -636,6 +641,7 @@ for (const native of [false, true]) {
             stateId: "LON",
             sectorType: "energy",
             revenue: 1_000_000,
+            capacityBookAnchor: 1_000_000,
             profitMargin: 0.5,
             workers: 10,
             currentGrowthCost: 0,
