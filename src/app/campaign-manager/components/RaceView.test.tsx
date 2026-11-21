@@ -287,7 +287,7 @@ describe("RaceView primary details", () => {
     view(primary({ primaryAdvanceCount: 3 } as Partial<ElectionResponse>));
     expect(screen.getByText(/Top 3 advance to the general/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "How primary scoring works" }));
-    expect(screen.getByText(/Primary share = candidate score/)).toBeTruthy();
+    expect(screen.getByText(/larger differences in candidate scores produce wider leads/)).toBeTruthy();
   });
 
   it("shows your standing on your own primary", () => {
