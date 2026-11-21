@@ -262,3 +262,14 @@ export interface NppPlantsContext {
     sectorType: CorporationType
   ) => number;
 }
+
+/** The sold-share reading world for one decision (rules/fundedSellThrough nppSoldShare). */
+export function soldShareWorldOfDecision(
+  ctx: Pick<NppCorpDecisionContext, "fundedWorldEpoch" | "transitionFirstFundedTurn" | "turn">
+): import("./rules/fundedSellThrough").SoldShareWorld {
+  return {
+    fundedWorldEpoch: ctx.fundedWorldEpoch,
+    firstFundedTurn: ctx.transitionFirstFundedTurn,
+    turn: ctx.turn,
+  };
+}

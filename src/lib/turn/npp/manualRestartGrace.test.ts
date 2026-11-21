@@ -57,10 +57,11 @@ describe("manual restart grace", () => {
     expect(manualRestartGraceEndsTurn({})).toBeNull();
   });
 
-  it("owner restart resets both counters and records the turn", () => {
+  it("owner restart resets the loss and sales counters and records the turn", () => {
     expect(ownerRestartFields(77)).toEqual({
       pnlLossTurns: 0,
       producerZeroSalesTurns: 0,
+      fundedLowSaleTurns: 0,
       manualReactivatedTurn: 77,
     });
   });

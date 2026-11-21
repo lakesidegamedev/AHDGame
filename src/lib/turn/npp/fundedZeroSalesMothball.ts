@@ -54,7 +54,13 @@ export function pushFundedZeroSalesMothballs({
       sectorUpdates.push({
         filter: { _id: reopen._id, mothballed: true },
         update: {
-          $set: { mothballed: false, producerZeroSalesTurns: 0, pnlLossTurns: 0, updatedAt: now },
+          $set: {
+            mothballed: false,
+            producerZeroSalesTurns: 0,
+            fundedLowSaleTurns: 0,
+            pnlLossTurns: 0,
+            updatedAt: now,
+          },
         },
       });
     for (const sector of sectors) {
