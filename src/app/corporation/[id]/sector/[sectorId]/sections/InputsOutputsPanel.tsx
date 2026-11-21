@@ -6,6 +6,9 @@ import { ArrowDownToLine, ArrowUpFromLine, Pickaxe } from "lucide-react";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { THROUGHPUT_MIN } from "@/lib/market/throughput";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
+import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   getCommodityDisplayCurrency,
@@ -67,6 +70,8 @@ export default function InputsOutputsPanel({
   const currencyCode = getCommodityDisplayCurrency(countryId);
   const price = (v: number) =>
     fmtPrice(convertCommodityPrice(v, currencyCode, forexEnabled, exchangeRates));
+  const symbol = CURRENCY_SYMBOLS[currencyCode];
+  const flowPrice = (v: number) => `${symbol}${currencySymbolSep(symbol)}${price(v)}`;
 
   // Per-output clear rate, NOT the sector-wide blend. `plants.fillRate` is
   // soldUnits/producedUnits summed across the whole mix, so painting it on every
@@ -171,9 +176,8 @@ export default function InputsOutputsPanel({
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
       <h2 className="text-heading-sm font-bold text-foreground">What goes in, what comes out</h2>
       <p className="mb-4 mt-1 text-body-sm text-muted">
-        Your plants buy the things on the left and make the things on the right. Amounts are what
-        they bought and made last turn, per day. Prices are per unit, in {currencyCode}: what you
-        were charged for inputs
+        Your plants buy the things on the left and make the things on the right. Amounts are daily.
+        Prices are per unit, in {currencyCode}: what you were charged for inputs
         {showsRealizedOutput
           ? hasSettledSales || perProductPrice.size > 0
             ? " and what each thing you make sold for"
@@ -209,7 +213,8 @@ export default function InputsOutputsPanel({
                 <FlowRow
                   key={f.commodity}
                   flow={{ ...f, units: f.units * inputUnitScale }}
-                  priceText={price(f.billedUnitPrice ?? f.marketPrice)}
+                  marketReference={f.billedUnitPrice == null}
+                  priceText={flowPrice(f.billedUnitPrice ?? f.marketPrice)}
                   short={shortInputs.has(f.commodity)}
                   offers={
                     shortInputs.has(f.commodity) ? (
@@ -309,8 +314,19 @@ export default function InputsOutputsPanel({
               {commodities.supplies.map((f) => (
                 <FlowRow
                   key={f.commodity}
-                  flow={{ ...f, units: f.units * outputUnitScale }}
-                  priceText={price(
+                  flow={{
+                    ...f,
+                    units:
+                      f.settledSales && Number.isFinite(f.settledSales.produced)
+                        ? f.settledSales.produced * TURNS_PER_DAY
+                        : f.units * outputUnitScale,
+                  }}
+                  marketReference={
+                    f.settledSales
+                      ? f.settledSales.sold === 0
+                      : realizedOutputPrice == null && !perProductPrice.has(f.commodity)
+                  }
+                  priceText={flowPrice(
                     f.settledSales
                       ? f.settledSales.sold > 0
                         ? f.settledSales.revenue / f.settledSales.sold
@@ -324,7 +340,7 @@ export default function InputsOutputsPanel({
                       return (
                         <InfoTooltip
                           trigger={
-                            <span className="text-body-xs text-muted">
+                            <span className="border-b border-dotted border-muted/40 text-body-xs text-muted">
                               {settled.ownSites >= settled.offered - 1e-6
                                 ? "Supplied your own sites"
                                 : `${fmtPct(settled.sold / settled.offered)} of offers sold`}
@@ -335,8 +351,8 @@ export default function InputsOutputsPanel({
                           <p className="text-muted">Last settled turn</p>
                           <p>{fmtUnits(settled.offered, 2)} offered</p>
                           <p>
-                            {fmtUnits(settled.sold, 2)} sold outside · {price(settled.revenue)}{" "}
-                            {currencyCode} sales
+                            {fmtUnits(settled.sold, 2)} sold outside · {flowPrice(settled.revenue)}{" "}
+                            sales
                           </p>
                           <p>{fmtUnits(settled.ownSites, 2)} sent to your sites</p>
                           <p>{fmtUnits(settled.unsold, 2)} unsold</p>
@@ -584,9 +600,11 @@ function FlowRow({
   badge,
   short = false,
   offers = null,
+  marketReference = false,
 }: {
   flow: CommodityFlow;
   priceText: string;
+  marketReference?: boolean;
   right: React.ReactNode;
   badge: React.ReactNode;
   /** Input rows only: this input fell short last turn. */
@@ -601,45 +619,43 @@ function FlowRow({
         short ? "border-warning/50 bg-warning/10" : "border-card-border bg-background/40"
       }`}
     >
-      <Link
-        href={`/commodity/${flow.commodity}`}
-        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-body-xs font-bold transition-opacity hover:opacity-80 ${flow.colors}`}
-        aria-label={`Open the ${flow.label} market`}
-      >
-        {flow.icon}
-      </Link>
-      {/* `min-w-0` on the tooltip wrapper, not just the inner span: InfoTooltip
-          renders an inline-block, which as a flex child refuses to shrink below
-          its content, so the label overran the numbers on the right instead of
-          truncating. */}
-      <InfoTooltip
-        width={260}
-        className="min-w-0 flex-1"
-        trigger={
-          <span className="block cursor-help truncate border-b border-dotted border-muted/40 text-body-sm text-foreground">
-            {flow.label}
-          </span>
-        }
-      >
-        <p className="mb-1 font-semibold text-foreground">{flow.label}</p>
-        <p className="text-muted">
-          {fmtUnits(flow.units, 1)} {flow.unit} a day at {priceText} each.
-        </p>
-        {flow.priceAttribution && (
-          <p className="mt-2 text-muted">
-            Global price drivers: inflation {signedPrice(flow.priceAttribution.nominalInflation)},
-            scarcity memory {signedPrice(flow.priceAttribution.scarcityMemory)}, current market
-            balance {signedPrice(flow.priceAttribution.marketBalance)}, producer input costs{" "}
-            {signedPrice(flow.priceAttribution.producerInputCostPassThrough)}, adjustment lag{" "}
-            {signedPrice(flow.priceAttribution.adjustmentLag)}
-            {flow.priceAttribution.explicitOverride !== 0 && (
-              <>, override {signedPrice(flow.priceAttribution.explicitOverride)}</>
-            )}
-            . These explain the global leg; country and regional conditions set the local price
-            shown on this row.
+      <div className="flex w-full min-w-0 items-center gap-2">
+        <Link
+          href={`/commodity/${flow.commodity}`}
+          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-body-xs font-bold transition-opacity hover:opacity-80 ${flow.colors}`}
+          aria-label={`Open the ${flow.label} market`}
+        >
+          {flow.icon}
+        </Link>
+        <InfoTooltip
+          width={260}
+          className="min-w-0 flex-1"
+          trigger={
+            <span className="block cursor-help truncate border-b border-dotted border-muted/40 text-body-sm text-foreground">
+              {flow.label}
+            </span>
+          }
+        >
+          <p className="mb-1 font-semibold text-foreground">{flow.label}</p>
+          <p className="text-muted">
+            {fmtUnits(flow.units, 1)} {flow.unit} a day at {priceText} each.
           </p>
-        )}
-      </InfoTooltip>
+          {flow.priceAttribution && (
+            <p className="mt-2 text-muted">
+              Global price drivers: inflation {signedPrice(flow.priceAttribution.nominalInflation)},
+              scarcity memory {signedPrice(flow.priceAttribution.scarcityMemory)}, current market
+              balance {signedPrice(flow.priceAttribution.marketBalance)}, producer input costs{" "}
+              {signedPrice(flow.priceAttribution.producerInputCostPassThrough)}, adjustment lag{" "}
+              {signedPrice(flow.priceAttribution.adjustmentLag)}
+              {flow.priceAttribution.explicitOverride !== 0 && (
+                <>, override {signedPrice(flow.priceAttribution.explicitOverride)}</>
+              )}
+              . These explain the global leg; country and regional conditions set the local price
+              shown on this row.
+            </p>
+          )}
+        </InfoTooltip>
+      </div>
       {short && (
         <span className="shrink-0 rounded bg-warning/20 px-1.5 py-0.5 text-body-xs font-semibold text-warning">
           Ran short
@@ -647,8 +663,9 @@ function FlowRow({
       )}
       {badge && <span className="shrink-0">{badge}</span>}
       <span className="shrink-0 text-body-sm tabular-nums text-muted">
-        <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span> ·{" "}
-        {priceText}
+        <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span>{" "}
+        {flow.unit ? `${flow.unit}/day` : "per day"} · {marketReference ? "Market " : ""}
+        {priceText}/unit
       </span>
       {right && <span className="shrink-0">{right}</span>}
       {offers && <span className="shrink-0">{offers}</span>}
