@@ -808,6 +808,7 @@ export default function SectorDetailPage() {
                     financials={financials}
                     corporation={corporation}
                     outputCount={commodities?.supplies.length}
+                    outputs={commodities?.supplies}
                   />
                 </>
               )}
@@ -958,6 +959,7 @@ export default function SectorDetailPage() {
                 deliveryLimitedFraction={plants.truth.deliveryLimitedFraction ?? 0}
                 deliveryLimitedFreightClass={plants.truth.deliveryLimitedFreightClass ?? null}
                 isCeo={isCeo}
+                outputs={commodities?.supplies}
               />
             )}
 

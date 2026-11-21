@@ -144,6 +144,7 @@
       "mothballHelp": "Mothball all capacity or park just a share below. Cold capacity pays {percent}% of its anchored maintenance basis and produces nothing. Normal depreciation continues.",
       "cancelHelp": "Cancellation returns 75% of the cost of the capacity still under construction. Delivered capacity is kept.",
       "strandedOptions": "Options: park surplus capacity in the Plant panel, change to a strategy with stronger demand, stockpile storable goods during a temporary glut, or sell the sector. Growing capacity will help only where buyers can absorb it.",
+      "strandedMixedOptions": "Options: change to a strategy that makes more {selling}, park surplus capacity in the Plant panel, or stockpile storable goods during a temporary glut. Building more of the same mix adds more of what is not selling.",
       "freightState": "State freight: {load} TEU used{turnLabel} of {capacity} TEU available.",
       "freightStateTurn": " in turn {turn}",
       "freightOneHopEstimate": "If this sector ran at full capacity and shipped all output one state away, it would need about {estimate} TEU per day. Local sales use no freight; longer routes use more.",
