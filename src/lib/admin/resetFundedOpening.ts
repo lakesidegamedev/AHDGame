@@ -183,7 +183,10 @@ export async function openResetWorldFunded(
     planDigest: census.planDigest,
     approvedDigest: census.planDigest,
   });
-  const switched = await applyFundedSwitch(db, { expectedWorldEpoch: epoch });
+  const switched = await applyFundedSwitch(db, {
+    expectedWorldEpoch: epoch,
+    usePresetOpeningPrices: true,
+  });
   return {
     ...gaps,
     openingSectors: census.plan.sectors.length,
