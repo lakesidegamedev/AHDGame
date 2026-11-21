@@ -1,39 +1,12 @@
 export const gettingStartedContent = `# Getting Started
 
-You have just signed up and the dashboard is full of numbers. This page gets you from there to a declared candidacy in your first week, and tells you what to ignore until then. Read it with the game open and click through as you go. The game is built to be played a few turns at a time, not in one sitting.
+[Create a character](/create-character), then open [your profile](/profile). Each real hour is one turn.
 
-\`\`\`guide-screenshot
-home
-\`\`\`
+## Start here
 
-*The front door: sign in or register, then create a character.*
-
-## What the game asks of you
-
-- The game runs in your browser. There is no download.
-- One turn runs every real hour, whether you are online or not. Log in once or twice a day, spend your actions, and leave. [The Game Loop](/wiki/the-game-loop) covers how often you really need to show up and what skipping a day costs.
-- If you have no character yet, the game sends you to **Create Character**. The onboarding choices, including your wealth background, are in [Create a Character](/wiki/create-a-character) (after an economy reset you pick the wealth background once more), and your country, home, sliders and kit set the starting numbers below.
-- Pick a country whose politics you already understand if you are learning. The country picker is the authoritative list for your world.
-- Your first week is about influence, a party, and one race. Corporations, bonds, and central banks can wait.
-
-## Six numbers on your profile
-
-![Profile of a new character showing actions, state influence, national influence and favorability](/wiki-images/screens/getting-started-new-character-profile.webp)
-
-| Number | What it is | What it buys |
-| --- | --- | --- |
-| **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, and most other moves. Declaring for a race costs none. |
-| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units. | Ads, polls, donor building, and influence operations. |
-| **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal. Above 60 it slips a little every turn. |
-| **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
-| **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
-| **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
-
-Campaign Funds and Cash on Hand are different pools, and nothing on the campaign screen spends your personal cash automatically. To move cash into campaign funds, use **Personal Campaign Donation**: it costs 2 actions, takes the cash you choose, lands 50% of it in campaign funds (the other 50% is lost), and adds Infamy (about 4 for ₳100,000 and 15 for ₳1,000,000). New characters also get a 28-point spread across seven stats at creation, which scale action caps. See [Stats & Actions](/wiki/stats-actions).
-
-Funds also arrive on their own every turn. The base amount depends on your home state's size (₳5,000 to ₳40,000 per turn), and your donor level adds to it. Most days, funds rather than actions are what limit you.
-
-There is a third pool you will meet later. A corporation's treasury is not your personal cash, even when you are the CEO. Salaries and dividends are how value leaves the company. The most common new-player error is spending campaign funds on personal investments, or assuming a corporation's cash can pay for a campaign.
+1. **Campaign at home three times.** Use the first-days panel on your profile or open [Actions](/actions).
+2. **Choose a party.** Compare the parties in your region, or run as an independent.
+3. **Enter a local race.** Open [Elections](/elections), find a race in your region accepting candidates, and choose **Enter race**.
 
 ## The first ten minutes
 
@@ -61,6 +34,25 @@ elections
 
 ![The first ten minutes as a flow: read the dashboard, campaign, join a party, build donors and fundraise, find a race, poll, declare and open View Campaign, with the no-open-race and missed-window branches.](/wiki-images/diagrams/getting-started-first-ten-minutes.svg)
 
+## Six numbers on your profile
+
+![Profile of a new character showing actions, state influence, national influence and favorability](/wiki-images/screens/getting-started-new-character-profile.webp)
+
+| Number | What it is | What it buys |
+| --- | --- | --- |
+| **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, and most other moves. Declaring for a race costs none. |
+| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units. | Ads, polls, donor building, and influence operations. |
+| **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal. Above 60 it slips a little every turn. |
+| **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
+| **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
+| **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
+
+Campaign Funds and Cash on Hand are different pools, and nothing on the campaign screen spends your personal cash automatically. To move cash into campaign funds, use **Personal Campaign Donation**: it costs 2 actions, takes the cash you choose, lands 50% of it in campaign funds (the other 50% is lost), and adds Infamy (about 4 for ₳100,000 and 15 for ₳1,000,000). New characters also get a 28-point spread across seven stats at creation, which scale action caps. See [Stats & Actions](/wiki/stats-actions).
+
+Funds also arrive on their own every turn. The base amount depends on your home state's size (₳5,000 to ₳40,000 per turn), and your donor level adds to it. Most days, funds rather than actions are what limit you.
+
+There is a third pool you will meet later. A corporation's treasury is not your personal cash, even when you are the CEO. Salaries and dividends are how value leaves the company. The most common new-player error is spending campaign funds on personal investments, or assuming a corporation's cash can pay for a campaign.
+
 ## Spending your first 25 actions
 
 There is no single correct build, but this allocation covers the first-days goals and leaves room to react. It spends exactly 25 actions.
@@ -82,7 +74,7 @@ That leaves about ₳81,000 of your ₳250,000, assuming a state with average GD
 
 Costs scale with your stats and state, so the funds numbers in the game will differ from the table. The action costs can move too: Campaign costs 1 action below 20 PI and rises to 2 at 20, 3 at 40, 4 at 60, and 5 at 80. Build Donor Network starts at 4 and rises with donor level, and Run Advertisements costs 5 below 30 Favorability, 6 at 30 to 49, 7 at 50 to 69, 8 at 70 to 84, and 9 at 85 or above. The table uses a new character's starting values.
 
-Your profile may also show a starter checklist until you dismiss it or finish it. It follows the plan you picked in the tutorial: scouting your state, joining a party, a first vote, investing, a Campaign action, filing for a race, founding a company, backing a union and reading the wire. Finishing every required step pays a one-time bonus of campaign funds worth 20% of the starting amount (₳50,000 with the default start). Separately, the first-days panel runs for your first 72 hours and lists the three goals in step 1.
+Your profile may also show a starter checklist until you dismiss it or finish it. It follows the plan you picked in the tutorial: scouting your state, joining a party, a first vote, investing, a Campaign action, filing for a race, founding a company, backing a union and reading the wire. Finishing every required step pays a one-time bonus of campaign funds worth 20% of the starting amount (₳50,000 with the default start). Separately, the first-days panel runs for your first 72 hours and lists your first three goals.
 
 ## After you declare
 
@@ -101,26 +93,12 @@ Your profile may also show a starter checklist until you dismiss it or finish it
 - [ ] Read [First Campaign Walkthrough](/wiki/first-campaign-walkthrough) before you spend the rest of your war chest.
 - [ ] Read [Tips for Beginners](/wiki/tips-for-beginners) for the mistakes that cost new players the most.
 
-## Contests running alongside
-
-Open **Contests** next to Help. Weekly rounds compare players on fourteen measures, grouped into business, politics, government, and referrals. The top three with a positive score split each cash prize 50 / 30 / 20, except government approval, which is winner takes all. New corporations and characters join at the start of the next round.
-
-- **Business:** small business growth, big business growth, comeback of the week (corporations that lost at least 10% the week before), and personal wealth growth (net worth: cash, savings, shares, bonds and funds).
-- **Politics:** most NPI gained, rookie of the week (characters created in the last two weeks), backbencher of the week (started the round in the lower half), public image (most Favorability gained), and kingmaker (most races won by candidates you endorsed).
-- **Government:** legislator of the week (bills you sponsored that became law), government approval, statehouse approval and party growth, each for a player who leads the government, state or party.
-- **Referrals:** most new players brought in this week.
-
-A separate season-long **iteration referrals** race counts new players who create a character during the current iteration. The top three iteration referrers can earn Supporter for the next iteration. Paying subscriptions are separate.
-
-The fine print matters: growth excludes capital you inject during the round, an approval entry requires the same player head of government throughout the round, and party growth requires the same chair. Weekly and iteration rankings exclude banned referees, self-referrals, and strongly linked accounts.
-
-The Discord bot also offers casino games paid in your character's home currency. Review the quoted stake and payout before playing.
-
 ## Read your country's hub
 
 Each hub explains that country's offices, election system, legislature, government formation, currency, and economy. The classic ten are below. Worlds built on the 1991 preset add more countries than these pages currently cover; use the country picker in game for the authoritative list, and read the country page for the one you join.
 
 - [United States](/wiki/us-overview)
+- [Canada](/country/ca)
 - [United Kingdom](/wiki/uk-overview)
 - [Germany](/wiki/de-overview)
 - [Japan](/wiki/jp-overview)

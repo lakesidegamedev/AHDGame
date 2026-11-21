@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
 import { faqContent } from "@/lib/seeds/wiki/content/faq";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { migration } from "./2026-11-19-faq-party-leadership";
+import { migration } from "./2026-11-21-faq-party-leadership";
 
 const paragraphStart =
   "You draft a **Party Charter** on the new-charter page: name, abbreviation, an economic and social platform, and three human founders (yourself plus two others). Your two co-founders must live in your home state or a state adjacent to it, since a new party's founding trio is geographically anchored, just like its founding NPP cohort. Once all three founders sign on the charter's page, the charter ratifies, the party is created, and all three founders are joined to it as members.";

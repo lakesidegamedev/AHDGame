@@ -61,3 +61,33 @@ describe("US budget publication", () => {
     expect(body.budget.balance).toBe(125);
   });
 });
+
+it("publishes regional debt, cash and interest without losing authorized service costs", async () => {
+  await db
+    .collection("states")
+    .insertOne({ _id: "LON" as never, countryId: "UK", population: 100, gdp: 100 });
+  await db.collection("regionalBudgets").insertOne({
+    _id: "LON" as never,
+    countryId: "UK",
+    totalBudget: 120,
+    enactedBillCosts: 100,
+    interestPayments: 5,
+    surplus: 15,
+    councilTaxRevenue: 70,
+    businessRatesRevenue: 30,
+    westminsterGrant: 20,
+    financing: { principal: 100, cash: 25 },
+  });
+  const response = await GET(new Request("http://localhost/api/country/UK/region/LON/budget"), {
+    params: Promise.resolve({ code: "UK", id: "LON" }),
+  });
+  expect(response.status).toBe(200);
+  const { budget } = await response.json();
+  expect(budget.balance).toBe(25);
+  expect(budget.financing.principal).toBe(100);
+  expect(budget.spending.interestPayments).toBe(5);
+  expect(budget.spending.total).toBe(105);
+  expect(
+    Object.values(budget.spending.byCategory).reduce((sum: number, value) => sum + Number(value), 0)
+  ).toBe(100);
+});

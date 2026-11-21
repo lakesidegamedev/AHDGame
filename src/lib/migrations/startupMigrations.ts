@@ -1,3 +1,4 @@
+import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
 import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
@@ -42,7 +43,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
-import { migration as faqPartyLeadership } from "./entries/2026-11-19-faq-party-leadership";
+import { migration as faqPartyLeadership } from "./entries/2026-11-21-faq-party-leadership";
 import { runMigrations, type RunSummary } from "./runner";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
@@ -130,6 +131,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Energy sectors on the removed fracking method must leave it before a turn runs without it.
   moveFrackingToExtraction,
   linearBuildDelivery,
+  corporationsWikiMargins,
   faqPartyLeadership,
 ];
 
@@ -185,8 +187,10 @@ export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> 
     db
   ).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   // A reset preserves historical markers but removes opening pool rows.
-  // Bootstrap only the new 1991 world; never refill an existing cash pool.
-  if (state?.preset === "1991-default" && state.currentTurn === 1) {
+  if (
+    state?.currentTurn === 1 &&
+    (state.preset === "1991-default" || state.preset === "2027-default")
+  ) {
     summaries.push(
       await runMigrations(db, {
         migrations: [bondMarketPools],

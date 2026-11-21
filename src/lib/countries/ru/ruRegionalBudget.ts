@@ -18,7 +18,6 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
-import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
@@ -100,7 +99,6 @@ export async function processRURegionalBudgets(
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
-  const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
   let regionsProcessed = 0;
 
@@ -120,32 +118,6 @@ export async function processRURegionalBudgets(
     const surplus = unionGrant - enactedBillCosts;
     const isOverBudget = surplus < 0;
     const turnsOverBudget = isOverBudget ? (existing?.turnsOverBudget ?? 0) + 1 : 0;
-
-    // Forced austerity: over budget for more than one turn → the most
-    // expensive programme drops one level (mirrors the UK pipeline).
-    if (turnsOverBudget > 1 && lawCosts.length > 0) {
-      const mostExpensive = [...lawCosts].sort((a, b) => b.cost - a.cost)[0];
-      if (mostExpensive.cost > 0 && mostExpensive.level > 0) {
-        const law = getLaw(mostExpensive.lawId)!;
-        const doc = projectLawToLegislationType(law);
-        const newLevel = mostExpensive.level - 1;
-        const option = doc.policyOptions![newLevel];
-        statePolicyOps.push({
-          updateOne: {
-            filter: { stateId: regionId, legislationTypeId: mostExpensive.lawId },
-            update: {
-              $set: {
-                policyOptionId: option.id,
-                policyOptionIndex: newLevel,
-                economic: option.economic,
-                social: option.social,
-                effectDirection: option.effectDirection,
-              },
-            },
-          },
-        });
-      }
-    }
 
     const budgetDoc: RegionalBudget = {
       _id: regionId,
@@ -176,9 +148,6 @@ export async function processRURegionalBudgets(
     regionsProcessed++;
   }
 
-  if (statePolicyOps.length > 0) {
-    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
-  }
   if (regionalBudgetOps.length > 0) {
     await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }

@@ -403,7 +403,6 @@ describe("bank action visibility", () => {
   it.each([
     { isCeo: false, canMutate: false, privateBankingEnabled: true },
     { isCeo: true, canMutate: false, privateBankingEnabled: false },
-    { isCeo: true, canMutate: true, privateBankingEnabled: true, eligibleTypes: [] },
   ])("hides unavailable charter creation", async (state) => {
     global.fetch = vi.fn(async () =>
       ok({ ...payload, charter: null, ...state })
@@ -413,6 +412,26 @@ describe("bank action visibility", () => {
     expect(screen.queryByText("Issue bank charter")).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByText(/only the ceo/i)).toBeNull();
+  });
+
+  it("explains why no charter can be issued instead of rendering a blank tab", async () => {
+    global.fetch = vi.fn(async () =>
+      ok({
+        ...payload,
+        charter: null,
+        eligibleTypes: [],
+        eligibilityReasons: ["Insufficient treasury for a retail charter"],
+        capitalRequirementByType: { retail: 1_000_000, investment: 2_000_000 },
+        corporation: { ...payload.corporation, liquidCapital: 210_452.64 },
+      })
+    ) as unknown as typeof fetch;
+    render(<BankConsoleTab corporationId="corp1" isCeo />);
+    await screen.findByText(/none can be issued right now/i);
+    expect(screen.getByText("Insufficient treasury for a retail charter")).toBeTruthy();
+    expect(screen.getAllByText(/charter capital/i)).toHaveLength(2);
+    expect(screen.getByText(/Treasury/)).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /issue charter/i })).toBeNull();
   });
 
   it("keeps customer actions without exposing bank management to other viewers", async () => {

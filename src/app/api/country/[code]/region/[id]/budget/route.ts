@@ -16,11 +16,6 @@ import {
   isParliamentarySystem,
   type CountryId,
 } from "@/lib/constants/countries";
-import type { StateBudget, EnactedLaw } from "@/lib/db/types/budget";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { LegislationType } from "@/lib/db/types/legislation";
-import type { State } from "@/lib/db/types";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { normalizeStateSpending, SECTOR_SUBSIDIES_SPENDING_KEY } from "@/lib/budget/spending";
 import { computeRegionalSpendingByCategory } from "@/lib/budget/regionalSpending";
@@ -166,7 +161,11 @@ async function serveRegionalBudget(
   });
   byCategory[SECTOR_SUBSIDIES_SPENDING_KEY] = regionalBudget.subsidyCosts ?? 0;
 
-  const spendingTotal = Object.values(byCategory).reduce((sum, v) => sum + v, 0);
+  const unlistedSpending =
+    regionalBudget.enactedBillCosts -
+    Object.values(byCategory).reduce((sum, value) => sum + value, 0);
+  if (Math.abs(unlistedSpending) > 0.01) byCategory.otherAuthorizedSpending = unlistedSpending;
+  const spendingTotal = regionalBudget.enactedBillCosts + (regionalBudget.interestPayments ?? 0);
 
   // Per-country revenue view of the shared regionalBudgets document.
   const { revenue, grantAmount } = buildRegionalRevenueShape(regionalBudget);
@@ -178,11 +177,13 @@ async function serveRegionalBudget(
     revenue,
     taxRates: {},
     taxBases: {},
+    financing: regionalBudget.financing,
     spending: {
       byCategory,
+      interestPayments: regionalBudget.interestPayments ?? 0,
       total: spendingTotal,
     },
-    balance: regionalBudget.surplus,
+    balance: regionalBudget.financing?.cash ?? 0,
     surplus: regionalBudget.surplus,
     stateGdp: 0,
     updatedAt: regionalBudget.updatedAt,

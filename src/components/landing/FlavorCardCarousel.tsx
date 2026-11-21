@@ -6,86 +6,8 @@ import { cdnStatic } from "@/lib/images/cdnUrls";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { FLAVOR_CARD_PORTRAITS, type FlavorCard } from "./flavorCards";
 
-/* -------------------------------------------------------------------------- */
-/* Types                                                                       */
-/* -------------------------------------------------------------------------- */
-
-type LiveCrisis = {
-  _id: string;
-  name: string;
-  description: string;
-  heroImage?: string;
-  scope: "global" | "country" | "region";
-  countryIds: string[];
-};
-
-type DynamicCard = {
-  id: string;
-  type: "crisis";
-  headline: string;
-  body: string;
-  imageUrl: string;
-  tag: string;
-};
-
-function crisesToDynamicCards(crises: LiveCrisis[]): DynamicCard[] {
-  const COUNTRY_NAMES: Record<string, string> = {
-    US: "United States",
-    UK: "United Kingdom",
-    CN: "China",
-    DE: "Germany",
-    JP: "Japan",
-    BR: "Brazil",
-    NG: "Nigeria",
-    IE: "Ireland",
-    FR: "France",
-    IT: "Italy",
-    ES: "Spain",
-    SE: "Sweden",
-    TR: "Turkey",
-    SU: "Soviet Union",
-    DD: "East Germany",
-    PL: "Poland",
-    HU: "Hungary",
-    RO: "Romania",
-    YU: "Yugoslavia",
-    CS: "Czechoslovakia",
-    BY: "Belarus",
-    BAL: "Baltics",
-  };
-
-  return crises.map((crisis) => {
-    const tag =
-      crisis.scope === "global"
-        ? "Global Crisis"
-        : crisis.scope === "country"
-          ? (COUNTRY_NAMES[crisis.countryIds[0]] ?? crisis.countryIds[0] ?? "National Crisis")
-          : "Regional Crisis";
-
-    return {
-      id: String(crisis._id),
-      type: "crisis",
-      headline: crisis.name,
-      body: crisis.description,
-      // Fallback is a self-hosted, license-documented asset (see
-      // scripts/landing-images/manifest.json) — never hotlink third-party
-      // image services on the public landing page.
-      imageUrl: crisis.heroImage ?? cdnStatic("landing", "newsroom"),
-      tag,
-    };
-  });
-}
-
-/* -------------------------------------------------------------------------- */
-/* Styles                                                                      */
-/* -------------------------------------------------------------------------- */
-
 const CARD_CLASSES =
   "relative flex-shrink-0 w-[280px] sm:w-[320px] overflow-hidden rounded-xl border border-card-border bg-card shadow-card transition-all duration-300";
-
-const TAG_CLASSES: Record<DynamicCard["type"], string> = {
-  crisis: "bg-red-500/15 text-red-400 border-red-500/25",
-};
 
 /* -------------------------------------------------------------------------- */
 /* Sub-components                                                              */
@@ -163,70 +85,14 @@ function StaticCard({ card, index }: { card: FlavorCard; index: number }) {
   );
 }
 
-function DynamicCardItem({ card, number }: { card: DynamicCard; number: number }) {
-  return (
-    <div className={CARD_CLASSES}>
-      <div className="relative h-[180px] overflow-hidden">
-        {/* unoptimized (unconditional): crisis heroImage is a dynamic external URL — an arbitrary
-            host would crash the optimizer's remotePatterns check, and proxying adds Railway egress */}
-        <Image
-          src={card.imageUrl}
-          alt={card.headline}
-          fill
-          sizes="320px"
-          loading="lazy"
-          unoptimized
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-          }}
-          className="object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-        <div className="absolute bottom-2 left-3">
-          <span
-            className={`rounded-full border px-2 py-0.5 text-body-xs font-medium ${TAG_CLASSES[card.type]}`}
-          >
-            {card.tag}
-          </span>
-        </div>
-      </div>
-      <div className="p-4">
-        <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono text-body-xs text-red-300">
-            {String(number).padStart(2, "0")}
-          </span>
-        </div>
-        <h3 className="text-heading-sm font-semibold text-foreground">{card.headline}</h3>
-        <p className="mt-2 text-body-sm leading-relaxed text-muted">{card.body}</p>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Carousel                                                                    */
-/* -------------------------------------------------------------------------- */
-
-export function FlavorCardCarousel({
-  staticCards,
-  crises = [],
-}: {
-  staticCards: FlavorCard[];
-  crises?: LiveCrisis[];
-}) {
-  const dynamicCards = crisesToDynamicCards(crises);
-  const allCards = [
-    ...staticCards.map((c) => ({ type: "static" as const, data: c })),
-    ...dynamicCards.map((c) => ({ type: "dynamic" as const, data: c })),
-  ];
-
+export function FlavorCardCarousel({ staticCards }: { staticCards: FlavorCard[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
 
-  const maxIndex = Math.max(0, allCards.length - 1);
+  const maxIndex = Math.max(0, staticCards.length - 1);
 
   const goNext = useCallback(() => {
     setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
@@ -291,7 +157,7 @@ export function FlavorCardCarousel({
     container.scrollTo({ left: scrollLeft, behavior: "smooth" });
   }, [currentIndex]);
 
-  if (allCards.length === 0) return null;
+  if (staticCards.length === 0) return null;
 
   return (
     <div
@@ -310,13 +176,9 @@ export function FlavorCardCarousel({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {allCards.map((card, i) =>
-          card.type === "static" ? (
-            <StaticCard key={card.data.id} card={card.data} index={i} />
-          ) : (
-            <DynamicCardItem key={card.data.id} card={card.data} number={i + 1} />
-          )
-        )}
+        {staticCards.map((card, i) => (
+          <StaticCard key={card.id} card={card} index={i} />
+        ))}
       </div>
 
       {/* Navigation arrows */}
@@ -355,7 +217,7 @@ export function FlavorCardCarousel({
 
       {/* Dots */}
       <div className="mt-2 flex justify-center gap-2">
-        {allCards.map((_, i) => (
+        {staticCards.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentIndex(i)}

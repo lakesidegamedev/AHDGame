@@ -20,6 +20,7 @@ export type BondMarketPoolFlowKind =
   | "retiredIn"
   | "estateOut"
   | "recoveriesIn"
+  | "openingAllocationIn"
   | "inflowIn"
   | "sweepOut";
 

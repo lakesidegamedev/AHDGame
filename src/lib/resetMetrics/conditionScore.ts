@@ -2,7 +2,12 @@ import type { PrimaryMetricDefinition } from "./catalog";
 import { politicalScoreFromLegacyValue } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { legacyMetricCalibration } from "./rules/metricCalibration";
 
-export type ResetMetricScoreCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
+export const RESET_METRIC_SCORE_COUNTRIES = ["US", "UK", "JP", "IE", "SCO", "WAL", "CA"] as const;
+export type ResetMetricScoreCountry = (typeof RESET_METRIC_SCORE_COUNTRIES)[number];
+
+export function isResetMetricScoreCountry(countryId: string): countryId is ResetMetricScoreCountry {
+  return (RESET_METRIC_SCORE_COUNTRIES as readonly string[]).includes(countryId);
+}
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));

@@ -531,6 +531,16 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                       canEnter={entry.canEnter}
                       canWithdraw={entry.canWithdraw}
                       busy={entry.busy}
+                      entryMessage={
+                        entry.entryBlock
+                          ? t(
+                              entry.entryBlock === "nominationsUnavailable" &&
+                                selected?.stage === "upcoming"
+                                ? "race.nominationsUpcoming"
+                                : `race.${entry.entryBlock}`
+                            )
+                          : undefined
+                      }
                       onEnter={() => void entry.enter()}
                       onWithdraw={() => void entry.withdraw()}
                     />

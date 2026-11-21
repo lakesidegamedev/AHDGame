@@ -33,7 +33,7 @@ The inputs come from the [corporation](/wiki/corporations): its cash, plants, ea
 | Public share issue | Up to 50% of shares; self-issue up to 20% at a 15% premium |
 | Split limits | Forward up to 100x; reverse down to 1,000,000 shares (scaled down in earlier eras); 48-turn cooldown |
 | Post-split smoothing | 70% previous price, 30% fundamental, for 3 turns |
-| Sell pacing | Pool absorbs at most 5% of company value per turn; sales under ₳25,000,000 never paced |
+| Sell pacing | Per company per turn, all sellers share an allowance of 5% of market value or ₳25,000,000, whichever is higher |
 | Issue pacing | At most 10% of shares or ₳50,000,000 per turn, whichever is larger |
 | Thin float | Public float under 5% trades at the fundamental price |
 | Hostile takeover | Above 75% of voting power; minority paid 125% of market price |
@@ -59,7 +59,7 @@ From a corporation page, go to the Shares tab, or use the **Trade** shortcut on 
 
 Market orders use the quoted bid or ask. The equity pool's base half-spread is 1% on each side of its midpoint, before its cash-balance adjustment. Execution depends on available shares, cash and the applicable market path; liquidity is not unlimited.
 
-Very large sales are paced. The market buys at most **5% of a company's value** each turn from all sellers together, or ₳25,000,000 if that is larger, so sales under ₳25,000,000 per company per turn are never limited. A market sale bigger than what is left this turn is refused and tells you how many shares the market will still take; place a sell order instead and the rest fills over the coming turns at the market price. That is why you cannot always sell everything at once.
+The equity pool's sell allowance for each company is the higher of **5% of its market value** and **₳25,000,000 converted to the company's currency**. All sellers of that company's shares share the allowance, and it resets each turn. If your market sale exceeds the remaining allowance, the game tells you how many shares you can still sell to the pool this turn. A sell limit order can stay open and fill across later turns as price and liquidity allow.
 
 **Limit orders** place a buy or sell at a target price. The order sits on the book and fills automatically when the market price crosses your limit. Orders have no expiry; they stay open until filled or cancelled.
 

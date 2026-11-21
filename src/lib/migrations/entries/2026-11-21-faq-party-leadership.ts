@@ -12,7 +12,7 @@ const electionTiming =
   "During the pre-iteration founding phase, 12-turn elections open only for vacant leadership seats. In regular play, the vice-chair and treasurer elections open immediately and join your country's shared cycle. While the founding chair holds office, the first regular chair election waits until at least one of those two elections has completed. Declare your candidacy on the party page when an election opens.";
 
 export const migration: Migration = {
-  id: "2026-11-19-faq-party-leadership",
+  id: "2026-11-21-faq-party-leadership",
   description: "Correct the party leadership passage in the published FAQ.",
   idempotent: true,
   async execute(db, ctx) {

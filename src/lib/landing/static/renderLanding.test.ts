@@ -51,7 +51,6 @@ function input(overrides: Partial<StaticLandingInput> = {}): StaticLandingInput 
     },
     currentYear: 2027,
     government: {},
-    crises: [],
     discord: null,
     flavorCards: getEraFlavorCards(2027),
     posterBase: "/landing/globe-2027-h5",
@@ -75,6 +74,12 @@ function input(overrides: Partial<StaticLandingInput> = {}): StaticLandingInput 
 
 describe("renderLandingHtml", () => {
   const html = renderLandingHtml(input());
+
+  it("gives the era cards their own heading and links to the live crisis list", () => {
+    expect(html).toContain("What shapes this era");
+    expect(html).toContain('href="/world/crises"');
+    expect(html).toContain("View live crises");
+  });
 
   it("is a complete document with no framework scripts", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);

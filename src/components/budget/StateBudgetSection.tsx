@@ -89,7 +89,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
       <h2 className="text-xl font-semibold">State budget - FY{budget.fiscalYear}</h2>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <BudgetSummaryCard label="Revenue" value={budget.revenue.total} countryId={countryId} />
         <BudgetSummaryCard label="Spending" value={budget.spending.total} countryId={countryId} />
         <BudgetSummaryCard
@@ -99,6 +99,11 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
           countryId={countryId}
         />
         <BudgetSummaryCard label="Cash balance" value={budget.balance} countryId={countryId} />
+        <BudgetSummaryCard
+          label="Debt"
+          value={budget.financing?.principal ?? 0}
+          countryId={countryId}
+        />
       </div>
 
       {budget.taxRates && <IncomeTaxRates rates={budget.taxRates} />}
@@ -162,6 +167,12 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
         <div className="rounded-xl border border-card-border bg-card p-4">
           <h3 className="font-medium mb-3">Spending by category</h3>
           <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Interest payments</span>
+              <span className="font-mono">
+                {formatMoney(budget.spending.interestPayments ?? 0)}
+              </span>
+            </div>
             {Object.entries(budget.spending.byCategory).map(([key, value]) => (
               <div key={key} className="flex justify-between">
                 <span>{humanizeKey(key)}</span>

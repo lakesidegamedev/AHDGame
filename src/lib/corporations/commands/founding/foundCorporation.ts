@@ -1,7 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { z } from "zod";
-import { getNewCorporationFoundingBarrier } from "@/lib/character/newCharacterTransferBarrier";
-import { getGameTime } from "@/lib/time/gameTime";
 import { purchasedHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { loadBankingPolicy } from "@/lib/banking/policy";
@@ -87,15 +85,11 @@ export interface FoundCorporationBody {
 }
 
 export type FoundCorporationResult =
-  | { ok: false; status: number; error: string; extra?: Record<string, unknown> }
+  | { ok: false; status: number; error: string }
   | { ok: true; status: 201 | 202; body: FoundCorporationBody };
 
-function fail(
-  status: number,
-  error: string,
-  extra?: Record<string, unknown>
-): FoundCorporationResult {
-  return extra ? { ok: false, status, error, extra } : { ok: false, status, error };
+function fail(status: number, error: string): FoundCorporationResult {
+  return { ok: false, status, error };
 }
 
 /**
@@ -176,20 +170,6 @@ export async function foundCorporation({
   // currentTurnAtFounding is reused below for founding records.
   const foundingGameState = await getGameState();
   const currentTurnAtFounding = foundingGameState?.currentTurn ?? 0;
-  const foundingClock = await getGameTime();
-  const newFounderBarrier = getNewCorporationFoundingBarrier(
-    character,
-    currentTurnAtFounding,
-    foundingClock.effectiveNow.getTime(),
-    foundingGameState?.preIteration?.active === true
-  );
-  if (newFounderBarrier.blocked) {
-    return fail(
-      403,
-      `New characters can found a corporation after 48 turns. You can found in ${newFounderBarrier.remainingTurns} turn(s).`,
-      { remainingTurns: newFounderBarrier.remainingTurns }
-    );
-  }
 
   const founderUser = await usersCollection(db).findOne(
     { _id: new ObjectId(userId) },

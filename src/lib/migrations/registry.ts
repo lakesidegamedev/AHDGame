@@ -1,3 +1,4 @@
+import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
 import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
@@ -147,7 +148,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
-import { migration as faqPartyLeadership } from "./entries/2026-11-19-faq-party-leadership";
+import { migration as faqPartyLeadership } from "./entries/2026-11-21-faq-party-leadership";
 import { migration as backfillSpinOffTechBaselines } from "./entries/2026-10-08-backfill-spinoff-tech-baselines";
 import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-media-product-projects-v1-index";
 import { migration as bankTreasuryTradeIndexes } from "./entries/2026-10-04-bank-treasury-trade-indexes";
@@ -425,6 +426,7 @@ export const MIGRATIONS: Migration[] = [
   wikiRevisionsIndexes,
   moveFrackingToExtraction,
   linearBuildDelivery,
+  corporationsWikiMargins,
   faqPartyLeadership,
 ];
 

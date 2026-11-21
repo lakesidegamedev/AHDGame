@@ -33,6 +33,8 @@ export interface ElectedOfficial {
   isNPP?: boolean;
   nppId?: ObjectId | null;
   electedAt?: Date;
+  /** General election that seated this row; lets a rerun of that election recognise its own seating. */
+  electionId?: ObjectId;
   termEnds?: Date;
   /** True if appointed (Senate only), false if elected */
   isAppointment?: boolean;

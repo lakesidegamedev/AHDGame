@@ -19,6 +19,18 @@ function claim(
 }
 
 describe("settleRegionalBudget", () => {
+  it("fully funds regional services through borrowing when revenue is insufficient", () => {
+    const result = settleRegionalBudget({
+      availableBudget: 50,
+      reservedNonProgramSpending: 10,
+      allowBorrowing: true,
+      claims: [claim("a", 40), claim("b", 60)],
+    });
+    expect(result.totalFunded).toBe(110);
+    expect(result.totalUnfunded).toBe(0);
+    expect(result.programs.every((p) => p.implementationFactor === 1)).toBe(true);
+  });
+
   it("fully funds programs when the region has sufficient budget", () => {
     const result = settleRegionalBudget({
       availableBudget: 100,

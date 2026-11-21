@@ -1,4 +1,7 @@
-export const corporationsContent = `# Corporations
+import { renderCorporationsContent } from "./corporationsMargins";
+
+// Share the margin copy with the authored-page migration.
+export const corporationsContent = renderCorporationsContent`# Corporations
 
 The first real decision you make as CEO is which industry to commit to, because margin and who you end up fighting both follow from it. A **corporation** is a business a player runs as CEO. It owns **sectors** (the plants it builds in each state), sells what they make on the commodity markets, pays tax, employs workers and pays dividends to its shareholders. It is the main way players earn money and economic influence, and it ties into most other systems: prices, labour, taxes, the stock market and politics. In a command economy the state owns production instead; see [Planned / Command Economies](/wiki/planned-economies).
 
@@ -266,8 +269,8 @@ If a margin is negative, open the sector's margin breakdown and check, in order:
 
 | Modifier | Max Effect | Notes |
 | --- | --- | --- |
-| Sector type match | +5pp primary / +2.5pp secondary / -15pp unrelated | Bonus if sector matches primary type; penalty if neither type matches |
-| Secondary type match | +2.5pp | If sector matches secondary type |
+| Corporate type match | +5pp primary / +2.5pp secondary / -15pp unrelated | Based on the corporation's chosen primary and secondary types. Other types take the penalty. |
+| Regional industry specialization | +5pp primary / +2.5pp secondary | Applies when a sector matches its region's primary or secondary industry. This bonus adds to the corporate type modifier. |
 | Home state | +5% | Sectors in your HQ state |
 | Same country | +2.5% | Sectors in your home country (not HQ state) |
 | State conditions | ±8pp combined | Selected state metrics, among them unemployment, power grid, corruption, workforce skill, crime, broadband, roads, carbon emissions and cost of living, weighted by how much your sector and its strategy rely on it. Each metric is capped at 0.75pp and each cost channel (labour, logistics, grid and so on) at 2pp |

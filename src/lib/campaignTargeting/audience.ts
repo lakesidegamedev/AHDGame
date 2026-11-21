@@ -19,10 +19,13 @@ export async function loadCampaignAudience(
   countryId: CountryId,
   stateId: string,
   turnout?: StateDemographicTurnout | null,
-  turnoutRulesVersion = CAMPAIGN_RULES_VERSION
+  turnoutRulesVersion = CAMPAIGN_RULES_VERSION,
+  preloadedState?: State | null
 ) {
   const [state, demographics, defaults, gameState, turnoutData] = await Promise.all([
-    statesCollection(db).findOne({ _id: stateId, countryId }),
+    preloadedState === undefined
+      ? statesCollection(db).findOne({ _id: stateId, countryId })
+      : preloadedState,
     stateDemographicsCollection(db).findOne({ _id: stateId, countryId }),
     demographicDefaultsCollection(db).findOne({ _id: stateId, countryId }),
     gameStateCollection(db).findOne(

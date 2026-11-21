@@ -1,5 +1,3 @@
-import { getNewCorporationFoundingBarrier } from "@/lib/character/newCharacterTransferBarrier";
-import { getGameTime } from "@/lib/time/gameTime";
 import { loadPlayerIncomeTaxSummary } from "@/lib/budget/playerIncomeTaxSummary";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { NextResponse } from "next/server";
@@ -213,22 +211,11 @@ export async function GET(request?: Request) {
     // corporation ended.
     // userDoc is fetched above for every request; 0 means "may found now".
     const gameState = await getGameState();
-    const refoundingCooldownRemaining = foundingCooldownTurnsRemaining(
+    const foundingCooldownRemaining = foundingCooldownTurnsRemaining(
       userDoc?.lastCorporationFoundedTurn,
       gameState?.currentTurn ?? 0
     );
 
-    const foundingClock = await getGameTime();
-    const newFounderBarrier = getNewCorporationFoundingBarrier(
-      user.character,
-      gameState?.currentTurn ?? 0,
-      foundingClock.effectiveNow.getTime(),
-      gameState?.preIteration?.active === true
-    );
-    const foundingCooldownRemaining = Math.max(
-      refoundingCooldownRemaining,
-      newFounderBarrier.remainingTurns
-    );
     return NextResponse.json(
       {
         foundingCooldownTurnsRemaining: foundingCooldownRemaining,

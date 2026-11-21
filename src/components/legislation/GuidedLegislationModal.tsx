@@ -13,7 +13,10 @@ import type { BillCategory } from "@shared/constants/legislation";
 import { primaryMetricById, primaryMetrics } from "@/lib/resetMetrics/catalog";
 import { playerMetricDescription } from "@/lib/resetMetrics/presentation";
 import { estimateObservedMetricChange } from "@/lib/resetMetrics/rules/effectForecast";
-import type { ResetMetricScoreCountry } from "@/lib/resetMetrics/conditionScore";
+import {
+  isResetMetricScoreCountry,
+  type ResetMetricScoreCountry,
+} from "@/lib/resetMetrics/conditionScore";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
@@ -24,8 +27,6 @@ import {
   type EmbargoProvisionInput,
 } from "@/components/bills/embargoProvisionTypes";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
-
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface CatalogOption {
   option: { choice: LawChoice; annualAllocation: number };
@@ -148,11 +149,7 @@ type Step = "starting" | "family" | "level" | "review" | "overview";
 
 function resetMetricCountry(countryId: CountryId): ResetMetricScoreCountry | null {
   const normalized = countryId.toUpperCase();
-  return countryHasFeature("usUi", normalized) ||
-    countryHasFeature("ukUi", normalized) ||
-    countryHasFeature("jpUi", normalized)
-    ? normalized
-    : null;
+  return isResetMetricScoreCountry(normalized) ? normalized : null;
 }
 
 function categoryForDomain(domain: string, scope: "national" | "regional"): BillCategory {
