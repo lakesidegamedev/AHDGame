@@ -16,7 +16,7 @@ import type { AnyBulkWriteOperation, ObjectId } from "mongodb";
 import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { MARKET_DISABLED, type MarketContext } from "@/lib/market/marketContext";
 
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
@@ -242,10 +242,9 @@ function prepareProcessSectors(
     map: Map<string, Map<CurrencyCode, number>>,
     charIdStr: string,
     amountAnchor: number,
-    corpCountryId: string
+    corpCountryId: Corporation["countryId"]
   ) {
-    const currency =
-      COUNTRY_CURRENCY_MAP[corpCountryId as keyof typeof COUNTRY_CURRENCY_MAP] ?? "USD";
+    const currency = getSeedCurrencyCode(corpCountryId, lookups.preset ?? "") ?? "USD";
     // `amountAnchor` is ₳ (same convention as sector revenue / netIncomeBeforeDividends).
     // Character / imperial balances live in currencyBalances.personal.<code>, denominated in
     // the tagged currency — convert before storing so the downstream $inc lands at correct
