@@ -177,7 +177,10 @@ describe("successor-country profile server rendering", () => {
         })
       );
 
-      const page = await ProfilePage();
+      const reopenFirstSteps = countryId === "SCO" && !officeHolder;
+      const page = await ProfilePage(
+        reopenFirstSteps ? { searchParams: Promise.resolve({ firstSteps: "1" }) } : undefined
+      );
       const html = renderToStaticMarkup(
         <NextIntlClientProvider
           locale="en"
@@ -191,6 +194,12 @@ describe("successor-country profile server rendering", () => {
       expect(html).toContain(name.replaceAll("&", "&amp;"));
       expect(html).toContain("Career history");
       expect(html).toContain("Finances");
+      if (reopenFirstSteps) {
+        expect(html).toContain('id="first-steps"');
+        expect(html).toContain("Campaign in your home region");
+      } else {
+        expect(html).toContain('href="/profile?firstSteps=1#first-steps"');
+      }
       if (officeHolder) expect(html).toContain("Successor Test Party");
       expect(html).not.toContain("NaN");
       expect(html).not.toContain("Infinity");
