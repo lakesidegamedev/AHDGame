@@ -1,5 +1,6 @@
 "use client";
 
+import { readJsonResponse } from "@/lib/client/readJsonResponse";
 import { useState, useEffect, useCallback } from "react";
 import { notificationToInboxItem, groupMailIntoThreads, mailThreadToInboxItem } from "@/lib/inbox";
 import type { InboxItem, SerializedNotification, SerializedMail } from "@/lib/inbox";
@@ -51,9 +52,12 @@ export function useInboxData(): UseInboxDataResult {
         }
 
         const [notifsData, inboxData, sentData] = await Promise.all([
-          notifsRes.json() as Promise<{ notifications: SerializedNotification[] }>,
-          inboxRes.json() as Promise<{ mails: SerializedMail[]; selfCharacterId?: string }>,
-          sentRes.json() as Promise<{ mails: SerializedMail[] }>,
+          readJsonResponse(notifsRes) as Promise<{ notifications: SerializedNotification[] }>,
+          readJsonResponse(inboxRes) as Promise<{
+            mails: SerializedMail[];
+            selfCharacterId?: string;
+          }>,
+          readJsonResponse(sentRes) as Promise<{ mails: SerializedMail[] }>,
         ]);
 
         if (signal.aborted) return;
