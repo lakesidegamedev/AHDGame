@@ -19,7 +19,11 @@ import {
   type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
 import { isMarketSaturated, isStuckAtThrottleFloor } from "@/lib/turn/npp/rules/marketSaturation";
-import { nppDemandThrottle } from "@/lib/turn/npp/rules/fundedSellThrough";
+import {
+  nppDemandThrottle,
+  nppSoldShare,
+  type SoldShareWorld,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
 import { chooseCostMothballSector } from "@/lib/turn/npp/costMothball";
 import type { SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import type { NppCorpDecision } from "./corpDecisionTypes";
@@ -37,6 +41,8 @@ export function buildNppGlutMothballUpdates(args: {
   marketSaturationOf?: PlacementSignals["marketSaturationOf"];
   /** Funded world epoch: the floor reading is sell-through (rules/fundedSellThrough). */
   fundedWorldEpoch?: string;
+  /** Which sold share the glut gate reads; absent reads the legacy `soldFraction`. */
+  soldShareWorld?: SoldShareWorld;
 }): NppCorpDecision["sectorUpdates"] {
   const {
     corporation: corp,
@@ -48,6 +54,7 @@ export function buildNppGlutMothballUpdates(args: {
     priceRatioOf,
     marketSaturationOf,
     fundedWorldEpoch,
+    soldShareWorld = { turn },
   } = args;
   const sectorUpdates: NppCorpDecision["sectorUpdates"] = [];
 
@@ -92,9 +99,17 @@ export function buildNppGlutMothballUpdates(args: {
       if (ratio >= GLUT_RESTART_PRICE_RATIO) {
         sectorUpdates.push({
           filter: { _id: sp.sector._id },
-          // A revived plant re-earns chronic-cost status from zero instead
-          // of mothballing again on its first losing turn (step 5).
-          update: { $set: { mothballed: false, pnlLossTurns: 0, updatedAt: now } },
+          // A revived plant re-earns chronic-cost status, and on a funded
+          // world its low-sale streak, from zero instead of acting again on
+          // its first bad turn.
+          update: {
+            $set: {
+              mothballed: false,
+              pnlLossTurns: 0,
+              ...(fundedWorldEpoch ? { fundedLowSaleTurns: 0 } : {}),
+              updatedAt: now,
+            },
+          },
         });
         stateChangeBudget -= 1;
       }
@@ -111,9 +126,9 @@ export function buildNppGlutMothballUpdates(args: {
         // fill is ~1 so the gate would never fire) and its output/rationing
         // legs live outside the clearing book this signal reads.
         if (sp.sector.sectorType === "extraction") continue;
-        const fill = sp.sector.soldFraction;
-        // soldFraction is only written under clearing mode; a sector that
-        // has never cleared (mid-build, legacy) is not a candidate.
+        const fill = nppSoldShare(sp.sector, soldShareWorld);
+        // No reading (never cleared, or no current funded sale) is no
+        // evidence of a glut, so the plant is not a candidate.
         if (fill == null || fill >= GLUT_MOTHBALL_FILL_THRESHOLD) continue;
         const ratio = sectorShortageScore(
           sp.sector.sectorType,

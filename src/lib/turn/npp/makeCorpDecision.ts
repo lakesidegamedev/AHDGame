@@ -23,6 +23,7 @@ import { hasProtectedConstructionProperty } from "@/lib/corporations/securedCons
 import {
   STRANDED_DIVEST_MAX_PER_TURN,
   STRANDED_DIVEST_TURNS,
+  STRANDED_LOW_FILL_THRESHOLD,
 } from "@/lib/corporations/strandedPlant";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
@@ -41,7 +42,12 @@ import {
   pushFoundingCapacityObservation,
   resolveCapacityCohort,
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
-import { fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
+import {
+  fundedSellThrough,
+  nppSoldShare,
+  soldShareFundedEpoch,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
+import { soldShareWorldOfDecision } from "./corpDecisionTypes";
 import type {
   NppCorpDecision,
   NppCorpDecisionContext,
@@ -221,9 +227,11 @@ export function makeNppCorpDecision(
   // Everything below only RE-WEIGHTS levers that already existed. `expand` is
   // the identity, so a corp that is doing fine never changes behaviour.
   const debtDominant = debtServiceLocal > 0 && debtServiceLocal >= grossRealizedIncome;
-  const lowFillSectors = sectorProfits.filter(
-    (sp) => sp.sector.soldFraction != null && sp.sector.soldFraction < CHRONIC_LOW_FILL_THRESHOLD
-  ).length;
+  const soldShareWorld = soldShareWorldOfDecision(ctx);
+  const lowFillSectors = sectorProfits.filter((sp) => {
+    const soldShare = nppSoldShare(sp.sector, soldShareWorld);
+    return soldShare != null && soldShare < CHRONIC_LOW_FILL_THRESHOLD;
+  }).length;
   const readHeadroom = memoizeOnce(() =>
     hasEnterableHeadroom(
       corp,
@@ -344,23 +352,30 @@ export function makeNppCorpDecision(
   // would invite the next founding straight back in.
   if (plants?.enabled && numSectors > 1 && profitableSectors > 0) {
     let strandedDivests = 0;
+    // On a funded turn the streak and the latest sale are both funded: the
+    // legacy counter tracks a clearing pass the funded market does not pay on.
+    const fundedTurn = soldShareFundedEpoch(soldShareWorld) != null;
+    const strandedTurns = (sector: CorporateSector) =>
+      (fundedTurn ? sector.fundedLowSaleTurns : sector.lowFillTurns) ?? 0;
     // Longest-stranded first, so the cap exits the worst plant.
     const stranded = sectorProfits
       .filter(
         (sp) =>
-          (sp.sector.lowFillTurns ?? 0) >= STRANDED_DIVEST_TURNS &&
-          // lowFillTurns counts the legacy clearing shadow. On a funded world a
-          // plant is stranded only if its own settlement left output unsold:
-          // deleting a sold-out plant destroys capacity in a short market.
-          (!ctx.fundedWorldEpoch ||
-            (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
+          strandedTurns(sp.sector) >= STRANDED_DIVEST_TURNS &&
+          // A plant is stranded only if its latest funded settlement left
+          // output unsold: deleting a sold-out plant destroys capacity in a
+          // short market. No current reading is no evidence.
+          (fundedTurn
+            ? (nppSoldShare(sp.sector, soldShareWorld) ?? 1) < STRANDED_LOW_FILL_THRESHOLD
+            : !ctx.fundedWorldEpoch ||
+              (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
           !isCoreSector(sp.sector) &&
           !hasProtectedConstructionProperty(sp.sector) &&
           !isNppDivestmentProtected(sp.sector, ctx.turn) &&
           sp.sector.mothballed !== true &&
           !divestedSectorIds.includes(sp.sector._id)
       )
-      .sort((a, b) => (b.sector.lowFillTurns ?? 0) - (a.sector.lowFillTurns ?? 0));
+      .sort((a, b) => strandedTurns(b.sector) - strandedTurns(a.sector));
     for (const sp of stranded) {
       if (strandedDivests >= STRANDED_DIVEST_MAX_PER_TURN) break;
       if (numSectors - divestedSectorIds.length <= 1) break;

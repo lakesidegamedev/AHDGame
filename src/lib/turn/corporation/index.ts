@@ -444,6 +444,8 @@ export async function processCorporationTurn(
     politicalMediaOrders,
     treasuryCashLedgerEnabled,
     fundedProducerTurn: producerPath === "funded",
+    fundedWorldEpoch:
+      producerPath === "funded" ? (gameState?.worldEpochId ?? undefined) : undefined,
   });
   // One read, one guarded bulk write and one re-read for the whole turn's
   // plans, instead of two round trips per order. The map below stays keyed by
