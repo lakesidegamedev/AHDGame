@@ -144,7 +144,7 @@
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^1.33.0",
     "mongodb": "^7.8.0",
-    "next": "^16.4.3",
+    "next": "^16.4.5",
     "next-intl": "^4.14.9",
     "node-cron": "^4.6.0",
     "pg": "^8.23.1",
@@ -180,7 +180,7 @@
     "braces": "$braces"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.3",
+    "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
@@ -194,10 +194,10 @@
     "@vitest/coverage-v8": "^5.0.5",
     "braces": "file:vendor/braces-depth-guard-3.0.3-ahd.1.tgz",
     "chrome-launcher": "^1.2.3",
-    "concurrently": "^10.0.5",
+    "concurrently": "^10.0.7",
     "d3-geo": "^3.1.1",
     "eslint": "^10.14.0",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.5",
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
@@ -209,7 +209,7 @@
     "topojson-server": "^3.0.1",
     "typescript": "6.0.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "license": "PolyForm-Noncommercial-1.0.0",
   "prettier": {

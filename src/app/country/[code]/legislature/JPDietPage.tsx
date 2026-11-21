@@ -11,7 +11,7 @@ import { useJPDietPageState } from "./useJPDietPageState";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { ExecutiveGovernmentResponse } from "@/lib/government/executiveViewerState";
 import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { LeaderCard } from "@/components/legislature/LeaderCard";
 import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
 import { useToast } from "@/contexts/ToastContext";
 import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
@@ -665,52 +665,11 @@ export function JPDietPage({ countryId }: Props) {
 
               {/* Leader cards */}
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-card-border bg-card p-5">
-                  <p className="text-body-sm font-medium text-muted mb-2">Prime minister</p>
-                  {leaders?.primeMinister ? (
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        url={leaders.primeMinister.avatarUrl}
-                        name={leaders.primeMinister.characterName}
-                        size="h-12 w-12"
-                        className="rounded-lg"
-                      />
-                      <div>
-                        <Link
-                          href={`/character/${leaders.primeMinister.sequentialId ?? leaders.primeMinister.characterId}`}
-                          className="font-semibold hover:text-primary transition-colors"
-                        >
-                          {leaders.primeMinister.characterName}
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm italic text-muted">Vacant</p>
-                  )}
-                </div>
-                <div className="rounded-xl border border-card-border bg-card p-5">
-                  <p className="text-body-sm font-medium text-muted mb-2">Opposition leader</p>
-                  {leaders?.oppositionLeader ? (
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        url={leaders.oppositionLeader.avatarUrl}
-                        name={leaders.oppositionLeader.characterName}
-                        size="h-12 w-12"
-                        className="rounded-lg"
-                      />
-                      <div>
-                        <Link
-                          href={`/character/${leaders.oppositionLeader.sequentialId ?? leaders.oppositionLeader.characterId}`}
-                          className="font-semibold hover:text-primary transition-colors"
-                        >
-                          {leaders.oppositionLeader.characterName}
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm italic text-muted">Vacant</p>
-                  )}
-                </div>
+                <LeaderCard title="Prime minister" character={leaders?.primeMinister ?? null} />
+                <LeaderCard
+                  title="Opposition leader"
+                  character={leaders?.oppositionLeader ?? null}
+                />
               </div>
 
               <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">

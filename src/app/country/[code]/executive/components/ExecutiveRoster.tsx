@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 
 export interface RosterRow {
   /** Position label (e.g. "Treasury", "Foreign Affairs"). */
@@ -46,35 +46,9 @@ export function ExecutiveRoster({
             key={row.role}
             className="flex items-center gap-2.5 border-b border-card-border/50 px-4 py-2 last:border-b-0"
           >
-            {row.holder ? (
-              <Avatar
-                url={row.holder.avatarUrl}
-                name={row.holder.name}
-                size="h-6 w-6"
-                className="rounded-md"
-              />
-            ) : (
-              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-card-border text-[10px] text-muted">
-                —
-              </span>
-            )}
-            <span className="min-w-0 flex-1 truncate text-xs">
-              {row.holder ? (
-                row.holder.href ? (
-                  <Link
-                    href={row.holder.href}
-                    className="font-medium text-foreground transition-colors hover:text-primary"
-                  >
-                    {row.holder.name}
-                  </Link>
-                ) : (
-                  <span className="font-medium">{row.holder.name}</span>
-                )
-              ) : (
-                <span className="italic text-muted">Vacant</span>
-              )}
-              <span className="ml-1 text-[10px] text-muted">· {row.role}</span>
-            </span>
+            <div className="min-w-0 flex-1 text-xs">
+              <OfficeholderPortrait compact role={row.role} holder={row.holder} />
+            </div>
             {row.pending && (
               <span className="rounded-full bg-info/10 px-1.5 py-px text-[8px] font-bold text-info">
                 PENDING

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { SectionLabel } from "@/components/ui";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { getDb } from "@/lib/mongodb";
@@ -107,50 +107,33 @@ export default async function ArasPage({ params }: PageProps) {
 
         {/* Sitting Uachtarán card */}
         <section className="rounded-2xl border border-card-border bg-card p-6 shadow-card">
-          <SectionLabel as="h2">Sitting uachtarán</SectionLabel>
-          {uachtaran ? (
-            <div className="flex items-center gap-4">
-              <Link href={uachtaranHref!} className="shrink-0">
-                <Avatar
-                  url={uachtaran.avatarUrl}
-                  name={uachtaran.name}
-                  size="h-20 w-20"
-                  className="rounded-xl text-3xl ring-2 ring-card-border"
-                />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={uachtaranHref!}
-                  className="text-body-lg font-semibold text-foreground transition-colors hover:text-primary"
-                >
-                  {uachtaran.name}
-                </Link>
-                {uachtaranParty && (
-                  <div className="mt-1">
-                    <PartyChip
-                      partyName={uachtaranParty.name}
-                      partyColor={uachtaranParty.color}
-                      partyId={uachtaran.party}
-                      countryId="IE"
-                      logoUrl={uachtaranParty.logoUrl}
-                    />
-                  </div>
-                )}
-              </div>
+          <OfficeholderPortrait
+            role={<SectionLabel as="h2">Sitting uachtarán</SectionLabel>}
+            vacancyLabel="No sitting Uachtarán"
+            holder={
+              uachtaran && {
+                name: uachtaran.name,
+                avatarUrl: uachtaran.avatarUrl,
+                href: uachtaranHref ?? undefined,
+              }
+            }
+          />
+          {uachtaran && uachtaranParty && (
+            <div className="mt-2 flex justify-center">
+              <PartyChip
+                partyName={uachtaranParty.name}
+                partyColor={uachtaranParty.color}
+                partyId={uachtaran.party}
+                countryId="IE"
+                logoUrl={uachtaranParty.logoUrl}
+              />
             </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-card-elevated text-3xl text-muted ring-2 ring-dashed ring-card-border">
-                —
-              </div>
-              <div className="flex-1">
-                <p className="italic text-muted">No sitting Uachtarán</p>
-                <p className="mt-0.5 text-body-sm text-muted">
-                  The Office of the Uachtarán is vacant. The next nationwide election will be
-                  spawned at the start of the canonical cycle.
-                </p>
-              </div>
-            </div>
+          )}
+          {!uachtaran && (
+            <p className="mt-2 text-center text-body-sm text-muted">
+              The Office of the Uachtarán is vacant. The next nationwide election will be spawned at
+              the start of the canonical cycle.
+            </p>
           )}
         </section>
 

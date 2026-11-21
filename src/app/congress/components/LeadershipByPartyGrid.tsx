@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { formatPartyState } from "./CongressShared";
 
 export type LeaderDisplay = {
@@ -35,31 +34,28 @@ function LeaderRow({
 }) {
   return (
     <div className="flex items-center gap-3 border-b border-card-border/30 py-2 last:border-0">
-      <Avatar
-        url={leader.avatarUrl}
-        name={leader.characterName}
-        size="h-10 w-10"
-        borderKey={leader.borderKey}
-        tintColor={leader.tintColor}
-      />
       <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-foreground">{leader.label}</span>
-        {leader.isVacant ? (
-          <span className="ml-2 text-xs italic text-muted/60">Vacant</span>
-        ) : (
-          <span className="ml-2 text-xs" style={{ color: leader.partyColor }}>
-            <Link
-              href={`/character/${leader.sequentialId ?? leader.characterId}`}
-              className="hover:underline"
-            >
-              {leader.characterName}
-            </Link>
-            <span className="text-muted">
-              {" "}
-              {formatPartyState(leader.party, leader.state, leader.partyName)}
-            </span>
-          </span>
-        )}
+        <OfficeholderPortrait
+          compact
+          role={leader.label}
+          detail={
+            !leader.isVacant
+              ? formatPartyState(leader.party, leader.state, leader.partyName)
+              : undefined
+          }
+          holder={
+            leader.isVacant
+              ? null
+              : {
+                  ...leader,
+                  name: leader.characterName,
+                  href:
+                    leader.sequentialId != null || leader.characterId
+                      ? `/character/${leader.sequentialId ?? leader.characterId}`
+                      : undefined,
+                }
+          }
+        />
       </div>
       {showAssign && (
         <div className="shrink-0 flex items-center gap-1">

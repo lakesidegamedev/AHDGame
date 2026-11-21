@@ -69,6 +69,7 @@ export interface LeadershipActor {
 export interface CommitteeMemberView {
   characterId: string;
   name: string;
+  profile?: { href: string; avatarUrl?: string };
   role: "chair" | "viceChair" | "treasurer" | "member";
   /** Caucus slug of the holder's active faction, null when unaligned. */
   faction: string | null;
@@ -80,7 +81,7 @@ export interface LeadershipStateView {
   family: UKPartyLeadership["family"];
   committeeName: string;
   ruleset: UKPartyLeadership["ruleset"];
-  leader: { characterId: string; name: string } | null;
+  leader: Pick<CommitteeMemberView, "characterId" | "name" | "profile"> | null;
   committee: { members: CommitteeMemberView[]; control: CommitteeControl };
   immunity: { protected: boolean; turnsRemaining: number };
   amendment: { canAmendNow: boolean; turnsUntilAmendable: number };
@@ -179,7 +180,11 @@ export async function getCommitteeSnapshot(
       ? []
       : charactersCollection(db)
           .find({ _id: { $in: memberIds } })
-          .project({ name: 1 })
+          .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
+            name: 1,
+            avatarUrl: 1,
+            sequentialId: 1,
+          })
           .toArray(),
     memberIds.length === 0
       ? []
@@ -198,7 +203,7 @@ export async function getCommitteeSnapshot(
       .project({ slug: 1 })
       .toArray(),
   ]);
-  const nameById = new Map(characters.map((c) => [c._id.toString(), c.name]));
+  const characterById = new Map(characters.map((c) => [c._id.toString(), c]));
   const slugByCaucusId = new Map(caucuses.map((c) => [c._id.toString(), c.slug]));
   const factionByMemberId = new Map(
     memberships.map((m) => [
@@ -206,12 +211,21 @@ export async function getCommitteeSnapshot(
       slugByCaucusId.get(m.caucusId.toString()) ?? null,
     ])
   );
-  const members: CommitteeMemberView[] = [...roleById.entries()].map(([id, role]) => ({
-    characterId: id,
-    name: nameById.get(id) ?? "Unknown",
-    role,
-    faction: factionByMemberId.get(id) ?? null,
-  }));
+  const members: CommitteeMemberView[] = [...roleById.entries()].map(([id, role]) => {
+    const character = characterById.get(id);
+    return {
+      characterId: id,
+      name: character?.name ?? "Unknown",
+      profile: character
+        ? {
+            href: `/character/${character.sequentialId ?? id}`,
+            avatarUrl: character.avatarUrl,
+          }
+        : undefined,
+      role,
+      faction: factionByMemberId.get(id) ?? null,
+    };
+  });
   const control = resolveCommitteeControl(
     members.map((m) => ({ memberId: m.characterId, faction: m.faction }))
   );
@@ -261,14 +275,11 @@ export async function getLeadershipState(
     loadActiveChallenge(db, leadership),
   ]);
 
-  let leader: LeadershipStateView["leader"] = null;
-  if (party.chairId) {
-    const chair = await charactersCollection(db).findOne(
-      { _id: party.chairId },
-      { projection: { name: 1 } }
-    );
-    leader = { characterId: party.chairId.toString(), name: chair?.name ?? "Unknown" };
-  }
+  const chairId = party.chairId?.toString();
+  const chair = committee.members.find((member) => member.characterId === chairId);
+  const leader = chair
+    ? { characterId: chair.characterId, name: chair.name, profile: chair.profile }
+    : null;
 
   const since = turnsSince(currentTurn, leadership.lastSurvivalTurn);
   const immune =

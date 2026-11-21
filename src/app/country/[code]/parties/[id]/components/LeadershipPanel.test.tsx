@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { LeadershipPanel } from "./LeadershipPanel";
 
 interface FetchCall {
@@ -94,14 +94,22 @@ describe("LeadershipPanel", () => {
     renderPanel();
     expect(await screen.findByText("Party not found")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByText(/1922 Committee: Leader Lex/)).toBeTruthy();
+    expect(
+      await within(await screen.findByRole("region", { name: "Party leadership" })).findByText(
+        "Leader Lex"
+      )
+    ).toBeTruthy();
     expect(attempts).toBe(2);
   });
 
   it("renders the leader, committee, ruleset and immunity notice", async () => {
     stubFetch(makeState({ immunity: { protected: true, turnsRemaining: 12 } }));
     renderPanel();
-    expect(await screen.findByText(/1922 Committee: Leader Lex/)).toBeTruthy();
+    expect(
+      await within(await screen.findByRole("region", { name: "Party leadership" })).findByText(
+        "Leader Lex"
+      )
+    ).toBeTruthy();
     expect(screen.getByText(/immune for 12 more turn/)).toBeTruthy();
     expect(screen.getByText("15% of MPs")).toBeTruthy();
     // Ballot electorate readout plus the amendment-form option.
@@ -123,7 +131,11 @@ describe("LeadershipPanel", () => {
       })
     );
     renderPanel();
-    expect(await screen.findByText(/1922 Committee: Leader Lex/)).toBeTruthy();
+    expect(
+      await within(await screen.findByRole("region", { name: "Party leadership" })).findByText(
+        "Leader Lex"
+      )
+    ).toBeTruthy();
     expect(screen.queryByText("Amend removal rules")).toBeNull();
   });
 

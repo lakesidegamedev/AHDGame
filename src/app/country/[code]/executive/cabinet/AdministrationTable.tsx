@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { Badge } from "@/components/ui";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { CabinetVoteRow } from "@/app/whitehouse/cabinet/components/CabinetVoteRow";
@@ -448,39 +448,19 @@ function OfficeRow({
         {note && <div className="mt-0.5 text-[11px] text-muted">{note}</div>}
       </td>
       <td className="px-3 py-2.5">
-        {holder ? (
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Avatar
-              url={holder.avatarUrl ?? undefined}
-              name={holder.name}
-              size="h-7 w-7"
-              className="shrink-0 rounded-md"
+        {nominee && !holder ? (
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden="true"
+              className="h-8 w-8 shrink-0 rounded-lg border border-dashed border-card-border"
             />
-            {holder.href ? (
-              <Link
-                href={holder.href}
-                className="truncate font-medium text-foreground transition-colors hover:text-primary"
-              >
-                {holder.name}
-              </Link>
-            ) : (
-              <span className="truncate font-medium">{holder.name}</span>
-            )}
+            <span className="min-w-0 wrap-anywhere text-muted">
+              <span className="text-[11px]">Nominee </span>
+              <span className="font-medium text-foreground/80">{nominee.name}</span>
+            </span>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-dashed border-card-border text-[10px] text-muted">
-              -
-            </span>
-            {nominee ? (
-              <span className="truncate text-muted">
-                <span className="text-[11px]">Nominee </span>
-                <span className="font-medium text-foreground/80">{nominee.name}</span>
-              </span>
-            ) : (
-              <span className="italic text-muted">Vacant</span>
-            )}
-          </div>
+          <OfficeholderPortrait compact holder={holder} />
         )}
       </td>
       <td className="hidden whitespace-nowrap px-3 py-2.5 md:table-cell">

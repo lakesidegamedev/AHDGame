@@ -12,6 +12,8 @@ import { useSearchParams } from "next/navigation";
 
 import { Button, CardSkeleton, Skeleton } from "@/components/ui";
 
+import { NationalPartyCommitteeRoster } from "./components/NationalPartyCommitteeRoster";
+import { NationalPartyOfficerRow } from "./components/NationalPartyOfficerRow";
 import { NationalPartyIdentityStatus } from "./components/NationalPartyIdentityStatus";
 import { RegimeOffersInbox } from "@/components/parties/RegimeOffersInbox";
 import { AgendaBannerWithEdit } from "@/components/party-hub/AgendaBannerWithEdit";
@@ -40,7 +42,7 @@ import { POSITIONS, fmt as nationalFmt } from "./components/helpers";
 import { PartyPageSkeleton } from "./PartyPageSkeleton";
 import { usePartyHubLoaders } from "./usePartyHubLoaders";
 import { resolveTreasuryPermissions } from "./treasuryPermissions";
-import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
+import { getNationalCommitteeName } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
 
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -231,7 +233,10 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   const [party, setParty] = useState<PartyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [electionData, setElectionData] = useState<NationalElectionsState | null>(null);
-  const [committeeData, setCommitteeData] = useState<CommitteeData | null>(null);
+  const [committeeResult, setCommitteeResult] = useState<CommitteeData | "unavailable" | null>(
+    null
+  );
+  const committeeData = committeeResult === "unavailable" ? null : committeeResult;
   const [currentTurn, setCurrentTurn] = useState(0);
   const [mainTabChoice, chooseMainTab] = useState<{ key: string; value: NationalMainTab } | null>(
     null
@@ -277,7 +282,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     setParty,
     setLinkedStateIds,
     setElectionData,
-    setCommitteeData,
+    setCommitteeResult,
     setEligibleStates,
     setAnalyticsData,
     setLoading,
@@ -580,7 +585,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     ? [
         { id: "overview", label: "Overview" },
         { id: "analytics", label: "Analytics" },
-        { id: "committee", label: "Committee" },
+        { id: "committee", label: party.committeeTitles?.name?.trim() || "Committee" },
         { id: "caucuses", label: "Caucuses" },
         { id: "whip-room", label: "Whip room" },
         { id: "slate", label: "Slate" },
@@ -767,7 +772,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     >
       {activeTab === "overview" && (
         <div className="space-y-12">
-          <PartyOverviewPanel party={party} />
+          <PartyOverviewPanel party={party} committeeResult={committeeResult} />
           <RegimeOffersInbox countryCode={backCountry} partySequentialId={String(party.id)} />
           {canViewExtendedTabs && (
             <div className="grid gap-x-12 gap-y-12 md:grid-cols-2">
@@ -823,42 +828,13 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
 
       {activeTab === "committee" && (
         <div className="space-y-12">
-          <section aria-labelledby="committee-title">
-            <h2 id="committee-title" className={PARTY_SECTION_HEADING_CLASS}>
-              {getPartyRoleLabel(party.countryId, "committee")}
-            </h2>
-            <p className="mt-1 max-w-2xl text-body text-muted">
-              {`The ${getPartyRoleLabel(party.countryId, "committee")} consists of up to 6 elected members who help guide party policy and strategy.`}
-            </p>
-            <ol className="mt-4 grid border-t border-card-border sm:grid-cols-2 sm:gap-x-12 md:grid-cols-3">
-              {Array.from({
-                length: Math.max(
-                  committeeData?.committeeSize || 6,
-                  committeeData?.committeeMembers?.length ?? 0
-                ),
-              }).map((_, idx) => {
-                const member = committeeData?.committeeMembers?.[idx];
-                return (
-                  <li
-                    key={member ? member.id : `empty-${idx}`}
-                    className="flex items-baseline justify-between gap-3 border-b border-card-border py-3"
-                  >
-                    <span className="text-body-sm tabular-nums text-muted">Seat {idx + 1}</span>
-                    {member ? (
-                      <Link
-                        href={`/character/${member.sequentialId ?? member.id}`}
-                        className="min-w-0 truncate text-body font-medium text-foreground hover:underline"
-                      >
-                        {member.name}
-                      </Link>
-                    ) : (
-                      <span className="text-body text-muted">Vacant</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <NationalPartyOfficerRow party={party} />
+          <NationalPartyCommitteeRoster
+            countryId={party.countryId}
+            committeeResult={committeeResult}
+            committeeTitles={party.committeeTitles}
+            showSeatNumbers
+          />
           <CommitteeProposalsSection
             country={backCountry}
             countryCode={countryCode}
@@ -950,7 +926,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
                 {sub === "national"
                   ? "National leadership"
                   : sub === "committee"
-                    ? getPartyRoleLabel(party?.countryId ?? "US", "committee")
+                    ? getNationalCommitteeName(party.countryId, party.committeeTitles)
                     : `${COUNTRY_CLIENT_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabelPlural ?? "State parties"}`}
               </button>
             ))}
@@ -1073,13 +1049,18 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
             party={party}
             countryId={backCountry}
             characterId={user?.character?.id ?? ""}
+            committeeMembers={committeeData?.committeeMembers}
             onUpdate={fetchParty}
           />
         </>
       )}
 
       {activeTab === "leadership" && countryHasFeature("ukUi", party.countryId) && (
-        <LeadershipPanel countryCode={backCountry} partyId={id} />
+        <LeadershipPanel
+          countryCode={backCountry}
+          partyId={id}
+          leadershipTitles={party.leadershipTitles}
+        />
       )}
 
       {activeTab === "conference" && countryHasFeature("ukUi", party.countryId) && (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useGameClock } from "@/contexts/useGameClock";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { LocalTime } from "@/components/time/LocalTime";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -20,7 +21,13 @@ interface NominationDisplay {
 interface RoleState {
   role: "speaker_ng_reps" | "president_ng_senate";
   label: string;
-  leader: { characterId: string | null; characterName: string; party: string | null } | null;
+  leader: {
+    characterId: string | null;
+    characterName: string;
+    party: string | null;
+    avatarUrl?: string;
+    profileHref?: string;
+  } | null;
   election: {
     status: string;
     startedAt: string;
@@ -126,15 +133,18 @@ export function NgChamberLeadershipPanel({ countryId }: { countryId: CountryId }
             className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4 space-y-3"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-body-sm font-medium text-muted">{r.label}</p>
-                <p className="text-base font-semibold text-foreground mt-0.5">
-                  {r.leader?.characterName ?? "Vacant"}
-                </p>
-                {r.leader?.party && (
-                  <p className="text-xs text-muted">{r.leader.party.toUpperCase()}</p>
-                )}
-              </div>
+              <OfficeholderPortrait
+                compact
+                role={r.label}
+                detail={r.leader?.party?.toUpperCase()}
+                holder={
+                  r.leader && {
+                    name: r.leader.characterName,
+                    avatarUrl: r.leader.avatarUrl,
+                    href: r.leader.profileHref,
+                  }
+                }
+              />
               {viewer.isAdmin && !isElectionActive && (
                 <button
                   onClick={() => postAction(r.role, "start_election")}

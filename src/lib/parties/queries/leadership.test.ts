@@ -205,6 +205,36 @@ describe("getNationalCommitteeState", () => {
     expect(state.canVote).toBe(false);
   });
 
+  it("returns public avatars from the existing batch read in committee order", async () => {
+    await mockViewer();
+    const db = makeDb();
+    db.collectionMocks["nationalCommitteeElections"]!.findOne.mockResolvedValue(null);
+    const otherId = new ObjectId();
+    const find = db.collectionMocks["characters"]!.find;
+    find.mockReturnValue({
+      toArray: async () => [
+        { _id: otherId, name: "Other Member" },
+        {
+          _id: characterId,
+          sequentialId: 27,
+          name: "Committee Member",
+          avatarUrl: "/committee.png",
+        },
+      ],
+    } as never);
+
+    const { getNationalCommitteeState } = await import("./leadership");
+    const state = await getNationalCommitteeState(
+      db as unknown as Db,
+      makeParty({ committeeIds: [characterId, otherId] })
+    );
+    expect(state.committeeMembers).toMatchObject([
+      { sequentialId: 27, name: "Committee Member", avatarUrl: "/committee.png" },
+      { id: otherId.toString(), name: "Other Member" },
+    ]);
+    expect(find).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the ballot open for a member past the cooldown", async () => {
     await mockViewer();
     const db = makeDb();

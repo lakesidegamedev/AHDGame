@@ -1,15 +1,15 @@
 "use client";
 
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
+import { getPositionLabels } from "./helpers";
+import type { PartyData } from "./types";
+import type {
+  CommitteeMemberView,
+  LeadershipStateView,
+} from "@/lib/countries/uk/leadership/leadershipCommands";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { getMessageStyle } from "@/lib/utils/formatters";
-
-interface CommitteeMemberView {
-  characterId: string;
-  name: string;
-  role: "chair" | "viceChair" | "treasurer" | "member";
-  faction: string | null;
-}
 
 interface LeadershipState {
   partyName: string;
@@ -21,7 +21,7 @@ interface LeadershipState {
     removalMajorityPct: number;
     survivalImmunityTurns: number;
   };
-  leader: { characterId: string; name: string } | null;
+  leader: LeadershipStateView["leader"];
   committee: {
     members: CommitteeMemberView[];
     control: {
@@ -61,9 +61,11 @@ interface LeadershipState {
 export function LeadershipPanel({
   countryCode,
   partyId,
+  leadershipTitles,
 }: {
   countryCode: string;
   partyId: string;
+  leadershipTitles?: PartyData["leadershipTitles"];
 }) {
   const [data, setData] = useState<LeadershipState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +153,7 @@ export function LeadershipPanel({
   if (!data) return null;
   const busy = acting !== null;
   const challenge = data.activeChallenge;
+  const labels = getPositionLabels(countryCode, leadershipTitles);
 
   return (
     <div className="space-y-6">
@@ -159,9 +162,11 @@ export function LeadershipPanel({
       </div>
 
       <section aria-label="Party leadership" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">
-          {data.committeeName}: {data.leader ? data.leader.name : "Vacant"}
-        </h3>
+        <OfficeholderPortrait
+          compact
+          role={<h3 className="text-heading-sm font-bold">{labels.chair}</h3>}
+          holder={data.leader && { name: data.leader.name, ...data.leader.profile }}
+        />
         <p className="mt-1 text-body-sm text-muted">
           {data.leader
             ? `Sitting party leader. A successful challenge vacates the chair; the existing chair election seats the successor. The government is unaffected.`
@@ -205,13 +210,15 @@ export function LeadershipPanel({
             ? `Leading faction: ${data.committee.control.leadingFaction} (${data.committee.control.leadingSeats} seats${data.committee.control.majorityHeld ? ", majority" : ", no majority"})`
             : `No faction alignment recorded`}
         </p>
-        <ul className="mt-3 space-y-1 text-body-sm">
+        <ul role="list" className="mt-3 space-y-1 text-body-sm">
           {data.committee.members.map((m) => (
-            <li key={m.characterId} className="flex justify-between gap-2">
-              <span>
-                {m.name} <span className="text-muted">({m.role})</span>
-              </span>
-              <span className="text-muted">{m.faction ?? "unaligned"}</span>
+            <li key={m.characterId} className="border-b border-card-border py-2">
+              <OfficeholderPortrait
+                compact
+                role={m.role === "member" ? "Committee member" : labels[m.role]}
+                detail={m.faction ?? "unaligned"}
+                holder={{ name: m.name, ...m.profile }}
+              />
             </li>
           ))}
           {data.committee.members.length === 0 && (

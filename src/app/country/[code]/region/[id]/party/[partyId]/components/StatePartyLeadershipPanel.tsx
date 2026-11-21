@@ -4,7 +4,7 @@ import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import Link from "next/link";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import { CampaignerPicker } from "@/components/party/CampaignerPicker";
 import { StatePartyLeadershipManager } from "@/components/StatePartyLeadershipManager";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countryClientConfig";
@@ -163,35 +163,15 @@ export function StatePartyLeadershipPanel({
           const leader = stateParty[field] as LeaderInfo | null;
           return (
             <div key={field} className="rounded-lg border border-card-border bg-background p-4">
-              <div className="text-body-sm font-medium text-muted mb-3">{label}</div>
-              <div className="flex items-center gap-3 min-h-[3rem]">
-                {leader ? (
-                  <>
-                    <Avatar
-                      url={leader.avatarUrl}
-                      name={leader.name}
-                      size="h-12 w-12"
-                      className="ring-2 ring-card-border"
-                    />
-                    <Link
-                      href={`/character/${leader.sequentialId ?? leader.id}`}
-                      className="min-w-0 text-sm font-semibold text-primary hover:underline"
-                    >
-                      {leader.name}
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-muted bg-muted/10"
-                      aria-hidden
-                    >
-                      <span className="text-muted text-sm">—</span>
-                    </div>
-                    <span className="text-muted italic text-sm">Vacant</span>
-                  </>
-                )}
-              </div>
+              <OfficeholderPortrait
+                role={label}
+                holder={
+                  leader && {
+                    ...leader,
+                    href: `/character/${leader.sequentialId ?? leader.id}`,
+                  }
+                }
+              />
             </div>
           );
         })}

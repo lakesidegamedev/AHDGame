@@ -22,11 +22,13 @@ const params = Promise.resolve({ code: "us", id: "1" });
 describe("PATCH /api/country/[code]/parties/[id]/settings leadership titles", () => {
   let db: MockDb;
   let chairId: ObjectId;
+  let committeeMemberId: ObjectId;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
     chairId = new ObjectId();
+    committeeMemberId = new ObjectId();
     db.collection("politicalParties");
 
     const { getDb } = await import("@/lib/mongodb");
@@ -50,6 +52,7 @@ describe("PATCH /api/country/[code]/parties/[id]/settings leadership titles", ()
       chairId,
       viceChairId: new ObjectId(),
       leadershipTitles: { chair: "Chairperson" },
+      committeeIds: [committeeMemberId],
     } as never);
   });
 
@@ -75,6 +78,63 @@ describe("PATCH /api/country/[code]/parties/[id]/settings leadership titles", ()
       viceChair: "Deputy Secretary",
       treasurer: null,
     });
+  });
+
+  it("saves committee labels and member titles for the current roster", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(
+      makeRequest({
+        committeeTitles: {
+          name: "  National Council ",
+          member: "   ",
+          byMember: { [committeeMemberId.toString()]: "  Rules Convenor " },
+        },
+      }),
+      { params }
+    );
+
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ chairId, committeeIds: { $all: [committeeMemberId] } }),
+      {
+        $set: expect.objectContaining({
+          "committeeTitles.name": "National Council",
+          "committeeTitles.member": null,
+          [`committeeTitles.byMember.${committeeMemberId.toString()}`]: "Rules Convenor",
+        }),
+      }
+    );
+  });
+
+  it("clears one member override without replacing the other titles", async () => {
+    const { PATCH } = await import("./route");
+    const member = committeeMemberId.toString();
+    const response = await PATCH(
+      makeRequest({ committeeTitles: { byMember: { [member]: null } } }),
+      { params }
+    );
+
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ chairId }),
+      {
+        $set: { updatedAt: expect.any(Date) },
+        $unset: { [`committeeTitles.byMember.${member}`]: "" },
+      }
+    );
+  });
+
+  it("refuses custom titles for a person who no longer sits on the committee", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(
+      makeRequest({
+        committeeTitles: { byMember: { [new ObjectId().toString()]: "Rules Convenor" } },
+      }),
+      { params }
+    );
+
+    expect(response.status).toBe(409);
+    expect(db.collectionMocks["politicalParties"]!.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects titles longer than the server limit", async () => {
@@ -131,6 +191,7 @@ describe("PATCH /api/country/[code]/parties/[id]/settings leadership titles", ()
     const response = await PATCH(
       makeRequest({
         leadershipTitles: { chair: "General Secretary", viceChair: null, treasurer: null },
+        committeeTitles: { name: "Council" },
       }),
       { params }
     );
