@@ -9,6 +9,7 @@ import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
 import type { PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { RemoveCandidateButton } from "@/components/elections/admin/RemoveCandidateButton";
+import { PrimaryScoreDetails } from "./PrimaryScoreDetails";
 import { EndorsementBadges } from "@/components/elections/EndorsementBadges";
 
 function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
@@ -140,6 +141,13 @@ export function PartySection({
       }
     >
       <div className="px-4 py-3 sm:px-5">
+        {inPrimary && group.primaryShareBasis && (
+          <p className="mb-3 text-xs text-muted">
+            {group.primaryShareBasis === "counted"
+              ? "Share of primary votes counted so far"
+              : "Estimated share before votes are counted"}
+          </p>
+        )}
         {group.candidates.length === 0 ? (
           <div className="text-sm text-muted italic py-1">No candidates declared</div>
         ) : (
@@ -201,6 +209,11 @@ export function PartySection({
                           style={isAdvancing ? { color: candidateColor } : undefined}
                         >
                           {rawPct.toFixed(1)}%
+                          {c.primaryVotesCounted != null && (
+                            <span className="block text-right text-xs font-normal text-muted">
+                              {c.primaryVotesCounted.toLocaleString("en-US")} votes
+                            </span>
+                          )}
                         </span>
                       )}
                       {isAdmin && !isEnded && electionId && onRemoveSuccess && (
@@ -227,6 +240,9 @@ export function PartySection({
                     </div>
                   )}
 
+                  {inPrimary && c.primaryScoreBreakdown && (
+                    <PrimaryScoreDetails breakdown={c.primaryScoreBreakdown} />
+                  )}
                   <EndorsementBadges endorsements={c.endorsements} />
                 </div>
               );

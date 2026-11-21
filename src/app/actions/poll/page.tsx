@@ -194,10 +194,18 @@ export default function PollPage() {
   };
 
   const switchTier = async (tier: "small" | "large") => {
+    if (!pollData || pollData.pollType !== selectedTier || tier === selectedTier || commissioning)
+      return;
     setSelectedTier(tier);
-    setPollCommissioned(false);
-    const res = await fetch(`/api/actions/poll?type=${tier}`);
-    if (res.ok) setPollData(await res.json());
+    try {
+      const res = await fetch(`/api/actions/poll?type=${tier}`);
+      if (!res.ok) throw new Error("Poll tier failed to load");
+      setPollData(await res.json());
+      setPollCommissioned(false);
+    } catch {
+      setSelectedTier(pollData.pollType);
+      showToast("Couldn't load that poll type. Please try again.", "error");
+    }
   };
 
   if (loading) return <PageLoader />;
@@ -238,13 +246,22 @@ export default function PollPage() {
   // per tier plus the intellect-scaled fund cost, already converted to LOCAL
   // at the frozen campaign rate POST charges.
   const homeCurrency = getHomeCurrency(character);
-  const fundCostLocal = pollData.fundCostLocal;
-  const actionCost = pollData.actionCost;
+  const tierLoading = pollData.pollType !== selectedTier;
+  const priceAvailable = pollData.priceAvailable !== false;
+  const fundCostLocal =
+    selectedTier === "large" ? pollData.fundCostLargeLocal : pollData.fundCostSmallLocal;
+  const actionCost = selectedTier === "large" ? pollData.actionCostLarge : pollData.actionCostSmall;
   const canAfford = selectedTier === "large" ? canAffordLarge : canAffordSmall;
   const hasActions = selectedTier === "large" ? hasActionsLarge : hasActionsSmall;
-  const canCommission = canAfford && hasActions && !commissioning && !pollCommissioned;
+  const canCommission =
+    priceAvailable &&
+    !tierLoading &&
+    canAfford &&
+    hasActions &&
+    !commissioning &&
+    !pollCommissioned;
 
-  const storedPoll = pollData.storedPoll;
+  const storedPoll = tierLoading ? null : pollData.storedPoll;
   const showResults = pollCommissioned || !!storedPoll;
 
   const tiers = [
@@ -331,6 +348,7 @@ export default function PollPage() {
                   type="button"
                   role="radio"
                   aria-checked={active}
+                  disabled={tierLoading || commissioning}
                   onClick={() => switchTier(t.id)}
                   className={`rounded-lg border p-4 text-left transition-colors ${
                     active ? t.ring : "border-card-border bg-card hover:border-muted/50"
@@ -349,7 +367,9 @@ export default function PollPage() {
                     </div>
                     <div className="shrink-0 text-right">
                       <div className="text-body-lg font-semibold tabular-nums text-warning">
-                        {formatCurrencyFaceAmount(t.fund, homeCurrency)}
+                        {priceAvailable
+                          ? formatCurrencyFaceAmount(t.fund, homeCurrency)
+                          : "Price unavailable"}
                       </div>
                       <div className="text-body-sm text-muted">{t.actions} actions</div>
                     </div>
@@ -363,7 +383,9 @@ export default function PollPage() {
             <p className="text-body text-muted">
               Cost{" "}
               <span className="font-semibold text-foreground">
-                {formatCurrencyFaceAmount(fundCostLocal, homeCurrency)}
+                {priceAvailable
+                  ? formatCurrencyFaceAmount(fundCostLocal, homeCurrency)
+                  : "unavailable"}
               </span>{" "}
               and <span className="font-semibold text-foreground">{actionCost} actions</span>. You
               have{" "}
@@ -393,23 +415,31 @@ export default function PollPage() {
                     : "cursor-not-allowed bg-foreground/10 text-muted"
               }`}
             >
-              {pollCommissioned
-                ? "Filed"
-                : commissioning
-                  ? "Filing..."
-                  : !canAfford
-                    ? "Insufficient funds"
-                    : !hasActions
-                      ? "No actions"
-                      : selectedTier === "large"
-                        ? "Commission full poll"
-                        : "Commission quick poll"}
+              {tierLoading
+                ? "Loading poll"
+                : !priceAvailable
+                  ? "Allocate Intellect to commission"
+                  : pollCommissioned
+                    ? "Filed"
+                    : commissioning
+                      ? "Filing..."
+                      : !canAfford
+                        ? "Insufficient funds"
+                        : !hasActions
+                          ? "No actions"
+                          : selectedTier === "large"
+                            ? "Commission full poll"
+                            : "Commission quick poll"}
             </button>
           </div>
         </section>
 
         <div className="mt-8 space-y-8">
-          {showResults && storedPoll ? (
+          {tierLoading ? (
+            <p role="status" className="text-body text-muted">
+              Loading results for this poll type…
+            </p>
+          ) : showResults && storedPoll ? (
             <PollResults
               poll={storedPoll}
               selectedTier={selectedTier}
@@ -422,10 +452,6 @@ export default function PollPage() {
               <p className="mx-auto mt-1 max-w-md text-body text-muted">
                 Commission a poll above to see your appeal score, estimated voters, and voter group
                 breakdown for {stateName}.
-              </p>
-              <p className="mx-auto mt-2 max-w-md text-body-sm text-muted">
-                If you see zeros, run Admin, Demographics, Reseed Demographics, then commission a
-                new poll.
               </p>
             </section>
           )}

@@ -13,6 +13,7 @@ import {
   resolvePartyChairPrimaryRole,
   buildPartyChairIdSet,
   scorePrimaryCandidate,
+  describeRegionalPrimaryScore,
 } from "./primaryScore";
 
 describe("calcPrimaryScore", () => {
@@ -361,4 +362,32 @@ describe("primarySharePctSoftmax", () => {
     const shares = primarySharePctSoftmax([50, 50, 50, 50]);
     for (const s of shares) expect(s).toBeCloseTo(25, 1);
   });
+});
+
+it("breaks out the exact primary score, including the non-player adjustment", () => {
+  const input = {
+    isPresidential: false,
+    isNPP: true,
+    hasPlayerInParty: true,
+    candidateEcon: 2,
+    candidateSocial: -1,
+    partyEcon: 1,
+    partySocial: 0,
+    stateEconLean: 3,
+    stateSocialLean: -2,
+    favorability: 60,
+    politicalInfluence: 36,
+    infamy: 0,
+  };
+
+  const breakdown = describeRegionalPrimaryScore(input);
+  expect(breakdown).toMatchObject({
+    alignment: 36,
+    favorability: 21,
+    influence: 15,
+    infamyAdjustment: 0,
+    nppAdjustment: -36,
+    score: 36,
+  });
+  expect(breakdown.score).toBe(scorePrimaryCandidate(input));
 });

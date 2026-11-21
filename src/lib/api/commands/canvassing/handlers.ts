@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import { getStateDemographicTurnoutCollection } from "@/lib/db/collections";
@@ -156,7 +157,13 @@ export async function GET(req: NextRequest) {
       canvassUnitFundsCost(priceLevel) *
       (forex ? campaignLocalRate(auth.user.character.countryId, campaignRates) : 1);
     return NextResponse.json(
-      { stateId, targets: [...targets.values()], preview, fundsCost },
+      {
+        stateId,
+        targets: [...targets.values()],
+        preview,
+        fundsCost,
+        currency: getHomeCurrency(auth.user.character),
+      },
       { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {

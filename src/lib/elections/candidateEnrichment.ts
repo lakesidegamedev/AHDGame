@@ -15,6 +15,8 @@ import {
   buildPartyChairMaps,
   resolvePartyChairPrimaryRole,
   scorePrimaryCandidate,
+  describeRegionalPrimaryScore,
+  type RegionalPrimaryScoreBreakdown,
 } from "@/lib/primaryScore";
 import { parseSeatId } from "@/lib/seats/seatId";
 
@@ -47,7 +49,9 @@ export interface EnrichedCandidate {
    */
   infamy?: number;
   primaryScore: number;
+  primaryScoreBreakdown?: RegionalPrimaryScoreBreakdown;
   sharePct: number;
+  primaryVotesCounted?: number;
   enteredAt: Date;
   constituencyId?: string;
   japanShugiinListOrder?: number;
@@ -117,6 +121,7 @@ export interface EnrichmentDependencies {
    * leave this false to track live affiliation.
    */
   preferBallotParty?: boolean;
+  includePrimaryScoreBreakdown?: boolean;
 }
 
 export function enrichElectionCandidates(deps: EnrichmentDependencies): EnrichedCandidate[] {
@@ -134,6 +139,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
     states,
     electionSeatId,
     preferBallotParty = false,
+    includePrimaryScoreBreakdown = false,
   } = deps;
 
   // Resolve state-of-race lean for state-level alignment in calcPrimaryScore.
@@ -278,7 +284,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       ? undefined
       : (charMap.get(c.characterId.toString())?.infamy ?? 0);
 
-    const primaryScore = scorePrimaryCandidate({
+    const scoreInputs = {
       isPresidential: isPresident,
       isNPP: Boolean(c.isNPP),
       hasPlayerInParty: partiesWithPlayerCandidate.has(c.party),
@@ -296,7 +302,12 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       infamy: candidateInfamy,
       stateEconLean: raceStateEconLean,
       stateSocialLean: raceStateSocialLean,
-    });
+    };
+    const primaryScoreBreakdown =
+      includePrimaryScoreBreakdown && !isPresident
+        ? describeRegionalPrimaryScore(scoreInputs)
+        : undefined;
+    const primaryScore = primaryScoreBreakdown?.score ?? scorePrimaryCandidate(scoreInputs);
 
     const char = c.isNPP ? undefined : charMap.get(c.characterId.toString());
     // Resolve npp early so avatarUrl can fall back to the NPP's own portrait
@@ -341,6 +352,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       nationalInfluence: nationalInfluence ?? 0,
       infamy: candidateInfamy,
       primaryScore,
+      ...(primaryScoreBreakdown && { primaryScoreBreakdown }),
       sharePct: 0, // Will be computed in grouping step
       enteredAt: c.enteredAt,
       ...(c.constituencyId ? { constituencyId: c.constituencyId } : {}),
@@ -383,6 +395,7 @@ export interface PartyGroup {
   partySocial: number;
   hasCompetitivePrimary: boolean;
   candidates: EnrichedCandidate[];
+  primaryShareBasis?: "counted" | "estimate";
 
   /**
    * Presidential primaries only: projected delegates per candidate id, awarded

@@ -115,11 +115,19 @@ function MonoCount({ n }: { n: number }) {
 
 export function InboxClient() {
   const { items, loading, error, refetch } = useInboxData();
-  const [state, dispatch] = useReducer(inboxReducer, initialInboxState);
+  const searchParams = useSearchParams();
+  const mailLink = searchParams?.get("tab") === "mail";
+  const deepLinkId = searchParams?.get("id") ?? null;
+  const [state, dispatch] = useReducer(
+    inboxReducer,
+    mailLink && !deepLinkId ? { ...initialInboxState, seg: "mail" } : initialInboxState
+  );
   // The eyebrow is decorative identity text the shell already fetched for the
   // navbar, so read it from the shared bootstrap instead of issuing a second
   // full /api/auth/me session lookup on every inbox view.
-  const navData = useOptionalAuthMe()?.navData ?? null;
+  const auth = useOptionalAuthMe();
+  const navData = auth?.navData ?? null;
+  const refreshNav = auth?.refetch;
   const eyebrow: EyebrowInfo | null = navData?.characterName
     ? {
         name: navData.characterName,
@@ -203,19 +211,25 @@ export function InboxClient() {
             await Promise.all(
               receivedMailIds(item).map((id) => fetch(`/api/mail/${id}`, { method: "PATCH" }))
             );
+            refreshNav?.();
           }
         } catch {
           // Best-effort — UI is already updated optimistically
         }
       }
     },
-    [state.readIds]
+    [state.readIds, refreshNav]
   );
 
+  useEffect(() => {
+    if (!mailLink || deepLinkId) return;
+    dispatch({ type: "SET_SEG", seg: "mail" });
+    setMobileReader(false);
+    setShowHistory(false);
+  }, [mailLink, deepLinkId]);
   // Deep link from the navbar bell: /notifications?id=<notification id> opens
   // that item. Widen the segment and history so the item is on the rail even
   // when it is read or older than the focused list, then select it once.
-  const deepLinkId = useSearchParams()?.get("id") ?? null;
   const handledDeepLinkId = useRef<string | null>(null);
   useEffect(() => {
     if (!deepLinkId || loading || handledDeepLinkId.current === deepLinkId) return;
@@ -228,24 +242,28 @@ export function InboxClient() {
   }, [deepLinkId, loading, items, handleSelect]);
 
   // Archive
-  const handleArchive = useCallback(async (item: InboxItem) => {
-    dispatch({ type: "ARCHIVE", id: item.id });
-    try {
-      if (item.kind === "mail") {
-        await Promise.all(
-          receivedMailIds(item).map((id) => fetch(`/api/mail/${id}`, { method: "DELETE" }))
-        );
-      } else {
-        await fetch("/api/notifications", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: item.id, action: "archive" }),
-        });
+  const handleArchive = useCallback(
+    async (item: InboxItem) => {
+      dispatch({ type: "ARCHIVE", id: item.id });
+      try {
+        if (item.kind === "mail") {
+          await Promise.all(
+            receivedMailIds(item).map((id) => fetch(`/api/mail/${id}`, { method: "DELETE" }))
+          );
+          refreshNav?.();
+        } else {
+          await fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: item.id, action: "archive" }),
+          });
+        }
+      } catch {
+        // Best-effort
       }
-    } catch {
-      // Best-effort
-    }
-  }, []);
+    },
+    [refreshNav]
+  );
 
   // Snooze
   const handleSnooze = useCallback(async (item: InboxItem) => {
@@ -298,8 +316,9 @@ export function InboxClient() {
       );
       refetch();
     }
+    if (mailIds.length > 0) refreshNav?.();
     setMarkingAll(false);
-  }, [visibleItems, state.readIds, markingAll, refetch]);
+  }, [visibleItems, state.readIds, markingAll, refetch, refreshNav]);
 
   // Loading state — mirrors header + segment chips + rail/reading-pane grid
   if (loading) {
@@ -441,6 +460,11 @@ export function InboxClient() {
               aria-selected={active}
               onClick={() => {
                 dispatch({ type: "SET_SEG", seg });
+                if (seg !== "mail" && mailLink) {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("tab");
+                  window.history.replaceState(null, "", url);
+                }
                 setMobileReader(false);
                 setShowHistory(false);
               }}
