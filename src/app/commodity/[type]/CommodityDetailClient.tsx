@@ -302,6 +302,9 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 nationalSupply={data.nationalSupply}
                 nationalDemand={data.nationalDemand}
                 reachableBooks={data.reachableBooks}
+                fundedCountryBooks={
+                  data.nationalBalanceSource === "funded_book" ? data.fundedCountryBooks : undefined
+                }
                 stateCountryMap={marketScope.stateCountryMap}
                 capacityByState={marketScope.capacityByState}
                 mode={mapMode}
