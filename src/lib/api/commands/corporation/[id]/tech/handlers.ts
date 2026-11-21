@@ -352,7 +352,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // While an active product is in development it takes a bounded share of
       // the R&D budget, so only the remainder earns points.
 
-      rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 10) / 10 : null,
+      rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 1000) / 1000 : null,
       rdDecayPerTurn: rdProjection ? Math.round(rdProjection.rdScoreDecay * 10) / 10 : null,
       rdFundedProduct:
         fundedProject && rdProjection && rdDevelopmentShare > 0
@@ -375,6 +375,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             dailyGrossOperatingScale: Math.round(dailyGrossRevenue ?? 0),
             defaultRevenueFraction: TECH_NODE_CASH_REVENUE_FRACTION,
             capacityFloorApplied,
+            minimumCashCost: Math.round(techCashFloorLocal),
           },
       unlockedStrategyIds: redact ? [] : getUnlockedStrategyIds(corpView),
       unlockedStrategyNames,
