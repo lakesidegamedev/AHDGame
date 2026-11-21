@@ -19,7 +19,9 @@ export default function FlowLedgerStrip({
   return (
     <div className="rounded-xl border border-card-border bg-card px-5 py-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-body-sm font-medium text-muted">Global pooled ledger</span>
+        <span className="text-body-sm font-medium text-muted">
+          World totals, ignoring shipping limits
+        </span>
         <span className="text-[10px] text-muted tabular-nums">turn {flows.turn}</span>
       </div>
       <div
@@ -31,7 +33,7 @@ export default function FlowLedgerStrip({
           <div className="text-sm font-bold tabular-nums text-foreground">
             {formatUnits(flows.clearedUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Could clear</div>
+          <div className="text-[10px] text-muted mt-0.5">Could sell</div>
         </div>
         <div title="Calibrated world ledger demand above world supply. Reachable buyer intent can be higher because this pool ignores location and delivery limits.">
           <div
@@ -41,7 +43,7 @@ export default function FlowLedgerStrip({
           >
             {formatUnits(flows.unmetDemandUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Pooled unmet</div>
+          <div className="text-[10px] text-muted mt-0.5">Orders above supply</div>
         </div>
         <div title="World supply above calibrated world ledger demand. This pooled estimate does not apply route or country reachability.">
           <div
@@ -51,7 +53,7 @@ export default function FlowLedgerStrip({
           >
             {formatUnits(flows.surplusUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Pooled surplus</div>
+          <div className="text-[10px] text-muted mt-0.5">Supply above orders</div>
         </div>
         {flows.stockUnits != null && (
           <div title="Global stockpile after this turn's flows and spoilage. Not yet affecting prices.">
@@ -76,7 +78,7 @@ export default function FlowLedgerStrip({
             >
               {flows.coverTurns == null ? "—" : `${flows.coverTurns}t`}
             </div>
-            <div className="text-[10px] text-muted mt-0.5">Cover</div>
+            <div className="text-[10px] text-muted mt-0.5">Turns of stock</div>
           </div>
         )}
       </div>

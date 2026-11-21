@@ -234,6 +234,8 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
               unit={data.unit}
               marketLabel={marketScope.marketLabel}
               imports={marketScope.imports}
+              market={marketScope.fundedMarket}
+              world={!marketScope.activeCountry}
             />
             {data.flows && <FlowLedgerStrip flows={data.flows} unit={data.unit} />}
             {heavyLoaded && (
