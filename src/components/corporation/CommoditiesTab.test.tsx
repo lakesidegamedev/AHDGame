@@ -248,7 +248,7 @@ describe("CommoditiesTab by region", () => {
     const row = name.closest("tr")!;
     expect(within(row).getByText("Iron ore 500, Coal 100")).toBeTruthy();
     expect(within(row).getByText("Steel 1,000")).toBeTruthy();
-    // Input cost counts only the priced line; coal has no market price.
+    // Input value counts only the priced line; coal has no market price.
     const cost = within(row).getByText("$9000");
     expect(cost.getAttribute("title")).toBe("Excludes commodities with no market price.");
     expect(within(row).getByText("$31000")).toBeTruthy();
@@ -284,7 +284,7 @@ describe("CommoditiesTab by region", () => {
     render(<CommoditiesTab corpId="7" />);
     const name = await screen.findByRole("button", { name: "West Virginia" });
     const cells = within(name.closest("tr")!).getAllByRole("cell");
-    // State, Consumes, Produces, Input cost, Output value, Net value, toggle.
+    // State, Consumes, Produces, Input value, Output value, Net value, toggle.
     expect(cells[1].textContent).toBe("Coal 50");
     expect(cells[3].textContent).toBe("");
     expect(cells[4].textContent).toBe("");
@@ -393,8 +393,8 @@ describe("CommoditiesTab inputs and outputs", () => {
     render(<CommoditiesTab corpId="7" isCeo />);
     await screen.findByRole("table", { name: "Inputs" });
     // Inputs: (62 + 56) x 10. Outputs: (447 + 12) x 10.
-    expect(screen.getByText("2 commodities, $1180 per turn")).toBeTruthy();
-    expect(screen.getByText("2 commodities, $4590 per turn")).toBeTruthy();
+    expect(screen.getByText("2 commodities, $1180/day at market prices")).toBeTruthy();
+    expect(screen.getByText("2 commodities, $4590/day at market prices")).toBeTruthy();
   });
 
   it("links each row to its market only", async () => {
