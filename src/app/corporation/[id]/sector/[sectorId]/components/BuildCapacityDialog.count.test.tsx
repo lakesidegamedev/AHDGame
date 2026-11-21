@@ -14,6 +14,7 @@ import type { CorporationType } from "@/lib/constants/corporations";
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({
     formatAmount: (amount: number) => `$${Math.round(amount).toLocaleString("en-US")}`,
+    formatFull: (amount: number) => `$${amount.toFixed(2)}`,
   }),
 }));
 
@@ -165,6 +166,24 @@ it("distinguishes paid orders from cap estimates in mixed-output advice", () => 
     "Paid orders covered"
   );
   expect(screen.getByText("Match demand uses paid orders only.")).toBeTruthy();
+});
+
+it("shows cash left and the price factor that reconciles base to construction", () => {
+  const units = plantSizeUnits("manufacturing");
+  renderDialog(vi.fn(), {
+    ...plants,
+    buildQuote: { ...plants.buildQuote, unitPriceAnchor: 9, buildPriceScaleMultiplier: 1 / 9 },
+  });
+
+  expect(screen.getByTestId("build-cash-after").textContent).toContain(
+    `Cash left after build $${(plants.buildQuote.corpCapitalAnchor - units).toLocaleString("en-US")}`
+  );
+  expect(screen.getByText("Standard build price adjustment").closest("div")?.textContent).toContain(
+    "÷ 9"
+  );
+  expect(screen.getByText("Construction subtotal").nextSibling?.textContent).toBe(
+    `$${units.toFixed(2)}`
+  );
 });
 
 it("keeps the default view to the headline figures and one details disclosure", () => {
@@ -347,7 +366,7 @@ describe("BuildCapacityDialog count control", () => {
     renderDialog(vi.fn(), { ...plants, investment: undefined });
     const demand = screen.getByRole("button", { name: "Match demand" }) as HTMLButtonElement;
     expect(demand.disabled).toBe(true);
-    expect(screen.getByText(/Automatic sizing needs one full turn of results/)).toBeTruthy();
+    expect(screen.getByText(/Automatic sizing needs current operating results/)).toBeTruthy();
   });
 
   it("explains that outstanding debt withholds automatic sizing", () => {

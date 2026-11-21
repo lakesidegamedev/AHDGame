@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  commodityDominanceMultiplier,
   dominanceMultiplierForOrder,
   worstTollRatioForOrder,
 } from "@/lib/corporations/rules/commodityDominanceRamp";
@@ -116,7 +115,7 @@ export default function BuildCapacityDialog({
   onWithdrawFinancing,
 }: BuildCapacityDialogProps) {
   const t = useTranslations("corporations.sectorInvestment");
-  const { formatAmount } = useCurrency();
+  const { formatAmount, formatFull } = useCurrency();
   const workersDesired = plants.workersDesired ?? plants.workers;
   const labourStaffingFactor =
     plants.labourStaffingFactor ??
@@ -262,6 +261,7 @@ export default function BuildCapacityDialog({
     financingChoice?.request && q.financing
       ? financingChoice.request.principal / (q.financing.localPerAnchor || 1)
       : 0;
+  const cashAfter = q.corpCapitalAnchor - Math.max(0, preview.total - financedAnchor);
   const afterBuild =
     affordable && preview.safeCount > 0 && (q.runningBillsAnchor ?? 0) > 0
       ? runAfterBuild({
@@ -478,6 +478,22 @@ export default function BuildCapacityDialog({
           />
         </dl>
 
+        {preview.safeCount > 0 && (
+          <p className="text-body-sm" data-testid="build-cash-after">
+            <span className="text-muted">{cashAfter >= 0 ? t("cashLeft") : t("cashShort")}</span>{" "}
+            <span
+              className={
+                cashAfter < 0 ? "font-semibold text-error" : "font-semibold text-foreground"
+              }
+            >
+              {money(Math.abs(cashAfter))}
+            </span>
+            {!returns && (
+              <span className="ml-2 text-body-xs text-muted">{t("forecastUnavailable")}</span>
+            )}
+          </p>
+        )}
+
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <p className="text-body-sm text-muted" data-testid="build-room">
             {sectorType === "logistics"
@@ -603,24 +619,23 @@ export default function BuildCapacityDialog({
           <div className="mt-3 space-y-4">
             <dl className="space-y-2 text-body-sm">
               <CostLeg
-                label={`Base price per ${site}`}
-                value={money(q.unitPriceAnchor * unitsPerFacility)}
-                help={`One ${site} makes about ${fmtUnits(unitsPerFacility)} units a day.`}
+                label={t("baseOrderPrice")}
+                value={formatFull(q.unitPriceAnchor * preview.safeUnits)}
+                help={t("baseOrderPriceHelp")}
               />
               <CostLeg
-                label="Your market share"
-                value={fmtMult(q.localDominanceMultiplier ?? q.dominanceMultiplier)}
-                help="Growing a sector you already dominate costs more."
-                muted={(q.localDominanceMultiplier ?? q.dominanceMultiplier) === 1}
+                label={t("marketShareAdjustment")}
+                value={fmtMult(preview.orderDominance)}
+                help={
+                  q.commodityToll && preview.tollLabel
+                    ? t("marketShareDemandHelp", {
+                        percent: Math.round(preview.tollRatio * 100),
+                        product: preview.tollLabel,
+                      })
+                    : t("marketShareAdjustmentHelp")
+                }
+                muted={preview.orderDominance === 1}
               />
-              {q.commodityToll && (
-                <CostLeg
-                  label="Share of market demand"
-                  value={fmtMult(commodityDominanceMultiplier(preview.tollRatio))}
-                  help={`With this order you could make about ${Math.round(preview.tollRatio * 100)}% of the market demand for ${preview.tollLabel ?? "this good"}. Past half costs sharply more.`}
-                  muted={commodityDominanceMultiplier(preview.tollRatio) === 1}
-                />
-              )}
               <CostLeg
                 label="Borrowing rates"
                 value={fmtMult(q.rateMultiplier)}
@@ -652,10 +667,21 @@ export default function BuildCapacityDialog({
                   help={t("expansionDiscountHelp")}
                 />
               )}
+              {q.buildPriceScaleMultiplier != null && q.buildPriceScaleMultiplier !== 1 && (
+                <CostLeg
+                  label={t("buildPriceScale")}
+                  value={
+                    q.buildPriceScaleMultiplier === 1 / 9
+                      ? "÷ 9"
+                      : `×${q.buildPriceScaleMultiplier.toLocaleString("en-US", { maximumFractionDigits: 6 })}`
+                  }
+                  help={t("buildPriceScaleHelp")}
+                />
+              )}
               <div className="flex items-center justify-between border-t border-card-border pt-2">
-                <dt className="text-body-sm text-muted">Price per {site}</dt>
+                <dt className="text-body-sm text-muted">{t("constructionSubtotal")}</dt>
                 <dd className="text-body-sm font-semibold tabular-nums text-foreground">
-                  {money(q.perUnitAnchor * unitsPerFacility)}
+                  {formatFull(preview.construction)}
                 </dd>
               </div>
               {preview.sizeSurcharge > 0 && preview.safeUnits > 0 && (
@@ -668,8 +694,15 @@ export default function BuildCapacityDialog({
               {preview.transferFee > 0 && (
                 <CostLeg
                   label="Foreign transfer fee"
-                  value={money(preview.transferFee)}
+                  value={formatFull(preview.transferFee)}
                   help="Moving money into a country with a different currency costs a small fee."
+                />
+              )}
+              {preview.transferFee > 0 && (
+                <CostLeg
+                  label={t("buildTotal")}
+                  value={formatFull(preview.total)}
+                  help={t("buildTotalWithFee")}
                 />
               )}
             </dl>
