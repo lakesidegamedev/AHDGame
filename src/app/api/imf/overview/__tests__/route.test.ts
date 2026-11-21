@@ -51,9 +51,14 @@ describe("GET /api/imf/overview", () => {
   it("200 returns IMF corp + board members + bailouts + overrides", async () => {
     const charId = new ObjectId();
     const imfId = new ObjectId();
-    vi.mocked(requireAuth).mockResolvedValue({ ok: true, user: {} } as never);
+    vi.mocked(requireAuth).mockResolvedValue({
+      ok: true,
+      user: { character: { _id: charId } },
+    } as never);
     vi.mocked(getImfCorporation).mockResolvedValue({
       _id: imfId,
+      ceoId: charId,
+      ceoVacant: false,
       liquidCapital: 5_000_000_000,
       liquidCurrencyCode: "USD",
       shareholders: [{ characterId: charId, shares: 50 }],
@@ -111,6 +116,9 @@ describe("GET /api/imf/overview", () => {
       liquidCapital: 5_000_000_000,
       liquidCurrencyCode: "USD",
     });
+    expect(body.viewerIsBoardMember).toBe(true);
+    expect(body.viewerIsManagingDirector).toBe(true);
+    expect(body.managingDirector).toMatchObject({ name: "Admin Alex" });
     expect(body.boardMembers).toEqual([
       { characterId: charId.toString(), name: "Admin Alex", sequentialId: null },
     ]);

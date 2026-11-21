@@ -14,6 +14,23 @@ export const SEVERITY_HISTORY_LIMIT = 48;
 /** Stages in which doing nothing lets a crisis feed on itself. */
 const ESCALATING_STAGES: ReadonlySet<ActiveCrisisStage> = new Set(["signal", "onset", "peak"]);
 
+/** The grace period applies only where inactivity can add severity. */
+export function inactionGraceTurns(
+  def: CrisisDefinition,
+  stage: CrisisInstance["stage"]
+): number | null {
+  const rule = def.severity.inaction;
+  if (
+    stage === "resolved" ||
+    !ESCALATING_STAGES.has(stage) ||
+    rule.maxPerTurn <= 0 ||
+    (rule.perTurn <= 0 && rule.growthPerTurn <= 0)
+  ) {
+    return null;
+  }
+  return rule.graceTurns;
+}
+
 export interface AcceptedLeverUse {
   use: LeverUse;
   lever: CrisisLeverDef;

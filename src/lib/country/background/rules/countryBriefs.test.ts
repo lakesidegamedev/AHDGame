@@ -95,13 +95,16 @@ describe("planBriefs", () => {
         turn: 296,
         fiscalYear: 2029,
         sizeGdpShare: 0.014,
-        taxRise: 0.006,
-        spendingCut: 0.008,
+        taxRise: 12_809_692_289.646,
+        spendingCut: 14_998_877_577.022,
       },
     });
     const first = planBriefs(o, memory());
     expect(first.briefs.map((b) => b.kind).sort()).toEqual(["austerity", "election"]);
-    expect(first.briefs.find((b) => b.kind === "austerity")?.body).toContain("1.4% of GDP");
+    const austerity = first.briefs.find((b) => b.kind === "austerity")?.body;
+    expect(austerity).toContain("1.4% of GDP");
+    expect(austerity).toContain("12.8B EUR in tax increases");
+    expect(austerity).toContain("15.0B EUR in spending cuts");
     expect(planBriefs(o, first.memory).briefs).toEqual([]);
   });
 

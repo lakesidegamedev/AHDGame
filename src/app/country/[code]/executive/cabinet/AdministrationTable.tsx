@@ -8,6 +8,7 @@ import { PartyChip } from "@/app/congress/components/CongressShared";
 import { CabinetVoteRow } from "@/app/whitehouse/cabinet/components/CabinetVoteRow";
 import { CabinetNominateModal } from "@/app/whitehouse/cabinet/components/CabinetNominateModal";
 import type { CabinetGroup } from "@/lib/constants/cabinetPositionGroups";
+import { cabinetSenateVoteSummary } from "@/lib/cabinet/senateVoteSummary";
 import type { Position, PositionMember, PresidentialCabinetState } from "./usePresidentialCabinet";
 
 /** An office above the cabinet (President, Vice President) shown in the same table. */
@@ -121,7 +122,13 @@ export function AdministrationTable({
       return {
         label: "Senate vote",
         tone: "info",
-        note: `${n.votesFor} for, ${n.votesAgainst} against`,
+        note: (
+          <>
+            {n.votesFor} for, {n.votesAgainst} against
+            <br />
+            {cabinetSenateVoteSummary(n.votesFor, n.votesAgainst)}
+          </>
+        ),
       };
     }
     return { label: "Vacant", tone: "default" };

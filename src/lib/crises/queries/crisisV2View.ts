@@ -7,7 +7,7 @@ import { getGameState } from "@/lib/gameState";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { forecastDoNothing, severityTrend, type SeverityTrend } from "@/lib/crises/v2/forecast";
 import { ROLE_LABEL, ledgerView, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
-import { SEVERITY_HISTORY_LIMIT } from "@/lib/crises/v2/severity";
+import { SEVERITY_HISTORY_LIMIT, inactionGraceTurns } from "@/lib/crises/v2/severity";
 import type { CrisisDefinition, CrisisScar, CrisisStage, ScarKind } from "@/lib/crises/v2/types";
 import {
   getAvailableLevers,
@@ -37,7 +37,7 @@ export interface CrisisV2Summary {
   /** Who holds a response to this crisis, whatever the viewer can do. */
   responders: CrisisV2Responder[];
   /** Idle turns tolerated before doing nothing starts to cost severity. */
-  graceTurns: number;
+  graceTurns: number | null;
 }
 
 export interface CrisisV2Responder {
@@ -116,7 +116,7 @@ function summarize(
       ? scoped.map(({ id, name }) => ({ id, name }))
       : [],
     responders: respondersFor(def),
-    graceTurns: def.severity.inaction.graceTurns,
+    graceTurns: inactionGraceTurns(def, crisis.v2.stage),
   };
 }
 
@@ -232,7 +232,7 @@ export async function loadCrisisV2Detail(
     levers: [],
     corporations: [],
     responders: respondersFor(def),
-    graceTurns: def?.severity.inaction.graceTurns ?? 0,
+    graceTurns: null,
     ledger,
     scars,
   };

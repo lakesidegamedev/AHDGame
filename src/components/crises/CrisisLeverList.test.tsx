@@ -208,7 +208,7 @@ describe("noResponseText and forecast copy", () => {
     ]);
     expect(text).toContain("head of state (Declare emergency)");
     expect(text).toContain("central bank chair (Inject liquidity)");
-    expect(text).toContain("keeps escalating");
+    expect(text).not.toContain("keeps escalating");
   });
 
   it("says plainly when nobody holds a response", () => {
@@ -217,7 +217,7 @@ describe("noResponseText and forecast copy", () => {
 
   it("adds the grace period to the forecast", () => {
     expect(forecastText(40, [42, 50, 61], 2)).toBe(
-      "If nobody acts: 40 now, about 61 in 3 turns. Doing nothing for more than 2 turns makes it worse."
+      "If nobody acts: 40 now, about 61 in 3 turns. After 2 idle turns, inaction can add to severity."
     );
   });
 });

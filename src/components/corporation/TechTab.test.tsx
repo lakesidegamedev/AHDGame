@@ -183,11 +183,14 @@ beforeEach(() => {
         isCeo: true,
         redacted: false,
         rdScore: 10,
+        rdBudget: 114_968,
+        rdGainPerTurn: 0.04,
         liquidCapital: 61_413_924,
         cashPricing: {
           dailyGrossOperatingScale: 2_635_025_294,
           defaultRevenueFraction: 0.15,
           capacityFloorApplied: true,
+          minimumCashCost: 4_900_000,
         },
         decades: [],
       }),
@@ -201,9 +204,20 @@ describe("TechTab cash pricing", () => {
 
     await waitFor(() => expect(screen.getByText("How cash prices work")).toBeTruthy());
     expect(screen.getByText(/15% of the corporation's \$2,635,025,294 daily gross/)).toBeTruthy();
-    expect(screen.getByText(/Market cap and profit do not set the price/)).toBeTruthy();
+    expect(screen.getByText(/one game year of savings or extra operating profit/)).toBeTruthy();
+    expect(screen.getByText(/with a minimum of \$4,900,000/)).toBeTruthy();
     expect(screen.getByText(/Owned plant capacity is the minimum pricing basis/)).toBeTruthy();
-    expect(screen.getByText(/Exchange rates can move the converted total/)).toBeTruthy();
+    expect(screen.getByText(/at current exchange rates/)).toBeTruthy();
+  });
+
+  it("shows the current R&D spend and a gain smaller than a tenth of a point", async () => {
+    renderTechTab();
+
+    expect(await screen.findByText("+0.04/turn after decay")).toBeTruthy();
+    expect(screen.getByText("$114,968/day")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open CEO budget" }).getAttribute("href")).toBe(
+      "/corporation/624?tab=ceo#ceo-budget"
+    );
   });
 });
 
@@ -328,6 +342,7 @@ describe("TechTab research tree", () => {
     expect(
       screen.getByText(/The other track stays locked unless you abandon this decade/)
     ).toBeTruthy();
+    expect(screen.getByText(/R&D points left after unlocking/).textContent).toContain("2");
     expect(screen.getByRole("button", { name: "Unlock technology" })).toBeTruthy();
   });
 

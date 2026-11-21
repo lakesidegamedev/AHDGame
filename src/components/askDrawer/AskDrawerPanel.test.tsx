@@ -265,6 +265,8 @@ describe("AskDrawerPanel chat layout", () => {
     const pill = screen.getByRole("button", { name: /^Sources/ });
     expect(pill.textContent).toContain("2");
     fireEvent.click(pill);
+    expect(screen.getByRole("heading", { name: "Sources 2" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Code and documentation" })).toBeTruthy();
     expect(screen.getByText("Approval wiki page")).toBeTruthy();
     expect(screen.getByText("Live game data read")).toBeTruthy();
     expect(screen.getByText("Party approval")).toBeTruthy();

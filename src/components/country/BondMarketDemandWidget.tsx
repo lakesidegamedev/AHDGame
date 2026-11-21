@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui";
 import type { SovereignDemandResult, SovereignDemandSnapshot } from "@/lib/sovereignDefault/types";
 import type { DsaResult } from "@/lib/sovereignDefault/debtSustainability";
+import type { SovereignCrisisState } from "@/lib/db/types/federalBudget";
 import { fetchSovereignStatus } from "./sovereignStatusRequest";
 
 interface SovereignStatusResponse {
@@ -12,7 +13,17 @@ interface SovereignStatusResponse {
   snapshot: SovereignDemandSnapshot;
   demand: SovereignDemandResult;
   dsa?: DsaResult;
+  crisisState?: SovereignCrisisState;
+  consecutiveFailedAuctions?: number;
 }
+
+const CRISIS_STATUS: Record<SovereignCrisisState, string> = {
+  normal: "No active debt crisis",
+  warning: "Auction warning",
+  crisisPending: "Debt crisis · awaiting executive action",
+  crisisResolving: "Debt crisis · resolution underway",
+  recovering: "Recovering from debt crisis",
+};
 
 interface Props {
   countryCode: string;
@@ -80,7 +91,7 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
     );
   }
 
-  const { demand, dsa } = state.data;
+  const { demand, dsa, crisisState, consecutiveFailedAuctions } = state.data;
   const ratio = demand.demandRatio;
   const ratioColor =
     ratio >= 1.0
@@ -116,10 +127,20 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
           <span className="text-xs text-muted">Sustainability index</span>
           <span className={`text-sm font-bold tabular-nums ${dsaColor}`}>
             {dsa.score.toFixed(0)} / 100{" "}
-            <span className="ml-1 text-xs font-normal text-muted">({dsa.band})</span>
+            <span className="ml-1 text-xs font-normal text-muted">
+              ({dsa.band === "crisis" ? "severe risk" : dsa.band})
+            </span>
           </span>
         </div>
       ) : null}
+      {crisisState && (
+        <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-muted">
+          <span>{CRISIS_STATUS[crisisState]}</span>
+          {consecutiveFailedAuctions != null && (
+            <span>Consecutive failed auctions {consecutiveFailedAuctions}</span>
+          )}
+        </div>
+      )}
       <table className="mt-3 w-full text-xs">
         <tbody>
           {demand.components.map((c) => (

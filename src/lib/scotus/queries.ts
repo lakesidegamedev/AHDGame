@@ -79,12 +79,13 @@ export async function getScotusCaseHistory(
 /** Pending Docket cases the Court has yet to rule on, soonest decision year first. */
 export async function getScotusUpcomingCases(
   db: Db,
-  countryId: CountryId
+  countryId: CountryId,
+  preset?: string
 ): Promise<
   Array<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>
 > {
   return docketCasesCollection(db)
-    .find({ countryId, status: "pending" })
+    .find({ countryId, status: "pending", ...(preset && { preset }) })
     .project<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>({
       _id: 0,
       caseKey: 1,

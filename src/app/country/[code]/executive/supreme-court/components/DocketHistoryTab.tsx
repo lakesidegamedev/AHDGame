@@ -8,18 +8,21 @@ interface DocketCaseRow {
   title: string;
   axis: "economic" | "social";
   decisionYear: number;
+  isSurprise?: boolean;
   outcome?: "affirmed" | "diverged";
   decidedAtTurn?: number;
   decisionSeatedFor?: number;
   decisionSeatedAgainst?: number;
 }
 
-/**
- * Docket history: past cases and how the sitting Court ruled, most recent first
- * (server already sorts by `decidedAtTurn` descending; see `getScotusCaseHistory`).
- * Lazy-loaded: only fetched once the Docket History tab is opened, matching the
- * Admin-tab lazy-fetch convention on the cabinet page.
- */
+interface DocketResponse {
+  cases: DocketCaseRow[];
+  upcomingCases?: (Pick<DocketCaseRow, "caseKey" | "title" | "axis" | "decisionYear"> & {
+    hearingDueTurn?: number;
+  })[];
+  proceduralOnly?: boolean;
+}
+
 /**
  * What the outcome badges mean and how cases reach the Court. Shown with the
  * list and with the empty state, so a player never meets "Affirmed history" or
@@ -40,27 +43,27 @@ export function DocketExplainer() {
         justices do not cast votes on individual cases. Some landmark outcomes are fixed to history.
       </p>
       <p>
-        Players cannot file cases. Landmark cases reach the docket on their historical dates, and
-        rare unscripted cases can appear on their own. You shape rulings through who sits on the
-        bench: the President nominates and the Senate confirms.
+        Players cannot file cases. Historical scenarios may schedule landmark cases. Unscripted
+        cases can appear during play. You shape rulings through who sits on the bench: the President
+        nominates and the Senate confirms.
       </p>
     </div>
   );
 }
 
 export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
-  const [cases, setCases] = useState<DocketCaseRow[] | null>(null);
+  const [docket, setDocket] = useState<DocketResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/country/${countryCode}/scotus/cases`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("failed"))))
-      .then((json: { cases?: DocketCaseRow[] }) => {
-        if (!cancelled) setCases(json.cases ?? []);
+      .then((json: DocketResponse) => {
+        if (!cancelled) setDocket(json);
       })
       .catch(() => {
-        if (!cancelled) setError("Failed to load docket history.");
+        if (!cancelled) setError("Failed to load the docket.");
       });
     return () => {
       cancelled = true;
@@ -75,7 +78,7 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
     );
   }
 
-  if (cases === null) {
+  if (docket === null) {
     return (
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
@@ -85,52 +88,72 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
     );
   }
 
-  if (cases.length === 0) {
-    return (
-      <div className="space-y-3">
-        <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
-          No cases have been decided yet. Landmark cases fire near their real historical dates as
-          the game clock advances.
-        </div>
-        <DocketExplainer />
-      </div>
-    );
-  }
+  const { cases, upcomingCases = [], proceduralOnly } = docket;
 
   return (
-    <div className="space-y-3">
-      <DocketExplainer />
-      {cases.map((c) => {
-        const diverged = c.outcome === "diverged";
-        return (
-          <div
-            key={c.caseKey}
-            className="flex flex-col gap-2 rounded-xl border border-card-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">{c.title}</p>
-              <p className="mt-0.5 text-xs text-muted">
-                {c.decisionYear} · {c.axis === "economic" ? "Economic" : "Social"} axis
-                {c.decisionSeatedFor != null && c.decisionSeatedAgainst != null && (
-                  <>
-                    {" "}
-                    · {c.decisionSeatedFor}-{c.decisionSeatedAgainst} majority
-                  </>
-                )}
-              </p>
-            </div>
-            <span
-              className={`shrink-0 self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide sm:self-center ${
-                diverged
-                  ? "border-warning/40 bg-warning/10 text-warning"
-                  : "border-card-border bg-card-elevated text-muted"
-              }`}
-            >
-              {diverged ? "Diverged" : "Affirmed history"}
-            </span>
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Upcoming cases</h2>
+        {upcomingCases.length === 0 && (
+          <p className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+            {proceduralOnly
+              ? "No cases are awaiting a hearing. New cases can arise during play and get a hearing date when they are filed."
+              : "No cases are currently on the docket."}
+          </p>
+        )}
+        {upcomingCases.map((c) => (
+          <div key={c.caseKey} className="rounded-xl border border-card-border bg-card p-4">
+            <p className="text-sm font-semibold text-foreground">{c.title}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              {c.hearingDueTurn != null
+                ? `Hearing on Turn ${c.hearingDueTurn}`
+                : `Scheduled for ${c.decisionYear}`}
+              {" · "}
+              {c.axis === "economic" ? "Economic" : "Social"} case
+            </p>
           </div>
-        );
-      })}
+        ))}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Decided cases</h2>
+        {cases.length === 0 && (
+          <p className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+            No rulings have been recorded.
+          </p>
+        )}
+        {cases.map((c) => {
+          const diverged = c.outcome === "diverged";
+          return (
+            <div
+              key={c.caseKey}
+              className="flex flex-col gap-2 rounded-xl border border-card-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{c.title}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {c.decisionYear} · {c.axis === "economic" ? "Economic" : "Social"} axis
+                  {c.decisionSeatedFor != null && c.decisionSeatedAgainst != null && (
+                    <>
+                      {" "}
+                      · {c.decisionSeatedFor}-{c.decisionSeatedAgainst} majority
+                    </>
+                  )}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide sm:self-center ${
+                  diverged
+                    ? "border-warning/40 bg-warning/10 text-warning"
+                    : "border-card-border bg-card-elevated text-muted"
+                }`}
+              >
+                {c.isSurprise ? "Ruling recorded" : diverged ? "Diverged" : "Affirmed history"}
+              </span>
+            </div>
+          );
+        })}
+      </section>
     </div>
   );
 }

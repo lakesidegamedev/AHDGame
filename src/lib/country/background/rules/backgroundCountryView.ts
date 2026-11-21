@@ -318,8 +318,8 @@ export function buildFiscalView(
           fiscalYear: pkg.fiscalYear,
           turn: pkg.turn,
           size: pkg.sizeGdpShare * 100,
-          taxRise: pkg.taxRise * 100,
-          spendingCut: pkg.spendingCut * 100,
+          taxRise: pkg.taxRise,
+          spendingCut: pkg.spendingCut,
           approvalCost: pkg.approvalCost,
         }
       : null,

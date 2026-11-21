@@ -65,6 +65,8 @@ const percent = (value: number | null, digits = 1): string =>
 export function BackgroundCountryOverview({ view, name, startingYear, clock }: Props) {
   const { economy, currency, trade, politics } = view;
   const code = currency?.currencyCode as CurrencyCode | undefined;
+  const fiscalAmount = (amount: number) =>
+    code ? formatLocalAmount(amount, code) : `${formatFundsCompact(amount, "")} in local currency`;
   const seats: PartySeatsDisplay[] =
     politics?.parties.map((p) => ({
       party: p.party,
@@ -167,10 +169,11 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                 {view.fiscal.lastPackage ? (
                   <p data-testid="background-austerity" className="text-body-sm">
                     Austerity package, fiscal year {view.fiscal.lastPackage.fiscalYear}:{" "}
-                    {percent(view.fiscal.lastPackage.size)} of GDP (tax{" "}
-                    {percent(view.fiscal.lastPackage.taxRise)}, spending cuts{" "}
-                    {percent(view.fiscal.lastPackage.spendingCut)}), costing the government{" "}
-                    {view.fiscal.lastPackage.approvalCost.toFixed(1)} points of approval.
+                    {percent(view.fiscal.lastPackage.size)} of GDP, including{" "}
+                    {fiscalAmount(view.fiscal.lastPackage.taxRise)} in tax increases and{" "}
+                    {fiscalAmount(view.fiscal.lastPackage.spendingCut)} in spending cuts. The
+                    government lost {view.fiscal.lastPackage.approvalCost.toFixed(1)} points of
+                    approval.
                   </p>
                 ) : (
                   <p className="text-body-sm text-muted">No austerity package so far.</p>

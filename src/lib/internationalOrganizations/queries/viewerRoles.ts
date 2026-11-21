@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
@@ -17,8 +18,9 @@ export async function loadViewerOrganizationRoles(params: {
   db: Db;
   characterId: ObjectId | null;
   characterName?: string | null;
+  homeCountryId?: CountryId | null;
 }) {
-  const { db, characterId, characterName } = params;
+  const { db, characterId, characterName, homeCountryId } = params;
   if (!characterId) {
     return {
       characterId: null,
@@ -51,7 +53,24 @@ export async function loadViewerOrganizationRoles(params: {
       )
     ) ?? null;
 
-  const headOfGovernmentOf = await findCountryHeadedBy(db, characterId);
+  const usPositionId = countryHasFeature("usLib", homeCountryId)
+    ? FOREIGN_AFFAIRS_POSITION_BY_COUNTRY.US
+    : null;
+  const [headOfGovernmentOf, usForeignMinister] = await Promise.all([
+    findCountryHeadedBy(db, characterId),
+    usPositionId
+      ? cabinetCol.findOne(
+          { countryId: "US", positionId: usPositionId },
+          { projection: { characterId: 1, isNPP: 1, nppId: 1 } }
+        )
+      : null,
+  ]);
+  const usRepresentation: "vacant" | "npp" | null =
+    !usPositionId || usForeignMinister?.characterId
+      ? null
+      : usForeignMinister?.isNPP || usForeignMinister?.nppId
+        ? "npp"
+        : "vacant";
 
   // The diplomatic-action budget applies to the country the viewer acts for.
   // Only the foreign-affairs seat holder acts: every action route requires it,
@@ -70,6 +89,7 @@ export async function loadViewerOrganizationRoles(params: {
     foreignMinisterOf,
     foreignMinisterCountryName: foreignMinisterOf ? COUNTRY_CONFIGS[foreignMinisterOf].name : null,
     headOfGovernmentOf,
+    usRepresentation,
     headOfGovernmentCountryName: headOfGovernmentOf
       ? COUNTRY_CONFIGS[headOfGovernmentOf].name
       : null,

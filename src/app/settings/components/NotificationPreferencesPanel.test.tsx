@@ -22,6 +22,20 @@ describe("notification controls", () => {
     for (const type of NOTIFICATION_TYPES)
       expect(messages.settings.notifications.types).toHaveProperty(type);
   });
+  it("explains live turn status without offering a switch for inbox delivery", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ mutedTypes: ["turn_advance"], snoozedTypes: [] }),
+      })
+    );
+    mount();
+
+    expect(await screen.findByRole("heading", { name: "Elections" })).toBeTruthy();
+    expect(screen.getByText(/The in-game status bar tracks live turns/)).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: "Turn notifications" })).toBeNull();
+  });
   it("loads existing preferences and restores the switch after a rejected save", async () => {
     const fetch = vi
       .fn()

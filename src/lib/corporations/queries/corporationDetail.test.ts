@@ -82,6 +82,25 @@ describe("loadCorporationDetailView", () => {
     }
   );
 
+  it("finds the IMF director when an old CEO type points at the wrong collection", async () => {
+    const director = makeCharacter({ name: "IMF Managing Director" });
+    db.collection("characters").findOne.mockResolvedValue(director);
+    db.collection("characters").find.mockReturnValue({ toArray: async () => [director] });
+    const result = await loadCorporationDetailView({
+      db: db as unknown as Db,
+      corporation: makeCorporation({
+        imfInstitution: true,
+        ceoVacant: false,
+        ceoType: "npp",
+        ceoId: director._id,
+        shareholders: [{ characterId: director._id, shares: 50 }],
+      }),
+      currentTurn: 105,
+      viewerUserId: null,
+    });
+    expect(result.ceo).toMatchObject({ name: director.name, isNpp: false });
+  });
+
   it("does not award the CEO a synthetic remainder for debited character reservations", async () => {
     const ceo = makeCharacter({ name: "CEO" });
     const corporation = makeCorporation({

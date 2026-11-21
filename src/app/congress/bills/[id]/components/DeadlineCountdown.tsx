@@ -3,15 +3,17 @@ import { useDeadlineLabel } from "./useDeadlineLabel";
 export function DeadlineCountdown({
   deadline,
   deadlineTurn,
+  kind,
 }: {
   deadline: string | null;
   deadlineTurn?: number | null;
+  kind?: "vote" | "presidentialAction";
 }) {
-  const { text, expired, pending } = useDeadlineLabel(deadline, deadlineTurn);
+  const { text, expired, pending, turnLabel } = useDeadlineLabel(deadline, deadlineTurn, kind);
   return (
     <span
       className={`text-xs tabular-nums font-mono ${expired ? "text-red-400" : pending ? "text-muted" : "text-purple-300"}`}
-      title={deadlineTurn != null ? `Voting closes turn ${deadlineTurn}` : undefined}
+      title={turnLabel}
     >
       ⏱ {text}
     </span>

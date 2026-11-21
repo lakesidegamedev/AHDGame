@@ -113,6 +113,7 @@ describe("GET /api/country/[code]/sovereign-status", () => {
         findOne: () =>
           Promise.resolve({
             sovereignCrisisState: "recovering",
+            failedAuctionConsecutiveCount: 2,
             recoveryStartedAt: { turn: 100 },
             recoveryFiscalDisciplineStreak: 3,
             marketAccessLockedUntilTurn: 148,
@@ -150,6 +151,7 @@ describe("GET /api/country/[code]/sovereign-status", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.crisisState).toBe("recovering");
+    expect(body.consecutiveFailedAuctions).toBe(2);
     expect(body.recoveryStartedAt).toEqual({ turn: 100 });
     expect(body.recoveryFiscalDisciplineStreak).toBe(3);
     expect(body.marketAccessLockedUntilTurn).toBe(148);

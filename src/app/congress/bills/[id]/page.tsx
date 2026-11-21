@@ -11,6 +11,7 @@ import { BillPageErrorBoundary } from "@/components/BillPageErrorBoundary";
 import { BillDetailSkeleton } from "./components/BillDetailSkeleton";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { BillProvisionsSection } from "@/components/legislature/BillProvisionsSection";
 import type { BillDetail } from "./types";
@@ -197,6 +198,12 @@ function BillDetailContent() {
   // thresholds stay seat-based for display.
   const heroRequiredPctOfCast =
     !supermajority && !isJpOverride && filibustered && bill.currentChamber === "senate";
+  const heroPassRule =
+    !heroRequiredPctOfCast && (countryHasFeature("usUi", resolvedCountryId) || isJpOverride)
+      ? supermajority || isJpOverride
+        ? "twoThirds"
+        : "majority"
+      : undefined;
 
   // Dispatch seating-chart hero: live vote-colored chamber diagram for the
   // chamber currently voting, in the country's seating style (hemicycle /
@@ -430,6 +437,7 @@ function BillDetailContent() {
                         width={460}
                         requiredPct={heroRequiredPct}
                         requiredPctOfCast={heroRequiredPctOfCast}
+                        passRule={heroPassRule}
                       />
                     )}
                     <div className="min-w-0 space-y-4">
@@ -622,10 +630,11 @@ function BillDetailContent() {
                       the bill becomes law (pocket signature).
                     </p>
                   </div>
-                  {bill.presidentActionDeadline && (
+                  {(bill.presidentActionDeadlineOnTurn != null || bill.presidentActionDeadline) && (
                     <DeadlineCountdown
                       deadline={bill.presidentActionDeadline}
                       deadlineTurn={bill.presidentActionDeadlineOnTurn}
+                      kind="presidentialAction"
                     />
                   )}
                 </div>
