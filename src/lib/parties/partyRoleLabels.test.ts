@@ -2,6 +2,19 @@ import { describe, it, expect } from "vitest";
 import { getPartyRoleLabel } from "./partyRoleLabels";
 
 describe("getPartyRoleLabel", () => {
+  it("keeps the treasurer role distinct from another office's standard title", () => {
+    const titles = { treasurer: " national VICE chair " };
+    expect(getPartyRoleLabel("US", "treasurer", titles)).toBe("National Treasurer");
+    expect(getPartyRoleLabel("US", "viceChair", titles)).toBe("National Vice Chair");
+  });
+
+  it("uses standard labels when two saved custom titles match", () => {
+    const titles = { chair: "Coordinator", viceChair: "coordinator", treasurer: "Finance Lead" };
+    expect(getPartyRoleLabel("US", "chair", titles)).toBe("National Chair");
+    expect(getPartyRoleLabel("US", "viceChair", titles)).toBe("National Vice Chair");
+    expect(getPartyRoleLabel("US", "treasurer", titles)).toBe("Finance Lead");
+  });
+
   it("returns the default English label for a country with no overrides (US)", () => {
     expect(getPartyRoleLabel("US", "chair")).toBe("National Chair");
     expect(getPartyRoleLabel("US", "viceChair")).toBe("National Vice Chair");
