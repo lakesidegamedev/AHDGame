@@ -3,6 +3,7 @@ import type { Achievement } from "@/lib/db/types";
 
 import { CONTEST_ACHIEVEMENTS } from "@/lib/contests/achievementDefinitions";
 import { SCOTUS_ACHIEVEMENTS } from "@/lib/scotus/achievementDefinitions";
+import { INTERNATIONAL_LEADER_ACHIEVEMENT } from "@/lib/achievements/careerPostAchievements";
 
 const now = new Date();
 
@@ -26,6 +27,7 @@ export const ACHIEVEMENT_SEED: Omit<Achievement, "_id">[] = [
     createdAt: now,
     updatedAt: now,
   })),
+  { ...INTERNATIONAL_LEADER_ACHIEVEMENT, createdAt: now, updatedAt: now },
   // Special
   {
     slug: "alpha_tester",

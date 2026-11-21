@@ -1,13 +1,29 @@
 #!/bin/sh
 # Fast checks that fail CI most often and take seconds locally: the file size
-# and module boundary audit, and formatting of the files this branch changed.
-# Typecheck and tests stay in CI. Skip once with `git push --no-verify`.
+# and module boundary audit, the comment, double cast and data access ratchets,
+# changelog entry format, and formatting of the files this branch changed.
+# Typecheck, tests and the slower hygiene ratchet stay in CI.
+# Skip once with `git push --no-verify`.
 
 base=$(git merge-base HEAD origin/development 2>/dev/null || git merge-base HEAD '@{upstream}' 2>/dev/null)
 
 echo "pre-push: architecture audit"
 node scripts/architecture-audit.mjs > /dev/null || {
   echo "pre-push: architecture audit failed. Run: node scripts/architecture-audit.mjs"
+  exit 1
+}
+
+for ratchet in comment doubleCast dataAccess; do
+  echo "pre-push: $ratchet ratchet"
+  npx --no -- tsx "scripts/architecture/${ratchet}Ratchet.cli.ts" check || {
+    echo "pre-push: $ratchet ratchet failed (see above)."
+    exit 1
+  }
+done
+
+echo "pre-push: changelog entries"
+npx --no -- tsx scripts/changelog/check-entries.ts || {
+  echo "pre-push: changelog entries failed. Run: npm run changelog:check"
   exit 1
 }
 

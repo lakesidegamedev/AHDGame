@@ -2,10 +2,16 @@ import type { ProducerOperatingResult } from "@/lib/market/producerMarket/produc
 
 type ProductRow = Pick<
   ProducerOperatingResult["products"][number],
-  "commodity" | "offeredUnits" | "soldUnits" | "internalDeliveredUnits" | "revenue"
+  | "commodity"
+  | "producedUnits"
+  | "offeredUnits"
+  | "soldUnits"
+  | "internalDeliveredUnits"
+  | "revenue"
 >;
 
 export interface SettledProductSales {
+  produced: number;
   offered: number;
   sold: number;
   ownSites: number;
@@ -24,12 +30,14 @@ export function settledProductSales(
   const sales = new Map<string, SettledProductSales>();
   for (const product of receipt.products) {
     const row = sales.get(product.commodity) ?? {
+      produced: 0,
       offered: 0,
       sold: 0,
       ownSites: 0,
       unsold: 0,
       revenue: 0,
     };
+    row.produced += product.producedUnits;
     row.offered += product.offeredUnits;
     row.sold += product.soldUnits;
     row.ownSites += product.internalDeliveredUnits ?? 0;

@@ -1,11 +1,20 @@
 import { brotliDecompressSync, gunzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import {
-  compressJsonResponse,
-  compressedJson,
+  compressJsonResponse as compressJsonResponseUnforced,
+  compressedJson as compressedJsonUnforced,
   MIN_JSON_COMPRESS_BYTES,
   negotiateJsonEncoding,
+  ORIGIN_JSON_COMPRESSION_ENABLED,
 } from "./jsonCompression";
+
+// The encoding mechanics are tested with the switch forced on.
+const compressJsonResponse = (res: Response, req: Request | undefined) =>
+  compressJsonResponseUnforced(res, req, { enabled: true });
+const compressedJson = (req: Request, data: unknown, init: ResponseInit = {}) =>
+  compressedJsonUnforced(req, data, init, { enabled: true });
 
 function requestWithAcceptEncoding(acceptEncoding?: string): Request {
   const headers = new Headers();
@@ -157,5 +166,29 @@ describe("compressJsonResponse", () => {
       requestWithAcceptEncoding("gzip")
     );
     expect(res.headers.get("vary")).toBe("Accept-Encoding");
+  });
+});
+
+describe("origin compression switch", () => {
+  it("leaves bodies as plain JSON while the switch is off", async () => {
+    const res = await compressJsonResponseUnforced(
+      new Response(JSON.stringify(bigPayload()), {
+        headers: { "content-type": "application/json" },
+      }),
+      requestWithAcceptEncoding("br, gzip"),
+      { enabled: false }
+    );
+    expect(res.headers.get("content-encoding")).toBeNull();
+    expect(await decode(res)).toEqual(bigPayload());
+  });
+
+  it("is only on when the installed Next forwards Content-Encoding on route responses", () => {
+    const require = createRequire(import.meta.url);
+    const sendResponsePath = require.resolve("next/dist/server/send-response.js");
+    const source = readFileSync(sendResponsePath, "utf8");
+    const forbidden = /FORBIDDEN_HEADERS\s*=\s*\[([^\]]*)\]/.exec(source)?.[1] ?? "";
+    const nextStripsEncoding = forbidden.includes("content-encoding");
+    // A stripped header leaves the client holding compressed bytes it cannot parse.
+    if (nextStripsEncoding) expect(ORIGIN_JSON_COMPRESSION_ENABLED).toBe(false);
   });
 });

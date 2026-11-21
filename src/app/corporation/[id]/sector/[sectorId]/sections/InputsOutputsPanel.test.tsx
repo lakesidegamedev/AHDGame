@@ -425,6 +425,44 @@ describe("InputsOutputsPanel layout", () => {
 });
 
 describe("sold share beside own-site use", () => {
+  it("labels real production per day and distinguishes a market price from revenue", () => {
+    const { container } = render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            flow({
+              commodity: "energy",
+              label: "Electricity",
+              icon: "kW",
+              unit: "kWh",
+              units: 999,
+              marketPrice: 12,
+              settledSales: {
+                produced: 2,
+                offered: 3,
+                sold: 0,
+                ownSites: 3,
+                unsold: 0,
+                revenue: 0,
+              },
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    const row = container.querySelector("#io-outputs")?.closest("section");
+    expect(row?.textContent).toContain("48 kWh/day");
+    expect(row?.textContent).toContain("Market $12/unit");
+    fireEvent.click(screen.getByText("Supplied your own sites"));
+    expect(screen.getByText("0 sold outside · $0 sales")).toBeTruthy();
+  });
+
   it("shows the own-site value next to the sold share", () => {
     render(
       <InputsOutputsPanel

@@ -199,6 +199,33 @@ export async function loadOrganizationDef(
   return row ? customOrgToDef(row) : null;
 }
 
+/** Defs for several orgs in at most two reads (EU context, custom orgs). */
+export async function loadOrganizationDefsById(
+  db: Db,
+  organizationIds: readonly InternationalOrganizationId[]
+): Promise<Map<InternationalOrganizationId, InternationalOrganizationDef>> {
+  const defs = new Map<InternationalOrganizationId, InternationalOrganizationDef>();
+  const customIds: InternationalOrganizationId[] = [];
+  for (const id of new Set(organizationIds)) {
+    if (!isBuiltInInternationalOrganizationId(id)) customIds.push(id);
+    else if (id !== "EU") {
+      const def = getOrganizationDef(id);
+      if (def) defs.set(id, def);
+    }
+  }
+  const [eu, custom] = await Promise.all([
+    organizationIds.includes("EU") ? loadOrganizationDef(db, "EU") : null,
+    customIds.length > 0
+      ? (await getCustomInternationalOrganizationsCollection(db))
+          .find({ id: { $in: customIds } })
+          .toArray()
+      : [],
+  ]);
+  if (eu) defs.set("EU", eu);
+  for (const row of custom) defs.set(row.id, customOrgToDef(row));
+  return defs;
+}
+
 /**
  * A def whose category is the world's EFFECTIVE one, for the single place that
  * gates on what an organisation may DO.
