@@ -163,10 +163,12 @@ export default function InputsOutputsPanel({
       units: f.units,
       soldFraction: f.soldFraction,
       revenueShare: f.revenueShare,
+      settledUnitPrice: f.settledUnitPrice,
     })),
     revenue: plants.pnl?.revenueAnchor,
     soldUnits: plants.soldUnits,
     fallbackSoldFraction: plants.fillRate,
+    settled: plants.truth?.salesBasis === "settlement",
   });
   const hasSettledSales = commodities.supplies.some((flow) => flow.settledSales?.sold);
   const showsRealizedOutput =
@@ -378,6 +380,7 @@ export default function InputsOutputsPanel({
                             }`}
                           >
                             {fmtPct(share)} sold
+                            {f.soldFractionBasis === "estimate" ? " (market estimate)" : ""}
                             {ownSite
                               ? ` · ${ownSiteLabel(ownSite.share)} (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`
                               : ""}
@@ -393,6 +396,9 @@ export default function InputsOutputsPanel({
                           {perOutput
                             ? "This is this output on its own. Each thing you make can clear at a different rate, so read the rows against each other to find the one that is not moving."
                             : "This sector has not cleared a turn yet, so this is the average across everything you make, not this output on its own."}
+                          {f.soldFractionBasis === "estimate"
+                            ? " This plant has no settled sales record yet, so this is the market's estimate, not a count of units buyers paid for."
+                            : ""}
                         </p>
                         {ownSiteText && (
                           <p className="mt-1 text-muted">

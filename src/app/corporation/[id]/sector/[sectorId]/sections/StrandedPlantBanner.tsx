@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { STRANDED_WARN_TURNS } from "@/lib/corporations/strandedPlant";
+import type { StrandedWarning } from "@/lib/corporations/rules/strandedWarning";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,
@@ -16,10 +16,8 @@ import {
 } from "@/lib/corporations/rules/outputSalesSplit";
 
 interface StrandedPlantBannerProps {
-  /** Consecutive turns the sector cleared under half its output. */
-  lowFillTurns: number;
-  /** Last turn's sold fraction, 0-1, null before the first plants turn. */
-  soldFraction: number | null;
+  /** What the plant page knows about poor sales (`truth.strandedWarning`); null shows nothing. */
+  warning: StrandedWarning | null | undefined;
   /**
    * Last turn's delivery-limited share, 0-1. Above 1% the banner names freight
    * as the cause instead of oversupply: the advice below is the opposite in
@@ -35,28 +33,31 @@ interface StrandedPlantBannerProps {
 }
 
 /**
- * Live warning shown while a plant is chronically stranded: it has sold less
- * than half of what it makes for STRANDED_WARN_TURNS straight. Not dismissable
- * and not stored — it reflects a current condition and disappears on its own
- * once the plant starts clearing again. The margin figure cannot warn the
- * player here (units that do sell still carry a healthy margin), so without
- * this the first visible symptom is a bank balance that never grows.
+ * Live warning shown while a plant is not selling most of its output. With a
+ * funded sale record it states the latest settled turn; with only the legacy
+ * market estimate it states that estimate's streak. Not dismissable and not
+ * stored: it reflects a current condition and disappears on its own once the
+ * plant sells again. The margin figure cannot warn the player here (units that
+ * do sell still carry a healthy margin), so without this the first visible
+ * symptom is a bank balance that never grows.
  */
 export default function StrandedPlantBanner({
-  lowFillTurns,
-  soldFraction,
+  warning,
   deliveryLimitedFraction = 0,
   deliveryLimitedFreightClass = null,
   isCeo,
   outputs,
 }: StrandedPlantBannerProps) {
   const t = useTranslations("corporations.sectorInvestment");
-  if (lowFillTurns < STRANDED_WARN_TURNS) return null;
+  if (!warning) return null;
+  const settled = warning.basis === "settlement";
 
   // A mixed site whose products split: name them instead of blaming the site.
   const split = outputSalesSplit(outputs);
-  const soldPct = soldFraction != null ? Math.round(soldFraction * 100) : null;
-  const deliveryLimited = deliveryLimitedFraction > DELIVERY_LIMITED_MIN_SHARE;
+  const pct = (x: number) => Math.round(x * 100);
+  // The legacy delivery reading is measured against the legacy fill, so it
+  // never explains a settled plant's sales.
+  const deliveryLimited = !settled && deliveryLimitedFraction > DELIVERY_LIMITED_MIN_SHARE;
   const deliveryPct = Math.round(deliveryLimitedFraction * 100);
   const deliveryLabel = deliveryLimitedFreightClass
     ? FREIGHT_CLASS_LABELS[deliveryLimitedFreightClass]
@@ -84,16 +85,27 @@ export default function StrandedPlantBanner({
               ? "This plant cannot deliver its output"
               : split
                 ? `${split.stuck.map((o) => o.label).join(" and ")} ${split.stuck.length === 1 ? "is" : "are"} not selling`
-                : "This plant cannot sell its output"}
+                : settled
+                  ? "This plant is not selling most of its output"
+                  : "This plant cannot sell its output"}
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            For {lowFillTurns} turns in a row this sector has sold less than half of what it makes
-            {soldPct != null ? ` (last turn: ${soldPct}%)` : ""}.{" "}
+            {warning.basis === "settlement"
+              ? `Last turn buyers and the company's own sites took ${pct(warning.takenShare)}% of what this plant offered${
+                  warning.turnsInRow != null
+                    ? `, and it has sold less than half for ${warning.turnsInRow} turns in a row`
+                    : ""
+                }.`
+              : `By the market estimate, for ${warning.turnsInRow} turns in a row this sector has sold less than half of what it makes${
+                  warning.soldShare != null ? ` (last turn: ${pct(warning.soldShare)}%)` : ""
+                }.`}{" "}
             {deliveryLimited
               ? `Last turn ${deliveryLabel} limited ${deliveryPct}% of what it offered, so that output earned no revenue while its production costs still landed. Buyers still want it. ${deliveryExplanation}`
               : split
                 ? `${listOutputs(split.selling)} ${split.selling.some((o) => o.ownSites) ? "found buyers or fed your sites" : "found buyers"}, but ${listOutputs(split.stuck)} did not. The unsold part earns no revenue while its production costs still land.`
-                : "The local market is oversupplied for its goods, so extra output earns no revenue this turn while its production costs still land."}{" "}
+                : settled
+                  ? "The unsold part earned no revenue while its production costs still landed."
+                  : "The local market is oversupplied for its goods, so extra output earns no revenue this turn while its production costs still land."}{" "}
             Its margin still looks healthy because margin only counts the units that do sell.
           </p>
           {isCeo && (

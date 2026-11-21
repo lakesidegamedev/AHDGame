@@ -85,6 +85,10 @@ export default function PricingPanel({
   };
 
   const sold = pricing.soldFraction;
+  // A plant with a funded sale record reads only that record. Without one the
+  // figures are the legacy market pass's estimate, and say so.
+  const settled = pricing.salesBasis === "settlement";
+  const estimate = pricing.salesBasis === "estimate";
   // Output handed to the company's own sites is no sale, but the plant was used.
   const ownSite = pricing.ownSiteFraction ?? 0;
   const used = Math.min(1, (sold ?? 0) + ownSite);
@@ -129,6 +133,7 @@ export default function PricingPanel({
               >
                 {Math.round(sold * 100)}% sold of units offered last turn (all outputs)
                 {ownSiteText ? `, ${ownSiteText}` : ""}
+                {estimate ? " (market estimate)" : ""}
               </span>
             }
             width={260}
@@ -141,6 +146,9 @@ export default function PricingPanel({
               all and still land in the middle here. See Commodity Flows for the per-output rates.
               {ownSiteText
                 ? " Output sent to your own sites is not a sale and earns no revenue, so it is counted separately."
+                : ""}
+              {estimate
+                ? " This plant has no settled sales record yet, so this is the market's estimate, not a count of units buyers paid for."
                 : ""}
             </p>
           </InfoTooltip>
@@ -249,25 +257,37 @@ export default function PricingPanel({
         <InfoTooltip
           trigger={
             <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
-              Clearing result (last turn)
+              {settled
+                ? "Paid against asking price (last turn)"
+                : `Clearing result (last turn${estimate ? ", market estimate" : ""})`}
             </span>
           }
           width={300}
         >
-          <p className="text-muted text-xs">
-            Realized revenue = sold share × your posted price × the market price level, faded in
-            over 5 game years so repositioning never causes a revenue cliff.
-            {pricing.effectivePosture != null && (
-              <>
-                {" "}
-                Effective posture used:{" "}
-                <span className="font-medium text-foreground tabular-nums">
-                  {postureLabel(pricing.effectivePosture)}
-                </span>
-                {pricing.posture == null ? " (automatic)" : ""}.
-              </>
-            )}
-          </p>
+          {settled ? (
+            <p className="text-muted text-xs">
+              What this plant was paid last turn, against what everything it offered for outside
+              sale would have earned at its asking price.
+              {sold != null ? ` ${Math.round(sold * 100)}% of what it offered sold.` : ""} Units
+              nobody bought earn nothing, so selling 80% of the offer at the asking price reads
+              ×0.80.
+            </p>
+          ) : (
+            <p className="text-muted text-xs">
+              Realized revenue = sold share × your posted price × the market price level, faded in
+              over 5 game years so repositioning never causes a revenue cliff.
+              {pricing.effectivePosture != null && (
+                <>
+                  {" "}
+                  Effective posture used:{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {postureLabel(pricing.effectivePosture)}
+                  </span>
+                  {pricing.posture == null ? " (automatic)" : ""}.
+                </>
+              )}
+            </p>
+          )}
         </InfoTooltip>
         <span
           className={`font-bold tabular-nums ${
@@ -284,7 +304,9 @@ export default function PricingPanel({
 
       {pricing.clearingFactor == null && (
         <p className="mt-2 text-[11px] italic text-muted">
-          Clearing figures appear after the next turn.
+          {settled
+            ? "Nothing was offered for outside sale last turn."
+            : "Clearing figures appear after the next turn."}
         </p>
       )}
     </div>

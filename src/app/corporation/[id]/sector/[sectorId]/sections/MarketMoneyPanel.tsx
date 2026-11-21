@@ -252,6 +252,9 @@ export default function MarketMoneyPanel({
                 : "Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale. Units that do not sell cost you money and earn nothing.") +
               (deliveryLimitedShown
                 ? ` ${deliveryLabel} limited ${fmtPct(deliveryLimited)} of your output from reaching buyers outside this state. ${deliveryExplanation} ${deliveryAction}`
+                : "") +
+              (truth.salesBasis === "estimate"
+                ? " This plant has no settled sales record yet, so the sales figures here are the market's estimate."
                 : "")
             }
           />

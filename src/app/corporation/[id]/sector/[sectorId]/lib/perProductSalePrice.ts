@@ -9,6 +9,10 @@
  *
  * Units sold per output are rescaled to add up to the sector's booked sold
  * units, so a one-output sector gets exactly the existing average back.
+ *
+ * A plant with a funded sale record was paid per product, so each output's
+ * price is its settled revenue over its settled units sold, and the legacy
+ * revenue split is never used for it.
  */
 export interface PerProductSaleInput {
   commodity: string;
@@ -18,6 +22,8 @@ export interface PerProductSaleInput {
   soldFraction?: number | null;
   /** This output's share of last turn's realized revenue (0-1), if recorded. */
   revenueShare?: number | null;
+  /** Funded sale record: settled revenue over settled units sold for this output. */
+  settledUnitPrice?: number | null;
 }
 
 export function perProductSalePrices(args: {
@@ -28,9 +34,19 @@ export function perProductSalePrices(args: {
   soldUnits: number | null | undefined;
   /** Sector-wide fill, used for a row with no per-output fill yet. */
   fallbackSoldFraction?: number | null;
+  /** The plant has a funded sale record: prices come only from `settledUnitPrice`. */
+  settled?: boolean;
 }): Map<string, number> {
   const out = new Map<string, number>();
   const { supplies, revenue, soldUnits } = args;
+  if (args.settled) {
+    for (const f of supplies) {
+      const price = f.settledUnitPrice;
+      if (typeof price === "number" && Number.isFinite(price) && price > 0)
+        out.set(f.commodity, price);
+    }
+    return out;
+  }
   if (supplies.length < 2) return out;
   if (!(typeof revenue === "number" && revenue > 0 && Number.isFinite(revenue))) return out;
   if (!(typeof soldUnits === "number" && soldUnits > 0 && Number.isFinite(soldUnits))) return out;

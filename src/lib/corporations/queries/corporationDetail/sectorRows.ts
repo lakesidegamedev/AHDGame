@@ -82,6 +82,7 @@ import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
 
 /**
  * Advertising counted from one news-media sector's exact commodity ledger
@@ -755,13 +756,16 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // failure. The row shows one fill number and a player reads every point of
     // missing fill as "nobody wanted it", which is the opposite instruction
     // from what a freight-limited sector needs. Null outside plants and when
-    // the freight pass has written nothing.
+    // the freight pass has written nothing. The legacy pass measures it against
+    // its own fill, so a plant with a funded sale record shows none.
+    const legacyDelivery =
+      plantsMode && !fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn);
     const deliveryLimitedFraction =
-      plantsMode && Number.isFinite(sector.deliveryLimitedFraction)
+      legacyDelivery && Number.isFinite(sector.deliveryLimitedFraction)
         ? Math.max(0, Math.min(1, sector.deliveryLimitedFraction as number))
         : null;
     const deliveryLimitedFreightClass =
-      plantsMode &&
+      legacyDelivery &&
       (sector.deliveryLimitedFreightClass === "bulk" ||
         sector.deliveryLimitedFreightClass === "special" ||
         sector.deliveryLimitedFreightClass === "grid")
