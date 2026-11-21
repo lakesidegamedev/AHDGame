@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="780" height="404" viewBox="0 0 780 404" role="img" font-family="system-ui, sans-serif">
 <title>How impeachment proceeds</title>
-<desc>The President path needs a lower chamber vote then an upper chamber vote, each 6 turns and counted against all seats; the governor path is a single two-thirds vote.</desc>
+<desc>The President path needs a lower chamber vote then an upper chamber vote, each 24 turns and counted against all seats; the governor path is a single two-thirds vote.</desc>
 <defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
 <rect x="0.5" y="0.5" width="779" height="403" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
 <g fill="#18181b">
@@ -11,11 +11,11 @@
 <text x="89.0" y="96.2" font-size="12" text-anchor="middle">articles</text>
 <rect x="194" y="44" width="180" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
 <text x="284.0" y="64.2" font-size="12" text-anchor="middle" font-weight="700">Lower chamber vote</text>
-<text x="284.0" y="80.2" font-size="12" text-anchor="middle">6 turns; more than half</text>
+<text x="284.0" y="80.2" font-size="12" text-anchor="middle">24 turns; more than half</text>
 <text x="284.0" y="96.2" font-size="12" text-anchor="middle">of all seats</text>
 <rect x="414" y="44" width="180" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
 <text x="504.0" y="64.2" font-size="12" text-anchor="middle" font-weight="700">Upper chamber vote</text>
-<text x="504.0" y="80.2" font-size="12" text-anchor="middle">6 turns; two-thirds</text>
+<text x="504.0" y="80.2" font-size="12" text-anchor="middle">24 turns; two-thirds</text>
 <text x="504.0" y="96.2" font-size="12" text-anchor="middle">of all seats</text>
 <rect x="634" y="44" width="126" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
 <text x="697.0" y="64.2" font-size="12" text-anchor="middle" font-weight="700">Removed</text>
@@ -40,7 +40,7 @@
 <text x="89.0" y="310.2" font-size="12" text-anchor="middle">files</text>
 <rect x="194" y="266" width="180" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
 <text x="284.0" y="286.2" font-size="12" text-anchor="middle" font-weight="700">Conviction vote</text>
-<text x="284.0" y="302.2" font-size="12" text-anchor="middle">6 turns; two-thirds of</text>
+<text x="284.0" y="302.2" font-size="12" text-anchor="middle">24 turns; two-thirds of</text>
 <text x="284.0" y="318.2" font-size="12" text-anchor="middle">all state seats</text>
 <rect x="414" y="266" width="160" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
 <text x="494.0" y="302.2" font-size="12" text-anchor="middle">Governor removed</text>

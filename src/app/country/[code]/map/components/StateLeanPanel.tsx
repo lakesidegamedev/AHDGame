@@ -6,11 +6,8 @@ import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { regionUrl } from "@/lib/urls";
 import { getDisplayLean } from "@/lib/utils/demographics";
-import {
-  getEconomicPositionName,
-  getSocialPositionName,
-  interpolateLeanHex,
-} from "@/lib/utils/politics";
+import { getEconomicPositionName, interpolateLeanHex } from "@/lib/utils/politics";
+import type { RegionLeanDisplay } from "@/lib/regionLean/scale";
 
 interface GroupRow {
   id: string;
@@ -26,6 +23,8 @@ interface RegionDemographicsResponse {
   stateName: string;
   calculatedEconomicLean: number;
   calculatedSocialLean: number;
+  /** Party-lean label from the main-party even split. */
+  leanDisplay?: RegionLeanDisplay;
   sections: { id: string; name: string; rows: GroupRow[] }[];
 }
 
@@ -124,10 +123,15 @@ export function StateLeanPanel({
           </h2>
           {data && (
             <p className="mt-1 text-sm text-muted">
-              Combined {fmt(combined)} ({getEconomicPositionName(combined)}) · Economic{" "}
-              {fmt(data.calculatedEconomicLean)} (
-              {getEconomicPositionName(data.calculatedEconomicLean)}) · Social{" "}
-              {fmt(data.calculatedSocialLean)} ({getSocialPositionName(data.calculatedSocialLean)})
+              {data.leanDisplay ? (
+                <span className="font-semibold text-foreground">{data.leanDisplay.label}</span>
+              ) : (
+                <>
+                  Combined {fmt(combined)} ({getEconomicPositionName(combined)})
+                </>
+              )}{" "}
+              · Economic {fmt(data.calculatedEconomicLean)} · Social{" "}
+              {fmt(data.calculatedSocialLean)}
             </p>
           )}
         </div>

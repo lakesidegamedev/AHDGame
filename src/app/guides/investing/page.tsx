@@ -161,42 +161,34 @@ export default function InvestingGuidePage() {
           <section className="space-y-4">
             <SectionHeader id="share-price">3. How share price is calculated</SectionHeader>
             <p className="text-sm text-muted leading-relaxed">
-              In multiplayer, share price is a blended metric recalculated every 15 minutes.
-              Earnings update on the hourly turn:
+              Share pricing starts with what the corporation owns after debt and adds value for its
+              earnings and expected growth. If a corporation relies heavily on bond interest for
+              earnings, the game reduces the earnings and growth contributions.
+            </p>
+            <FormulaBlock>{`Base valuation per share =
+    1.0 × tangible book per share
+  + (0.5 × risk-adjusted earnings power per share
+     + 0.15 × growth premium per share) × bond reliance multiplier`}</FormulaBlock>
+            <p className="text-sm text-muted leading-relaxed">
+              Tangible book includes cash, sector value and other assets, less issued bond debt.
+              Sector value includes{" "}
+              <strong className="text-foreground">net present value (NPV)</strong>, which expresses
+              expected future sector profits in today&apos;s money. Earnings power reflects
+              risk-adjusted earnings and the cost of capital, while the growth premium reflects
+              expected sector growth.
             </p>
             <p className="text-sm text-muted leading-relaxed">
-              In short: price blends what the corporation owns and its sector value (balance sheet),
-              how much it earns (income), and recent price trend (momentum), with owned assets
-              weighted most heavily. <strong className="text-foreground">NPV</strong> (net present
-              value) turns each sector&apos;s future yearly profit into one lump-sum value today,
-              using a <strong className="text-foreground">25% discount rate</strong>, the annual
-              return investors demand before a future profit stream is worth paying for now.
+              The game adjusts this valuation for factors such as the number of subsidiaries, how
+              much of the company the CEO owns and index fund ownership. It generally limits the
+              change from the prior price and uses a separate smoothing rule after stock splits.
             </p>
-            <FormulaBlock>{`Share price = 60% balance sheet + 25% income + 15% momentum
-
-Balance sheet:  equity per share = (liquid capital + NPV of all sectors) / total shares
-  → NPV uses a 25% discount rate: yearlyProfit / 0.25
-  → High CEO salary drains liquid capital → lower equity per share
-
-Income component: based on after-tax corporate income
-  → Higher dividend payout = more distributed, less retained
-  → Lower retained earnings = lower future equity growth
-
-Momentum: 15-turn price trend
-  → Creates short-term trading opportunity independent of fundamentals
-
-Floor: $0.01 per share (hard minimum)`}</FormulaBlock>
             <p className="text-sm text-muted leading-relaxed">
-              The balance sheet component is the most important long-term signal. Corporations that
-              retain earnings and expand into profitable states will see equity per share rise
-              steadily even if their current dividends are low.
+              In multiplayer, the hourly turn updates earnings and records the formula price in
+              company history. Between turns, quarter-hour market ticks use earnings from the last
+              completed turn and refresh the live price with changes such as cash balances and
+              exchange rates. After each repricing, investor sentiment and buying and selling
+              pressure can move the live price.
             </p>
-            <Callout label="Interest rates affect growth costs.">
-              When the central bank raises rates, the cost of corporate expansion rises.
-              Corporations operating in high-rate environments grow more slowly, which caps the
-              equity growth component of share price. This makes high-rate periods generally bad for
-              stocks, as in real markets.
-            </Callout>
           </section>
 
           {/* ── 4. Dividends ── */}

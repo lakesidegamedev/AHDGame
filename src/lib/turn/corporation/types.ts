@@ -258,6 +258,13 @@ export interface CorporationLookups {
    */
   strengthUpkeepStage?: number;
   /**
+   * World starting year and `gameConfig.legacyTechMode`, read once per turn.
+   * Together they say how pre-start-decade tech counts (see
+   * `legacyTechContextFromLookups`). Absent mode = "off".
+   */
+  legacyTechStartingYear?: number;
+  legacyTechMode?: "baseline" | "off";
+  /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
    * `capInputPriceRatioAtWorld`). Cheap local inputs still win; expensive
@@ -662,7 +669,7 @@ export interface SectorCalculationsResult {
   /**
    * v2: per-state labour wage index (worker-weighted wage multiplier; 1.0 =
    * baseline). Persisted to macroMetrics.economic.labourWageIndex and read by the
-   * macro coupling (migration pull) when labourSystemMode ≥ "macro". Empty when
+   * macro coupling (migration pull) Empty when
    * the labour system is off.
    */
   labourWageIndexByState: Map<string, number>;
@@ -673,7 +680,7 @@ export interface SectorCalculationsResult {
    * automation is excluded from the wage index by design (it cuts headcount,
    * not pay; see the comment at its accumulation site). Persisted to
    * macroMetrics.economic.automationIndex and read by the jobs-channel macro
-   * coupling (unemployment) when labourSystemMode ≥ "macro". Empty when the
+   * coupling (unemployment) Empty when the
    * labour system is off.
    */
   automationIndexByState: Map<string, number>;

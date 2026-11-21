@@ -25,7 +25,7 @@ describe("computeExpiresAt (async, reads gameConfig)", () => {
     const expiresAt = await computeExpiresAt(db as never, createdAt);
 
     // 168 turns × 30 min × 60_000 = 302_400_000 ms = 3.5 IRL days
-    const expected = new Date(createdAt.getTime() + 168 * 30 * 60_000);
+    const expected = new Date(createdAt.getTime() + TX_TTL_TURNS * 30 * 60_000);
     expect(expiresAt.getTime()).toBe(expected.getTime());
     expect(db.collectionMocks.gameConfig.findOne).toHaveBeenCalledWith(
       { _id: "default" },
@@ -64,7 +64,7 @@ describe("computeExpiresAt (async, reads gameConfig)", () => {
 
     const expiresAt = await computeExpiresAt(db as never, createdAt);
 
-    // 168 turns at 30 min each, not 168 hourly turns (which would keep 336 fast-mode turns)
+    // TX_TTL_TURNS at 30 min each, not hourly turns (which would keep twice as many fast-mode turns)
     expect(expiresAt.getTime()).toBe(createdAt.getTime() + TX_TTL_TURNS * 30 * 60_000);
   });
 });
@@ -74,8 +74,8 @@ describe("computeExpiresAtSync", () => {
     const createdAt = new Date("2026-04-27T00:00:00Z");
     const expiresAt = computeExpiresAtSync(createdAt, 60);
 
-    // Default 168 turns × 60 min = 7 IRL days
-    const expected = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // Default TX_TTL_TURNS (720) × 60 min = 30 IRL days
+    const expected = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
     expect(expiresAt.getTime()).toBe(expected.getTime());
   });
 
@@ -141,10 +141,10 @@ describe("effectiveTurnLengthMinutes", () => {
 });
 
 describe("defaultExpiresAt (no DB)", () => {
-  it("uses the default 168 × 60 min cadence", () => {
+  it("uses the default TX_TTL_TURNS × 60 min cadence (30 IRL days)", () => {
     const createdAt = new Date("2026-04-27T00:00:00Z");
     const expiresAt = defaultExpiresAt(createdAt);
-    const expected = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const expected = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
     expect(expiresAt.getTime()).toBe(expected.getTime());
   });
 });

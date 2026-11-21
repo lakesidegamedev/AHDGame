@@ -3,8 +3,7 @@
  *
  * Runs every turn in the effects & metrics group: computes each UK region's
  * budget from council tax, business rates, and the Westminster grant, then
- * compares against enacted spending. Regions in deficit for more than one turn
- * trigger forced austerity (most expensive programme downgraded one tier).
+ * compares against enacted spending. Deficits are financed by the regional debt service phase.
  *
  * Revenue is derived from the region's own economy and the national grant
  * pool, never from a `legislationTypes` lookup. The v2 preset unseeds all
@@ -20,9 +19,8 @@
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { State } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
+import type { LegislationType } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
@@ -260,7 +258,7 @@ function computeSpendingMultiplier(
  * Main turn processing function for UK regional budgets.
  *
  * Called once per turn. Fetches all UK regions, calculates budgets, detects
- * deficits, applies forced austerity when needed, drifts value bases, and
+ * deficits, drifts value bases, and
  * upserts RegionalBudget documents.
  *
  * @returns Object with regionsProcessed count.
@@ -381,11 +379,9 @@ export async function processRegionalBudgets(
 
   let regionsProcessed = 0;
 
-  // Batched: accumulate per-region upserts and rare forced-austerity
-  // updates into bulkWrite arrays and commit once after the loop, avoiding
+  // Batch regional updates once after the loop, avoiding
   // one round-trip per region. This shape is shared across regional-budget
   // phases and scales with region count.
-  const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
   for (const region of ukRegions) {
@@ -447,6 +443,7 @@ export async function processRegionalBudgets(
     const regionalSettlement =
       regionalFinanceEnabled || regionResetPrograms.length > 0
         ? settleRegionalBudget({
+            allowBorrowing: true,
             availableBudget: budgetResult.totalBudget,
             reservedNonProgramSpending: subsidyCosts,
             claims: [
@@ -471,53 +468,6 @@ export async function processRegionalBudgets(
     const isOverBudget = enactedBillCosts > budgetResult.totalBudget;
     const previousTurnsOver = existingBudget?.turnsOverBudget ?? 0;
     const turnsOverBudget = isOverBudget ? previousTurnsOver + 1 : 0;
-
-    // e. Forced austerity: if over budget for more than 1 turn, downgrade most expensive programme
-    if (!regionalFinanceEnabled && turnsOverBudget > 1 && spendingPolicies.length > 0) {
-      // Sort by cost descending to find the most expensive enacted programme
-      // (region-total cost so v2 and legacy laws compare on the same basis).
-      const policiesWithCost = spendingPolicies.map((p) => ({
-        policy: p,
-        cost: enactedRegionalPolicyCost(
-          p,
-          legTypeMap,
-          region,
-          nationalBudget?.programCostScaleBaseline ?? 1
-        ),
-      }));
-      policiesWithCost.sort((a, b) => b.cost - a.cost);
-
-      const mostExpensive = policiesWithCost[0];
-      if (mostExpensive && mostExpensive.cost > 0) {
-        const legType = legTypeMap.get(mostExpensive.policy.legislationTypeId);
-        if (legType?.policyOptions) {
-          const currentIndex = legType.policyOptions.findIndex(
-            (o) => o.id === mostExpensive.policy.policyOptionId
-          );
-          // Downgrade one tier (lower index = cheaper option in our spending types)
-          if (currentIndex > 0) {
-            const newOption = legType.policyOptions[currentIndex - 1] as LegislationPolicyOption;
-            statePolicyOps.push({
-              updateOne: {
-                filter: {
-                  stateId: region._id,
-                  legislationTypeId: mostExpensive.policy.legislationTypeId,
-                },
-                update: {
-                  $set: {
-                    policyOptionId: newOption.id,
-                    policyOptionIndex: currentIndex - 1,
-                    economic: newOption.economic,
-                    social: newOption.social,
-                    effectDirection: newOption.effectDirection,
-                  },
-                },
-              },
-            });
-          }
-        }
-      }
-    }
 
     // f. Drift property and commercial value bases
     const implementationByLegislationType = regionalSettlement
@@ -593,9 +543,6 @@ export async function processRegionalBudgets(
     regionsProcessed++;
   }
 
-  if (statePolicyOps.length > 0) {
-    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
-  }
   if (regionalBudgetOps.length > 0) {
     await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }

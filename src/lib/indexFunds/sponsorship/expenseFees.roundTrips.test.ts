@@ -70,9 +70,7 @@ function feeWorld(fundCount: number): { memory: InMemoryDb; db: Db; sponsorId: O
     })) as unknown as Record<string, unknown>[]
   );
   memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
-  memory.seed("gameConfig", [
-    { _id: "default", playerFundSponsorshipEnabled: true, indexFundsMode: "full" },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", playerFundSponsorshipEnabled: true }]);
   memory.seed("systemSettings", [{ _id: "current", financialTxLog: { thresholds: {} } }]);
   return { memory, db, sponsorId };
 }

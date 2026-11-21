@@ -31,7 +31,7 @@ export default async function WikiNewPage({ searchParams }: WikiNewPageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
+      <div className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Create new wiki page</h1>
           <p className="mt-1 text-sm text-muted">
@@ -46,7 +46,7 @@ export default async function WikiNewPage({ searchParams }: WikiNewPageProps) {
             <p className="mb-1 font-semibold text-foreground">Before you start</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                Pick a category — Characters, Corporations, Party profiles, Events, or Reference.
+                Pick a category, Characters, Corporations, Party profiles, Events, or Reference.
               </li>
               <li>
                 {WIKI_CREATE_COOLDOWN_HOURS}-hour cooldown between new pages. Editing an existing

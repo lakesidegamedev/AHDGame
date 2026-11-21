@@ -59,7 +59,6 @@ export default async function LandingPage() {
 
   const seedYear = snapshot?.seedYear ?? 1979;
   const currentYear = snapshot?.currentYear ?? seedYear;
-  const crises = snapshot?.crises ?? [];
   const playerCounts = snapshot?.playerCounts ?? {};
   const governmentTypes = snapshot?.governmentTypes ?? buildGovernmentTypeMap();
   // The landing's tier rosters key on the era's default preset; so does this.
@@ -80,7 +79,6 @@ export default async function LandingPage() {
     <SandboxHome
       isSignedIn={false}
       era={seedYear}
-      crises={crises}
       playerCounts={playerCounts}
       governmentTypes={governmentTypes}
       discordStats={discordStats}

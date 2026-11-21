@@ -1,44 +1,77 @@
 /**
- * Smooth (per-turn) build delivery for the plants tier.
+ * Per-turn build delivery for the plants tier.
  *
- * Orders placed with `smooth: true` deliver linearly across their build window: a
- * slice of capacity (and a proportional slice of the paid cost leaving CIP) every
- * turn from `startTurn` to `onlineTurn`, instead of landing as one lump.
+ * Every order with a positive window delivers linearly across
+ * `[startTurn, onlineTurn]`: a slice of capacity (and a proportional slice of
+ * the paid cost leaving CIP) every turn, instead of landing as one lump or in
+ * whole-plant steps. Capacity may be fractional mid-build.
  *
  * The model is a pure function of the order's immutable fields (`startTurn`,
- * `onlineTurn`, `unitsOrdered`, `costPaidAnchor`) and the current turn. Nothing is
- * stored per order about delivery progress, so the turn processor never mutates an
- * in-flight order; it keeps writing only the C4-safe delta (`$pull` fully-landed
+ * `onlineTurn`, `unitsOrdered`, `costPaidAnchor`, optional
+ * `deliveryBaseFraction`) and the current turn. Nothing is stored per order
+ * about delivery progress, so the turn processor never mutates an in-flight
+ * order; it keeps writing only the C4-safe delta (`$pull` fully-landed
  * orders, `$inc` the CIP those turns released). Per-turn slices telescope to
  * exactly `unitsOrdered` by `onlineTurn`.
  *
- * Legacy orders (no `smooth` flag) and degenerate orders with a non-positive
- * window keep the all-at-once behaviour, so in-flight orders land unchanged.
+ * Only a degenerate order with a non-positive window lands all at once.
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
 import { steppedDeliveredFraction } from "@/lib/corporations/wholePlants/rules";
 
-/** True when the order should ramp in rather than land all at once. */
-function isSmooth(order: SectorBuildOrder): boolean {
-  return order.smooth === true && order.onlineTurn - order.startTurn > 0;
+/** True when the order ramps in across a real window. */
+function hasWindow(order: SectorBuildOrder): boolean {
+  return order.onlineTurn - order.startTurn > 0;
 }
 
 /**
- * Fraction of the order delivered as of `turn`, in [0, 1].
- *
- * Legacy / degenerate orders are a step: 0 until `onlineTurn`, then 1. Smooth
- * orders ramp linearly across `[startTurn, onlineTurn]`. A smooth order
- * stamped with `plantUnits` (whole plants) ramps in whole-plant steps: plant k
- * of p lands on the first turn the linear ramp passes k/p.
+ * An order is on linear delivery once it carries `deliveryBaseFraction` (new
+ * orders are placed with 0; the linear-build-delivery migration stamps in-flight ones).
+ * Unstamped orders keep their original lump or whole-plant curve, so a turn
+ * that runs before the migration never loses or repeats delivered capacity.
  */
-export function deliveredFraction(order: SectorBuildOrder, turn: number): number {
-  if (!isSmooth(order)) return turn >= order.onlineTurn ? 1 : 0;
+function isLinear(order: SectorBuildOrder): boolean {
+  return typeof order.deliveryBaseFraction === "number";
+}
+
+function legacyFraction(order: SectorBuildOrder, turn: number): number {
+  if (!(order.smooth === true && hasWindow(order))) return turn >= order.onlineTurn ? 1 : 0;
   const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
   const linear = f <= 0 ? 0 : f >= 1 ? 1 : f;
   return order.plantUnits != null && order.plantUnits > 0
     ? steppedDeliveredFraction(linear, order.unitsOrdered, order.plantUnits)
     : linear;
+}
+
+function baseFraction(order: SectorBuildOrder): number {
+  const b = order.deliveryBaseFraction;
+  return typeof b === "number" && Number.isFinite(b) ? Math.min(1, Math.max(0, b)) : 0;
+}
+
+/**
+ * Fraction of the order delivered as of `turn`, in [0, 1]. Linear across the
+ * window, starting from `deliveryBaseFraction` for re-anchored in-flight
+ * orders. A degenerate window is a step at `onlineTurn`.
+ */
+export function deliveredFraction(order: SectorBuildOrder, turn: number): number {
+  if (!isLinear(order)) return legacyFraction(order, turn);
+  if (!hasWindow(order)) return turn >= order.onlineTurn ? 1 : 0;
+  const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
+  const linear = f <= 0 ? 0 : f >= 1 ? 1 : f;
+  const base = baseFraction(order);
+  return base + (1 - base) * linear;
+}
+
+/**
+ * First turn on which any capacity of the order lands, or `onlineTurn` when it
+ * lands all at once. Lets player copy name the turn output actually starts.
+ */
+export function firstDeliveryTurn(order: SectorBuildOrder): number {
+  for (let turn = order.startTurn + 1; turn < order.onlineTurn; turn++) {
+    if (deliveredFraction(order, turn) > 0) return turn;
+  }
+  return order.onlineTurn;
 }
 
 function safeUnits(order: SectorBuildOrder): number {
@@ -71,7 +104,8 @@ export function resolveBuildSettledTurn(
 /** Share of the order delivered after `settledTurn` up to `currentTurn`. */
 function deliveredSlice(order: SectorBuildOrder, settledTurn: number, currentTurn: number): number {
   if (settledTurn >= currentTurn) return 0;
-  if (!isSmooth(order)) return currentTurn >= order.onlineTurn ? 1 : 0;
+  if (!hasWindow(order) || (!isLinear(order) && order.smooth !== true))
+    return currentTurn >= order.onlineTurn ? 1 : 0;
   const slice = deliveredFraction(order, currentTurn) - deliveredFraction(order, settledTurn);
   return slice > 0 ? slice : 0;
 }
@@ -80,10 +114,8 @@ function deliveredSlice(order: SectorBuildOrder, settledTurn: number, currentTur
  * Capacity units this order converts into `capitalStock` for the turns after
  * `settledTurn` up to and including `currentTurn`.
  *
- * Legacy: the whole order once it has come due (matching the pre-smooth
- * `landedBuildUnits` sum). Smooth: every slice due in that span, so the final
- * slice lands on `onlineTurn`, or on the first turn the build step runs after
- * it. Nothing lands when `settledTurn` is not before `currentTurn`.
+ * Every slice due in that span, so the final slice lands on `onlineTurn`, or
+ * on the first turn the build step runs after it. Nothing lands when `settledTurn` is not before `currentTurn`.
  */
 export function unitsDeliveredSince(
   order: SectorBuildOrder,
@@ -113,42 +145,31 @@ export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: numbe
 }
 
 /**
- * Average capacity units this order adds per turn of its ramp, or 0 when it
- * does not add capacity on every turn.
- *
- * A linear smooth order adds exactly `unitsOrdered / window` each turn. A
- * whole-plant order only has a per-turn rate when at least one plant lands per
- * turn, and then it is an average of lumpy steps. With fewer plants than turns
- * it lands in steps with empty turns between; an order under one plant lands in
- * one piece on its online turn, so it has no steady rate. Legacy orders land all
- * at once and have no rate either. Use `nextArrivalTurn` to say when a stepped
- * order next lands.
+ * Capacity units this order adds each turn of its remaining ramp, or 0 once it
+ * has landed or has no real window.
  */
 export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number): number {
   const units = safeUnits(order);
-  if (units === 0 || !isSmooth(order) || currentTurn >= order.onlineTurn) return 0;
-  const window = order.onlineTurn - order.startTurn;
-  if (order.plantUnits != null && order.plantUnits > 0) {
-    // The same plant count steppedDeliveredFraction ramps through.
-    const plants = Math.max(1, Math.round(units / order.plantUnits));
-    if (plants < window) return 0;
-  }
-  return units / window;
+  if (units === 0 || !hasWindow(order) || currentTurn >= order.onlineTurn) return 0;
+  if (!isLinear(order)) return 0;
+  return (units * (1 - baseFraction(order))) / (order.onlineTurn - order.startTurn);
 }
 
 /**
  * First turn after `currentTurn` on which this order adds capacity, or null
- * once it has landed. A legacy order lands on its online turn; a whole-plant
- * order on the turn its next plant steps in, which can be well before the
- * online turn (two plants over six turns land at the midpoint and the end).
+ * once it has landed. A ramping order adds capacity every turn, so that is the
+ * next turn (or the turn after `startTurn` for an order not yet started).
  */
 export function nextArrivalTurn(order: SectorBuildOrder, currentTurn: number): number | null {
   if (safeUnits(order) === 0 || currentTurn >= order.onlineTurn) return null;
-  if (!isSmooth(order)) return order.onlineTurn;
-  for (let turn = Math.max(order.startTurn, currentTurn) + 1; turn < order.onlineTurn; turn++) {
-    if (unitsDeliveredThisTurn(order, turn) > 0) return turn;
+  if (!hasWindow(order)) return order.onlineTurn;
+  if (!isLinear(order)) {
+    for (let turn = Math.max(order.startTurn, currentTurn) + 1; turn < order.onlineTurn; turn++) {
+      if (legacyFraction(order, turn) > legacyFraction(order, turn - 1)) return turn;
+    }
+    return order.onlineTurn;
   }
-  return order.onlineTurn;
+  return Math.min(order.onlineTurn, Math.max(order.startTurn, currentTurn) + 1);
 }
 
 /** Paid cost still under construction (not yet delivered) as of `currentTurn`. */
@@ -164,4 +185,17 @@ export function undeliveredUnits(order: SectorBuildOrder, currentTurn: number): 
 /** Sum of `undeliveredCost` across a queue — the sector's true CIP total. */
 export function queueUndeliveredCost(queue: SectorBuildOrder[], currentTurn: number): number {
   return queue.reduce((sum, o) => sum + undeliveredCost(o, currentTurn), 0);
+}
+
+/**
+ * When a new order would deliver, in turns from the turn it is placed. The
+ * first slice lands next turn and the last on `lastInTurns` (the full window).
+ */
+export function plannedArrivalTurns(
+  unitsOrdered: number,
+  plantUnits: number,
+  buildTurns: number
+): { firstInTurns: number; lastInTurns: number } | null {
+  if (!(unitsOrdered > 0) || !(plantUnits > 0) || !(buildTurns > 0)) return null;
+  return { firstInTurns: 1, lastInTurns: buildTurns };
 }

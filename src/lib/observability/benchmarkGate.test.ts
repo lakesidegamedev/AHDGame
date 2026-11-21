@@ -134,13 +134,12 @@ describe("featurePostureEntries", () => {
   it("keeps flags and modes, drops ids, counters and clocks, and sorts", () => {
     expect(
       featurePostureEntries(
-        { _id: "default", simSandbox: true, labourSystemMode: "full", turnLengthMinutes: 60 },
-        { _id: "current", currentTurn: 481, nppAutonomyLevel: "v5", indexFundsEnabled: false }
+        { _id: "default", simSandbox: true, turnLengthMinutes: 60 },
+        { _id: "current", currentTurn: 481, nppAutonomyLevel: "v5", moneySupplyEnabled: false }
       )
     ).toEqual([
-      ["0.labourSystemMode", "full"],
       ["0.simSandbox", "true"],
-      ["1.indexFundsEnabled", "false"],
+      ["1.moneySupplyEnabled", "false"],
       ["1.nppAutonomyLevel", "v5"],
     ]);
   });

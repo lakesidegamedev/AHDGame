@@ -56,7 +56,7 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
     { key: "all", label: "All" },
     ...view.poles.map((p) => ({ key: p.id as Filter, label: p.label })),
     { key: "non-aligned", label: "Non-aligned" },
-    { key: "in-play", label: "In play" },
+    { key: "in-play", label: "Contested or non-aligned" },
   ];
 
   return (
@@ -77,18 +77,19 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
             >
               {tallies.byPole.get(pole.id) ?? 0}
             </div>
-            <div className="text-body-xs text-muted">nations leading</div>
+            <div className="text-body-xs text-muted">countries where this bloc leads</div>
           </div>
         ))}
         <div className="rounded-lg border border-card-border bg-card p-3 shadow-card">
           <div className="text-body-sm font-medium text-muted">Non-aligned</div>
           <div className="font-mono text-heading tabular-nums text-muted">{tallies.undecided}</div>
-          <div className="text-body-xs text-muted">lead within {ALIGNMENT_GATES.nonAligned}</div>
+          <div className="text-body-xs text-muted">
+            lead of {ALIGNMENT_GATES.nonAligned} points or less
+          </div>
         </div>
         <div className="rounded-lg border border-card-border bg-card p-3 shadow-card">
-          <div className="text-body-sm font-medium text-muted">In play</div>
+          <div className="text-body-sm font-medium text-muted">Contested or non-aligned</div>
           <div className="font-mono text-heading tabular-nums text-warning">{tallies.inPlay}</div>
-          <div className="text-body-xs text-muted">contested or non-aligned</div>
         </div>
       </div>
 
@@ -118,6 +119,12 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
           className="ml-auto rounded-md border border-card-border bg-card px-3 py-1 text-body-sm text-foreground"
         />
       </div>
+
+      <p className="text-body-sm text-muted">
+        Lead is the gap between a country’s top two bloc shares. Non-members at {view.joinGate}{" "}
+        points qualify as Eligible. At {ALIGNMENT_GATES.locked} points, influence actions are
+        blocked (Locked). A member below {view.joinGate} points shows Defection risk.
+      </p>
 
       {/* Ledger */}
       <div className="rounded-lg border border-card-border bg-card shadow-card">
@@ -164,13 +171,6 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
           </p>
         )}
       </div>
-
-      <p className="text-body-sm text-muted">
-        Bands compare a nation&rsquo;s <span className="text-foreground">lead</span> — its leading
-        bloc&rsquo;s share minus the runner-up&rsquo;s — against this era&rsquo;s gate of{" "}
-        {view.joinGate}. A nation whose lead sits within {ALIGNMENT_GATES.nonAligned} reads as
-        non-aligned, whatever its largest share.
-      </p>
     </main>
   );
 }
@@ -179,12 +179,11 @@ function Header({ view }: { view: WorldAlignmentView }) {
   return (
     <header className="space-y-1">
       <p className="text-body-sm font-medium text-muted">
-        {view.year} · {view.poles.length} blocs · gate {view.joinGate}
+        {view.year} · {view.poles.length} blocs
       </p>
       <h1 className="text-display font-semibold">Cold War ledger</h1>
       <p className="max-w-prose text-body text-muted">
-        Where every nation stands between the blocs. Each holds a share per bloc plus an uncommitted
-        remainder, always totalling 100.
+        Each country has 100 points split between the blocs and its uncommitted share.
       </p>
     </header>
   );

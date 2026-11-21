@@ -41,6 +41,8 @@ function matches(doc: Doc, filter: Doc, opts: StoreOptions = {}): boolean {
       if (present !== (v as { $exists: boolean }).$exists) return false;
     } else if (opts.strictOperators && v && typeof v === "object" && "$gt" in (v as object)) {
       if (!(typeof doc[k] === "number" && doc[k] > (v as { $gt: number }).$gt)) return false;
+    } else if (opts.strictOperators && v && typeof v === "object" && "$gte" in (v as object)) {
+      if (!(typeof doc[k] === "number" && doc[k] >= (v as { $gte: number }).$gte)) return false;
     } else if ((opts.strictOperators && k.includes(".") ? readPath(doc, k) : doc[k]) !== v) {
       return false;
     }
@@ -85,7 +87,7 @@ export interface InMemoryStore {
   cols: Record<string, Doc[]>;
 }
 
-/** `makeInMemoryStore` with `$exists`, `$nin` and `$gt` honoured. See StoreOptions. */
+/** `makeInMemoryStore` with `$exists`, `$nin`, `$gt` and `$gte` honoured. See StoreOptions. */
 export function makeStrictInMemoryStore(seed: Record<string, Doc[]> = {}): InMemoryStore {
   return makeInMemoryStore(seed, { strictOperators: true });
 }

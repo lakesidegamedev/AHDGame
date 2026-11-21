@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig, LegislationType } from "@/lib/db/types";
-import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
 import {
   annotateMinimumWageLawOptions,
   minimumWageLawOn,
@@ -194,14 +193,12 @@ export async function GET(request: Request) {
     const wageFloorConfig = minimumWageLawListed
       ? await gameConfigCollection(db).findOne(
           { _id: "default" },
-          { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
+          { projection: { minimumWageLawStage: 1 } }
         )
       : null;
-    const body =
-      minimumWageLawOn(wageFloorConfig?.minimumWageLawStage) &&
-      (await isLabourWagesEnabled(wageFloorConfig))
-        ? annotateMinimumWageLawOptions(withEstimates)
-        : withEstimates;
+    const body = minimumWageLawOn(wageFloorConfig?.minimumWageLawStage)
+      ? annotateMinimumWageLawOptions(withEstimates)
+      : withEstimates;
 
     return NextResponse.json(body, {
       headers: {

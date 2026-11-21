@@ -1,3 +1,4 @@
+import { settleRegionalDebt, type RegionalDebtLedger } from "@/lib/budget/rules/regionalDebt";
 import { describe, expect, it } from "vitest";
 import { generateStateBudgets } from "@/lib/seeds/reference/budgets";
 import { resolveRegionalSpending } from "@/lib/budget/rules/regionalSpending";
@@ -42,10 +43,11 @@ describe("Canadian provincial standing services", () => {
       expect(seeded.authorizedSpending).toEqual(seeded.spending);
     }
   });
-  it("retains authority across repeated rollovers while funding only available revenue", () => {
+  it("retains service authority and finances deficits across repeated rollovers", () => {
     for (const b of budgets) {
       const services = caProvincialServiceClaims("CA", "2027-default", b.stateId);
-      let cash = 0;
+      let financing: RegionalDebtLedger | undefined;
+      let turn = 0;
       for (const multiplier of [0.86, 0.9, 1.1]) {
         const revenue = Math.round(b.spending.total * multiplier);
         const result = resolveRegionalSpending({
@@ -54,14 +56,35 @@ describe("Canadian provincial standing services", () => {
           laws: [],
           programs: [],
           revenue,
-          cash,
+          cash: financing?.cash ?? 0,
           settle: true,
         });
         expect(result.authorizedSpending.total).toBe(b.spending.total);
-        expect(result.spending.total).toBe(Math.min(b.spending.total, revenue + cash));
-        cash += revenue - result.spending.total;
-        expect(cash).toBeGreaterThanOrEqual(0);
-        if (multiplier < 1) expect(cash).toBe(0);
+        expect(result.spending.total).toBe(b.spending.total);
+        expect(result.settlement?.totalUnfunded).toBe(0);
+        const openingDebt = financing?.principal ?? 0;
+        for (let period = 0; period < 48; period++) {
+          const openingNetAssets = (financing?.cash ?? 0) - (financing?.principal ?? 0);
+          financing = settleRegionalDebt({
+            previous: financing,
+            openingCash: financing?.cash ?? 0,
+            annualRevenue: revenue,
+            annualPrimarySpending: result.spending.total,
+            turn: ++turn,
+            turnsPerYear: 48,
+          });
+          const netReceipts =
+            Math.round((revenue / 48) * 100) / 100 -
+            Math.round((result.spending.total / 48) * 100) / 100 -
+            financing.interestPaid;
+          expect(financing.cash - financing.principal).toBeCloseTo(
+            openingNetAssets + netReceipts,
+            2
+          );
+          expect(financing.cash).toBeGreaterThanOrEqual(0);
+        }
+        if (multiplier < 1) expect(financing!.principal).toBeGreaterThan(openingDebt);
+        else expect(financing!.principal).toBeLessThan(openingDebt);
       }
     }
   });

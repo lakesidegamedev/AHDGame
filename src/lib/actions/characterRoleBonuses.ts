@@ -6,10 +6,8 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial } from "@/lib/db/types";
 import { loadOrganizationHeads } from "@/lib/internationalOrganizations/orgHeadAgenda";
 import type { LeadershipRole } from "@/lib/db/types/leadership";
-import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
 import {
   JUSTICE_ACTION_BONUS,
@@ -18,7 +16,7 @@ import {
   type CeoNiTier,
 } from "./positionNiBonus";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
-import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { loadPartyChairOrganizations } from "./positionNiBonus/partyChair";
 
 export interface CharacterRoleBonusInput {
   character: {
@@ -27,11 +25,6 @@ export interface CharacterRoleBonusInput {
     currentOffice?: { type: string } | null;
     ceoNiTier?: CeoNiTier | null;
   };
-  party: {
-    chairId?: ObjectId | null;
-    viceChairId?: ObjectId | null;
-    treasurerId?: ObjectId | null;
-  } | null;
   congressLeadershipRoles: readonly LeadershipRole[];
   isSeatedJustice: boolean;
   isCentralBankChair: boolean;
@@ -51,7 +44,6 @@ export async function loadCharacterRoleBonuses(
   db: Db,
   {
     character,
-    party,
     congressLeadershipRoles,
     isSeatedJustice,
     isCentralBankChair,
@@ -60,16 +52,16 @@ export async function loadCharacterRoleBonuses(
 ): Promise<CharacterRoleBonuses> {
   const countryId = (character.countryId ?? "US") as CountryId;
   const id = character._id.toString();
-  const [presiding, statePartyChair, orgSeats, opposition] = await Promise.all([
+  const [presiding, orgSeats, opposition, chairOrgs] = await Promise.all([
     electedOfficialsCollection(db)
       .find(
         { characterId: character._id, officeType: { $in: ["speaker", "senatePresident"] } },
         { projection: { officeType: 1 } }
       )
       .toArray(),
-    statePartyOrgCollection(db).findOne({ chairId: character._id }, { projection: { _id: 1 } }),
     loadOrganizationHeads(db, { characterId: character._id }).catch(() => []),
     resolveOppositionLeaderForCountry(db, countryId).catch(() => null),
+    loadPartyChairOrganizations(db, character._id).catch(() => new Map<string, number>()),
   ]);
 
   const roles: LeadershipRole[] = [
@@ -90,10 +82,6 @@ export async function loadCharacterRoleBonuses(
       currentOfficeType: character.currentOffice?.type,
       countryId,
       congressLeadershipRoles: roles,
-      isPartyChair: party?.chairId?.toString() === id,
-      isPartySubChair:
-        party?.viceChairId?.toString() === id || party?.treasurerId?.toString() === id,
-      isStatePartyChair: statePartyChair != null,
       isSeatedJustice,
       isCentralBankChair,
       cabinetCountryId: cabinetSeat
@@ -102,6 +90,7 @@ export async function loadCharacterRoleBonuses(
       isActingCabinet:
         cabinetSeats.length > 0 && cabinetSeats.every((seat) => seat.acting === true),
       ceoTier: character.ceoNiTier ?? null,
+      partyChairOrganization: chairOrgs.get(id),
       isOrgHead: orgSeats.length > 0,
     }),
     leadershipActionBonus: resolveLeadershipActionBonus({

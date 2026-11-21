@@ -75,10 +75,6 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
         }).catch(() => null),
       ]);
 
-      if (fundRes.status === 403) {
-        setError("Index funds are not enabled.");
-        return;
-      }
       if (!fundRes.ok) {
         const body = (await fundRes.json()) as { error?: string };
         setError(apiErrorText(body, "Fund not found"));

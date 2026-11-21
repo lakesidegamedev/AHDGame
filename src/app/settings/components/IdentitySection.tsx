@@ -28,6 +28,7 @@ interface CharacterData {
 }
 
 interface Props {
+  expectedUserId?: string;
   character: CharacterData;
   onCharacterUpdate: (updates: Partial<CharacterData>) => void;
 }
@@ -44,6 +45,7 @@ function ProviderCard({
   icon,
   onUnlink,
   unlinkBlockedReason,
+  expectedUserId,
 }: {
   provider: string;
   isLinked: boolean;
@@ -56,6 +58,7 @@ function ProviderCard({
   icon: React.ReactNode;
   onUnlink: () => void;
   unlinkBlockedReason?: string;
+  expectedUserId?: string;
 }) {
   const t = useTranslations("settings");
   const [unlinking, setUnlinking] = useState(false);
@@ -118,6 +121,7 @@ function ProviderCard({
         </div>
       ) : (
         <form action={linkUrl} method="GET" className="inline-block">
+          {expectedUserId && <input type="hidden" name="expectedUserId" value={expectedUserId} />}
           <button
             type="submit"
             className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white transition-colors ${brandColor}`}
@@ -170,7 +174,7 @@ const AppleIcon = (
   </svg>
 );
 
-export function IdentitySection({ character, onCharacterUpdate }: Props) {
+export function IdentitySection({ character, onCharacterUpdate, expectedUserId }: Props) {
   const t = useTranslations("settings");
   const [discordRequired, setDiscordRequired] = useState<boolean | null>(null);
   const [requirementLoadFailed, setRequirementLoadFailed] = useState(false);
@@ -220,6 +224,7 @@ export function IdentitySection({ character, onCharacterUpdate }: Props) {
           displayName={character.discordUsername}
           subtitle={t("identity.discordLinked")}
           linkUrl="/api/auth/discord"
+          expectedUserId={expectedUserId}
           unlinkUrl="/api/auth/discord/unlink"
           unlinkBlockedReason={
             requirementLoadFailed

@@ -208,7 +208,7 @@ describe("PlantPanel order that lands whole", () => {
     expect(screen.queryByText(/arriving each turn/)).toBeNull();
   });
 
-  it("names the turn the next plant lands for an order that steps plants in", () => {
+  it("shows the per-turn arrival for a multi-plant order", () => {
     const steppedPlants = {
       ...plants,
       capacityUnits: 0,
@@ -220,8 +220,8 @@ describe("PlantPanel order that lands whole", () => {
           onlineTurn: 6,
           turnsRemaining: 5,
           smooth: true,
-          unitsPerTurn: 0,
-          nextArrivalTurn: 3,
+          unitsPerTurn: 50,
+          nextArrivalTurn: 1,
           unitsOrdered: 2,
           unitsDelivered: 0,
           costPaidAnchor: 1_000_000,
@@ -245,9 +245,7 @@ describe("PlantPanel order that lands whole", () => {
       />
     );
 
-    expect(
-      screen.getByText(/next plant lands on turn 3 · done on turn 6 \(5 to go\)/)
-    ).toBeTruthy();
+    expect(screen.getByText(/arriving each turn · done on turn 6 \(5 to go\)/)).toBeTruthy();
   });
 });
 

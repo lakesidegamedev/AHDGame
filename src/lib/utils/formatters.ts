@@ -256,6 +256,14 @@ export function electionToLarpYear(
       return (years.caCommons ?? years.governorStateSenate) + (cycle - 1) * 4;
     case "qcAssembly":
       return (years.qcAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
+    case "abAssembly":
+      return (years.abAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
+    case "rtxAssembly":
+      return (years.rtxAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
+    case "nenAssembly":
+      return (years.nenAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
+    case "rcaAssembly":
+      return (years.rcaAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
     default:
       return years.governorStateSenate + (cycle - 1) * 4;
   }

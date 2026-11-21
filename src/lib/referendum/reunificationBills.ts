@@ -19,6 +19,10 @@ import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { independenceCopy } from "./rules/sovereigntyRegions";
 
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Display-only votingEndsAt offset; turn-based resolution uses votingEndsOnTurn. */
 const APPROX_TURN_MS = 3_600_000;
 
@@ -116,8 +120,10 @@ export async function createReunificationConsentBills(
 
 /**
  * Create the single consent bill for a passed independence referendum: the
- * parent's lower house must consent to release the region as a new sovereign
- * country. There is no admitting parliament, so no counterpart bill.
+ * parent's legislature must consent to release the region as a new sovereign
+ * country. It starts in the lower chamber and follows the country's ordinary
+ * bill lifecycle (a second chamber and a presidential signature where the
+ * country has them). There is no admitting parliament, so no counterpart bill.
  */
 export async function createIndependenceConsentBill(
   db: Db,
@@ -131,8 +137,8 @@ export async function createIndependenceConsentBill(
     title: `${copy.region} (Independence) Bill`,
     summary:
       `A bill for ${copy.parent} to release ${copy.region} as an independent sovereign ` +
-      "country following its independence referendum. The Commons must consent for independence " +
-      "to take effect.",
+      `country following its independence referendum. ${capitalize(copy.body)} must consent for ` +
+      "independence to take effect.",
     sponsorName: copy.sponsor,
     currentTurn,
     category: "independence",

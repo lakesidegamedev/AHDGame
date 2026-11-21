@@ -1743,3 +1743,11 @@ html[data-high-contrast="true"] :focus-visible {
 html[data-cookie-consent] [data-cookie-consent-banner] {
   display: none;
 }
+
+/* Link colour for wiki article text: lighter red on dark surfaces for contrast. */
+:root {
+  --wiki-link: #f87171;
+}
+[data-theme="light"] {
+  --wiki-link: #b91c1c;
+}

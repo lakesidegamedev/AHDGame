@@ -24,4 +24,9 @@ describe("foundingPlant", () => {
     const half = sectorEntryFeeAnchor("1953-default", 0.5);
     expect(half).toBe(Math.round(full * 0.5));
   });
+
+  it("charges the lower flat 2027 fee before tech discounts", () => {
+    expect(sectorEntryFeeAnchor("2027-default")).toBe(5_000);
+    expect(sectorEntryFeeAnchor("2027-default", 0.5)).toBe(2_500);
+  });
 });

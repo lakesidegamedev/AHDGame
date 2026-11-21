@@ -273,7 +273,7 @@ export interface EuroAdoptionProvision {
 }
 
 /**
- * v3 Phase 7b (labourSystemMode >= "full"): union laws. A single signed axis
+ * v3 Phase 7b: union laws. A single signed axis
  * rather than the design doc's literal "right-to-work / collective-bargaining
  * sliders" — deliberate simplification, validated as architecturally safe
  * (every other non-policy provision is a raw typed field with its own
@@ -731,6 +731,10 @@ export interface LegislationTypePosition {
     | "caCommons" // CA House of Commons
     | "caSenate" // CA Senate (appointed)
     | "qcAssembly" // QC National Assembly (successor country)
+    | "abAssembly" // AB Legislative Assembly (successor country)
+    | "rtxAssembly" // RTX House of Representatives (successor country)
+    | "nenAssembly" // NEN Assembly (successor country)
+    | "rcaAssembly" // RCA Assembly (successor country)
     | "milletMeclisi"
     | "senato" // TR parliament chambers (added with 1979 Turkey)
     | "volkskammer" // DD Volkskammer (one-party; added with 1979 GDR)
@@ -1092,7 +1096,11 @@ export interface LegislationType {
     | "sco"
     | "wls"
     | "ca"
-    | "qc";
+    | "qc"
+    | "ab"
+    | "rtx"
+    | "rca"
+    | "nen";
 
   /**
    * Political-legislation v2 (spec §6): the typed law's metric targets,

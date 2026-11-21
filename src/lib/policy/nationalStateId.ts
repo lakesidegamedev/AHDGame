@@ -30,6 +30,10 @@ import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
+import { AB_ECONOMY } from "@/lib/countries/ab/economy";
+import { RTX_ECONOMY } from "@/lib/countries/rtx/economy";
+import { NEN_ECONOMY } from "@/lib/countries/nen/economy";
+import { RCA_ECONOMY } from "@/lib/countries/rca/economy";
 
 /**
  * Mapping from country to the "stateId" used in collections like statePolicies
@@ -70,6 +74,10 @@ export const NATIONAL_POLICY_STATE_IDS: Record<CountryId, string> = {
   WAL: WAL_ECONOMY.nationalPolicyStateId,
   CA: CA_ECONOMY.nationalPolicyStateId,
   QC: QC_ECONOMY.nationalPolicyStateId,
+  AB: AB_ECONOMY.nationalPolicyStateId,
+  RTX: RTX_ECONOMY.nationalPolicyStateId,
+  NEN: NEN_ECONOMY.nationalPolicyStateId,
+  RCA: RCA_ECONOMY.nationalPolicyStateId,
 };
 
 export function getNationalStateId(countryId: CountryId): string {

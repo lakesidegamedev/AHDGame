@@ -149,6 +149,7 @@ export type FinancialTxType =
   // Admin / system
   | "admin_transfer"
   | "onboarding_reward" // one-time new-player checklist completion payout
+  | "starting_capital" // endowment written onto a newly created character
   | "contest_prize" // weekly contest winner's cash prize
   | "casino_wager" // stake paid into the Discord casino house or a shared pot
   | "casino_payout" // winnings or a refunded stake paid out by the Discord casino
@@ -329,7 +330,8 @@ export const DEFAULT_TX_THRESHOLDS: TxThresholds = {
 /**
  * Retention window for financial transaction log entries, expressed in turns.
  *
- * 168 turns × 60 min/turn = 7 IRL days at the default cadence. The MongoDB
+ * 720 turns × 60 min/turn = 30 IRL days at the default cadence, so support can
+ * trace money for a month. The MongoDB
  * TTL index still operates on `expiresAt` (a wall-clock Date), but emitters
  * now compute that Date as `createdAt + TX_TTL_TURNS × turnLengthMinutes ×
  * 60_000ms` so admins can change turn cadence without silently shrinking or
@@ -340,7 +342,7 @@ export const DEFAULT_TX_THRESHOLDS: TxThresholds = {
  * Mark/KIMI dropped at the 96h mark and erased the ~$8B inflow event from
  * forensic visibility.
  */
-export const TX_TTL_TURNS = 168;
+export const TX_TTL_TURNS = 720;
 
 /**
  * Default turn length in minutes — used when gameConfig hasn't been seeded

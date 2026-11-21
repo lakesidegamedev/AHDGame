@@ -1016,6 +1016,20 @@ export interface BondInfo {
   debtHeadroom?: number;
   /** Which rule is currently binding on `maxAllowedIssuance` (#1198). */
   issuanceLimitedBy?: "perIssuance" | "leverage" | "exitEquity";
+  /**
+   * What the currency's bond market pool underwrites at issuance. The slider
+   * ceiling is a legal borrowing limit, so an issue larger than
+   * `fundableNowAnchor` funds only the difference now and places the rest over
+   * later turns. Absent on older deploys, which funded every issue in full.
+   */
+  primaryMarket?: {
+    hasPool: boolean;
+    poolCurrency: string;
+    /** `null` when there is no pool for the currency: the whole issue funds at par. */
+    fundableNowAnchor: number | null;
+    /** Share of the requested face value the pool may place per turn once open. */
+    unsoldPlacementSharePerTurn: number;
+  };
   isCeo: boolean;
   cooldownTurnsRemaining: number;
   currentTurn: number;
@@ -1031,6 +1045,7 @@ export type CorpTabId =
   | "financials"
   | "sectors"
   | "commodities"
+  | "supply-chain"
   | "shares"
   | "credit"
   | "charts"

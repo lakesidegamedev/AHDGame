@@ -11,17 +11,14 @@
  *   3. Federal Equalization Grant (BEZ): Finance Minister allocation or an
  *      equal per-capita split of the grant pool.
  *
- * Deficits for more than one turn trigger forced austerity (most expensive
- * programme downgraded one tier), matching UK and JP behaviour.
+ * Deficits are financed by the regional debt service phase.
  */
 
 import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { StateMetrics } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
+import type { LegislationType } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getStatesCollection } from "@/lib/db/collections/states";
@@ -239,7 +236,7 @@ const FOREIGN_SHAPE_FIELDS = {
  * Main turn processing function for DE Länder budgets.
  *
  * Called once per turn. Fetches all DE Länder, calculates budgets from enacted
- * income-tax and VAT legislation, detects deficits, applies forced austerity
+ * income-tax and VAT legislation, detects deficits, retains authorized services
  * when needed, and upserts RegionalBudget documents.
  */
 export async function processDERegionalBudgets(
@@ -361,7 +358,6 @@ export async function processLaenderRegionalBudgets(
 
   let regionsProcessed = 0;
   // Batched per-region writes (see regionalBudget.ts for rationale).
-  const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
   for (const region of deRegions) {
@@ -417,45 +413,6 @@ export async function processLaenderRegionalBudgets(
     const previousTurnsOver = existingBudget?.turnsOverBudget ?? 0;
     const turnsOverBudget = isOverBudget ? previousTurnsOver + 1 : 0;
 
-    // Forced austerity: downgrade the most expensive enacted programme after 1 consecutive deficit turn
-    if (turnsOverBudget > 1 && spendingPolicies.length > 0) {
-      const policiesWithCost = spendingPolicies.map((p) => ({
-        policy: p,
-        cost: getOptionCostPerCapita(p, legTypeMap),
-      }));
-      policiesWithCost.sort((a, b) => b.cost - a.cost);
-
-      const mostExpensive = policiesWithCost[0];
-      if (mostExpensive && mostExpensive.cost > 0) {
-        const legType = legTypeMap.get(mostExpensive.policy.legislationTypeId);
-        if (legType?.policyOptions) {
-          const currentIndex = legType.policyOptions.findIndex(
-            (o) => o.id === mostExpensive.policy.policyOptionId
-          );
-          if (currentIndex > 0) {
-            const newOption = legType.policyOptions[currentIndex - 1] as LegislationPolicyOption;
-            statePolicyOps.push({
-              updateOne: {
-                filter: {
-                  stateId: region._id,
-                  legislationTypeId: mostExpensive.policy.legislationTypeId,
-                },
-                update: {
-                  $set: {
-                    policyOptionId: newOption.id,
-                    policyOptionIndex: currentIndex - 1,
-                    economic: newOption.economic,
-                    social: newOption.social,
-                    effectDirection: newOption.effectDirection,
-                  },
-                },
-              },
-            });
-          }
-        }
-      }
-    }
-
     const budgetDoc: RegionalBudget = {
       _id: region._id,
       countryId,
@@ -496,9 +453,6 @@ export async function processLaenderRegionalBudgets(
     regionsProcessed++;
   }
 
-  if (statePolicyOps.length > 0) {
-    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
-  }
   if (regionalBudgetOps.length > 0) {
     await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }

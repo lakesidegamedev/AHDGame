@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildSyncRoleTokens, officeLabel } from "./buildSyncRoles";
+import {
+  buildSyncRoleTokens,
+  officeLabel,
+} from "@/lib/api/commands/discord-bot/sync-roles/buildSyncRoles";
 
 const base = {
   partyName: "Independent",
@@ -141,5 +144,29 @@ describe("officeLabel", () => {
 
   it("falls back to the raw key for an unknown office type", () => {
     expect(officeLabel("US", "totallyMadeUp")).toBe("totallyMadeUp");
+  });
+});
+
+describe("Canadian office role tokens", () => {
+  it("stacks the Canadian PM and parliamentary seat roles", () => {
+    const result = buildSyncRoleTokens({
+      ...base,
+      countryId: "CA",
+      officeTypes: ["caCommons"],
+      isHeadOfGovernment: true,
+    });
+    expect(result.roles).toContain("country:CA");
+    expect(result.roles).toContain("headOfGov");
+    expect(result.roles).toContain("office:Member of Parliament");
+  });
+  it("labels provincial legislators and premiers from the Canada config", () => {
+    const result = buildSyncRoleTokens({
+      ...base,
+      countryId: "CA",
+      officeTypes: ["provincialLegislature", "governor"],
+    });
+    expect(result.roles).toContain("office:Member of the Provincial Legislature");
+    expect(result.roles).toContain("office:Premier");
+    expect(result.roles).not.toContain("headOfGov");
   });
 });

@@ -77,12 +77,6 @@ export function FundTable({
       const res = await fetch(`/api/investment-funds?exchange=${exchangeApi}`, {
         cache: "no-store",
       });
-      if (res.status === 403) {
-        setOwnFunds([]);
-        onCountChange?.(0);
-        setOwnLoading(false);
-        return;
-      }
       if (!res.ok) throw new Error("Failed to load funds");
       const data = (await res.json()) as { funds?: FundListItem[] };
       const list = data.funds ?? [];

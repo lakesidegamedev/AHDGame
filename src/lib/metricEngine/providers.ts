@@ -156,8 +156,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         taxRates: 1,
       })
       .toArray(),
-    // P2/D7: market mode via the SAME db handle (mock-db safe — mirrors the
-    // labourSystemMode read in the engine phase), not the global getDb().
+    // P2/D7: market mode via the SAME db handle (mock-db safe), not the global getDb().
     gameConfigCollection(db)
       .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, outputBasis: 1 } })
       .catch(() => null),

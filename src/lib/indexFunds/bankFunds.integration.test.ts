@@ -178,7 +178,6 @@ function fixture(type: "retail" | "investment" | "universal" = "investment") {
   memory.seed("gameConfig", [
     {
       _id: "default",
-      indexFundsMode: "full",
       auditLog: false,
     },
   ]);
@@ -315,52 +314,6 @@ describe("bank fund eligibility and segregation", () => {
       expect(response.headers.get("cache-control")).toContain("no-store");
     }
   );
-  it.each(["investment", "universal"] as const)(
-    "hides and rejects %s bank creation and investing when the fund engine is off",
-    async (type) => {
-      const f = fixture(type);
-      f.memory.collection("gameConfig").docs[0].indexFundsMode = "off";
-      const before = f.total();
-      const { GET } = await import("@/app/api/corporations/[id]/funds/route");
-      const response = await GET(new Request("http://localhost/funds"), {
-        params: Promise.resolve({ id: String(f.sponsor._id) }),
-      });
-      expect(await response.json()).toMatchObject({ canCreate: false, stockChoices: [] });
-      expect(await fundCreationEligibility(f.db, f.sponsor)).not.toBeNull();
-      expect((await charterFund(f.db, f.creation)).ok).toBe(false);
-      expect(
-        (await fundTradeCapabilities(f.db, f.fund, { hasCharacter: true, units: 0 })).canSubscribe
-      ).toBe(false);
-      const { GET: getFund } = await import("@/app/api/investment-funds/[slug]/route");
-      const detail = await getFund(new Request("http://localhost/fund"), {
-        params: Promise.resolve({ slug: f.fund.slug }),
-      });
-      expect(detail.status).toBe(200);
-      expect((await detail.json()).fund.canSubscribe).toBe(false);
-      expect((await queueBankFundSubscription(f.db, f.input)).status).toBe(403);
-      const { POST } = await import("@/app/api/investment-funds/[slug]/subscribe/route");
-      expect(
-        (
-          await POST(
-            new Request("http://localhost/subscribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ units: 10, operationId: f.input.operationId }),
-            }),
-            { params: Promise.resolve({ slug: f.fund.slug }) }
-          )
-        ).status
-      ).toBe(403);
-      expect(f.orders()).toHaveLength(0);
-      expect(f.total()).toBe(before);
-      f.memory.collection("gameConfig").docs[0].indexFundsMode = "full";
-      expect(await fundCreationEligibility(f.db, f.sponsor)).toBeNull();
-      expect(
-        (await fundTradeCapabilities(f.db, f.fund, { hasCharacter: true, units: 0 })).canSubscribe
-      ).toBe(true);
-    }
-  );
-
   it("hides creation from other viewers and refuses inactive charters", async () => {
     const f = fixture();
     vi.mocked(getAuthUser).mockResolvedValue({ userId: String(new ObjectId()) } as never);

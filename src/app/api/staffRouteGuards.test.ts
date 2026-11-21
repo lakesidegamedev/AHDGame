@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
+import { readRouteSource } from "@/lib/test-utils/routeSource";
 import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -46,7 +47,7 @@ describe("staff API route guards", () => {
       .map((f) => relative(process.cwd(), f).split(sep).join("/"))
       .filter((rel) => !(rel in EXEMPT))
       .filter((rel) => {
-        const src = readFileSync(join(process.cwd(), rel), "utf8");
+        const src = readRouteSource(join(process.cwd(), rel));
         return !CENTRAL_GUARDS.some((g) => src.includes(g));
       });
     expect(unguarded).toEqual([]);

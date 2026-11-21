@@ -45,7 +45,6 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameHealthSummary } from "@/lib/db/types/gameHealthSnapshot";
 import type { TurnLog } from "@/lib/db/types/turnLog";
 import type { WorldsimCorporationBootstrapResult } from "@/lib/sim/worldsimCorporationBootstrap";
-import { LABOUR_MODE_ORDER, type LabourSystemMode } from "@/lib/labour/modes";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { applyCloneControllerPolicy } from "@/lib/sim/cloneControllers";
 import {
@@ -229,18 +228,6 @@ const seed = arg("seed") ?? "default";
 const preset = arg("preset") ?? DEFAULT_SEED_PRESET;
 const turns = Number(arg("turns") ?? "500");
 
-// --labour-mode is the exact counterpart of --market-mode. Both tiers were
-// raised together (wages->full, ledger->capital) when fresh worlds adopted the
-// production posture, but only the market half could be exercised here, so a
-// harness A/B silently held labour at the preset default and reported itself as
-// a clean comparison. Sourced from @/lib/labour/modes for the same purity
-// reason the market import documents.
-const labourModeRaw = arg("labour-mode");
-if (labourModeRaw && !LABOUR_MODE_ORDER.includes(labourModeRaw as LabourSystemMode)) {
-  console.error(`--labour-mode must be one of ${LABOUR_MODE_ORDER.join(", ")}`);
-  process.exit(1);
-}
-const labourMode = labourModeRaw as LabourSystemMode | undefined;
 const canonicalFreightBillingEnabled = parseOptionalBoolean(
   arg("canonical-freight-billing"),
   "canonical-freight-billing"
@@ -641,7 +628,6 @@ async function main() {
         demographicsDemand,
         macroGrowth,
         allFeatureFlags,
-        labourMode,
         canonicalFreightBillingEnabled,
         shortageResponsiveSourcingEnabled,
         indexFundBondLiquidityEnabled,
@@ -664,16 +650,6 @@ async function main() {
       );
     }
 
-    if (labourMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { labourSystemMode: labourMode } },
-          { upsert: true }
-        );
-      log(`Set labourSystemMode="${labourMode}" on sandbox gameConfig`);
-    }
     if (scarcityDrift) {
       await db
         .collection<GameConfig>("gameConfig")
@@ -934,16 +910,6 @@ async function main() {
     // still applying the world-level gates. Order: any corp
     // conversion before autonomy gates, so the first turn sees the requested
     // controller and economy posture.
-    if (labourMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { labourSystemMode: labourMode } },
-          { upsert: true }
-        );
-      log(`[clone] set labourSystemMode="${labourMode}" on cloned gameConfig`);
-    }
     if (scarcityDrift) {
       await db
         .collection<GameConfig>("gameConfig")

@@ -22,10 +22,6 @@ import {
   politicalContributionPerTurn,
 } from "@/lib/unions/unionPoliticalContributions";
 
-let labourFullModeEnabled = true;
-vi.mock("@/lib/labour/featureFlag", () => ({
-  isLabourFullMode: vi.fn().mockImplementation(async () => labourFullModeEnabled),
-}));
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
 }));
@@ -206,30 +202,8 @@ function mockDb({
 
 describe("processUnionsTurn", () => {
   beforeEach(async () => {
-    labourFullModeEnabled = true;
     const { emitTxBulk } = await import("@/lib/financialTxLog/emit");
     vi.mocked(emitTxBulk).mockClear();
-  });
-
-  it("does nothing when there are no owned unions", async () => {
-    const { db, unionsBulkWrite } = mockDb({ unions: [] });
-    const result = await processUnionsTurn(db);
-    expect(result.unionsProcessed).toBe(0);
-    expect(unionsBulkWrite).not.toHaveBeenCalled();
-  });
-
-  it("is a no-op (skips entirely) when labourSystemMode < 'full'", async () => {
-    labourFullModeEnabled = false;
-    const union = makeUnion();
-    const { db, unionsBulkWrite } = mockDb({
-      unions: [union],
-      activeCharacterIds: [union.ownerId!.toString()],
-    });
-
-    const result = await processUnionsTurn(db);
-    expect(result.unionsProcessed).toBe(0);
-    expect(unionsBulkWrite).not.toHaveBeenCalled();
-    labourFullModeEnabled = true; // reset for subsequent tests
   });
 
   it("credits dues income scaled by real represented-sector members, with no services running", async () => {
@@ -610,7 +584,6 @@ describe("processUnionsTurn", () => {
 
 describe("processUnionsTurn, safety-net seeding + union-ban suspension", () => {
   it("backfills via seedUnions(reset:false) when full mode is on but ZERO union docs exist", async () => {
-    labourFullModeEnabled = true;
     vi.mocked(seedUnions).mockClear();
     const { db } = mockDb({ unions: [], totalUnionCount: 0 });
 
@@ -625,7 +598,6 @@ describe("processUnionsTurn, safety-net seeding + union-ban suspension", () => {
   it("backfills when the roster is INCOMPLETE, not just empty (regression: 1953 sandbox stuck at 1 of 391)", async () => {
     // A lone stray union (e.g. an early partial seed) must NOT block the
     // backfill, the old `=== 0` guard let exactly this state persist forever.
-    labourFullModeEnabled = true;
     vi.mocked(seedUnions).mockClear();
     const { db } = mockDb({
       unions: [],
@@ -640,33 +612,7 @@ describe("processUnionsTurn, safety-net seeding + union-ban suspension", () => {
     expect(reset).toBe(false);
   });
 
-  it("does NOT seed when the roster is already complete", async () => {
-    labourFullModeEnabled = true;
-    vi.mocked(seedUnions).mockClear();
-    const union = makeUnion();
-    const { db } = mockDb({
-      unions: [union],
-      activeCharacterIds: [union.ownerId!.toString()],
-      seededCountryIds: ["US"],
-      totalUnionCount: OPERATING_SECTOR_TYPES.length, // 1 country × all sectors = full roster
-    });
-
-    await processUnionsTurn(db);
-    expect(seedUnions).not.toHaveBeenCalled();
-  });
-
-  it("does NOT count or seed at all below full mode", async () => {
-    labourFullModeEnabled = false;
-    vi.mocked(seedUnions).mockClear();
-    const { db } = mockDb({ unions: [], totalUnionCount: 0 });
-
-    await processUnionsTurn(db);
-    expect(seedUnions).not.toHaveBeenCalled();
-    labourFullModeEnabled = true; // reset for subsequent tests
-  });
-
   it("union ban (player suggestion #93): the owned-unions query excludes suspended unions from dues/decay/vacancy", async () => {
-    labourFullModeEnabled = true;
     const union = makeUnion();
     const { db, unionsFind } = mockDb({
       unions: [union],
@@ -686,7 +632,6 @@ describe("processUnionsTurn, safety-net seeding + union-ban suspension", () => {
   });
 
   it("uses FederalBudget bans for cells seeded after the ban", async () => {
-    labourFullModeEnabled = true;
     const union = makeUnion({ suspended: false });
     const { db, unionsFind, unionsDistinct, federalBudgetFind } = mockDb({
       unions: [union],

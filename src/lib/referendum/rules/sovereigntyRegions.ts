@@ -21,7 +21,11 @@ export interface SovereigntyRegion {
   readonly nationalGovernmentName: string;
   /** The parent country as written mid-sentence ("the United Kingdom"). */
   readonly parentName: string;
-  /** Who sponsors the parent parliament's consent bill. */
+  /** Who decides whether the referendum goes ahead: "Prime Minister" or "President". */
+  readonly decisionMakerTitle: string;
+  /** The parent legislature that votes on consent, mid-sentence ("the House of Commons"). */
+  readonly consentBodyName: string;
+  /** Who sponsors the parent legislature's consent bill. */
   readonly consentSponsor: string;
   /**
    * Party slugs the region's mood moves votes between at elections: toward
@@ -37,6 +41,25 @@ export interface SovereigntyRegion {
    * nothing can pass into a country that does not exist.
    */
   readonly actuates: boolean;
+  /**
+   * How the office surfaces name the region's mood and policy: "sovereignty"
+   * (a Sovereignty tab and desire) or the UK's "devolution".
+   */
+  readonly wording: "sovereignty" | "devolution";
+  /**
+   * Seats the parent's upper chamber loses when the region leaves, for a
+   * parent whose upper chamber is not apportioned by region (the US Senate
+   * seats two senators per state). Absent when the chamber follows its regions.
+   */
+  readonly parentUpperChamberSeats?: number;
+  /**
+   * States that leave together when `regionId` is a bloc id rather than a
+   * state. One referendum, one pooled result; the member states keep their ids
+   * and move to the successor country.
+   */
+  readonly memberRegionIds?: readonly string[];
+  /** How copy names a bloc, where no single region name exists. */
+  readonly displayName?: string;
 }
 
 export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
@@ -49,9 +72,12 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     parentName: "the United Kingdom",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_snp"], rivals: ["uk_conservative"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "UK",
@@ -62,9 +88,12 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     parentName: "the United Kingdom",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_plaid"], rivals: ["uk_conservative"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "UK",
@@ -75,9 +104,12 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     parentName: "the United Kingdom",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
     consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
     actuates: true,
+    wording: "devolution",
   },
   {
     countryId: "CA",
@@ -88,16 +120,106 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     executiveTitle: "Premier",
     nationalGovernmentName: "Ottawa",
     parentName: "Canada",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
     consentSponsor: "Government of Canada",
     electionParties: {
       separatist: ["ca_laurentian"],
       rivals: ["ca_federal_unity", "ca_national_prosperity"],
     },
     actuates: true,
+    wording: "sovereignty",
+  },
+  {
+    countryId: "CA",
+    regionId: "CA_AB",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "AB",
+    executiveTitle: "Premier",
+    nationalGovernmentName: "Ottawa",
+    parentName: "Canada",
+    decisionMakerTitle: "Prime Minister",
+    consentBodyName: "the House of Commons",
+    consentSponsor: "Government of Canada",
+    electionParties: {
+      separatist: ["ca_alberta_sovereignty"],
+      rivals: ["ca_federal_unity", "ca_national_prosperity"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+  },
+  {
+    countryId: "US",
+    regionId: "TX",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "RTX",
+    executiveTitle: "Governor",
+    nationalGovernmentName: "Washington",
+    parentName: "the United States",
+    decisionMakerTitle: "President",
+    consentBodyName: "Congress",
+    consentSponsor: "The Administration",
+    electionParties: {
+      separatist: ["us_lone_star"],
+      rivals: ["us_republican", "us_democratic"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+    parentUpperChamberSeats: 2,
+  },
+  {
+    countryId: "US",
+    regionId: "CA",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "RCA",
+    executiveTitle: "Governor",
+    nationalGovernmentName: "Washington",
+    parentName: "the United States",
+    decisionMakerTitle: "President",
+    consentBodyName: "Congress",
+    consentSponsor: "The Administration",
+    electionParties: {
+      separatist: ["us_bear_flag"],
+      rivals: ["us_republican", "us_democratic"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+    parentUpperChamberSeats: 2,
+  },
+  {
+    countryId: "US",
+    regionId: "NE_BLOC",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "NEN",
+    executiveTitle: "Governor",
+    nationalGovernmentName: "Washington",
+    parentName: "the United States",
+    decisionMakerTitle: "President",
+    consentBodyName: "Congress",
+    consentSponsor: "The Administration",
+    electionParties: {
+      separatist: ["us_new_england"],
+      rivals: ["us_republican", "us_democratic"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+    parentUpperChamberSeats: 12,
+    memberRegionIds: ["ME", "NH", "VT", "MA", "RI", "CT"],
+    displayName: "New England",
   },
 ];
 
-const BY_REGION = new Map(SOVEREIGNTY_REGIONS.map((entry) => [entry.regionId, entry]));
+/** A bloc id and each of its member states all resolve to the bloc's entry. */
+const BY_REGION = new Map<string, SovereigntyRegion>(
+  SOVEREIGNTY_REGIONS.flatMap((entry) => [
+    [entry.regionId, entry] as const,
+    ...(entry.memberRegionIds ?? []).map((member) => [member, entry] as const),
+  ])
+);
 
 /** The registry entry for a region, matched case-insensitively. */
 export function sovereigntyRegion(regionId: string): SovereigntyRegion | null {
@@ -114,11 +236,46 @@ export function isSovereigntyRegion(regionId: string): boolean {
   return BY_REGION.has(regionId.toUpperCase());
 }
 
-/** Region ids for one country, in registry order. */
+/** True when the region's office names its mood as sovereignty rather than devolution. */
+export function usesSovereigntyWording(regionId: string): boolean {
+  return sovereigntyRegion(regionId)?.wording === "sovereignty";
+}
+
+/** The state ids an entry covers: its members for a bloc, else its own region. */
+export function entryRegionIds(entry: SovereigntyRegion): readonly string[] {
+  return entry.memberRegionIds ?? [entry.regionId];
+}
+
+/** True when the entry is a bloc of several states rather than one region. */
+export function isSovereigntyBloc(entry: SovereigntyRegion): boolean {
+  return (entry.memberRegionIds?.length ?? 0) > 1;
+}
+
+/**
+ * The state ids a region or bloc id stands for. A single region is a bloc of
+ * one, so callers iterate the same way for both.
+ */
+export function sovereigntyMemberRegionIds(regionId: string): string[] {
+  const entry = sovereigntyRegion(regionId);
+  return entry ? [...entryRegionIds(entry)] : [regionId.toUpperCase()];
+}
+
+/** The id a referendum for this region is filed under (the bloc id for a member state). */
+export function sovereigntyReferendumKey(regionId: string): string {
+  return sovereigntyRegion(regionId)?.regionId ?? regionId.toUpperCase();
+}
+
+/** A region's name in event copy: the bloc name, else the id itself. */
+export function sovereigntyRegionLabel(regionId: string): string {
+  const entry = sovereigntyRegion(regionId);
+  return entry?.displayName ?? regionId;
+}
+
+/** State ids for one country, in registry order, with each bloc expanded to its members. */
 export function sovereigntyRegionIds(countryId: string): string[] {
-  return SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === countryId).map(
-    (entry) => entry.regionId
-  );
+  return SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === countryId).flatMap((entry) => [
+    ...entryRegionIds(entry),
+  ]);
 }
 
 /** Countries with at least one sovereignty region, in registry order. */
@@ -135,7 +292,14 @@ export function hostsSovereigntyReferendums(countryId: string | null | undefined
 export function independenceCopy(
   regionId: string,
   successorName: (countryId: string) => string | undefined
-): { region: string; parent: string; national: string; sponsor: string } {
+): {
+  region: string;
+  parent: string;
+  national: string;
+  sponsor: string;
+  decisionMaker: string;
+  body: string;
+} {
   const entry = sovereigntyRegion(regionId);
   const successor = entry?.successorCountryId ?? regionId;
   return {
@@ -143,6 +307,8 @@ export function independenceCopy(
     parent: entry?.parentName ?? "the United Kingdom",
     national: entry?.nationalGovernmentName ?? "Westminster",
     sponsor: entry?.consentSponsor ?? "His Majesty's Government",
+    decisionMaker: entry?.decisionMakerTitle ?? "Prime Minister",
+    body: entry?.consentBodyName ?? "the House of Commons",
   };
 }
 
@@ -150,15 +316,30 @@ export function independenceCopy(
 export function getSovereigntyGovernmentNames(stateId: string): {
   regional: string;
   national: string;
+  decisionMaker: string;
 } {
   const region = sovereigntyRegion(stateId);
   return {
     regional: region?.executiveTitle ?? "First Minister",
     national: region?.nationalGovernmentName ?? "Westminster",
+    decisionMaker: region?.decisionMakerTitle ?? "Prime Minister",
   };
 }
 
 /** The registry entry whose independence produces the given successor country. */
 export function sovereigntyRegionForSuccessor(successorId: string): SovereigntyRegion | null {
   return SOVEREIGNTY_REGIONS.find((entry) => entry.successorCountryId === successorId) ?? null;
+}
+
+/** Title of whoever decides a region's referendum request, as written in copy. */
+export function referendumDecisionMakerTitle(regionId: string): string {
+  return sovereigntyRegion(regionId)?.decisionMakerTitle ?? "Prime Minister";
+}
+
+/** The decision maker's title for a country's referendums. */
+export function decisionMakerTitleForCountry(countryId: string): string {
+  return (
+    SOVEREIGNTY_REGIONS.find((entry) => entry.countryId === countryId)?.decisionMakerTitle ??
+    "Prime Minister"
+  );
 }

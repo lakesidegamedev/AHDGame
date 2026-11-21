@@ -150,6 +150,7 @@ export interface SectorPlantsSection {
   /** Cash-backed orders in each output's actual market. National rows include the region. */
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
+  strategyBuildRoom?: Record<string, number | null>;
   /**
    * True when this sector's own demand throttle bound last turn. Its idle
    * capacity is what buyers' room fills first (output can climb by the probe
@@ -201,6 +202,8 @@ export interface SectorPlantsSection {
     /** Base ₳ per unit at this era, before the multipliers below. */
     unitPriceAnchor: number;
     expansionMultiplier?: number;
+    /** Price share charged for the first facility in a new market (1 = no discount). */
+    foundingMultiplier?: number;
     dominanceMultiplier: number;
     /** The part of {@link dominanceMultiplier} that comes from market share alone. */
     localDominanceMultiplier?: number;

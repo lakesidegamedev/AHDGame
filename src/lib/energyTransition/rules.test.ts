@@ -25,19 +25,19 @@ import {
 
 describe("renewables reliability", () => {
   it("costs pure renewables with no firming the full penalty", () => {
-    const mix = regionalPowerMix([{ strategyId: "renewables", capacity: 100 }]);
+    const mix = regionalPowerMix([{ strategyId: "wind", capacity: 100 }]);
     expect(renewablesReliabilityPenalty(mix)).toBeCloseTo(MAX_RENEWABLES_RELIABILITY_PENALTY);
   });
 
   it("is lifted by storage at the target ratio and halved by half of it", () => {
     const full = regionalPowerMix([
-      { strategyId: "renewables", capacity: 100 },
+      { strategyId: "wind", capacity: 100 },
       { strategyId: "grid_storage_utility", capacity: 25 },
     ]);
     expect(renewablesReliabilityPenalty(full)).toBe(0);
     // Smart grid firms at half weight: 25 units firm like 12.5 of storage.
     const half = regionalPowerMix([
-      { strategyId: "renewables", capacity: 100 },
+      { strategyId: "wind", capacity: 100 },
       { strategyId: "smart_grid", capacity: 25 },
     ]);
     expect(renewablesReliabilityPenalty(half)).toBeCloseTo(MAX_RENEWABLES_RELIABILITY_PENALTY / 2);
@@ -45,7 +45,7 @@ describe("renewables reliability", () => {
 
   it("costs nothing where renewables are a small share of the grid", () => {
     const mix = regionalPowerMix([
-      { strategyId: "renewables", capacity: 20 },
+      { strategyId: "wind", capacity: 20 },
       { strategyId: "standard", capacity: 80 },
     ]);
     expect(renewablesReliabilityPenalty(mix)).toBe(0);
@@ -65,7 +65,7 @@ describe("ageing infrastructure", () => {
 
   it("dates an untracked opening fleet by type and method", () => {
     expect(openingVintageYear("energy", "standard", 2027)).toBe(1999);
-    expect(openingVintageYear("energy", "renewables", 2027)).toBe(2019);
+    expect(openingVintageYear("energy", "wind", 2027)).toBe(2019);
     expect(openingVintageYear("energy", "grid_storage_utility", 2027)).toBe(2027);
     expect(openingVintageYear("chemical_industries", null, 2027)).toBe(2005);
     expect(openingVintageYear("retail", null, 2027)).toBeNull();
@@ -87,9 +87,9 @@ describe("climate laws", () => {
     const coal = carbonPriceInputPenalty(3, "energy", "standard");
     expect(coal).toBeGreaterThan(0);
     expect(carbonPriceInputPenalty(4, "energy", "standard")).toBeGreaterThan(coal);
-    expect(carbonPriceInputPenalty(3, "energy", "fracking")).toBeLessThan(coal);
+    expect(carbonPriceInputPenalty(3, "energy", "gas_fired")).toBeLessThan(coal);
     expect(carbonPriceInputPenalty(3, "chemical_industries", "standard")).toBeGreaterThan(0);
-    expect(carbonPriceInputPenalty(4, "energy", "renewables")).toBe(0);
+    expect(carbonPriceInputPenalty(4, "energy", "wind")).toBe(0);
     expect(carbonPriceInputPenalty(4, "energy", "nuclear")).toBe(0);
     expect(carbonPriceInputPenalty(4, "media", null)).toBe(0);
   });
@@ -103,20 +103,20 @@ describe("climate laws", () => {
     expect(coalPhaseOutPenalty(2, 2045, "energy", "standard")).toBe(
       COAL_PHASE_OUT_PENALTY_AT_DEADLINE
     );
-    expect(coalPhaseOutPenalty(2, 2045, "energy", "renewables")).toBe(0);
+    expect(coalPhaseOutPenalty(2, 2045, "energy", "wind")).toBe(0);
     expect(coalPhaseOutPenalty(0, 2045, "energy", "standard")).toBe(0);
   });
 
   it("charges fossil power for the gap to the clean power standard", () => {
     const share = cleanPowerShare([
       { strategyId: "standard", capacity: 60 },
-      { strategyId: "renewables", capacity: 30 },
+      { strategyId: "wind", capacity: 30 },
       { strategyId: "nuclear", capacity: 10 },
     ]);
     expect(share).toBeCloseTo(0.4);
     expect(cleanPowerStandardPenalty(1, share, "energy", "standard")).toBe(0);
     expect(cleanPowerStandardPenalty(3, share, "energy", "standard")).toBeCloseTo(0.24);
-    expect(cleanPowerStandardPenalty(3, share, "energy", "renewables")).toBe(0);
+    expect(cleanPowerStandardPenalty(3, share, "energy", "wind")).toBe(0);
     expect(cleanPowerStandardPenalty(3, share, "manufacturing", "standard")).toBe(0);
   });
 
@@ -182,7 +182,7 @@ describe("one sector's input bill", () => {
   it("leaves a clean, young sector with no laws untouched", () => {
     const adjustment = sectorTransitionAdjustment({
       operatingType: "energy",
-      strategyId: "renewables",
+      strategyId: "wind",
       currentYear: 2030,
       policy: NO_TRANSITION_POLICY,
       cleanShare: 1,
@@ -192,5 +192,41 @@ describe("one sector's input bill", () => {
     expect(applyTransitionAdjustment(NEUTRAL_TECH_EFFECTS, adjustment, ["coal"])).toBe(
       NEUTRAL_TECH_EFFECTS
     );
+  });
+});
+
+describe("hydro, gas, wind and solar power", () => {
+  it("counts wind and solar as intermittent and hydro as firm", () => {
+    const mix = regionalPowerMix([
+      { strategyId: "wind", capacity: 40 },
+      { strategyId: "solar", capacity: 40 },
+      { strategyId: "hydroelectric", capacity: 20 },
+    ]);
+    expect(mix.renewables).toBe(80);
+    expect(renewablesReliabilityPenalty(mix)).toBeGreaterThan(0);
+    const hydroOnly = regionalPowerMix([{ strategyId: "hydroelectric", capacity: 100 }]);
+    expect(renewablesReliabilityPenalty(hydroOnly)).toBe(0);
+  });
+
+  it("treats hydro, wind and solar as clean and gas as half as carbon intense as coal", () => {
+    expect(
+      cleanPowerShare([
+        { strategyId: "hydroelectric", capacity: 1 },
+        { strategyId: "wind", capacity: 1 },
+        { strategyId: "solar", capacity: 1 },
+        { strategyId: "gas_fired", capacity: 1 },
+      ])
+    ).toBeCloseTo(0.75);
+    expect(carbonPriceInputPenalty(4, "energy", "gas_fired")).toBeCloseTo(
+      carbonPriceInputPenalty(4, "energy", "standard") / 2
+    );
+    expect(carbonPriceInputPenalty(4, "energy", "hydroelectric")).toBe(0);
+    expect(coalPhaseOutPenalty(4, 2040, "energy", "gas_fired")).toBe(0);
+  });
+
+  it("dates opening fleets: old dams, newer gas, newest solar", () => {
+    expect(openingVintageYear("energy", "hydroelectric", 2027)).toBe(1982);
+    expect(openingVintageYear("energy", "gas_fired", 2027)).toBe(2009);
+    expect(openingVintageYear("energy", "solar", 2027)).toBe(2022);
   });
 });

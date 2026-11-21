@@ -35,7 +35,7 @@ import {
   type NppFoundingCashWitness,
 } from "@/lib/turn/npp/foundingCashLedger";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, ExchangeRate, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
@@ -68,10 +68,8 @@ import {
 } from "@/lib/turn/npp/decisionSnapshotIndexes";
 
 import { partitionOpenMarkets } from "@/lib/economy/queries/privateEnterpriseGate";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 
-import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
+import type { ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 
 import { bucketKey } from "@/lib/market/marketBuckets";
 import {
@@ -79,6 +77,7 @@ import {
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
 
+import { resolvePlantBuildPriceScale } from "@/lib/corporations/rules/capacityEconomy";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   foundingInputAvailability,
@@ -137,7 +136,7 @@ import {
 } from "@/lib/corporations/autopilot";
 import type { CorpAutopilotAdvisory } from "@/lib/db/types/corporation";
 import { operatorPermissionsFor } from "@/lib/turn/npp/operatorPermissions";
-import { operatorMay } from "@/lib/turn/npp/rules/operatorPolicy";
+import { operatorMay } from "@/lib/corporations/rules/operatorPolicy";
 import { createNotifications } from "@/lib/notifications";
 import {
   corpDailyGrossRevenueLocalFromSectors,
@@ -525,6 +524,7 @@ export async function processNppCorporationDecisions(
         producerCaptiveDeliveryStage?: number;
         nppDividendAfterTaxStage?: number;
         nppGrowthPerProductFillStage?: number;
+        plantBuildPriceScale?: number;
       } & ShortageGrowthFinanceConfigInput
     >(db).findOne(
       { _id: "default" as never },
@@ -538,6 +538,7 @@ export async function processNppCorporationDecisions(
           nppShortageGrowthFinanceStage: 1,
           nppDividendAfterTaxStage: 1,
           nppGrowthPerProductFillStage: 1,
+          plantBuildPriceScale: 1,
           nppShortageGrowthFinanceCandidateLimit: 1,
           nppShortageGrowthFinanceMaxPaybackTurns: 1,
           nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
@@ -552,6 +553,7 @@ export async function processNppCorporationDecisions(
       enabled: true,
       year: plantsYear,
       eraUnitScale: await loadWorldEraUnitScale(db),
+      buildPriceScale: resolvePlantBuildPriceScale(nppGameConfig?.plantBuildPriceScale),
       preset: resolvePresetIdFromGameState(gsPlants),
       primeRateOf: (cid) => primeByCountry.get(cid) ?? 0,
       costOfLivingOf: (sid) => colByState.get(sid) ?? null,
@@ -631,8 +633,10 @@ export async function processNppCorporationDecisions(
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
   }
-  const { labourMode, retailExpansionPaused, ledgerShadow, bankingPolicy } =
-    await loadNppBehaviorConfig(db, turn);
+  const { retailExpansionPaused, ledgerShadow, bankingPolicy } = await loadNppBehaviorConfig(
+    db,
+    turn
+  );
   const nppConstructionFinanceEnabled =
     plants?.enabled === true &&
     bankingPolicy.privateBanking &&
@@ -756,8 +760,6 @@ export async function processNppCorporationDecisions(
     strategyGate?.frontierEntryExperimentEnabled
   );
 
-  const labourWagesEnabled = isLabourSystemMode(labourMode) && labourAtLeast(labourMode, "wages");
-
   // Pace AI free conversions: a per-country allowance of capacity book value per turn.
   const capacityBookByCountry = new Map<string, number>();
   if (conversionPaceShare > 0)
@@ -850,7 +852,6 @@ export async function processNppCorporationDecisions(
         isNationalEnterprise: !!corp.countryOwnerId,
       }),
       modifiers: autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers(archetype),
-      labourWagesEnabled,
       currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
       techTreesEnabled,
       sectorResearchByLane,

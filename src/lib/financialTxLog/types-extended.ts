@@ -123,6 +123,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   // ── Admin / system ─────────────────────────────────────────────────────
   "admin_transfer",
   "onboarding_reward",
+  "starting_capital",
   "contest_prize",
   "casino_wager",
   "casino_payout",
@@ -281,6 +282,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
 
   admin_transfer: "Admin Transfer",
   onboarding_reward: "Onboarding Reward",
+  starting_capital: "Starting Capital",
   contest_prize: "Contest Prize",
   casino_wager: "Casino Stake",
   casino_payout: "Casino Payout",

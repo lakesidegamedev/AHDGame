@@ -1932,18 +1932,6 @@ export function runSeedAudit(input: {
   }
 
   // A7 — ladder-valued flags that silently disable whole subsystems.
-  const labour = String(flags.labourSystemMode ?? "");
-  if (labour !== "full") {
-    out.push({
-      id: "A7-labour",
-      countryId: "WORLD",
-      severity: "high",
-      title: `labourSystemMode is "${labour || "unset"}", not "full"`,
-      detail:
-        "ownedUnionMembershipPressureByKey is only fetched at full, so union membership pressure never reaches " +
-        "unionization or labor cost no matter who leads the union. The whole bargaining layer is inert below it.",
-    });
-  }
   const market = String(flags.marketSystemMode ?? "");
   if (market !== "clearing" && market !== "capital") {
     out.push({

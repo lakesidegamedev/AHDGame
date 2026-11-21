@@ -1,3 +1,5 @@
+import { settleVoteTurn } from "@/lib/elections/engine/settleVoteTurn";
+export { initElectionVoteTally } from "@/lib/elections/engine/tallyInitialization";
 /**
  * Election vote tally accumulation and initialization.
  */
@@ -7,72 +9,43 @@ import {
   approvalVoteMultiplier,
 } from "@/lib/elections/engine/approvalVoteMultiplier";
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
-import { russianDumaVoteTotals } from "@/lib/countries/ru/rules/assemblyVoteIncrement";
-import { russianCouncilVoteTotals } from "@/lib/countries/ru/rules/councilVoteTotals";
-import { resolveRussianCouncilBallot } from "@/lib/countries/ru/rules/councilResult";
-import { russianPresidentialVoteIncrement } from "@/lib/countries/ru/rules/presidentialVoteIncrement";
-import { campaignStrengthLookupKey } from "@/lib/campaigns/suspendEndorseLifecycle";
-import {
-  loadRaceCampaignMultiplier,
-  type RaceCampaignEffectsMemo,
-} from "@/lib/campaigns/raceCampaignEffects";
-import { getStateLean } from "@/lib/utils/demographics";
+
+import { type RaceCampaignEffectsMemo } from "@/lib/campaigns/raceCampaignEffects";
+
 import { buildNationalSubstrate, loadNationalRegionDocs } from "./nationwideElectorate";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 import { getDb } from "@/lib/mongodb";
 import type {
   Election,
-  Campaign,
   ElectionCandidate,
   ElectionVoteTally,
-  PrimaryResults,
   State,
   StateDemographics,
-  GameState,
-  VoteTurnSnapshot,
 } from "@/lib/db/types";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import { getStateApprovalForElection } from "@/lib/utils/getStateApprovalForElection";
-import type {
-  StatePartyOrg,
-  StateDemographicTurnout,
-  StateRegistrationPool,
-  ExecutiveEndorsement,
-} from "@/lib/db/types";
+import type { StatePartyOrg, StateDemographicTurnout, StateRegistrationPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getPartyStrengthWeight, getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import {
   isCoattailEligibleRace,
   isOwnRegionalExecutiveRace,
-  buildGovModifierByParty,
   resolveGovExecutiveApproval,
 } from "./govCoattail";
 import { officeKeyForElectionType } from "@/lib/utils/electionLabels";
-import { allocateSeats, isMultiSeatElection } from "@/lib/elections/resolution/seatAllocation";
+
 import { turnVoteWeight, resolveTurnWindow } from "./voteCalculations";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { getIncumbentSeatShareByParty } from "./incumbentSeatShare";
-import {
-  resolveSingleSeatLegislativeIncumbent,
-  resolveHouseIncumbentTenures,
-} from "./singleSeatIncumbency";
+import { resolveSingleSeatLegislativeIncumbent } from "./singleSeatIncumbency";
 import { getFundsByPartyForElection } from "./fundsByParty";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "./tallyProjections";
 import { planTurnSlice, sameTurnSliceParts } from "@/lib/elections/rules/turnSlice";
-import { accumulateHuBallots } from "@/lib/countries/hu/rules/accumulateBallots2014";
-import { allocateHuListTurnVotes } from "@/lib/countries/hu/rules/listBallots2014";
-import {
-  accumulateJapanBallots,
-  allocateJapanListTurnVotes,
-} from "@/lib/countries/jp/rules/shugiinBallotMath";
-import {
-  isHeadOfGovernmentRace,
-  resolvePresidentApproval,
-  buildPresidentialModifierByParty,
-} from "./presidentialCoattail";
-import { computeMedianVoter } from "./medianVoter";
+
+import { isHeadOfGovernmentRace, resolvePresidentApproval } from "./presidentialCoattail";
+
 import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 import {
   fetchEnrichedCandidates,
@@ -80,7 +53,7 @@ import {
   type EnrichmentParty,
 } from "./candidateEnrichment";
 import type { AccumulateVoteTurnPreload } from "./types";
-import { getCountryState } from "@/lib/countryState";
+
 import { loadPartyGroupFavorability } from "@/lib/governorOffice/address/partyGroupFavorabilityLoader";
 import {
   buildGranularElectorateSubstrate,
@@ -102,38 +75,27 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
 import { loadElectionRegionDemographicsV2 } from "./demographicsV2Preload";
-import {
-  buildMidtermOppositionModifierByParty,
-  isMidtermOppositionBoostEligible,
-} from "./midtermOppositionBoost";
+import { isMidtermOppositionBoostEligible } from "./midtermOppositionBoost";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
-import {
-  resolveElectionManifestoMultipliers,
-  deriveGroupLeans,
-} from "@/lib/countries/uk/manifesto/electionManifestoResolver";
+
 import { loadActiveCrisisBlameShifts } from "@/lib/events/substrate/countryModifiers";
 import { loadActiveLeaderLegacyShifts } from "@/lib/government/leaderLegacy";
-import { buildCrisisBlameModifierByParty, type CrisisBlameShift } from "./crisisBlame";
+import { type CrisisBlameShift } from "./crisisBlame";
 import { buildCurrentRegistrationBaseline } from "./electionFormulaFactors";
-import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
-import {
-  castRankedBallots,
-  mergeRankedBallots,
-  countPrStv,
-  validateRankedBallots,
-} from "@/lib/elections/rules/prStv";
+
+import { validateRankedBallots } from "@/lib/elections/rules/prStv";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
-import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
-import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
+
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
@@ -179,7 +141,7 @@ function memoized<T>(
   return pending;
 }
 
-export async function accumulateVoteTurn(
+async function prepareAccumulateVoteTurn(
   electionId: ObjectId,
   turnNumber: number,
   now: Date,
@@ -204,7 +166,7 @@ export async function accumulateVoteTurn(
      */
     slice?: "early";
   }
-): Promise<void> {
+) {
   const db = options?.preload?.db ?? (await getDb());
   const memo = options?.preload?.turnMemo;
 
@@ -218,7 +180,7 @@ export async function accumulateVoteTurn(
       electionCandidatesCollection(db).find({ electionId, status: "active" }).toArray(),
   ]);
 
-  if (!tally || candidates.length === 0) return;
+  if (!tally || candidates.length === 0) return { kind: "early" as const, value: undefined };
   // Per-turn idempotency: a stalled turn can re-run this phase under the
   // same turn number, and each half ("early" ahead of the turn, then "rest")
   // is counted once. A tally already holding this turn's snapshot is counted.
@@ -226,12 +188,12 @@ export async function accumulateVoteTurn(
     sameTurnSliceParts(tally.turnSnapshots, turnNumber),
     options?.slice
   );
-  if (!slicePlan) return;
+  if (!slicePlan) return { kind: "early" as const, value: undefined };
   const { slicePart, fraction: sliceFraction } = slicePlan;
 
   const election =
     options?.election ?? (await electionsCollection(db).findOne({ _id: electionId }));
-  if (!election || !election.endTime) return;
+  if (!election || !election.endTime) return { kind: "early" as const, value: undefined };
   // Ranked ballots split cleanly: each half casts its own first-preference
   // increments, and identical rankings merge by adding weights.
   const isPrStv = tally.countingMethod === "pr_stv";
@@ -324,7 +286,7 @@ export async function accumulateVoteTurn(
     });
   }
 
-  if (!state || !demographics) return;
+  if (!state || !demographics) return { kind: "early" as const, value: undefined };
 
   const partyOrgByParty = new Map(statePartyOrgs.map((po) => [po.partyId, po.organization]));
   // Phase 5a: Reg as persuasion-resistance multiplier in general-election
@@ -739,669 +701,72 @@ export async function accumulateVoteTurn(
         ])
       : undefined,
   ]);
-  // Party renewal bounds the ratchet: past half the seats, no further shield.
-  const incumbentSeatShareByParty =
-    priorSeatShareByParty && partyRenewalEnabled
-      ? capIncumbentSeatShares(priorSeatShareByParty)
-      : priorSeatShareByParty;
-
-  const presidentialModifierByParty =
-    isGeneralElection && !isOwnHeadOfGovernmentRace
-      ? buildPresidentialModifierByParty(president ?? null, partyIdsInRace)
-      : undefined;
-
-  // A stale `electedOfficials.party` value that doesn't match a party actually
-  // in the race silently no-ops (empty map → neutral 1.0×).
-  const govModifierByParty = wantsGovCoattail
-    ? buildGovModifierByParty(govExecutive ?? null, partyIdsInRace)
-    : undefined;
-
-  const crisisBlameModifierByParty = crisisBlameShifts
-    ? buildCrisisBlameModifierByParty(crisisBlameShifts, stateId, partyIdsInRace, turnNumber)
-    : undefined;
-
-  const midtermOppositionModifierByParty = wantsMidtermOppositionBoost
-    ? buildMidtermOppositionModifierByParty(governingPartyIds ?? new Set(), partyIdsInRace)
-    : undefined;
-
-  // Approval-modulated incumbency (own regional-executive race only). The
-  // governor coattail deliberately skips the executive's own seat; this fills
-  // that gap by feeding the sitting governor's approval into the incumbency
-  // driver — a shield when popular, a drag when unpopular. The presidential
-  // race is excluded: that engine already folds approval into a dedicated
-  // `strengthMultiplier`, so routing it here would double-count.
-  const incumbentPartyId =
-    wantsOwnExecIncumbency && govExecutive ? govExecutive.partyId : undefined;
-  const incumbentApproval =
-    wantsOwnExecIncumbency && govExecutive ? govExecutive.approval : undefined;
-
-  const legislativeIncumbentPartyId = legInc ? legInc.incumbentPartyId : undefined;
-  const legislativeIncumbentTenureTerms = legInc ? legInc.tenureTerms : undefined;
-
-  // M3 — per-state median voter for the policy-distance driver.
-  // Computed from the already-built electorate units so no extra
-  // DB hit. GOTV / suppression effects shift the median via liveTurnouts.
-  const medianVoter = isGeneralElection
-    ? computeMedianVoter(effElectorate, effLiveTurnouts)
-    : undefined;
-
-  // Multi-seat legislative own-race (US House): per-candidate consecutive-term
-  // fatigue — a state's House delegation can have several simultaneous
-  // incumbents at once (one per party's returning nominee), so this is a map
-  // rather than the Senate's single flat-shield party+terms pair. See
-  // `resolveHouseIncumbentTenures`'s doc comment in singleSeatIncumbency.ts
-  // for why the House needs this different shape.
-  let houseIncumbentTenureTermsByCandidateId: Map<string, number> | undefined;
-  if (isGeneralElection && election.electionType === "house") {
-    if (options?.preload?.houseIncumbentTenuresByElection) {
-      houseIncumbentTenureTermsByCandidateId =
-        options.preload.houseIncumbentTenuresByElection.get(electionId.toString()) ?? new Map();
-    } else {
-      const runningIdentityToCandidateId = new Map<string, string>();
-      for (const c of candidates) {
-        const identity = (c.characterId ?? c.nppId)?.toString();
-        if (identity) runningIdentityToCandidateId.set(identity, c._id.toString());
-      }
-      houseIncumbentTenureTermsByCandidateId = await resolveHouseIncumbentTenures(
-        election,
-        runningIdentityToCandidateId,
-        db
-      );
-    }
-  }
-
-  // UK manifesto policy-popularity map. Off by default: the
-  // resolver short-circuits to undefined unless UK_MANIFESTO_VOTE_EFFECT=1 and
-  // this is a UK general election with locked manifestos — so no DB read and no
-  // behaviour change in prod until the coefficient is worldsim-calibrated.
-  const manifestoMultipliers = await resolveElectionManifestoMultipliers(db, {
-    countryId: electionCountryId,
-    electionId,
-    isGeneralElection,
-    groups: deriveGroupLeans(effElectorate),
-  });
-
-  // Runtime one-party flag for the FPTP spoiler gate, so a mid-game conversion
-  // takes effect at once (the compile-time config is wrong for converted worlds).
-  // The batched path preloads it; the standalone path reads cached countryState.
-  const isOnePartyState =
-    isGeneralElection &&
-    (
-      options?.preload?.enrichmentCountryConfigByElection?.get(electionId.toString()) ??
-      (await getCountryState(db, electionCountryId))
-    ).governmentType === "onePartyState";
-
-  const { votesPerCandidate, sharesPct } = distributeFn(
-    effEnriched,
-    effEffectiveTurnPool,
-    effTotalPool,
-    electorate,
-    effElectorate,
-    partyOrgByParty,
-    {
-      includeInfluenceInAppeal: false,
-      useNationalInfluenceForReach: false,
-      votingSystem: state.votingSystem ?? "fptp",
+  return {
+    kind: "context" as const,
+    context: {
+      candidates,
+      crisisBlameShifts,
+      db,
+      distributeFn,
+      effEffectiveTurnPool,
+      effElectorate,
+      effEnriched,
+      effLiveTurnouts,
+      effPartyGroupFavorabilityByKey,
+      effTotalPool,
+      election,
+      electionCountryId,
+      electionId,
+      electorate,
+      enriched,
+      governingPartyIds,
+      govExecutive,
+      huRegisteredVoters,
+      isBgFounding,
+      isBgOrdinary,
+      isBoundCouncil,
+      isBoundDuma,
       isGeneralElection,
-      isOnePartyState,
-      countryId: electionCountryId,
-      currentStateId: stateId,
-      parentRegionId: state.parentRegionId,
-      manifestoMultipliers,
-      liveTurnouts: effLiveTurnouts, // Pass resolved turnout to vote distribution
-      hasPlayerInRace,
-      partyGroupFavorabilityByKey: effPartyGroupFavorabilityByKey,
-      // Phase 5a — entrenched-Reg multiplier; consumed only in general
-      // elections. Empty / partial maps fall through to the neutral 1.0×
-      // per `regResistanceMultiplier`'s undefined branch.
-      regByParty,
-      // Current-registration baseline. Undefined disables the lane.
-      regBaselineByParty,
-      // Governor coattail (§7.3.2 govModifier) — in-state down-ballot only.
-      govModifierByParty,
-      // A1 — per-party prior seat-share for the incumbency driver.
-      incumbentSeatShareByParty,
-      // Approval-scaled directional incumbency for the executive's own race.
-      incumbentPartyId,
-      incumbentApproval,
-      // Flat single-seat legislative (US Senate) incumbency shield.
-      legislativeIncumbentPartyId,
-      legislativeIncumbentTenureTerms,
-      // Per-candidate multi-seat legislative (US House) tenure fatigue.
-      houseIncumbentTenureTermsByCandidateId,
-      // A2 — per-party spend-this-turn for the money driver.
-      fundsByParty,
-      // Presidential coattail — sitting President's nominal-share multiplier.
-      presidentialModifierByParty,
-      midtermOppositionModifierByParty,
-      crisisBlameModifierByParty,
-      // M3 — per-state median voter for the policy-distance driver.
-      medianVoter,
-    }
-  );
-
-  // Executive-leader endorsements: when the sitting head of government has
-  // endorsed a candidate in this race, apply a +1.5% multiplier to that
-  // candidate's per-turn vote increment. Mirrors the governor→presidential
-  // bonus in presidentialElectionEngine. Cross-race bleed isn't a concern
-  // because each `Election` is state-scoped (one race per AZ House district,
-  // one race for AZ Senate Class 1, etc.) so the multiplier only touches
-  // votes in this specific race's tally.
-  const executiveEndorsedCandidateIds =
-    memo?.executiveEndorsedCandidateIdsByElection?.get(electionId.toString()) ??
-    new Set(
-      (
-        await executiveEndorsementsCollection(db)
-          .find({ electionId, isActive: true })
-          .project<{ candidateId: ObjectId }>({ candidateId: 1 })
-          .toArray()
-      ).map((e) => e.candidateId.toString())
-    );
-  const EXECUTIVE_ENDORSEMENT_VOTE_BONUS = 1.015;
-
-  // Campaign Ground Game and field offices in this race's region. Keyed by
-  // the campaign's candidate (character or NPP id), not the filing row.
-  const campaignKeyByCandidateId = new Map(
-    candidates.map((c) => [c._id.toString(), campaignStrengthLookupKey(c)])
-  );
-  const campaignMultiplier = await loadRaceCampaignMultiplier(db, {
-    electionId,
-    countryId: electionCountryId,
-    regionId: stateId,
-    currentTurn: turnNumber,
-    isSwingRegion: Math.abs(getStateLean(state, stateId)) < 0.5,
-    memo,
-  });
-
-  // Start with active increments. Bound Duma ballots then restore counted
-  // withdrawals, which remain part of participation and certification.
-  const activeCandidateIds = new Set(enriched.map((ec) => ec.candidateId));
-  let newTotals: Record<string, number> = isPrStv ? { ...tally.totalVotes } : {};
-  const increments: Record<string, number> = {};
-  for (const ec of enriched) {
-    const raw = votesPerCandidate[ec.candidateId] ?? 0;
-    const campaignKey = campaignKeyByCandidateId.get(ec.candidateId);
-    const multiplier =
-      (executiveEndorsedCandidateIds.has(ec.candidateId) ? EXECUTIVE_ENDORSEMENT_VOTE_BONUS : 1.0) *
-      (campaignMultiplier && campaignKey ? campaignMultiplier(campaignKey) : 1.0);
-    increments[ec.candidateId] = Math.round(raw * multiplier);
-    newTotals[ec.candidateId] =
-      (tally.totalVotes[ec.candidateId] ?? 0) + increments[ec.candidateId];
-  }
-
-  const rankedBallots = isPrStv
-    ? mergeRankedBallots(tally.rankedBallots!, castRankedBallots(enriched, increments))
-    : undefined;
-  if (isPrStv) validateRankedBallots(rankedBallots, newTotals);
-
-  if (countryHasFeature("ruElections", election.countryId) && election.russianPresidentialRound) {
-    const campaigns = await campaignsCollection(db)
-      .find({ electionId }, { projection: { candidateId: 1, campaignStrength: 1 } })
-      .toArray();
-    const strengths = new Map(
-      campaigns.map((campaign) => [campaign.candidateId.toString(), campaign.campaignStrength ?? 0])
-    );
-    const rawVotes = Object.fromEntries(
-      enriched.map((candidate) => [
-        candidate.candidateId,
-        newTotals[candidate.candidateId] - (tally.totalVotes[candidate.candidateId] ?? 0),
-      ])
-    );
-    const campaignStrength = Object.fromEntries(
-      candidates.map((candidate) => [
-        candidate._id.toString(),
-        strengths.get(campaignStrengthLookupKey(candidate)) ?? 0,
-      ])
-    );
-    const increments = russianPresidentialVoteIncrement({
-      registeredVoters: election.russianPresidentialRound.registeredVoters,
-      priorVotes: tally.totalVotes,
-      rawVotes,
-      campaignStrength,
-    });
-    for (const candidate of enriched)
-      newTotals[candidate.candidateId] =
-        (tally.totalVotes[candidate.candidateId] ?? 0) + (increments[candidate.candidateId] ?? 0);
-  }
-
-  if (isBgOrdinary || isHuBound || isBgFounding || isJapanMixed)
-    for (const [id, votes] of Object.entries(tally.totalVotes)) {
-      if (!activeCandidateIds.has(id)) newTotals[id] = votes;
-    }
-  if (isBoundDuma) {
-    newTotals = russianDumaVoteTotals({
-      registeredVoters: election.russianDumaRound!.registeredVoters,
-      againstAllVotes: tally.russianDumaBallot?.againstAllVotes,
-      priorVotes: tally.totalVotes,
-      rawVotes: Object.fromEntries(
-        enriched.map((candidate) => [
-          candidate.candidateId,
-          newTotals[candidate.candidateId] - (tally.totalVotes[candidate.candidateId] ?? 0),
-        ])
-      ),
-    });
-  }
-
-  if (isHuBound || isBgFounding) {
-    // The shared vote-ledger arithmetic preserves historical cast marks and
-    // clamps only the new slice to the frozen registered electorate.
-    newTotals = russianDumaVoteTotals({
-      registeredVoters: huRegisteredVoters!,
-      priorVotes: tally.totalVotes,
-      rawVotes: Object.fromEntries(
-        enriched.map((candidate) => [
-          candidate.candidateId,
-          newTotals[candidate.candidateId] - (tally.totalVotes[candidate.candidateId] ?? 0),
-        ])
-      ),
-    });
-  }
-  const filingByCandidateId = new Map(
-    candidates.map((candidate) => [candidate._id.toString(), candidate])
-  );
-  const statePartyOrgByParty = new Map(statePartyOrgs.map((row) => [row.partyId, row]));
-  const huBallots =
-    countryHasFeature("huElections", electionCountryId) &&
-    election.electionType === "nationalAssembly" &&
-    election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1" &&
-    preset === "1991-default"
-      ? accumulateHuBallots(
-          stateId,
-          enriched.map((ec) => {
-            const filing = filingByCandidateId.get(ec.candidateId);
-            return {
-              candidateId: ec.candidateId,
-              partyId: ec.party,
-              constituencyId: filing?.constituencyId,
-              isNPP: filing?.isNPP,
-              votes: Math.max(
-                0,
-                newTotals[ec.candidateId] - (tally.totalVotes[ec.candidateId] ?? 0)
-              ),
-            };
-          }),
-          allocateHuListTurnVotes(
-            Math.round(effEffectiveTurnPool),
-            [...new Set(enriched.map((ec) => ec.party))]
-              .filter((partyId) => partyId !== "independent")
-              .map((partyId) => {
-                const org = statePartyOrgByParty.get(partyId);
-                return {
-                  partyId,
-                  registration: org?.registration,
-                  organization: org?.organization,
-                };
-              })
-          ),
-          tally.huConstituencyVotes,
-          tally.huListVotes
-        )
-      : null;
-  const japanMixedBallots =
-    countryHasFeature("jpElections", electionCountryId) &&
-    (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
-    election.japanShugiinRules?.ruleVersion === "mixed-1994-v1" &&
-    preset === "1991-default"
-      ? accumulateJapanBallots({
-          regionId: stateId,
-          candidates: enriched.map((candidate) => {
-            const filing = filingByCandidateId.get(candidate.candidateId);
-            return {
-              candidateId: candidate.candidateId,
-              partyId: candidate.party,
-              constituencyId: filing?.constituencyId,
-              isNPP: filing?.isNPP,
-              votes: Math.max(
-                0,
-                newTotals[candidate.candidateId] - (tally.totalVotes[candidate.candidateId] ?? 0)
-              ),
-            };
-          }),
-          listVoteIncrements: allocateJapanListTurnVotes(
-            Math.round(effEffectiveTurnPool),
-            [...new Set(enriched.map((candidate) => candidate.party))]
-              .filter((partyId) => partyId !== "independent")
-              .map((partyId) => {
-                const org = statePartyOrgByParty.get(partyId);
-                return {
-                  partyId,
-                  registration: org?.registration,
-                  organization: org?.organization,
-                };
-              })
-          ),
-          previousDistricts: tally.japanShugiinConstituencyVotes,
-          previousLists: tally.japanShugiinListVotes,
-        })
-      : null;
-  let councilTotals: ReturnType<typeof russianCouncilVoteTotals> | null = null;
-  if (isBoundCouncil) {
-    const rawVotes = Object.fromEntries(
-      enriched.map((candidate) => [
-        candidate.candidateId,
-        newTotals[candidate.candidateId] - (tally.totalVotes[candidate.candidateId] ?? 0),
-      ])
-    );
-    const nominationById = new Map(
-      candidates.map((candidate) => [
-        candidate._id.toHexString(),
-        candidate.russianCouncilNomination,
-      ])
-    );
-    councilTotals = russianCouncilVoteTotals({
-      registeredVoters: election.russianCouncilRound!.registeredVoters,
-      priorVotes: tally.totalVotes,
-      ledger: tally.russianCouncilBallot,
-      rawVotes,
-      rawAgainstAllVotes: Object.values(rawVotes).every((count) => count === 0)
-        ? Math.max(0, Math.floor(effEffectiveTurnPool))
-        : 0,
-      nominees: enriched.map((candidate) => {
-        const nomination = nominationById.get(candidate.candidateId);
-        if (!nomination) throw new Error("Council voting needs each nominee's frozen registration");
-        return {
-          id: candidate.candidateId,
-          registrationOrder: nomination.registrationOrder,
-          economicLean: candidate.charEP,
-          socialLean: candidate.charSP,
-          favorability: candidate.favorability,
-        };
-      }),
-    });
-    newTotals = councilTotals.votes;
-  }
-
-  // Project seats with the same allocator used by final resolution.
-  const seatsEstimate: Record<string, number> | undefined = (() => {
-    if (isBgOrdinary || isHuBound || isBgFounding || isJapanMixed) return undefined;
-    if (councilTotals) {
-      const result = resolveRussianCouncilBallot({
-        ...councilTotals.ballot,
-        invalidated: tally.russianCouncilBallot?.invalidated,
-      });
-      const winners =
-        result.outcome === "elected" && result.winnerIds.every((id) => activeCandidateIds.has(id))
-          ? new Set(result.winnerIds)
-          : new Set<string>();
-      return Object.fromEntries(
-        enriched.map((row) => [row.candidateId, winners.has(row.candidateId) ? 1 : 0])
-      );
-    }
-    const electionType = election.electionType as string;
-    const totalSeats = election.totalSeats as number | undefined;
-    if (!totalSeats || !isMultiSeatElection(electionType, totalSeats)) return undefined;
-    if (isPrStv) {
-      if (rankedBallots!.length === 0) return undefined;
-      return countPrStv(
-        enriched.map((c) => c.candidateId),
-        totalSeats,
-        rankedBallots!
-      ).seats;
-    }
-    const totalVotesCast = enriched.reduce((s, ec) => s + (newTotals[ec.candidateId] ?? 0), 0);
-    if (totalVotesCast === 0) return undefined;
-    const ranked = enriched
-      .map((candidate) => ({
-        id: candidate.candidateId,
-        votes: newTotals[candidate.candidateId] ?? 0,
-        party: candidate.party,
-        isNPP: candidate.isNPP,
-      }))
-      .sort((a, b) => b.votes - a.votes || a.id.localeCompare(b.id));
-    const stateId = election.state;
-    return allocateSeats(
-      electionType,
+      isHuBound,
+      isJapanMixed,
+      isOwnHeadOfGovernmentRace,
+      isPrStv,
+      legInc,
+      memo,
+      now,
+      options,
+      participationSummary,
+      partyIdsInRace,
+      partyOrgByParty,
+      partyRenewalEnabled,
+      preset,
+      president,
+      priorSeatShareByParty,
+      slicePart,
+      state,
       stateId,
-      totalSeats,
-      ranked,
-      totalVotesCast,
-      stateId ? { [stateId]: totalSeats } : {},
-      undefined,
-      stateId ? { [stateId]: totalSeats } : {},
-      election.countryId ?? "US",
-      election.allocationMethod
-    ).seatsEstimate;
-  })();
-
-  const nativeRussianTotal = councilTotals
-    ? councilTotals.ledger.validBallots
-    : (countryHasFeature("ruElections", election.countryId) && election.russianPresidentialRound) ||
-        isBoundDuma
-      ? Object.values(newTotals).reduce((sum, count) => sum + count, 0) +
-        (isBoundDuma ? (tally.russianDumaBallot?.againstAllVotes ?? 0) : 0)
-      : null;
-  const snapshot: VoteTurnSnapshot = {
-    turn: turnNumber,
-    ...(slicePart ? { slicePart } : {}),
-    recordedAt: now,
-    cumulativeVotes: { ...newTotals },
-    sharesPct:
-      nativeRussianTotal == null
-        ? sharesPct
-        : Object.fromEntries(
-            Object.entries(newTotals).map(([id, count]) => [
-              id,
-              nativeRussianTotal ? (count / nativeRussianTotal) * 100 : 0,
-            ])
-          ),
-    ...(seatsEstimate ? { seatsEstimate } : {}),
-    ...(participationSummary ? { participation: participationSummary } : {}),
-    ...(councilTotals
-      ? {
-          russianCouncilBallot: {
-            registeredVoters: councilTotals.ledger.registeredVoters,
-            validBallots: councilTotals.ledger.validBallots,
-            againstAllVotes: councilTotals.ledger.againstAllVotes,
-          },
-        }
-      : {}),
-  };
-
-  // Sync nominee labels, retaining counted Duma withdrawals for certification.
-  const cleanedNames = { ...tally.candidateNames };
-  const cleanedParties = { ...tally.candidateParties };
-  for (const key of Object.keys(tally.totalVotes)) {
-    if (
-      !activeCandidateIds.has(key) &&
-      !isBoundDuma &&
-      !isBoundCouncil &&
-      !isBgOrdinary &&
-      !isHuBound &&
-      !isJapanMixed &&
-      !isBgFounding
-    ) {
-      delete cleanedNames[key];
-      delete cleanedParties[key];
-    }
-  }
-  for (const ec of enriched) {
-    if (!cleanedNames[ec.candidateId]) {
-      cleanedNames[ec.candidateId] = ec.characterName;
-      cleanedParties[ec.candidateId] = ec.party;
-    }
-  }
-
-  const tallyUpdate = {
-    ...(isBgOrdinary || isHuBound || isBgFounding || isJapanMixed
-      ? { $unset: { seatsEstimate: "" as const } }
-      : {}),
-    $set: {
-      ...(isBgOrdinary ? { bgOrdinaryBallot: true as const } : {}),
-      ...(isHuBound ? { hungarianAssemblyBallot: true as const } : {}),
-      ...(isBgFounding ? { bulgarianFoundingBallot: true as const } : {}),
-      totalVotes: newTotals,
-      ...(huBallots
-        ? {
-            huConstituencyVotes: huBallots.constituencyVotes,
-            huListVotes: huBallots.listVotes,
-            huDistrictSlate: huBallots.districtSlate,
-          }
-        : {}),
-      ...(japanMixedBallots
-        ? {
-            japanShugiinConstituencyVotes: japanMixedBallots.constituencyVotes,
-            japanShugiinListVotes: japanMixedBallots.listVotes,
-          }
-        : {}),
-      candidateNames: cleanedNames,
-      candidateParties: cleanedParties,
-      ...(election.allocationMethod === "sntv"
-        ? {
-            candidateIsNPP: Object.fromEntries(
-              enriched.map((ec) => [ec.candidateId, Boolean(ec.isNPP)])
-            ),
-          }
-        : {}),
-      ...(councilTotals
-        ? { russianCouncilBallot: { ...tally.russianCouncilBallot, ...councilTotals.ledger } }
-        : {}),
-      ...(isBoundDuma
-        ? {
-            russianDumaBallot: {
-              ...tally.russianDumaBallot,
-              againstAllVotes: tally.russianDumaBallot?.againstAllVotes ?? 0,
-            },
-          }
-        : {}),
-      ...(seatsEstimate ? { seatsEstimate } : {}),
-      ...(isPrStv
-        ? { rankedBallots, rankedPreferenceModel: "same_party_then_policy_distance_v1" as const }
-        : {}),
-      updatedAt: now,
+      statePartyOrgs,
+      tally,
+      turnNumber,
+      wantsGovCoattail,
+      wantsMidtermOppositionBoost,
+      wantsOwnExecIncumbency,
+      hasPlayerInRace,
+      regByParty,
+      regBaselineByParty,
+      fundsByParty,
     },
-    $push: { turnSnapshots: snapshot } as never,
   };
-  // STV totals and original ballots must commit together, and a concurrent
-  // replay must not overwrite another turn's ballot receipt. The rest of a
-  // split turn lands only beside that turn's early half.
-  const tallyFilter = isPrStv
-    ? slicePart === "rest"
-      ? {
-          electionId,
-          finalized: false,
-          turnSnapshots: {
-            $size: tally.turnSnapshots.length,
-            $not: { $elemMatch: { turn: turnNumber, slicePart: { $ne: "early" } } },
-          },
-        }
-      : {
-          electionId,
-          finalized: false,
-          "turnSnapshots.turn": { $ne: turnNumber },
-          turnSnapshots: { $size: tally.turnSnapshots.length },
-        }
-    : { electionId };
-  if (options?.tallyWrites) {
-    options.tallyWrites.push({ updateOne: { filter: tallyFilter, update: tallyUpdate } });
-    return;
-  }
-  const write = await electionVoteTalliesCollection(db).updateOne(tallyFilter, tallyUpdate);
-  if (isPrStv && write.matchedCount !== 1)
-    throw new Error("PR-STV accumulation lost its tally revision; retry from persisted ballots");
 }
+export type AccumulateVoteTurnStageContext = Extract<
+  Awaited<ReturnType<typeof prepareAccumulateVoteTurn>>,
+  { kind: "context" }
+>["context"];
 
-// ─── Initialize a blank tally for an election ────────────────────────────────
-
-export async function initElectionVoteTally(
-  electionId: ObjectId,
-  candidates: ElectionCandidate[],
-  state: string,
-  primaryResults?: PrimaryResults,
-  options?: { countingMethod: "pr_stv" }
+export async function accumulateVoteTurn(
+  ...args: Parameters<typeof prepareAccumulateVoteTurn>
 ): Promise<void> {
-  const db = await getDb();
-  const now = new Date();
-
-  const totalVotes: Record<string, number> = {};
-  const candidateNames: Record<string, string> = {};
-  const candidateParties: Record<string, string> = {};
-
-  for (const c of candidates) {
-    totalVotes[c._id.toString()] = 0;
-    candidateNames[c._id.toString()] = c.characterName;
-    candidateParties[c._id.toString()] = c.party;
-  }
-
-  // Primary ballots accrued during the primary window live on the same doc,
-  // and this init runs replaceOne — carry them across or the general-phase
-  // re-init silently erases the primary's entire count.
-  const existing = await electionVoteTalliesCollection(db).findOne(
-    { electionId },
-    {
-      projection: {
-        primaryVotes: 1,
-        hungarianAssemblyBallot: 1,
-        bulgarianFoundingBallot: 1,
-        countingMethod: 1,
-        rankedBallots: 1,
-        finalized: 1,
-        updatedAt: 1,
-        totalVotes: 1,
-        "turnSnapshots.turn": 1,
-      },
-    }
-  );
-  const countingMethod = options?.countingMethod ?? existing?.countingMethod;
-  if (countingMethod === "pr_stv") {
-    if (
-      existing?.finalized ||
-      existing?.rankedBallots?.length ||
-      existing?.turnSnapshots?.length ||
-      Object.values(existing?.totalVotes ?? {}).some((votes) => votes > 0)
-    )
-      throw new Error("Cannot reinitialize a PR-STV tally after ballots were cast");
-    const election = await electionsCollection(db).findOne({ _id: electionId });
-    if (
-      !countryHasFeature("ieElections", election?.countryId) ||
-      !["dail", "localCouncil"].includes(election.electionType)
-    )
-      throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
-  }
-
-  const doc: ElectionVoteTally = {
-    // Preserve the matched doc's _id: legacy tallies carry an auto-generated
-    // ObjectId, and replaceOne rejects a replacement whose _id differs from
-    // the matched document's (immutable-field MongoServerError).
-    _id: existing?._id ?? electionId,
-    electionId,
-    state,
-    totalVotes,
-    ...(countingMethod ? { countingMethod, rankedBallots: [] } : {}),
-    candidateNames,
-    candidateParties,
-    turnSnapshots: [],
-    finalized: false,
-    ...(primaryResults && { primaryResults }),
-    ...(existing?.primaryVotes && { primaryVotes: existing.primaryVotes }),
-    ...(existing?.hungarianAssemblyBallot && { hungarianAssemblyBallot: true }),
-    ...(existing?.bulgarianFoundingBallot && { bulgarianFoundingBallot: true }),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  if (countingMethod === "pr_stv") {
-    if (!existing) {
-      // A concurrent initializer can create or accrue the tally while this
-      // call validates the race. Never replace the document it produced.
-      await electionVoteTalliesCollection(db).updateOne(
-        { electionId },
-        { $setOnInsert: doc },
-        { upsert: true }
-      );
-      return;
-    }
-    const replaced = await electionVoteTalliesCollection(db).replaceOne(
-      {
-        electionId,
-        finalized: false,
-        turnSnapshots: { $size: 0 },
-        updatedAt: existing.updatedAt,
-      },
-      doc
-    );
-    if (replaced.matchedCount !== 1)
-      throw new Error("Cannot reinitialize a PR-STV tally after its revision changed");
-    return;
-  }
-  await electionVoteTalliesCollection(db).replaceOne({ electionId }, doc, { upsert: true });
+  const prepared = await prepareAccumulateVoteTurn(...args);
+  if (prepared.kind === "early") return prepared.value;
+  return settleVoteTurn(prepared.context);
 }

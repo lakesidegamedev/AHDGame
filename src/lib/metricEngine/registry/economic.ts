@@ -231,7 +231,7 @@ export const gdpGrowthNode: RegistryNode = {
  * blend. decimals 2; bounds [1,15] (floor matches metricDefinitions minValue 1;
  * ceiling tighter than the def's Depression-level 25).
  *
- * When labourSystemMode ≥ "macro": a wage-index Δ and a separate automation
+ * A wage-index Δ and a separate automation
  * Δ each add a one-time labor-demand bump, summed and applied AFTER the Okun
  * target/clamp (leaving Okun's invariants untouched), then re-clamped.
  *
@@ -334,7 +334,7 @@ export const povertyRateNode: RegistryNode = {
  * per turn. inertia 0 (the compute itself is the increment); the policy delta
  * (e.g. minimum-wage acts) rides on top.
  *
- * v2-2 (gated on labourSystemMode ≥ "macro"): a CHANGE in the labour wage
+ * v2-2: a CHANGE in the labour wage
  * index adds a one-time impulse to wageGrowthAnnualPct via
  * `labourWageIncomePassthrough`. Read from `ctx.current` rather than declared
  * in `inputs` — the phase seeds it manually (like potentialGrowth/

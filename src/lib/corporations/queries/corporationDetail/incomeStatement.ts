@@ -13,10 +13,7 @@ import {
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import {
-  employerPensionCostForTurn,
-  EMPTY_EMPLOYER_PENSION_COST,
-} from "@/lib/pensions/employerPensionCosts";
+import { employerPensionCostForTurn } from "@/lib/pensions/employerPensionCosts";
 import { anchorPerTurnToFinancialDaily } from "@/lib/imf/imfFacilityFinancials";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import {
@@ -25,6 +22,7 @@ import {
   legalStructureTaxLabel,
   passThroughOwnerTax,
   passThroughReformPhase,
+  netPassThroughProfit,
   passThroughTaxMode,
 } from "@/lib/corporations/rules/passThroughTax";
 import { loadBankingPolicy } from "@/lib/banking/policy";
@@ -59,7 +57,6 @@ export interface IncomeStatementInputs {
   currentTurn: number;
   totals: SectorDetailsResult["totals"];
   wageBillAnchorPerTurnBySectorId: Map<string, number>;
-  labourWagesEnabled: boolean;
   restatement: SectorCurrencyRestatement;
   fxByCurrency: Map<CurrencyCode, number>;
   federalBudgets: FederalBudget[];
@@ -186,7 +183,6 @@ export async function computeIncomeStatement(
     currentTurn,
     totals,
     wageBillAnchorPerTurnBySectorId,
-    labourWagesEnabled,
     restatement,
     fxByCurrency,
     federalBudgets,
@@ -223,14 +219,12 @@ export async function computeIncomeStatement(
   // cash fall with nothing on the statement to name it. Two lines, not one: the
   // bargained contribution is a price the CEO agreed, the deficit top-up is a
   // consequence the CEO did not.
-  const pensionCostPerTurn = labourWagesEnabled
-    ? await employerPensionCostForTurn(
-        db,
-        corporation._id,
-        currentTurn,
-        wageBillAnchorPerTurnBySectorId
-      )
-    : EMPTY_EMPLOYER_PENSION_COST;
+  const pensionCostPerTurn = await employerPensionCostForTurn(
+    db,
+    corporation._id,
+    currentTurn,
+    wageBillAnchorPerTurnBySectorId
+  );
   const pensionContributionCost = anchorToCorpCapital(
     anchorPerTurnToFinancialDaily(pensionCostPerTurn.contributionAnchorPerTurn),
     pageCorpCcy,
@@ -398,7 +392,7 @@ export async function computeIncomeStatement(
     const homeBudget = federalBudgets.find((b) => b.countryId === corporation.countryId);
     const hqBudget = hq ? stateBudgetsForTax.find((b) => b._id === hq) : undefined;
     const ownerTax = passThroughOwnerTax({
-      taxableProfit: Math.max(0, consolidatedTaxableNet) + Math.max(0, dailyCouponIncomeLocal),
+      taxableProfit: netPassThroughProfit(consolidatedTaxableNet, dailyCouponIncomeLocal),
       phase: passThroughPhase,
       rates: blendedOwnerRate(
         (corporation.shareholders ?? []).map((sh) => ({

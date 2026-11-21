@@ -15,9 +15,9 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
   const t = useTranslations("corporations.marketGroups");
   const { formatAmount } = useCurrency();
   const countryName = useCountryDisplayName();
-  const { data, loading, error } = useMarketJson<{ groups: PublicSubsidiaryGroup[] }>(
-    "/api/market/subsidiary-groups"
-  );
+  const { data, loading, error, signInRequired } = useMarketJson<{
+    groups: PublicSubsidiaryGroup[];
+  }>("/api/market/subsidiary-groups");
   const [search, setSearch] = useState("");
   const [showNpp, setShowNpp] = useState(false);
   const [industry, setIndustry] = useState("");
@@ -58,6 +58,18 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pages);
   const inputClass = "rounded-lg border border-card-border bg-card px-3 py-2 text-sm";
+  if (signInRequired) {
+    return (
+      <p className="py-6 text-sm text-muted">
+        <Link
+          href="/login?returnTo=%2Fmarket%3Ftab%3Dsub-groups"
+          className="text-primary hover:underline"
+        >
+          {t("signIn")}
+        </Link>
+      </p>
+    );
+  }
   return (
     <PanelState loading={loading} error={error}>
       <div className="space-y-4">

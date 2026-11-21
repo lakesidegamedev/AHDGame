@@ -4,7 +4,7 @@ import {
   operatorMay,
   operatorRole,
   resolveOperatorPermissions,
-} from "./operatorPolicy";
+} from "@/lib/corporations/rules/operatorPolicy";
 
 const npp = { autopilot: false, caretaker: false, ownedByParent: false };
 const autopilot = { autopilot: true, caretaker: false, ownedByParent: false };

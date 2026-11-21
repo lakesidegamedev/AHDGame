@@ -4,13 +4,21 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 export type LeanAxis = "economic" | "social" | "display";
 
 /** Numeric lean for the selected axis from a map-overview lean entry. */
-export function leanAxisValue(
-  d: { economicLean: number; socialLean: number; displayLean?: number },
-  axis: LeanAxis
-): number {
-  if (axis === "economic") return d.economicLean;
-  if (axis === "social") return d.socialLean;
-  return d.displayLean ?? (d.economicLean + d.socialLean) / 2;
+type LeanFillSource = {
+  economicLean: number;
+  socialLean: number;
+  displayLean?: number;
+  /** Lean from the country's even split between its two main parties. */
+  labelEconomicLean?: number;
+  labelSocialLean?: number;
+  labelDisplayLean?: number;
+};
+
+/** The value a lean fill shades: centred on the even split when the server sends it. */
+export function leanAxisValue(d: LeanFillSource, axis: LeanAxis): number {
+  if (axis === "economic") return d.labelEconomicLean ?? d.economicLean;
+  if (axis === "social") return d.labelSocialLean ?? d.socialLean;
+  return d.labelDisplayLean ?? d.displayLean ?? (d.economicLean + d.socialLean) / 2;
 }
 
 /**
@@ -18,10 +26,7 @@ export function leanAxisValue(
  * the selected axis, floored at 0.5 and rounded up to one decimal so the legend
  * endpoints read cleanly. Symmetric so zero always sits on the neutral centre.
  */
-export function leanHalfRange(
-  lean: Record<string, { economicLean: number; socialLean: number; displayLean?: number }>,
-  axis: LeanAxis
-): number {
+export function leanHalfRange(lean: Record<string, LeanFillSource>, axis: LeanAxis): number {
   let max = 0;
   for (const d of Object.values(lean)) {
     max = Math.max(max, Math.abs(leanAxisValue(d, axis)));

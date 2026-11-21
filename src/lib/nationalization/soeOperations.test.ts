@@ -27,7 +27,7 @@ vi.mock("@/lib/constants/metricDefinitions", async (importOriginal) => {
 // Avoid the FX collection read under MockDb; passthrough rate=1.
 vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/currency/corporationCapital")>();
-  return { ...actual, loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()) };
+  return { ...actual, loadValuationFxRates: vi.fn().mockResolvedValue(new Map()) };
 });
 
 import { buildMandateMetricOps, buildRdModernizationOps } from "./soeOperations";
@@ -319,8 +319,8 @@ describe("processSoeOperations", () => {
   });
 
   it("loads the 2027 EUR treasury denomination once for two French SOEs", async () => {
-    const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");
-    vi.mocked(loadFxRatesByCurrency).mockResolvedValue(new Map([["EUR", 1.2]]));
+    const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
+    vi.mocked(loadValuationFxRates).mockResolvedValue(new Map([["EUR", 1.2]]));
     db.collectionMocks.corporations.find.mockReturnValue(
       cursor(
         [new ObjectId(), new ObjectId()].map((_id) => ({

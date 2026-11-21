@@ -4,7 +4,6 @@ import { type Db, ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { makeCharacter, makeCorporation } from "@/lib/test-utils/factories";
 import type { BankCharter } from "@/lib/db/types/bank";
-import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
 import {
   DOMINANCE_MARGIN_PENALTY_AT_FULL,
   DOMINANCE_MARKET_SHARE_THRESHOLD,
@@ -24,17 +23,6 @@ vi.mock("@/lib/corporations/turnReferenceData", () => ({
 vi.mock("@/lib/db/patreonBorders", () => ({
   fetchBordersByUserIds: vi.fn().mockResolvedValue(new Map()),
 }));
-// isLabourWagesEnabled opens its own DB handle (getDb) when no preloaded
-// config is passed — stub it so the query stays fully MockDb-driven.
-vi.mock("@/lib/labour/featureFlag", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/labour/featureFlag")>(
-    "@/lib/labour/featureFlag"
-  );
-  return {
-    ...actual,
-    isLabourWagesEnabled: vi.fn().mockResolvedValue(false),
-  };
-});
 vi.mock("@/lib/corporations/imfPortfolioReceivables", () => ({
   findImfFacilityReceivablesForLender: vi
     .fn()
@@ -677,8 +665,6 @@ describe("loadCorporationDetailView", () => {
   });
 
   it("keeps a plants residual credit as signed maintenance so Gross Profit still matches derived opex (ticket #1122)", async () => {
-    vi.mocked(isLabourWagesEnabled).mockResolvedValueOnce(true);
-
     const ceo = makeCharacter({
       _id: new ObjectId(),
       userId: new ObjectId(),
@@ -783,7 +769,15 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       soldUnits: 1_200,
       constructionInProgressAnchor: storedCip,
       mothballed: true,
-      buildQueue: [{ unitsOrdered: 800, costPaidAnchor: 250_000, startTurn: 4, onlineTurn: 52 }],
+      buildQueue: [
+        {
+          unitsOrdered: 800,
+          costPaidAnchor: 250_000,
+          startTurn: 4,
+          onlineTurn: 52,
+          deliveryBaseFraction: 0,
+        },
+      ],
       ...partial,
     };
   }
@@ -842,7 +836,8 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
     expect(row.plantCount).toBe(200);
     expect(row.producedUnits).toBe(4_000);
     expect(row.soldUnits).toBe(1_200);
-    expect(row.constructionInProgressAnchor).toBe(250_000);
+    // Three quarters of the 48-turn window has passed, so a quarter of the cost is still in construction.
+    expect(row.constructionInProgressAnchor).toBe(62_500);
     expect(row.mothballed).toBe(true);
     expect(row.workers).toBe(10);
     expect(row.workersDesired).toBe(40);
@@ -855,13 +850,34 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
     expect(row.buildQueueSummary).toEqual({
       orders: 1,
       unitsOrdered: 800,
-      unitsRemaining: 800,
-      unitsPerTurn: 0,
+      unitsRemaining: 200,
+      unitsPerTurn: 800 / 48,
       lastOnlineTurn: 52,
       nextOnlineTurn: 52,
-      // A legacy all-at-once order next adds capacity on its online turn.
-      nextArrivalTurn: 52,
+      // An order with a window adds capacity every turn.
+      nextArrivalTurn: 41,
       turnsRemaining: 12,
+    });
+  });
+
+  it("derives displayed CIP from the loaded queue", async () => {
+    const result = await load("plants", 9_000_000);
+    expect(result.sectors[0]?.constructionInProgressAnchor).toBe(62_500);
+    expect(result.corporation.physical?.constructionInProgressAnchor).toBe(62_500);
+  });
+
+  it("rolls the physicals up to corp level, with fill as a ratio of totals", async () => {
+    const result = await load("plants");
+    expect(result.corporation.physical).toEqual({
+      capacityUnits: 5_000,
+      producedUnits: 4_000,
+      soldUnits: 1_200,
+      fillRate: 0.3,
+      constructionInProgressAnchor: 62_500,
+      unitsOnOrder: 800,
+      buildingSectorCount: 1,
+      mothballedSectorCount: 1,
+      sectorCount: 1,
     });
   });
 });

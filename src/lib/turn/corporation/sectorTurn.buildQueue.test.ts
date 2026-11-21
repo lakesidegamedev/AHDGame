@@ -162,12 +162,16 @@ const MIX_PRICE = PRE_FLIP_NAMEPLATE / IMPLIED_UNITS;
 const BUILD_TURNS = CAPACITY_BUILD_TURNS("manufacturing");
 
 /** An order that has already come online at `landsAt`. */
+// Fixture orders are placed on the turn under test (or already due), so the
+// slice they deliver this turn is exactly what each case asserts.
 function order(overrides: Partial<SectorBuildOrder> = {}): SectorBuildOrder {
+  const onlineTurn = overrides.onlineTurn ?? 900 + BUILD_TURNS;
   return {
     unitsOrdered: 1_000,
     costPaidAnchor: 500_000,
-    startTurn: 900,
-    onlineTurn: 900 + BUILD_TURNS,
+    startTurn: Math.min(onlineTurn, 1000),
+    onlineTurn,
+    deliveryBaseFraction: 0,
     ...overrides,
   };
 }
@@ -310,6 +314,7 @@ describe("plants build queue — smooth (per-turn) delivery", () => {
     startTurn: 900,
     onlineTurn: 900 + BUILD_TURNS,
     smooth: true,
+    deliveryBaseFraction: 0,
     ...overrides,
   });
 
@@ -413,6 +418,7 @@ describe("plants build queue — builds due inside an economy pause (#5169)", ()
     startTurn: 900,
     onlineTurn: 900 + BUILD_TURNS,
     smooth: true,
+    deliveryBaseFraction: 0,
   });
 
   /** One sector turn at `currentTurn`; returns the gross units it delivered. */
@@ -886,6 +892,7 @@ describe("plants build queue — a command racing the turn (C4)", () => {
       costPaidAnchor: 900_000,
       startTurn: 1000,
       onlineTurn: 1000 + BUILD_TURNS,
+      deliveryBaseFraction: 0,
     };
     const live = commandPlaceOrder(sector as unknown as Record<string, unknown>, fresh);
     expect(live).toMatchObject({
@@ -912,7 +919,7 @@ describe("plants build queue — a command racing the turn (C4)", () => {
       }),
       1001
     );
-    expect(next.doc.constructionInProgressAnchor).toBe(900_000);
+    expect(next.doc.constructionInProgressAnchor).toBeCloseTo(900_000 * (1 - 1 / BUILD_TURNS), 6);
   });
 
   it("never emits a whole-array buildQueue $set", () => {
@@ -957,7 +964,8 @@ describe("plants build queue — a command racing the turn (C4)", () => {
       }),
       1001
     );
-    expect(next.doc.constructionInProgressAnchor).toBe(300_000);
+    // One slice of the remaining order has landed by the next turn.
+    expect(next.doc.constructionInProgressAnchor).toBeCloseTo(300_000 * (1 - 1 / 200), 6);
   });
 
   it("reconciles CIP when nothing landed", () => {

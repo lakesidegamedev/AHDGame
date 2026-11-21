@@ -6,7 +6,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
-import { getSovereigntyGovernmentNames } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  getSovereigntyGovernmentNames,
+  usesSovereigntyWording,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 
 /** Server-serialized summary of a region's current/most-recent referendum. */
 export interface ReferendumSummary {
@@ -35,7 +38,7 @@ interface Props {
 function kindNoun(stateId: string): string {
   const id = stateId.toUpperCase();
   if (id === "NIR") return "Reunification";
-  if (id === "CA_QC") return "Sovereignty";
+  if (usesSovereigntyWording(id)) return "Sovereignty";
   return "Independence";
 }
 
@@ -50,7 +53,7 @@ function inTurns(targetTurn: number | null, currentTurn: number): string {
 function statusLine(ref: ReferendumSummary, currentTurn: number, stateId: string): string {
   switch (ref.status) {
     case "requested":
-      return "Requested: awaiting the Prime Minister's decision.";
+      return `Requested: awaiting the ${getSovereigntyGovernmentNames(stateId).decisionMaker}'s decision.`;
     case "granted":
     case "campaigning":
       return ref.campaignCloseTurn != null
@@ -169,8 +172,9 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
             <p className="text-sm text-muted">
               With sufficient {noun.toLowerCase()} desire, the{" "}
               {getSovereigntyGovernmentNames(stateId).regional} may formally request a referendum.
-              The Prime Minister then grants or declines the request. An NPP ministry acts after 24
-              turns if its party leadership has not decided sooner.
+              The {getSovereigntyGovernmentNames(stateId).decisionMaker} then grants or declines the
+              request. An NPP ministry acts after 24 turns if its party leadership has not decided
+              sooner.
             </p>
           )}
           {/* The cooldown line above already explains a cooldown block, so only

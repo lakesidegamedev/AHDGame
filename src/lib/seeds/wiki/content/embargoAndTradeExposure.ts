@@ -1,20 +1,20 @@
 export const embargoAndTradeExposureContent = `# Embargoes & Trade Exposure
 
-You want to hurt another country's economy, and you have two tools: a quick embargo that fades, or a law that stays. A trade minister can impose one immediately but only for a limited time. A bill can put a durable one on the books. When a country cuts off another completely, the target's corporations operating inside it lose their export sales, and how much they lose depends on how much of their business actually crossed the border.
+You want to hurt another country's economy, and you have two main tools: a quick embargo that fades, or a law that stays. A trade minister can impose one that starts next turn, but only for a limited time. A bill can put a durable one on the books. When a country cuts off another completely, the target's corporations operating inside it lose their export sales, and how much they lose depends on how much of their business actually crossed the border.
 
 ## Choosing how to impose one
 
 | | Ministerial embargo | Legislated embargo |
 | --- | --- | --- |
 | Who | The trade minister, from the cabinet office page | A bill that passes |
-| Speed | Immediate | After the bill is signed |
+| Speed | Next turn | After the bill is signed |
 | Lasts | Up to 96 turns, 2 game years | Until repealed |
 | How it ends | Expires, or the minister lifts it | An end-embargo provision in a later bill |
 | Cost | One cabinet action | The bill process |
 
 Embargoes can also come from an international organization resolution or a crisis outcome. Those follow their own rules. Only the minister and legislation paths are described here.
 
-If you are your country's trade minister, open your [cabinet](/wiki/cabinet) office page and use the **Trade embargoes** panel, which spends cabinet actions. Pick the target, commodity, direction, block or cap, and a duration up to 96 turns. Use the Lift button on the same panel to end it early. To make it durable, write an embargo provision into a [bill](/wiki/bills-legislation); only a later bill can end it. Allies can be embargoed. The only blocked target is your own country.
+If you are your country's trade minister, open your [cabinet](/wiki/cabinet) office page and use the **Trade embargoes** panel, which spends cabinet actions. Pick the target, commodity, direction, block or cap, and a duration up to 96 turns. Use the Lift button on the same panel to end it early. To make it durable, write an embargo provision into a [bill](/wiki/bills-legislation); only a later bill can end it. Allies can be embargoed. Your own country and any country that is not enabled cannot be targeted.
 
 Each embargo picks:
 
@@ -29,7 +29,7 @@ Each embargo picks:
 | Active ministerial embargoes per member | 2 |
 | Cooldown on the same target after a ministerial embargo | 168 turns, 3.5 game years, counted from when it was enacted |
 
-The cooldown stops a minister re-imposing the same embargo the moment it lapses. Lifting an embargo early does not reset it, so if you need the pressure to last past the cooldown, use legislation. The game also blocks a second embargo that would cover the same country pair, commodity and direction while the first is active, and a country cannot embargo itself. Embargoed flows are blocked or capped in the clearing of the [Trade System](/wiki/trade-system). A [blockade](/wiki/blockades) stacks with an embargo: an embargo blocks a lane outright and a blockade scales what affinity is left.
+The cooldown stops a minister re-imposing the same embargo the moment it lapses. Lifting an embargo early does not reset it, so if you need the pressure to last past the cooldown, use legislation. The game also blocks a second embargo that would cover the same country pair, commodity and direction while the first is active, and a country cannot embargo itself. Embargoed flows are blocked or capped in the clearing of the [Trade System](/wiki/trade-system). A [blockade](/wiki/blockades) stacks with an embargo: a block embargo stops a lane outright (a cap only limits it to a set number of units) and a blockade scales what affinity is left.
 
 ## What a total embargo does to a corporation
 

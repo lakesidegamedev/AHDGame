@@ -22,7 +22,10 @@ import type { DevolutionDriverSnapshot } from "./tabs/DevolutionTab";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
 import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  usesSovereigntyWording,
+  sovereigntyRegionIn,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
 
 // Only the Overview tab is open on arrival; the others are one click away and
@@ -115,7 +118,7 @@ function buildTabs(
   if (showDevolution)
     tabs.push({
       key: "devolution",
-      label: stateId.toUpperCase() === "CA_QC" ? "Sovereignty" : "Devolution",
+      label: usesSovereigntyWording(stateId) ? "Sovereignty" : "Devolution",
     });
   tabs.push(
     { key: "legislation", label: "Legislation" },
@@ -130,7 +133,8 @@ export function GovernorOfficeClient(props: Props) {
   const showDevolution =
     sovereigntyRegionIn(props.countryId, props.stateId) != null && props.devolution != null;
   const tabs = buildTabs(showDevolution, props.stateId);
-  const [active, setActive] = useState<TabKey>("overview");
+  const [selectedTab, setSelectedTab] = useState<TabKey>("overview");
+  const active = selectedTab === "devolution" && !showDevolution ? "overview" : selectedTab;
   const router = useRouter();
 
   // Some regional titles already encode the state name ("Mayor of London")
@@ -247,7 +251,7 @@ export function GovernorOfficeClient(props: Props) {
             {tabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActive(tab.key)}
+                onClick={() => setSelectedTab(tab.key)}
                 className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
                   active === tab.key
                     ? "border-b-2 border-primary text-foreground font-medium"

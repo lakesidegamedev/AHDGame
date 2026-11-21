@@ -104,7 +104,7 @@ export default function PlantPanel({
   // a third built is not counted as built), and the rest still being built.
   const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) => {
     const ordered = plantsFromUnitsForSector(plantSizing, o.unitsOrdered);
-    const built = Math.min(ordered, Math.floor(Math.max(0, o.unitsDelivered) / unitsPerPlant));
+    const built = Math.min(ordered, Math.max(0, o.unitsDelivered) / unitsPerPlant);
     return { ordered, built, building: ordered - built };
   };
   const plantsBeingBuilt = plants.buildQueue.reduce((s, o) => s + orderPlants(o).building, 0);
@@ -435,7 +435,7 @@ export default function PlantPanel({
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-body-sm font-semibold text-foreground">
-                        {o.smooth && o.turnsRemaining > 0
+                        {o.turnsRemaining > 0
                           ? `${fmtUnits(sitesDelivered)} of ${fmtUnits(sitesOrdered)} ${orderedNoun} built`
                           : `${fmtUnits(sitesOrdered)} ${orderedNoun}`}
                       </p>
@@ -443,9 +443,7 @@ export default function PlantPanel({
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
                             ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
-                            : o.nextArrivalTurn != null && o.nextArrivalTurn < o.onlineTurn
-                              ? `next ${vocab.singular} lands on turn ${o.nextArrivalTurn} · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
-                              : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
+                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
                           : `arrives next turn · ${money(o.costPaidAnchor)} paid`}
                       </p>
                     </div>

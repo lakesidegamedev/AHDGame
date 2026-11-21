@@ -96,6 +96,42 @@ describe("MarketPositionPanel NPP grouping", () => {
     expect(screen.queryByText(/320/)).toBeNull();
   });
 
+  it("names products with waiting buyers when a covered product zeroes the full-mix count", () => {
+    render(
+      <MarketPositionPanel
+        market={makeMarket([])}
+        sector={sector}
+        corporation={corporation}
+        financials={null}
+        room={{
+          demandGapUnits: 8000,
+          measuredDemandGapUnits: 0,
+          unitsPerFacility: 25,
+          buildDemand: [
+            {
+              commodity: "electronics",
+              scope: "national",
+              funded: 1000,
+              delivered: 400,
+              unmet: 600,
+              capacityUnits: 300,
+            },
+            {
+              commodity: "software",
+              scope: "national",
+              funded: 500,
+              delivered: 500,
+              unmet: 0,
+              capacityUnits: 0,
+            },
+          ],
+        }}
+      />
+    );
+    expect(screen.getByText("Buyers waiting for Electronics & Semiconductors")).toBeTruthy();
+    expect(screen.queryByText(/^about 0 /)).toBeNull();
+  });
+
   it("does not present missing measured capacity as zero or as weighted demand", () => {
     render(
       <MarketPositionPanel

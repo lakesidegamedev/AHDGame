@@ -24,8 +24,6 @@ export interface NppCorpDecisionContext {
   fxRate?: number;
   /** Live local-per-anchor rates used to restate host-currency sector revenue. */
   fxByCurrency?: ReadonlyMap<string, number>;
-  /** Whether the labour system permits wage-level writes. */
-  labourWagesEnabled?: boolean;
   currentYear?: number;
   techTreesEnabled?: boolean;
   /**
@@ -76,7 +74,7 @@ export interface NppCorpDecisionContext {
    */
   challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
   /** Resolved NPP operator permissions; absent derives them from the corporation. */
-  operator?: import("./rules/operatorPolicy").OperatorPermissions;
+  operator?: import("@/lib/corporations/rules/operatorPolicy").OperatorPermissions;
   /**
    * First funded turn of the world's market transition (opening turn + 1);
    * absent before the funded market or outside a funded world.
@@ -231,6 +229,8 @@ export interface NppPlantsContext {
   holdExpansionAtCashFloor?: boolean;
   year: number;
   eraUnitScale: number;
+  /** Resolved `gameConfig.plantBuildPriceScale`; absent = shipped default. */
+  buildPriceScale?: number;
   preset: string | undefined;
   primeRateOf: (countryId: string) => number;
   costOfLivingOf: (stateId: string) => number | null;

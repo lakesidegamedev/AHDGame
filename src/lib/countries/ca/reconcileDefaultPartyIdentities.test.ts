@@ -34,9 +34,9 @@ it("corrects every default identity while preserving IDs, played state and count
   const { memory, db, rows, foreign } = fixture();
   const orgs = await memory.collection("statePartyOrg").find({}).toArray();
   const officials = await memory.collection("electedOfficials").find({}).toArray();
-  expect(await reconcileCaDefaultPartyIdentities(db, "2027-default")).toBe(5);
+  expect(await reconcileCaDefaultPartyIdentities(db, "2027-default")).toBe(6);
   const parties = await memory.collection("politicalParties").find({ countryId: "CA" }).toArray();
-  expect(parties).toHaveLength(5);
+  expect(parties).toHaveLength(6);
   for (const [i, row] of rows.entries()) {
     const updated = parties.find((p) => String(p._id) === String(row._id))!;
     const {

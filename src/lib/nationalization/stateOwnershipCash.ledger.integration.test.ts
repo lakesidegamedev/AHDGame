@@ -784,3 +784,17 @@ for (const native of [false, true]) {
     }
   );
 }
+
+// Memory fixtures exercise orchestration; isolated replica-set tests prove transaction rollback.
+vi.mock("@/lib/db/runRequiredTransaction", async (load) => {
+  const real = await load<typeof import("@/lib/db/runRequiredTransaction")>();
+  return {
+    ...real,
+    runRequiredTransaction: vi.fn(
+      async (
+        body: import("@/lib/db/runRequiredTransaction").RequiredTransactionBody<unknown>,
+        options?: import("@/lib/db/runRequiredTransaction").RequiredTransactionOptions
+      ) => (options?.client ? real.runRequiredTransaction(body, options) : body(undefined as never))
+    ),
+  };
+});

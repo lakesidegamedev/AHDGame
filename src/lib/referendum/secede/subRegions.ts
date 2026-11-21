@@ -3,16 +3,24 @@ import type { State } from "@/lib/db/types";
 import { scoRegions } from "@/lib/seeds/sco/scoRegions";
 import { walRegions } from "@/lib/seeds/wal/walRegions";
 import { QC_CAPITAL_REGION, qcRegions } from "@/lib/countries/qc/data/qcRegions";
+import { AB_CAPITAL_REGION, abRegions } from "@/lib/countries/ab/data/abRegions";
+import { RTX_CAPITAL_REGION, rtxRegions } from "@/lib/countries/rtx/data/rtxRegions";
+import { NEN_CAPITAL_REGION, nenRegions } from "@/lib/countries/nen/data/nenRegions";
+import { RCA_CAPITAL_REGION, rcaRegions } from "@/lib/countries/rca/data/rcaRegions";
 import { sovereigntyRegionForSuccessor } from "../rules/sovereigntyRegions";
 import { isResetV2Country, type ResetV2Country } from "@/lib/resetVersions/rules";
 
-export type SecedingCountryId = "SCO" | "WAL" | "QC";
+export type SecedingCountryId = "SCO" | "WAL" | "QC" | "AB" | "RTX" | "RCA" | "NEN";
 
 /** Latent sub-region seed maps, keyed by seceding country. */
 export const SUB_REGION_SEEDS: Record<SecedingCountryId, State[]> = {
   SCO: scoRegions,
   WAL: walRegions,
   QC: qcRegions,
+  AB: abRegions,
+  RTX: rtxRegions,
+  NEN: nenRegions,
+  RCA: rcaRegions,
 };
 
 /**
@@ -24,6 +32,10 @@ export const CAPITAL_SUBREGION: Record<SecedingCountryId, string> = {
   SCO: "LOT", // Edinburgh & the Lothians
   WAL: "CDF", // Cardiff & South East
   QC: QC_CAPITAL_REGION,
+  AB: AB_CAPITAL_REGION,
+  RTX: RTX_CAPITAL_REGION,
+  NEN: NEN_CAPITAL_REGION,
+  RCA: RCA_CAPITAL_REGION,
 };
 
 /** Where a successor country comes from: the parent country and the region it leaves as. */

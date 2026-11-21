@@ -12,9 +12,6 @@ import type { LedgerEntry } from "@/lib/ledger/types";
 import { processNPPFundInvestments } from "./nppInvesting";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-}));
 
 const nativeEnabled = process.env.AHD_NPP_FUND_MIRROR_REAL_MONGO === "1";
 let client: MongoClient | undefined;

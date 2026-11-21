@@ -3,7 +3,6 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
-import { gameConfig as gameConfigDefaults } from "@/lib/seeds/reference/gameConfig";
 import type { ResetSystem, ResetSystemVersion } from "@/lib/resetVersions/rules";
 import type { NppAutonomyLevel } from "@/lib/db/types/gameState";
 
@@ -189,50 +188,6 @@ const NPP_ENTRY_VIABILITY_MODES: {
   },
 ];
 
-/**
- * Graduated system modes that live on gameConfig instead of gameState. Writes
- * go through the existing per-system PATCH routes (NOT /feature-gates) because
- * some of them carry side effects — e.g. index-funds runs its bootstrap
- * migrations on a fresh enable.
- */
-interface SystemMode {
-  key: "labourSystemMode" | "indexFundsMode";
-  label: string;
-  desc: string;
-  endpoint: string;
-  defaultValue: string;
-  levels: { value: string; label: string; blurb: string }[];
-}
-
-const SYSTEM_MODES: SystemMode[] = [
-  {
-    key: "labourSystemMode",
-    label: "Labour system",
-    desc: "Graduated rollout — each tier is a superset of the previous.",
-    endpoint: "/api/admin/config/labour",
-    defaultValue: gameConfigDefaults.labourSystemMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Baseline economy, no labour dynamics." },
-      { value: "wages", label: "Wages", blurb: "Sector wage dynamics + minimum-wage laws." },
-      { value: "macro", label: "Macro", blurb: "Wages feed back into the macro engine." },
-      { value: "unions", label: "Unions", blurb: "Unions & collective bargaining." },
-      { value: "full", label: "Full", blurb: "Complete labour system." },
-    ],
-  },
-  {
-    key: "indexFundsMode",
-    label: "Index funds",
-    desc: "Fresh enable runs the fund-definition bootstrap migrations.",
-    endpoint: "/api/admin/config/index-funds",
-    defaultValue: gameConfigDefaults.indexFundsMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Funds hidden." },
-      { value: "partial", label: "Partial", blurb: "Read-only pages + cron accrual." },
-      { value: "full", label: "Full", blurb: "Player buys/sells enabled." },
-    ],
-  },
-];
-
 interface GatesState {
   booleans: Record<string, boolean>;
   nppAutonomyLevel: NppAutonomyLevel;
@@ -258,7 +213,6 @@ function DefaultBadge() {
 
 export function FeatureGatesPanel() {
   const [state, setState] = useState<GatesState | null>(null);
-  const [modes, setModes] = useState<Record<string, string> | null>(null);
   const [commandEconomyEnabled, setCommandEconomyEnabled] = useState(false);
   const [commandEconomyTolerance, setCommandEconomyTolerance] = useState(
     COMMAND_ECONOMY_DEFAULT_TOLERANCE
@@ -269,20 +223,11 @@ export function FeatureGatesPanel() {
 
   const fetchState = useCallback(async () => {
     try {
-      const [gatesRes, marketRes, ...modeRes] = await Promise.all([
+      const [gatesRes, marketRes] = await Promise.all([
         fetch("/api/admin/feature-gates"),
         fetch("/api/admin/config/market"),
-        ...SYSTEM_MODES.map((m) => fetch(m.endpoint)),
       ]);
       if (gatesRes.ok) setState((await gatesRes.json()) as GatesState);
-      const next: Record<string, string> = {};
-      for (let i = 0; i < SYSTEM_MODES.length; i++) {
-        const res = modeRes[i];
-        if (res.ok) {
-          const data = (await res.json()) as { mode?: string };
-          next[SYSTEM_MODES[i].key] = data.mode ?? "off";
-        }
-      }
       // Command-economy flags live on the market config route (gameConfig),
       // not /feature-gates.
       if (marketRes.ok) {
@@ -297,7 +242,6 @@ export function FeatureGatesPanel() {
             : COMMAND_ECONOMY_DEFAULT_TOLERANCE
         );
       }
-      setModes(next);
     } catch {
       // silent
     } finally {
@@ -344,28 +288,6 @@ export function FeatureGatesPanel() {
           resetV2Ready: data.resetV2Ready,
         });
       }
-    } catch {
-      setError("Network error");
-    } finally {
-      setSavingKey(null);
-    }
-  }, []);
-
-  const patchMode = useCallback(async (mode: SystemMode, value: string) => {
-    setSavingKey(mode.key);
-    setError("");
-    try {
-      const res = await fetch(mode.endpoint, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: value }),
-      });
-      const data = (await res.json()) as { mode?: string; error?: string };
-      if (!res.ok) {
-        setError(apiErrorText(data, `Failed to update ${mode.label}`));
-        return;
-      }
-      setModes((prev) => ({ ...(prev ?? {}), [mode.key]: data.mode ?? value }));
     } catch {
       setError("Network error");
     } finally {
@@ -425,7 +347,7 @@ export function FeatureGatesPanel() {
       <div className="mb-4">
         <h3 className="text-sm font-semibold">Feature gates</h3>
         <p className="text-xs leading-relaxed text-muted">
-          One control surface for every game feature flag, including the graduated system modes.
+          One control surface for every game feature flag, plus the command economy.
           Gates marked <span className="font-semibold text-primary">seed default</span> ship enabled
           on every fresh world; the rest are staged rollouts. NPP economy and line of credit are
           core systems — always on, no longer gated.
@@ -688,59 +610,8 @@ export function FeatureGatesPanel() {
         </p>
       </div>
 
-      {/* Graduated system modes (gameConfig) */}
+      {/* Market configuration flags (gameConfig) */}
       <div className="mb-5 space-y-3">
-        {SYSTEM_MODES.map((mode) => {
-          const current = modes?.[mode.key] ?? "off";
-          const saving = savingKey === mode.key;
-          return (
-            <div
-              key={mode.key}
-              className="rounded-lg border border-card-border bg-background/40 p-4"
-            >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{mode.label}</span>
-                  {mode.defaultValue !== "off" ? <DefaultBadge /> : null}
-                </div>
-                <span className="text-body-sm font-medium text-muted">
-                  {mode.levels.find((l) => l.value === current)?.label ?? current}
-                </span>
-              </div>
-              <p className="mb-3 text-xs text-muted">
-                {mode.desc}
-                {mode.defaultValue !== "off" ? (
-                  <>
-                    {" "}
-                    Fresh seeds start at <span className="font-semibold">{mode.defaultValue}</span>.
-                  </>
-                ) : null}
-              </p>
-              <div className="inline-flex flex-wrap gap-1 rounded-lg border border-card-border bg-card p-1">
-                {mode.levels.map((lvl) => {
-                  const active = current === lvl.value;
-                  return (
-                    <button
-                      key={lvl.value}
-                      type="button"
-                      disabled={saving}
-                      title={lvl.blurb}
-                      onClick={() => void patchMode(mode, lvl.value)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                        active
-                          ? "bg-primary text-white"
-                          : "text-muted hover:bg-background hover:text-foreground"
-                      }`}
-                    >
-                      {lvl.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
         {/* Command economy — gameConfig flags via /api/admin/config/market (not /feature-gates). */}
         <div className="rounded-lg border border-card-border bg-background/40 p-4">
           <div className="mb-1 flex items-center justify-between gap-2">

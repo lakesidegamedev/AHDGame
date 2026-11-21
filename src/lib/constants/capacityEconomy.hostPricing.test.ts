@@ -4,7 +4,8 @@ import {
   acumenGrowthCostMultiplier,
   getDominanceGrowthCostMultiplier,
 } from "@/lib/constants/corporations";
-import { TECH_GROWTH_REDUCTION_CAP, aggregateTechEffects } from "@/lib/constants/techTree/effects";
+import { TECH_GROWTH_REDUCTION_CAP } from "@/lib/constants/techTree/effects";
+import { aggregateTechEffects } from "@/lib/techTree/rules/effectLayers";
 import {
   CAPACITY_ANCHOR_YEAR,
   HOST_BUILD_PRICE_INDEX_MAX,

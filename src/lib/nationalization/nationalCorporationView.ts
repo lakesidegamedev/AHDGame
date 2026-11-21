@@ -1,3 +1,8 @@
+import {
+  fundedDailyToTurn,
+  publicServiceShare,
+  publicServiceTotals,
+} from "./rules/settledEnterprise";
 /**
  * Aggregates the read-only view-model for the National Corporation page (spec §17).
  * Every field traces to real engine data — sectors, per-state metrics (dynamic
@@ -6,7 +11,7 @@
  */
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, GameState, State, StateMetrics } from "@/lib/db/types";
+import type { Corporation, StateMetrics } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import {
   computeFillRate,
@@ -21,7 +26,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { computeSoeEfficiencyBreakdown, type SoeEfficiencyBreakdown } from "./soeEfficiency";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { findMergedRegionMetricsManyForDisplay } from "@/lib/macroMetrics/displayMerge";
 import {
   resolveSectorMandate,
@@ -360,6 +364,26 @@ export async function buildNationalCorporationView(
     ? ((await gameStateCollection(db).findOne({ _id: "current" }))?.currentTurn ?? 0)
     : 0;
 
+  const marketHoldings = stateIds.length
+    ? await corporateSectorsCollection(db)
+        .find(
+          { stateId: { $in: stateIds } },
+          {
+            projection: {
+              stateId: 1,
+              countryId: 1,
+              sectorType: 1,
+              mothballed: 1,
+              revenue: 1,
+              realizedRevenue: 1,
+              "producerInventory.worldEpoch": 1,
+              "producerSettlement.revenue": 1,
+            },
+          }
+        )
+        .toArray()
+    : [];
+  const serviceTotals = publicServiceTotals(marketHoldings);
   const viewSectors: NatViewSector[] = sectors.map((s) => {
     const mandate = resolveSectorMandate(corp, s);
     const m = metricsById.get(s.stateId);
@@ -382,13 +406,7 @@ export async function buildNationalCorporationView(
     // (price control ×1.5) AND the employment guarantee's unemployment relief —
     // so both postures raise the number and an unmapped sector still shows the
     // relief it provides.
-    let stateSectorRevenue = 0;
-    for (const x of sectors) {
-      if (x.stateId === s.stateId && x.sectorType === s.sectorType) {
-        stateSectorRevenue += Math.max(0, x.revenue);
-      }
-    }
-    const soeShare = stateSectorRevenue > 0 ? Math.max(0, s.revenue) / stateSectorRevenue : 0;
+    const soeShare = publicServiceShare(s, serviceTotals);
     const publicValuePerTurn =
       Math.round(
         getMandateContributions(countryId, s, mandate, soeShare).reduce(
@@ -406,7 +424,7 @@ export async function buildNationalCorporationView(
       stateId: s.stateId,
       stateName: regionName(s.stateId),
       revenue: s.revenue,
-      realizedRevenue: soeRealizedRevenue(s, plantsMode),
+      realizedRevenue: fundedDailyToTurn(s, soeRealizedRevenue(s, plantsMode)),
       workers: s.workers,
       profitMargin: s.profitMargin,
       targetGrowthRate: s.targetGrowthRate ?? 0,
@@ -449,7 +467,10 @@ export async function buildNationalCorporationView(
       // penalty; efficiency.total is added only for the seeded-base fallback used
       // when a sector has never processed a turn.
       operatingProfit: Math.round(
-        soeSectorOperatingProfit(s, plantsMode, s.profitMargin + efficiency.total)
+        fundedDailyToTurn(
+          s,
+          soeSectorOperatingProfit(s, plantsMode, s.profitMargin + efficiency.total)
+        )
       ),
       mandateIsOverride: s.soeMandate != null,
       mappedMetricLabels,

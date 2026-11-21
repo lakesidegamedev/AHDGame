@@ -5,11 +5,9 @@
  */
 
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { State, StateMetrics } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
+import type { LegislationType } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { withLawAdministration } from "@/lib/governmentFinance/lawAdministrationCatalog";
 import {
@@ -115,7 +113,7 @@ function getOptionCostPerCapita(
  * Main turn processing function for JP regional budgets.
  *
  * Called once per turn. Fetches all JP regions, calculates budgets, detects
- * deficits, applies forced austerity when needed, and upserts RegionalBudget
+ * deficits, retains authorized services, and upserts RegionalBudget
  * documents.
  */
 export async function processJPRegionalBudgets(
@@ -244,7 +242,6 @@ export async function processJPRegionalBudgets(
   let regionsProcessed = 0;
   // Batched per-region writes (see regionalBudget.ts for rationale) — scales
   // with region count toward the 30-50-country target.
-  const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
   for (const region of jpRegions) {
@@ -313,6 +310,7 @@ export async function processJPRegionalBudgets(
     const regionalSettlement =
       regionalFinanceEnabled || regionResetPrograms.length > 0
         ? settleRegionalBudget({
+            allowBorrowing: true,
             availableBudget: budgetResult.totalBudget,
             reservedNonProgramSpending: subsidyCosts,
             claims: [
@@ -337,45 +335,6 @@ export async function processJPRegionalBudgets(
     const isOverBudget = enactedBillCosts > budgetResult.totalBudget;
     const previousTurnsOver = existingBudget?.turnsOverBudget ?? 0;
     const turnsOverBudget = isOverBudget ? previousTurnsOver + 1 : 0;
-
-    // Forced austerity: if over budget for more than 1 turn, downgrade most expensive programme
-    if (!regionalFinanceEnabled && turnsOverBudget > 1 && spendingPolicies.length > 0) {
-      const policiesWithCost = spendingPolicies.map((p) => ({
-        policy: p,
-        cost: getOptionCostPerCapita(p, legTypeMap),
-      }));
-      policiesWithCost.sort((a, b) => b.cost - a.cost);
-
-      const mostExpensive = policiesWithCost[0];
-      if (mostExpensive && mostExpensive.cost > 0) {
-        const legType = legTypeMap.get(mostExpensive.policy.legislationTypeId);
-        if (legType?.policyOptions) {
-          const currentIndex = legType.policyOptions.findIndex(
-            (o) => o.id === mostExpensive.policy.policyOptionId
-          );
-          if (currentIndex > 0) {
-            const newOption = legType.policyOptions[currentIndex - 1] as LegislationPolicyOption;
-            statePolicyOps.push({
-              updateOne: {
-                filter: {
-                  stateId: region._id,
-                  legislationTypeId: mostExpensive.policy.legislationTypeId,
-                },
-                update: {
-                  $set: {
-                    policyOptionId: newOption.id,
-                    policyOptionIndex: currentIndex - 1,
-                    economic: newOption.economic,
-                    social: newOption.social,
-                    effectDirection: newOption.effectDirection,
-                  },
-                },
-              },
-            });
-          }
-        }
-      }
-    }
 
     // Upsert the RegionalBudget document
     const budgetDoc: RegionalBudget = {
@@ -427,9 +386,6 @@ export async function processJPRegionalBudgets(
     regionsProcessed++;
   }
 
-  if (statePolicyOps.length > 0) {
-    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
-  }
   if (regionalBudgetOps.length > 0) {
     await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }

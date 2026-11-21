@@ -9,7 +9,7 @@ import { CORPORATION_STARTING_CAPITAL } from "@/lib/constants/corporations";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
-vi.mock("@/lib/api/requireAuth");
+vi.mock("@/lib/api/requireAuth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: () => ({ ok: true }),
   rateLimitResponse: vi.fn(),
@@ -286,37 +286,40 @@ describe("POST /api/corporations — forex enabled", () => {
   });
 });
 
-vi.mock("@/lib/time/gameTime", () => ({
-  getGameTime: vi
-    .fn()
-    .mockResolvedValue({ currentTurn: 0, effectiveNow: new Date("2026-10-31T00:00:00Z") }),
-}));
-it.each([false, true])(
-  "new-character corporation creation respects founding-period exemption=%s",
-  async (founding) => {
+it.each([
+  { founding: false, lastCorporationFoundedTurn: undefined, expectedStatus: 201 },
+  { founding: true, lastCorporationFoundedTurn: undefined, expectedStatus: 201 },
+  { founding: false, lastCorporationFoundedTurn: 40, expectedStatus: 400 },
+])(
+  "allows new characters to found unless the account is on refounding cooldown: %j",
+  async ({ founding, lastCorporationFoundedTurn, expectedStatus }) => {
     const { getDb } = await import("@/lib/mongodb");
     const { requireAuth } = await import("@/lib/api/requireAuth");
     const { db, corpInsertOne, character } = makeDb("US");
     const original = db.collection.getMockImplementation()!;
-    db.collection.mockImplementation((name: string) =>
-      name === "gameState"
-        ? {
-            findOne: async () => ({
-              _id: "current",
-              currentYear: 1970,
-              currentTurn: 0,
-              preIteration: { active: founding },
-            }),
-          }
-        : original(name)
-    );
+    db.collection.mockImplementation((name: string) => {
+      if (name === "gameState") {
+        return {
+          findOne: async () => ({
+            _id: "current",
+            currentYear: 1970,
+            currentTurn: 56,
+            preIteration: { active: founding },
+          }),
+        };
+      }
+      if (name === "users") {
+        return { findOne: async () => ({ lastCorporationFoundedTurn }) };
+      }
+      return original(name);
+    });
     vi.mocked(getDb).mockResolvedValue(db as never);
     vi.mocked(requireAuth).mockResolvedValue({
       ok: true,
       user: {
         userId: new ObjectId().toString(),
         hasCharacter: true,
-        character: { ...character, createdTurn: 0 },
+        character: { ...character, createdTurn: 54 },
       },
     } as never);
     const { POST } = await import("../route");
@@ -331,8 +334,10 @@ it.each([false, true])(
         }),
       })
     );
-    expect(response.status).toBe(founding ? 201 : 403);
-    expect(corpInsertOne).toHaveBeenCalledTimes(founding ? 1 : 0);
-    if (!founding) expect((await response.json()).remainingTurns).toBe(48);
+    expect(response.status).toBe(expectedStatus);
+    expect(corpInsertOne).toHaveBeenCalledTimes(expectedStatus === 201 ? 1 : 0);
+    if (expectedStatus === 400) {
+      expect((await response.json()).error).toBe("You can found another corporation in 80 turns.");
+    }
   }
 );

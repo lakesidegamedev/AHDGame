@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Bill } from "@/lib/db/types";
-import { buildBillDisplays } from "./billDisplays";
+import { buildBillDisplays } from "@/lib/api/commands/congress/bills/billDisplays";
 
 describe("buildBillDisplays — voteShiftPreview", () => {
   const viewerId = new ObjectId();

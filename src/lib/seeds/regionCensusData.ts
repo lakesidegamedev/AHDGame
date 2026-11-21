@@ -51,6 +51,10 @@ import { UKR_GEOGRAPHY } from "@/lib/countries/ukr/geography";
 import { BAL_GEOGRAPHY } from "@/lib/countries/bal/geography";
 import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 import { QC_GEOGRAPHY } from "@/lib/countries/qc/geography";
+import { AB_GEOGRAPHY } from "@/lib/countries/ab/geography";
+import { RTX_GEOGRAPHY } from "@/lib/countries/rtx/geography";
+import { NEN_GEOGRAPHY } from "@/lib/countries/nen/geography";
+import { RCA_GEOGRAPHY } from "@/lib/countries/rca/geography";
 
 export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   PL: PL_GEOGRAPHY.censusBundles,
@@ -97,6 +101,10 @@ export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   WAL: WAL_GEOGRAPHY.censusBundles,
   CA: CA_GEOGRAPHY.censusBundles,
   QC: QC_GEOGRAPHY.censusBundles,
+  AB: AB_GEOGRAPHY.censusBundles,
+  RTX: RTX_GEOGRAPHY.censusBundles,
+  NEN: NEN_GEOGRAPHY.censusBundles,
+  RCA: RCA_GEOGRAPHY.censusBundles,
 };
 
 /**

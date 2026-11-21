@@ -20,6 +20,7 @@ import {
   legacyOptionLevel,
   regionalPowerMix,
   renewablesReliabilityPenalty,
+  INTERMITTENT_POWER_METHODS,
   type TransitionPolicy,
 } from "./rules";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
@@ -131,19 +132,20 @@ export function summarisePowerFleet(sectors: Iterable<PowerFleetSector>): PowerF
 }
 
 /**
- * A standing output loss for renewables in one region, in the disaster effect
- * shape the corporation turn already applies (physical under plants).
+ * Standing output losses for wind and solar in one region, one entry per
+ * intermittent method, in the disaster effect shape the corporation turn
+ * already applies (physical under plants).
  */
-export function renewablesReliabilityEntry(penalty: number): DisasterEffectEntry {
-  return {
+export function renewablesReliabilityEntries(penalty: number): DisasterEffectEntry[] {
+  return INTERMITTENT_POWER_METHODS.map((strategyId): DisasterEffectEntry => ({
     value: -penalty * 100,
     startTurn: 0,
     durationTurns: 0,
     sectorType: "energy",
-    strategyId: "renewables",
+    strategyId,
     physicality: "physical",
     persistent: true,
-  };
+  }));
 }
 
 export interface EnergyTransitionContext {

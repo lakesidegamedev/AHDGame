@@ -57,6 +57,26 @@ export const COUNTRY_RUNTIME_SEED: Record<CountryId, CountryRuntimeSeed> = {
     rulingPartyId: null,
     hasLeaderConfidenceModel: false,
   },
+  AB: {
+    governmentType: "parliamentaryRepublic",
+    rulingPartyId: null,
+    hasLeaderConfidenceModel: false,
+  },
+  RTX: {
+    governmentType: "parliamentaryRepublic",
+    rulingPartyId: null,
+    hasLeaderConfidenceModel: false,
+  },
+  NEN: {
+    governmentType: "parliamentaryRepublic",
+    rulingPartyId: null,
+    hasLeaderConfidenceModel: false,
+  },
+  RCA: {
+    governmentType: "parliamentaryRepublic",
+    rulingPartyId: null,
+    hasLeaderConfidenceModel: false,
+  },
   BR: { governmentType: "presidential", rulingPartyId: null, hasLeaderConfidenceModel: false },
   CN: { governmentType: "onePartyState", rulingPartyId: 1, hasLeaderConfidenceModel: true },
   NG: { governmentType: "presidential", rulingPartyId: null, hasLeaderConfidenceModel: false },

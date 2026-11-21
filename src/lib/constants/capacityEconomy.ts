@@ -27,6 +27,7 @@ export {
   PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
   THROTTLE_IDLE_UPKEEP_SHARE,
   CAPACITY_FOUNDING_DISCOUNT,
+  PLANT_BUILD_PRICE_SCALE,
   ATTACK_CAPTURE_EFFICIENCY,
   ATTACK_BUILD_PRICE_PREMIUM,
   MAX_BUILD_UNITS_PER_ORDER,
@@ -53,5 +54,7 @@ export {
   techBuildTurns,
   hostBuildPriceIndex,
   computeBuildCost,
+  foundingBuildMultiplier,
+  resolvePlantBuildPriceScale,
 } from "@/lib/corporations/rules/capacityEconomy";
 export type { BuildCostInputs, BuildCostBreakdown } from "@/lib/corporations/rules/capacityEconomy";

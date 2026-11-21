@@ -222,6 +222,18 @@ export const REGION_ROSTERS: Partial<Record<CountryId, Partial<Record<EraId, Ros
   QC: {
     "2027": () => import("@/lib/countries/qc/data/qcRegions").then((m) => m.qcRegions),
   },
+  AB: {
+    "2027": () => import("@/lib/countries/ab/data/abRegions").then((m) => m.abRegions),
+  },
+  RTX: {
+    "2027": () => import("@/lib/countries/rtx/data/rtxRegions").then((m) => m.rtxRegions),
+  },
+  NEN: {
+    "2027": () => import("@/lib/countries/nen/data/nenRegions").then((m) => m.nenRegions),
+  },
+  RCA: {
+    "2027": () => import("@/lib/countries/rca/data/rcaRegions").then((m) => m.rcaRegions),
+  },
 };
 
 /** The region ids a country seeds for an era, via the same fallback as seeding. */

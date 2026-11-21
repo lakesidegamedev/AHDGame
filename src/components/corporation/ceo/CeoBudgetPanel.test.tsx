@@ -281,3 +281,30 @@ describe("CeoBudgetPanel: group payment disclosure (#1669)", () => {
     expect(document.body.textContent).not.toMatch(/hands strength to/);
   });
 });
+
+describe("CeoBudgetPanel: tax line label", () => {
+  it("labels an ordinary corporation's tax as corporate tax", () => {
+    renderBudget({ financials: { totalRevenue: 1000, federalTax: 80, stateTax: 20 } });
+    expect(screen.getByText("Corporate tax")).toBeTruthy();
+    expect(screen.queryByText(/Owner tax on pass-through profit/)).toBeNull();
+  });
+
+  it("labels a pass-through's charge as the owners' tax, not corporate tax", () => {
+    renderBudget({
+      financials: { totalRevenue: 1000, federalTax: 80, stateTax: 20, passThroughOwnerTax: 100 },
+    });
+    expect(screen.getByText("Owner tax on pass-through profit")).toBeTruthy();
+    expect(screen.queryByText("Corporate tax")).toBeNull();
+    expect(screen.queryByText("Other tax")).toBeNull();
+  });
+
+  it("shows the phase-in and any remaining non-owner tax separately", () => {
+    renderBudget({
+      corporation: { passThroughTaxPhase: 0.5 },
+      financials: { totalRevenue: 1000, federalTax: 80, stateTax: 20, passThroughOwnerTax: 60 },
+    });
+    expect(screen.getByText("Owner tax on pass-through profit (50% phased in)")).toBeTruthy();
+    expect(screen.getByText("Other tax")).toBeTruthy();
+    expect(screen.queryByText("Corporate tax")).toBeNull();
+  });
+});

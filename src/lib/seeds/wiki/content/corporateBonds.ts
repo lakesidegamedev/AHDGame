@@ -1,6 +1,6 @@
 export const corporateBondsContent = `# Corporate Bonds
 
-You want to build a new plant and you do not want to sell shares to pay for it. A **corporate bond** is the alternative: a loan a corporation takes from the public. The company gets the cash now, pays interest (a **coupon**) every turn, and repays the full face value in one lump sum on the maturity date. Players can buy bonds for steady income. If the corporation cannot pay, the bond **defaults** and the company's rating and options suffer.
+You want to build a new plant and you do not want to sell shares to pay for it. A **corporate bond** is the alternative: a loan a corporation takes from the public. The company gets the cash now, pays interest (a **coupon**) every turn, and repays the full face value in one lump sum on the maturity date. Players can buy bonds for coupon income. If the corporation cannot pay, the bond **defaults** and the company's rating and options suffer.
 
 ## Issuing a bond
 
@@ -11,7 +11,7 @@ Only the CEO can issue bonds, from the Credit & Bonds tab (under Finance) of the
 | Parameter | Details |
 | --- | --- |
 | Minimum issuance | ₳100,000 |
-| Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. When that second cap is the binding one, the issue form says so. Refinancing defaulted debt is exempt, since it adds no debt. |
+| Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. When that second cap is the binding one, the issue form says so. Refinancing defaulted debt is exempt from the second cap only, since it adds no debt, and it still has to fit the 2x equity cap. |
 | Maximum per issue | 25% of annual revenue, with a floor of ₳500,000,000 |
 | Unit face value | 1,000 per bond unit, in the bond's currency |
 | Maturity options | 96 turns (2 years), 240 turns (5 years), 336 turns (7 years) |
@@ -97,7 +97,7 @@ Any player or corporation can buy bond units from the public float:
 - **Corporations:** Payment from liquid capital. Coupon payments received as corporate income. Choose your corporation as the buyer to buy from its treasury.
 - **NPP caretaker CEOs:** When the corp is profitable and cash sits above one day of revenue, they spend surplus cash on high-coupon home-currency paper from the public float. They will not buy the corp's own issue, and a loss-making corp keeps the cash as runway.
 
-Buying suits steady income with minimal management, rate speculation (buy long-duration bonds when rates are high and prices are depressed, profit when rates fall), or distressed debt (buy defaulted bonds cheaply from the float and wait for the default to be cured at face value).
+Buying suits coupon income (watch the issuer's rating), rate speculation (buy long-duration bonds when rates are high and prices are depressed, profit when rates fall), or distressed debt (buy defaulted bonds cheaply from the float and wait for the default to be cured at face value).
 
 CEOs can also **buy back** their own bonds from the public float to reduce outstanding debt:
 - Non-defaulted bonds: buyback at the bond market's current **asking price**

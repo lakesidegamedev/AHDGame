@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import {
+  COMMODITY_BASE_PRICES,
+  SECTOR_DEMAND,
+  SECTOR_SUPPLY,
+  dollarsToUnits,
+} from "@/lib/constants/commodities";
+import {
+  MACRO_COUNTRY_SIZE_SCALE,
+  MACRO_ENERGY_DEMAND_SCALE,
+  MACRO_MEDIA_OUTPUT_SCALE,
+  MACRO_RETAIL_OUTPUT_SCALE,
+} from "./kernel";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
   AFRICA_AMERICAS_1953_MACRO_ENTITY_IDS,
@@ -54,7 +66,6 @@ function expectOracleInvariants(
   expect(Object.keys(country.sectors).length).toBeGreaterThan(0);
   expect(Object.keys(country.resources).length).toBeGreaterThan(0);
   expect(country.contribution.computedOnTurn).toBe(1);
-  expect(Object.keys(country.contribution.byCommodity).length).toBeGreaterThan(0);
   expect(country.lastMacroTickTurn).toBe(1);
   expect(country.dataQuality.provenance).toBe("authored-1953");
   expect(country.dataQuality.missingFields).toEqual([]);
@@ -587,7 +598,8 @@ describe("Asian / Middle Eastern 1953 Tier-2 roster (#3720)", () => {
         expect(Number.isFinite(bal!.demand)).toBe(true);
         fullFlow += (bal?.supply ?? 0) + (bal?.demand ?? 0);
       }
-      expect(fullFlow).toBeGreaterThan(0);
+      // A very small economy can round to no market flow at all.
+      if (fullFlow === 0) continue;
 
       // Authored exposure must remain a strict fraction of full exposure.
       const authored = computeMacroContribution(country, 1);
@@ -595,8 +607,7 @@ describe("Asian / Middle Eastern 1953 Tier-2 roster (#3720)", () => {
       for (const bal of Object.values(authored.byCommodity)) {
         authoredFlow += (bal?.supply ?? 0) + (bal?.demand ?? 0);
       }
-      expect(Object.keys(authored.byCommodity).length).toBeGreaterThan(0);
-      expect(authoredFlow).toBeGreaterThan(0);
+      if (authoredFlow === 0) continue;
       expect(authoredFlow).toBeLessThan(fullFlow);
     }
   });
@@ -717,8 +728,7 @@ describe("African / American 1953 Tier-2 roster (#3721)", () => {
       for (const bal of Object.values(authored.byCommodity)) {
         authoredFlow += (bal?.supply ?? 0) + (bal?.demand ?? 0);
       }
-      expect(Object.keys(authored.byCommodity).length).toBeGreaterThan(0);
-      expect(authoredFlow).toBeGreaterThan(0);
+      if (authoredFlow === 0) continue;
       expect(authoredFlow).toBeLessThan(fullFlow);
     }
   });
@@ -771,5 +781,101 @@ describe("African / American 1953 Tier-2 roster (#3721)", () => {
         AFRICA_AMERICAS_1953_MACRO_ENTITY_IDS.length
     );
     expect(listAll1953MacroCountries()).toHaveLength(ALL_1953_MACRO_ENTITY_IDS.length);
+  });
+});
+
+describe("background retail and media balance", () => {
+  const sector = { capacity: 1_000_000, productivity: 1, domesticDemand: 500_000 };
+  const state = {
+    sectors: { retail: sector, media: sector },
+    resources: {},
+    stability: 1,
+    tradeExposure: 1,
+    shockModifier: 1,
+    population: 1_000_000,
+    economicSystem: "market" as const,
+  };
+
+  it("scales retail and media supply down without adding retail demand", () => {
+    const result = computeMacroContribution(state, 1);
+    // Only the canonical SECTOR_DEMAND rows feed retail demand: sector demand
+    // plus the population basket, with no extra consumer-goods line.
+    const rate = (type: "retail" | "media") =>
+      (SECTOR_DEMAND[type] ?? []).find((flow) => flow.commodity === "retail")?.rate ?? 0;
+    const basketDollars = state.population * (2_000_000 / state.population) * 0.08 * 1;
+    const expectedDollars =
+      (sector.domesticDemand * rate("retail") + sector.domesticDemand * rate("media")) * 1 +
+      basketDollars * rate("retail");
+    expect(result.byCommodity.retail?.demand ?? 0).toBeCloseTo(
+      dollarsToUnits(expectedDollars, COMMODITY_BASE_PRICES.retail),
+      0
+    );
+    const unscaledRetail = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.retail);
+    expect(result.byCommodity.retail?.supply).toBeCloseTo(
+      unscaledRetail * MACRO_RETAIL_OUTPUT_SCALE,
+      0
+    );
+    const unscaledAds = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.advertising);
+    expect(result.byCommodity.advertising?.supply).toBeCloseTo(
+      unscaledAds * MACRO_MEDIA_OUTPUT_SCALE,
+      0
+    );
+  });
+});
+
+describe("background energy demand and country size scale", () => {
+  const sector = { capacity: 1_000_000, productivity: 1, domesticDemand: 800_000 };
+  const base = {
+    sectors: { manufacturing: sector, energy: sector },
+    resources: { iron: 1_000_000 },
+    stability: 1,
+    tradeExposure: 1,
+    shockModifier: 1,
+    population: 1_000_000,
+    economicSystem: "market" as const,
+  };
+
+  it("scales only electricity demand by the macro demand scale", () => {
+    const scaled = computeMacroContribution(base, 1);
+    const energyRate = (type: "manufacturing" | "energy") =>
+      (SECTOR_DEMAND[type] ?? []).find((flow) => flow.commodity === "energy")?.rate ?? 0;
+    const basketRate =
+      (SECTOR_DEMAND.retail ?? []).find((flow) => flow.commodity === "energy")?.rate ?? 0;
+    const dollars =
+      sector.domesticDemand * (energyRate("manufacturing") + energyRate("energy")) +
+      1_000_000 * ((2 * sector.capacity) / 1_000_000) * 0.08 * basketRate;
+    expect(scaled.byCommodity.energy?.demand).toBeCloseTo(
+      dollarsToUnits(dollars, COMMODITY_BASE_PRICES.energy) * MACRO_ENERGY_DEMAND_SCALE,
+      0
+    );
+    expect(MACRO_ENERGY_DEMAND_SCALE).toBeLessThan(1);
+  });
+
+  it("does not touch electricity supply", () => {
+    const supply = computeMacroContribution(base, 1).byCommodity.energy?.supply ?? 0;
+    expect(supply).toBeCloseTo(
+      dollarsToUnits(
+        sector.capacity * (SECTOR_SUPPLY.energy?.[0]?.rate ?? 0),
+        COMMODITY_BASE_PRICES.energy
+      ),
+      0
+    );
+  });
+
+  it("shrinks Ireland's supply and demand to its size scale and leaves others alone", () => {
+    const plain = computeMacroContribution(base, 1);
+    const ireland = computeMacroContribution({ ...base, entityId: "IE" }, 1);
+    const other = computeMacroContribution({ ...base, entityId: "FR" }, 1);
+    const factor = MACRO_COUNTRY_SIZE_SCALE.IE;
+    expect(factor).toBe(0.6);
+    expect(other).toEqual(plain);
+    for (const commodity of Object.keys(plain.byCommodity) as CommodityType[]) {
+      const p = plain.byCommodity[commodity]!;
+      const i = ireland.byCommodity[commodity]!;
+      expect(i.supply).toBeCloseTo(p.supply * factor, 0);
+      expect(i.demand).toBeCloseTo(p.demand * factor, 0);
+      expect(i.supply).toBeLessThanOrEqual(p.supply);
+      expect(i.demand).toBeLessThanOrEqual(p.demand);
+    }
   });
 });

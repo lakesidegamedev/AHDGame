@@ -1,6 +1,6 @@
 export const defenceProcurementContent = `# Defence Procurement
 
-A defence contract is the one place in the game where a minister can steer public money into a company they own, and the rules here exist to make that costly. Recruiting units and paying for equipment are two different systems. This page is about the second one: how the defence appropriation turns into materiel, who suppliers can be, and the guardrails. See [Units, Recruitment & Procurement](/wiki/military-units) for unit costs and upkeep; the appropriation and the arsenal are shared with unit purchase and upkeep, and delivered lots stock the arsenal that equips new units and refits old ones.
+A defence contract is one place in the game where a minister can steer public money into a company they own, and the rules here exist to make that costly. Recruiting units and paying for equipment are two different systems. This page is about the second one: how the defence appropriation turns into materiel, who suppliers can be, and the guardrails. See [Units, Recruitment & Procurement](/wiki/military-units) for unit costs and upkeep; the appropriation and the arsenal are shared with unit purchase and upkeep, and delivered lots stock the arsenal that equips new units and refits old ones.
 
 ## From tender to arsenal
 
@@ -13,7 +13,7 @@ The defence seat publishes a tender for equipment. Eligible domestic corporation
 | What | Value |
 | --- | --- |
 | Contracting window | 12 turns (a quarter of a game year) |
-| New obligations per window | About 45% of the annual defence line, prorated to the window |
+| New obligations per window | About 11.25% of the annual defence line (the 45% procurement share, one quarter per window) |
 | Share one private supplier may take | One third of the window |
 | Share a state-owned supplier may take | The whole window |
 | Payout per turn | At most 3 times the steady procurement income |
@@ -41,7 +41,7 @@ Publishing reserves the maximum obligation. Award transfers the actual winning v
 
 The country board has **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs, type filters and ten results per page. An interrupted award remains in Bidding Closed so the government can resume it.
 
-A country under a **demilitarisation** settlement (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)) may publish no new tenders and award no new contracts, and no company may bid on its tenders, until the bar lapses. Live contracts keep delivering.
+A country under a **demilitarisation** settlement (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)) may award no new defence contracts, until the bar lapses after the number of turns set in the term (240 by default, at most 480). Live contracts keep delivering.
 
 ## Planned economies
 
@@ -51,9 +51,9 @@ The Soviet Union and East Germany receive **state arms industry** output indepen
 
 Contracts are budgeted in quarterly tranches, not against an open-ended future stream. Each country gets a new contracting window every 12 turns (one quarter of a game year). Inside one window:
 
-- The country's total new obligations are capped at roughly 45% of its annual defence line, scaled to the window (the other 55% is assumed to be sustaining the seeded force, not buying more of it).
+- The country's total new obligations are capped at roughly 11.25% of its annual defence line (the 45% procurement share, scaled to one quarter) (the other 55% is assumed to be sustaining the seeded force, not buying more of it).
 - **No private supplier may take more than one third of that window's tranche.** This is the concentration cap: it stops a minister emptying the entire quarter's procurement budget into a single corporation.
-- **State-owned industry is exempt from the one-third cap.** In a command economy the buying country typically seeds one National Corporation per sector, so applying the private-supplier cap there would leave two thirds of the window unspendable with no other plant able to use it. A National Corporation has no player CEO who personally profits from the award, which is the reason the cap exists in the first place.
+- **State-owned industry is exempt from the one-third cap.** In a command economy the buying country typically seeds one National Corporation per sector, so applying the private-supplier cap there would leave two thirds of the window unspendable with no other plant able to use it. A National Corporation is state-owned, so no private owner profits from the award, which is the reason the cap exists in the first place.
 
 When the window rolls over, unspent capacity does not carry forward and a fresh tranche opens.
 
@@ -104,7 +104,7 @@ To stop that, deliveries are also throttled per turn:
 
 - Each turn, a country can pay suppliers at most three times its normal per-turn procurement income (its annual defence line's procurement share, divided evenly across the year).
 - Within that, one private supplier can be paid at most its capped share of the country total (the same one-third share used for awards); state-owned industry can take the full country cap.
-- There is always a one-lot floor: if a country has paid nothing yet this turn, at least one lot goes through even if its price exceeds the strict cap, so a small country's contract is never permanently stuck.
+- There is a one-lot floor: if a country has paid nothing yet this turn, at least one lot goes through even if its price exceeds the strict cap, so a small country's contract is never permanently stuck.
 
 Because the per-turn cap is three times the steady rate and a window is twelve turns, the cap can never reduce what a legitimate buyer spends across a full window; it only prevents a whole quarter's budget landing in one or two turns.
 
@@ -128,5 +128,5 @@ Because the per-turn cap is three times the steady rate and a window is twelve t
 
 See also: [Conflicts & the Military System](/wiki/conflicts-overview).
 
-Runs in every world where the buying country has a defence seat and a usable budget and GDP. Contracts are domestic only, with the buyer and supplier in the same country and currency, and the Soviet Union and East Germany also receive passive state arms output. Last checked 2026-10-29, version 1.18.0. Exact rules: [Defence Procurement](https://docs.lakesidegames.net/design/defence-procurement.html)
+Runs in worlds with government contracts on and procurement not paused, where the buying country has a defence seat and a usable budget and GDP and is not barred by a peace settlement. Contracts are domestic only, with the buyer and supplier in the same country and currency, and the Soviet Union and East Germany also receive passive state arms output. Last checked 2026-10-29, version 1.18.0. Exact rules: [Defence Procurement](https://docs.lakesidegames.net/design/defence-procurement.html)
 `;

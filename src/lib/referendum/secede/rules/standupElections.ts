@@ -11,12 +11,20 @@ import {
 } from "@/lib/elections/scheduling/shared";
 import type { SecedingCountryId } from "../subRegions";
 import { QC_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/qc/data/qcRegions";
+import { AB_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/ab/data/abRegions";
+import { RTX_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/rtx/data/rtxRegions";
+import { NEN_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/nen/data/nenRegions";
+import { RCA_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/rca/data/rcaRegions";
 
 /** Regional-council seats per successor sub-region, sized at standup. */
 const SUCCESSOR_COUNCIL_SEATS: Record<SecedingCountryId, Record<string, number>> = {
   SCO: SCO_REGIONAL_COUNCIL_SEATS,
   WAL: WAL_REGIONAL_COUNCIL_SEATS,
   QC: QC_REGIONAL_COUNCIL_SEATS,
+  AB: AB_REGIONAL_COUNCIL_SEATS,
+  RTX: RTX_REGIONAL_COUNCIL_SEATS,
+  NEN: NEN_REGIONAL_COUNCIL_SEATS,
+  RCA: RCA_REGIONAL_COUNCIL_SEATS,
 };
 
 export function buildStandupElections(input: {

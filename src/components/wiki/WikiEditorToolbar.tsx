@@ -41,6 +41,34 @@ const FORMAT_BUTTONS = [
     after: "]]",
     placeholder: "Page Title",
   },
+  {
+    label: "Infobox (politician, party or corporation)",
+    icon: "Info",
+    before: "{{infobox:politician|Name=",
+    after: "|Party=|Office=}}\n",
+    placeholder: "Name",
+  },
+  {
+    label: "Election result box (election id)",
+    icon: "Vote",
+    before: "{{election:",
+    after: "}}\n",
+    placeholder: "election id",
+  },
+  {
+    label: "Party seat chart (country-number, like us-1)",
+    icon: "Seats",
+    before: "{{party-seats:",
+    after: "}}\n",
+    placeholder: "us-1",
+  },
+  {
+    label: "Corporation stock chart (corporation number)",
+    icon: "Stock",
+    before: "{{stock:",
+    after: "}}\n",
+    placeholder: "1",
+  },
 ] as const;
 
 export function WikiEditorToolbar({ onInsert, onInsertImage }: WikiEditorToolbarProps) {

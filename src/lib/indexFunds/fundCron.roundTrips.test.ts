@@ -89,9 +89,7 @@ function world(fundCount: number, corpCount = 120) {
       updatedAt: NOW,
     },
   ]);
-  memory.seed("gameConfig", [
-    { _id: "default", indexFundsMode: "full", ledgerShadow: true, auditLog: true },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true, auditLog: true }]);
   memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   memory.seed("gameState", [{ _id: "current", currentTurn: 47 }]);
   vi.mocked(getDb).mockResolvedValue(db);

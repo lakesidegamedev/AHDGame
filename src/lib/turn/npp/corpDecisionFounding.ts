@@ -248,6 +248,7 @@ export function decideNppFounding({
             startTurn: ctx.turn,
             onlineTurn: ctx.turn + buildTurns,
             smooth: true,
+            deliveryBaseFraction: 0,
             ...(plants?.wholePlants ? { plantUnits: starterUnits } : {}),
           },
         });

@@ -39,7 +39,6 @@ async function main() {
   assert.equal(dirty, "", "Fixture requires a clean source tree");
   await db.collection("gameConfig").insertOne({
     _id: "default",
-    indexFundsMode: "full",
     nppEconomyEnabled: false,
     indexFundsDomesticSovereignCoverageEnabled: false,
     auditLog: true,

@@ -54,7 +54,7 @@ import type { ClimateFeedbackState } from "@/lib/crises/climateTurn";
 import {
   loadTransitionPolicies,
   summarisePowerFleet,
-  renewablesReliabilityEntry,
+  renewablesReliabilityEntries,
 } from "@/lib/energyTransition/policies";
 import {
   climateExposureFromTags,
@@ -417,7 +417,7 @@ export async function buildExtractionAndPortfolioLookups({
     for (const [stateId, penalty] of fleet.renewablesPenaltyByState)
       activeDisasterEffectsByState.set(stateId, [
         ...(activeDisasterEffectsByState.get(stateId) ?? []),
-        renewablesReliabilityEntry(penalty),
+        ...renewablesReliabilityEntries(penalty),
       ]);
     const pressure = climate?.pressure ?? climateProfile.startingPressure;
     for (const s of states) {

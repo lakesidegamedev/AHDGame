@@ -11,7 +11,7 @@ import { settleBankFundSubscriptions } from "./subscriptions";
  *   Step 6: NPP fund investing, throttled by NPP_FUND_INVESTMENT_INTERVAL.
  *   Step 7: sponsored expense fees and wind-down.
  *
- * Gated behind `indexFundsMode`; a silent no-op when disabled. The HTTP
+ * The HTTP
  * route `/api/cron/index-fund` is a manual/debug entry point and is not
  * registered in `src/lib/cron.ts`.
  */
@@ -36,10 +36,9 @@ import {
   queuedRedemptionClaimShare,
 } from "./rules/queuedRedemptionRotation";
 import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
-import { substepMarker } from "@/lib/observability/phaseSubsteps";
+import { recordPhaseSubstep, substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { Db } from "mongodb";
-import type { GameConfig, IndexFund, IndexFundTransaction } from "@/lib/db/types";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
+import type { IndexFund, IndexFundTransaction } from "@/lib/db/types";
 import {
   listFundsByIds,
   listActiveFunds,
@@ -111,8 +110,6 @@ import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
 import { workerConfig } from "@/lib/config/worker";
-import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
-import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
@@ -191,7 +188,7 @@ async function publishReadyFundNavs(db: Db, prepared: NavPreparation[]): Promise
  * on the financial-day cadence; Pass 3 two-sided rebalances (including float
  * buys); Pass 3b cross-fund market; Pass 3c redemptions and snapshot;
  * Step 6 NPP investing (throttled by NPP_FUND_INVESTMENT_INTERVAL); Step 7
- * sponsored fees and wind-down. Gated behind indexFundsMode.
+ * sponsored fees and wind-down.
  */
 export interface IndexFundCronOptions {
   currentTurn?: number;
@@ -237,30 +234,6 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     errors: [],
   };
   const currentTurn = options?.currentTurn ?? 0;
-
-  if (
-    !(await isIndexFundsEnabled()) &&
-    !(await indexFundsCollection<Document>(db).countDocuments({
-      "mandate.mode": "picked_stocks",
-      status: { $ne: "delisted" },
-    }))
-  ) {
-    try {
-      await refreshEquityLiquidityFacility({
-        db,
-        turn: currentTurn,
-        enabled: false,
-        funds: [],
-        listings: [],
-        totalListings: 0,
-      });
-    } catch (err) {
-      result.errors.push(
-        `Equity liquidity cleanup: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    return result;
-  }
 
   try {
     await recoverAllFundFloatSettlements(db);
@@ -793,6 +766,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   }
 
   mark("pass3b-crossFund");
+  const redemptionStartedAt = performance.now();
   // Pass 3c: pay redemptions and snapshot after cross-fund market settles.
   funds = await listFundsByIds(db, redemptionServiceFundIds);
   // Snapshots are upserts keyed by (fund, turn); one bulk write replaces one per fund.
@@ -849,6 +823,11 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       claimsLeft -= allotted - share.claimsLeft;
     }
   }
+  const snapshotsStartedAt = performance.now();
+  recordPhaseSubstep(
+    "pass3c-redemptions+snapshot.redemptions",
+    snapshotsStartedAt - redemptionStartedAt
+  );
   const settledRedemptionFunds =
     currentTurn > 0
       ? new Map(
@@ -902,6 +881,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     result.errors.push(`Fund snapshots: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  recordPhaseSubstep(
+    "pass3c-redemptions+snapshot.snapshots",
+    performance.now() - snapshotsStartedAt
+  );
   mark("pass3c-redemptions+snapshot");
   // Step 6: NPP fund investments (GDP-proportional budget allocation).
   // Throttled to every NPP_FUND_INVESTMENT_INTERVAL turns - the biggest
@@ -1027,5 +1010,3 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   return result;
 }
-
-export { INDEX_FUNDS_DISABLED_MESSAGE };

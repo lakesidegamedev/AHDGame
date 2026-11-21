@@ -45,20 +45,23 @@ export interface SectorBuildOrder {
    */
   accelerated?: boolean;
   /**
-   * When true, the order delivers capacity LINEARLY across
-   * `[startTurn, onlineTurn]`, a slice per turn, instead of the whole
-   * `unitsOrdered` landing at once on `onlineTurn`. Absent on legacy orders and
-   * on the flip-compensation credit, which keep all-at-once landing. See
-   * `src/lib/corporations/buildDelivery.ts`.
+   * Marks orders placed under the per-turn delivery model. Every order with a
+   * positive window delivers linearly across `[startTurn, onlineTurn]` whether
+   * or not this is set. See `src/lib/corporations/buildDelivery.ts`.
    */
   smooth?: boolean;
   /**
-   * Whole plants: units in one plant of this order's sector, stamped when the
-   * order was placed or recounted under `gameConfig.wholePlantsStage`. A smooth
-   * order with this set delivers whole plants, never a part-plant slice.
-   * Absent = today's linear slices.
+   * Units in one plant of this order's sector, stamped at placement. Orders
+   * are placed in whole plants; delivery is still a per-turn slice, so this
+   * does not shape the delivery curve.
    */
   plantUnits?: number;
+  /**
+   * Share of the order already delivered when `startTurn` was last re-anchored.
+   * Set once for orders that were mid-build when delivery became linear, so the
+   * rest ramps in from there without repaying what already landed. Absent = 0.
+   */
+  deliveryBaseFraction?: number;
   /** Paid, secured construction loan. Absent on ordinary cash-funded orders. */
   constructionLoanId?: string;
   constructionClaimId?: string;
@@ -93,6 +96,10 @@ export interface NationalizationTaking {
 }
 
 export interface CorporateSector {
+  /** Identity for a separately acquired or built site in an occupied market. */
+  nationalizationSiteKey?: string;
+  /** Physical ownership receipt for replay safety. */
+  ownershipTransferKey?: string;
   /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
   /**
@@ -277,7 +284,7 @@ export interface CorporateSector {
    */
   labourStaffingFactor?: number;
   /**
-   * Labour system (labourSystemMode ≥ "wages"): wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
+   * Labour system: wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
    */
   wageLevel?: number;
   /**
@@ -301,7 +308,7 @@ export interface CorporateSector {
   dominanceMarginPenaltyPp?: number;
   /**
    * Labour system telemetry: most recent per-turn labor cost written when
-   * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).
+   * (home currency, daily basis like `revenue`).
    * Display/analytics only, not read back into the economy. Absent when the
    * labour system is off.
    */
@@ -313,7 +320,7 @@ export interface CorporateSector {
    */
   wagePerWorker?: number;
   /**
-   * v3 Phase 5/6 (labourSystemMode ≥ "unions"): per-sector NPC unionization
+   * v3 Phase 5/6: per-sector NPC unionization
    * pressure, 0, 100. Drifts toward a condition-driven target each turn (see
    * `src/lib/labour/unionization.ts`). Feeds a standing labor-cost surcharge
    * (`unionPremium()`) and the strike trigger threshold (`src/lib/labour/strikes.ts`).
@@ -338,7 +345,7 @@ export interface CorporateSector {
    */
   representingUnionId?: ObjectId | null;
   /**
-   * v3 Phase 6 (labourSystemMode ≥ "unions"): a slow-moving index of what
+   * v3 Phase 6: a slow-moving index of what
    * workers expect to be paid in real terms, trended toward the sector's
    * current real-wage index (`realWageIndex()` in unionization.ts) at most
    * `WORKER_EXPECTATION_TREND_STEP` per turn. The strike trigger fires when
@@ -362,7 +369,7 @@ export interface CorporateSector {
    */
   strikeCooldownUntilTurn?: number | null;
   /**
-   * v3 Phase 7 (labourSystemMode ≥ "full"): turn after which this sector's
+   * v3 Phase 7: turn after which this sector's
    * CEO may attempt another union-busting action, or null when not in
    * cooldown. Set on every busting attempt (success or backfire), see
    * `src/lib/labour/unionBusting.ts`.

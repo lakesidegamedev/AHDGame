@@ -20,7 +20,7 @@ Pending nominations appear on the executive dashboard for the President, and ope
 
 - All Cabinet seats, except the White House Chief of Staff, whom the President appoints alone with no Senate vote.
 - Supreme Court justices, who use the same NPP party-line behavior (see [Supreme Court](/wiki/scotus)).
-- Federal Reserve chair and governors, voted on from the FOMC committee page (see [FOMC / Rate-Setting Board](/wiki/fomc) and [central-banks](/wiki/central-banks)). The Senate confirms anyone the President puts on the FOMC board; a vacant Fed chair seat can also be filled by the chair draw on Central Banks.
+- Federal Reserve chair and governors, nominated from the FOMC committee page and confirmed by the Senate (see [FOMC / Rate-Setting Board](/wiki/fomc) and [central-banks](/wiki/central-banks)). The Senate confirms anyone the President puts on the FOMC board; a vacant Fed chair seat can also be filled by the chair draw on Central Banks.
 - A Vice President nomination to fill a vacancy needs both the Senate and the House: each chamber must pass it with a strict majority.
 
 Nigeria's President nominates the same way and its Senate confirms on the same rules. Parliamentary countries (UK, Japan, Germany) have no Senate confirmation. The Prime Minister or Chancellor appoints cabinet members directly. See [Government Formation](/wiki/government-formation).
@@ -34,20 +34,21 @@ Nigeria's President nominates the same way and its Senate confirms on the same r
 | Pending nominations per seat | 1 |
 | NPP senator, same party as the nominee | Always Confirm |
 | NPP senator from the President's party (otherwise) | 70% Confirm, 30% Abstain |
-| Any other NPP senator, including the opposition party and independents | 55% Confirm, 45% Reject |
+| NPP senator from the other major party than the nominee | Always Reject |
+| Any other NPP senator, such as independents | 55% Confirm, 45% Reject |
 | NPP with no party | Abstain |
 
 Seat counts weigh the vote: an NPP bloc holding several seats casts its full seat count.
 
-NPP senators ignore favorability, loyalty and policy alignment on confirmations. Only party and chance matter. There is no automatic opposition vote: an opposition NPP bloc rolls 55% Confirm like any other, so a nominee usually picks up some opposition seats. A blocking majority has to come from player senators and whips, which is why the party that controls the Senate (see [Congress Leadership](/wiki/congress-leadership)) still matters.
+NPP senators ignore favorability, loyalty and policy alignment on confirmations. Only party and chance matter. NPP senators from the other major party than the nominee always vote Reject, and only independents and minor parties roll 55% Confirm. Player senators and whips can still swing a close vote, which is why the party that controls the Senate (see [Congress Leadership](/wiki/congress-leadership)) still matters.
 
 ### Counting a close one
 
-A 100 seat Senate: 52 Republican seats, 46 Democratic, 2 independent. A Republican President nominates a Republican. Republican NPP seats always Confirm. Democratic and independent NPP seats each roll 55% Confirm, so only Democratic player senators reliably vote Reject. If every Republican seat votes Confirm and every Democratic seat votes Reject, the vote is 52 to 46 with the 2 independents split at random. The nominee passes. If one Republican player senator crosses over, it is 51 to 47 and still passes. If three do, it is 49 to 49 plus independents, and a pure tie fails, so the last two seats decide it.
+A 100 seat Senate: 52 Democratic seats, 46 Republican, 2 independent. A Democratic President nominates a Democrat. Democratic NPP seats always Confirm. Republican NPP seats always Reject and independent NPP seats each roll 55% Confirm, so the nominee needs player senators and independents to hold. If every Democratic seat votes Confirm and every Republican seat votes Reject, the vote is 52 to 46 with the 2 independents split at random. The nominee passes. If one Democratic player senator crosses over, it is 51 to 47 and still passes. If three do, it is 49 to 49 plus independents, and a pure tie fails, so the last two seats decide it.
 
 ## Playing the vote
 
-- **As President:** nominate, withdraw a nomination before the vote closes (this returns the seat to vacant without a formal rejection), or bridge a vacancy with a 24-turn acting appointment. A nominee the Senate has rejected cannot be installed as acting for the same seat.
+- **As President:** nominate, withdraw a nomination before the vote closes (this returns the seat to vacant without a formal rejection), or bridge a vacancy with a 24-turn acting appointment. If the Senate rejects a nomination, the President cannot appoint that nominee as acting for the same seat during the current presidency. A central bank office conflict or an unanswered seat offer does not count as a Senate rejection.
 - **As a senator:** vote Confirm, Reject or Abstain. If you are your party's chair, vice chair or a chamber leader, you can whip the party's NPP bloc or its player senators while the vote is open, the same way you do on a bill (see [Voting & Whips](/wiki/voting-and-whips)).
 - **As a nominee:** the party label matters most to NPPs. Win goodwill from player senators, who decide for themselves.
 

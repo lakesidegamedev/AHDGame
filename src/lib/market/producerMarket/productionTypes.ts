@@ -1,3 +1,4 @@
+import type { ElectricityNetwork, GridMarketSummary } from "@/lib/electricityNetwork/rules/types";
 /** Plain-data requests, receipts and injected execution controls for producer planning. */
 import type {
   MarketAccount,
@@ -19,6 +20,7 @@ import type { ImportTariffTable } from "./tariffRules";
 import type { ProducerCashChange } from "./cashChangesRules";
 
 export type ProducerEconomyInput = {
+  electricityNetwork?: ElectricityNetwork;
   turn: number;
   accounts: readonly MarketAccount[];
   payables?: readonly ProducerPayable[];
@@ -101,6 +103,8 @@ export type ProducerEconomyInput = {
     pressureByLane: Readonly<Record<string, number>>;
     maxStep?: number;
     maxMultiplier?: number;
+    /** Raise advertising asks from clearing even when the seller last asked more. */
+    advertisingFromClearing?: boolean;
   };
   /** Automatic ask tie-break (quoteProducer buyerTieBreak), producerAskBuyerTieStage >= 1. */
   askBuyerTieBreak?: boolean;
@@ -132,6 +136,7 @@ export type ProducerEconomyResult = {
   /** Optional for receipts written before convergence diagnostics existed. */
   planning?: ProducerPlanningDiagnostics;
   tradeReceipt: ProducerTradeReceipt;
+  electricity?: GridMarketSummary;
   prices: ReturnType<typeof settleProducerMarket>["prices"];
   /** Units each buyer order asked for and received, for demand telemetry. */
   orderOutcomes: Array<{

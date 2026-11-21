@@ -27,7 +27,7 @@ export type SimActorMode = "pure-npp" | "synthetic";
 export type ActorGateStatus = "covered" | "partial" | "unreachable";
 
 /** Registry version stamped into every manifest; bump on entry changes. */
-export const ACTOR_COVERAGE_REGISTRY_VERSION = 3;
+export const ACTOR_COVERAGE_REGISTRY_VERSION = 4;
 
 /** Exact explicit result for the presidential-nomination gate in pure NPP mode. */
 export const UNCOVERED_PRESIDENTIAL_NOMINATION = "uncovered: presidential nomination";
@@ -267,7 +267,9 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     id: "household-wealth",
     label: "Household and wealth-list aggregation",
     requires: "a character population to aggregate into households and rankings",
-    seams: [seam("src/app/api/stock-exchange/wealth-list/route.ts", "computeCharacterWealth")],
+    seams: [
+      seam("src/lib/api/commands/stock-exchange/wealth-list/handlers.ts", "computeCharacterWealth"),
+    ],
     pureNpp: {
       status: "unreachable",
       reason:

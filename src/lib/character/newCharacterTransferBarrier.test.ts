@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   getNewCharacterTransferBarrier,
-  getNewCorporationFoundingBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "./newCharacterTransferBarrier";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
@@ -66,20 +65,5 @@ describe("getNewCharacterTransferBarrier — neither field", () => {
 
   it("exposes the 48-turn constant", () => {
     expect(NEW_CHARACTER_TRANSFER_BARRIER_TURNS).toBe(48);
-  });
-});
-
-describe("corporation founding grace period", () => {
-  it("waives only creation while the world founding period is active", () => {
-    expect(getNewCorporationFoundingBarrier({ createdTurn: 100 }, 100, now, true).blocked).toBe(
-      false
-    );
-    expect(
-      getNewCorporationFoundingBarrier({ createdTurn: 100 }, 147, now, false).remainingTurns
-    ).toBe(1);
-    expect(getNewCorporationFoundingBarrier({ createdTurn: 100 }, 148, now, false).blocked).toBe(
-      false
-    );
-    expect(getNewCharacterTransferBarrier({ createdTurn: 100 }, 100, now).blocked).toBe(true);
   });
 });

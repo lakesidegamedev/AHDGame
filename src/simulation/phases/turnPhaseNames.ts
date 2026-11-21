@@ -104,6 +104,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "stateOwnershipConcentration",
   "subsidyBudget",
   "regionalBudgetProcessing",
+  "regionalDebtService",
   "jpRegionalBudgetProcessing",
   "deRegionalBudgetProcessing",
   "crisisTurn",

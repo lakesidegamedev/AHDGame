@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { caStateMetrics } from "@/lib/countries/ca/data/caStateMetrics";
+import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countriesTables";
 import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import {
   SOVEREIGNTY_REGIONS,
@@ -10,7 +12,11 @@ import {
   sovereigntyRegion,
   sovereigntyRegionIds,
   sovereigntyRegionIn,
+  usesSovereigntyWording,
   independenceCopy,
+  entryRegionIds,
+  sovereigntyMemberRegionIds,
+  sovereigntyReferendumKey,
 } from "./sovereigntyRegions";
 
 describe("sovereignty registry", () => {
@@ -36,14 +42,35 @@ describe("sovereignty registry", () => {
     expect(sovereigntyRegionIn("US", "SCO")).toBeNull();
     expect(sovereigntyRegionIn("UK", "CA_QC")).toBeNull();
     expect(isSovereigntyRegion("LON")).toBe(false);
-    expect(hostsSovereigntyReferendums("US")).toBe(false);
+    expect(hostsSovereigntyReferendums("DE")).toBe(false);
     expect(hostsSovereigntyReferendums(undefined)).toBe(false);
   });
 
   it("lists each country once and each region once", () => {
-    expect(sovereigntyCountryIds()).toEqual(["UK", "CA"]);
+    expect(sovereigntyCountryIds()).toEqual(["UK", "CA", "US"]);
     const ids = SOVEREIGNTY_REGIONS.map((entry) => entry.regionId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("gives every successor country an id no state or other country uses", () => {
+    const stateIds = new Set(
+      Object.values(STATE_ADJACENCY).flatMap((map) => [
+        ...Object.keys(map),
+        ...Object.values(map).flat(),
+      ])
+    );
+    const all = SOVEREIGNTY_REGIONS.flatMap((entry) =>
+      entry.successorCountryId ? [entry.successorCountryId] : []
+    );
+    expect(new Set(all).size).toBe(all.length);
+    // Scotland and Wales predate the rule: their country ids are also their region ids.
+    const successors = SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId !== "UK").flatMap(
+      (entry) => (entry.successorCountryId ? [entry.successorCountryId] : [])
+    );
+    for (const id of successors) {
+      expect(Object.keys(COUNTRY_CONFIGS)).toContain(id);
+      expect(stateIds.has(id)).toBe(false);
+    }
   });
 
   it("names Canadian regions that the 2027 seed creates", () => {
@@ -51,12 +78,24 @@ describe("sovereignty registry", () => {
     for (const regionId of sovereigntyRegionIds("CA")) expect(seeded.has(regionId)).toBe(true);
   });
 
-  it("seeds Quebec's opening sovereignty mood and no other province's", () => {
+  it("registers Alberta as a Canadian region that can become the AB successor", () => {
+    expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
+      kind: "independence",
+      successorCountryId: "AB",
+      executiveTitle: "Premier",
+      nationalGovernmentName: "Ottawa",
+      actuates: true,
+    });
+  });
+
+  it("seeds Quebec's and Alberta's opening sovereignty mood and no other province's", () => {
     const desire = new Map(
       caStateMetrics.map((m) => [m._id, m.governance?.independenceDesire?.value])
     );
     expect(desire.get("CA_QC")).toBe(35);
-    for (const [regionId, value] of desire) if (regionId !== "CA_QC") expect(value).toBeUndefined();
+    expect(desire.get("CA_AB")).toBe(24);
+    for (const [regionId, value] of desire)
+      if (regionId !== "CA_QC" && regionId !== "CA_AB") expect(value).toBeUndefined();
   });
 });
 
@@ -65,17 +104,20 @@ describe("getSovereigntyGovernmentNames", () => {
     expect(getSovereigntyGovernmentNames("CA_QC")).toEqual({
       regional: "Premier",
       national: "Ottawa",
+      decisionMaker: "Prime Minister",
     });
     expect(getSovereigntyGovernmentNames("sco")).toEqual({
       regional: "First Minister",
       national: "Westminster",
+      decisionMaker: "Prime Minister",
     });
   });
 
   it("falls back to the Westminster names outside the table", () => {
-    expect(getSovereigntyGovernmentNames("TX")).toEqual({
+    expect(getSovereigntyGovernmentNames("LON")).toEqual({
       regional: "First Minister",
       national: "Westminster",
+      decisionMaker: "Prime Minister",
     });
   });
 
@@ -86,12 +128,106 @@ describe("getSovereigntyGovernmentNames", () => {
       parent: "the United Kingdom",
       national: "Westminster",
       sponsor: "His Majesty's Government",
+      decisionMaker: "Prime Minister",
+      body: "the House of Commons",
     });
     expect(independenceCopy("CA_QC", (id) => names[id])).toEqual({
       region: "Quebec",
       parent: "Canada",
       national: "Ottawa",
       sponsor: "Government of Canada",
+      decisionMaker: "Prime Minister",
+      body: "the House of Commons",
     });
+  });
+
+  it("gives California a President decision, a Congress consent vote and its own successor", () => {
+    expect(sovereigntyRegionIn("US", "CA")).toMatchObject({
+      kind: "independence",
+      decisionMakerTitle: "President",
+      consentBodyName: "Congress",
+      successorCountryId: "RCA",
+      actuates: true,
+      wording: "sovereignty",
+    });
+    expect(sovereigntyRegionIn("CA", "CA")).toBeNull();
+  });
+
+  it("gives Texas a President decision and a Congress consent vote", () => {
+    const texas = sovereigntyRegionIn("US", "TX");
+    expect(texas).toMatchObject({
+      kind: "independence",
+      executiveTitle: "Governor",
+      decisionMakerTitle: "President",
+      nationalGovernmentName: "Washington",
+      consentBodyName: "Congress",
+      actuates: true,
+      successorCountryId: "RTX",
+    });
+    expect(sovereigntyRegionIn("UK", "TX")).toBeNull();
+    expect(independenceCopy("TX", () => undefined)).toMatchObject({
+      decisionMaker: "President",
+      body: "Congress",
+      parent: "the United States",
+    });
+    expect(getSovereigntyGovernmentNames("TX")).toMatchObject({
+      regional: "Governor",
+      decisionMaker: "President",
+    });
+    expect(getSovereigntyGovernmentNames("SCO").decisionMaker).toBe("Prime Minister");
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
+  });
+});
+
+describe("the New England bloc", () => {
+  it("answers to the bloc id and to each member state", () => {
+    for (const id of ["NE_BLOC", "ME", "nh", "VT", "MA", "RI", "CT"]) {
+      expect(sovereigntyRegionIn("US", id)).toMatchObject({
+        regionId: "NE_BLOC",
+        successorCountryId: "NEN",
+        parentUpperChamberSeats: 12,
+        wording: "sovereignty",
+      });
+    }
+    expect(sovereigntyRegionIn("CA", "ME")).toBeNull();
+  });
+
+  it("expands to its member states and leaves a single region as a bloc of one", () => {
+    expect(sovereigntyMemberRegionIds("NE_BLOC")).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
+    expect(sovereigntyMemberRegionIds("ME")).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
+    expect(sovereigntyMemberRegionIds("TX")).toEqual(["TX"]);
+    expect(sovereigntyMemberRegionIds("SCO")).toEqual(["SCO"]);
+    expect(sovereigntyReferendumKey("VT")).toBe("NE_BLOC");
+    expect(sovereigntyReferendumKey("TX")).toBe("TX");
+    expect(sovereigntyRegionIds("US")).toEqual(["TX", "CA", "ME", "NH", "VT", "MA", "RI", "CT"]);
+  });
+
+  it("gives every successor an id distinct from every state and country id", () => {
+    const us = SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === "US");
+    const stateIds = new Set(us.flatMap((entry) => entryRegionIds(entry)));
+    for (const entry of us) {
+      if (!entry.successorCountryId) continue;
+      expect(stateIds.has(entry.successorCountryId)).toBe(false);
+      expect(
+        SOVEREIGNTY_REGIONS.filter((other) => other.successorCountryId === entry.successorCountryId)
+      ).toHaveLength(1);
+    }
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
   });
 });

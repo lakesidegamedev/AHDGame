@@ -32,17 +32,17 @@ The portfolios that define the Soviet council:
 | Minister of Internal Affairs (internal security) | Internal Security Posture: thaw vs crackdown | Public Order Sweep, Internal Passport Audit |
 | Minister of Culture | Cultural Line: liberal vs orthodox | Mass Literacy Campaign, Union Cultural Festival |
 
-The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education, and State Security, the KGB chairmanship from 1954) follow the same tier-plus-orders pattern. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
+The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education, and State Security, the KGB chairmanship from 1954) carry national metrics only, with no tier setting or orders. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
 
 ## The plan and the marketization dial
 
-In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
+In worlds that use the command economy (an admin turns it on for the world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
 
 \`\`\`wiki-chart
 marketization-schedule-by-country
 \`\`\`
 
-- **The dial is earned.** What does it do? It decides which economic engine runs. Black-market pressure, chronic plan under-fulfilment and a reformist policy stance push it up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
+- **The dial is earned.** What does it do? It decides which economic engine runs. Black-market pressure, chronically idle plant capacity and a reformist policy stance push it up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
 - **The three seats are wired to real offices.** The Gosplan planner panel is operated by the Chairman of Gosplan cabinet seat and the state-credit panel by the Gosbank liaison; SOE directors are appointed per enterprise.
 - **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).
@@ -82,7 +82,7 @@ Unlike China's mechanically unicameral NPC, the Supreme Soviet is **bill-active 
 
 Both chambers elect **on the same day** on a shared four-year cycle (anchored to 1954 in the 1953 preset and 1984 in the 1979 preset). Republic Supreme Soviets, the sub-national tier, run their own four-year cycle (1955 / 1980). There are **no snap elections**.
 
-The coalition threshold is a bare majority of the Soviet of the Union: **280 seats** (264 of 526 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one. Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
+The coalition threshold is **376 seats** of the Soviet of the Union (355 of 526 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one. Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
 
 When the last Supreme Soviet election of a cycle resolves, a **convocation reset** fires: a sitting Premier who kept a seat stays on but faces an automatic confidence motion (a Premier without a seat loses the chair), and the Chairman of the Presidium is cleared so the new chambers elect the head of state afresh.
 
@@ -94,7 +94,7 @@ When the last Supreme Soviet election of a cycle resolves, a **convocation reset
 | Nationalities Deputy | Multi-seat republic-weighted election | 4 years | 515 |
 | Republic Deputy | Multi-seat sub-national election | 4 years | 4,587 total |
 | Republic First Secretary | Regional executive election | 4 years | 1 per region |
-| Chairman of Gosbank | Nominated by the Premier, then drawn | 4 years | 1 |
+| Chairman of Gosbank | Nominated by the Premier, then drawn | 5 years | 1 |
 
 The Premier carries **+4 actions per turn**; a Supreme Soviet or Nationalities Deputy +1; a Republic First Secretary +2; the Chairman of Gosbank +3. The Chairman of the Presidium carries +0 actions and zero party-strength weight: the office is a ceremonial capstone, not a power base.
 
@@ -142,7 +142,7 @@ The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded 
 - **Moscow holds permanent leadership.** The pact's chair, the **Supreme Commander of the Unified Command**, is permanently assigned to the USSR. No other member can ever hold it.
 - **Tribute.** In worlds that began at the 1953 preset, the two armed blocs levy a fixed yearly tribute on non-voting client members instead of voted dues: 0.75% of GDP for the Warsaw Pact and 0.5% for NATO.
 - **Alignment.** Between 1945 and 1990 the world runs on a WEST vs EAST alignment axis; the Warsaw Pact is the EAST bloc's accession channel, opposite NATO.
-- **Conflicts are player-made.** The world starts with **no pre-seeded wars**. Every conflict on the board was started by a player declaration or a world event, and declare-war bills need a two-thirds majority even in a one-party state (the only bill class that keeps its supermajority here). See [Conflicts Overview](/wiki/conflicts-overview).
+- **Conflicts are player-made.** The world starts with Cold War campaigns seeded at creation. Other conflicts start from a player declaration or a world event, and declare-war bills need a two-thirds majority even in a one-party state (the only bill class that keeps its supermajority here). See [Conflicts Overview](/wiki/conflicts-overview).
 
 ## Living history
 
@@ -154,5 +154,5 @@ RU
 
 See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
 
-Runs as described, and is playable, in the 1953 and 1979 presets. In the 1991 preset the same slot is an economy preview (closed to players) showing the Soviet Union's final year: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked 2026-10-30, version 1.18.0.
+Runs as described, and is playable, in the 1953 and 1979 presets. In the 1991 preset the same slot is an economy preview (closed to players) showing the Soviet Union's final year: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy and regime escalation rules apply in the 1953 and 1979 worlds, and tribute applies only in worlds that began at the 1953 preset. Last checked 2026-10-30, version 1.18.0.
 `;

@@ -15,7 +15,6 @@ function fixture(): EvidenceInput {
     requestedRedemptionFlag: true,
     initialRedemptionFlag: true,
     finalRedemptionFlag: true,
-    indexFundsMode: "full",
     equityLiquidityFacilityEnabled: true,
     indexFundBondLiquidityEnabled: false,
     corporationIds: ["corp"],

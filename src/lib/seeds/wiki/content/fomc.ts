@@ -32,7 +32,7 @@ If **no governors are seated**, meetings pause and the chair sets the rate direc
 3. NPP seats vote at once, from the same rule an autonomous chair uses, tilted hawk (leans to hike) or dove (leans to cut).
 4. Player governors vote within 24 hours. No ballot counts as an abstain.
 5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A decision reached on the turn the meeting opens takes effect the next turn; a decision reached on a later turn takes effect at once.
-6. If it passes, the rate moves and the change counts toward the 16.
+6. If it passes and the rules allow the move, the rate moves and the change counts toward the 16. If the move is blocked (for example by an exchange-rate commitment), the vote still passes but the rate stays where it was.
 
 ![Flow of an FOMC meeting from the due date and automatic motion through NPP and player votes to a majority decision that moves the rate or fails.](/wiki-images/diagrams/fomc-meeting-flow.svg)
 

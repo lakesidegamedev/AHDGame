@@ -234,6 +234,8 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
               unit={data.unit}
               marketLabel={marketScope.marketLabel}
               imports={marketScope.imports}
+              market={marketScope.fundedMarket}
+              world={!marketScope.activeCountry}
             />
             {data.flows && <FlowLedgerStrip flows={data.flows} unit={data.unit} />}
             {heavyLoaded && (
@@ -302,6 +304,9 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 nationalSupply={data.nationalSupply}
                 nationalDemand={data.nationalDemand}
                 reachableBooks={data.reachableBooks}
+                fundedCountryBooks={
+                  data.nationalBalanceSource === "funded_book" ? data.fundedCountryBooks : undefined
+                }
                 stateCountryMap={marketScope.stateCountryMap}
                 capacityByState={marketScope.capacityByState}
                 mode={mapMode}

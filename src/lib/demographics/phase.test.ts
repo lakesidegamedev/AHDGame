@@ -462,7 +462,7 @@ describe("runDemographicFlows", () => {
   });
 
   it("turns a persistent labour shortage into additional population growth", async () => {
-    async function runMode(labourSystemMode: "wages" | "macro") {
+    async function runWithTightness(labourTightness: number) {
       const target = createMockDb();
       target.collection("regionDemographics");
       target.collectionMocks.regionDemographics!.find = vi.fn().mockReturnValue({
@@ -482,18 +482,13 @@ describe("runDemographicFlows", () => {
               population: { birthRate: { value: 50 }, migrationRate: { value: 0.05 } },
               healthcare: { lifeExpectancy: { value: 50 }, preventableMortality: { value: 50 } },
               economic: {
-                labourTightness: { value: 4.8 },
+                labourTightness: { value: labourTightness },
                 labourWageIndex: { value: 1 },
               },
             },
           ]),
         }),
       });
-      target.collection("gameConfig");
-      target.collectionMocks.gameConfig!.findOne = vi
-        .fn()
-        .mockResolvedValue({ _id: "default", labourSystemMode });
-
       const { runDemographicFlows } = await import("./phase");
       await runDemographicFlows(target as unknown as Db, 1);
       const population = (
@@ -509,11 +504,11 @@ describe("runDemographicFlows", () => {
       return { population, realizedMigration: metrics["population.realizedMigrationRate.value"] };
     }
 
-    const gated = await runMode("wages");
-    const responsive = await runMode("macro");
+    const slack = await runWithTightness(0);
+    const shortage = await runWithTightness(4.8);
 
-    expect(responsive.realizedMigration).toBeGreaterThan(gated.realizedMigration);
-    expect(responsive.population).toBeGreaterThan(gated.population);
+    expect(shortage.realizedMigration).toBeGreaterThan(slack.realizedMigration);
+    expect(shortage.population).toBeGreaterThan(slack.population);
   });
 
   it("writes state.votingEligiblePopulation (Σ ages ≥ voting age) ≤ total population", async () => {
@@ -737,9 +732,7 @@ describe("runDemographicFlows", () => {
       }),
     });
     db.collection("gameConfig");
-    db.collectionMocks.gameConfig!.findOne = vi
-      .fn()
-      .mockResolvedValue({ _id: "default", labourSystemMode: "macro" });
+    db.collectionMocks.gameConfig!.findOne = vi.fn().mockResolvedValue({ _id: "default" });
 
     const { runDemographicFlows } = await import("./phase");
     await runDemographicFlows(db as unknown as Db, 1);

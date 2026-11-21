@@ -1,6 +1,5 @@
 /** Bulk sector operations apply CEO policies to a country or sector group, with optional cost previews. */
 import type { CountryId } from "@/lib/constants/countries";
-import { isLabourWagesEnabled, isLabourUnionsEnabled } from "@/lib/labour/featureFlag";
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
 import { estimateWageChange } from "@/lib/corporations/rules/bulkWagePreview";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
@@ -26,6 +25,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -87,10 +87,6 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         sectorType,
         preview,
       });
-    }
-
-    if (wageLevel !== undefined && !(await isLabourWagesEnabled())) {
-      return errorResponse(403, "The labour system is not enabled.");
     }
 
     const bulkMode =
@@ -163,8 +159,9 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         unlockedTechNodeIds: corporation.unlockedTechNodeIds,
         techDecadeLane: corporation.techDecadeLane,
       };
+      const legacyTech = await loadLegacyTechContext(db);
       const techMultFor = (s: CorporateSector) =>
-        getSectorTechEffects(techCorpView, s.sectorType).growthCostMultiplier;
+        getSectorTechEffects(techCorpView, s.sectorType, legacyTech).growthCostMultiplier;
       let projectedTotal = 0;
       let currentTotal = 0;
       for (const s of sectors) {
@@ -210,9 +207,8 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         }
       | undefined;
     if (wageLevel !== undefined) {
-      const floors = (await isLabourUnionsEnabled())
-        ? (await loadCollectiveAgreementEffects(db, await getCurrentTurn(db))).wageFloorBySectorId
-        : new Map<string, number>();
+      const floors = (await loadCollectiveAgreementEffects(db, await getCurrentTurn(db)))
+        .wageFloorBySectorId;
       const fx = await loadValuationFxRates(db);
       const { toCorpCurrency } = buildSectorCurrencyRestatement(corporation, fx);
       let current = 0,
@@ -334,7 +330,10 @@ async function bulkSetCapacity(
 ) {
   const mode = await getMarketSystemMode();
   if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
-    return errorResponse(400, "Capacity building is not enabled in this world");
+    return errorResponse(
+      400,
+      "Building is switched off in this world right now, so no capacity can be ordered."
+    );
   }
   const mothballed = action === "mothball";
   const filter: Record<string, unknown> = {

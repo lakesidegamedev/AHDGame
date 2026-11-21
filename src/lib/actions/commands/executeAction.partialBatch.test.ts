@@ -38,19 +38,28 @@ describe("executeCharacterAction: partial batch", () => {
       return { ...current };
     });
     const findOne = vi.fn(async () => ({ ...current }));
+    const actionLogs = {
+      insertMany: vi.fn(async (docs: unknown[]) => ({
+        insertedIds: Object.fromEntries(docs.map((_, i) => [i, new ObjectId()])),
+      })),
+      insertOne: vi.fn().mockResolvedValue({ insertedId: new ObjectId() }),
+      findOne: vi.fn().mockResolvedValue(null),
+    };
     const db = {
       collection: vi.fn((name: string) => {
         if (name === "characters") {
           return { findOne, findOneAndUpdate };
         }
         if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+        if (name === "actionLogs") return actionLogs;
         return {
           insertOne: vi.fn().mockResolvedValue({ insertedId: new ObjectId() }),
+          insertMany: actionLogs.insertMany,
           findOne: vi.fn().mockResolvedValue(null),
         };
       }),
     } as unknown as Db;
-    return { db, findOneAndUpdate, findOne };
+    return { db, findOneAndUpdate, findOne, actionLogs };
   }
 
   const makeCharacter = (actions: number): Character =>
@@ -71,7 +80,7 @@ describe("executeCharacterAction: partial batch", () => {
 
   it("returns ok with a stop note when AP runs out mid-batch", async () => {
     const character = makeCharacter(FUNDRAISE_AP * 2 + 1);
-    const { db, findOneAndUpdate } = makeDb(character);
+    const { db, findOneAndUpdate, actionLogs } = makeDb(character);
     const res = await executeCharacterAction(db, {
       character,
       characterQuery: { _id: character._id },
@@ -86,12 +95,26 @@ describe("executeCharacterAction: partial batch", () => {
     expect(res.message).toMatch(/^Stopped after 2 of 5:/);
     expect(res.message).toContain("Completed 2 times.");
     // Audit rows for the committed iterations are still flushed.
-    expect(vi.mocked(recordAuditBulk).mock.calls[0]![0]).toHaveLength(2);
+    const audit = vi.mocked(recordAuditBulk).mock.calls[0]![0];
+    expect(audit).toHaveLength(2);
+    // Both committed iterations log in one insert, not one per iteration.
+    expect(actionLogs.insertMany).toHaveBeenCalledTimes(1);
+    expect(actionLogs.insertOne).not.toHaveBeenCalled();
+    const logged = actionLogs.insertMany.mock.calls[0]![0] as unknown[];
+    expect(logged).toHaveLength(2);
+    // Audit refs still point at the log row for their own iteration.
+    const insertedIds = (
+      (await actionLogs.insertMany.mock.results[0]!.value) as {
+        insertedIds: Record<number, { toString(): string }>;
+      }
+    ).insertedIds;
+    expect(audit[0]!.refs?.actionLogId?.toString()).toBe(insertedIds[0]!.toString());
+    expect(audit[1]!.refs?.actionLogId?.toString()).toBe(insertedIds[1]!.toString());
   });
 
   it("reuses the updated character and checks achievements once per batch", async () => {
     const character = makeCharacter(FUNDRAISE_AP * 4);
-    const { db, findOne, findOneAndUpdate } = makeDb(character);
+    const { db, findOne, findOneAndUpdate, actionLogs } = makeDb(character);
     const res = await executeCharacterAction(db, {
       character,
       characterQuery: { _id: character._id },
@@ -101,6 +124,8 @@ describe("executeCharacterAction: partial batch", () => {
     });
     expect(res.ok).toBe(true);
     expect(findOneAndUpdate).toHaveBeenCalledTimes(4);
+    expect(actionLogs.insertMany).toHaveBeenCalledTimes(1);
+    expect(actionLogs.insertMany.mock.calls[0]![0]).toHaveLength(4);
     // Iterations 2-4 read the document the previous atomic update returned, so
     // a batch of four opens no extra character reads.
     expect(findOne).not.toHaveBeenCalled();
@@ -118,7 +143,7 @@ describe("executeCharacterAction: partial batch", () => {
 
   it("still errors when the very first iteration is refused", async () => {
     const character = makeCharacter(1);
-    const { db } = makeDb(character);
+    const { db, actionLogs } = makeDb(character);
     const res = await executeCharacterAction(db, {
       character,
       characterQuery: { _id: character._id },
@@ -127,6 +152,9 @@ describe("executeCharacterAction: partial batch", () => {
       actor: { userId: new ObjectId(), username: "tester" },
     });
     expect(res.ok).toBe(false);
+    // Nothing committed in the batch, so no action log row is written at all.
+    expect(actionLogs.insertMany).not.toHaveBeenCalled();
+    expect(actionLogs.insertOne).not.toHaveBeenCalled();
   });
 
   it("logs safe timing totals and completed batch count", async () => {

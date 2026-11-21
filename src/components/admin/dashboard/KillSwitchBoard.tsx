@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { Skeleton } from "@/components/ui";
 
+import { ElectricityNetworkCard } from "./ElectricityNetworkCard";
+
 type MaintenanceMode = "off" | "partial" | "full";
 
 /** Switches whose state is a simple `{ enabled }` GET + PATCH on one URL. */
@@ -42,6 +44,15 @@ interface TurnSwitchDef {
 type SwitchDef = PatchSwitchDef | TurnSwitchDef;
 
 const SWITCHES: SwitchDef[] = [
+  {
+    key: "party-adjacency",
+    kind: "patch",
+    url: "/api/admin/party/adjacency",
+    label: "Party adjacency requirement",
+    desc: "Enabled: joining, recruitment and party relocation follow adjacent territory rules. Disabled: players and NPPs may join, be recruited or relocate anywhere within the same country. Costs, cooldowns and other eligibility checks still apply. Default enabled.",
+    onLabel: "Enabled",
+    offLabel: "Disabled",
+  },
   {
     key: "government-confidence",
     kind: "patch",
@@ -361,6 +372,7 @@ export function KillSwitchBoard() {
       <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
         {/* Maintenance is 3-state, rendered first as the most drastic switch.
             Direct mode picker instead of a click-to-cycle card. */}
+        <ElectricityNetworkCard />
         <MaintenanceCard
           mode={maintenance}
           busy={busyKey === "maintenance"}

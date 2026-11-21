@@ -29,7 +29,7 @@ Kick, transfer and disband are in the Chair's Office and need the coalition chai
 
 Only the **coalition chair** can start a disband vote, from the Chair's Office. Only one can run at a time. It lasts **24 turns** (24 hours at the standard pace). Each member party's national chair votes yes or no and can change their vote until the end. It is counted at the first turn after the 24 turns end, not the moment the last vote comes in.
 
-The coalition is disbanded if yes votes are **more than half of all member parties**. A party that does not vote counts as no. If it passes, the coalition is deleted, every member loses its affiliation and every chair is told. If it fails, nothing changes. A coalition with many inactive chairs is therefore hard to dissolve; count your votes before you ally.
+The coalition is disbanded if yes votes are **more than half of all member parties**. A party that does not vote counts as no. If it passes, the coalition is deleted, every member loses its affiliation and every chair is told. If it fails, the vote is cleared and the coalition stays as it is. A coalition with many inactive chairs is therefore hard to dissolve; count your votes before you ally.
 
 Five parties sit in the Liberty Alliance. The coalition chair opens a disband vote at turn 800. Three need to say yes (half of 5 is 2.5, so 3). By turn 810, two chairs vote yes, one votes no, and two have not voted. At turn 824 the vote is counted: 2 yes is below 3, so the coalition survives. Had a third chair voted yes at any point before turn 824, the coalition would have been disbanded at turn 824. Votes never end it early.
 

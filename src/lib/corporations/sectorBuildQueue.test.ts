@@ -3,7 +3,14 @@ import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
 import type { SectorBuildOrder } from "@/lib/db/types";
 
 function order(partial: Partial<SectorBuildOrder>): SectorBuildOrder {
-  return { unitsOrdered: 100, costPaidAnchor: 1_000, startTurn: 0, onlineTurn: 48, ...partial };
+  return {
+    unitsOrdered: 100,
+    costPaidAnchor: 1_000,
+    startTurn: 0,
+    onlineTurn: 48,
+    deliveryBaseFraction: 0,
+    ...partial,
+  };
 }
 
 describe("summarizeBuildQueue", () => {
@@ -55,12 +62,12 @@ describe("summarizeBuildQueue", () => {
       ],
       10
     );
-    expect(summary?.unitsPerTurn).toBeCloseTo(2, 10);
+    expect(summary?.unitsPerTurn).toBeCloseTo(2.5, 10);
     expect(summary?.lastOnlineTurn).toBe(80);
     expect(summary?.nextOnlineTurn).toBe(50);
   });
 
-  it("reports no per-turn arrival for an order under one whole plant (ticket 1753)", () => {
+  it("reports a per-turn arrival for an order under one whole plant", () => {
     const summary = summarizeBuildQueue(
       [
         order({
@@ -73,18 +80,18 @@ describe("summarizeBuildQueue", () => {
       ],
       608
     );
-    expect(summary?.unitsPerTurn).toBe(0);
-    expect(summary?.unitsRemaining).toBeCloseTo(193, 9);
+    expect(summary?.unitsPerTurn).toBeCloseTo(193 / 8, 9);
+    expect(summary?.unitsRemaining).toBeCloseTo(193 * (6 / 8), 9);
     expect(summary?.lastOnlineTurn).toBe(614);
   });
 
-  it("reports when a stepped order next lands, before its finish turn", () => {
+  it("reports the next turn as the next arrival for a whole-plant order", () => {
     const summary = summarizeBuildQueue(
       [order({ unitsOrdered: 200, plantUnits: 100, startTurn: 0, onlineTurn: 6, smooth: true })],
       1
     );
-    expect(summary?.unitsPerTurn).toBe(0);
-    expect(summary?.nextArrivalTurn).toBe(3);
+    expect(summary?.unitsPerTurn).toBeCloseTo(200 / 6, 9);
+    expect(summary?.nextArrivalTurn).toBe(2);
     expect(summary?.lastOnlineTurn).toBe(6);
   });
 });

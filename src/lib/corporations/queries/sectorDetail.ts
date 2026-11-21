@@ -7,7 +7,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
-import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag";
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
 import {
@@ -291,7 +290,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // Operating strategy: resolve effective supply/demand rates
     const currentTurn = gameState?.currentTurn ?? 0;
     // Tech-tree production-method gating for the strategy picker (inert when off).
-    const { techTreesEnabled, techCurrentYear, techCorpView, strategyWorld } =
+    const { techTreesEnabled, techCurrentYear, techCorpView, legacyTech, strategyWorld } =
       await loadSectorTechContext(db, {
         gameState,
         corporation,
@@ -447,11 +446,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // the gross maintenance figure above (profit-invariant, see computeSectorLaborCost).
     // Surface it as its own line item and display maintenance NET of labour, so the
     // wage cost is visible instead of silently folded into Maintenance.
-    const labourWagesEnabled = await isLabourWagesEnabled();
     const sectorLaborCost =
-      labourWagesEnabled && typeof sector.laborCost === "number" && sector.laborCost > 0
-        ? sector.laborCost
-        : 0;
+      typeof sector.laborCost === "number" && sector.laborCost > 0 ? sector.laborCost : 0;
     const maintenanceNet = maintenance - sectorLaborCost;
 
     // Apportioned per-sector tax, matches the corp page formula (see
@@ -503,6 +499,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ceo,
         techTreesEnabled,
         techCorpView,
+        legacyTech,
         sectorType,
         techCurrentYear,
         effectiveSupply,
@@ -628,7 +625,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           allocatedTightness: employmentStaffingTightness(stateMetrics?.labourEmployment),
           corporateEmployed: stateMetrics?.labourEmployment?.corporateEmployed,
           demandWageIndex: stateMetrics?.economic?.labourDemandWageIndex?.value,
-          wagesEnabled: labourWagesEnabled,
+          wagesEnabled: true,
           sectorWageLevel: clampWageLevel(sector.wageLevel ?? 1),
         }),
         productionPolicy: sector.productionPolicy ?? 0,
@@ -641,7 +638,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           Math.round((sectorWageLevel(sector.sectorType) / MEDIAN_SECTOR_WAGE_LEVEL) * 100) / 100,
         minWageUplift:
           Math.round((minWageFloorMultiplier(sector.sectorType, minWageKaitz) - 1) * 1000) / 1000,
-        // v3 Phase 5/6 (labourSystemMode ≥ "unions"): NPC unionization
+        // v3 Phase 5/6: NPC unionization
         // pressure, 0-100. Feeds unionPremium (labor cost) and the strike
         // trigger threshold.
         unionization: sector.unionization ?? 0,
@@ -775,6 +772,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           techTreesEnabled,
           techCurrentYear,
           techCorpView,
+          legacyTech,
           sectorType: sector.sectorType,
         }),
         profit: Math.round(sectorAmountInCorpCurrency(profit)),
@@ -809,10 +807,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       },
       isCeo,
       parentDirection,
-      labourEnabled: labourWagesEnabled,
-      // Gates the union-busting UI panel; that mechanic requires "full" tier,
-      // one above the wage-slider's "wages" tier.
-      labourFullEnabled: await isLabourFullMode(),
+      labourEnabled: true,
+      labourFullEnabled: true,
       // Gates the CEO Prospect action on extraction sectors (per-surface flag
       // convention: the page reads its own GET, no separate flags endpoint).
       prospectingEnabled: await isProspectingEnabled(),

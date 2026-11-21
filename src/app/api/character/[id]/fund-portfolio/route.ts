@@ -4,14 +4,12 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import {
   listCharacterPositions,
   listFundsByIds,
   listCharacterFundTransactions,
 } from "@/lib/indexFunds/fundQueries";
 import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
-import { INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 
 // GET /api/character/[id]/fund-portfolio — Character's fund positions and recent transactions
 // Auth: the character owner or admin
@@ -21,9 +19,6 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
     if (!auth) return errorResponse(401, "Authentication required");
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { id } = await params;
     let characterId: ObjectId;

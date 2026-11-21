@@ -35,14 +35,14 @@ function read(rel: string): string {
 
 describe("region-derived stage wiring", () => {
   it("seedAllCountryData opts out of runSeed's region-derived stage", () => {
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("bootstrapGameWorld.ts") + "\n" + read("seedCountryData.ts");
     const call = source.match(/await runSeed\(\{[^}]*\}\)/);
     expect(call, "seedAllCountryData no longer calls runSeed").not.toBeNull();
     expect(call![0]).toContain("includeRegionDerived: false");
   });
 
   it("bootstrap runs the stage itself, once", () => {
-    const source = read("bootstrapGameWorld.ts");
+    const source = read("bootstrapGameWorld.ts") + "\n" + read("seedCountryData.ts");
     const calls = source.match(/runRegionDerivedStage\(db, \{/g) ?? [];
     expect(calls).toHaveLength(1);
   });

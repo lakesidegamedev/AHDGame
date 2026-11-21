@@ -43,6 +43,8 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { sovereignMaturityLadder } from "@/lib/budget/rules/maturityLadder";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
@@ -53,6 +55,13 @@ export interface FyHistoryPoint {
   debtToGdp: number;
   gdp: number;
   rating: CreditRating;
+  /** Inputs for the prior close's rate breakdown, when the record carries them. */
+  debtRate?: number;
+  debtPrincipal?: number;
+  investorConfidence?: number;
+  gdpGrowth?: number;
+  inflationRate?: number;
+  imfBailoutActive?: boolean;
 }
 
 type FyHistorySnap = {
@@ -63,6 +72,10 @@ type FyHistorySnap = {
     debtToGdpRatio: number;
     gdp: number;
     creditRating: CreditRating;
+    debt?: { interestRate?: number; principal?: number };
+    economicFactors?: { gdpGrowth?: number; inflationRate?: number };
+    investorConfidence?: number;
+    imfSovereignBailoutActive?: boolean;
   };
 };
 
@@ -73,6 +86,10 @@ type FyHistoryLive = {
   debtToGdpRatio: number;
   gdp: number;
   creditRating: CreditRating;
+  debt?: { interestRate?: number; principal?: number };
+  economicFactors?: { gdpGrowth?: number; inflationRate?: number };
+  investorConfidence?: number;
+  imfSovereignBailoutActive?: boolean;
 };
 
 /**
@@ -93,6 +110,12 @@ export function buildFyHistory(
       debtToGdp: s.budget.debtToGdpRatio,
       gdp: s.budget.gdp,
       rating: s.budget.creditRating,
+      debtRate: s.budget.debt?.interestRate,
+      debtPrincipal: s.budget.debt?.principal,
+      investorConfidence: s.budget.investorConfidence,
+      gdpGrowth: s.budget.economicFactors?.gdpGrowth,
+      inflationRate: s.budget.economicFactors?.inflationRate,
+      imfBailoutActive: s.budget.imfSovereignBailoutActive,
     });
   }
   if (live) {
@@ -103,6 +126,12 @@ export function buildFyHistory(
       debtToGdp: live.debtToGdpRatio,
       gdp: live.gdp,
       rating: live.creditRating,
+      debtRate: live.debt?.interestRate,
+      debtPrincipal: live.debt?.principal,
+      investorConfidence: live.investorConfidence,
+      gdpGrowth: live.economicFactors?.gdpGrowth,
+      inflationRate: live.economicFactors?.inflationRate,
+      imfBailoutActive: live.imfSovereignBailoutActive,
     });
   }
   return [...byFy.values()].sort((a, b) => a.fy - b.fy);
@@ -249,6 +278,12 @@ export async function loadFederalBudgetDetail(params: {
           "budget.debtToGdpRatio": 1,
           "budget.gdp": 1,
           "budget.creditRating": 1,
+          "budget.debt.interestRate": 1,
+          "budget.debt.principal": 1,
+          "budget.economicFactors.gdpGrowth": 1,
+          "budget.economicFactors.inflationRate": 1,
+          "budget.investorConfidence": 1,
+          "budget.imfSovereignBailoutActive": 1,
         },
       }
     )
@@ -535,6 +570,31 @@ export async function loadFederalBudgetDetail(params: {
     ? await assertTreasuryAuthority(db, budgetCountryId, characterId)
     : false;
 
+  // Outstanding sovereign face by maturity, for the refinancing ladder. One
+  // projected read; the ladder itself is a pure rule.
+  const sovereignBonds = await bondsCollection(db)
+    .find(
+      {
+        issuerType: "sovereign",
+        countryId: budgetCountryId,
+        matured: { $ne: true },
+        defaulted: { $ne: true },
+      },
+      { projection: { totalIssued: 1, couponRate: 1, maturityTurn: 1 } }
+    )
+    .toArray();
+  const maturityLadder = sovereignMaturityLadder(
+    sovereignBonds.map((bond) => ({
+      principal: bond.totalIssued,
+      couponRatePct: bond.couponRate,
+      maturityTurn: bond.maturityTurn,
+    })),
+    {
+      currentTurn,
+      todayRatePct: (resolvedNationalBudget.debt?.interestRate ?? 0) * 100,
+    }
+  );
+
   return {
     ok: true as const,
     body: {
@@ -568,6 +628,7 @@ export async function loadFederalBudgetDetail(params: {
       fyHistory: buildFyHistory(fyHistorySnaps, resolvedNationalBudget),
       // Live sovereign-default signals for the Sovereign Health panel.
       sovereign: projectSovereign(resolvedNationalBudget, currentTurn),
+      maturityLadder,
       isFinanceMinister,
       currentYear,
       commandEconomyEnabled: gameConfig?.commandEconomyEnabled === true,

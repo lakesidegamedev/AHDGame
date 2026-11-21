@@ -24,7 +24,6 @@ describe("sim worker runWorld argument emission", () => {
 
   it("emits every experiment override end to end", () => {
     const job: SimJobExperimentFields = {
-      labourSystemMode: "full",
       canonicalFreightBillingEnabled: true,
       shortageResponsiveSourcingEnabled: false,
       indexFundBondLiquidityEnabled: true,
@@ -38,7 +37,6 @@ describe("sim worker runWorld argument emission", () => {
       countries: "US,UK",
     };
     expect(buildRunWorldArgs(job)).toEqual([
-      "--labour-mode=full",
       "--canonical-freight-billing=true",
       "--shortage-responsive-sourcing=false",
       "--index-fund-bond-liquidity=true",

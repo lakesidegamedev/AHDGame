@@ -33,6 +33,7 @@ import {
 } from "@/lib/commodity-map/commodityPriceDisplay";
 import CommodityMapModeToggle, { type MapMode } from "./CommodityMapModeToggle";
 import CommodityMapLegend from "./CommodityMapLegend";
+import type { FundedCountryMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import CommodityCountryStatCard from "./CommodityCountryStatCard";
 import CommodityCountryRail, { buildCountryRailRows } from "./CommodityCountryRail";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -60,6 +61,7 @@ interface CommodityWorldMapViewProps {
   statePrices: Record<string, number>;
   nationalSupply?: Record<string, number>;
   nationalDemand?: Record<string, number>;
+  fundedCountryBooks?: Record<string, FundedCountryMarket>;
   /**
    * Per-country reachable book for THIS commodity. Absent on a world that has
    * not run a turn since 1.1.2, which hides the Reachable mode rather than
@@ -95,6 +97,7 @@ export default function CommodityWorldMapView({
   statePrices,
   nationalSupply,
   nationalDemand,
+  fundedCountryBooks,
   reachableBooks,
   stateCountryMap,
   capacityByState,
@@ -990,7 +993,7 @@ export default function CommodityWorldMapView({
             commodityLabel={commodityLabel}
             unit={unit}
             data={selectedCountry.data}
-            imports={reachableBooks?.[selectedCountry.countryId]?.imports ?? null}
+            market={fundedCountryBooks?.[selectedCountry.countryId]}
             mode={mode}
             onModeChange={onModeChange}
             forexEnabled={forexEnabled}

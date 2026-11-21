@@ -1,3 +1,4 @@
+import { inventoryInclusiveCompensationBase } from "./rules/fundedOwnership";
 import {
   TIER_MULTIPLIER,
   NATIONALIZATION_BOOK_PREMIUM,
@@ -151,7 +152,16 @@ export function sectorCompensationValuationAnchor(
 ): number {
   const fraction = options.fraction ?? 1;
   const base = options.plantsEnabled
-    ? sectorBookValueAnchor(sector, options.currentYear, options.eraUnitScale, options.currentTurn)
+    ? inventoryInclusiveCompensationBase(
+        sectorBookValueAnchor(
+          sector,
+          options.currentYear,
+          options.eraUnitScale,
+          options.currentTurn
+        ),
+        sector.producerInventory,
+        NATIONALIZATION_BOOK_PREMIUM
+      )
     : npvAnchor;
   return base * fraction;
 }

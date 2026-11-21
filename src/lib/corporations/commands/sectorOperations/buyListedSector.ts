@@ -188,7 +188,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     if (await isPrivateEnterpriseBlocked(db, sectorCountryId)) {
       return errorResponse(
         403,
-        "This market is state-controlled under a command economy and is closed to private sector expansion."
+        "This market is state-controlled under a command economy and is closed to private companies. Pick a state with a market economy."
       );
     }
 

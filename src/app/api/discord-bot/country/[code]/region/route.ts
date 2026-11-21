@@ -5,7 +5,7 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
-import type { State, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import { officeLabel } from "@/lib/api/discordBotLabels";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -45,14 +45,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const db = await getDb();
 
-    const [state, officials] = await Promise.all([
-      statesCollection(db).findOne({ _id: stateId, countryId }),
-      electedOfficialsCollection(db).find({ state: stateId }).toArray(),
-    ]);
+    const state = await statesCollection(db).findOne({
+      _id: { $in: [stateId, `${countryId}_${stateId}`] },
+      countryId,
+    });
 
     if (!state) {
       return NextResponse.json({ found: false });
     }
+    const officials = await electedOfficialsCollection(db)
+      .find({ state: state._id, countryId })
+      .toArray();
 
     // Filter parties by country to avoid cross-country collisions
     const partyIds = [
@@ -72,11 +75,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         region: state.region,
         population: state.population,
         votingSystem: state.votingSystem ?? "fptp",
-        stateUrl: `${BASE_URL}/state/${state._id}`,
+        stateUrl: `${BASE_URL}/country/${countryId.toLowerCase()}/region/${state._id}`,
         officials: officials.map((o) => {
           const party = o.party ? partyMap.get(o.party) : null;
           return {
             officeType: o.officeType,
+            officeLabel: officeLabel(countryId, o.officeType),
             characterId: o.characterId?.toString() ?? null,
             characterName: o.characterName ?? null,
             party: party?.name ?? (o.party === "independent" ? "Independent" : (o.party ?? null)),

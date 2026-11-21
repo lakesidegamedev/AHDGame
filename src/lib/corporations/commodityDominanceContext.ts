@@ -27,6 +27,12 @@ import {
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
+import { loadFundedCountryBooks } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import {
+  fundedCountryMarketsByCommodity,
+  priceRowsTurn,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
 import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
@@ -164,6 +170,7 @@ export async function loadCommodityDominanceContext(
   args: {
     corporation: Pick<Corporation, "_id" | "countryOwnerId">;
     sector: Pick<CorporateSector, "_id">;
+    newSite?: FirmSectorRow;
     turn: number;
     currentYear: number;
   }
@@ -185,7 +192,11 @@ export async function loadCommodityDominanceContext(
       .find({ corporationId: { $in: corporationIds } }, { projection: FIRM_SECTOR_PROJECTION })
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
-    const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
+    const sites: FirmSectorRow[] =
+      args.newSite && !rows.some((row) => row._id.equals(args.newSite!._id))
+        ? [...rows, args.newSite]
+        : rows;
+    const sectors = sites.map((row) => toDominanceSector(row, args.turn));
     const targetIndex = sectors.findIndex((s) => String(s._id) === String(args.sector._id));
     if (targetIndex < 0) return null;
     // Price the toll on the strategy the ORDER will run, not the trailing
@@ -226,24 +237,52 @@ export async function loadCommodityDominanceContext(
           projection: {
             commodity: 1,
             globalDemand: 1,
+            turn: 1,
+            demandTruncatedUnits: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
             ...Object.fromEntries(countryStateIds.map((id) => [`stateDemand.${id}`, 1])),
           },
         }
       )
       .toArray();
+    // Country-booked services are measured against the funded country book, the
+    // same demand the country market page shows. The price rows' state demand
+    // is a different, far smaller figure for these commodities (a few crew-days
+    // against thousands), so it is only a fallback when no book was published.
+    const fundedMarkets =
+      targetCountryId && countryStateIds.length > 0
+        ? fundedCountryMarketsByCommodity(
+            (await loadFundedCountryBooks(db, priceRowsTurn(priceDocs) ?? args.turn))?.rows ?? []
+          )
+        : null;
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
     const countryDemand: Partial<Record<CommodityType, number>> = {};
+    // The books store demand after the ledger cap, which can leave a state with
+    // a fraction of a unit of "demand" for a service the world plainly wants.
+    // The toll asks how much a firm could oversupply what people want, so it
+    // reads demand with the capped-away part restored, pro rata by scope.
     for (const doc of priceDocs) {
-      demand[doc.commodity] = doc.globalDemand;
+      const worldCapped = doc.globalDemand;
+      const truncated = doc.demandTruncatedUnits;
+      demand[doc.commodity] = worldCapped + latentDemandTopUp(worldCapped, worldCapped, truncated);
       const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
-      if (typeof local === "number") stateDemand[doc.commodity] = local;
-      if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity))
-        countryDemand[doc.commodity] = countryStateIds.reduce(
+      if (typeof local === "number")
+        stateDemand[doc.commodity] = local + latentDemandTopUp(local, worldCapped, truncated);
+      if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity)) {
+        const fundedDemand = targetCountryId
+          ? fundedMarkets?.get(doc.commodity)?.[targetCountryId]?.demand
+          : undefined;
+        if (typeof fundedDemand === "number" && fundedDemand > 0) {
+          countryDemand[doc.commodity] = fundedDemand;
+          continue;
+        }
+        const capped = countryStateIds.reduce(
           (sum, id) => sum + (Number(doc.stateDemand?.[id]) || 0),
           0
         );
+        countryDemand[doc.commodity] = capped + latentDemandTopUp(capped, worldCapped, truncated);
+      }
     }
     return {
       sectors: pricedSectors,

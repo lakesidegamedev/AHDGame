@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { API_DOCS_URL, LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
+import {
+  API_DOCS_URL,
+  LANDING_FOOTER_SECTIONS,
+  LANDING_TRAY_LINKS,
+} from "@/lib/landing/publicLinks";
 import enCatalog from "../../../messages/en/auth.json";
 import deCatalog from "../../../messages/de/auth.json";
 

@@ -70,6 +70,22 @@ export const CORP_TABS: CorpTab[] = [
     ),
   },
   {
+    id: "supply-chain",
+    label: "Supply chain",
+    tooltip: "Actual suppliers and customers by company, sector and location",
+    icon: (
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
     id: "shares",
     label: "Shares",
     tooltip: "Shareholder registry, trading, and equity structure",

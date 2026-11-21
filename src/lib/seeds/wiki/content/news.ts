@@ -1,6 +1,6 @@
 export const newsContent = `# News
 
-News is the one place where everyone can see what you say. Players write articles and place paid sponsored posts, and the game itself posts big public events such as resolved wars and court rulings. It is for being seen: it does not change any of your numbers, so use it for reputation, recruiting and rivalry, not as a campaign action.
+News is the one place where everyone can see what you say. Players write articles and place paid sponsored posts, and the game itself posts big public events such as resolved wars and court rulings. It is for being seen: it does not change your political numbers (sponsored posts do cost actions and personal cash), so use it for reputation, recruiting and rivalry, not as a campaign action.
 
 ## The two tabs
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getParliamentaryCountryIds,
   tallySeatsByParty,
+  tallySeatsByPartyForCountries,
   processParliamentaryNPPAutoAye,
 } from "./parliamentaryGovernment";
 import { getHeadOfGovernmentOfficeKey } from "@/lib/constants/countries";
@@ -134,5 +135,24 @@ describe("era-aware parliamentary government coverage", () => {
     expect(getHeadOfGovernmentOfficeKey("RO", "2027-default")).toBe("primeMinister");
     expect(getParliamentaryCountryIds("2027-default")).not.toContain("RU");
     expect(getParliamentaryCountryIds("1979-default")).toContain("RO");
+  });
+});
+
+describe("tallySeatsByPartyForCountries", () => {
+  it("matches the per-country tally for every country in one pass", async () => {
+    const mem = createInMemoryDb();
+    mem.seed("gameState", [{ _id: "current", preset: "1991-default" }]);
+    mem.seed("countryGameStates", [{ _id: "RU" }]);
+    mem.seed("electedOfficials", [
+      { _id: "a", countryId: "RU", officeType: "unionCongressDeputy", party: "1", seatsHeld: 10 },
+      { _id: "b", countryId: "RU", officeType: "dumaDeputy", party: "3", seatsHeld: 30 },
+      { _id: "c", countryId: "UK", officeType: "mp", party: "4", seatsHeld: 2 },
+      { _id: "d", countryId: "UK", officeType: "mp", party: "4" },
+    ]);
+    const db = mem as unknown as Db;
+    const bulk = await tallySeatsByPartyForCountries(db, ["RU", "UK"]);
+    expect(bulk.RU).toEqual(await tallySeatsByParty(db, "RU"));
+    expect(bulk.UK).toEqual(await tallySeatsByParty(db, "UK"));
+    expect(await tallySeatsByPartyForCountries(db, [])).toEqual({});
   });
 });

@@ -29,11 +29,11 @@ A Sangiin seat provides 6-year tenure that survives snap elections, which is use
 | Member of the House of Councillors (Sangiin) | Regional multi-seat election (Hare largest remainder), staggered | 6 years | 248 (252 in 1991) |
 | Governor | Regional election | 4 years | 1 per region (8) |
 | Emperor | Imperial character (ceremonial) | Lifetime | 1 |
-| Governor of the Bank of Japan | Appointed action | 4 years | 1 |
+| Governor of the Bank of Japan | Appointed action | 5 years | 1 |
 
 ## Running in one of eight regions
 
-Japan's gameplay is organized around 8 regions, each containing multiple prefectures. Your character's home region determines where you run for office.
+Japan's gameplay is organized around 8 regions, each containing one or more prefectures. Your character's home region determines where you run for office.
 
 \`\`\`wiki-chart
 jp-seats-by-region
@@ -56,7 +56,7 @@ Both chambers share seats out the same way. Each region elects several members a
 
 Say a region elects 14 members and 98,000 votes are cast, so one seat costs a quota of 7,000 votes. Party A has 49,000 votes, B has 31,000 and C has 18,000. A gets 7 seats, B gets 4 and C gets 2, which is 13 of 14. The last seat goes to the largest leftover: A has 0, B has 3,000 and C has 4,000, so C takes it. Final result: A 7, B 4, C 3. A party under the bar (10% in a Shūgiin race) gets nothing, however many leftover votes it holds.
 
-- **Major parties:** the spoiler model treats the LDP and CDP as the major parties in every region, Kansai included.
+- **Major parties:** the spoiler model treats the LDP and CDP as the major parties in every region except Kansai, where Nippon Ishin and the LDP are the major parties.
 - **Primaries advance the top 3 candidates** per party per region in Diet races, the same as the UK rule (not the US's top-1 rule). Governor primaries advance one.
 - **Timing:** a regular Shūgiin election window is 192 turns (8 real days: 168 for the primary and 24 for the general), and a Sangiin window is 144 turns (6 real days: 120 primary + 24 general).
 - **Sangiin stagger:** only one class is up at a time, and every region splits its seats across both classes. So your home region always has Sangiin seats up in every Sangiin election: Kanto's 80 seats are 40 per class. A class comes up every 144 turns (6 real days). Check the election page for which class is next before you declare.
@@ -67,7 +67,7 @@ Rules shared with every country are in [Election Mechanics](/wiki/election-mecha
 
 The PM is appointed through a confidence vote in the **Shūgiin only** (the Sangiin does not vote on PM selection):
 
-1. After Shūgiin elections resolve, a party chair or coalition chair whose bloc holds 233+ seats proposes a PM from among their bloc's members. The bloc needs at least one player member.
+1. After Shūgiin elections resolve, a party chair or coalition chair whose bloc holds 233+ seats (or at least 72 on the minority route in step 4) proposes a PM from among their bloc's members. The bloc needs at least one player member.
 2. A confidence vote among all 465 Shūgiin members is held.
 3. If it passes (more ayes than nays), the nominee becomes PM and appoints all cabinet members directly. See the [Cabinet Guide](/wiki/cabinet-guide).
 4. **Minority government**: any party or coalition chair holding at least 72 Shūgiin seats (15.38% of the chamber, rounded up) can propose a PM and call a confidence vote, even when a rival bloc has 233+. The Shūgiin votes the bid up or down.
@@ -121,7 +121,7 @@ This gives the ruling coalition a direct legislative fast-track not available in
 | --- | --- | --- |
 | Entry | Shūgiin member | +1 action/turn; introduces legislation in the primary chamber |
 | Parallel | Sangiin member | +1 action/turn; 6-year terms survive snap elections |
-| Mid-game | Governor | +2 actions/turn; controls regional executive; 4-year term |
+| Mid-game | Governor | +3 actions/turn; controls regional executive; 4-year term |
 | Top | Prime Minister | +4 actions/turn; snap election power; cabinet bill fast-track |
 
 See [Player Progression](/wiki/player-progression) for the general ladder. Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. The charter system is country-agnostic; JP-specific gates don't apply.
@@ -168,5 +168,5 @@ JP
 
 See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
 
-Playable from the 1991 preset on; in 1953 and 1979 Japan runs as an economy preview, with its economy simulated but its offices closed to players. Seat counts change by era: 466 Shūgiin seats in the 1953 preset, 512 Shūgiin and 252 Sangiin in the 1991 preset (where a 1994 electoral law can be passed to move to 500 seats: 300 districts and 200 list seats), 465 and 248 in modern presets. Cabinet Bills are a Japan-only mechanic. Last checked 2026-10-30, version 1.18.0.
+Playable in the modern presets only; in the 1953, 1979 and 1991 presets Japan runs as an economy preview, with its economy simulated but its offices closed to players. Seat counts change by era: 466 Shūgiin seats in the 1953 preset, 512 Shūgiin and 252 Sangiin in the 1991 preset (where a 1994 electoral law can be passed to move to 500 seats: 300 districts and 200 list seats), 465 and 248 in modern presets. Cabinet Bills are a Japan-only mechanic. Last checked 2026-10-30, version 1.18.0.
 `;

@@ -86,7 +86,11 @@ function mockDb(
     },
     gameConfig: { findOne: () => Promise.resolve(null) },
     systemSettings: { findOne: () => Promise.resolve(null) },
-    exchangeRates: { find: () => ({ toArray: () => Promise.resolve([]) }) },
+    // The unstamped Italian corp resolves to the legacy lira code; a live 1:1 row
+    // keeps the amounts below in test units instead of authored-era ones.
+    exchangeRates: {
+      find: () => ({ toArray: () => Promise.resolve([{ currencyCode: "ITL", rate: 1 }]) }),
+    },
   };
   const db = {
     collection: (name: string) => collections[name] ?? { findOne: () => Promise.resolve(null) },

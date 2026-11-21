@@ -12,11 +12,26 @@ import {
 import type { MetricCategoryId } from "@/lib/db/types";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { MetricFilter } from "./components/GlobeMetricPanel";
+import type { MetricFilter } from "@/lib/world/metricFilter";
+import {
+  DEFAULT_COMPARE_CATEGORY,
+  compareCategoryParam,
+  metricFilterParam,
+  parseCompareCategoryParam,
+  parseMetricFilterParam,
+} from "@/lib/world/metricFilterUrl";
 import { hasBlocData } from "./worldBlocs";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { rankNations, type RankingSelection } from "@/lib/world/rankings";
-import { toggleComparePair } from "@/lib/world/countryCompare";
+import {
+  compareShareParam,
+  parseCompareShareParam,
+  toggleComparePair,
+} from "@/lib/world/countryCompare";
+import { ALL_COUNTRY_IDS } from "@/lib/constants/countryClientConfig";
+
+/** Countries a shared comparison link may name. */
+const SHAREABLE_COUNTRY_IDS = new Set<string>(ALL_COUNTRY_IDS);
 
 /** ISO numeric codes used by the world map TopoJSON */
 const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
@@ -27,6 +42,10 @@ const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
   IE: "372",
   CA: "124",
   QC: "124", // shares the Canadian code; not rendered until independence
+  AB: "124", // shares the Canadian code; not rendered until independence
+  RTX: "840", // shares the US code; not rendered until independence
+  NEN: "840", // shares the US code; not rendered until independence
+  RCA: "840", // shares the US code; not rendered until independence
   BR: "076",
   CN: "156",
   NG: "566",
@@ -87,6 +106,9 @@ type WorldMetricFilterContextValue = {
   setCompareMode: (on: boolean) => void;
   /** The two nations picked on the map, left to right. */
   compareCountryIds: CountryId[];
+  /** Category the comparison panel reads, carried in a shared link. */
+  compareCategory: MetricCategoryId;
+  setCompareCategory: (category: MetricCategoryId) => void;
   toggleCompareCountry: (id: CountryId) => void;
   clearCompare: () => void;
 };
@@ -111,6 +133,8 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
   } | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [compareCountryIds, setCompareCountryIds] = useState<CountryId[]>([]);
+  const [compareCategory, setCompareCategory] =
+    useState<MetricCategoryId>(DEFAULT_COMPARE_CATEGORY);
 
   useEffect(() => {
     fetchJson<WorldMetricsData>("/api/world/metrics", { feature: "world-metrics" })
@@ -171,6 +195,43 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
   }, []);
   const clearCompare = useCallback(() => setCompareCountryIds([]), []);
 
+  // A shared link opens straight into the comparison. Reading in an effect keeps
+  // the server render and the hydrated tree identical, and the write below then
+  // keeps the address bar truthful as picks change.
+  const [linkRead, setLinkRead] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shared = parseCompareShareParam(params.get("compare"), SHAREABLE_COUNTRY_IDS);
+    if (shared.length > 0) {
+      setCompareCountryIds(shared as CountryId[]);
+      setCompareMode(true);
+      // The view only rides along with a comparison; on its own it would
+      // override this world's own default. Older links carry no view at all.
+      const sharedFilter = parseMetricFilterParam(params.get("filter"));
+      if (sharedFilter) setMetricFilter(sharedFilter);
+      const sharedCategory = parseCompareCategoryParam(params.get("cat"));
+      if (sharedCategory) setCompareCategory(sharedCategory);
+    }
+    setLinkRead(true);
+  }, []);
+
+  useEffect(() => {
+    if (!linkRead) return;
+    const url = new URL(window.location.href);
+    if (compareMode && compareCountryIds.length > 0) {
+      url.searchParams.set("compare", compareShareParam(compareCountryIds));
+      url.searchParams.set("filter", metricFilterParam(metricFilter));
+      const category = compareCategoryParam(compareCategory);
+      if (category) url.searchParams.set("cat", category);
+      else url.searchParams.delete("cat");
+    } else {
+      for (const key of ["compare", "filter", "cat"]) url.searchParams.delete(key);
+    }
+    if (url.toString() !== window.location.href) {
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [linkRead, compareMode, compareCountryIds, metricFilter, compareCategory]);
+
   // Leaving comparison mode drops the picks. Coming back should start a fresh
   // pair, not silently reopen the last one the player has stopped thinking about.
   useEffect(() => {
@@ -189,6 +250,8 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
       compareMode,
       setCompareMode,
       compareCountryIds,
+      compareCategory,
+      setCompareCategory,
       toggleCompareCountry,
       clearCompare,
     }),
@@ -201,6 +264,7 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
       rankFor,
       compareMode,
       compareCountryIds,
+      compareCategory,
       toggleCompareCountry,
       clearCompare,
     ]

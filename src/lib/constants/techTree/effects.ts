@@ -1,4 +1,3 @@
-import { COMMODITY_TYPES } from "../commodities";
 /**
  * Tech-tree effect types.
  *
@@ -87,7 +86,7 @@ export interface GrowthCostReductionEffect {
 
 /**
  * Proportional reduction to a sector's labor cost (automation), per turn.
- * Only bites when the labour system is on (labourSystemMode ≥ "wages"); no-op
+ * Only bites when the labour system is on; no-op
  * otherwise since labor isn't a separate cost line. 0.1 = labor 10% cheaper.
  */
 export interface LaborCostReductionEffect {
@@ -281,80 +280,6 @@ export function scaleEffect(effect: TechEffect, scale: number): TechEffect {
     default:
       return effect; // strength grants / unlockStrategy are not per-sector
   }
-}
-
-/** Reduce a flat list of effects to the per-turn scalars the turn engine applies. */
-export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffects {
-  let plantOutputPct = 0;
-  let methodOutputPct = 0;
-  let inputEfficiencyPct = 0;
-  let growthCostReductionPct = 0;
-  let laborCostReductionPct = 0;
-  let dominanceShield = 0;
-  let tariffShield = 0;
-  let expansionDiscount = 0;
-  const inputRateMult: Record<string, number> = {};
-  const outputRateMult: Record<string, number> = {};
-  for (const effect of effects) {
-    if (effect.kind === "plantOutput") {
-      if (effect.method) methodOutputPct += effect.pct;
-      else plantOutputPct += effect.pct;
-    } else if (effect.kind === "inputEfficiency") {
-      inputEfficiencyPct += effect.pct;
-    } else if (effect.kind === "growthCostReduction") {
-      growthCostReductionPct += effect.pct;
-    } else if (effect.kind === "laborCostReduction") {
-      laborCostReductionPct += effect.pct;
-    } else if (effect.kind === "dominanceShield") {
-      dominanceShield += effect.pct;
-    } else if (effect.kind === "tariffShield") {
-      tariffShield += effect.pct;
-    } else if (effect.kind === "expansionDiscount") {
-      expansionDiscount += effect.pct;
-    } else if (effect.kind === "inputCost") {
-      const cur = inputRateMult[effect.commodity] ?? 1;
-      inputRateMult[effect.commodity] = cur * Math.max(0, 1 - effect.pct);
-    } else if (effect.kind === "outputRate") {
-      const cur = outputRateMult[effect.commodity] ?? 1;
-      outputRateMult[effect.commodity] = cur * (1 + Math.max(0, effect.pct));
-    }
-  }
-  const clampedReduction = Math.min(TECH_GROWTH_REDUCTION_CAP, Math.max(0, growthCostReductionPct));
-  const clampedLaborReduction = Math.min(
-    TECH_LABOR_REDUCTION_CAP,
-    Math.max(0, laborCostReductionPct)
-  );
-  const shield = (v: number) => Math.min(TECH_SHIELD_CAP, Math.max(0, v));
-  // The plant-wide effects fold into the per-commodity maps every consumer
-  // already reads (supply, demand, unit yield, world ledger), so no consumer
-  // needs a second code path. Applied to every commodity: a rate a recipe does
-  // not use is never read.
-  const plantOutputBonus = Math.min(TECH_PLANT_OUTPUT_CAP, Math.max(0, plantOutputPct));
-  const methodOutputBonus = Math.min(TECH_METHOD_OUTPUT_CAP, Math.max(0, methodOutputPct));
-  const inputEfficiencyBonus = Math.min(TECH_INPUT_EFFICIENCY_CAP, Math.max(0, inputEfficiencyPct));
-  if (plantOutputBonus > 0 || methodOutputBonus > 0 || inputEfficiencyBonus > 0) {
-    for (const commodity of COMMODITY_TYPES) {
-      if (plantOutputBonus > 0 || methodOutputBonus > 0) {
-        outputRateMult[commodity] =
-          (outputRateMult[commodity] ?? 1) * (1 + plantOutputBonus) * (1 + methodOutputBonus);
-      }
-      if (inputEfficiencyBonus > 0) {
-        inputRateMult[commodity] = (inputRateMult[commodity] ?? 1) * (1 - inputEfficiencyBonus);
-      }
-    }
-  }
-  return {
-    plantOutputBonus,
-    methodOutputBonus,
-    inputEfficiencyBonus,
-    growthCostMultiplier: 1 - clampedReduction,
-    laborCostMultiplier: 1 - clampedLaborReduction,
-    inputRateMult,
-    outputRateMult,
-    dominanceShield: shield(dominanceShield),
-    tariffShield: shield(tariffShield),
-    expansionDiscount: shield(expansionDiscount),
-  };
 }
 
 /** Strength grants on a single node, applied once at unlock time. */

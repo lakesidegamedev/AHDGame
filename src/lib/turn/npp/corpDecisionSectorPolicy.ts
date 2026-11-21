@@ -20,7 +20,7 @@ import { STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { GROWTH_COST_MARGIN_SHARE } from "@/lib/turn/npp/nppCorporationTuning";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
-import { operatorMay } from "./rules/operatorPolicy";
+import { operatorMay } from "@/lib/corporations/rules/operatorPolicy";
 import { chooseTransitionConversion } from "@/lib/turn/npp/rules/transitionConversion";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import { hasConversionBudget } from "@/lib/market/producerMarket/transitionRules";
@@ -31,7 +31,7 @@ import { pushNppWageUpdates } from "@/lib/turn/npp/nppWagePolicy";
 import type { CeoArchetypeModifiers } from "@/lib/npp/ceoArchetype";
 import type { StrategyLevers } from "@/lib/turn/npp/corpStrategy";
 import type { Corporation } from "@/lib/db/types";
-import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
+import type { OperatorPermissions } from "@/lib/corporations/rules/operatorPolicy";
 
 /** Sets growth, production, mothballing and wage levers for each held sector. */
 export function applyNppSectorPolicies({
@@ -317,17 +317,15 @@ export function applyNppSectorPolicies({
     }
   }
 
-  // ── 2d. Wage policy (labour wages+) ───────────────────────────────────────
+  // ── 2d. Wage policy ───────────────────────────────────────
   // Stepped toward shortage/glut targets one tick at a time; see nppWagePolicy.
-  if (ctx.labourWagesEnabled) {
-    pushNppWageUpdates({
-      corp,
-      sectorProfits,
-      divestedSectorIds,
-      priceRatioOf,
-      now,
-      sectorUpdates,
-    });
-  }
+  pushNppWageUpdates({
+    corp,
+    sectorProfits,
+    divestedSectorIds,
+    priceRatioOf,
+    now,
+    sectorUpdates,
+  });
   return { conversionApplied, conversionCharge };
 }

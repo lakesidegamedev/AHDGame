@@ -45,6 +45,13 @@ describe("producer stage env public home first", () => {
   });
 });
 
+describe("producer stage env demand floor", () => {
+  it("passes the demand floor stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).demandFloorStage).toBeUndefined();
+    expect(producerStageEnv({ producerDemandFloorStage: 1 }).demandFloorStage).toBe(1);
+  });
+});
+
 describe("producer stage env sales advance price", () => {
   it("judges the sales advance at clearing prices only when the stage is on", () => {
     expect(producerStageEnv(null).salesAdvanceAtClearing).toBe(false);

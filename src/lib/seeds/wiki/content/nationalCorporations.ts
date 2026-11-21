@@ -11,10 +11,10 @@ Every country has **one primary** National Corporation. It holds every sector ty
 Three seats share control, so no one player runs everything. These powers sit with the head of government and finance minister in the [Cabinet](/wiki/cabinet).
 
 - **Head of government.** Marks strategic sectors and orders takings.
-- **Finance minister** (Treasury Secretary, Chancellor, Minister of Finance and similar). Sets policy: appoints or removes the CEO, sets public mandates, splits and merges sector types, sets the CEO's draw cap, and privatizes. If this seat is empty, those actions are unavailable until it is filled.
+- **Finance minister** (Treasury Secretary, Chancellor, Minister of Finance and similar). Sets policy: appoints or removes the CEO, sets public mandates (the CEO can set them too), splits and merges sector types, sets the CEO's draw cap, and privatizes. If this seat is empty, those actions are unavailable until it is filled.
 - **CEO.** Runs day-to-day operations. The finance minister appoints the CEO (they may appoint themselves). The CEO must live in the country and cannot be CEO of any other company.
 
-The ministry sets policy and the CEO runs operations. A CEO cannot set mandates, take or sell assets, or raise their own budget cap.
+The ministry sets policy and the CEO runs operations. A CEO cannot take or sell assets or raise their own budget cap.
 
 ![Map of who controls a National Corporation: the head of government, the finance minister and the CEO.](/wiki-images/diagrams/national-corporations-authority-map.svg)
 
@@ -53,7 +53,7 @@ The point of owning a company, rather than taxing a private one, is the **mandat
 | --- | --- |
 | Healthcare | Physician capacity |
 | Energy | Power-grid reliability |
-| Logistics, vehicles, construction | Road condition |
+| Logistics, construction | Road condition |
 | Telecommunications, technology | Broadband access |
 | Agriculture | Food security |
 | Manufacturing, chemicals | Manufacturing competitiveness |
@@ -62,7 +62,7 @@ The point of owning a company, rather than taxing a private one, is the **mandat
 | Retail | Lower cost of living |
 | Real estate | Housing affordability |
 
-At full state ownership of a sector in a region the nudge is **0.03 points per turn**, about 1.4 points a year before the metric's natural slow decay. It scales down with the state's share of that market. The only ceiling is the metric's own range.
+At full state ownership of a sector in a region the nudge is **0.03 points per turn**, about 1.4 points a year before the metric's natural slow decay. It scales down with the state's share of that market. One sector can push a single metric at most 8 points above its current value, and the metric's own range also limits it.
 
 Two postures trade profit for public value, set for the whole company or per sector:
 

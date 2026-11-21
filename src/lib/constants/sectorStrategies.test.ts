@@ -7,6 +7,7 @@ import {
   getMediaOperatingModelStrategies,
   getSectorStrategies,
   getStrategy,
+  STRATEGY_TRANSITION_TURNS,
   SECTOR_STRATEGIES,
 } from "./sectorStrategies";
 import { COMMODITY_TYPES } from "./commodities";
@@ -91,6 +92,80 @@ describe("unknown persisted sector types", () => {
       }
     }
   );
+});
+
+describe("2027 focused mining recipes", () => {
+  it.each(["oil_gas", "natural_gas_drilling", "rare_earth_mining"])(
+    "uses less industrial chemicals for %s in 2027",
+    (id) => {
+      const original = getStrategy("extraction", id, "1991-default");
+      const current = getStrategy("extraction", id, "2027-default");
+      expect(original.demand.chemicals).toBe(0.15);
+      expect(current.demand.chemicals).toBe(0.12);
+      expect(current.supply).toEqual(original.supply);
+    }
+  );
+
+  it("blends the chemical requirement during a switch from diversified mining", () => {
+    const result = getEffectiveStrategyRates(
+      "extraction",
+      "natural_gas_drilling",
+      "standard",
+      100,
+      100 + STRATEGY_TRANSITION_TURNS / 2,
+      "2027-default"
+    );
+    expect(result.isTransitioning).toBe(true);
+    expect(result.demand.chemicals).toBeCloseTo(0.1);
+    expect(getStrategy("extraction", "standard", "2027-default").demand.chemicals).toBe(0.08);
+  });
+});
+
+describe("2027 diversified and fuel mining inputs", () => {
+  it.each(["standard", "oil_gas", "natural_gas_drilling"])(
+    "uses the 2027 material requirements for %s",
+    (id) => {
+      const baseline = SECTOR_STRATEGIES.extraction.find((strategy) => strategy.id === id)!;
+      const expected = { ...baseline.demand };
+      for (const commodity of ["energy", "steel", "vehicles"] as const) {
+        const amount = expected[commodity];
+        if (amount != null) expected[commodity] = amount * 0.85;
+      }
+      if (id === "standard") {
+        for (const commodity of ["energy", "vehicles", "freight"] as const) {
+          expected[commodity] = expected[commodity]! * 0.65;
+        }
+      } else {
+        expected.chemicals = 0.12;
+      }
+
+      const current = getStrategy("extraction", id, "2027-default");
+      expect(current.demand).toEqual(expected);
+      expect(current.supply).toEqual(baseline.supply);
+      expect(getStrategy("extraction", id, "1973-default").demand).toEqual(baseline.demand);
+    }
+  );
+
+  it("blends diversified freight requirements while a gas site retools", () => {
+    const result = getEffectiveStrategyRates(
+      "extraction",
+      "standard",
+      "natural_gas_drilling",
+      100,
+      100 + STRATEGY_TRANSITION_TURNS / 2,
+      "2027-default"
+    );
+    expect(result.isTransitioning).toBe(true);
+    expect(result.demand.freight).toBeCloseTo(0.0325, 4);
+  });
+
+  it("keeps rare-earth electricity and equipment use at the existing rates", () => {
+    const baseline = getStrategy("extraction", "rare_earth_mining", "1973-default");
+    expect(getStrategy("extraction", "rare_earth_mining", "2027-default").demand).toEqual({
+      ...baseline.demand,
+      chemicals: 0.12,
+    });
+  });
 });
 
 describe("media operating model strategies", () => {
@@ -268,4 +343,39 @@ describe("logistics freight-only strategy", () => {
   it("resolves through getStrategy in a 1991 world", () => {
     expect(getStrategy("logistics", "freight_only", "1991-default")).toEqual(freightOnly);
   });
+});
+
+describe("building materials manufacturing", () => {
+  it.each([false, true])(
+    "retools vehicle output into building materials (advertising: %s)",
+    (advertisingInput) => {
+      const strategy = getSectorStrategies("manufacturing").find(
+        (item) => item.id === "building_materials"
+      );
+      expect(strategy?.supply).toEqual({ building_materials: 0.5 });
+      const ratesAt = (elapsed: number) =>
+        getEffectiveStrategyRates(
+          "manufacturing",
+          "building_materials",
+          "vehicle_assembly",
+          100,
+          100 + elapsed,
+          "2027-default",
+          undefined,
+          { advertisingInput }
+        );
+
+      expect(ratesAt(STRATEGY_TRANSITION_TURNS / 2).supply).toEqual({
+        vehicles: 0.25,
+        building_materials: 0.25,
+      });
+      const finished = ratesAt(STRATEGY_TRANSITION_TURNS);
+      expect(finished.supply).toEqual({ building_materials: 0.5 });
+      expect(finished.isTransitioning).toBe(false);
+      expect(finished.demand.advertising).toBe(advertisingInput ? 0.07 : undefined);
+      expect(Object.values(finished.demand).reduce((total, rate) => total + rate, 0)).toBeCloseTo(
+        0.4
+      );
+    }
+  );
 });

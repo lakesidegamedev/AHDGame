@@ -1,6 +1,6 @@
 export const demographicsContent = `# Demographics
 
-Who lives in a state decides which policies win it. The demographics system models the voters in each state, and every vote in every election flows through voter groups and how well a candidate fits them, so it is the foundation under [Election Mechanics](/wiki/election-mechanics). It is a voter and election mechanic, not a corporation mechanic. For tactics (which group to spend on) see [Demographics & Targeting](/wiki/demographics-targeting).
+Who lives in a state decides which policies win it. The demographics system models the voters in each state, and votes in general and presidential elections flow through voter groups and how well a candidate fits them, along with reach, approval and party organization, so it is the foundation under [Election Mechanics](/wiki/election-mechanics). It is a voter and election mechanic, not a corporation mechanic. For tactics (which group to spend on) see [Demographics & Targeting](/wiki/demographics-targeting).
 
 ## The census: who the electorate is
 
@@ -23,7 +23,7 @@ The dimensions are combined into **cells**, one combination across all of them, 
 
 A cell's lean is the average of its buckets' positions, and its turnout is blended from its buckets' participation rates. Cells are what the vote engine counts, and turnout actions reach every cell that carries the bucket they target.
 
-Every playable era has its own census bundles and position tables: a 1979 world has a 1979 electorate, not a reweighted 2019 one. Positions are authored per era and country to reflect that period's politics.
+Most playable eras have their own census bundles and position tables, so a 1979 world usually has a 1979 electorate, not a reweighted 2019 one. Where a country has no census for an era yet, the nearest authored era is used. Positions are authored per era and country to reflect that period's politics.
 
 **A cell in a ten-million-voter state (illustrative).** In a state of 10,000,000 voters, the cell "white, mature, no college, middle income" is estimated at 6% of the electorate (600,000 people). Its buckets' turnout blends to 60%, so 360,000 of them vote. If its lean is +1.2 economic and +2.0 social, a candidate at (+1, +2) fits it almost perfectly, and a candidate at (-3, -2) is a total distance of 8.2 away and gets close to the floor of appeal there.
 
@@ -47,7 +47,7 @@ Each turn, the vote pool is split between cells by size and turnout. Inside a ce
 
 ## State political lean
 
-A state's lean is its cells' economic and social leans, weighted by population share times turnout, averaged and clamped to -5..+5. Labels use the shared ruler rounded to the nearest step: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean Left or Lean Right, plus or minus 3 Left or Right. US state leans built this way spread well under plus or minus 1, so most states label as Centrist; the map shades them on a continuous scale fitted to the actual spread instead of these labels. Elections use raw position differences, not the label.
+A state's lean is its cells' economic and social leans, weighted by population share times turnout, averaged and clamped to -5..+5. Labels use the shared ruler rounded to the nearest step: 0 Centrist, plus 1 Center-Right or minus 1 Center-Left, plus 2 Lean Right or minus 2 Lean Left, plus 3 Right or minus 3 Left. US state leans built this way spread well under plus or minus 1, so most states label as Centrist; the map shades them on a continuous scale fitted to the actual spread instead of these labels. Elections use raw position differences, not the label.
 
 ## Moving turnout
 
@@ -73,5 +73,5 @@ Why the system works this way: it makes geography matter without hard-coding a m
 
 Tip: relying on intuition from another state misleads, because the same group can lean differently in two states.
 
-Live in every world and country with elections. The four dimensions above are for the US. Other countries use their own groups, and every playable era has its own data. Last checked 2026-10-30, version 1.18.0. Exact rules: [Demographics (design)](https://docs.lakesidegames.net/design/demographics.html). See also [Campaign Strategy](/wiki/campaign-strategy).
+Live in countries whose reset system version uses demographics v2; other countries still use the older per-state data. The four dimensions above are for the US. Other countries use their own groups, and most playable eras have their own data. Last checked 2026-10-30, version 1.18.0. Exact rules: [Demographics (design)](https://docs.lakesidegames.net/design/demographics.html). See also [Campaign Strategy](/wiki/campaign-strategy).
 `;

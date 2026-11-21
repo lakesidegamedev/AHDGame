@@ -1,8 +1,11 @@
 import {
   accountCurrency,
+  accountId,
   counterpartyAccount,
+  isCampaignWalletTx,
   mintSinkAccount,
   subjectAccount,
+  toCampaignWalletAccount,
 } from "@/lib/ledger/accounts";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { LedgerEntryInput, LedgerLeg } from "@/lib/ledger/types";
@@ -202,6 +205,20 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   office_income: "public_salary",
   savings_interest: "deposit_interest",
   fundraise_credit: "political_fundraising",
+  // New-character endowment: no in-world payer.
+  starting_capital: "starting_capital",
+  // Both directions share one reason so a deposit nets against a withdrawal per
+  // currency; the savings side of the move has no leg of its own here.
+  savings_deposit: "savings_account_transfer",
+  savings_withdrawal: "savings_account_transfer",
+  // The issuer's receipt is the same principal the buyers' bond_purchase rows
+  // pay, so it shares their reason and the two net per currency.
+  bond_issuance: "bond_principal_investment",
+  // The row witnesses only the sold currency. The bought side has no row, so the
+  // reason names the conversion instead of pooling it as unattributed.
+  forex_trade: "forex_conversion",
+  // Cash from the equity market pool, an unmodeled asset account.
+  ipo_proceeds: "equity_issuance_proceeds",
   // Equity transfers whose contra is an unmodeled asset account (public float, fund holdings).
   // Fund-subject buy and sell rows share this reason so a buy nets against its own sale
   // per currency instead of pooling in `unattributed`. Fund-subject rows never mirror.
@@ -368,13 +385,23 @@ export function deriveLedgerEntry(
     typeof tx.meta?.subscriptionEscrowId === "string"
       ? tx.meta.subscriptionEscrowId
       : null;
-  const subject = escrowKey
+  const campaignId = typeof tx.meta?.campaignId === "string" ? tx.meta.campaignId : "";
+  const campaignWallet = isCampaignWalletTx(tx);
+  const baseSubject = escrowKey
     ? `fund_subscription_escrow:${escrowKey}:${tx.currencyCode}`
     : subjectAccount(
         tx.subjectType,
         { subjectId: tx.subjectId?.toString(), countryId: tx.countryId, statePartyKey },
         tx.currencyCode
       );
+  // Fundraising lands in the election campaign's own funds, never in a character
+  // wallet, so the credit books to that war chest rather than a wallet it never touched.
+  const subject =
+    tx.type === "fundraise_credit" && tx.subjectType === "character" && campaignId
+      ? accountId("campaign_fund", campaignId, tx.currencyCode)
+      : baseSubject && campaignWallet
+        ? toCampaignWalletAccount(baseSubject)
+        : baseSubject;
   if (!subject) return null;
 
   const primary: LedgerLeg = {
@@ -393,7 +420,10 @@ export function deriveLedgerEntry(
   // A derivable counterparty always wins. Failing that, a linked transfer
   // account from the row's own meta (fund cash, transfer counterparty) wins
   // over the mint/sink fallback - these are real transfers, not creation.
-  const linked = counterparty ?? fundMirrorAccount(tx) ?? partyTransferContra(tx);
+  const linked =
+    (counterparty && campaignWallet ? toCampaignWalletAccount(counterparty) : counterparty) ??
+    fundMirrorAccount(tx) ??
+    partyTransferContra(tx);
   const contraAccount =
     linked ?? mintSinkAccount(anchor, reasonForTxType(tx.type), tx.currencyCode);
 

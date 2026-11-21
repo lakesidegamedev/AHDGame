@@ -1,7 +1,6 @@
 /**
  * POST /api/unions/[id]/demand-wage: the union president publishes (or
  * withdraws) a standing wage claim for the industry. Gated on
- * `labourSystemMode >= "full"`.
  *
  * This is a pressure signal, not a second bargaining system: the number is
  * only ever read for display (the per-local gap column on the union
@@ -17,7 +16,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { setUnionWageDemand } from "@/lib/unions/commands/unionActions";
 
 interface RouteParams {
@@ -28,10 +26,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/[id]/demand-wage:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

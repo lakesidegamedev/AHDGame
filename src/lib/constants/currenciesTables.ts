@@ -55,6 +55,10 @@ export {
 } from "./currencyCodes";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
+import { AB_ECONOMY } from "@/lib/countries/ab/economy";
+import { RTX_ECONOMY } from "@/lib/countries/rtx/economy";
+import { NEN_ECONOMY } from "@/lib/countries/nen/economy";
+import { RCA_ECONOMY } from "@/lib/countries/rca/economy";
 
 /** Zod-compatible tuple for CurrencyCode validation */
 export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
@@ -311,6 +315,10 @@ export const INITIAL_RATES: Partial<Record<CountryId, number>> = {
   // preset's roster includes it; this row values CAD everywhere else.
   CA: 1.3269,
   QC: 1.3269, // CAD: shares Canada's rate (not forex-active)
+  AB: 1.3269, // CAD: shares Canada's rate (not forex-active)
+  RTX: 1.0, // USD: shares the US rate (not forex-active)
+  NEN: 1.0, // USD: shares the US rate (not forex-active)
+  RCA: 1.0, // USD: shares the US rate (not forex-active)
 };
 
 /**
@@ -562,6 +570,10 @@ export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
   // WDI PA.NUS.FCRF 2024 average, matching the CAD figures in Canada's 2027 data.
   CA: 1.3698,
   QC: 1.3698, // CAD: shares Canada's rate (not forex-active)
+  AB: 1.3698, // CAD: shares Canada's rate (not forex-active)
+  RTX: 1.0, // USD: shares the US rate (not forex-active)
+  NEN: 1.0, // USD: shares the US rate (not forex-active)
+  RCA: 1.0, // USD: shares the US rate (not forex-active)
 };
 
 /**
@@ -684,6 +696,10 @@ export const MONETARY_BASELINES: Record<CountryId, MonetaryBaseline> = {
   WAL: WAL_ECONOMY.monetary.baseline, // mirrors UK (sterling zone)
   CA: CA_ECONOMY.monetary.baseline,
   QC: QC_ECONOMY.monetary.baseline, // mirrors Canada (Canadian-dollar zone)
+  AB: AB_ECONOMY.monetary.baseline, // mirrors Canada (Canadian-dollar zone)
+  RTX: RTX_ECONOMY.monetary.baseline, // mirrors the US (US-dollar zone)
+  NEN: NEN_ECONOMY.monetary.baseline, // mirrors the US (US-dollar zone)
+  RCA: RCA_ECONOMY.monetary.baseline, // mirrors the US (US-dollar zone)
 };
 
 // ── FX Intervention (chair standing policy) ─────────────────────────────────

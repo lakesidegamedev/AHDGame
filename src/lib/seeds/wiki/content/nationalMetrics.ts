@@ -4,7 +4,7 @@ Before you cut rates, build a sector or pass a law, check what the country's num
 
 Each state keeps its own set of metrics. Every turn the game updates them, then rolls them up into national figures. Most national rates are population-weighted averages of the states. GDP growth is weighted by each state's GDP. Unemployment is weighted by each state's labour force. Open a country's Metrics page for national values, rankings of states and history charts; state pages show each state's own metrics. The Metrics page averages every metric across states by population, growth included, so its growth figure can differ from the GDP-weighted national figure that the Economy page and the budget use.
 
-![Country Metrics page showing the average score, political direction and democratic health](/wiki-images/screens/national-metrics-country-metrics.webp)
+![Country Metrics page showing the average score](/wiki-images/screens/national-metrics-country-metrics.webp)
 
 ## What growth really measures
 
@@ -23,7 +23,7 @@ unemployment-output-gap
 \`\`\`
 
 - **The output gap sets the target.** A region has a structural rate, the unemployment that exists even in a normal year (4.5% unless local conditions change it). Each point of output gap moves the target by 0.4 points, down when the economy runs hot and up when it is slack. Funded matching, transport and childcare programmes lower the structural rate.
-- **Hiring takes time.** At average workforce skill, half of a corporation's open positions fill in 2 turns. The background economy closes half the gap to its target in about 24 turns. A more skilled workforce fills jobs faster.
+- **Hiring takes time.** At average workforce skill, half of a corporation's open positions fill in half a turn. The background economy closes half the gap to its target in about 24 turns. A more skilled workforce fills jobs faster.
 - **Floor.** Unemployment never reads below 1%.
 
 Where a region has no labour force data, the game falls back to a simple Okun's Law rule: unemployment falls 0.2 points per 1% of growth above trend and rises 0.25 points per 1% below it, with 85% inertia and bounds of 1% to 15%.
@@ -36,7 +36,7 @@ Higher unemployment also weakens union bargaining leverage ([Unions](/wiki/union
 
 Inflation moves toward a target built from several pressures. In multiplayer it advances halfway at half past each hour, and the hourly turn applies the rest of the step.
 
-![Eight pressures push inflation, which in turn affects corporate margins and central bank chair scrutiny.](/wiki-images/diagrams/national-metrics-inflation-inputs.svg)
+![Many pressures push inflation, which in turn affects corporate margins and central bank chair scrutiny.](/wiki-images/diagrams/national-metrics-inflation-inputs.svg)
 
 | Pressure | Effect |
 | --- | --- |
@@ -53,7 +53,7 @@ The prime rate is set by the chair or committee in [Central Banks](/wiki/central
 
 Inflation keeps 35% of last turn's value, normally moves at most 1.5 points in a turn, and cannot fall below -2.0%.
 
-Each country has its own inflation target, set per country and era. Most developed economies use 2.0%, but some countries and early eras run much higher (see [Central Banks](/wiki/central-banks)). Inflation far from target hurts all corporate margins, and the central bank chair is judged against the target. Inflation and growth also set the [FOMC](/wiki/fomc) committee's motion and how its NPP seats vote.
+Each country has its own inflation target, set per country and era. Most developed economies use 2.0%, but some countries and early eras run much higher (see [Central Banks](/wiki/central-banks)). Inflation well above target, or deflation, hurts corporate margins, while inflation just under target helps them, and the central bank chair is judged against the target. Inflation and growth also set the [FOMC](/wiki/fomc) committee's motion and how its NPP seats vote.
 
 So why is inflation rising when you cut rates? Rates below the neutral rate push inflation up, and the full effect of a change takes 12 turns to arrive. A healthy range is growth near the region's own trend, unemployment near its structural rate, and inflation near the country's target.
 
@@ -76,7 +76,7 @@ States track many more measures, grouped in ten categories:
 
 The exact list varies by country, and a world set in an earlier era leaves out measures that did not exist yet. Each metric has a **value** and a **baseline**. Laws and corporate activity push the value away from the baseline, and **natural decay** pulls it back by 0.25% of the remaining gap each turn.
 
-Who pushes them: enacted laws push state metrics away from baseline every turn ([Bills & Legislation](/wiki/bills-legislation)), and each enacted law keeps pushing its metric while it stays in force. Enacted policy pulls metrics toward a target each turn ([Policy Effects](/wiki/policy-effects)). Ministerial orders and tier settings move metrics ([Cabinet](/wiki/cabinet)), and each cabinet building nudges its region's metrics every turn ([Cabinet Projects & Buildings](/wiki/cabinet-projects)). Public mandates push the matched metrics up each turn, while corruption and transparency set how efficient state companies are ([National Corporations](/wiki/national-corporations)). Spending laws also move state metrics. Effects build over many turns, not one.
+Who pushes them: enacted laws move state metrics once their programme is funded ([Bills & Legislation](/wiki/bills-legislation)), and a law in force only moves its metric while its programme is funded and its agency delivers. Enacted policy pulls metrics toward a target each turn ([Policy Effects](/wiki/policy-effects)). Ministerial orders and tier settings move metrics ([Cabinet](/wiki/cabinet)), and each cabinet building nudges its region's metrics every turn ([Cabinet Projects & Buildings](/wiki/cabinet-projects)). Public mandates push the matched metrics up each turn, while corruption and transparency set how efficient state companies are ([National Corporations](/wiki/national-corporations)). Spending laws also move state metrics. Effects build over many turns, not one.
 
 Legislators can aim a law at a specific metric: education funding moves literacy and test scores, infrastructure spending moves roads and broadband, environmental rules move emissions.
 
@@ -88,7 +88,7 @@ metric-decay-recovery
 
 ## Placing sectors where conditions pay
 
-Conditions in a state change the profit margin of corporations operating there, in percentage points. Each metric has a base effect (below). That base is weighted by how much the sector depends on it, then capped at 0.75 points per metric, 2 points per channel (labour, logistics, digital and so on) and 8 points in total. Every sector feels every metric a little; the sectors listed feel it most. If you run corporations, place sectors where this table works for you, since a state with good roads, a reliable grid and high skill pays you better margins. Growing your sectors also lifts the state's GDP growth and creates jobs.
+Conditions in a state change the profit margin of corporations operating there, in percentage points. Each metric has a base effect (below). That base is weighted by how much the sector depends on it, then capped at 0.75 points per metric, 2 points per channel (labour, logistics, digital and so on) and 8 points in total. Unemployment, grid reliability and corruption affect every sector; the other metrics only affect the sectors listed. If you run corporations, place sectors where this table works for you, since a state with good roads, a reliable grid and high skill pays you better margins. Growing your sectors also lifts the state's GDP growth and creates jobs.
 
 | State metric | Base effect | Weighs most on |
 | --- | --- | --- |
@@ -111,5 +111,5 @@ With roads at 80 against the 60 where they add nothing, the base effect is (80 -
 - Command economies: shortage, overhang and the black market feed the marketization dial ([Planned / Command Economies](/wiki/planned-economies)).
 - Currency: inflation, growth and trade drift the exchange rate, and the household price index sets real purchasing power in the economy panel.
 
-Live in every world, for every country. Which state metrics exist and what the inflation target is depend on the country and the era the world starts in. Last checked 2026-10-29, version 1.18.0. Exact rules: [National Metrics (design)](https://docs.lakesidegames.net/design/national-metrics.html). See also: [Glossary](/wiki/glossary), [Demographics](/wiki/demographics)
+Live in every world, for every country. Which state metrics exist depends on the country and the era the world starts in, and the inflation target depends on the country and the world's current in-game year. Last checked 2026-10-29, version 1.18.0. Exact rules: [National Metrics (design)](https://docs.lakesidegames.net/design/national-metrics.html). See also: [Glossary](/wiki/glossary), [Demographics](/wiki/demographics)
 `;

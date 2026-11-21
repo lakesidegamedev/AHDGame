@@ -43,6 +43,7 @@ describe("sector investment terms", () => {
         year: 1966,
         eraUnitScale: 1,
         primeRate: 5,
+        buildPriceScale: 1,
       };
       const ordinary = computeBuildCost(args);
       const founding = computeBuildCost({ ...args, founding: true });

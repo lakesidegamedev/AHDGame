@@ -2,7 +2,7 @@ import type { ElectionDetail } from "./wikiElectionTypes";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 
 export function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
     year: "numeric",

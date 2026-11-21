@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MetricCategoryId } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import {
@@ -14,11 +14,18 @@ import {
   type CompareRow,
   type RankedNation,
 } from "@/lib/world/rankings";
+import { comparePairReady, compareShareParam } from "@/lib/world/countryCompare";
+import { buildCompareSummary, type CompareSummarySide } from "@/lib/world/compareSummary";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useWorldMetricFilter, type WorldMetricsCountry } from "../WorldMetricFilterContext";
+import type { CountryEconomyOutlook } from "@/lib/economy/queries/countryEconomyOutlook";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import { buildCompareSeries } from "@/lib/world/compareSeries";
 
 const SLOT_COUNT = 2;
-const DEFAULT_CATEGORY: MetricCategoryId = "economic";
+
+/** Which copy button was pressed last, so each one can name its own result. */
+type CopyState = "idle" | "link" | "summary" | "link-failed" | "summary-failed";
 
 /**
  * Side-by-side reading of two nations picked on the globe.
@@ -33,12 +40,76 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
     compareMode,
     setCompareMode,
     compareCountryIds,
+    compareCategory,
+    setCompareCategory,
     toggleCompareCountry,
     clearCompare,
     worldMetrics,
   } = useWorldMetricFilter();
   const countryName = useCountryDisplayName();
-  const [chosenCategory, setChosenCategory] = useState<MetricCategoryId>(DEFAULT_CATEGORY);
+
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+
+  // Built at click time from the live address, so the link carries the current
+  // origin and any other world parameters already in the URL.
+  const compareUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("compare", compareShareParam(compareCountryIds));
+    return url.toString();
+  };
+
+  const copy = async (text: string, kind: "link" | "summary") => {
+    if (!navigator.clipboard) {
+      setCopyState(kind === "link" ? "link-failed" : "summary-failed");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState(kind);
+    } catch {
+      setCopyState(kind === "link" ? "link-failed" : "summary-failed");
+    }
+    window.setTimeout(() => setCopyState("idle"), 2200);
+  };
+
+  // Recent paths come from the same economy payload the economy page reads, one
+  // fetch per pick. Two nations only, and the effect is keyed on the pair so a
+  // changed side refetches instead of showing the previous nation's line.
+  const [outlooks, setOutlooks] = useState<Record<string, CountryEconomyOutlook | null>>({});
+  const pairKey = compareCountryIds.slice(0, SLOT_COUNT).join(",");
+  useEffect(() => {
+    const ids = pairKey ? pairKey.split(",") : [];
+    if (ids.length < SLOT_COUNT) {
+      setOutlooks({});
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    Promise.allSettled(
+      ids.map((id) =>
+        fetchJson<CountryEconomyOutlook>(`/api/country/${id.toLowerCase()}/economy`, {
+          feature: "world-compare-economy",
+          signal: controller.signal,
+        })
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      // A nation without a stored economy document is a normal empty side, and
+      // settled results keep the other side's series when one fetch fails.
+      setOutlooks(
+        Object.fromEntries(
+          ids.map((id, index) => [
+            id,
+            results[index]?.status === "fulfilled" ? results[index].value : null,
+          ])
+        )
+      );
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [pairKey]);
 
   // Every national document, keyed by country id. The ISO-keyed map is a subset
   // and only fills gaps in the by-id payload.
@@ -57,7 +128,7 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   if (!compareMode) return null;
 
   const categories = worldMetrics?.availableCategories ?? [];
-  const category = categories.includes(chosenCategory) ? chosenCategory : categories[0];
+  const category = categories.includes(compareCategory) ? compareCategory : categories[0];
 
   const sides = Array.from({ length: SLOT_COUNT }, (_, index) => {
     const id = compareCountryIds[index] ?? null;
@@ -94,8 +165,49 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
     ? compareAcrossMetrics({ countries: all, countryIds: picked, category, metrics: metricIds })
     : [];
 
+  // Charts only when both sides loaded with history; one missing side would
+  // silently show a single line and invite a comparison that is not there.
+  const chartPair =
+    compareCountryIds.length === SLOT_COUNT && compareCountryIds.every((id) => outlooks[id])
+      ? ([outlooks[compareCountryIds[0]], outlooks[compareCountryIds[1]]] as [
+          CountryEconomyOutlook,
+          CountryEconomyOutlook,
+        ])
+      : null;
+
   const cellFor = (row: CompareRow, id: CountryId | null) =>
     id ? (row.cells.find((cell) => cell.countryId === id) ?? null) : null;
+
+  // The summary reads the same rows the panel shows, so a pasted comparison
+  // cannot drift from what the sender sees. Both sides need stored figures
+  // before there is anything worth pasting beside the link.
+  const summarySides: [CompareSummarySide, CompareSummarySide] = [
+    {
+      name: sides[0].label ?? "Not picked",
+      overall: sides[0].id ? (overallRanks.get(sides[0].id) ?? null) : null,
+      categoryRank: sides[0].id ? (categoryRanks.get(sides[0].id) ?? null) : null,
+    },
+    {
+      name: sides[1].label ?? "Not picked",
+      overall: sides[1].id ? (overallRanks.get(sides[1].id) ?? null) : null,
+      categoryRank: sides[1].id ? (categoryRanks.get(sides[1].id) ?? null) : null,
+    },
+  ];
+  const summaryReady = comparePairReady(compareCountryIds) && sides.every((side) => side.country);
+  const copySummary = () => {
+    void copy(
+      buildCompareSummary({
+        sides: summarySides,
+        category: category ?? null,
+        rows: rows.map((row) => ({
+          metric: row.metric,
+          cells: [cellFor(row, sides[0].id), cellFor(row, sides[1].id)] as const,
+        })),
+        url: compareUrl(),
+      }),
+      "summary"
+    );
+  };
 
   const shellClass = fullscreen
     ? "fixed left-4 top-16 z-[70] max-h-[70vh] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-card-border bg-card/95 p-4 shadow-panel"
@@ -111,6 +223,34 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {comparePairReady(compareCountryIds) && (
+            <button
+              type="button"
+              onClick={() => void copy(compareUrl(), "link")}
+              aria-live="polite"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            >
+              {copyState === "link"
+                ? "Link copied"
+                : copyState === "link-failed"
+                  ? "Copy failed"
+                  : "Copy link"}
+            </button>
+          )}
+          {summaryReady && (
+            <button
+              type="button"
+              onClick={copySummary}
+              aria-live="polite"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            >
+              {copyState === "summary"
+                ? "Summary copied"
+                : copyState === "summary-failed"
+                  ? "Copy failed"
+                  : "Copy summary"}
+            </button>
+          )}
           {compareCountryIds.length > 0 && (
             <button
               type="button"
@@ -170,7 +310,7 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
             <button
               key={entry}
               type="button"
-              onClick={() => setChosenCategory(entry)}
+              onClick={() => setCompareCategory(entry)}
               className={`rounded-md px-2 py-0.5 text-body-sm font-medium transition-colors ${
                 entry === category
                   ? "bg-primary/20 text-primary border border-primary/30"
@@ -218,6 +358,34 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
                 cells={sides.map((side) => cellFor(row, side.id))}
               />
             ))}
+          </div>
+        </div>
+      )}
+      {chartPair && (
+        <div className="mt-4">
+          <h3 className="text-body-sm font-semibold">Recent path</h3>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Both nations on one scale per series, positioned by turn.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <SeriesChart
+              title="GDP growth"
+              seriesA={chartPair[0].pulse.gdpGrowth.history}
+              seriesB={chartPair[1].pulse.gdpGrowth.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
+            <SeriesChart
+              title="Inflation"
+              seriesA={chartPair[0].pulse.inflation.history}
+              seriesB={chartPair[1].pulse.inflation.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
+            <SeriesChart
+              title="Policy rate"
+              seriesA={chartPair[0].pulse.primeRate.history}
+              seriesB={chartPair[1].pulse.primeRate.history}
+              labels={[sides[0].label ?? "A", sides[1].label ?? "B"]}
+            />
           </div>
         </div>
       )}
@@ -288,6 +456,73 @@ function MetricRow({
           </span>
         );
       })}
+    </div>
+  );
+}
+
+const SERIES_COLORS = ["var(--primary, #3b82f6)", "var(--color-warning, #f59e0b)"] as const;
+
+function SeriesChart({
+  title,
+  seriesA,
+  seriesB,
+  labels,
+}: {
+  title: string;
+  seriesA: readonly { turn: number; rate: number }[];
+  seriesB: readonly { turn: number; rate: number }[];
+  labels: [string, string];
+}) {
+  const chart = buildCompareSeries(seriesA, seriesB);
+  if (!chart) return null;
+  return (
+    <div className="rounded-lg border border-card-border bg-card px-3 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-body-sm font-medium text-muted">{title}</span>
+        <span className="text-[10px] tabular-nums text-muted">
+          {chart.min.toFixed(1)} to {chart.max.toFixed(1)}%
+        </span>
+      </div>
+      <svg
+        viewBox="0 0 100 30"
+        preserveAspectRatio="none"
+        className="mt-1 h-14 w-full"
+        role="img"
+        aria-label={`${title}, ${labels[0]} against ${labels[1]}`}
+      >
+        <polyline
+          points={chart.a}
+          fill="none"
+          stroke={SERIES_COLORS[0]}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        <polyline
+          points={chart.b}
+          fill="none"
+          stroke={SERIES_COLORS[1]}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted">
+        {[chart.latestA, chart.latestB].map((latest, index) => (
+          <span key={index} className="flex items-center gap-1">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: SERIES_COLORS[index] }}
+            />
+            <span className="truncate">{labels[index]}</span>
+            <span className="tabular-nums text-foreground">
+              {latest == null ? "n/a" : `${latest.toFixed(1)}%`}
+            </span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

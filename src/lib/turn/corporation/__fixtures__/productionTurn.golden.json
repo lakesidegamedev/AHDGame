@@ -3,20 +3,20 @@
   "sectorOps": 420,
   "corpOps": 60,
   "totalRevenueGenerated": 6460696.071294792,
-  "totalIncomeGenerated": 877497.4978111538,
+  "totalIncomeGenerated": 1524974.966037701,
   "sectorsProcessed": 420,
-  "sha256": "50d1b276d47b0ecb3ef4f181a47e2bb82fa4f425c30f908d3dfb49c7c1127f16",
+  "sha256": "427a6f2704c3cf6319cc16012df5b122e32ecf016c8d67fd9680bc71249a3c7f",
   "shadow": {
     "plants": 420,
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1293486.8641976512,
+    "householdSpend": 1343382.5567877155,
     "publicSpend": 301.32424721597914,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "83141b4149cd64f7426a978322df1b590c8677fc4c1abb0f291ca5d81f73ca49"
+    "sha256": "eb6213b918015afcd50a41f49a273efb4e9b587d1d38bfb46c2a292e00171869"
   },
   "clearing": {
     "sectorsWithClearing": 420,
@@ -28,7 +28,7 @@
     "contractTargets": 0,
     "brandLoyaltyUpdates": 60,
     "invariantBreaches": 0,
-    "sha256": "585c3e048d86c982e678f8fb35e6cf8deac9e5b19aad651f0c0e51cdc31e0fb2"
+    "sha256": "d440a9c5194058ec1c037bcf02416b90d18dc20fcf4ce6468ca92b18330f52df"
   },
   "lookups": {
     "corporations": 60,
@@ -36,18 +36,18 @@
     "sectorPresenceKeys": 0,
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
-    "sha256": "6196a51f4cad9bb6a96daa62239edea965b6388e56f07d271f73c85d17d9aca3"
+    "sha256": "c0dacbe20fba23a7f3f0646a6e267c2b53d8d0be26ea359cd4ded8ce0b490147"
   },
   "historicalShadow": {
     "plants": 420,
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1293486.8641976523,
+    "householdSpend": 1343382.5567877148,
     "publicSpend": 301.32424721597914,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "665e27eed03f75ae4519573e7c788faa88c9ef737c254a1776a42013b4a93ef1"
+    "sha256": "d12805a182bd086a3fff24374e53d9d9a6cff6358dfc62c60267e350b556d8ea"
   }
 }

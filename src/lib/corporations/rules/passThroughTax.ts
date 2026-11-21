@@ -193,8 +193,19 @@ export function blendedOwnerRate(
 }
 
 /**
+ * Taxable profit for the owner tax: operating profit and bond coupon income are
+ * netted before the zero floor, so an operating loss offsets coupon income.
+ */
+export function netPassThroughProfit(operatingNet: number, couponIncome: number): number {
+  const net =
+    (Number.isFinite(operatingNet) ? operatingNet : 0) +
+    (Number.isFinite(couponIncome) ? couponIncome : 0);
+  return Math.max(0, net);
+}
+
+/**
  * Owner tax on a pass-through's taxable profit this turn. Taxable profit is the
- * consolidated operating profit plus bond coupon income, floored at zero.
+ * consolidated operating profit netted with bond coupon income, floored at zero.
  */
 export function passThroughOwnerTax(args: {
   taxableProfit: number;

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import {
   getStateResourceCapacity,
   lookupStateResourceCapacity,
@@ -81,5 +82,38 @@ describe("lookupStateResourceCapacity against the live reference map", () => {
       expect(lookupStateResourceCapacity(live, "DD", stateId)?.countryId).toBe("DD");
       expect(lookupStateResourceCapacity(live, "DE", stateId)?.countryId).toBe("DE");
     }
+  });
+});
+
+describe("Canada capacity coverage", () => {
+  // Canadian provinces were seeded with `resources: {}` because the map had no
+  // CA entries, which capped every extraction multiplier at 0 for the country.
+  it("lists every 2027 Canadian region with at least one deposit", () => {
+    const live = getStateResourceCapacity("2027-default");
+    expect(caRegions2027).toHaveLength(13);
+    for (const region of caRegions2027) {
+      const resolved = lookupStateResourceCapacity(live, "CA", region._id);
+      expect(resolved, `${region._id} should have a capacity entry`).toBeDefined();
+      expect(resolved?.countryId).toBe("CA");
+      expect(
+        Object.keys(resolved?.resources ?? {}).length,
+        `${region._id} should carry deposits`
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it("gives the major producers their headline resource", () => {
+    const live = getStateResourceCapacity("2027-default");
+    expect(live["CA:CA_AB"]?.resources.oil).toBeGreaterThan(0);
+    expect(live["CA:CA_AB"]?.resources.natural_gas).toBeGreaterThan(0);
+    expect(live["CA:CA_BC"]?.resources.timber).toBeGreaterThan(0);
+    expect(live["CA:CA_QC"]?.resources.iron).toBeGreaterThan(0);
+    expect(live["CA:CA_NL"]?.resources.iron).toBeGreaterThan(0);
+  });
+
+  it("does not leak Canadian deposits into the US state of the same suffix", () => {
+    const live = getStateResourceCapacity("2027-default");
+    expect(live["US:CA"]?.countryId).toBe("US");
+    expect(lookupStateResourceCapacity(live, "US", "CA")?.countryId).toBe("US");
   });
 });

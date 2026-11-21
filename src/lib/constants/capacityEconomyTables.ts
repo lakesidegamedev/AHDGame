@@ -172,6 +172,21 @@ export const PLANT_CREW_SUSTAINED_GLUT_THROTTLE = 0.25;
  */
 export const THROTTLE_IDLE_UPKEEP_SHARE = 0.33;
 
+/**
+ * Global multiplier on the ordinary (non-founding) build price outside the
+ * qualified 1991 basis, calibrated so a fully selling plant repays its build
+ * in roughly 60 turns. `gameConfig.plantBuildPriceScale` overrides it live.
+ */
+export const PLANT_BUILD_PRICE_SCALE = 1 / 9;
+
+/** Construction basis for standard facilities with low cash earnings per installed unit. */
+export const STANDARD_BUILD_PRICE_SCALE_2027: Readonly<
+  Partial<Record<OperatingSectorType, number>>
+> = {
+  retail: 0.25,
+  financial: 0.2,
+};
+
 /** Legacy first-plant discount. The qualified 1991 preset pays the full basis. */
 export const CAPACITY_FOUNDING_DISCOUNT = 0.1;
 

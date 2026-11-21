@@ -22,10 +22,12 @@ import { campaignManagerHref } from "@/lib/campaignManager/links";
 export function FirstDaysPanel({
   data,
   year,
+  campaignCost,
   partiesHref,
 }: {
   data: FirstDaysData;
   year: number | null;
+  campaignCost: { actions: number; funds: string } | null;
   partiesHref: string;
 }) {
   const t = useTranslations("profile.firstDays");
@@ -109,9 +111,18 @@ export function FirstDaysPanel({
             </p>
             {!campaignDone && (
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <Button size="sm" onClick={campaign} isLoading={campaigning}>
-                  {t("campaignButton")}
-                </Button>
+                {campaignCost ? (
+                  <>
+                    <Button size="sm" onClick={campaign} isLoading={campaigning}>
+                      {t("campaignButton")}
+                    </Button>
+                    <span className="text-body-xs text-muted">
+                      {t("campaignCost", campaignCost)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-body-xs text-muted">{t("campaignCostUnavailable")}</span>
+                )}
                 <Link href="/actions" className="text-body-xs text-muted hover:underline">
                   {t("allActions")}
                 </Link>
@@ -152,7 +163,12 @@ export function FirstDaysPanel({
               <>
                 <p className="text-body-sm font-medium text-foreground">{t("raceTitle")}</p>
                 {data.races.length === 0 ? (
-                  <p className="mt-0.5 text-body-xs text-muted">{t("raceNone")}</p>
+                  <p className="mt-0.5 text-body-xs text-muted">
+                    {t("raceNone")}{" "}
+                    <Link href="/elections" className="text-primary hover:underline">
+                      {t("browseRaces")}
+                    </Link>
+                  </p>
                 ) : (
                   <>
                     <p className="mt-0.5 text-body-xs leading-relaxed text-muted">

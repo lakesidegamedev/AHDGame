@@ -13,10 +13,10 @@ describe("construction work as demand", () => {
     expect(slices.reduce((a, b) => a + b, 0)).toBeCloseTo(100);
   });
 
-  it("buys an all-at-once order's work when it lands, so a refund before landing cannot add to it", () => {
-    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14 };
-    expect([11, 12, 13].map((t) => buildWorkThisTurn(order, t))).toEqual([0, 0, 0]);
-    expect(buildWorkThisTurn(order, 14)).toBe(100);
+  it("spreads a legacy order's work over its window like any other order", () => {
+    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14, deliveryBaseFraction: 0 };
+    expect([11, 12, 13].map((t) => buildWorkThisTurn(order, t))).toEqual([25, 25, 25]);
+    expect(buildWorkThisTurn(order, 14)).toBe(25);
   });
 
   it("never buys more than paid plus refundable remainder after a cancellation", () => {

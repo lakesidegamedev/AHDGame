@@ -87,7 +87,7 @@ describe("owned producer capacity", () => {
       completedTurn: 6,
       ownedDailyUnits: 100,
       paidBookAnchor: 50,
-      buildQueue: [{ unitsOrdered: 80, costPaidAnchor: 10, startTurn: 3, onlineTurn: 7 }],
+      buildQueue: [{ unitsOrdered: 80, costPaidAnchor: 10, startTurn: 6, onlineTurn: 7 }],
     });
     expect(next.deliveredDailyUnits).toBe(80);
     expect(next.state.paidBookAnchor).toBeCloseTo(60 * (1 - CAPITAL_DEPRECIATION_PER_TURN));
@@ -123,7 +123,7 @@ describe("owned producer capacity", () => {
       paidBookAnchor: 50,
       buildQueue: [
         // Lands in the missed turn: dropping it would lose its paid cost.
-        { unitsOrdered: 30, costPaidAnchor: 12, startTurn: 555, onlineTurn: 561 },
+        { unitsOrdered: 30, costPaidAnchor: 12, startTurn: 560, onlineTurn: 561 },
         { unitsOrdered: 60, costPaidAnchor: 24, startTurn: 558, onlineTurn: 564, smooth: true },
         // Placed while the turn was missed.
         { unitsOrdered: 40, costPaidAnchor: 8, startTurn: 561, onlineTurn: 565, smooth: true },
@@ -166,5 +166,46 @@ describe("owned producer capacity", () => {
         recessionCapacityFactor: 1,
       })
     ).toThrow("schedule");
+  });
+});
+
+describe("whole plants: the delivered part of a plant under construction produces", () => {
+  const SIZE = 250;
+  const wholeState = (): ProducerCapacityState => ({
+    completedTurn: 10,
+    ownedDailyUnits: SIZE,
+    paidBookAnchor: 500,
+    buildQueue: [
+      { unitsOrdered: SIZE, costPaidAnchor: 1000, startTurn: 10, onlineTurn: 14, smooth: true },
+    ],
+    wholePlants: { plantUnits: SIZE, creditUnits: 0, wearUnits: 0 },
+  });
+
+  it("a one-plant order delivers a quarter of a plant next turn and runs it", () => {
+    const next = advance(wholeState());
+    expect(next.deliveredDailyUnits).toBeCloseTo(SIZE / 4, 9);
+    expect(next.state.ownedDailyUnits).toBe(SIZE);
+    expect(next.state.wholePlants?.creditUnits).toBeCloseTo(SIZE / 4, 9);
+    expect(next.capacityUnits).toBeCloseTo((SIZE + SIZE / 4) / TURNS_PER_DAY, 9);
+  });
+
+  it("telescopes into the whole plant with no capacity lost or counted twice", () => {
+    let state = wholeState();
+    for (let i = 0; i < 4; i++) {
+      const next = advance(state);
+      expect(next.capacityUnits).toBeCloseTo(
+        (next.state.ownedDailyUnits + (next.state.wholePlants?.creditUnits ?? 0)) / TURNS_PER_DAY,
+        9
+      );
+      state = next.state;
+    }
+    expect(state.ownedDailyUnits).toBe(2 * SIZE);
+    expect(state.wholePlants?.creditUnits ?? 0).toBeCloseTo(0, 9);
+    expect(state.buildQueue).toEqual([]);
+  });
+
+  it("still scales the part-plant by the active fraction", () => {
+    const next = advance(wholeState(), 0.5);
+    expect(next.activeUnits).toBeCloseTo((next.capacityUnits * 1) / 2, 12);
   });
 });

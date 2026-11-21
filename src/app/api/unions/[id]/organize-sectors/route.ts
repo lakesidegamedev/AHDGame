@@ -18,7 +18,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { organizeSector } from "@/lib/unions/commands/organizeSector";
 import { ORGANIZE_SECTORS_BATCH_MAX } from "@/lib/unions/organizeSectorEconomy";
 
@@ -38,10 +37,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(
       `api/unions/[id]/organize-sectors:${auth.user.userId}`,

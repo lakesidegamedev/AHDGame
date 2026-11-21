@@ -533,9 +533,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Renewables R&D",
-        description: "Early solar and wind capability diversifies output.",
+        description:
+          "Early wind and solar capability diversifies output. Unlocks Wind Power now and Solar Power from 2009.",
         effects: [
-          { kind: "unlockStrategy", strategyId: "renewables" },
+          { kind: "unlockStrategy", strategyId: "wind" },
+          { kind: "unlockStrategy", strategyId: "solar" },
           { kind: "inputEfficiency", pct: 0.03 },
         ],
       },
@@ -552,12 +554,9 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
     ],
     "2009": [
       {
-        name: "Shale Fracking",
-        description: "Horizontal fracking unlocks the high-output Hydraulic Fracturing method.",
-        effects: [
-          { kind: "unlockStrategy", strategyId: "fracking" },
-          { kind: "inputEfficiency", pct: 0.06 },
-        ],
+        name: "Plant Retrofit Programs",
+        description: "Systematic retrofits trim fuel and maintenance inputs across the fleet.",
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Smart Grid",
@@ -3785,8 +3784,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Shale Extraction",
-        description: "Fracking transforms supply economics.",
-        effects: [{ kind: "plantOutput", pct: 0.025 }],
+        description:
+          "Horizontal fracking transforms supply economics and unlocks the high-output Hydraulic Fracturing method.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "hydraulic_fracturing" },
+          { kind: "plantOutput", pct: 0.025 },
+        ],
       },
       {
         name: "Autonomous Haulage",

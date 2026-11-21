@@ -728,7 +728,7 @@ Examples:
                     name: "Commercial Development",
                     supply: "Real Estate Services 0.50",
                     demand:
-                      "Construction Services 0.25, Financial Services 0.20, Steel, Consulting",
+                      "Construction Services 0.23, Financial Services 0.12, Steel, Consulting",
                     note: "Higher output; heavier financing and construction needs",
                   },
                   {

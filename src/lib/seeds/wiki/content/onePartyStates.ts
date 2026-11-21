@@ -32,7 +32,7 @@ Banned parties cannot propose or vote on bills, and the bill route is simpler (s
 - **Popular Legitimacy** (starts at 75, range 0 to 100): how the public reads the regime. Driven by the economy and conditions (see [National Metrics](/wiki/national-metrics)), repression, policy alignment with the country's priorities and the credibility of elections.
 - **Party Confidence** (starts at 75, range 0 to 95): how stable the ruling party is internally. Driven by policy alignment, purges and a bleed that switches on when popular legitimacy falls below 30.
 
-Popular legitimacy drifts slowly toward 60 each turn (0.1 a turn), so it sinks back from a high score and recovers from a low one. Party confidence has no natural recovery: only reforms, decisions, renewals and good policy alignment raise it.
+Popular legitimacy drifts slowly toward 60 each turn (0.1 a turn), so it sinks back from a high score and recovers from a low one. Party confidence has no natural recovery: only leader renewals and good policy alignment raise it, while reforms and purges cost confidence.
 
 ## The four-stage slide toward collapse
 
@@ -69,7 +69,7 @@ Popular legitimacy falls to 55 and stays there. After 12 turns Stage 1 begins an
 
 - **Ruling leader (Premier or equivalent):** use the five reforms, respond to stage decisions, order purges, or announce a constitutional convention (below).
 - **Approved-party member:** hold seats, run for legislative offices, propose and vote on bills. A Regime Offers inbox on the party page lists regime events addressed to your party, such as being legalized as a concession to unrest.
-- **Founding a party:** a new party is marked banned when it is ratified. The charter page explains what it can and cannot do. It can become Approved if the ruling leader picks it with the legalize reform.
+- **Founding a party:** a new party in a one-party state is marked banned when it is ratified. The charter page explains what it can and cannot do. It can become Approved if the ruling leader picks it with the legalize reform.
 - **Anyone:** read the public Regime Stability panel on the country overview, which shows the stage and a short description without raw numbers.
 
 Common doubts:

@@ -1,0 +1,65 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Commissioner",
+    "legislature": {
+      "name": "Legislative Assembly",
+      "lowerChamber": {
+        "key": "abAssembly",
+        "name": "Legislative Assembly",
+        "shortName": "Assembly",
+        "seats": 87,
+        "description": "87 members elected across Alberta's regions, seats shared by each region's vote."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "Premier",
+        "labelPlural": "Premiers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "abAssembly",
+        "label": "Member of the Legislative Assembly",
+        "labelPlural": "Members of the Legislative Assembly",
+        "chamberKey": "abAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Commissioner",
+        "labelPlural": "Commissioners",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Canada",
+        "labelPlural": "Governors of the Bank of Canada",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": {
+      "snapElectionsAllowed": true
+    }
+  }
+}

@@ -65,8 +65,9 @@ function makeSector(overrides: Partial<CorporateSector> = {}): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-function makeLookups(marketSharePct = 0): CorporationLookups {
+function makeLookups(marketSharePct = 0, legacyTechStartingYear?: number): CorporationLookups {
   return {
+    legacyTechStartingYear,
     corporations: [],
     sectorsByCorp: new Map(),
     corpById: new Map(),
@@ -109,6 +110,8 @@ function makeLookups(marketSharePct = 0): CorporationLookups {
 interface EnvOpts {
   techTreesEnabled?: boolean;
   marketSharePct?: number;
+  /** World starting year for the tech era context; a 1940 start makes no node pre-start. */
+  legacyTechStartingYear?: number;
 }
 
 function makeEnv(
@@ -117,7 +120,7 @@ function makeEnv(
   opts: EnvOpts = {}
 ): SectorTurnEnv {
   return {
-    lookups: makeLookups(opts.marketSharePct ?? 0),
+    lookups: makeLookups(opts.marketSharePct ?? 0, opts.legacyTechStartingYear),
     turn: currentTurn,
     currentTurn,
     now: new Date("2026-08-01T00:00:00Z"),
@@ -162,7 +165,7 @@ describe("D9 — retool leaves capital-mode utilization alone", () => {
    * to make.
    */
   const FROM = "standard";
-  const TO = "renewables";
+  const TO = "wind";
   // Deliberately below implied units so `capitalUtilization` is a live ratio
   // rather than pinned at its 1.0 ceiling — a clamped reading would prove nothing.
   const STOCK = 1_000;
@@ -234,8 +237,10 @@ describe("tech outputRate — plants units chain", () => {
   const EXPECTED_MULT = () =>
     techOutputUnitsMultiplier(
       SUPPLY,
-      getSectorTechEffects({ type: "energy", unlockedTechNodeIds: [OUTPUT_RATE_NODE] }, "energy")
-        .outputRateMult
+      getSectorTechEffects({ type: "energy", unlockedTechNodeIds: [OUTPUT_RATE_NODE] }, "energy", {
+        startingYear: 1940,
+        mode: "baseline",
+      }).outputRateMult
     );
 
   it("the fixture node really does raise output (guards against a silent no-op test)", () => {
@@ -245,8 +250,9 @@ describe("tech outputRate — plants units chain", () => {
   it("raises producedUnits by exactly the unit-weighted output multiplier", () => {
     const sector = () =>
       makeSector({ capitalStock: 3_000, plantsStartTurn: 900 } as Partial<CorporateSector>);
-    const plain = run("plants", sector(), makeCorp(), { techTreesEnabled: true });
-    const withTech = run("plants", sector(), techCorp(), { techTreesEnabled: true });
+    const world = { techTreesEnabled: true, legacyTechStartingYear: 1940 };
+    const plain = run("plants", sector(), makeCorp(), world);
+    const withTech = run("plants", sector(), techCorp(), world);
     expect(withTech.update.producedUnits as number).toBeCloseTo(
       (plain.update.producedUnits as number) * EXPECTED_MULT(),
       // `producedUnits` is persisted rounded to 2dp; 1dp is the honest tolerance.

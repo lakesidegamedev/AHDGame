@@ -5,6 +5,7 @@ import { seedCapitalStock, impliedOutputUnits } from "@/lib/market/capital";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 import { CAPITAL_SEED_HEADROOM, CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { getEffectiveStrategyRates, getStrategy } from "@/lib/constants/sectorStrategies";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEconomy";
 
 const CURRENT_TURN = 1000;
@@ -289,5 +290,43 @@ describe("computePlantsCapacity: country recession factor", () => {
     expect(running(1.5).plantsOwnedCapacity).toBeCloseTo(base.plantsOwnedCapacity, 6);
     expect(running(0).plantsOwnedCapacity).toBeCloseTo(base.plantsOwnedCapacity, 6);
     expect(running(Number.NaN).plantsOwnedCapacity).toBeCloseTo(base.plantsOwnedCapacity, 6);
+  });
+});
+
+describe("computePlantsCapacity: whole plants include the delivered part-plant", () => {
+  const size = plantSizeForSector({ sectorType: "manufacturing", strategyId: "standard" });
+  const part = size / 5;
+  const sectorWith = (remainder: number) =>
+    ({
+      ...input().sector,
+      capitalStock: 2 * size,
+      plantUnitRemainder: remainder,
+      plantWearUnits: 0,
+    }) as PlantsCapacityInput["sector"];
+  const whole = (remainder: number, landed: number) =>
+    computePlantsCapacity(
+      input({
+        isFlipTurn: false,
+        wholePlants: true,
+        sector: sectorWith(remainder),
+        landedBuildUnits: landed,
+      })
+    );
+
+  it("a delivered fraction of a plant adds to operating capacity, not to the plant count", () => {
+    const none = whole(0, 0);
+    const partial = whole(0, part);
+    expect(partial.plantLedger?.plantCount).toBe(none.plantLedger?.plantCount);
+    expect(partial.plantLedger?.plantUnitRemainder).toBeCloseTo(part, 9);
+    expect(partial.plantsCapacity - none.plantsCapacity).toBeCloseTo(part, 6);
+    expect(partial.plantsNameplateRevenue).toBeGreaterThan(none.plantsNameplateRevenue);
+  });
+
+  it("completing the plant moves credit into the stock without changing total capacity", () => {
+    const before = whole(size - part, 0);
+    const after = whole(size - part, part);
+    expect(after.plantLedger?.plantCount).toBe(3);
+    expect(after.plantLedger?.plantUnitRemainder).toBeCloseTo(0, 9);
+    expect(after.plantsCapacity - before.plantsCapacity).toBeCloseTo(part, 6);
   });
 });

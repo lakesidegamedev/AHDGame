@@ -7,7 +7,7 @@ import {
   getAllAchievements,
 } from "@/lib/achievements";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { getAchievementProgress } from "@/lib/achievements/progress";
+import { getAchievementProgressMap } from "@/lib/achievements/progress";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
@@ -64,16 +64,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .filter((x): x is NonNullable<(typeof items)[number]> => Boolean(x));
 
     const earnedIds = new Set(earned.map(({ achievement }) => achievement._id.toString()));
-    const progressEntries = await Promise.all(
-      allAchievements.map(
-        async (a) =>
-          [
-            a._id.toString(),
-            earnedIds.has(a._id.toString()) ? null : await getAchievementProgress(db, character, a),
-          ] as const
-      )
+    const progressMap = await getAchievementProgressMap(
+      db,
+      character,
+      allAchievements.filter((a) => !earnedIds.has(a._id.toString()))
     );
-    const progressMap = new Map(progressEntries);
 
     const allItems = allAchievements.map((a) => {
       const earnedEntry = earned.find(

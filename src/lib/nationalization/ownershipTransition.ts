@@ -1,46 +1,44 @@
-import {
-  loadStockWithholdingContexts,
-  withholdStockReceipt,
-  netStockProceeds,
-} from "@/lib/budget/stockSaleWithholding";
+import { transferFinancialHoldings } from "./transferFinancialHoldings";
+import { transferCorporateArrears } from "./transferCorporateArrears";
+import { combineLiabilityBooks } from "./rules/financialHoldings";
+import { corporateCashArrearsAnchor } from "@/lib/bonds/corporateCredit";
+import { sumHeldBondFaceAnchor } from "@/lib/bonds/corpExitEquity";
+import { absorbSectorIntoNatCorp } from "@/lib/nationalization/siteAbsorption";
+import { payShareholders } from "@/lib/nationalization/shareholderCompensation";
+export { payShareholders } from "@/lib/nationalization/shareholderCompensation";
+export type { PayShareholdersLedgerContext } from "@/lib/nationalization/shareholderCompensation";
+import { TIER_MULTIPLIER } from "./constants";
+
+import { moveProducerLiabilities } from "./producerLiabilities";
+import { producerDebtAnchor, producerStockBookAnchor } from "./rules/fundedOwnership";
+
 import type { Db } from "mongodb";
-import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
-import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
+
 import { heldStakeValueAnchor, transferOwnedSharesToNatCorp } from "./heldEquityTransfer";
 import { ObjectId } from "mongodb";
 import { badRequest } from "@/lib/api/errors";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+
 import { splitCompensationBySector } from "./compensationSplit";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
-  loadFxRatesByCurrency,
-  fxRateForCorpFromMap,
+  loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { sumBondPrincipalAnchor } from "@/lib/bonds/bondPrincipalSum";
-import { seedPlantLedger } from "@/lib/corporations/plantLedger";
-import {
-  allocateShareholderPool,
-  buildPrimeRateMap,
-  computeSectorNpvSum,
-} from "@/lib/bonds/corporateBondDefault";
+
+import { buildPrimeRateMap, computeSectorNpvSum } from "@/lib/bonds/corporateBondDefault";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
-import {
-  payFundShareholderRows,
-  payNppShareholderRows,
-} from "@/lib/corporations/payFundShareholders";
+
 import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
-import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+
 import type { CountryId } from "@/lib/constants/countries";
 import {
   ensurePrimaryNationalCorporation,
@@ -53,10 +51,7 @@ import {
   wholeCorpCompensationAnchor,
 } from "./compensation";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import {
-  mergeSectorPlantFields,
-  readSectorPlantFields,
-} from "@/lib/corporations/sectorTransferCapex";
+
 import { getGameState } from "@/lib/gameState";
 import { sumSectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import { readStateOwnershipConcentration, sociMultiplier } from "./concentration";
@@ -74,14 +69,13 @@ import {
 import { snapshotCorporationCurrency } from "@/lib/ledger/balanceSnapshot";
 import { deleteDissolvedCorporation } from "./dissolvedCorporation";
 import type { CompensationTier } from "./constants";
-import { NATIONALIZATION_REVENUE_HAIRCUT } from "./constants";
+
 import { applyNationalizationConsequences } from "./consequences/apply";
 import { recordNationalizationLedger } from "./ledger";
 import type { NationalizationMethod, NationalizationTrigger } from "./consequences/types";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import {
   combineConstructionBorrowerTransferPlans,
-  mergeSurvivorConstructionFilter,
   prepareConstructionBorrowerTransfers,
   securedSiteMergeRefusal,
   settleConstructionBorrowerTransfers,
@@ -99,7 +93,6 @@ import {
   hasProtectedConstructionClaim,
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
-  unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
 import {
   settleFundedWholeCorpLiquidation,
@@ -110,7 +103,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -131,208 +124,6 @@ export interface TransitionConsequenceInput {
 /** Pairs a seized site with the holding `absorbSectorIntoNatCorp` folds it into. */
 const nationalizedSiteMergeKey = (sector: Pick<CorporateSector, "stateId" | "sectorType">) =>
   `${sector.stateId}|${sector.sectorType}`;
-
-/**
- * Move one seized `sector` into the NatCorp `destId`, MERGING into an existing holding
- * of the same `(stateId, sectorType)` because a blind `$set: { corporationId }` would
- * violate the unique index and throw E11000. On a merge the donor's capacity folds
- * into the existing row and the donor is dropped; otherwise the donor is re-parented.
- *
- * PLANTS-GATED: under `marketSystemMode >= "plants"` a sector's `revenue` is DERIVED by
- * `sectorTurn` from `capitalStock × mix price`, so both branches move CAPACITY and apply
- * the 15% haircut to `capitalStock`; the revenue write stays in lockstep off the same
- * haircut. Below plants `plantsEnabled` is false and no plant field is written, since
- * `capitalStock` is owned by capital mode there and spreading a fold would stamp stray
- * plant fields onto rows that carry none.
- */
-async function absorbSectorIntoNatCorp(
-  db: Db,
-  sector: CorporateSector,
-  destId: ObjectId,
-  absorbedAtTurn: number,
-  now: Date,
-  transitionMultiplier: number,
-  plantsEnabled: boolean,
-  transitionKey?: string,
-  fundedOperationKey?: string,
-  constructionTransfers?: ConstructionBorrowerTransferPlan,
-  compensation?: { countryId: string; anchor: number }
-): Promise<ObjectId> {
-  const sectors = corporateSectorsCollection(db);
-  // Prior-owner provenance — captured from the donor row BEFORE it is re-parented
-  // or folded, so an emergency taking can be reversed (SCOTUS strike-down). On a
-  // merge the survivor's earlier takings are kept beside the latest one.
-  const provenance = {
-    formerCorporationId: sector.corporationId,
-    ...(sector.countryId ? { formerCountryId: sector.countryId } : {}),
-    formerRevenue: sector.revenue ?? 0,
-    ...(typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
-      ? { formerCapitalStock: sector.capitalStock }
-      : {}),
-    takenAtTurn: absorbedAtTurn,
-    // What the treasury paid for this taking, so a court reversal can recover it.
-    ...(compensation && compensation.anchor > 0
-      ? {
-          compensationAnchor: compensation.anchor,
-          compensationCountryId: compensation.countryId,
-        }
-      : {}),
-  };
-  // Transition revenue haircut: the state acquires a disrupted asset worth 15%
-  // less than what the former owner held (compensation is paid on the full value
-  // upstream, before this transfer). nationalizedAtTurn anchors the productivity
-  // shock that decays over NATIONALIZATION_TRANSITION_TURNS.
-  const keep = 1 - NATIONALIZATION_REVENUE_HAIRCUT;
-  const transferRevenue = Math.round((sector.revenue ?? 0) * keep);
-  const donorStock =
-    typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
-      ? Math.max(0, sector.capitalStock)
-      : 0;
-  // The haircut lands on `capitalStock` and on `capitalStock` ONLY — the same
-  // rule `nationalizeSectorWide` carves by. Each build order's `costPaidAnchor`
-  // is real ₳ a corp has ALREADY PAID: shaving 15% off it destroys money rather
-  // than capacity. In-flight builds therefore transfer whole; the state seizes
-  // a going concern, and compensation already prices the queue into replacement
-  // cost book value.
-  const haircutStock = Math.round(donorStock * keep * 100) / 100;
-  // P5: the paid basis follows the capacity, at the same haircut, so the
-  // per-unit basis of the surviving plant is unchanged. Only touched when the
-  // donor carries a recorded basis — a row without one keeps the list-price
-  // fallback, which already tracks the haircut stock automatically.
-  const donorBook =
-    typeof sector.capacityBookAnchor === "number" &&
-    Number.isFinite(sector.capacityBookAnchor) &&
-    sector.capacityBookAnchor >= 0
-      ? sector.capacityBookAnchor
-      : null;
-  const haircutBook = donorBook != null ? donorBook * keep : null;
-  const existing = await sectors.findOne({
-    corporationId: destId,
-    stateId: sector.stateId,
-    sectorType: sector.sectorType,
-  });
-  if (existing && !existing._id.equals(sector._id)) {
-    // A financed site keeps its own row; `nationalizedSiteMergeKey` refuses
-    // the taking before any money moves when it would have to fold.
-    if (hasProtectedConstructionClaim(sector))
-      throw badRequest("A site with a construction loan cannot be merged into another holding");
-    if (existing.constructionPropertyTransition)
-      throw badRequest("The National Corporation holding is in another ownership change");
-    // MERGE: the donor row is DELETED below, so anything not folded into the
-    // survivor here is destroyed outright. `mergeSectorPlantFields` sums
-    // capacity and CIP, concatenates the queues in landing order, ANDs
-    // `mothballed` and keeps the EARLIER ramp anchor (a re-anchored ramp would
-    // re-clamp production the donor had long since ramped past).
-    const merged = plantsEnabled
-      ? mergeSectorPlantFields(readSectorPlantFields(existing), {
-          ...readSectorPlantFields(sector),
-          capitalStock: haircutStock,
-          ...seedPlantLedger(sector, haircutStock),
-          capacityBookAnchor: haircutBook,
-        })
-      : null;
-    const { earlierTakings: olderTakings = [], ...latestTaking } =
-      existing.nationalizationProvenance ?? {};
-    const earlierTakings = existing.nationalizationProvenance
-      ? [...olderTakings, latestTaking as NationalizationTaking]
-      : [];
-    const merge = await sectors.updateOne(
-      { _id: existing._id, ...mergeSurvivorConstructionFilter(existing) },
-      {
-        $inc: {
-          // Revenue merges in EVERY mode, in lockstep with the capacity fold
-          // above and off the same post-haircut quantity. Skipping the write under
-          // plants does not avoid a double count: the donor row is DELETED
-          // immediately below, so the donor's revenue would exist nowhere in the
-          // world until the next `sectorTurn` restatement. Both the metric-engine
-          // provider and `estimateNationalizedOperatingIncome` read this field, so
-          // skipping causes a one-turn UNDERCOUNT of national output.
-          revenue: transferRevenue,
-          workers: sector.workers ?? 0,
-          currentGrowthCost: sector.currentGrowthCost ?? 0,
-        },
-        $set: {
-          ...(merged ? { ...merged } : {}),
-          absorbedAtTurn,
-          nationalizedAtTurn: absorbedAtTurn,
-          nationalizationTransitionMultiplier: transitionMultiplier,
-          // The survivor keeps its own earlier holdings, so a reversal has to know
-          // how much of the row this taking added.
-          nationalizationProvenance: {
-            ...provenance,
-            ...(earlierTakings.length > 0 ? { earlierTakings } : {}),
-            mergedIntoExisting: true,
-            foldedRevenue: transferRevenue,
-            foldedWorkers: sector.workers ?? 0,
-            foldedGrowthCost: sector.currentGrowthCost ?? 0,
-            ...(plantsEnabled ? { foldedCapitalStock: haircutStock } : {}),
-          },
-          updatedAt: now,
-        },
-      }
-    );
-    if (merge.matchedCount !== 1)
-      throw badRequest("The National Corporation holding became secured during the taking");
-    const remove = await sectors.deleteOne({
-      _id: sector._id,
-      ...(fundedOperationKey
-        ? { "pendingFundedNationalization.operationKey": fundedOperationKey }
-        : {}),
-      ...(transitionKey
-        ? { "constructionPropertyTransition.key": transitionKey }
-        : unprotectedConstructionPropertyFilter()),
-    });
-    if (remove.deletedCount !== 1)
-      throw badRequest("The sector became secured during the nationalization");
-    return existing._id;
-  } else {
-    // RE-PARENT: the doc itself is re-pointed, so the plant state rides along
-    // for free — except `capitalStock`, which must take the haircut. Without it
-    // the next tick restates `revenue` from the untouched nameplate straight
-    // back to the full pre-taking figure and the transition penalty silently
-    // evaporates.
-    const reparent = await sectors.updateOne(
-      {
-        _id: sector._id,
-        ...(fundedOperationKey
-          ? { "pendingFundedNationalization.operationKey": fundedOperationKey }
-          : {}),
-        ...(transitionKey
-          ? {
-              "constructionPropertyTransition.key": transitionKey,
-              ...constructionTransfers?.claimFilterFor(sector),
-            }
-          : (constructionTransfers?.filterFor(sector) ?? unprotectedConstructionPropertyFilter())),
-      },
-      {
-        $set: {
-          corporationId: destId,
-          ...constructionTransfers?.setFor(sector._id),
-          revenue: transferRevenue,
-          ...(plantsEnabled ? { capitalStock: haircutStock } : {}),
-          ...(plantsEnabled ? seedPlantLedger(sector, haircutStock) : {}),
-          ...(plantsEnabled && haircutBook != null ? { capacityBookAnchor: haircutBook } : {}),
-          absorbedAtTurn,
-          nationalizedAtTurn: absorbedAtTurn,
-          nationalizationTransitionMultiplier: transitionMultiplier,
-          nationalizationProvenance: provenance,
-          updatedAt: now,
-        },
-        ...(fundedOperationKey
-          ? {
-              $unset: {
-                pendingFundedNationalization: "",
-                constructionPropertyTransition: "",
-              },
-            }
-          : {}),
-      }
-    );
-    if (reparent.matchedCount !== 1)
-      throw badRequest("The sector became secured during the nationalization");
-    return sector._id;
-  }
-}
 
 /**
  * Settle one FOREIGN sector (held outside the nationalizing country) of a seized
@@ -454,7 +245,7 @@ export async function nationalizeSector(
   // Valuation in ₳ via the canonical sector NPV (going-concern, growth-cost-net).
   const [centralBanks, fxByCurrency, donorFxRate, marketMode, gameState] = await Promise.all([
     centralBanksCollection(db).find({}).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getCorpFxRate(db, donor),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -492,7 +283,7 @@ export async function nationalizeSector(
   // The state takes the site with its secured construction loan, the same way
   // a whole-corp taking assumes the seized corporation's bonds: the National
   // Corporation becomes the borrower. Checked and locked before compensation.
-  if (hasProtectedConstructionClaim(sector)) {
+  if (hasProtectedConstructionClaim(sector) && !sector.producerInventory) {
     const mergeRefusal = await securedSiteMergeRefusal(
       db,
       [sector],
@@ -519,7 +310,12 @@ export async function nationalizeSector(
     grossValuationAnchor -
       assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency)
   );
-  const payoutAnchor = applyTier(valuationAnchor, params.tier, { plantsEnabled });
+  const payoutAnchor = Math.max(
+    0,
+    applyTier(valuationAnchor, params.tier, { plantsEnabled }) -
+      producerDebtAnchor(donor.producerPayables, sector._id.toHexString()) *
+        TIER_MULTIPLIER[params.tier]
+  );
   try {
     if (
       sector.pendingFundedNationalization &&
@@ -761,6 +557,38 @@ export async function nationalizeWholeCorp(
   }
 
   const targetSectors = await sectors.find({ corporationId: target._id }).toArray();
+  const foreignFunded = targetSectors.filter(
+    (site) => site.producerInventory && site.countryId && site.countryId !== params.countryId
+  );
+  if (foreignFunded.length) {
+    const hostEnterprises = await corporationsCollection(db)
+      .find(
+        { countryOwnerId: { $in: [...new Set(foreignFunded.map((site) => site.countryId))] } },
+        {
+          projection: {
+            countryOwnerId: 1,
+            assignedSectorTypes: 1,
+            isPrimaryNationalCorporation: 1,
+          },
+        }
+      )
+      .toArray();
+    if (
+      foreignFunded.some(
+        (site) =>
+          !hostEnterprises.some(
+            (host) =>
+              host.countryOwnerId === site.countryId &&
+              (host.isPrimaryNationalCorporation ||
+                host.assignedSectorTypes?.includes(site.sectorType))
+          )
+      )
+    )
+      throw badRequest(
+        "A funded site abroad needs a receiving state enterprise or must be sold before this taking. Its stock and unpaid bills cannot be released without a successor."
+      );
+  }
+
   if (
     !ledger.context?.treasuryCashLedgerEnabled &&
     targetSectors.some(
@@ -783,6 +611,9 @@ export async function nationalizeWholeCorp(
   // canonical return. Individual sectors may route to split-offs (resolved per
   // type below).
   const nationalCorp = await ensurePrimaryNationalCorporation(db, params.countryId);
+  combineLiabilityBooks(target.operatingCashArrearsByCurrency, undefined);
+  combineLiabilityBooks(target.federalTaxArrearsAnchorByCountry, undefined);
+  await transferFinancialHoldings(db, target._id, nationalCorp._id, now, { dryRun: true });
   // Its ordinary bank loans become the National Corporation's debt, like its
   // bonds. Checked before any site is reserved or money moves.
   const loanRefusal = await corporateLoanAssumptionCheck(db, {
@@ -806,7 +637,7 @@ export async function nationalizeWholeCorp(
   for (const { dest, sites } of financedByDest.values()) {
     const mergeRefusal = await securedSiteMergeRefusal(
       db,
-      sites,
+      sites.filter((s) => !s.producerInventory),
       dest._id,
       nationalizedSiteMergeKey
     );
@@ -870,6 +701,7 @@ export async function nationalizeWholeCorp(
   const [
     targetBonds,
     heldStakes,
+    heldBonds,
     centralBanks,
     fxByCurrency,
     targetFxRate,
@@ -884,8 +716,9 @@ export async function nationalizeWholeCorp(
         { projection: { shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1, countryId: 1 } }
       )
       .toArray(),
+    bonds.find({ "holders.corporationId": target._id, matured: false }).toArray(),
     centralBanksCollection(db).find({}).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getCorpFxRate(db, target),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -912,6 +745,12 @@ export async function nationalizeWholeCorp(
   // the secured construction loans its National Corporations take on, and its
   // ordinary bank loans (construction loans excluded there, so none counts twice).
   const debtAnchor =
+    corporateCashArrearsAnchor({
+      operatingByCurrency: target.operatingCashArrearsByCurrency,
+      federalTaxByCountryAnchor: target.federalTaxArrearsAnchorByCountry,
+      fxByCurrency,
+    }) +
+    producerDebtAnchor(target.producerPayables) +
     sumBondPrincipalAnchor(targetBonds, fxByCurrency) +
     assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency) +
     assumedSecuredPrincipalAnchor(
@@ -923,9 +762,9 @@ export async function nationalizeWholeCorp(
     );
   // Shares the seized corp holds in other corporations pass to the National
   // Corporation (step 5b) as shares only, so the buyout pays holders market value,
-  // like cash. Held bonds are left out (conservative under-valuation, never an
-  // over-pay) until the portfolio pass.
+  // like cash. Bond holdings retain their face-value asset basis.
   const heldEquityAnchor = heldStakeValueAnchor(heldStakes, target._id, fxByCurrency);
+  const heldBondsAnchor = sumHeldBondFaceAnchor(heldBonds, target._id, fxByCurrency);
   const sharePriceAnchor = corpLiquidCapitalToAnchor(target.sharePrice, target, targetFxRate);
   // D11 — base and premium must move together. Under plants the sector leg is
   // replacement-cost book and carries the BOOK premium; cash is taken at par
@@ -938,7 +777,11 @@ export async function nationalizeWholeCorp(
   if (corpPlantsEnabled) {
     const comp = wholeCorpCompensationAnchor({
       sectorBookAnchor: sectorNpvAnchor,
-      nonSectorAssetsAnchor: liquidCapitalAnchor + heldEquityAnchor,
+      nonSectorAssetsAnchor:
+        liquidCapitalAnchor +
+        heldEquityAnchor +
+        heldBondsAnchor +
+        targetSectors.reduce((n, s) => n + producerStockBookAnchor(s.producerInventory), 0),
       debtAnchor,
       tier: params.tier,
     });
@@ -948,7 +791,8 @@ export async function nationalizeWholeCorp(
     valuationAnchor = computeWholeCorpValuation({
       sharePrice: sharePriceAnchor,
       totalShares: target.totalShares,
-      balanceSheetEquity: liquidCapitalAnchor + sectorNpvAnchor + heldEquityAnchor,
+      balanceSheetEquity:
+        liquidCapitalAnchor + sectorNpvAnchor + heldEquityAnchor + heldBondsAnchor,
       debt: debtAnchor,
     });
     payoutPoolAnchor = applyTier(valuationAnchor, params.tier);
@@ -1123,6 +967,8 @@ export async function nationalizeWholeCorp(
   await transferOwnedSharesToNatCorp(db, target, nationalCorp._id, heldStakes, now);
 
   // ── 6. Dissolve the seized shell. ──
+  await moveProducerLiabilities(db, { fromId: target._id, toId: nationalCorp._id });
+  await transferCorporateArrears(db, target._id, nationalCorp._id);
   await cleanupShareMarketActivityForCorporations(db, [target._id], now, forexEnabled);
   await stampSubjectDeleted(db, target._id, {
     sequentialId: target.sequentialId,
@@ -1211,316 +1057,5 @@ export async function nationalizeWholeCorp(
     sectorsAbsorbed: domesticSectors.length,
     bondsAssumed: targetBonds.length,
     shareholderPayoutAnchor: payoutPoolAnchor,
-  };
-}
-
-export async function payShareholders(
-  db: Db,
-  target: Corporation,
-  poolAnchor: number,
-  fxByCurrency: ReadonlyMap<CurrencyCode, number>,
-  now: Date,
-  ledger?: PayShareholdersLedgerContext
-): Promise<void> {
-  const allocation = allocateShareholderPool(target, poolAnchor, new Map());
-  const forexEnabled = await isForexEnabled();
-  // Ledger legs for every holder credited below. Collected here and flushed once
-  // at the end so a throw part-way through does not log money that was reversed.
-  const ledgerEntries: PayShareholdersTxInput[] = [];
-  const holdingsByOwner = new Map(
-    (target.shareholders ?? []).flatMap((holder) => {
-      const key = holder.characterId
-        ? "character:" + holder.characterId.toHexString()
-        : holder.imperialCharacterId
-          ? "imperial:" + holder.imperialCharacterId.toHexString()
-          : undefined;
-      return key ? [[key, holder] as const] : [];
-    })
-  );
-
-  const anchorToLocal = (amtAnchor: number, currency: string): number => {
-    const rate = fxByCurrency.get(currency as CurrencyCode);
-    return Number.isFinite(rate) && rate && rate > 0 ? amtAnchor * rate : amtAnchor;
-  };
-
-  // Character + imperial holders → personal cash, split by collection.
-  const charRows = allocation.characterRows.filter((r) => !r.isImperial && r.payout > 0);
-  const imperialRows = allocation.characterRows.filter((r) => r.isImperial && r.payout > 0);
-
-  const withholdingContexts = await loadStockWithholdingContexts(
-    db,
-    [
-      ...charRows.map((r) => ({
-        id: new ObjectId(r.characterId),
-        collection: "characters" as const,
-      })),
-      ...imperialRows.map((r) => ({
-        id: new ObjectId(r.characterId),
-        collection: "imperialCharacters" as const,
-      })),
-    ],
-    ledger?.turn ?? 0
-  );
-  if (charRows.length > 0) {
-    const ids = charRows.map((r) => new ObjectId(r.characterId));
-    const docs = await charactersCollection(db)
-      .find({ _id: { $in: ids } })
-      .toArray();
-    const currencyById = new Map(docs.map((c) => [c._id.toString(), getHomeCurrency(c)]));
-    await charactersCollection(db).bulkWrite(
-      charRows.map((r) => {
-        const currency = currencyById.get(r.characterId) ?? "USD";
-        const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;
-        const holder = holdingsByOwner.get("character:" + r.characterId);
-        const grossStockTax =
-          ledger?.stockTaxActive && holder
-            ? pendingStockTaxReceipt({
-                id:
-                  target._id.toHexString() +
-                  ":" +
-                  ledger.kind +
-                  ":" +
-                  ledger.turn +
-                  ":character:" +
-                  r.characterId,
-                currencyCode: currency,
-                holdingTerms: positionHoldingTerms(
-                  anchorHoldingPosition(holder, fxRateForCorpFromMap(target, fxByCurrency)),
-                  ledger.turn,
-                  0
-                ),
-                proceedsAnchor: r.payout,
-                proceedsCredited: amt,
-                saleTurn: ledger.turn,
-                assessmentTurn: ledger.turn + 1,
-              })
-            : undefined;
-        const stockTax = grossStockTax
-          ? withholdStockReceipt(
-              grossStockTax,
-              withholdingContexts.get("characters:" + r.characterId)
-            )
-          : undefined;
-        if (ledger)
-          ledgerEntries.push(
-            buyoutPayoutLeg(ledger, target, "character", new ObjectId(r.characterId), amt, currency)
-          );
-        return {
-          updateOne: {
-            filter: { _id: new ObjectId(r.characterId) },
-            update: {
-              $inc: buildPersonalBalanceInc(
-                netStockProceeds(amt, stockTax),
-                currency,
-                forexEnabled
-              ),
-              $set: { updatedAt: now },
-              ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
-            },
-          },
-        };
-      })
-    );
-  }
-
-  if (imperialRows.length > 0) {
-    const ids = imperialRows.map((r) => new ObjectId(r.characterId));
-    const docs = await imperialCharactersCollection(db)
-      .find({ _id: { $in: ids } })
-      .toArray();
-    const currencyById = new Map(docs.map((c) => [c._id.toString(), getHomeCurrency(c)]));
-    await imperialCharactersCollection(db).bulkWrite(
-      imperialRows.map((r) => {
-        const currency = currencyById.get(r.characterId) ?? "USD";
-        const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;
-        const holder = holdingsByOwner.get("imperial:" + r.characterId);
-        const grossStockTax =
-          ledger?.stockTaxActive && holder
-            ? pendingStockTaxReceipt({
-                id:
-                  target._id.toHexString() +
-                  ":" +
-                  ledger.kind +
-                  ":" +
-                  ledger.turn +
-                  ":imperial:" +
-                  r.characterId,
-                currencyCode: currency,
-                holdingTerms: positionHoldingTerms(
-                  anchorHoldingPosition(holder, fxRateForCorpFromMap(target, fxByCurrency)),
-                  ledger.turn,
-                  0
-                ),
-                proceedsAnchor: r.payout,
-                proceedsCredited: amt,
-                saleTurn: ledger.turn,
-                assessmentTurn: ledger.turn + 1,
-              })
-            : undefined;
-        const stockTax = grossStockTax
-          ? withholdStockReceipt(
-              grossStockTax,
-              withholdingContexts.get("imperialCharacters:" + r.characterId)
-            )
-          : undefined;
-        if (ledger)
-          ledgerEntries.push(
-            buyoutPayoutLeg(
-              ledger,
-              target,
-              "character",
-              new ObjectId(r.characterId),
-              amt,
-              currency,
-              {
-                imperial: true,
-              }
-            )
-          );
-        return {
-          updateOne: {
-            filter: { _id: new ObjectId(r.characterId) },
-            update: {
-              $inc: buildPersonalBalanceInc(
-                netStockProceeds(amt, stockTax),
-                currency,
-                forexEnabled
-              ),
-              $set: { updatedAt: now },
-              ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
-            },
-          },
-        };
-      })
-    );
-  }
-
-  // Corporate equity holders → liquidCapital, in each corp's home currency.
-  const corpRows = allocation.corporationRows.filter((r) => r.payout > 0);
-  if (corpRows.length > 0) {
-    const ids = corpRows.map((r) => new ObjectId(r.corporationId));
-    const docs = await corporationsCollection(db)
-      .find({ _id: { $in: ids } })
-      .toArray();
-    const corpById = new Map(docs.map((c) => [c._id.toString(), c]));
-    await corporationsCollection(db).bulkWrite(
-      corpRows.map((r) => {
-        const creditor = corpById.get(r.corporationId);
-        const creditorCurrency = (creditor?.liquidCurrencyCode ??
-          COUNTRY_CURRENCY_MAP[creditor?.countryId as CountryId] ??
-          "USD") as CurrencyCode;
-        const rate = fxByCurrency.get(creditorCurrency) ?? 1;
-        const amtInCapital = Math.round(anchorToCorpLiquidCapital(r.payout, creditor ?? {}, rate));
-        if (ledger)
-          ledgerEntries.push(
-            buyoutPayoutLeg(
-              ledger,
-              target,
-              "corporation",
-              new ObjectId(r.corporationId),
-              amtInCapital,
-              creditorCurrency
-            )
-          );
-        return {
-          updateOne: {
-            filter: { _id: new ObjectId(r.corporationId) },
-            update: { $inc: { liquidCapital: amtInCapital }, $set: { updatedAt: now } },
-          },
-        };
-      })
-    );
-  }
-
-  // Public float → the national treasury (no value dropped). Same unified
-  // treasury the rest of the nationalization money flows move (spec §5).
-  if (allocation.publicFloatRow && allocation.publicFloatRow.payout > 0) {
-    // The treasury leg settles against the seized corporation like the holder rows.
-    await creditTreasuryProceedsFromAnchor(
-      db,
-      target.countryId,
-      allocation.publicFloatRow.payout,
-      now,
-      ledger
-        ? {
-            flow: "nationalization_buyout_float",
-            key: `nationalize-float:${target._id.toString()}:${ledger.turn}`,
-            ledger: ledger.treasury,
-            passThroughCorpId: target._id.toString(),
-          }
-        : undefined
-    );
-  }
-
-  // Index-fund shareholders → fund cash (₳). Same pool, no FX (cashAnchor is ₳).
-  // Previously dropped by allocateShareholderPool. The whole-corp shell is
-  // deleted after this transition, so the fund's holding of it is pulled too.
-  // Fund rows are ledgered with the same share_buyout_payout
-  // type as every other holder bucket now that fund cash is a ledger account.
-  if (allocation.fundRows.length > 0) {
-    const { txEntries: fundTxEntries } = await payFundShareholderRows(
-      db,
-      allocation.fundRows,
-      target._id,
-      now,
-      {
-        ledger: ledger
-          ? {
-              turn: ledger.turn,
-              txType: "share_buyout_payout",
-              kind: ledger.kind,
-              counterpartyId: target._id,
-              counterpartyName: target.name,
-            }
-          : undefined,
-      }
-    );
-    if (ledger) ledgerEntries.push(...fundTxEntries);
-  }
-  await payNppShareholderRows(db, allocation.nppRows, now);
-
-  // Flush every holder leg in one insert.
-  if (ledger && ledgerEntries.length > 0) {
-    await emitTxBulk(db, ledgerEntries, await loadTxThresholds(db));
-  }
-}
-
-/** Ledger context for {@link payShareholders}; omit to skip emission entirely. */
-export interface PayShareholdersLedgerContext {
-  stockTaxActive?: boolean;
-  turn: number;
-  /** Short marker for what moved the money, e.g. "agreed_acquisition". */
-  kind: string;
-  /** Witness context for the public float's treasury leg. */
-  treasury?: TreasuryCashOptions;
-}
-
-type PayShareholdersTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
-
-/** One holder-side buyout credit, counterparty being the corp being bought out. */
-function buyoutPayoutLeg(
-  ledger: PayShareholdersLedgerContext,
-  target: Corporation,
-  subjectType: "character" | "corporation",
-  subjectId: ObjectId,
-  amount: number,
-  currencyCode: string,
-  meta?: Record<string, unknown>
-): PayShareholdersTxInput {
-  return {
-    type: "share_buyout_payout",
-    turn: ledger.turn,
-    createdAt: new Date(),
-    subjectType,
-    subjectId,
-    subjectName: subjectType === "corporation" ? "(corp shareholder)" : "(shareholder)",
-    // The exact credited amount: wallets are credited unrounded, so a rounded row
-    // would leave the holder's stock check off by the fraction.
-    amount,
-    currencyCode: currencyCode as CurrencyCode,
-    counterpartyType: "corporation",
-    counterpartyId: target._id,
-    counterpartyName: target.name,
-    meta: { kind: ledger.kind, ...(meta ?? {}) },
   };
 }

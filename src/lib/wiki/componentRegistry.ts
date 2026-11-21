@@ -22,6 +22,12 @@ import { CongressSnapshot } from "@/components/wiki/widgets/CongressSnapshot";
 import { CommodityDistribution } from "@/components/wiki/widgets/CommodityDistribution";
 import { CountryHistory } from "@/components/wiki/widgets/CountryHistory";
 import { VoteShareCalculator } from "@/components/wiki/calculators/VoteShareCalculator";
+import { WikiInfobox } from "@/components/wiki/widgets/WikiInfobox";
+import {
+  WikiElectionEmbed,
+  WikiPartySeatsEmbed,
+  WikiStockEmbed,
+} from "@/components/wiki/widgets/WikiEmbeds";
 import { WikiGuideScreenshot } from "@/components/wiki/WikiGuideScreenshot";
 
 export interface WikiWidgetProps {
@@ -72,6 +78,10 @@ const WIKI_COMPONENT_REGISTRY: Record<string, ComponentType<WikiWidgetProps>> = 
   "cabinet-guide": CabinetGuide,
   "guide-screenshot": WikiGuideScreenshot,
   "wiki-chart": WikiChart,
+  "wiki-infobox": WikiInfobox,
+  "wiki-election": WikiElectionEmbed,
+  "wiki-party-seats": WikiPartySeatsEmbed,
+  "wiki-stock": WikiStockEmbed,
 };
 
 export function getWikiComponent(lang: string): ComponentType<WikiWidgetProps> | null {

@@ -5,13 +5,11 @@ import { logRequest } from "@/lib/api/requestLog";
 import { requireCron } from "@/lib/api/requireCron";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { runIndexFundCron } from "@/lib/indexFunds/fundCron";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 
 // GET /api/cron/index-fund — Manual/debug index-fund engine (not scheduled in lib/cron.ts).
 // Recompute NAV, absorb float, rebalance constituents, process queued redemptions, snapshot.
 // Auth: requireCron
-// Feature flag: indexFundsMode must be partial or full; returns 200 with { skipped: true } otherwise.
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
@@ -20,11 +18,6 @@ export async function GET(req: Request) {
     if (!requireCron(req)) {
       logRequest("GET", "/api/cron/index-fund", 401, Date.now() - start);
       return errorResponse(401, "Unauthorized");
-    }
-
-    if (!(await isIndexFundsEnabled())) {
-      logRequest("GET", "/api/cron/index-fund", 200, Date.now() - start);
-      return NextResponse.json({ skipped: true, message: "Index funds feature is disabled" });
     }
 
     const gameState = await getGameState();

@@ -84,6 +84,7 @@ export function StatePageTabs({
   regionGovernmentApproval = null,
   regionApprovalBase = null,
   regionParties = [],
+  leanDisplay = null,
   bucketProfile = null,
 }: StatePageTabsProps) {
   const { loaded, failed, resetSystemVersions, resetV2Countries } = useWorldFlags();
@@ -235,6 +236,7 @@ export function StatePageTabs({
             turnoutData={turnoutData ?? null}
             countryId={state.countryId}
             regionParties={regionParties}
+            leanDisplay={leanDisplay}
             bucketProfile={bucketProfile}
             population={state.population}
             isAdmin={isAdmin}
