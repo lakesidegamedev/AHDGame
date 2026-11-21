@@ -11,6 +11,7 @@ import { BillPageErrorBoundary } from "@/components/BillPageErrorBoundary";
 import { BillDetailSkeleton } from "./components/BillDetailSkeleton";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { BillProvisionsSection } from "@/components/legislature/BillProvisionsSection";
 import type { BillDetail } from "./types";
@@ -198,7 +199,7 @@ function BillDetailContent() {
   const heroRequiredPctOfCast =
     !supermajority && !isJpOverride && filibustered && bill.currentChamber === "senate";
   const heroPassRule =
-    !heroRequiredPctOfCast && (resolvedCountryId === "US" || isJpOverride)
+    !heroRequiredPctOfCast && (countryHasFeature("usUi", resolvedCountryId) || isJpOverride)
       ? supermajority || isJpOverride
         ? "twoThirds"
         : "majority"
