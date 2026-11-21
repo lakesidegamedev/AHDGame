@@ -13,15 +13,17 @@ import {
 } from "@/lib/commodity-map/commodityPriceDisplay";
 import type { MapMode } from "./CommodityMapModeToggle";
 import { formatUnits } from "../lib/helpers";
-import { postImportBalance } from "@/lib/trade/postImportGap";
+import {
+  fundedCountryTradeTotals,
+  type FundedCountryMarket,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
 
 interface CommodityCountryStatCardProps {
   countryId: CountryId;
   commodityLabel: string;
   unit: string;
   data: CountryCommodityData;
-  /** Units imported into this country; null/undefined when unknown. */
-  imports?: number | null;
+  market?: FundedCountryMarket;
   mode: MapMode;
   onModeChange: (mode: MapMode) => void;
   forexEnabled: boolean;
@@ -37,7 +39,7 @@ export default function CommodityCountryStatCard({
   commodityLabel,
   unit,
   data,
-  imports,
+  market,
   mode,
   onModeChange,
   forexEnabled,
@@ -52,21 +54,6 @@ export default function CommodityCountryStatCard({
   const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const currencyCode = getCommodityDisplayCurrency(countryId);
   const hasRegionMap = COUNTRIES_WITH_REGION_MAPS.has(countryId);
-  // Imports fill demand that home production leaves open, so a gap they close
-  // is not reported as a shortage.
-  const importsKnown = typeof imports === "number";
-  const balance = importsKnown
-    ? postImportBalance(data.supply, data.demand, imports).balance
-    : data.balance;
-  const afterImports = importsKnown ? " after imports" : "";
-  const balanceLabel =
-    balance > 0
-      ? "Surplus" + afterImports
-      : balance < 0
-        ? "Shortage" + afterImports
-        : "Balanced" + afterImports;
-  const balanceColor = balance > 0 ? "text-success" : balance < 0 ? "text-error" : "text-muted";
-
   // Close on click outside — check both desktop overlay and mobile sheet refs
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -120,9 +107,7 @@ export default function CommodityCountryStatCard({
           unit={unit}
           data={data}
           mode={mode}
-          balance={balance}
-          balanceLabel={balanceLabel}
-          balanceColor={balanceColor}
+          market={market}
           hasRegionMap={hasRegionMap}
           currencyCode={currencyCode}
           forexEnabled={forexEnabled}
@@ -163,9 +148,7 @@ export default function CommodityCountryStatCard({
               unit={unit}
               data={data}
               mode={mode}
-              balance={balance}
-              balanceLabel={balanceLabel}
-              balanceColor={balanceColor}
+              market={market}
               hasRegionMap={hasRegionMap}
               currencyCode={currencyCode}
               forexEnabled={forexEnabled}
@@ -189,9 +172,7 @@ function CardContent({
   unit,
   data,
   mode,
-  balance,
-  balanceLabel,
-  balanceColor,
+  market,
   hasRegionMap,
   currencyCode,
   forexEnabled,
@@ -207,9 +188,7 @@ function CardContent({
   unit: string;
   data: CountryCommodityData;
   mode: MapMode;
-  balance: number;
-  balanceLabel: string;
-  balanceColor: string;
+  market?: FundedCountryMarket;
   hasRegionMap: boolean;
   currencyCode: CurrencyCode;
   forexEnabled: boolean;
@@ -219,8 +198,12 @@ function CardContent({
   onViewCountryPage: () => void;
   onViewCountryMap: () => void;
 }) {
-  const total = data.supply + data.demand;
-  const supplyPct = total > 0 ? (data.supply / total) * 100 : 50;
+  const trade = market ? fundedCountryTradeTotals(market) : null;
+  const sold = trade?.sold ?? null;
+  const percentSold =
+    market && market.supply > 0 && sold !== null
+      ? `${((100 * sold) / market.supply).toFixed(0)}% of local offers sold`
+      : undefined;
   const activePrice = data.avgPrice ?? null;
 
   return (
@@ -253,6 +236,24 @@ function CardContent({
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-px bg-card-border/30">
+        <StatRow
+          label={trade ? "Total supply" : "Estimated local supply"}
+          value={`${formatUnits(trade?.supply ?? data.supply, unit)}/day`}
+          color="text-foreground"
+          sub={
+            market &&
+            `${formatUnits(market.supply, unit)} offered locally + ${formatUnits(market.imports, unit)} imported`
+          }
+        />
+        <StatRow
+          label={trade ? "Total demand" : "Estimated domestic demand"}
+          value={`${formatUnits(trade?.demand ?? data.demand, unit)}/day`}
+          color="text-foreground"
+          sub={
+            market &&
+            `${formatUnits(market.demand, unit)} ordered locally + ${formatUnits(market.exports, unit)} exported`
+          }
+        />
         {activePrice != null && (
           <StatRow
             label={mode === "price" ? "National price" : "Avg price"}
@@ -261,36 +262,12 @@ function CardContent({
           />
         )}
         <StatRow
-          label="Supply"
-          value={`${formatUnits(data.supply, unit)}/day`}
-          color="text-success"
-        />
-        <StatRow
-          label="Demand"
-          value={`${formatUnits(data.demand, unit)}/day`}
-          color="text-error"
-        />
-        <StatRow
-          label="Balance"
-          value={`${balance > 0 ? "+" : ""}${formatUnits(Math.abs(balance), unit)}`}
-          color={balanceColor}
-          sub={balanceLabel}
+          label="Local producer sales"
+          value={sold !== null ? `${formatUnits(sold, unit)}/day` : "Unavailable"}
+          color={sold !== null ? "text-success" : "text-muted"}
+          sub={percentSold}
         />
       </div>
-
-      {/* Supply/demand bar */}
-      {total > 0 && (
-        <div className="px-4 py-2">
-          <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-card-elevated">
-            <div className="h-full bg-success/70" style={{ width: `${supplyPct}%` }} />
-            <div className="h-full bg-error/70" style={{ width: `${100 - supplyPct}%` }} />
-          </div>
-          <div className="flex justify-between mt-1 text-[9px] text-muted">
-            <span>Supply {supplyPct.toFixed(0)}%</span>
-            <span>Demand {(100 - supplyPct).toFixed(0)}%</span>
-          </div>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="px-4 py-3 border-t border-card-border space-y-2">
@@ -392,7 +369,7 @@ function StatRow({
     <div className="px-4 py-2 bg-card">
       <div className="text-body-sm font-medium text-muted">{label}</div>
       <div className={`text-sm font-bold tabular-nums ${color}`}>{value}</div>
-      {sub && <div className="text-[9px] text-muted">{sub}</div>}
+      {sub && <div className="text-[10px] text-muted">{sub}</div>}
     </div>
   );
 }

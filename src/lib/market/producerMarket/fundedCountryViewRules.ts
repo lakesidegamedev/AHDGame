@@ -70,6 +70,15 @@ export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMar
   };
 }
 
+export function fundedCountryTradeTotals(market: FundedCountryMarket) {
+  return {
+    supply: market.supply + market.imports,
+    demand: market.demand + market.exports,
+    sold:
+      market.filled === null ? null : Math.max(0, market.filled - market.imports + market.exports),
+  };
+}
+
 /** commodity -> country -> funded market. */
 export function fundedCountryMarketsByCommodity(
   rows: readonly FundedCountryBookRow[]
