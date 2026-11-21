@@ -83,6 +83,26 @@ export function appliedThroughputFloor(governorCap: number): number {
  * capital, and throughput sections for a sector. Reads the market-system
  * mode (one gameConfig read) at the same point the inline code did.
  */
+/**
+ * Each output's share of last turn's revenue. A settled plant was paid per
+ * product on its receipt, so its split comes from there; the clearing split is
+ * only for plants with no current receipt.
+ */
+export function outputRevenueShares(
+  receiptSales: ReadonlyMap<string, { revenue: number }> | null,
+  clearingShares: Partial<Record<string, number>> | null | undefined
+): Partial<Record<string, number>> {
+  if (!receiptSales)
+    return clearingShares && typeof clearingShares === "object" ? clearingShares : {};
+  let total = 0;
+  for (const sale of receiptSales.values()) total += Math.max(0, sale.revenue);
+  if (!(total > 0)) return {};
+  const shares: Partial<Record<string, number>> = {};
+  for (const [commodity, sale] of receiptSales)
+    shares[commodity] = Math.max(0, sale.revenue) / total;
+  return shares;
+}
+
 export async function buildSectorCommoditySections(args: {
   sector: CorporateSector;
   /**
@@ -234,10 +254,7 @@ export async function buildSectorCommoditySections(args: {
       ? sector.soldByCommodity
       : {};
   // Each output's share of last turn's realized revenue, so multi-output sectors can show a per-product sale price instead of a blended average. Absent until the sector clears a turn with the field.
-  const revenueShareByCommodity: Partial<Record<string, number>> =
-    sector.revenueShareByCommodity && typeof sector.revenueShareByCommodity === "object"
-      ? sector.revenueShareByCommodity
-      : {};
+  const revenueShareByCommodity = outputRevenueShares(receiptSales, sector.revenueShareByCommodity);
   const hasRevenueSplit = Object.keys(revenueShareByCommodity).length > 0;
 
   const supplies = supplyFlows.map((f) => {

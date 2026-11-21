@@ -221,6 +221,40 @@ describe("buildSectorPlantsSection", () => {
     expect(s.idleCauses.some((c) => c.cause === "demand")).toBe(false);
   });
 
+  it("does not call a settled plant stranded when most of its offer found takers", () => {
+    const section = (soldUnits: number | null) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          lowFillTurns: 5,
+          producerSettlement:
+            soldUnits == null
+              ? undefined
+              : ({
+                  turn: 100,
+                  offeredUnits: 20,
+                  producedUnits: 20,
+                  soldUnits,
+                  products: [
+                    {
+                      commodity: "healthcare_services",
+                      book: "state:CA",
+                      producedUnits: 20,
+                      offeredUnits: 20,
+                      soldUnits,
+                      internalDeliveredUnits: 0,
+                      revenue: soldUnits * 100,
+                    },
+                  ],
+                } as unknown as CorporateSector["producerSettlement"]),
+        }),
+      });
+    expect(section(19).truth.lowFillTurns).toBe(0);
+    expect(section(6).truth.lowFillTurns).toBe(5);
+    expect(section(null).truth.lowFillTurns).toBe(5);
+  });
+
   it("says a sold-out run cut by an input is held by it, not ramping (ticket 1765)", () => {
     const settled = (over: Record<string, unknown>) =>
       buildSectorPlantsSection({

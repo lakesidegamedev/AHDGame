@@ -21,6 +21,7 @@ import {
 import type { PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
+import { STRANDED_LOW_FILL_THRESHOLD } from "@/lib/corporations/strandedPlant";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   activeCapacityFraction,
@@ -481,6 +482,13 @@ export function buildSectorPlantsSection(args: {
         sales.offered > 0 ? [[commodity, sales.sold / sales.offered]] : []
       )
     : Object.entries(sector.soldByCommodity ?? {});
+  let settledOffered = 0;
+  let settledTaken = 0;
+  for (const sales of receiptSales?.values() ?? []) {
+    settledOffered += sales.offered;
+    settledTaken += sales.sold + sales.ownSites;
+  }
+  const settledTakenShare = settledOffered > 0 ? settledTaken / settledOffered : null;
   const soldByCommodity = productFractions
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
@@ -665,7 +673,12 @@ export function buildSectorPlantsSection(args: {
       soldByCommodity,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
-      lowFillTurns: num(sector.lowFillTurns) ?? 0,
+      // The streak is counted on the clearing fill. A settled plant whose offer
+      // mostly found takers last turn is not stranded, whatever that says.
+      lowFillTurns:
+        settledTakenShare != null && settledTakenShare >= STRANDED_LOW_FILL_THRESHOLD
+          ? 0
+          : (num(sector.lowFillTurns) ?? 0),
       sellOutsideFirst: sector.sellOutsideFirst === true,
       inventory: {
         stockpileUnsold: sector.stockpileUnsold === true,
