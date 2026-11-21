@@ -78,6 +78,7 @@ import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import { tariffCollectorScopes, collectionsAtClose, plantLevies } from "./fundedTariffs";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
+import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/producerQuotes";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
   capCarry,
@@ -129,6 +130,8 @@ export interface FundedProducerTurnResult {
   settledProfitByCorp: Map<string, number>;
   /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
   headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
+  /** The settled trades, for contract settlement later in the turn. */
+  tradeReceipt?: ProducerTradeReceipt;
 }
 
 export { producerStageEnv } from "./producerStageEnv";

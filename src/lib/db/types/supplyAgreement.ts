@@ -110,6 +110,12 @@ export interface SupplyAgreement {
   lastDeliveryTurn?: number;
   /** Units this agreement delivered to its named buyer on lastDeliveryTurn. */
   lastDeliveredUnits?: number;
+  /**
+   * "funded" when `lastDeliveredUnits` is what the funded market sold from the
+   * supplier to the buyer, the figure the premium was priced on. Absent when it
+   * is the clearing pass's contracted units.
+   */
+  lastDeliveryBasis?: "funded";
   /** Buyer demand used to allocate this agreement's latest delivery. */
   lastBuyerConsumptionUnits?: number;
   /** Delivery turn retained before lastDeliveryTurn was updated. */
