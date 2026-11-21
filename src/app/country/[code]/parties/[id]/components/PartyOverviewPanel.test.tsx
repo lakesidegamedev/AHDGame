@@ -16,7 +16,7 @@ describe("PartyOverviewPanel leadership labels", () => {
       socialPosition: 0,
       politicalStrength: 0,
       effectivePsCap: 0,
-    } as PartyData;
+    } as unknown as PartyData;
 
     render(<PartyOverviewPanel party={party} committeeResult={null} />);
 
@@ -47,7 +47,7 @@ describe("PartyOverviewPanel leadership labels", () => {
         member: "Councillor",
         byMember: { first: "Rules Convenor" },
       },
-    } as PartyData;
+    } as unknown as PartyData;
     const committeeResult = {
       committeeSize: 3,
       committeeMembers: [
@@ -87,7 +87,7 @@ describe("PartyOverviewPanel leadership labels", () => {
       socialPosition: 0,
       politicalStrength: 0,
       effectivePsCap: 0,
-    } as PartyData;
+    } as unknown as PartyData;
 
     render(<PartyOverviewPanel party={party} committeeResult={null} />);
 
