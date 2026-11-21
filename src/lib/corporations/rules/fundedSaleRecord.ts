@@ -1,15 +1,10 @@
 /**
  * Which sales record a plant's page reads.
  *
- * Where the funded producer market settles a plant, its settlement
- * (`sector.producerSettlement`) is what the plant was paid on. The legacy
- * market pass still stamps its own fill on the sector (`soldFraction`,
- * `soldByCommodity`, `lowFillTurns` and the rest), and that reading can sit far
- * from the paid one. The settlement wins over a legacy fill of the same turn or
- * older. A legacy fill stamped on a later turn means the plant was not settled
- * since, so the legacy reading is the latest one; the two turns are never mixed.
- *
- * Pure: plain data in, the record to read (or null) out.
+ * The funded settlement (`sector.producerSettlement`) is what the plant was
+ * paid on, and it wins over a legacy fill of the same turn or older. A legacy
+ * fill from a later turn means the plant was not settled since, so the legacy
+ * reading is the latest one. The two turns are never mixed.
  */
 export function fundedSaleRecord<T extends { turn: number }>(
   settlement: T | null | undefined,

@@ -1,18 +1,11 @@
 /**
  * Per-product sale price on a multi-output sector.
  *
- * The money panel's "each unit sold for" is revenue / units sold across every
- * output. On a sector making two things priced far apart that average reads
- * as though the dear product sold far under market. This splits the sector's
- * revenue by each output's recorded revenue share and divides by that
- * output's units sold.
- *
- * Units sold per output are rescaled to add up to the sector's booked sold
- * units, so a one-output sector gets exactly the existing average back.
- *
- * A plant with a funded sale record was paid per product, so each output's
- * price is its settled revenue over its settled units sold, and the legacy
- * revenue split is never used for it.
+ * A plain revenue over units average misreads a sector making two things
+ * priced far apart. A plant with a funded sale record uses each product's
+ * settled revenue over its settled units. Otherwise the sector's revenue is
+ * split by each output's recorded revenue share, with units rescaled to the
+ * booked sold units so a one-output sector gets the plain average back.
  */
 export interface PerProductSaleInput {
   commodity: string;

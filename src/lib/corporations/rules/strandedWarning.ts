@@ -1,22 +1,14 @@
 import { STRANDED_LOW_FILL_THRESHOLD, STRANDED_WARN_TURNS } from "@/lib/corporations/strandedPlant";
 
 /**
- * Whether the plant page warns that a plant is not selling its output, and on
- * what evidence.
+ * Whether the plant page warns that a plant is not selling its output.
  *
- * A plant with a funded sale record is judged only on that record: it warns
- * when less than half of what the plant offered on its latest settled turn
- * found a taker (sold, or delivered to the company's own sites). The settlement
- * keeps no count of consecutive low turns, so `turnsInRow` stays null and the
- * page states the latest turn only. Once the settlement records such a count,
- * pass it as `settledLowSaleTurns` and it is reported and required to reach
- * `STRANDED_WARN_TURNS`.
+ * With a funded sale record the plant is judged only on that record: it warns
+ * when under half of its latest settled offer found a taker. The settlement
+ * keeps no consecutive low-sale count yet, so `turnsInRow` stays null until a
+ * caller passes `settledLowSaleTurns`.
  *
- * A plant with no funded record (an older world, single player, a world's first
- * turn) keeps the legacy market estimate: the consecutive low-fill count from
- * the legacy pass.
- *
- * Pure: plain data in, the warning (or null) out.
+ * With no funded record the legacy low-fill count is kept, as an estimate.
  */
 
 export type StrandedWarning =
