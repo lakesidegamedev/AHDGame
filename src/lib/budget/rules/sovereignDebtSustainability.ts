@@ -1,14 +1,13 @@
 /**
- * Sovereign debt sustainability: where the debt ratio is going, and what that
- * should cost.
- *
- * The credit ladder in `budget/debt.ts` prices the ratio as it stands, so a
- * surplus country still pays the top rate forever. This module is the standard
- * debt-dynamics identity, in plain ratios and percentages:
+ * Sovereign debt dynamics: where the ratio goes and what that should cost.
  *
  *   d(t+1) = ((1 + r) / (1 + g)) * d(t) - pb
  *
- * Pure rules: plain data in, plain data out.
+ * `r` is nominal interest, `g` nominal growth and `pb` the primary balance,
+ * all shares of GDP. The rollover factor's excess over 1, times `d`, is the
+ * primary balance that holds the ratio flat.
+ *
+ * Pure: plain data in, plain data out.
  */
 
 export type DebtTrajectory = "falling" | "stable" | "rising";
@@ -64,13 +63,12 @@ const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 /**
- * Nominal GDP growth from the real growth the engine stores plus inflation.
+ * Nominal GDP growth from real growth plus inflation.
  *
- * The debt identity divides by nominal growth, so passing real growth alone
- * understates `g` and turns an ordinary 2% real, 2% inflation year into a
- * rising ratio that charges an unearned premium. Inflation stays signed here:
+ * `economicFactors.gdpGrowth` is real, and the identity divides by nominal
+ * growth, so the real rate alone understates `g`. Inflation is signed here:
  * deflation shrinks nominal GDP and raises the ratio even when real output
- * holds. The tax-base ceiling floors inflation for a revenue reason instead.
+ * holds. The tax-base ceiling floors inflation for a revenue reason, not this.
  */
 export function nominalGrowthFromReal(
   realGrowthPct: number | null | undefined,

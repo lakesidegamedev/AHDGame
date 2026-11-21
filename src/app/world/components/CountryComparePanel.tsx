@@ -21,6 +21,7 @@ import { useWorldMetricFilter, type WorldMetricsCountry } from "../WorldMetricFi
 import type { CountryEconomyOutlook } from "@/lib/economy/queries/countryEconomyOutlook";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { buildCompareSeries } from "@/lib/world/compareSeries";
+import type { DebtTrajectory } from "@/lib/budget/rules/sovereignDebtSustainability";
 
 const SLOT_COUNT = 2;
 
@@ -71,6 +72,45 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
     }
     window.setTimeout(() => setCopyState("idle"), 2200);
   };
+
+  // Recent paths come from the same economy payload the economy page reads, one
+  // fetch per pick. Two nations only, and the effect is keyed on the pair so a
+  // changed side refetches instead of showing the previous nation's line.
+  const [outlooks, setOutlooks] = useState<Record<string, CountryEconomyOutlook | null>>({});
+  const pairKey = compareCountryIds.slice(0, SLOT_COUNT).join(",");
+  useEffect(() => {
+    const ids = pairKey ? pairKey.split(",") : [];
+    if (ids.length < SLOT_COUNT) {
+      setOutlooks({});
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    Promise.allSettled(
+      ids.map((id) =>
+        fetchJson<CountryEconomyOutlook>(`/api/country/${id.toLowerCase()}/economy`, {
+          feature: "world-compare-economy",
+          signal: controller.signal,
+        })
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      // A nation without a stored economy document is a normal empty side, and
+      // settled results keep the other side's series when one fetch fails.
+      setOutlooks(
+        Object.fromEntries(
+          ids.map((id, index) => [
+            id,
+            results[index]?.status === "fulfilled" ? results[index].value : null,
+          ])
+        )
+      );
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [pairKey]);
 
   // Recent paths come from the same economy payload the economy page reads, one
   // fetch per pick. Two nations only, and the effect is keyed on the pair so a
@@ -174,6 +214,11 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           CountryEconomyOutlook,
         ])
       : null;
+
+  // Debt shows per side as soon as that side's payload arrives, so one missed
+  // economy document does not hide the other nation's figures.
+  const debtSides = sides.map((side) => (side.id ? (outlooks[side.id]?.debt ?? null) : null));
+  const showDebt = debtSides.some((debt) => debt !== null);
 
   const cellFor = (row: CompareRow, id: CountryId | null) =>
     id ? (row.cells.find((cell) => cell.countryId === id) ?? null) : null;
@@ -389,8 +434,84 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
           </div>
         </div>
       )}
+      {showDebt && (
+        <div className="mt-4">
+          <h3 className="text-body-sm font-semibold">Debt</h3>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Rate today, the ratio in five years at today&apos;s primary balance, and the balance
+            that would hold it flat.
+          </p>
+          <div className="mt-1">
+            <DebtRow
+              label="Effective rate"
+              cells={debtSides.map((debt) =>
+                debt ? `${debt.effectiveRatePct.toFixed(1)}%` : "n/a"
+              )}
+            />
+            <DebtRow
+              label="In five years"
+              cells={debtSides.map((debt) =>
+                debt ? `${debt.projectedDebtToGdpPct.toFixed(1)}% of GDP` : "n/a"
+              )}
+            />
+            <DebtRow
+              label="Trajectory"
+              cells={debtSides.map((debt) =>
+                debt
+                  ? {
+                      text: TRAJECTORY_LABEL[debt.trajectory],
+                      className: debt.trajectory === "rising" ? "text-warning" : "",
+                    }
+                  : "n/a"
+              )}
+            />
+            <DebtRow
+              label="To hold flat"
+              cells={debtSides.map((debt) =>
+                debt ? balanceNeededLabel(debt.stabilisingPrimaryBalancePct) : "n/a"
+              )}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
+}
+
+const TRAJECTORY_LABEL: Record<DebtTrajectory, string> = {
+  rising: "Rising",
+  stable: "Stable",
+  falling: "Falling",
+};
+
+/** Positive means a surplus would hold the ratio flat; negative means a deficit can. */
+function balanceNeededLabel(pct: number): string {
+  if (Math.abs(pct) < 0.05) return "0.0% of GDP";
+  return pct > 0
+    ? `${pct.toFixed(1)}% surplus of GDP`
+    : `${Math.abs(pct).toFixed(1)}% deficit of GDP`;
+}
+
+function DebtRow({ label, cells }: { label: string; cells: (string | DebtCell)[] }) {
+  return (
+    <div className="grid grid-cols-[minmax(7rem,1.5fr)_1fr_1fr] items-center gap-x-2 border-b border-card-border/60 py-1.5">
+      <span className="truncate text-body-sm text-muted">{label}</span>
+      {cells.map((cell, index) => {
+        const text = typeof cell === "string" ? cell : cell.text;
+        const className = typeof cell === "string" ? "" : cell.className;
+        return (
+          <span key={index} className={`text-right text-body-sm tabular-nums ${className}`}>
+            {text}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+interface DebtCell {
+  text: string;
+  className?: string;
 }
 
 /** The stronger of two scores, or null when there is nothing to choose between. */
