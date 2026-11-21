@@ -44,11 +44,13 @@ export default function BuildMarketReadout({
           facilities: sites,
         })
       : readout.summary === "some-waiting"
-        ? t("headlineSomeWaiting", {
-            waiting: names(waiting),
-            covered: names(covered),
-            facilities: sites,
-          })
+        ? capSignal
+          ? t("headlineSomePaidOrdersWaiting", { waiting: names(waiting) })
+          : t("headlineSomeWaiting", {
+              waiting: names(waiting),
+              covered: names(covered),
+              facilities: sites,
+            })
         : readout.summary === "none-waiting"
           ? capSignal
             ? t("headlinePaidOrdersCovered")
@@ -103,7 +105,10 @@ function ProductRow({
   const chip = {
     waiting: { text: t("chipWaiting"), cls: "border-success/40 bg-success/10 text-success" },
     "idle-covers": { text: t("chipIdle"), cls: "border-warning/40 bg-warning/10 text-warning" },
-    covered: { text: t("chipCovered"), cls: "border-card-border bg-card-elevated text-muted" },
+    covered: {
+      text: t(product.capHiddenUnmet != null ? "chipPaidOrdersCovered" : "chipCovered"),
+      cls: "border-card-border bg-card-elevated text-muted",
+    },
     "no-orders": { text: t("chipNoOrders"), cls: "border-card-border bg-card-elevated text-muted" },
     unknown: { text: t("chipUnknown"), cls: "border-card-border bg-card-elevated text-muted" },
   }[product.verdict];
