@@ -26,7 +26,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
   // own national legislature (where the confirmation vote is surfaced).
   const senateLink =
     countryId === COUNTRY_CLIENT_CONFIGS.US.id
-      ? "/congress?chamber=senate&tab=bills"
+      ? "/congress?chamber=senate&tab=bills&view=confirmations"
       : legislatureUrl(countryId);
   const cabinet = usePresidentialCabinet(countryId);
   const { data, loading, error, fetchData, activeNominations, filledCount } = cabinet;
@@ -56,6 +56,12 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
       </div>
     );
   }
+
+  const staffCount = data.positions.filter(
+    (position) => position.member && position.appointedWithoutConfirmation
+  ).length;
+  const actingCount = data.positions.filter((position) => position.member?.acting).length;
+  const confirmedCount = filledCount - staffCount - actingCount;
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -108,6 +114,9 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
                   / {data.positions.length} filled
                 </span>
               </span>
+              <span className="whitespace-nowrap text-xs text-muted">
+                {confirmedCount} confirmed · {actingCount} acting · {staffCount} staff
+              </span>
             </div>
             <div className="flex min-w-[140px] flex-col px-5 py-3">
               <span className="text-body-sm font-medium text-muted">Pending votes</span>
@@ -140,10 +149,23 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
                 succession. Confirmed members use the shared cabinet office system for cabinet
                 actions, standing orders, emergency powers, and department settings.
               </p>
+              {countryId === "US" && data.isPresident && (
+                <p>
+                  Non-player senators support nominees from their own party. A nominee from another
+                  party can draw support from that party&apos;s senators.
+                </p>
+              )}
               {data.positions.some((position) => position.appointedWithoutConfirmation) && (
                 <p>
                   White House staff seats, such as the Chief of Staff, are appointed by the
                   President alone. They need no Senate vote and take office at the next turn.
+                </p>
+              )}
+              {data.actingEnabled && (
+                <p>
+                  For a vacant seat, the President can appoint an acting secretary without a Senate
+                  vote. Each seat gets one acting appointment per presidential term
+                  {data.actingTenureTurns ? `, lasting up to ${data.actingTenureTurns} turns` : ""}.
                 </p>
               )}
             </div>
