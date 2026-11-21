@@ -22,6 +22,8 @@ export interface CommodityPrice {
    * shortage scores, expansion advisor gap) so builders see the hidden shortage.
    */
   demandTruncatedUnits?: number;
+  /** Estimated daily unmet demand omitted by the cap, for build advice only. */
+  buildDemandCapGap?: import("@/lib/market/rules/buildDemandCap").BuildDemandCapGap;
   /**
    * (globalDemand + demandTruncatedUnits) / globalSupply: the shortage the
    * world would report without the caps. Absent when nothing was truncated.
