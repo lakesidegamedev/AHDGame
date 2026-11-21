@@ -45,19 +45,24 @@ describe("loadSidebarWidgetData", () => {
     });
     const db = fakeDb({
       stockExchangeSnapshots: {
-        findOne: vi.fn().mockResolvedValue({
-          exchangeName: "NYSE",
-          turn: 10,
-          listings: [
+        find: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([
             {
-              _id: id,
-              sequentialId: 4,
-              name: "Acme",
-              tickerSymbol: "ACM",
-              sharePrice: 11,
-              liquidCurrencyCode: "USD",
+              _id: "nyse",
+              exchangeName: "NYSE",
+              turn: 10,
+              listings: [
+                {
+                  _id: id,
+                  sequentialId: 4,
+                  name: "Acme",
+                  tickerSymbol: "ACM",
+                  sharePrice: 11,
+                  liquidCurrencyCode: "USD",
+                },
+              ],
             },
-          ],
+          ]),
         }),
       },
       corporationHistory: { find: historyFind },
@@ -88,6 +93,162 @@ describe("loadSidebarWidgetData", () => {
     expect(data["stockTicker:nowhere"]).toBeNull();
   });
 
+  it("batches reads across distinct ticker exchanges and dedupes repeated exchanges", async () => {
+    const firstId = new ObjectId();
+    const secondId = new ObjectId();
+    const nyse = {
+      _id: "nyse",
+      exchangeName: "NYSE",
+      turn: 10,
+      listings: [
+        { _id: secondId, sequentialId: 2, name: "Second", sharePrice: 15 },
+        { _id: firstId, sequentialId: 1, name: "First", sharePrice: 11 },
+      ],
+    };
+    const ftse = {
+      _id: "ftse",
+      exchangeName: "FTSE",
+      turn: 10,
+      listings: [nyse.listings[0]!],
+    };
+    const snapshotFind = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([ftse, nyse]),
+    });
+    const historyFind = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    const db = fakeDb({
+      stockExchangeSnapshots: {
+        find: snapshotFind,
+      },
+      corporationHistory: { find: historyFind },
+    });
+    const data = await loadSidebarWidgetData(
+      db,
+      [
+        "stockTicker:nyse",
+        "stockTicker:ftse",
+        "stockTicker:nyse",
+        "stockTicker:home",
+        "stockTicker:nowhere",
+      ],
+      viewer
+    );
+
+    expect(historyFind).toHaveBeenCalledTimes(1);
+    expect(historyFind.mock.calls[0]![0]).toEqual({
+      corporationId: { $in: [secondId, firstId] },
+      turn: { $gt: -2, $lt: 10 },
+    });
+    expect(snapshotFind).toHaveBeenCalledExactlyOnceWith(
+      { _id: { $in: ["nyse", "ftse"] } },
+      { projection: { exchangeName: 1, turn: 1, listings: { $slice: 8 } } }
+    );
+    expect(data).toMatchObject({
+      "stockTicker:nyse": { exchange: "nyse", rows: [{ sequentialId: 2 }, { sequentialId: 1 }] },
+      "stockTicker:ftse": { exchange: "ftse", rows: [{ sequentialId: 2 }] },
+      "stockTicker:home": null,
+      "stockTicker:nowhere": null,
+    });
+  });
+
+  it("uses each snapshot's exclusive history interval for a shared corporation", async () => {
+    const id = new ObjectId();
+    const listing = { _id: id, sequentialId: 1, name: "Acme", sharePrice: 20 };
+    const snapshots = [
+      { _id: "nyse", exchangeName: "NYSE", turn: 20, listings: [listing] },
+      {
+        _id: "ftse",
+        exchangeName: "FTSE",
+        turn: 26,
+        listings: [{ ...listing, _id: new ObjectId(id.toHexString()), sharePrice: 30 }],
+      },
+    ];
+    const historyFind = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { corporationId: id, turn: 25, sharePrice: 25 },
+        { corporationId: id, turn: 19, sharePrice: 16 },
+        { corporationId: id, turn: 14, sharePrice: 12 },
+        { corporationId: id, turn: 20, sharePrice: 21 },
+        { corporationId: id, turn: 22, sharePrice: NaN },
+      ]),
+    });
+    const data = await loadSidebarWidgetData(
+      fakeDb({
+        stockExchangeSnapshots: {
+          find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(snapshots) }),
+        },
+        corporationHistory: { find: historyFind },
+      }),
+      ["stockTicker:nyse", "stockTicker:ftse"],
+      viewer
+    );
+
+    expect(data).toMatchObject({
+      "stockTicker:nyse": { turn: 20, rows: [{ change: 25, series: [12, 16, 20] }] },
+      "stockTicker:ftse": { turn: 26, rows: [{ change: 20, series: [16, 21, 25, 30] }] },
+    });
+    expect(historyFind).toHaveBeenCalledTimes(1);
+    expect(historyFind.mock.calls[0]![0]).toEqual({
+      $or: [
+        { corporationId: { $in: [id] }, turn: { $gt: 8, $lt: 20 } },
+        { corporationId: { $in: [id] }, turn: { $gt: 14, $lt: 26 } },
+      ],
+    });
+  });
+
+  it("returns null for an allowed exchange with no snapshot and skips history without listings", async () => {
+    const snapshotFind = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "nyse", exchangeName: "NYSE", turn: 10 }]),
+    });
+    const historyFind = vi.fn();
+    const data = await loadSidebarWidgetData(
+      fakeDb({
+        stockExchangeSnapshots: { find: snapshotFind },
+        corporationHistory: { find: historyFind },
+      }),
+      ["stockTicker:nyse", "stockTicker:ftse"],
+      viewer
+    );
+
+    expect(data).toEqual({
+      "stockTicker:nyse": { exchange: "nyse", exchangeName: "NYSE", turn: 10, rows: [] },
+      "stockTicker:ftse": null,
+    });
+    expect(snapshotFind.mock.calls[0]![0]).toEqual({ _id: { $in: ["nyse", "ftse"] } });
+    expect(historyFind).not.toHaveBeenCalled();
+  });
+
+  it("isolates a failed shared ticker history query from the watchlist", async () => {
+    const listings = [{ _id: new ObjectId(), sequentialId: 1, name: "Acme", sharePrice: 10 }];
+    const historyFind = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockRejectedValue(new Error("down")),
+    });
+    const data = await loadSidebarWidgetData(
+      fakeDb({
+        stockExchangeSnapshots: {
+          find: vi.fn().mockReturnValue({
+            toArray: vi.fn().mockResolvedValue([
+              { _id: "nyse", exchangeName: "NYSE", turn: 10, listings },
+              { _id: "ftse", exchangeName: "FTSE", turn: 10, listings },
+            ]),
+          }),
+        },
+        corporationHistory: { find: historyFind },
+        users: { findOne: vi.fn().mockResolvedValue({ widgetWatchlist: [] }) },
+      }),
+      ["stockTicker:nyse", "stockTicker:ftse", "watchlist"],
+      viewer
+    );
+
+    expect(data).toEqual({
+      "stockTicker:nyse": null,
+      "stockTicker:ftse": null,
+      watchlist: { rows: [] },
+    });
+    expect(historyFind).toHaveBeenCalledTimes(1);
+  });
+
   it("loads the viewer's watchlist", async () => {
     const findOne = vi.fn().mockResolvedValue({ widgetWatchlist: [] });
     const data = await loadSidebarWidgetData(fakeDb({ users: { findOne } }), ["watchlist"], viewer);
@@ -99,10 +260,15 @@ describe("loadSidebarWidgetData", () => {
     const id = new ObjectId();
     const db = fakeDb({
       stockExchangeSnapshots: {
-        findOne: vi.fn().mockResolvedValue({
-          exchangeName: "NYSE",
-          turn: 10,
-          listings: [{ _id: id, sequentialId: 4, name: "Acme", sharePrice: 11 }],
+        find: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([
+            {
+              _id: "nyse",
+              exchangeName: "NYSE",
+              turn: 10,
+              listings: [{ _id: id, sequentialId: 4, name: "Acme", sharePrice: 11 }],
+            },
+          ]),
         }),
       },
       corporationHistory: {

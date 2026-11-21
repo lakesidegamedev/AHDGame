@@ -3,6 +3,7 @@ import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
+import type { StockExchangeSnapshot } from "@/lib/db/types";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
 import { loadWatchlist } from "./data/watchlist";
 import { loadKeirPet } from "./keirPet";
@@ -136,36 +137,57 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
   };
 }
 
-async function loadTicker(db: Db, exchange: string): Promise<StockTickerWidgetData | null> {
-  if (!EXCHANGE_API_KEYS.has(exchange)) return null;
-  const snapshot = await stockExchangeSnapshotsCollection(db).findOne(
-    { _id: exchange },
-    { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
-  );
-  if (!snapshot) return null;
-  const listings = snapshot.listings ?? [];
-  // One read for every row's recent history, bounded by a turn floor.
-  const history = await corporationHistoryCollection(db)
+type TickerHistory = Map<string, { turn: number; sharePrice: number }[]>;
+
+async function loadTickerData(db: Db, exchanges: Set<string>) {
+  const snapshots = await stockExchangeSnapshotsCollection(db)
     .find(
-      {
-        corporationId: { $in: listings.map((row) => row._id) },
-        turn: { $gt: snapshot.turn - SERIES_TURNS, $lt: snapshot.turn },
-      },
-      { projection: { _id: 0, corporationId: 1, turn: 1, sharePrice: 1 } }
+      { _id: { $in: [...exchanges] } },
+      { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
     )
     .toArray();
-  const past = new Map<string, { turn: number; sharePrice: number }[]>();
-  for (const row of history) {
-    if (!Number.isFinite(row.sharePrice)) continue;
-    const key = row.corporationId.toString();
-    past.set(key, [...(past.get(key) ?? []), row]);
+  const snapshotsByExchange = new Map(snapshots.map((snapshot) => [snapshot._id, snapshot]));
+  const idsByTurn = new Map<number, Map<string, ObjectId>>();
+  for (const { turn, listings } of snapshots) {
+    if (!listings?.length) continue;
+    const ids = idsByTurn.get(turn) ?? new Map<string, ObjectId>();
+    for (const { _id } of listings) ids.set(_id.toString(), _id);
+    idsByTurn.set(turn, ids);
   }
+
+  const past: TickerHistory = new Map();
+  if (idsByTurn.size > 0) {
+    const filters = Array.from(idsByTurn, ([turn, ids]) => ({
+      corporationId: { $in: [...ids.values()] },
+      turn: { $gt: turn - SERIES_TURNS, $lt: turn },
+    }));
+    const history = await corporationHistoryCollection(db)
+      .find(filters[0] && filters.length === 1 ? filters[0] : { $or: filters }, {
+        projection: { _id: 0, corporationId: 1, turn: 1, sharePrice: 1 },
+      })
+      .toArray();
+    for (const row of history) {
+      if (!Number.isFinite(row.sharePrice)) continue;
+      const key = row.corporationId.toString();
+      const points = past.get(key) ?? [];
+      points.push(row);
+      past.set(key, points);
+    }
+    for (const points of past.values()) points.sort((a, b) => a.turn - b.turn);
+  }
+  return { snapshotsByExchange, past };
+}
+
+function renderTicker(snapshot: StockExchangeSnapshot, past: TickerHistory): StockTickerWidgetData {
   return {
-    exchange,
+    exchange: snapshot._id,
     exchangeName: snapshot.exchangeName,
     turn: snapshot.turn,
-    rows: listings.map((row) => {
-      const points = (past.get(row._id.toString()) ?? []).sort((a, b) => a.turn - b.turn);
+    rows: (snapshot.listings ?? []).map((row) => {
+      // The same listing can appear in exchanges with different snapshot turns.
+      const points = (past.get(row._id.toString()) ?? []).filter(
+        (point) => point.turn > snapshot.turn - SERIES_TURNS && point.turn < snapshot.turn
+      );
       const previous = points.at(-1);
       return {
         sequentialId: row.sequentialId,
@@ -205,9 +227,22 @@ export async function loadSidebarWidgetData(
   keys: string[],
   viewer: WidgetViewer
 ): Promise<Record<string, unknown>> {
+  const parsedKeys = keys.map((key) => ({ key, parsed: parseWidgetKey(key) }));
+  const tickerExchanges = new Set<string>();
+  for (const { parsed } of parsedKeys) {
+    if (
+      parsed?.id === "stockTicker" &&
+      parsed.param &&
+      parsed.param !== TICKER_HOME_SCOPE &&
+      EXCHANGE_API_KEYS.has(parsed.param)
+    ) {
+      tickerExchanges.add(parsed.param);
+    }
+  }
+  let tickerData: ReturnType<typeof loadTickerData> | undefined;
+
   const entries = await Promise.all(
-    keys.map(async (key): Promise<[string, unknown]> => {
-      const parsed = parseWidgetKey(key);
+    parsedKeys.map(async ({ key, parsed }): Promise<[string, unknown]> => {
       if (!parsed) return [key, null];
       try {
         switch (parsed.id) {
@@ -217,14 +252,15 @@ export async function loadSidebarWidgetData(
             return [key, await loadDueSoon(db, viewer.userId)];
           case "myCompany":
             return [key, await loadMyCompany(db, viewer)];
-          case "stockTicker":
-            // The client resolves the viewed nation to its exchange before asking.
-            return [
-              key,
-              parsed.param && parsed.param !== TICKER_HOME_SCOPE
-                ? await loadTicker(db, parsed.param)
-                : null,
-            ];
+          case "stockTicker": {
+            if (!parsed.param || !tickerExchanges.has(parsed.param)) return [key, null];
+            const { snapshotsByExchange, past } = await (tickerData ??= loadTickerData(
+              db,
+              tickerExchanges
+            ));
+            const snapshot = snapshotsByExchange.get(parsed.param);
+            return [key, snapshot ? renderTicker(snapshot, past) : null];
+          }
           case "staffQueues":
             return [key, await loadStaffQueues(db, viewer)];
           case "watchlist":
