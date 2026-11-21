@@ -175,10 +175,16 @@ export function LegislationTab({
       />
 
       <section className="rounded-xl border border-card-border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-3">Awaiting your assent</h2>
+        <h2 className="text-sm font-semibold">Bills to sign or veto</h2>
+        <p className="mt-1 mb-3 text-sm text-muted">
+          After the legislature passes a bill, the office can sign it into law or veto it. A veto
+          sends the bill back to the legislature for an override vote.
+        </p>
         <InlineError error={signError} className="mb-3 text-sm text-error" />
         {awaitingAssentBills.length === 0 ? (
-          <p className="text-sm text-muted">No bills are currently awaiting your assent.</p>
+          <p className="text-sm text-muted">
+            No bills are currently waiting for a signature or veto.
+          </p>
         ) : (
           <ul className="space-y-3">
             {awaitingAssentBills.map((b) => (
