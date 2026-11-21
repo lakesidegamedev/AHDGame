@@ -80,6 +80,9 @@ const CAREER_EVENT_LABELS: Record<string, { label: string; color: string }> = {
   appointed: { label: "Appointed", color: "text-primary" },
   removed: { label: "Removed", color: "text-error" },
   relocated: { label: "Relocated", color: "text-primary" },
+  took_post: { label: "Took post", color: "text-primary" },
+  left_post: { label: "Left post", color: "text-muted" },
+  left_office: { label: "Left office", color: "text-muted" },
 };
 
 const RETIRED_DATE_OPTS: Intl.DateTimeFormatOptions = {

@@ -8,6 +8,10 @@
  *
  * - partyHistorySnapshot: `partyHistory`, read by the party history page and
  *   analytics only.
+ * - careerPostSync: took/left post and left office career events plus the
+ *   `careerPosts` bookkeeping on characters, read by profiles and achievements
+ *   only. Term limits and election rules read elected/appointed events, which
+ *   this never writes.
  * - researchTelemetry: country-turn and securities research rows, read by the
  *   research export only.
  * - gameHealthSnapshot: `gameHealthSnapshots`, read by admin health pages and
@@ -28,6 +32,7 @@ import { resolveLongHorizonContext } from "@/lib/telemetry/longHorizon/telemetry
 import { appendCountryTurnTelemetry } from "@/lib/telemetry/research/countryTurn";
 import { appendSecurityTelemetry } from "@/lib/telemetry/research/securities";
 import { snapshotPartyHistory } from "@/lib/turn/partyHistorySnapshot";
+import { syncCareerPosts } from "@/lib/careerPosts/sync";
 import {
   snapshotPortfolioValues,
   snapshotCorporationPortfolioValues,
@@ -63,6 +68,7 @@ export const postLockReportingSteps: readonly PostLockReportingStep[] = [
     key: "historySnapshots",
     phases: [
       "partyHistorySnapshot",
+      "careerPostSync",
       "researchTelemetry",
       "portfolioSnapshot",
       "corpPortfolioSnapshot",
@@ -70,8 +76,9 @@ export const postLockReportingSteps: readonly PostLockReportingStep[] = [
     ],
     async execute(context, runtime) {
       const { db, newTurn } = context;
-      const [, , portfolioSnapshotResult] = await Promise.all([
+      const [, , , portfolioSnapshotResult] = await Promise.all([
         runtime.runPhase("partyHistorySnapshot", () => snapshotPartyHistory(db, newTurn)),
+        runtime.runPhase("careerPostSync", () => syncCareerPosts(db)),
         // Research panels (#2331, #2332, #2336). A failure here must never
         // stop anything, so it is isolated and only logged.
         runtime.runPhase("researchTelemetry", async () => {
