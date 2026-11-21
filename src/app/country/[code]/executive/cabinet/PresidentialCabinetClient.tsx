@@ -22,11 +22,10 @@ import { usePresidentialCabinet } from "./usePresidentialCabinet";
  */
 export default function PresidentialCabinetClient({ countryId }: { countryId: CountryId }) {
   const code = countryId.toLowerCase();
-  // US keeps its Congress deep-link; other presidential systems point at their
-  // own national legislature (where the confirmation vote is surfaced).
+  // The legacy /congress redirect drops the view parameters.
   const senateLink =
     countryId === COUNTRY_CLIENT_CONFIGS.US.id
-      ? "/congress?chamber=senate&tab=bills&view=confirmations"
+      ? `${legislatureUrl(countryId)}?chamber=senate&tab=bills&view=confirmations`
       : legislatureUrl(countryId);
   const cabinet = usePresidentialCabinet(countryId);
   const { data, loading, error, fetchData, activeNominations, filledCount } = cabinet;

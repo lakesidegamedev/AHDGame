@@ -104,7 +104,7 @@ function NominationDetailContent() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 gap-4">
         <p className="text-error text-sm">{error}</p>
         <Link
-          href="/congress?chamber=senate&tab=bills&view=confirmations"
+          href="/country/us/legislature?chamber=senate&tab=bills&view=confirmations"
           className="text-sm text-primary hover:underline"
         >
           ← Back to Senate bills
