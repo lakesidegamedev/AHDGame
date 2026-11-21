@@ -145,6 +145,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "approvalSnapshot",
   "interestRateSnapshot",
   "partyHistorySnapshot",
+  "careerPostSync",
   "researchTelemetry",
   "gameHealthSnapshot",
   "auditAnomalyScan",
