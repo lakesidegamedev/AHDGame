@@ -134,10 +134,43 @@ it("does not call a mixed funded shortage oversupply when conservative sizing is
   expect(screen.queryByText(/oversupplied/)).toBeNull();
 });
 
+it("distinguishes paid orders from cap estimates in mixed-output advice", () => {
+  renderDialog(vi.fn(), {
+    ...plants,
+    buildDemand: [
+      {
+        commodity: "electronics",
+        scope: "national",
+        funded: 10000,
+        delivered: 5000,
+        unmet: 5000,
+        capacityUnits: 5000,
+      },
+      {
+        commodity: "software",
+        scope: "national",
+        funded: 300,
+        delivered: 300,
+        unmet: 0,
+        capacityUnits: 0,
+        capHiddenUnmet: 200,
+        estimatedCapacityUnits: 200,
+      },
+    ],
+  });
+  expect(screen.getByTestId("build-market-headline").textContent).toContain(
+    "There are unfilled paid orders for Electronics & Semiconductors."
+  );
+  expect(screen.getByTestId("build-market-row-software").textContent).toContain(
+    "Paid orders covered"
+  );
+  expect(screen.getByText("Match demand uses paid orders only.")).toBeTruthy();
+});
+
 it("keeps the default view to the headline figures and one details disclosure", () => {
   renderDialog();
   expect(screen.getByText("Build total")).toBeTruthy();
-  expect(screen.getByText("First income")).toBeTruthy();
+  expect(screen.getByText("First opening")).toBeTruthy();
   expect(screen.getByText("Profit per turn")).toBeTruthy();
   expect(screen.getByText("Payback")).toBeTruthy();
   expect(screen.getByTestId("build-room").textContent).toContain("recommended");
@@ -499,9 +532,9 @@ function render(ui: ReactElement) {
 describe("BuildCapacityDialog first income and founding price", () => {
   it("shows first income next turn for any order size", () => {
     const { input } = renderDialog();
-    expect(screen.getByText("First income").nextSibling?.textContent).toBe("1 turn");
+    expect(screen.getByText("First opening").nextSibling?.textContent).toBe("1 turn");
     fireEvent.change(input, { target: { value: "3" } });
-    expect(screen.getByText("First income").nextSibling?.textContent).toBe("1 turn");
+    expect(screen.getByText("First opening").nextSibling?.textContent).toBe("1 turn");
     const text = screen.getByTestId("build-arrival").textContent ?? "";
     expect(text).toContain("equal slices every turn, starting next turn");
     expect(text).toContain("finishes in 3 turns");
