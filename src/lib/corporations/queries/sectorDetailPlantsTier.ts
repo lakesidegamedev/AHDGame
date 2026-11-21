@@ -751,6 +751,8 @@ export async function buildSectorDetailPlantsTier({
       currentStrategyId: sector.strategyId ?? "standard",
       currentSupply: effectiveSupply,
       soldByCommodity: sector.soldByCommodity,
+      soldByCommodityTurn: sector.soldByCommodityTurn,
+      settlement: sector.producerSettlement,
       demandThrottleFactor: sector.demandThrottleFactor,
       mothballed: sector.mothballed === true,
       isTransitioning: effectiveRates.isTransitioning,
