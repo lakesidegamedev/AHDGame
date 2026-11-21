@@ -158,6 +158,11 @@ export interface CommodityFlow {
    * multi-output sector which commodity is the one sitting unsold.
    */
   soldFraction?: number;
+  /**
+   * Where `soldFraction` came from: the funded settlement, or the legacy market
+   * estimate for a plant with no funded record. Absent on older payloads.
+   */
+  soldFractionBasis?: "settlement" | "estimate";
   /** CEO-only physical settlement, per turn. */
   settledSales?: SettledProductSales;
   /**
@@ -188,6 +193,12 @@ export interface CommodityFlow {
    * average sale price into a price per product on a multi-output sector.
    */
   revenueShare?: number;
+  /**
+   * Supply rows with a funded sale record: what each unit of this output sold
+   * for last settled turn (its settled revenue over units sold), in ₳. Absent
+   * when none sold.
+   */
+  settledUnitPrice?: number;
   /**
    * Extraction sectors only. Ratio of actual to theoretical output (0, 1).
    * 0 = no deposits in this state. undefined = not applicable or uncapped.
@@ -268,13 +279,21 @@ export interface PricingData {
   pricingMode?: "market" | "costPlus";
   /** CEO-posted posture (−0.2…0.2) or null = automatic. */
   posture: number | null;
-  /** Posture actually used last turn (auto sectors included). */
+  /**
+   * Posture the legacy market pass used last turn (auto sectors included).
+   * Null for a plant with a funded sale record, which sells at its asking price.
+   */
   effectivePosture: number | null;
+  /** Funded settlement or legacy market estimate; absent on older payloads. */
+  salesBasis?: "settlement" | "estimate";
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;
   /** Share of output handed to the company's own sites last turn (CEO only). Not a sale. */
   ownSiteFraction?: number | null;
-  /** Ramped clearing multiplier applied to realized revenue last turn. */
+  /**
+   * Funded: revenue over what the units put up for outside sale would have
+   * earned at the asking price. Estimate: the legacy ramped clearing multiplier.
+   */
   clearingFactor: number | null;
   /**
    * Corp's established price-identity norm, owner/CEO only, drives the gouging
@@ -799,13 +818,18 @@ export interface PlantsData {
     /**
      * Share of offered output no freight network could place. Separates a
      * delivery failure from a demand failure, which call for opposite
-     * responses. Optional for payloads predating it; absent reads as 0.
+     * responses. Optional for payloads predating it; absent reads as 0. Null
+     * for a plant with a funded sale record.
      */
-    deliveryLimitedFraction?: number;
+    deliveryLimitedFraction?: number | null;
     /** Cargo class behind the delivery-limited output leg. */
     deliveryLimitedFreightClass?: "bulk" | "special" | "grid" | null;
-    /** Consecutive turns under half fill; optional for payloads predating it. */
-    lowFillTurns?: number;
+    /** Funded settlement or legacy market estimate; absent on older payloads. */
+    salesBasis?: "settlement" | "estimate";
+    /** Legacy consecutive turns under half fill; null for a plant with a funded sale record. */
+    lowFillTurns?: number | null;
+    /** The not-selling warning to show, or null. Absent on older payloads. */
+    strandedWarning?: import("@/lib/corporations/rules/strandedWarning").StrandedWarning | null;
     /** Opt-in to sell to outside buyers before the company's own plants. */
     sellOutsideFirst?: boolean;
     /** Unsold-output inventory (§6); optional for payloads predating it. */

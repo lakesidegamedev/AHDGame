@@ -4,8 +4,10 @@ import {
   computeCapitalUsage,
   outputRevenueShares,
   perUnitAnchorAmount,
+  pricingSalesReading,
   resolveThroughputBindingInput,
 } from "@/lib/corporations/queries/sectorDetailCommodities";
+import type { CorporateSector } from "@/lib/db/types";
 
 describe("sector detail capital economics", () => {
   it("computes per-unit labour from an anchor-normalized total", () => {
@@ -90,5 +92,54 @@ describe("outputRevenueShares", () => {
   it("keeps the clearing split where there is no current receipt", () => {
     expect(outputRevenueShares(null, clearing)).toBe(clearing);
     expect(outputRevenueShares(null, undefined)).toEqual({});
+  });
+});
+
+describe("pricingSalesReading", () => {
+  const settlement = {
+    turn: 108,
+    offeredUnits: 20,
+    soldUnits: 20,
+    revenue: 2_000,
+    products: [
+      {
+        offeredUnits: 20,
+        soldUnits: 20,
+        internalDeliveredUnits: 0,
+        askingUnitPrice: 100,
+        revenue: 2_000,
+      },
+    ],
+  } as unknown as CorporateSector["producerSettlement"];
+  const legacy = {
+    effectivePosture: -0.1,
+    soldFraction: 0.12,
+    clearingFactor: 0.4,
+    soldByCommodityTurn: 108,
+  };
+
+  it("reads only the settlement for a funded plant and drops the legacy posture", () => {
+    expect(pricingSalesReading({ ...legacy, producerSettlement: settlement }, false)).toEqual({
+      salesBasis: "settlement",
+      effectivePosture: null,
+      soldFraction: 1,
+      clearingFactor: 1,
+    });
+  });
+
+  it("keeps the legacy figures, as an estimate, where there is no funded record", () => {
+    expect(pricingSalesReading(legacy, true)).toEqual({
+      salesBasis: "estimate",
+      effectivePosture: -0.1,
+      soldFraction: 0.12,
+      clearingFactor: 0.4,
+    });
+  });
+
+  it("reads the legacy figures when the settlement is older than them", () => {
+    const older = { ...settlement, turn: 107 } as CorporateSector["producerSettlement"];
+    expect(pricingSalesReading({ ...legacy, producerSettlement: older }, true).salesBasis).toBe(
+      "estimate"
+    );
   });
 });

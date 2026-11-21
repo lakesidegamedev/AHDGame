@@ -1,14 +1,11 @@
 /**
  * Per-product sale price on a multi-output sector.
  *
- * The money panel's "each unit sold for" is revenue / units sold across every
- * output. On a sector making two things priced far apart that average reads
- * as though the dear product sold far under market. This splits the sector's
- * revenue by each output's recorded revenue share and divides by that
- * output's units sold.
- *
- * Units sold per output are rescaled to add up to the sector's booked sold
- * units, so a one-output sector gets exactly the existing average back.
+ * A plain revenue over units average misreads a sector making two things
+ * priced far apart. A plant with a funded sale record uses each product's
+ * settled revenue over its settled units. Otherwise the sector's revenue is
+ * split by each output's recorded revenue share, with units rescaled to the
+ * booked sold units so a one-output sector gets the plain average back.
  */
 export interface PerProductSaleInput {
   commodity: string;
@@ -18,6 +15,8 @@ export interface PerProductSaleInput {
   soldFraction?: number | null;
   /** This output's share of last turn's realized revenue (0-1), if recorded. */
   revenueShare?: number | null;
+  /** Funded sale record: settled revenue over settled units sold for this output. */
+  settledUnitPrice?: number | null;
 }
 
 export function perProductSalePrices(args: {
@@ -28,9 +27,19 @@ export function perProductSalePrices(args: {
   soldUnits: number | null | undefined;
   /** Sector-wide fill, used for a row with no per-output fill yet. */
   fallbackSoldFraction?: number | null;
+  /** The plant has a funded sale record: prices come only from `settledUnitPrice`. */
+  settled?: boolean;
 }): Map<string, number> {
   const out = new Map<string, number>();
   const { supplies, revenue, soldUnits } = args;
+  if (args.settled) {
+    for (const f of supplies) {
+      const price = f.settledUnitPrice;
+      if (typeof price === "number" && Number.isFinite(price) && price > 0)
+        out.set(f.commodity, price);
+    }
+    return out;
+  }
   if (supplies.length < 2) return out;
   if (!(typeof revenue === "number" && revenue > 0 && Number.isFinite(revenue))) return out;
   if (!(typeof soldUnits === "number" && soldUnits > 0 && Number.isFinite(soldUnits))) return out;

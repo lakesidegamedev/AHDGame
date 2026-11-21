@@ -1,6 +1,7 @@
 import { commodityMixWeight, type CommodityType } from "@/lib/constants/commodities";
 import type { SectorStrategy } from "@/lib/constants/sectorStrategies";
 import { DEMAND_PROBE_MARGIN } from "@/lib/turn/corporation/demandThrottle";
+import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
 
 /**
  * Retool hint.
@@ -129,18 +130,15 @@ function valueWeight(rate: number, ratio: number | null | undefined): number {
 
 type CurrentLeg = { commodity: CommodityType; weight: number; fill: number };
 
-/**
- * The settlement is the paid record, so it wins over a clearing fill of the
- * same turn or older. A clearing fill newer than the settlement means the
- * plant was not settled since, and the two turns are never mixed.
- */
+/** The settlement when it is the plant's latest sales record and it offered something. */
 function settlementToRead(input: RetoolHintInput): RetoolHintSettlement | null {
-  const settlement = input.settlement;
-  if (!settlement || !finite(settlement.turn)) return null;
+  const settlement = fundedSaleRecord(
+    input.settlement,
+    input.soldByCommodity ? input.soldByCommodityTurn : null
+  );
+  if (!settlement) return null;
   if (!(settlement.products ?? []).some((p) => finite(p.offeredUnits) && p.offeredUnits > 0))
     return null;
-  const fillTurn = input.soldByCommodityTurn;
-  if (input.soldByCommodity && finite(fillTurn) && fillTurn > settlement.turn) return null;
   return settlement;
 }
 
