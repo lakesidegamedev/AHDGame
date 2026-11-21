@@ -9,6 +9,7 @@ import { orgHref } from "./orgRouting";
 import { OrgDirectory } from "./components/OrgDirectory";
 import { YourDelegations } from "./components/YourDelegations";
 import { GlobalResolutionsFeed } from "./components/GlobalResolutionsFeed";
+import { UsRepresentationNotice } from "./components/UsRepresentationNotice";
 
 // The map loads d3/topojson and every region shard, and the create form carries
 // the org catalogue. Both sit around the directory, so defer them rather than
@@ -78,6 +79,7 @@ export default function IntorgIndexClient() {
               )}
           </div>
         </header>
+        <UsRepresentationNotice status={viewer?.usRepresentation} />
 
         {loading ? (
           <div className="space-y-4">
