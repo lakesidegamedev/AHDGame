@@ -436,14 +436,14 @@ export default function PlantPanel({
                     <div className="min-w-0">
                       <p className="text-body-sm font-semibold text-foreground">
                         {o.turnsRemaining > 0
-                          ? `${fmtUnits(sitesDelivered)} of ${fmtUnits(sitesOrdered)} ${orderedNoun} built`
+                          ? `${fmtUnits(Math.floor(sitesDelivered + 1e-9))} of ${fmtUnits(sitesOrdered)} ${orderedNoun} finished`
                           : `${fmtUnits(sitesOrdered)} ${orderedNoun}`}
                       </p>
                       <p className="text-body-xs text-muted">
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
-                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
-                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
+                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(o.costPaidAnchor)} paid`
+                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(o.costPaidAnchor)} paid`
                           : `arrives next turn · ${money(o.costPaidAnchor)} paid`}
                       </p>
                     </div>
