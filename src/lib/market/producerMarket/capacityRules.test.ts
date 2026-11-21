@@ -72,6 +72,51 @@ describe("owned producer capacity", () => {
     expect(advance(state).deliveredDailyUnits).toBe(0);
   });
 
+  it("keeps a current-turn paid order intact until delivery begins", () => {
+    const order = {
+      unitsOrdered: 12,
+      costPaidAnchor: 30,
+      startTurn: 7,
+      onlineTurn: 9,
+      deliveryBaseFraction: 0,
+      constructionLoanId: "loan",
+      constructionClaimId: "claim",
+    };
+    const next = advance({
+      completedTurn: 6,
+      ownedDailyUnits: 0,
+      paidBookAnchor: 0,
+      buildQueue: [order],
+    });
+    expect(next.capacityUnits).toBe(0);
+    expect(next.deliveredDailyUnits).toBe(0);
+    expect(next.deliveredPaidCostAnchor).toBe(0);
+    expect(next.state.paidBookAnchor).toBe(0);
+    expect(next.constructionInProgressAnchor).toBe(30);
+    expect(next.state.buildQueue).toEqual([order]);
+    expect(next.state.buildQueue[0]).toBe(order);
+
+    const firstDelivery = advance(next.state);
+    expect(firstDelivery.deliveredDailyUnits).toBe(6);
+    expect(firstDelivery.deliveredPaidCostAnchor).toBe(15);
+    expect(firstDelivery.constructionInProgressAnchor).toBe(15);
+  });
+
+  it.each([
+    { startTurn: 8, onlineTurn: 9, deliveryBaseFraction: 0 },
+    { startTurn: 7, onlineTurn: 7, deliveryBaseFraction: 0 },
+    { startTurn: 7, onlineTurn: 9, deliveryBaseFraction: 0.25 },
+  ])("refuses a future or already delivering new schedule: %j", (schedule) => {
+    expect(() =>
+      advance({
+        completedTurn: 6,
+        ownedDailyUnits: 0,
+        paidBookAnchor: 0,
+        buildQueue: [{ unitsOrdered: 12, costPaidAnchor: 30, ...schedule }],
+      })
+    ).toThrow("schedule");
+  });
+
   it("parks output without deleting stock, and applies retool ratios only to operation", () => {
     const opening = { completedTurn: 2, ownedDailyUnits: 240, paidBookAnchor: 100, buildQueue: [] };
     const active = advance(opening, 1, 3);

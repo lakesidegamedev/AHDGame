@@ -6,6 +6,7 @@ import type { CorporateSector } from "@/lib/db/types";
 import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import { producerRunBudget } from "@/lib/market/producerMarket/productionPlan";
+import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
   prepareProducerPhysicalSector,
   withStateBooks,
@@ -59,6 +60,50 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("prepares a newly admitted site with paid construction and no same-turn capacity", () => {
+    const { input, sector, env } = fixture();
+    const order = {
+      unitsOrdered: 12,
+      costPaidAnchor: 30,
+      startTurn: env.currentTurn,
+      onlineTurn: env.currentTurn + 2,
+      deliveryBaseFraction: 0,
+    };
+    sector.capitalStock = 0;
+    sector.capacityBookAnchor = 0;
+    sector.buildQueue = [order];
+    delete sector.producerCapacity;
+    delete sector.producerInventory;
+    const opening = newEntrantProducerBooks(sector, "sector", input.worldEpoch, 0);
+    expect(opening).toMatchObject({ producerCapacity: { worldEpoch: input.worldEpoch, turn: 0 } });
+    Object.assign(sector, opening);
+
+    const { plan, target } = prepareProducerPhysicalSector(input).prepared;
+    expect(plan.capacityUnits).toBe(0);
+    expect(target.capacity.buildQueue).toEqual([order]);
+  });
+
+  it("prepares an existing site with a due cohort and a current-turn paid order", () => {
+    const { input, sector, env } = fixture();
+    const due = {
+      unitsOrdered: 12,
+      costPaidAnchor: 30,
+      startTurn: env.currentTurn - 1,
+      onlineTurn: env.currentTurn,
+      deliveryBaseFraction: 0,
+    };
+    const pending = { ...due, startTurn: env.currentTurn, onlineTurn: env.currentTurn + 2 };
+    const beforeDelivery = prepareProducerPhysicalSector(input).prepared.plan.capacityUnits;
+    sector.buildQueue = [due];
+    const withDelivery = prepareProducerPhysicalSector(input).prepared.plan.capacityUnits;
+    expect(withDelivery).toBeGreaterThan(beforeDelivery);
+    sector.buildQueue.push(pending);
+
+    const { plan, target } = prepareProducerPhysicalSector(input).prepared;
+    expect(plan.capacityUnits).toBe(withDelivery);
+    expect(target.capacity.buildQueue).toEqual([due, pending]);
+  });
+
   it("carries the last settled advertising offer into its shortage-price plan", () => {
     const { input, env, sector } = fixture();
     sector.sectorType = "media";
