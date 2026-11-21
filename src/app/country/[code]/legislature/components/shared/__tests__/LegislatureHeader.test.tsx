@@ -23,6 +23,23 @@ describe("LegislatureHeader", () => {
     },
   };
 
+  it("calls a party with fewer than half the seats the largest party", () => {
+    render(
+      <LegislatureHeader
+        {...baseProps}
+        countryId="CA"
+        stats={{
+          ...baseProps.stats,
+          majorityParty: { name: "Largest bloc", color: "#333333", seats: 136 },
+          totalSeats: 343,
+        }}
+      />
+    );
+    expect(screen.getByText("Largest party")).toBeTruthy();
+    expect(screen.queryByText("Majority party")).toBeNull();
+    expect(screen.getByText("136 / 343")).toBeTruthy();
+  });
+
   it("should render UK header without chamber switcher", () => {
     render(<LegislatureHeader {...baseProps} />);
 

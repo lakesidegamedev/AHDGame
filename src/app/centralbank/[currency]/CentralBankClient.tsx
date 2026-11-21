@@ -1,5 +1,6 @@
 "use client";
 
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { MonetaryAuthorityNotice } from "./components/MonetaryAuthorityNotice";
@@ -510,7 +511,7 @@ export default function CentralBankClient({ countryId, apiBasePath, members, chr
             <TabButton
               active={activeTab === "committee"}
               onClick={() => setActiveTab("committee")}
-              label="FOMC"
+              label={countryHasFeature("usUi", countryId) ? "FOMC" : "Rate committee"}
             />
           )}
           <TabButton
@@ -744,6 +745,7 @@ export default function CentralBankClient({ countryId, apiBasePath, members, chr
                 onOpenCommittee={() => setActiveTab("committee")}
                 inflationRate={data.rateInflation}
                 targetInflation={data.rateTargetInflation}
+                neutralPrimeRate={data.neutralPrimeRate}
                 lastRateChangeTurn={data.lastRateChangeTurn}
                 currentTurn={data.currentTurn}
                 bankApiBasePath={bankApiBasePath}

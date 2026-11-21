@@ -256,7 +256,7 @@ export function FomcCommitteeTab({ countryId }: { countryId: CountryId }) {
   if (!state?.hasCommittee)
     return (
       <p className="py-8 text-center text-sm text-muted">
-        This central bank does not have an FOMC committee.
+        This central bank does not have a rate committee.
       </p>
     );
 

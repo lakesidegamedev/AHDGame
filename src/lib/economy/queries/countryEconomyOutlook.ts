@@ -113,6 +113,7 @@ export interface CountryEconomyOutlook {
     forexRate: number | null;
     /** Live budget surplus (negative = deficit), local currency. */
     surplus: number | null;
+    /** Budget balance as percent of GDP. Positive means a surplus. */
     deficitToGdp: number | null;
   };
   sectorMix: CountrySectorMixEntry[];
