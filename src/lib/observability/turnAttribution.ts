@@ -40,7 +40,7 @@ const EXPLICIT: Record<string, Subsystem> = Object.fromEntries([
     "economicVitalSigns commodityPrices inflationRecalc economicModel crisisTurn crisisV2Turn autoCrisisTurn autoDisasterTurn internationalOrganizations mutualDefence nationalMetrics coldWarTension intelligenceTurn navairOperations sphereSponsorTurn worldEventsScheduler worldEventsMaintenance tradeGrowthMirror macroCountryTurn countryBriefs decolonization eraCrossing militaryBranchYearCrossing census longHorizonContext detectPreIterationComplete"
   ).map((p) => [p, "Macro economy & world"]),
   ...words(
-    "metricHistory researchTelemetry metricEngine financialSuspectScan auditAnomalyScan suspiciousDetection gameHealthSnapshot activityLogging metricActivation"
+    "metricHistory careerPostSync researchTelemetry metricEngine financialSuspectScan auditAnomalyScan suspiciousDetection gameHealthSnapshot activityLogging metricActivation"
   ).map((p) => [p, "History & integrity scans"]),
 ]);
 

@@ -16,8 +16,8 @@ import { PROFILE_LINK_CLASS } from "./profileStyles";
 type CareerT = ReturnType<typeof useTranslations>;
 
 type CareerEvent = NonNullable<Character["careerHistory"]>[number];
-type TabId = "elected" | "executive" | "party" | "other";
-type OfficeTabId = "elected" | "executive" | "other";
+type TabId = "elected" | "executive" | "leadership" | "party" | "other";
+type OfficeTabId = "elected" | "executive" | "leadership" | "other";
 
 interface CareerHistoryProps {
   /** Narrowed to the only fields this client component reads — avoids
@@ -59,6 +59,7 @@ const HEAD_OF_STATE_APPOINTED_TYPES = new Set([
 
 function categorizeEvent(event: CareerEvent): OfficeTabId {
   if (event.type === "relocated") return "other";
+  if (event.type === "took_post" || event.type === "left_post") return "leadership";
   if (event.type === "elected" || event.type === "lost_election") return "elected";
 
   // appointed / resigned / removed: route by office.
@@ -152,6 +153,12 @@ function EventItem({
     text = t("eventResigned", { office: officeText });
   } else if (event.type === "removed") {
     text = t("eventRemoved", { office: officeText });
+  } else if (event.type === "took_post") {
+    text = t("eventTookPost", { office: officeText });
+  } else if (event.type === "left_post") {
+    text = t("eventLeftPost", { office: officeText });
+  } else if (event.type === "left_office") {
+    text = t("eventLeftOffice", { office: officeText });
   } else {
     text = t("eventAppointed", { office: officeText });
   }
@@ -298,6 +305,7 @@ function TabStrip({
   const tabLabels: Record<TabId, string> = {
     elected: t("tabElected"),
     executive: t("tabExecutive"),
+    leadership: t("tabLeadership"),
     party: t("tabParty"),
     other: t("tabOther"),
   };
@@ -337,12 +345,13 @@ export function CareerHistory({
     const buckets: Record<OfficeTabId, CareerEvent[]> = {
       elected: [],
       executive: [],
+      leadership: [],
       other: [],
     };
     for (const event of reversed) {
       buckets[categorizeEvent(event)].push(event);
     }
-    const orderedTabs: TabId[] = ["elected", "executive", "party", "other"];
+    const orderedTabs: TabId[] = ["elected", "executive", "leadership", "party", "other"];
     const visible = orderedTabs.filter((t) =>
       t === "party" ? partyHistory.length > 0 : buckets[t].length > 0
     );
@@ -371,6 +380,7 @@ export function CareerHistory({
   const counts: Record<TabId, number> = {
     elected: groups.elected.length,
     executive: groups.executive.length,
+    leadership: groups.leadership.length,
     party: partyHistory.length,
     other: groups.other.length,
   };

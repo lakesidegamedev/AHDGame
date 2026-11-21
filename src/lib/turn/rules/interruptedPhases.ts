@@ -19,6 +19,7 @@ export const SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
   approvalSnapshot: "history rows only",
   interestRateSnapshot: "history rows only",
   partyHistorySnapshot: "history rows only",
+  careerPostSync: "career history rows only; the next turn catches up",
   researchTelemetry: "telemetry only",
   portfolioSnapshot: "snapshot rows only",
   corpPortfolioSnapshot: "snapshot rows only",

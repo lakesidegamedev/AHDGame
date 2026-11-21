@@ -87,7 +87,42 @@ export interface CharacterDemographics {
 }
 
 export type CareerEventType =
-  "elected" | "lost_election" | "resigned" | "appointed" | "removed" | "relocated";
+  | "elected"
+  | "lost_election"
+  | "resigned"
+  | "appointed"
+  | "removed"
+  | "relocated"
+  /** Took a non-office post: org, party, caucus, chamber leadership, bank, command, CEO. */
+  | "took_post"
+  /** Left a non-office post for any reason. */
+  | "left_post"
+  /** Left an office with no other exit recorded (term ended, moved, seat dissolved). */
+  | "left_office";
+
+/** What kind of post a took_post / left_post event refers to. */
+export type CareerPostCategory =
+  | "international"
+  | "legislative"
+  | "party"
+  | "state_party"
+  | "caucus"
+  | "central_bank"
+  | "military"
+  | "corporate";
+
+/**
+ * A post or office the character held at the last career sync. The sync diffs
+ * this against live holders each turn to write took/left career events.
+ */
+export interface CareerPostHolding {
+  key: string;
+  label: string;
+  category: CareerPostCategory | "office";
+  since: Date;
+  /** Set for category "office"; carried into the left_office event. */
+  office?: OfficeType;
+}
 
 /** Player line-of-credit (central bank) — per-currency principal, arrears, UX flags. */
 /**
@@ -142,6 +177,9 @@ export interface CareerEvent {
   electionId?: string;
   /** Executive term won at a founding (pre-iteration, cycle 0) election; excluded from the executive term limit, still a served term for display. */
   foundingTerm?: boolean;
+  /** For took_post / left_post events */
+  postCategory?: CareerPostCategory;
+  postKey?: string;
   /** For "relocated" events — from/to location context */
   fromState?: string;
   toState?: string;
@@ -329,6 +367,8 @@ export interface Character {
   party: string;
   currentOffice: OfficeType | null;
   careerHistory?: CareerEvent[];
+  /** Posts and offices held at the last career sync (see lib/careerPosts). */
+  careerPosts?: CareerPostHolding[];
   /**
    * Shared UK ministerial action pool: one pool per UK player across both
    * offices, so a second title grants no extra actions. Optional for legacy rows.
