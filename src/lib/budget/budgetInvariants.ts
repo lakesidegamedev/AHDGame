@@ -240,8 +240,8 @@ export async function reconcileFederalBudgetInvariants(
             : {
                 _id: budget._id,
                 "debt.principal": storedPrincipal,
-                gdp: budget.gdp ?? null,
-                gdpSmoothed: budget.gdpSmoothed ?? null,
+                gdp: budget.gdp ?? { $exists: false },
+                gdpSmoothed: budget.gdpSmoothed ?? { $exists: false },
               };
         ops.push({ updateOne: { filter, update: { $set: set } } });
       }
