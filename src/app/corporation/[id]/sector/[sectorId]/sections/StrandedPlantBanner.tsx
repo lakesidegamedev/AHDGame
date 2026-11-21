@@ -92,7 +92,7 @@ export default function StrandedPlantBanner({
             {deliveryLimited
               ? `Last turn ${deliveryLabel} limited ${deliveryPct}% of what it offered, so that output earned no revenue while its production costs still landed. Buyers still want it. ${deliveryExplanation}`
               : split
-                ? `${listOutputs(split.selling)} found buyers, but ${listOutputs(split.stuck)} did not. The unsold part earns no revenue while its production costs still land.`
+                ? `${listOutputs(split.selling)} ${split.selling.some((o) => o.ownSites) ? "found buyers or fed your sites" : "found buyers"}, but ${listOutputs(split.stuck)} did not. The unsold part earns no revenue while its production costs still land.`
                 : "The local market is oversupplied for its goods, so extra output earns no revenue this turn while its production costs still land."}{" "}
             Its margin still looks healthy because margin only counts the units that do sell.
           </p>
