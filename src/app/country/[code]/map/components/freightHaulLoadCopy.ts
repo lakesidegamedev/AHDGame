@@ -12,7 +12,7 @@ export type FreightHaulLoadEntry = {
   bulk: number;
   special: number;
   total: number;
-  /** Freight TEU supply in-state; 0 when unknown. */
+  /** Freight TEU supply in-state, when reported. */
   capacity?: number;
 };
 
@@ -38,6 +38,10 @@ function utilizationPct(haul: number, capacity: number): string | null {
   return `${Math.round(pct)}%`;
 }
 
+export function freightHaulExceedsCapacity(entry: FreightHaulLoadEntry): boolean {
+  return entry.capacity !== undefined && entry.total > entry.capacity;
+}
+
 export function freightHaulLoadTooltip(stateId: string, entry: FreightHaulLoadEntry): string[] {
   const capacity = entry.capacity ?? 0;
   const haul = entry.total;
@@ -57,6 +61,7 @@ export function freightHaulLoadTooltip(stateId: string, entry: FreightHaulLoadEn
   } else {
     lines.push(`No operating freight capacity`);
   }
+  if (freightHaulExceedsCapacity(entry)) lines.push("Haul above capacity");
   lines.push(`Bulk load: ${bulk} TEU/turn`);
   lines.push(`Special load: ${special} TEU/turn`);
   lines.push(
@@ -71,9 +76,8 @@ export function freightHaulLoadCaption(hasData: boolean): string {
     return "No freight data yet — capacity fills from the market turn; haul load after the sourcing pass runs.";
   }
   return (
-    "Green shows operating freight capacity. Amber shows an unowned logistics market waiting " +
-    "for an operator. Tooltips show interstate haul from the freight settlement ledger. Haul is " +
-    "booked as freight demand each market turn, so heavy-haul states lift freight prices and sold %. " +
+    "Green shading shows operating freight capacity. The state details show interstate haul. " +
+    "Haul adds to freight demand each market turn and can raise freight prices and sales. " +
     "Bulk and special loads share the same capacity; special cargo uses three times as much TEU per unit."
   );
 }

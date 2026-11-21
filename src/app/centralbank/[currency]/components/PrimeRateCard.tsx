@@ -35,6 +35,7 @@ export function PrimeRateCard({
   governanceEndpoint,
   inflationRate,
   targetInflation,
+  neutralPrimeRate,
 }: {
   primeRate: number;
   isChair: boolean;
@@ -60,6 +61,7 @@ export function PrimeRateCard({
   /** Stored inflation and target the rate API measures the widened hike cap against. */
   inflationRate?: number | null;
   targetInflation?: number | null;
+  neutralPrimeRate?: number | null;
 }) {
   const [pendingRate, setPendingRate] = useState<number | null>(null);
   const [reason, setReason] = useState("");
@@ -149,27 +151,29 @@ export function PrimeRateCard({
         {(primeRate ?? 0).toFixed(2)}%
       </p>
 
-      <div className="mt-4">
-        <p className="text-body-sm text-muted">Policy targets</p>
-        <dl className="mt-1 text-body">
-          <div className="flex min-w-0 justify-between gap-3 border-b border-card-border/60 py-1.5">
-            <dt className="min-w-0 text-muted">Inflation target</dt>
-            <dd className="shrink-0 font-medium tabular-nums text-foreground">2.00%</dd>
-          </div>
-          <div className="flex min-w-0 justify-between gap-3 border-b border-card-border/60 py-1.5">
-            <dt className="min-w-0 text-muted">GDP growth target</dt>
-            <dd className="shrink-0 font-medium tabular-nums text-foreground">3.00%</dd>
-          </div>
-          <div className="flex min-w-0 justify-between gap-3 py-1.5">
-            <dt className="min-w-0 text-muted">Neutral prime rate</dt>
-            <dd className="shrink-0 font-medium tabular-nums text-foreground">3.00%</dd>
-          </div>
-        </dl>
-        <p className="mt-2 text-body-sm leading-snug text-muted">
-          Raise rates when inflation runs above 2% to cool demand; cut rates when GDP growth sags
-          below 3% to stimulate the economy. Rates near 3% are roughly neutral.
-        </p>
-      </div>
+      {(targetInflation != null || neutralPrimeRate != null) && (
+        <div className="mt-4">
+          <p className="text-body-sm text-muted">Policy benchmarks</p>
+          <dl className="mt-1 text-body">
+            {targetInflation != null && (
+              <div className="flex min-w-0 justify-between gap-3 border-b border-card-border/60 py-1.5">
+                <dt className="min-w-0 text-muted">Inflation target</dt>
+                <dd className="shrink-0 font-medium tabular-nums text-foreground">
+                  {targetInflation.toFixed(2)}%
+                </dd>
+              </div>
+            )}
+            {neutralPrimeRate != null && (
+              <div className="flex min-w-0 justify-between gap-3 py-1.5">
+                <dt className="min-w-0 text-muted">Neutral prime rate</dt>
+                <dd className="shrink-0 font-medium tabular-nums text-foreground">
+                  {neutralPrimeRate.toFixed(2)}%
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
 
       {governmentControlled && (
         <p className="mt-4 text-body-sm text-muted">

@@ -115,7 +115,9 @@ export default function LegislatureHeader({
       <HeroStatsStrip>
         {/* Majority party */}
         <div className="flex flex-col px-5 py-3 min-w-[140px]">
-          <span className="text-body-sm font-medium text-muted">Majority party</span>
+          <span className="text-body-sm font-medium text-muted">
+            {stats.majorityParty.seats > stats.totalSeats / 2 ? "Majority party" : "Largest party"}
+          </span>
           <span
             className="text-base font-bold tabular-nums"
             style={{ color: stats.majorityParty.color }}

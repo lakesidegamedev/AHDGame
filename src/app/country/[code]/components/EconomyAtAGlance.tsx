@@ -203,8 +203,9 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
           ? "warn"
           : "bad";
 
-  const deficitToGdp = data.markets.deficitToGdp;
-  const debtToGdp = data.pulse.credit.debtToGdpRatio;
+  const budgetBalance = data.markets.deficitToGdp;
+  const debtRatio = data.pulse.credit.debtToGdpRatio;
+  const debtToGdp = debtRatio === null ? null : debtRatio * 100;
 
   return (
     <section className="space-y-3">
@@ -267,28 +268,32 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
         />
         <GlanceCard
           label="Budget balance"
-          value={
-            deficitToGdp === null
-              ? "No data"
-              : `${deficitToGdp > 0 ? "-" : ""}${Math.abs(deficitToGdp).toFixed(1)}% of GDP`
+          value={budgetBalance === null ? "No data" : `${signedPercent(budgetBalance)} of GDP`}
+          caption={
+            budgetBalance === null
+              ? "Annual revenue minus spending, as a share of GDP."
+              : budgetBalance > 0
+                ? "Budget surplus. Revenue exceeds spending."
+                : budgetBalance < 0
+                  ? "Budget deficit. Spending exceeds revenue."
+                  : "Revenue and spending are balanced."
           }
-          caption="Live surplus or deficit, as a share of GDP."
           tone={
-            deficitToGdp === null
+            budgetBalance === null
               ? "neutral"
-              : deficitToGdp > 3
+              : budgetBalance < -3
                 ? "bad"
-                : deficitToGdp > 0
+                : budgetBalance < 0
                   ? "warn"
                   : "good"
           }
-          fill={deficitToGdp === null ? null : position(deficitToGdp, -5, 15)}
-          target={position(0, -5, 15)}
+          fill={budgetBalance === null ? null : position(budgetBalance, -15, 5)}
+          target={position(0, -15, 5)}
           history={[]}
         />
         <GlanceCard
           label="Debt to GDP"
-          value={debtToGdp === null ? "No data" : `${debtToGdp.toFixed(0)}%`}
+          value={debtToGdp === null ? "No data" : `${debtToGdp.toFixed(1)}%`}
           caption={
             data.pulse.credit.rating
               ? `Sovereign credit ${data.pulse.credit.rating}.`

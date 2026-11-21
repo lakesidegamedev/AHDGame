@@ -419,15 +419,14 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   }
 
   const governingSeats =
-    govFormation?.totalSeatsSupporting ||
-    parlGov?.totalSeatsSupporting ||
-    (partyRows[0]?.seats ?? 0);
+    govFormation?.totalSeatsSupporting ?? parlGov?.totalSeatsSupporting ?? partyRows[0]?.seats ?? 0;
   const majorityThreshold =
     govFormation?.majorityThreshold ?? parlGov?.majorityThreshold ?? config.coalitionThreshold;
 
   const isPending = governmentStatus === "pending";
   const formationType = govFormation?.formationType ?? null;
-  const lostMajority = govFormation?.lostMajority ?? false;
+  const isMinority = !isPending && governingSeats < majorityThreshold;
+  const lostMajority = isMinority && (govFormation?.lostMajority ?? false);
 
   let statusStripText: string;
   if (isCaretakerActive(govFormation)) {
@@ -441,7 +440,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   } else if (formationType === "coalition") {
     statusStripText = "Formed via Coalition";
   } else if (formationType === "minority") {
-    statusStripText = "Formed via Minority";
+    statusStripText = "Formed as a minority government";
   } else if (formationType === "admin") {
     statusStripText = "Formed via Admin";
   } else if (governmentStatus === "formed") {
@@ -455,7 +454,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const pluralityId = govPartyId ?? partyRows[0]?.seqKey ?? null;
   const pluralityPartyChip =
     formationType === "coalition"
-      ? { partyName: "Plurality Coalition", partyColor: "#6b7280", partyId: "" }
+      ? { partyName: "Governing coalition", partyColor: "#6b7280", partyId: "" }
       : pluralityDoc && pluralityId
         ? {
             partyName: pluralityDoc.name,
@@ -692,7 +691,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       commonsLine={{
         seatsSupporting: isPending ? 0 : governingSeats,
         threshold: majorityThreshold,
-        isMinority: !isPending && (formationType === "minority" || lostMajority),
+        isMinority,
         isPending,
         lostMajority,
         formationType: formationType ?? undefined,

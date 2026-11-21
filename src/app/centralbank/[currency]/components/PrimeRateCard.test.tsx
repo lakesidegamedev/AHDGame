@@ -77,6 +77,13 @@ describe("PrimeRateCard governance contract", () => {
   });
 });
 
+it("shows the bank's supplied neutral rate and inflation target", () => {
+  render(<PrimeRateCard {...baseProps()} neutralPrimeRate={2.75} targetInflation={1.9} />);
+  expect(screen.getByText("Neutral prime rate")).toBeTruthy();
+  expect(screen.getByText("2.75%")).toBeTruthy();
+  expect(screen.getByText("1.90%")).toBeTruthy();
+});
+
 describe("PrimeRateCard hike range", () => {
   it("shows the ordinary range and no catch-up note near target", () => {
     render(
