@@ -86,7 +86,7 @@ export interface WorldMetricsCountry {
 export interface WorldMetricsData {
   /** Keyed by ISO-numeric, which is what the map's features are keyed by. */
   countries: Record<string, WorldMetricsCountry>;
-  /** Every national document keyed by country id; the ISO map above covers four. */
+  /** Full set of national metrics keyed by game country id. */
   countriesById?: Record<string, WorldMetricsCountry>;
   availableCategories: MetricCategoryId[];
   availableMetrics: Record<string, string[]>;

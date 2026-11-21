@@ -967,7 +967,11 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
   const hoveredMapped = hoveredIso ? WORLD_MAPPED_COUNTRIES[hoveredIso] : null;
   const hoveredMacro =
     hovered && inspectableFeatureIds.has(hovered) ? worldEntities.byFeatureId[hovered] : null;
-  const hoveredIsoCountryId = hoveredIso ? ISO_TO_COUNTRY_ID[hoveredIso] : undefined;
+  const hoveredIsoCountryId = hovered?.startsWith("bi:")
+    ? (hovered.slice(3).split(":")[0] as CountryId)
+    : hoveredIso
+      ? ISO_TO_COUNTRY_ID[hoveredIso]
+      : undefined;
   // Era-aware tooltip label (e.g. "West Germany" in 1979) when the hovered base
   // country maps to a CountryId; otherwise fall back to the static registry label.
   const hoveredLabel = hoveredMacro

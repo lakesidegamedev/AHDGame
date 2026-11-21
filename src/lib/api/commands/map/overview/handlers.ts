@@ -1,3 +1,7 @@
+import {
+  STATE_PRIMARY_SECTOR_MARGIN_BONUS,
+  STATE_SECONDARY_SECTOR_MARGIN_BONUS,
+} from "@/lib/constants/corporationsTables";
 import { buildApportionment } from "@/lib/elections/apportionment";
 import { computeMapOfficeholders } from "@/lib/map/officeholderService";
 import { NextResponse } from "next/server";
@@ -42,8 +46,8 @@ async function computeSectorSpecializationMap(
       secondaryLabel: OPERATING_SECTOR_TYPE_LABELS[spec.secondary],
       tooltip: [
         state.name,
-        `Primary: ${OPERATING_SECTOR_TYPE_LABELS[spec.primary]} (+10pp)`,
-        `Secondary: ${OPERATING_SECTOR_TYPE_LABELS[spec.secondary]} (+5pp)`,
+        `Primary: ${OPERATING_SECTOR_TYPE_LABELS[spec.primary]} (+${STATE_PRIMARY_SECTOR_MARGIN_BONUS}pp)`,
+        `Secondary: ${OPERATING_SECTOR_TYPE_LABELS[spec.secondary]} (+${STATE_SECONDARY_SECTOR_MARGIN_BONUS}pp)`,
       ],
     };
   }
