@@ -35,7 +35,9 @@ export interface CandidateDetail {
   politicalInfluence: number;
   nationalInfluence: number;
   primaryScore: number;
+  primaryScoreBreakdown?: import("@/lib/primaryScore").RegionalPrimaryScoreBreakdown;
   sharePct: number;
+  primaryVotesCounted?: number;
   enteredAt: string;
   endorsements: Endorsement[];
   isYou: boolean;
@@ -80,6 +82,7 @@ export interface PartyGroup {
   partySocial: number;
   hasCompetitivePrimary: boolean;
   candidates: CandidateDetail[];
+  primaryShareBasis?: "counted" | "estimate";
 
   /**
    * Presidential primaries only: projected delegates per candidate id, awarded

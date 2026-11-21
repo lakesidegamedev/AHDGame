@@ -4,9 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../messages/en/elections.json";
 import { CanvassingPanel } from "./CanvassingPanel";
-vi.mock("@/contexts/CurrencyContext", () => ({
-  useCurrency: () => ({ formatFull: (n: number) => `₳${n}` }),
-}));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -34,10 +31,16 @@ it("keeps a selected category when the census preview arrives", async () => {
     </NextIntlClientProvider>
   );
   await screen.findByRole("combobox");
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: /Canvass Voters.*Loading price/i })
+      .disabled
+  ).toBe(true);
   finishPreview({
     ok: true,
     json: async () => ({
       stateId: "GA",
+      fundsCost: 134,
+      currency: "USD",
       targets: [
         { dimension: "race", bucket: "white" },
         { dimension: "education", bucket: "college" },
@@ -46,6 +49,9 @@ it("keeps a selected category when the census preview arrives", async () => {
     }),
   });
   await screen.findByRole("option", { name: "Education" });
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: /Canvass Voters.*\$134\.00/i }).disabled
+  ).toBe(true);
   const category = screen.getByRole("combobox") as HTMLSelectElement;
   fireEvent.change(category, { target: { value: "education" } });
   expect(category.value).toBe("education");

@@ -50,6 +50,7 @@ const ActionCard = memo(function ActionCard({
   fundraiseYield,
   campaignCurrency,
   displayCampaignFunds,
+  quotedFundCost,
   displayPersonalWealth,
   blockGdpScaledCosts,
   forexEnabled,
@@ -120,6 +121,11 @@ const ActionCard = memo(function ActionCard({
   else if (isConvertCash) {
     effectiveFundLabel =
       displayPersonalWealth > 0 ? `${formatAmount(personalAnchor)} to convert` : "No cash";
+  } else if (quotedFundCost !== undefined) {
+    effectiveFundLabel =
+      quotedFundCost === null
+        ? "Price unavailable"
+        : formatCurrencyFaceAmount(quotedFundCost, campaignCurrency);
   } else effectiveFundLabel = card.fundLabel(character);
   const fundKind = fundLineKind(card.type);
 
@@ -129,7 +135,12 @@ const ActionCard = memo(function ActionCard({
   const fundNeeded = effectiveFundCost;
   // When forex rates are loaded, convert the ₳ cost to home currency so the
   // comparison uses the same units as displayCampaignFunds (stored home currency).
-  const fundNeededConverted = fundNeeded !== null ? politicalLocal(fundNeeded) : fundNeeded;
+  const fundNeededConverted =
+    quotedFundCost !== undefined
+      ? quotedFundCost
+      : fundNeeded !== null
+        ? politicalLocal(fundNeeded)
+        : null;
   const cantAffordFunds =
     fundNeededConverted !== null && displayCampaignFunds < fundNeededConverted;
   const cantAffordActions = character.actions < effectiveActionCost;

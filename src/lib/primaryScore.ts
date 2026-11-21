@@ -67,7 +67,7 @@ export function primarySharePctSoftmax(
  * BOTH state leans must be numbers to enter split-alignment; otherwise the
  * 40-pt party-only path is used.
  */
-export function calcPrimaryScore(
+function calculateRegionalPrimaryPoints(
   candidateEcon: number,
   candidateSocial: number,
   partyEcon: number,
@@ -77,7 +77,7 @@ export function calcPrimaryScore(
   infamy?: number | null,
   stateEconLean?: number | null,
   stateSocialLean?: number | null
-): number {
+) {
   const clampedFavorability = clampPercentStat(favorability);
   const clampedPoliticalInfluence = clampPercentStat(politicalInfluence);
 
@@ -105,7 +105,20 @@ export function calcPrimaryScore(
   const infScore = normalizeNPI(clampedPoliticalInfluence) * 25;
   const raw = alignment + favScore + infScore;
   const penalized = raw * infamyPenaltyMultiplier(infamy);
-  return Math.round(penalized * 10) / 10;
+  const score = Math.round(penalized * 10) / 10;
+  return {
+    alignment,
+    favorability: favScore,
+    influence: infScore,
+    infamyAdjustment: penalized - raw,
+    score,
+  };
+}
+
+export function calcPrimaryScore(
+  ...inputs: Parameters<typeof calculateRegionalPrimaryPoints>
+): number {
+  return calculateRegionalPrimaryPoints(...inputs).score;
 }
 
 /**
@@ -295,39 +308,55 @@ export interface PrimaryCandidateScoreInput {
   stateSocialLean?: number | null;
 }
 
+export interface RegionalPrimaryScoreBreakdown {
+  alignment: number;
+  favorability: number;
+  influence: number;
+  infamyAdjustment: number;
+  nppAdjustment: number;
+  campaignAdjustment?: number;
+  score: number;
+}
+
+export function describeRegionalPrimaryScore(
+  input: PrimaryCandidateScoreInput
+): RegionalPrimaryScoreBreakdown {
+  const points = calculateRegionalPrimaryPoints(
+    input.candidateEcon,
+    input.candidateSocial,
+    input.partyEcon,
+    input.partySocial,
+    input.favorability,
+    input.politicalInfluence,
+    input.infamy,
+    input.stateEconLean,
+    input.stateSocialLean
+  );
+  const score =
+    input.isNPP && input.hasPlayerInParty
+      ? points.score * NPP_PRIMARY_SCORE_MULTIPLIER
+      : points.score;
+  return { ...points, nppAdjustment: score - points.score, score };
+}
+
 /** Shared raw primary score pipeline for API display, snapshots and resolution. */
 export function scorePrimaryCandidate(input: PrimaryCandidateScoreInput): number {
-  let score: number;
-  if (input.isPresidential) {
-    const partyInfluence = effectivePartyInfluenceForPresidentialPrimary(
-      input.isNPP ? 0 : (input.partyInfluence ?? 0),
-      input.isNPP ? null : (input.partyChairRole ?? null),
-      input.partyChairContext
-    );
-    score = calcPresidentPrimaryScore(
-      input.candidateEcon,
-      input.candidateSocial,
-      input.partyEcon,
-      input.partySocial,
-      input.favorability,
-      input.isNPP
-        ? input.politicalInfluence
-        : (input.nationalInfluence ?? input.politicalInfluence),
-      partyInfluence,
-      input.infamy
-    );
-  } else {
-    score = calcPrimaryScore(
-      input.candidateEcon,
-      input.candidateSocial,
-      input.partyEcon,
-      input.partySocial,
-      input.favorability,
-      input.politicalInfluence,
-      input.infamy,
-      input.stateEconLean,
-      input.stateSocialLean
-    );
-  }
+  if (!input.isPresidential) return describeRegionalPrimaryScore(input).score;
+
+  const partyInfluence = effectivePartyInfluenceForPresidentialPrimary(
+    input.isNPP ? 0 : (input.partyInfluence ?? 0),
+    input.isNPP ? null : (input.partyChairRole ?? null),
+    input.partyChairContext
+  );
+  const score = calcPresidentPrimaryScore(
+    input.candidateEcon,
+    input.candidateSocial,
+    input.partyEcon,
+    input.partySocial,
+    input.favorability,
+    input.isNPP ? input.politicalInfluence : (input.nationalInfluence ?? input.politicalInfluence),
+    partyInfluence,
+    input.infamy
+  );
   return input.isNPP && input.hasPlayerInParty ? score * NPP_PRIMARY_SCORE_MULTIPLIER : score;
 }

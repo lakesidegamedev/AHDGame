@@ -44,6 +44,10 @@ export function actionCardProps(
     fundraiseYield: costs.fundraiseAmount,
     campaignCurrency: getHomeCurrency(character),
     displayCampaignFunds: c.displayCampaignFunds,
+    quotedFundCost:
+      card.type === "poll" || card.type === "pollLarge" || card.type === "canvass"
+        ? (c.actionPrices?.[card.type] ?? null)
+        : undefined,
     displayPersonalWealth: c.displayPersonalWealth,
     blockGdpScaledCosts: c.blockGdpScaledCosts,
     forexEnabled: c.forexEnabled,

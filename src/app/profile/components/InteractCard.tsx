@@ -4,7 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { MailComposerModal } from "@/components/MailComposerModal";
+import { ProfileMessageButton } from "./ProfileMessageButton";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -433,24 +433,13 @@ function MailTab({
   toCharacterName: string;
 }) {
   const t = useTranslations("profile.interact");
-  const [open, setOpen] = useState(false);
-
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full rounded-md bg-primary px-3 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-      >
-        {t("composeMail", { name: toCharacterName })}
-      </button>
-
-      {open && (
-        <MailComposerModal
-          mode={{ type: "mail", toCharacterId, toCharacterName }}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </>
+    <ProfileMessageButton
+      toCharacterId={toCharacterId}
+      toCharacterName={toCharacterName}
+      className="w-full rounded-md bg-primary px-3 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      label={t("composeMail", { name: toCharacterName })}
+    />
   );
 }
 

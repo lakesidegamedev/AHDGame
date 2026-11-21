@@ -36,6 +36,7 @@ import { ExperimentalMobileMenu } from "@/components/navbar/ExperimentalMobileMe
 
 import { pixelIconForLink } from "@/components/navbar/desktopNavModel";
 
+import { NavMailLink } from "@/components/navbar/NavMailLink";
 import { MobileDock } from "@/components/navbar/MobileDock";
 import { isCampaignNavActive } from "@/components/navbar/campaignNav";
 
@@ -432,6 +433,10 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                   </svg>
                 </button>
 
+                {showProfile && (
+                  <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-muted hover:text-foreground" />
+                )}
+
                 {/* Wallet */}
                 {showProfile && (
                   <Link
@@ -526,8 +531,8 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
 
           {/* ── Mobile bar ───────────────────────────────────────────────── */}
           <div className="mx-auto flex h-14 items-center gap-2.5 px-3.5 lg:hidden">
-            <Link href="/profile" className="flex shrink-0 items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white p-0.5">
+            <Link href="/profile" className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5">
                 <Image
                   src={CDN_LOGO_URL}
                   priority
@@ -540,7 +545,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
               </span>
               <Wordmark
                 typed={typedWordmark}
-                className={`whitespace-nowrap text-[15px] font-bold tracking-tight text-foreground ${
+                className={`min-w-0 truncate text-[15px] font-bold tracking-tight text-foreground ${
                   typedWordmark ? "font-mono" : ""
                 }`}
               />
@@ -555,6 +560,9 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                 >
                   <PixelNavIcon name="search" className="h-4 w-4" />
                 </button>
+                {showProfile && (
+                  <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-foreground" />
+                )}
                 <Link
                   href="/notifications"
                   aria-label={
@@ -593,6 +601,9 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
               </div>
             ) : (
               <div className="ml-auto flex items-center gap-1.5">
+                {showProfile && (
+                  <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-foreground" />
+                )}
                 {showProfile && user && (
                   <button
                     type="button"

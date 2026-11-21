@@ -27,6 +27,7 @@ import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { hasGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
 import { getActionImage } from "@/lib/images/actionImages";
 import { apiErrorText } from "@/lib/errors/catalog";
+import type { CampaignActionPrices } from "@/lib/actions/campaignActionPrices";
 import { CARDS } from "./actionsConstants";
 import type { ActionCard, ActionProjection, ActionsViewMode } from "./actionsTypes";
 
@@ -81,6 +82,7 @@ export interface ActionsController {
   executeConvertCash: (amount: number) => Promise<void>;
   fetchCharacter: () => Promise<void>;
   actionCosts: ActionCosts | null;
+  actionPrices?: CampaignActionPrices | null;
   projections: Partial<Record<string, ActionProjection>>;
   forexEnabled: boolean;
   displayCampaignFundsStored: number;
@@ -113,6 +115,7 @@ export function useActionsController({
   const router = useRouter();
   const worldFlags = useWorldFlags();
   const [character, setCharacter] = useState<Character | null>(null);
+  const [actionPrices, setActionPrices] = useState<CampaignActionPrices | null>(null);
   const [homeState, setHomeState] = useState<ActionStateEconomics | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [flash, setFlash] = useState<ActionFlash>(null);
@@ -135,7 +138,7 @@ export function useActionsController({
         // The GDP and population the cost quotes need ride the character
         // response, so the grid paints at final prices without a second,
         // serial state round trip.
-        fetch("/api/auth/character?include=homeState"),
+        fetch("/api/auth/character?include=homeState,actionPrices"),
       ]);
       if (meRes.status === 401 || meRes.status === 403) {
         router.push("/login");
@@ -152,10 +155,17 @@ export function useActionsController({
         storedViewModeRef.current?.(meData.user.actionsViewMode);
       }
       if (charRes.ok) {
-        const char: Character & { homeStateEconomics?: ActionStateEconomics | null } =
-          await charRes.json();
+        const {
+          homeStateEconomics,
+          actionPrices,
+          ...char
+        }: Character & {
+          homeStateEconomics?: ActionStateEconomics | null;
+          actionPrices?: CampaignActionPrices;
+        } = await charRes.json();
         setCharacter(char);
-        if (char.homeStateEconomics) setHomeState(char.homeStateEconomics);
+        setHomeState(homeStateEconomics ?? null);
+        setActionPrices(actionPrices ?? null);
       }
     } catch (err) {
       console.error("Failed to fetch character:", err);
@@ -507,6 +517,7 @@ export function useActionsController({
     executeConvertCash,
     fetchCharacter,
     actionCosts,
+    actionPrices,
     projections,
     forexEnabled,
     displayCampaignFundsStored,

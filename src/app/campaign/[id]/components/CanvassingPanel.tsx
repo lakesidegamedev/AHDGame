@@ -3,13 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
+import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { bucketLabel, dimensionLabelFor } from "@/lib/demographics/bucketLabels";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";
 import { blendButtonStyle, BlendLabel, BlendSelect } from "@/components/blend/BlendControls";
 import { apiErrorText } from "@/lib/errors/catalog";
 
-const COST_FUNDS = 100;
 const COST_ACTIONS = 1;
 
 interface CanvassingPanelProps {
@@ -47,7 +47,7 @@ const SOURCE_DESCRIPTION: Record<CanvassSource, string> = {
     "Boost turnout for the ticket in the state you are campaigning in as running mate. Spends a shared surrogate action.",
 };
 
-function calculateMaxCanvasses(actions: number, funds: number, cost = COST_FUNDS): number {
+function calculateMaxCanvasses(actions: number, funds: number, cost: number): number {
   const maxByActions = Math.floor(actions / COST_ACTIONS);
   const maxByFunds = Math.floor(funds / cost);
   return Math.min(maxByActions, maxByFunds, 50);
@@ -61,9 +61,12 @@ export function CanvassingPanel({
   onResourcesSpent,
   variant = "default",
 }: CanvassingPanelProps) {
-  const { formatFull } = useCurrency();
   const t = useTranslations("elections.campaignTargeting");
-  const [fundsCost, setFundsCost] = useState(COST_FUNDS);
+  const [quote, setQuote] = useState<{
+    stateId: string;
+    fundsCost: number;
+    currency: CurrencyCode;
+  } | null>(null);
   const [previewError, setPreviewError] = useState("");
   const [previewRevision, setPreviewRevision] = useState(0);
   const [nativeTargets, setNativeTargets] = useState<Array<{ dimension: string; bucket: string }>>(
@@ -160,7 +163,9 @@ export function CanvassingPanel({
         const data = await response.json();
         if (controller.signal.aborted || data.stateId !== eligibleStateId) return;
         setNativeTargets(data.targets ?? []);
-        if (typeof data.fundsCost === "number") setFundsCost(data.fundsCost);
+        if (typeof data.fundsCost === "number" && data.currency) {
+          setQuote({ stateId: data.stateId, fundsCost: data.fundsCost, currency: data.currency });
+        }
         setPreview(data.preview ?? null);
       })
       .catch((error) => {
@@ -173,19 +178,25 @@ export function CanvassingPanel({
 
   const activeCategory = categories.find((c) => c.key === selectedCategory) ?? null;
 
+  const activeQuote = quote?.stateId === eligibleStateId ? quote : null;
+  const fundsCost = activeQuote?.fundsCost;
   const hasResources = characterActions != null && characterFunds != null;
-  const maxCanvasses = hasResources
-    ? calculateMaxCanvasses(characterActions, characterFunds, fundsCost)
-    : 50;
+  const maxCanvasses =
+    fundsCost == null
+      ? 0
+      : hasResources
+        ? calculateMaxCanvasses(characterActions, characterFunds, fundsCost)
+        : 50;
 
-  const totalFundsCost = fundsCost * count;
+  const totalFundsCost = fundsCost == null ? null : fundsCost * count;
   const totalActionsCost = COST_ACTIONS * count;
   const canAfford =
-    !hasResources || (characterActions >= totalActionsCost && characterFunds >= totalFundsCost);
+    totalFundsCost !== null &&
+    (!hasResources || (characterActions >= totalActionsCost && characterFunds >= totalFundsCost));
 
   async function handleCanvass() {
     if (eligibility.status !== "eligible") return;
-    if (!selectedCategory || !selectedGroup) return;
+    if (!selectedCategory || !selectedGroup || !canAfford) return;
 
     setLoading(true);
     setMessage("");
@@ -313,7 +324,12 @@ export function CanvassingPanel({
 
   const activeStateId = eligibility.stateId;
   const description = SOURCE_DESCRIPTION[eligibility.source];
-  const costSuffix = `${totalActionsCost} action${totalActionsCost !== 1 ? "s" : ""}, ${formatFull(totalFundsCost)}`;
+  const costSuffix =
+    totalFundsCost !== null && activeQuote
+      ? `${totalActionsCost} action${totalActionsCost !== 1 ? "s" : ""}, ${formatCurrencyFaceAmount(totalFundsCost, activeQuote.currency)}`
+      : previewError
+        ? "Price unavailable"
+        : "Loading price…";
 
   function quantityStyle(active: boolean, enabled: boolean): React.CSSProperties {
     return {
