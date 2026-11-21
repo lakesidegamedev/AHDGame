@@ -142,6 +142,7 @@ function prepareProcessCorporationAccount(
             eraUnitScale: context.lookups.eraUnitScale,
           })
         : null;
+    if (fundedValue) context.fundedProfitHistory.set(sectorIdStr, fundedValue.profitHistory);
     corpSectorNPV += fundedValue ? fundedValue.valueAnchor : r.npvContribution;
     corpRealOutput += fundedValue?.realOutputAnchor ?? 0;
 

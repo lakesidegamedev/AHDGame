@@ -336,6 +336,7 @@ export function settleCorporationAccounts(
             receipt: funded.receiptsBySectorId.get(sectorId)!,
             result,
             daily: context.fundedDaily.get(sectorId)!,
+            valuationProfitHistory: context.fundedProfitHistory.get(sectorId),
           },
         ])
       ),
