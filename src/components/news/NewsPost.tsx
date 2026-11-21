@@ -115,6 +115,7 @@ export function NewsPost({
   const [reactingTo, setReactingTo] = useState<string | null>(null);
 
   const isAuthor = !post.isSystem && !!currentCharacterId && post.authorId === currentCharacterId;
+  const countrySource = post.isSystem ? / \((\/country\/[a-z0-9-]+)\)$/.exec(post.content) : null;
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -478,8 +479,16 @@ export function NewsPost({
 
           {/* Content */}
           <p className="mb-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {post.content}
+            {countrySource ? post.content.slice(0, countrySource.index) : post.content}
           </p>
+          {countrySource && (
+            <Link
+              href={countrySource[1]}
+              className="mb-3 inline-block text-sm text-primary underline"
+            >
+              View country
+            </Link>
+          )}
         </>
       )}
 
