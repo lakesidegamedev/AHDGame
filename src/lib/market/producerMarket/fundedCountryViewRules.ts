@@ -71,9 +71,11 @@ export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMar
 }
 
 export function fundedCountryTradeTotals(market: FundedCountryMarket) {
+  const domesticOrders = market.demand + market.spilloverRequested;
   return {
+    domesticOrders,
     supply: market.supply + market.imports,
-    demand: market.demand + market.exports,
+    demand: domesticOrders + market.exports,
     sold:
       market.filled === null ? null : Math.max(0, market.filled - market.imports + market.exports),
   };

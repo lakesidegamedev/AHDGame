@@ -261,10 +261,12 @@ function CardContent({
           value={`${formatUnits(trade?.demand ?? data.demand, unit)}/day`}
           tone="demand"
           parts={
-            market && [
-              { label: "Local orders", value: formatUnits(market.demand, unit) },
-              { label: "Exports", value: formatUnits(market.exports, unit) },
-            ]
+            market && trade
+              ? [
+                  { label: "Local orders", value: formatUnits(trade.domesticOrders, unit) },
+                  { label: "Exports", value: formatUnits(market.exports, unit) },
+                ]
+              : undefined
           }
         />
       </div>

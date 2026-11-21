@@ -10,7 +10,7 @@ vi.mock("@/components/CountryFlag", () => ({ CountryFlag: () => null }));
 const market: FundedCountryMarket = {
   supply: 164_700,
   demand: 74_700,
-  spilloverRequested: 0,
+  spilloverRequested: 1_500,
   filled: 76_200,
   funded: 65_400,
   imports: 5_800,
@@ -56,9 +56,9 @@ describe("commodity country card", () => {
     expect(screen.getAllByText("Imports")).toHaveLength(2);
     expect(screen.getAllByText("5.8K units")).toHaveLength(2);
     expect(screen.getAllByText("Total demand")).toHaveLength(2);
-    expect(screen.getAllByText("166.2K units/day")).toHaveLength(2);
+    expect(screen.getAllByText("167.7K units/day")).toHaveLength(2);
     expect(screen.getAllByText("Local orders")).toHaveLength(2);
-    expect(screen.getAllByText("74.7K units")).toHaveLength(2);
+    expect(screen.getAllByText("76.2K units")).toHaveLength(2);
     expect(screen.getAllByText("Exports")).toHaveLength(2);
     expect(screen.getAllByText("91.5K units")).toHaveLength(2);
     expect(screen.getAllByText("161.9K units/day")).toHaveLength(2);
