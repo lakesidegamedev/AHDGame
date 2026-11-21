@@ -4,6 +4,7 @@
  * motion; no behavior change).
  */
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
+import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
@@ -206,6 +207,7 @@ export async function buildSectorCommoditySections(args: {
   const ownSiteProducts = isCeo
     ? (ownSiteDeliveries(sector.producerSettlement, args.currentTurn ?? 0)?.products ?? [])
     : [];
+  const receiptSales = settledProductSales(sector.producerSettlement, args.currentTurn ?? 0);
   const ownSiteByCommodity = new Map(ownSiteProducts.map((p) => [p.commodity, p] as const));
 
   // Why an output went unsold last turn: its ask against what buyers in its
@@ -239,6 +241,12 @@ export async function buildSectorCommoditySections(args: {
   const hasRevenueSplit = Object.keys(revenueShareByCommodity).length > 0;
 
   const supplies = supplyFlows.map((f) => {
+    const sale = receiptSales?.get(f.commodity);
+    const soldFraction = receiptSales
+      ? sale && sale.offered > 0
+        ? Math.min(1, sale.sold / sale.offered)
+        : undefined
+      : soldByCommodity[f.commodity];
     const dollarFlow = sectorRevenueAnchor * f.rate;
     const units = dollarsToUnits(dollarFlow, COMMODITY_BASE_PRICES[f.commodity]);
     const gBal = globalBalances.get(f.commodity);
@@ -304,9 +312,8 @@ export async function buildSectorCommoditySections(args: {
       // "my short commodity isn't selling" on a multi-output sector where a
       // DIFFERENT output is the one sitting unsold (oil_gas: gas clears out in
       // a 2.7x shortage while oil, in glut, does not).
-      ...(market.clearingEnabled && typeof soldByCommodity[f.commodity] === "number"
-        ? { soldFraction: soldByCommodity[f.commodity] }
-        : {}),
+      ...(market.clearingEnabled && typeof soldFraction === "number" ? { soldFraction } : {}),
+      ...(isCeo && sale ? { settledSales: sale } : {}),
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }
         : {}),

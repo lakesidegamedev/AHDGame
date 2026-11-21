@@ -243,7 +243,7 @@ export default function MarketMoneyPanel({
             }
             help={
               (truth.soldByCommodity.length > 0
-                ? `Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. By product: ${truth.soldByCommodity
+                ? `Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. Share of offers sold by product: ${truth.soldByCommodity
                     .map(
                       (s) =>
                         `${COMMODITY_LABELS[s.commodity as CommodityType] ?? s.commodity} ${fmtPct(s.fraction)}`
