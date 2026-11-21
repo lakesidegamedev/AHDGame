@@ -3,6 +3,7 @@ import {
   FUNDED_SALE_EVIDENCE_MAX_AGE_TURNS,
   fundedLowSaleStreakStep,
   fundedSellThrough,
+  fundedTakenShare,
   nppDemandThrottle,
   nppOperatingCapacityUnits,
   nppSoldShare,
@@ -10,7 +11,12 @@ import {
   soldShareWorldOf,
   type SoldShareWorld,
 } from "./fundedSellThrough";
-import { decideExtractionStrategySwitch } from "@/lib/turn/npp/strategyExpectedRevenue";
+import {
+  CHRONIC_LOW_FILL_THRESHOLD,
+  decideExtractionStrategySwitch,
+} from "@/lib/turn/npp/strategyExpectedRevenue";
+import { STRANDED_LOW_FILL_THRESHOLD } from "@/lib/corporations/strandedPlant";
+import { GLUT_MOTHBALL_FILL_THRESHOLD } from "@/lib/turn/npp/nppCorporationTuning";
 
 const EPOCH = "epoch-1";
 const receipt = (over: Record<string, unknown> = {}) => ({
@@ -167,5 +173,79 @@ describe("mine recipe switch input", () => {
 
   it("keeps the full bar without a current funded sale", () => {
     expect(decideFor(FUNDED, { soldFraction: 0.1 })).toBeNull();
+  });
+});
+
+describe("own-site deliveries count as taken", () => {
+  const world: SoldShareWorld = { fundedWorldEpoch: EPOCH, firstFundedTurn: 2, turn: 10 };
+  // Every rule that reads the AI sold share: glut wage and output cap (chronic
+  // low fill), glut mothballing, the stranded-divest gate and the low-sale
+  // streak (which also feeds the contract glut discount through soldFraction).
+  const flaggedBy = (share: number | null) => ({
+    chronicLowFill: share != null && share < CHRONIC_LOW_FILL_THRESHOLD,
+    glutMothball: share != null && share < GLUT_MOTHBALL_FILL_THRESHOLD,
+    stranded: (share ?? 1) < STRANDED_LOW_FILL_THRESHOLD,
+    streak: fundedLowSaleStreakStep(share),
+  });
+
+  it("reads 1 for a plant whose whole offer went to its own sites, and flags nothing", () => {
+    const sector = {
+      soldFraction: 0,
+      producerSettlement: receipt({
+        turn: 10,
+        offeredUnits: 669,
+        soldUnits: 0,
+        products: [
+          { commodity: "energy", internalDeliveredUnits: 600 },
+          { commodity: "energy", internalDeliveredUnits: 69 },
+        ],
+      }),
+    };
+    expect(fundedTakenShare(sector, EPOCH, 10)).toBe(1);
+    expect(nppSoldShare(sector, world)).toBe(1);
+    expect(fundedSellThrough(sector, EPOCH, 10)).toBe(0);
+    expect(flaggedBy(nppSoldShare(sector, world))).toEqual({
+      chronicLowFill: false,
+      glutMothball: false,
+      stranded: false,
+      streak: "reset",
+    });
+  });
+
+  it("adds own-site deliveries to outside sales and clamps at 1", () => {
+    const part = receipt({
+      turn: 10,
+      offeredUnits: 100,
+      soldUnits: 20,
+      products: [{ internalDeliveredUnits: 30 }],
+    });
+    expect(fundedTakenShare({ producerSettlement: part }, EPOCH, 10)).toBe(0.5);
+    const over = receipt({
+      turn: 10,
+      offeredUnits: 100,
+      soldUnits: 80,
+      products: [{ internalDeliveredUnits: 40 }],
+    });
+    expect(fundedTakenShare({ producerSettlement: over }, EPOCH, 10)).toBe(1);
+  });
+
+  it("still reads 0 and flags every rule when nothing was sold or delivered and output went unsold", () => {
+    const sector = {
+      soldFraction: 1,
+      producerSettlement: receipt({
+        turn: 10,
+        offeredUnits: 120,
+        soldUnits: 0,
+        products: [{ commodity: "energy", internalDeliveredUnits: 0 }],
+      }),
+    };
+    expect(fundedTakenShare(sector, EPOCH, 10)).toBe(0);
+    expect(nppSoldShare(sector, world)).toBe(0);
+    expect(flaggedBy(nppSoldShare(sector, world))).toEqual({
+      chronicLowFill: true,
+      glutMothball: true,
+      stranded: true,
+      streak: "increment",
+    });
   });
 });

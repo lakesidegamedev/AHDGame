@@ -20,6 +20,10 @@
 
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { STRANDED_LOW_FILL_THRESHOLD } from "@/lib/corporations/strandedPlant";
+import {
+  offtakeUnits,
+  type CaptiveProduct,
+} from "@/lib/market/producerMarket/captiveDeliveryRules";
 
 /**
  * A receipt older than this many turns says nothing about the plant now. The
@@ -36,6 +40,8 @@ export interface FundedReceiptLike {
   capacityUnits?: number | null;
   offeredUnits?: number | null;
   soldUnits?: number | null;
+  /** Per-product lines; `internalDeliveredUnits` is output handed to the company's own sites. */
+  products?: readonly CaptiveProduct[] | null;
 }
 
 export interface DemandReadingSectorLike {
@@ -68,6 +74,36 @@ export function fundedSellThrough(
   fundedWorldEpoch: string,
   turn?: number
 ): number | null {
+  return fundedShare(sector, fundedWorldEpoch, turn, (r) =>
+    Math.max(0, finiteOrNull(r.soldUnits) ?? 0)
+  );
+}
+
+/**
+ * Taken over offered: units sold plus units handed to the company's own sites,
+ * over units offered, clamped to [0, 1]. Offered output includes own-site
+ * deliveries, so a plant feeding its own company is not a glut. Same null
+ * rules as fundedSellThrough.
+ */
+export function fundedTakenShare(
+  sector: DemandReadingSectorLike,
+  fundedWorldEpoch: string,
+  turn?: number
+): number | null {
+  return fundedShare(sector, fundedWorldEpoch, turn, (r) =>
+    offtakeUnits({
+      soldUnits: finiteOrNull(r.soldUnits) ?? 0,
+      products: r.products ?? undefined,
+    })
+  );
+}
+
+function fundedShare(
+  sector: DemandReadingSectorLike,
+  fundedWorldEpoch: string,
+  turn: number | undefined,
+  takenOf: (r: FundedReceiptLike) => number
+): number | null {
   const r = currentReceipt(sector, fundedWorldEpoch);
   if (!r) return null;
   if (turn != null) {
@@ -76,8 +112,7 @@ export function fundedSellThrough(
   }
   const offered = finiteOrNull(r.offeredUnits);
   if (offered == null || !(offered > 0)) return null;
-  const sold = Math.max(0, finiteOrNull(r.soldUnits) ?? 0);
-  return Math.max(0, Math.min(1, sold / offered));
+  return Math.max(0, Math.min(1, takenOf(r) / offered));
 }
 
 /** When a world reads funded sales for AI decisions, and for which turn. */
@@ -117,7 +152,8 @@ export function soldShareWorldOf(
  * The sold share AI-run companies act on: wages, output policy, glut
  * mothballing, strategy pivots, mine recipe switches and contract pricing.
  *
- * On a funded turn it is fundedSellThrough with freshness: null (no evidence)
+ * On a funded turn it is fundedTakenShare (own-site deliveries count as
+ * taken) with freshness: null (no evidence)
  * for a plant with no receipt from this world, a receipt older than
  * FUNDED_SALE_EVIDENCE_MAX_AGE_TURNS, or nothing offered. Null never reads as
  * "sold nothing", and a funded turn never falls back to the legacy clearing
@@ -129,7 +165,7 @@ export function nppSoldShare(
   world: SoldShareWorld
 ): number | null {
   const epoch = soldShareFundedEpoch(world);
-  if (epoch) return fundedSellThrough(sector, epoch, world.turn);
+  if (epoch) return fundedTakenShare(sector, epoch, world.turn);
   return finiteOrNull(sector.soldFraction);
 }
 
@@ -163,7 +199,7 @@ export function nppOperatingCapacityUnits(
 }
 
 /**
- * How one settled turn moves `fundedLowSaleTurns`: a sell-through under
+ * How one settled turn moves `fundedLowSaleTurns`: a taken share under
  * STRANDED_LOW_FILL_THRESHOLD extends the streak, one at or above it ends the
  * streak, and no reading (nothing offered) holds it.
  */

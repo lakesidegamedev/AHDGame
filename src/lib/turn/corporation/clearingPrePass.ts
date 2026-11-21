@@ -23,7 +23,7 @@ import {
   type FundedLoyaltySectorInput,
   type LoyaltySectorInput,
 } from "./brandLoyaltyTurn";
-import { fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
+import { fundedTakenShare } from "@/lib/turn/npp/rules/fundedSellThrough";
 import {
   getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
@@ -651,7 +651,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
               (c) => (rates.supply?.[c as keyof typeof rates.supply] ?? 0) > 0
             ),
             ...(fundedLoyaltyEpoch && sector.sectorType !== "media"
-              ? { fundedFill: fundedSellThrough(sector, fundedLoyaltyEpoch, turn ?? 0) }
+              ? { fundedFill: fundedTakenShare(sector, fundedLoyaltyEpoch, turn ?? 0) }
               : {}),
           });
         }

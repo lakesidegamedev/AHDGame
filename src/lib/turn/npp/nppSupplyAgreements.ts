@@ -283,6 +283,7 @@ export const NPP_SUPPLY_SECTOR_PROJECTION = {
   "producerSettlement.turn": 1,
   "producerSettlement.offeredUnits": 1,
   "producerSettlement.soldUnits": 1,
+  "producerSettlement.products.internalDeliveredUnits": 1,
   throughputFactor: 1,
   mothballed: 1,
   strategyId: 1,

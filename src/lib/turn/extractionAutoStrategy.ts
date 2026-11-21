@@ -636,6 +636,7 @@ export async function processExtractionAutoStrategy(
         "producerSettlement.turn": 1,
         "producerSettlement.offeredUnits": 1,
         "producerSettlement.soldUnits": 1,
+        "producerSettlement.products.internalDeliveredUnits": 1,
         transitionCooldownUntilTurn: 1,
         parentDirectedStrategy: 1,
         capitalStock: 1,

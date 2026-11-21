@@ -45,7 +45,7 @@ import { fundedShortageBuildOps } from "@/lib/turn/corporation/sectorTurn/shorta
 import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
-import { fundedLowSaleStreakStep, fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
+import { fundedLowSaleStreakStep, fundedTakenShare } from "@/lib/turn/npp/rules/fundedSellThrough";
 
 import { returnStateRunAdvances } from "@/lib/turn/corporation/stateRunAdvance";
 import { backgroundTradeOutcomes } from "@/lib/market/producerMarket/backgroundTradeRules";
@@ -278,7 +278,7 @@ export async function publishFundedProducerTurn(
   // A plant whose run short inputs cut was billed wages on the share it made;
   // its reported crew is that share of the planned crew.
   const headcountBySectorId = new Map(context.demand.headcountBySectorId);
-  // This turn's sell-through per settled sector, for the low-sale streak.
+  // This turn's taken share (sold plus own-site) per settled sector, for the low-sale streak.
   const sellThroughBySectorId = new Map<string, number | null>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
@@ -309,7 +309,7 @@ export async function publishFundedProducerTurn(
       throughputBySectorId.set(sector._id.toHexString(), fundedInputThroughput(r));
       sellThroughBySectorId.set(
         sector._id.toHexString(),
-        fundedSellThrough({ producerSettlement: r }, context.worldEpoch)
+        fundedTakenShare({ producerSettlement: r }, context.worldEpoch)
       );
     }
   }

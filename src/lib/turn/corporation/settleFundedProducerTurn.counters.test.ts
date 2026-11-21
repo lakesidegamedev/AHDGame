@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { noRepeatIncrement, settledSectorCounterUpdate } from "./settleFundedProducerTurn";
-import { fundedLowSaleStreakStep, fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
+import { fundedLowSaleStreakStep, fundedTakenShare } from "@/lib/turn/npp/rules/fundedSellThrough";
 
 const EPOCH = "epoch-1";
-const step = (offered: number, sold: number) =>
+const step = (offered: number, sold: number, ownSites = 0) =>
   fundedLowSaleStreakStep(
-    fundedSellThrough(
+    fundedTakenShare(
       {
-        producerSettlement: { worldEpoch: EPOCH, turn: 5, offeredUnits: offered, soldUnits: sold },
+        producerSettlement: {
+          worldEpoch: EPOCH,
+          turn: 5,
+          offeredUnits: offered,
+          soldUnits: sold,
+          products: [{ internalDeliveredUnits: ownSites }],
+        },
       },
       EPOCH
     )
@@ -41,6 +47,22 @@ describe("settled sector counters", () => {
       settledSectorCounterUpdate({}, "reset", step(100, 50))
     );
     expect(doc.fundedLowSaleTurns).toBe(0);
+  });
+
+  it("counts own-site deliveries as taken, so a plant feeding its own sites does not extend the streak", () => {
+    const doc = apply(
+      { fundedLowSaleTurns: 7 },
+      settledSectorCounterUpdate({}, "reset", step(669, 0, 669))
+    );
+    expect(doc.fundedLowSaleTurns).toBe(0);
+  });
+
+  it("extends the streak when nothing was sold or delivered to own sites", () => {
+    const doc = apply(
+      { fundedLowSaleTurns: 7 },
+      settledSectorCounterUpdate({}, "increment", step(120, 0, 0))
+    );
+    expect(doc.fundedLowSaleTurns).toBe(8);
   });
 
   it("holds through a turn with nothing offered", () => {
