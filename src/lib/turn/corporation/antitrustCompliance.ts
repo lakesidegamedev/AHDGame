@@ -49,9 +49,20 @@ export interface AntitrustComplianceResult {
 }
 
 /** Pure: the control rows and industry rows the rules need, from the turn snapshot. */
-export function complianceInputs(
-  lookups: Pick<CorporationLookups, "corporations" | "sectorsByCorp">
-): { rows: ControlRow[]; industry: IndustryRow[] } {
+type ComplianceLookups = Pick<CorporationLookups, "corporations"> & {
+  sectorsByCorp: ReadonlyMap<
+    string,
+    readonly Pick<
+      import("@/lib/db/types").CorporateSector,
+      "countryId" | "sectorType" | "realizedRevenue" | "revenue"
+    >[]
+  >;
+};
+
+export function complianceInputs(lookups: ComplianceLookups): {
+  rows: ControlRow[];
+  industry: IndustryRow[];
+} {
   const rows: ControlRow[] = [];
   const industry: IndustryRow[] = [];
   for (const corp of lookups.corporations) {
@@ -82,10 +93,7 @@ export function complianceInputs(
 
 export async function processAntitrustCompliance(
   db: Db,
-  lookups: Pick<
-    CorporationLookups,
-    "corporations" | "sectorsByCorp" | "exchangeRatesByCurrency" | "eraYear"
-  >,
+  lookups: ComplianceLookups & Pick<CorporationLookups, "exchangeRatesByCurrency" | "eraYear">,
   turn: number,
   now: Date = new Date()
 ): Promise<AntitrustComplianceResult> {

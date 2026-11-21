@@ -1,7 +1,3 @@
-/**
- * Decides whether an interrupted corporationTurn may rerun on a crash resume.
- * Stage 2 only, and only when the corporation turn journal covers this turn.
- */
 import type { Db } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import {
@@ -15,6 +11,11 @@ import {
   resilienceStageOf,
 } from "@/lib/turn/corporation/resume/rules";
 
+import {
+  FundedClosingPlanError,
+  readFundedClosingState,
+} from "@/lib/turn/corporation/resume/fundedClosingPlan";
+
 interface LockedState {
   currentTurn: number;
   worldEpochId?: string | null;
@@ -22,7 +23,7 @@ interface LockedState {
   processingPhaseStatuses?: Record<string, { status?: string } | undefined> | null;
 }
 
-/** Phases to rerun instead of refusing. Empty unless stage 2 and the journal covers the turn. */
+/** A verified funded close or a replayable stage 2 journal can resume the phase. */
 export async function corporationTurnRerunSet(
   db: Db,
   state: LockedState
@@ -30,6 +31,18 @@ export async function corporationTurnRerunSet(
   const target = state.processingTargetTurn;
   const status = state.processingPhaseStatuses?.corporationTurn?.status;
   if (typeof target !== "number" || (status !== "running" && status !== "failed")) return new Set();
+  if (state.worldEpochId) {
+    try {
+      const closing = await readFundedClosingState(db, {
+        worldEpoch: state.worldEpochId,
+        turn: target,
+      });
+      if (closing.continuation) return new Set(["corporationTurn"]);
+    } catch (error) {
+      if (error instanceof FundedClosingPlanError) return new Set();
+      throw error;
+    }
+  }
   const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     { projection: { turnResilienceStage: 1 } }

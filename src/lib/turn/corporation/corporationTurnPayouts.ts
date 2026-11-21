@@ -1,3 +1,7 @@
+import { assertProducerTurnFence } from "@/lib/market/producerMarket/settlement";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { saveFundedClosingPlan } from "./resume/fundedClosingPlan";
+import type { CorporationTurnResult } from "./corporationTurnRuntime";
 /** Closing steps of the corporation turn: capacity notices, audits, dividends, payouts and subsidiary upkeep. */
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type { GameState } from "@/lib/db/types";
@@ -53,6 +57,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 import {
   CorporationTurnStepRefusedError,
+  pruneJournal,
   runJournaledStep,
   runJournaledStepWithOutput,
   type JournalContext,
@@ -99,6 +104,7 @@ export async function settleCorporationTurnPayouts({
   passThroughTaxedDividendPayments,
   forexEnabled,
   resilienceStage,
+  fundedResult,
 }: {
   capacityBindingEvents: {
     sectorId: string;
@@ -141,6 +147,7 @@ export async function settleCorporationTurnPayouts({
   passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
   forexEnabled: boolean;
   resilienceStage?: number;
+  fundedResult?: ClosingResult;
 }) {
   const journal: JournalContext = {
     db,
@@ -540,29 +547,8 @@ export async function settleCorporationTurnPayouts({
     }
   }
 
-  const currencyIncomeFaceByCharacterId = new Map<string, Map<CurrencyCode, number>>();
-  for (const [id, currMap] of charPayments) {
-    currencyIncomeFaceByCharacterId.set(id, new Map(currMap));
-  }
-  mark("paymentAggregation");
-  const ratesForLoc = await loadExchangeRatesMap(db);
-  const currencyIncomeInternalByCharacterId = new Map<string, number>();
-  for (const [charIdStr, currencyAmounts] of charPayments) {
-    let internal = 0;
-    for (const [currency, amount] of currencyAmounts) {
-      if (amount <= 0) continue;
-      const rate = ratesForLoc[currency];
-      if (!rate || rate <= 0) continue;
-      internal += toInternalUnits(amount, rate);
-    }
-    if (internal > 0) currencyIncomeInternalByCharacterId.set(charIdStr, internal);
-  }
-
   // Reserve current taxes and old arrears atomically with each net payout.
   // Gross maps remain available for earnings history and tax-tier observations.
-  const taxableDividendPayments = new Map(
-    [...dividendPayments].map(([id, amounts]) => [id, new Map(amounts)])
-  );
   const payoutCredits: IncomeCredit[] = [];
   for (const [ownerCollection, payments] of [
     ["characters", charPayments],
@@ -594,13 +580,182 @@ export async function settleCorporationTurnPayouts({
   }
   if (typeof turn !== "number" && payoutCredits.length)
     throw new Error("Income payout needs a turn identity");
+  const continuation = {
+    turn,
+    now,
+    forexEnabled,
+    euroMonetaryUnion: gameState?.euroMonetaryUnion,
+    corporations: lookups.corporations,
+    sectorsByCorp: new Map(
+      [...lookups.sectorsByCorp].map(([id, sectors]) => [
+        id,
+        sectors.map(({ countryId, sectorType, realizedRevenue, revenue }) => ({
+          countryId,
+          sectorType,
+          realizedRevenue,
+          revenue,
+        })),
+      ])
+    ),
+    exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
+    stockHoldingTaxStartTurn: lookups.stockHoldingTaxStartTurn,
+    eraYear: lookups.eraYear,
+    corpSnapshots,
+    corpAuditEntries,
+    dividendIncomeReceivedByCorpId,
+    dividendTaxPaidByCountry,
+    ceoSalaryPayments,
+    dividendPayments,
+    capitalDividendPayments,
+    passThroughTaxedDividendPayments,
+    thresholds,
+    charPayments,
+    nppPayments,
+    payoutCredits,
+  };
+  if (fundedResult) {
+    const worldEpoch = journal.worldEpoch;
+    if (!worldEpoch || turn === undefined)
+      throw new TurnMustStopError("corporationTurn", "Funded closing needs a world and turn");
+    const scope = { worldEpoch, turn };
+    const plan = { ...continuation, turn, result: fundedResult };
+    try {
+      await assertProducerTurnFence(db, worldEpoch, turn);
+      await saveFundedClosingPlan(db, scope, plan);
+    } catch (error) {
+      throw new TurnMustStopError("corporationTurn", error);
+    }
+    return await resumeFundedCorporationClosing(db, scope, plan, mark);
+  }
+  return finishCorporationTurnPayouts(journal, continuation, mark);
+}
+
+type ClosingResult = Omit<
+  CorporationTurnResult,
+  "currencyIncomeInternalByCharacterId" | "currencyIncomeFaceByCharacterId"
+>;
+type ClosingLookups = Pick<
+  CorporationLookups,
+  "corporations" | "exchangeRatesByCurrency" | "stockHoldingTaxStartTurn" | "eraYear"
+> & {
+  sectorsByCorp: Map<
+    string,
+    Pick<CorporateSector, "countryId" | "sectorType" | "realizedRevenue" | "revenue">[]
+  >;
+};
+interface ClosingPayments extends ClosingLookups {
+  turn: number | undefined;
+  now: Date;
+  forexEnabled: boolean;
+  euroMonetaryUnion: GameState["euroMonetaryUnion"];
+  corpSnapshots: CorpSnapshot[];
+  corpAuditEntries: ActionAuditInput[];
+  dividendIncomeReceivedByCorpId: Map<string, number>;
+  dividendTaxPaidByCountry: Map<string, Map<string, number>>;
+  ceoSalaryPayments: Map<string, Map<CurrencyCode, number>>;
+  dividendPayments: Map<string, Map<CurrencyCode, number>>;
+  capitalDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  thresholds: TxThresholds;
+  charPayments: Map<string, Map<CurrencyCode, number>>;
+  nppPayments: Map<string, Map<CurrencyCode, number>>;
+  payoutCredits: IncomeCredit[];
+}
+
+export interface FundedClosingContinuation extends ClosingPayments {
+  turn: number;
+  result: ClosingResult;
+}
+
+export async function resumeFundedCorporationClosing(
+  db: Db,
+  scope: { worldEpoch: string; turn: number },
+  plan: FundedClosingContinuation,
+  mark: (label: string) => void
+): Promise<CorporationTurnResult> {
+  try {
+    await assertProducerTurnFence(db, scope.worldEpoch, scope.turn);
+    const journal = { db, stage: 2, ...scope } as const;
+    const payments = await finishCorporationTurnPayouts(journal, plan, mark, true);
+    await pruneJournal(journal).catch((error: unknown) =>
+      logger.error("corporationTurn", "closing journal cleanup failed", error)
+    );
+    return { ...plan.result, ...payments };
+  } catch (error) {
+    throw new TurnMustStopError("corporationTurn", error);
+  }
+}
+
+async function finishCorporationTurnPayouts(
+  journal: JournalContext,
+  plan: ClosingPayments,
+  mark: (label: string) => void,
+  funded = false
+) {
+  const { db } = journal;
+  const {
+    turn,
+    now,
+    forexEnabled,
+    euroMonetaryUnion,
+    corporations,
+    corpSnapshots,
+    corpAuditEntries,
+    dividendIncomeReceivedByCorpId,
+    dividendTaxPaidByCountry,
+    ceoSalaryPayments,
+    dividendPayments,
+    capitalDividendPayments,
+    passThroughTaxedDividendPayments,
+    thresholds,
+    charPayments,
+    nppPayments,
+    payoutCredits,
+  } = plan;
+  const lookups = {
+    corporations,
+    corpById: new Map(corporations.map((corp) => [corp._id.toHexString(), corp])),
+    sectorsByCorp: plan.sectorsByCorp,
+    exchangeRatesByCurrency: plan.exchangeRatesByCurrency,
+    stockHoldingTaxStartTurn: plan.stockHoldingTaxStartTurn,
+    eraYear: plan.eraYear,
+  };
+  const taxableDividendPayments = new Map(
+    [...dividendPayments].map(([id, amounts]) => [id, new Map(amounts)])
+  );
+  const currencyIncomeFaceByCharacterId = new Map(
+    [...charPayments].map(([id, amounts]) => [id, new Map(amounts)])
+  );
+  mark("paymentAggregation");
+  const ratesForLoc = funded ? undefined : await loadExchangeRatesMap(db);
   const netCredits = await creditIncomeAfterTax(db, "corporation", turn ?? 0, now, payoutCredits, {
-    acceptAppliedReceipt: journal.stage >= 2,
+    acceptAppliedReceipt: !funded && journal.stage >= 2,
+    recordReportingRates: funded,
   });
+  const currencyIncomeInternalByCharacterId = new Map<string, number>();
+  if (funded) {
+    for (const credit of netCredits) {
+      if (credit.ownerCollection !== "characters" || credit.gross <= 0 || !credit.reportingRate)
+        continue;
+      const id = credit.characterId.toHexString();
+      const internal = toInternalUnits(credit.gross, credit.reportingRate);
+      currencyIncomeInternalByCharacterId.set(
+        id,
+        (currencyIncomeInternalByCharacterId.get(id) ?? 0) + internal
+      );
+    }
+  } else {
+    for (const [id, amounts] of charPayments) {
+      let internal = 0;
+      for (const [currency, amount] of amounts) {
+        const rate = ratesForLoc?.[currency];
+        if (amount > 0 && rate && rate > 0) internal += toInternalUnits(amount, rate);
+      }
+      if (internal > 0) currencyIncomeInternalByCharacterId.set(id, internal);
+    }
+  }
   for (const credit of netCredits) {
     const id = credit.characterId.toHexString();
-    const payments = credit.ownerCollection === "characters" ? charPayments : imperialPayments;
-    payments.get(id)?.set(credit.currency, credit.net);
     if (credit.ownerCollection === "characters") {
       const dividend = dividendPayments.get(id)?.get(credit.currency);
       if (dividend !== undefined)
@@ -666,27 +821,31 @@ export async function settleCorporationTurnPayouts({
             .toArray()
         : [];
     const charById = new Map(divChars.map((c) => [c._id.toString(), c]));
-    const quoteContext = await loadConversionQuoteContext(db, gameState?.euroMonetaryUnion);
+    const quoteContext = await loadConversionQuoteContext(db, euroMonetaryUnion);
 
-    for (const [charIdStr, currMap] of dividendPayments) {
-      if (charIdStr.startsWith("imperial:") || charIdStr.startsWith("npp:")) continue;
-      const char = charById.get(charIdStr);
-      if (!char) continue;
-      const homeCurrency = getHomeCurrency(char);
-      for (const [currency, amount] of currMap) {
-        if (currency === homeCurrency || amount <= 0) continue;
-        await executeMarketMakerTrade(db, {
-          characterId: char._id,
-          countryId: char.countryId as CountryId,
-          fromCurrency: currency,
-          toCurrency: homeCurrency,
-          amount,
-          turn,
-          source: "auto_dividend",
-          quoteContext,
-        });
+    const convert = async () => {
+      for (const [charIdStr, currMap] of dividendPayments) {
+        if (charIdStr.startsWith("imperial:") || charIdStr.startsWith("npp:")) continue;
+        const char = charById.get(charIdStr);
+        if (!char) continue;
+        const homeCurrency = getHomeCurrency(char);
+        for (const [currency, amount] of currMap) {
+          if (currency === homeCurrency || amount <= 0) continue;
+          await executeMarketMakerTrade(db, {
+            characterId: char._id,
+            countryId: char.countryId as CountryId,
+            fromCurrency: currency,
+            toCurrency: homeCurrency,
+            amount,
+            turn,
+            source: "auto_dividend",
+            quoteContext,
+          });
+        }
       }
-    }
+    };
+    if (funded) await runJournaledStep(journal, "fundedDividendConversion", "refuse", convert);
+    else await convert();
   }
 
   mark("marketMakerDividendConv");
@@ -741,9 +900,15 @@ export async function settleCorporationTurnPayouts({
         lookups.stockHoldingTaxStartTurn !== undefined && turn >= lookups.stockHoldingTaxStartTurn
       )
     );
-    void processVoteReminders(db, turn).catch((error: unknown) =>
-      console.error("[corporationTurn] vote reminder sweep failed:", error)
-    );
+    const reminders = funded
+      ? runJournaledStep(journal, "fundedVoteReminders", "refuse", () =>
+          processVoteReminders(db, turn)
+        )
+      : processVoteReminders(db, turn);
+    void reminders.catch((error: unknown) => {
+      if (!(error instanceof CorporationTurnStepRefusedError))
+        console.error("[corporationTurn] vote reminder sweep failed:", error);
+    });
     mark("voteAutoResolve");
     // Resolve nationalizations whose notice window has elapsed (spec §14): cure-cancel
     // or complete the taking. Awaited so its effects land within this corp turn.
@@ -873,7 +1038,11 @@ export async function settleCorporationTurnPayouts({
   // One bulk write for the whole turn's aggregate corp-audit entries, never
   // per-corp (perf guard, see comment above `corpAuditEntries`).
   if (corpAuditEntries.length > 0) {
-    recordAuditBulk(corpAuditEntries);
+    if (funded) {
+      await runJournaledStep(journal, "fundedClosingAudit", "refuse", async () => {
+        recordAuditBulk(corpAuditEntries);
+      });
+    } else recordAuditBulk(corpAuditEntries);
   }
   return { currencyIncomeInternalByCharacterId, currencyIncomeFaceByCharacterId };
 }
