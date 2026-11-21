@@ -131,6 +131,7 @@ import {
   AUTOPILOT_MODIFIERS,
   advisoriesChanged,
   deriveAutopilotAdvisories,
+  distressAdvisoryActive,
   advisoriesToNotify,
   isAutopilotRun,
 } from "@/lib/corporations/autopilot";
@@ -1017,7 +1018,16 @@ export async function processNppCorporationDecisions(
           chronicLowFill: decision.autopilotSignals?.chronicLowFill === true,
           debtDominant: decision.autopilotSignals?.debtDominant === true,
           losingSectors: decision.autopilotSignals?.losingSectors ?? 0,
-          distressed: corp.financialDistressSinceTurn != null,
+          distressed: distressAdvisoryActive({
+            flagged: corp.financialDistressSinceTurn != null,
+            liquidCapital: corp.liquidCapital,
+            hasDefaultedBond: (issuerBondsByCorpId.get(corp._id.toString()) ?? []).some(
+              (b) => b.defaulted === true && b.matured !== true
+            ),
+            hasStalledProducerBill: (corp.producerPayables?.claims ?? []).some(
+              (c) => c.amount > 0 && c.notShrinkingSince != null
+            ),
+          }),
           affordableTech: techScratch[0]?.nodeName ?? null,
         },
         corp.autopilot.advisories,

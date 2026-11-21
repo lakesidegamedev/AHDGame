@@ -6,6 +6,7 @@ import {
   advisoriesChanged,
   advisoriesToNotify,
   deriveAutopilotAdvisories,
+  distressAdvisoryActive,
   isAutopilotRun,
   validateAutopilotToggle,
 } from "./autopilot";
@@ -128,5 +129,40 @@ describe("advisoriesChanged", () => {
     expect(advisoriesChanged(a, a)).toBe(false);
     expect(advisoriesChanged(a, [])).toBe(true);
     expect(advisoriesChanged(a, [{ ...a[0], subject: "B" }])).toBe(true);
+  });
+});
+
+describe("distressAdvisoryActive", () => {
+  const base = {
+    flagged: true,
+    liquidCapital: 377_639.99,
+    hasDefaultedBond: false,
+    hasStalledProducerBill: false,
+  };
+
+  it("does not re-raise distress for a corp that already recovered", () => {
+    expect(distressAdvisoryActive(base)).toBe(false);
+    const advisories = deriveAutopilotAdvisories(
+      {
+        chronicLowFill: false,
+        debtDominant: false,
+        losingSectors: 0,
+        distressed: distressAdvisoryActive(base),
+      },
+      [],
+      116
+    );
+    expect(advisories).toEqual([]);
+    expect(advisoriesToNotify([], advisories, undefined, 116)).toEqual([]);
+  });
+
+  it("keeps the advisory while cash is negative, a bond is defaulted or a bill is stalled", () => {
+    expect(distressAdvisoryActive({ ...base, liquidCapital: -1 })).toBe(true);
+    expect(distressAdvisoryActive({ ...base, hasDefaultedBond: true })).toBe(true);
+    expect(distressAdvisoryActive({ ...base, hasStalledProducerBill: true })).toBe(true);
+  });
+
+  it("is never active without the distress flag", () => {
+    expect(distressAdvisoryActive({ ...base, flagged: false, liquidCapital: -5 })).toBe(false);
   });
 });
