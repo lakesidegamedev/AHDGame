@@ -19,6 +19,7 @@ export async function GET() {
       db,
       characterId: auth.user.hasCharacter && auth.user.character ? auth.user.character._id : null,
       characterName: auth.user.character?.name ?? null,
+      homeCountryId: auth.user.character?.countryId ?? null,
     });
     // Per-viewer response with no id in the path; no-store stops a URL-keyed edge
     // cache from serving one player's roles to another. force-dynamic only blocks

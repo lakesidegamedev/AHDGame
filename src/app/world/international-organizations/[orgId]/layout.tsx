@@ -8,6 +8,7 @@ import { resolveOrgBySegment } from "../orgRouting";
 import { OrgProvider } from "../OrgProvider";
 import { OrgMasthead } from "../components/OrgMasthead";
 import { orgAccentStyle } from "../components/orgTheme";
+import { UsRepresentationNotice } from "../components/UsRepresentationNotice";
 
 /**
  * Per-org layout: fetches the world view once, resolves the org from the
@@ -65,6 +66,9 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
         </Link>
         <div style={orgAccentStyle(org.identity)} className="space-y-5">
           <OrgMasthead org={org} viewer={viewer} />
+          {org.members.some(
+            (member) => member.countryId === "US" && (member.hasVote || member.hasPolicyVote)
+          ) && <UsRepresentationNotice status={viewer?.usRepresentation} />}
           <OrgProvider
             value={{
               org,
