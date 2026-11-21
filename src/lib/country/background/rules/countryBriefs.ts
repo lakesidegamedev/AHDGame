@@ -11,6 +11,8 @@
  * Pure: plain data in, plain data out.
  */
 
+import { formatFundsCompact1dp } from "@/lib/utils/formattersCore";
+
 export type BriefKind =
   "debt_stress" | "election" | "currency_move" | "austerity" | "restructuring" | "outlook";
 
@@ -62,6 +64,7 @@ export interface BriefObservation {
     turn: number;
     fiscalYear: number;
     sizeGdpShare: number;
+    /** Amounts in the country's currency. */
     taxRise: number;
     spendingCut: number;
   } | null;
@@ -243,10 +246,12 @@ export function planBriefs(obs: BriefObservation, memory: BriefMemory | null): B
     (memory.packageTurn === null || obs.lastPackage.turn > memory.packageTurn)
   ) {
     const pkg = obs.lastPackage;
+    const local = (amount: number) =>
+      `${formatFundsCompact1dp(amount, "")} ${obs.currencyCode ?? "in local currency"}`;
     emit(
       "austerity",
       `${obs.countryName} announces an austerity package`,
-      `${obs.countryName} will consolidate its budget by ${pct(pkg.sizeGdpShare * 100)} of GDP in fiscal year ${pkg.fiscalYear}: tax rises of ${pct(pkg.taxRise * 100)} of GDP and spending cuts of ${pct(pkg.spendingCut * 100)} of GDP. Expect a weaker economy and a hit to the government's approval, and a stronger budget for bondholders.${bondLine(obs)}`
+      `${obs.countryName} plans a budget adjustment equal to ${pct(pkg.sizeGdpShare * 100)} of GDP in fiscal year ${pkg.fiscalYear}. The package includes ${local(pkg.taxRise)} in tax increases and ${local(pkg.spendingCut)} in spending cuts. Expect slower growth and lower government approval.${bondLine(obs)}`
     );
   }
 

@@ -83,6 +83,9 @@ describe("PresidentialCabinetClient acting appointments", () => {
       name: /appoint acting/i,
     })) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
+    expect(screen.getByRole("link", { name: "Senate confirmations" }).getAttribute("href")).toBe(
+      "/country/us/legislature?chamber=senate&tab=bills&view=confirmations"
+    );
   });
 
   it("disables the control once the seat's acting appointment is spent, and says why", async () => {

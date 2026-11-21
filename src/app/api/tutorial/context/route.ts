@@ -22,6 +22,9 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { localCampaignBalance } from "@/lib/currency/campaignBalance";
+import { getHomeCurrency } from "@/lib/currency/characterFunds";
+import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -114,10 +117,14 @@ async function handleGET() {
       facts.regionEconomy = { label: state.name ?? "Local economy", value: parts.join(" · ") };
     }
 
-    const funds = character.funds ?? 0;
+    const hasLocalBalances = Boolean(character.currencyBalances);
+    const funds = localCampaignBalance(character, hasLocalBalances);
+    const displayFunds = hasLocalBalances
+      ? formatCurrencyFaceAmount(funds, getHomeCurrency(character, gameState?.preset))
+      : `₳${Math.round(funds).toLocaleString("en-US")}`;
     facts.wallet = {
-      label: "You have",
-      value: `₳${Math.round(funds).toLocaleString()} · ${character.actions ?? 0} actions`,
+      label: "Campaign funds and actions",
+      value: `${displayFunds} · ${character.actions ?? 0} actions`,
     };
 
     if (partyCount > 0) {

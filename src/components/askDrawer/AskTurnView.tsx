@@ -656,11 +656,14 @@ export function TurnView({
           className="space-y-3 rounded-xl border border-card-border bg-card px-3.5 py-3 text-[13px]"
           data-ask-sources
         >
+          {sourceCount > 0 && (
+            <h3 className="font-semibold text-foreground">
+              Sources <span className="font-normal text-muted">{sourceCount}</span>
+            </h3>
+          )}
           {turn.citations.length > 0 && (
             <section>
-              <h4 className="mb-1.5 font-semibold text-foreground">
-                Sources <span className="font-normal text-muted">{turn.citations.length}</span>
-              </h4>
+              <h4 className="mb-1.5 font-semibold text-foreground">Code and documentation</h4>
               <ul className="space-y-1">
                 {turn.citations.map((c, i) => {
                   const url = absoluteAskUrl(c.url);

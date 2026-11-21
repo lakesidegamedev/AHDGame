@@ -80,6 +80,18 @@ describe("PATCH /api/country/[code]/parties/[id]/settings leadership titles", ()
     });
   });
 
+  it("rejects assigning the vice chair's standard title to the treasurer", async () => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(
+      makeRequest({
+        leadershipTitles: { chair: null, viceChair: null, treasurer: " National Vice Chair " },
+      }),
+      { params }
+    );
+    expect(response.status).toBe(400);
+    expect(db.collection("politicalParties").updateOne).not.toHaveBeenCalled();
+  });
+
   it("saves committee labels and member titles for the current roster", async () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(

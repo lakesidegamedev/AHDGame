@@ -5,12 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button, Skeleton } from "@/components/ui";
-import { InfoTooltip } from "@/components/InfoTooltip";
 import { useToast } from "@/contexts/ToastContext";
 import { getPartyHex } from "@/lib/utils/politics";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { legislatureUrl, executiveUrl, scotusJusticeOfficeUrl } from "@/lib/urls";
+import { executiveUrl, scotusJusticeOfficeUrl } from "@/lib/urls";
 import { SCOTUS_HERO_IMAGE_URL } from "@/lib/scotus/justiceImages";
 import { formatDeathChancePercent } from "@/lib/scotus/tenure";
 import { ScotusSeatCard, type SeatCardData } from "./components/ScotusSeatCard";
@@ -21,7 +20,7 @@ import {
   type NominatePartyOption,
 } from "./components/ScotusNominateModal";
 import { ScotusVoteRow, type ScotusNominationRow } from "./components/ScotusVoteRow";
-import { DocketHistoryTab } from "./components/DocketHistoryTab";
+import { DocketExplainer, DocketHistoryTab } from "./components/DocketHistoryTab";
 
 interface ScotusResponse {
   seats: SeatCardData[];
@@ -73,10 +72,6 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
   const code = countryId.toLowerCase();
   const isUS = countryId === COUNTRY_CLIENT_CONFIGS.US.id;
   const countryQuery = `?country=${encodeURIComponent(countryId)}`;
-  const senateLink =
-    countryId === COUNTRY_CLIENT_CONFIGS.US.id
-      ? "/congress?chamber=senate&tab=bills"
-      : legislatureUrl(countryId);
   const { showToast } = useToast();
 
   const [data, setData] = useState<ScotusResponse | null>(null);
@@ -298,9 +293,12 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               Back to White House
             </Link>
             <span className="text-muted">-</span>
-            <Link href={senateLink} className="text-muted transition-colors hover:text-foreground">
+            <a
+              href="#senate-confirmations"
+              className="text-muted transition-colors hover:text-foreground"
+            >
               Senate confirmations
-            </Link>
+            </a>
             {data.isJustice && (
               <>
                 <span className="text-muted">-</span>
@@ -317,55 +315,24 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
           <header className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
             <ScotusHero />
             <div className="p-6">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">Supreme Court</h1>
-                <InfoTooltip
-                  width={300}
-                  trigger={
-                    <span
-                      aria-label="How the Supreme Court works"
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-card-border bg-card-elevated text-xs font-semibold text-muted transition-colors hover:text-foreground"
-                    >
-                      ?
-                    </span>
-                  }
-                >
-                  <div className="space-y-2 text-left text-sm">
-                    <p className="font-semibold text-foreground">How the Court works</p>
-                    <ul className="list-disc space-y-1 pl-4 text-muted">
-                      <li>
-                        The President nominates a justice, a player or a generated candidate, and
-                        the Senate confirms by majority vote.
-                      </li>
-                      <li>
-                        Original justices leave on their historical dates. The President nominates
-                        the replacement; the Senate confirms. Later historical justices are never
-                        seated automatically. Player and NPP justices have a{" "}
-                        {formatDeathChancePercent()} death chance each turn after about two years.
-                      </li>
-                      <li>
-                        The court&apos;s ideological balance decides whether landmark historical
-                        cases play out as they really did or diverge into alternate outcomes.
-                      </li>
-                      <li>
-                        A diverged ruling changes real policy, national and state metrics, and
-                        regional political lean.
-                      </li>
-                      <li>
-                        Players cannot bring cases. Landmark cases arrive on their historical dates
-                        and rare unscripted cases can appear on their own; the Docket History tab
-                        explains each outcome.
-                      </li>
-                    </ul>
-                  </div>
-                </InfoTooltip>
-              </div>
+              <h1 className="text-2xl font-bold text-foreground">Supreme Court</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted">
-                Nine seats. When a justice leaves, the President nominates and the Senate confirms
-                by simple majority. Original justices leave on their historical dates; later
-                historical successors are never auto-seated. Player and NPP justices have a{" "}
-                {formatDeathChancePercent()} death chance each turn after their first two years.
+                Nine seats. The President nominates and the Senate confirms by simple majority.
               </p>
+              <details className="mt-3 max-w-2xl text-sm text-muted">
+                <summary className="cursor-pointer font-medium text-foreground">
+                  How the Court works
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p>
+                    Original justices with a scheduled departure leave on their historical dates.
+                    Others can leave after the historical records end. Player and NPP justices have
+                    a {formatDeathChancePercent()} chance of dying each turn after their first two
+                    years.
+                  </p>
+                  <DocketExplainer />
+                </div>
+              </details>
               <div className="mt-4 flex items-center gap-6 border-t border-card-border pt-4">
                 <div>
                   <span className="text-body-sm font-medium text-muted">Seated</span>
@@ -381,6 +348,30 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               </div>
             </div>
           </header>
+
+          <section
+            id="senate-confirmations"
+            className="scroll-mt-24 rounded-xl border border-card-border bg-card p-4 shadow-card"
+          >
+            <h2 className="text-base font-semibold text-foreground">Senate confirmations</h2>
+            {activeNominations.length === 0 ? (
+              <p className="text-sm text-muted">
+                No Supreme Court nominations are awaiting a vote.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {activeNominations.map((nomination) => (
+                  <ScotusVoteRow
+                    key={nomination.id}
+                    nomination={nomination}
+                    isSenator={data.isSenator}
+                    onVote={handleVote}
+                    votingId={votingId}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
 
           <nav
             className="flex overflow-x-auto border-b border-card-border"
@@ -406,7 +397,7 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               }`}
               aria-current={activeTab === "docket" ? "page" : undefined}
             >
-              Docket history
+              Docket
             </button>
           </nav>
 
@@ -428,43 +419,6 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
                     </Button>
                   </div>
                 </div>
-              )}
-
-              {activeNominations.length > 0 && (
-                <section className="rounded-xl border border-warning/30 bg-card p-4 shadow-card">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h2 className="text-base font-semibold text-foreground">
-                        {activeNominations.length} nomination
-                        {activeNominations.length === 1 ? "" : "s"} awaiting Senate vote
-                      </h2>
-                      <p className="text-sm text-muted">
-                        Senators can vote here or from Congress. Each confirmation uses a 24-hour
-                        simple-majority vote.
-                      </p>
-                    </div>
-                    <Link
-                      href={senateLink}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-card-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-all duration-150 hover:border-muted/40 hover:bg-card/80"
-                    >
-                      Open Senate
-                    </Link>
-                  </div>
-
-                  {data.isSenator && (
-                    <div className="mt-4 space-y-3">
-                      {activeNominations.map((nomination) => (
-                        <ScotusVoteRow
-                          key={nomination.id}
-                          nomination={nomination}
-                          isSenator={data.isSenator}
-                          onVote={handleVote}
-                          votingId={votingId}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
               )}
 
               <section>

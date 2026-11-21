@@ -50,4 +50,28 @@ describe("loadViewerOrganizationRoles — foreign-minister detection", () => {
     expect(db.collectionMocks["cabinetMembers"]!.find).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks["cabinetMembers"]!.findOne).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [null, "vacant"],
+    [{ characterId: null, isNPP: true }, "npp"],
+    [{ characterId: new ObjectId() }, null],
+  ])(
+    "reports the U.S. seat status without changing the viewer's authority",
+    async (member, status) => {
+      const cabinet = db.collectionMocks["cabinetMembers"]!;
+      cabinet.find.mockReturnValue({ toArray: async () => [] });
+      cabinet.findOne.mockResolvedValue(member);
+      const detail = await loadViewerOrganizationRoles({
+        db: db as unknown as Db,
+        characterId: new ObjectId(),
+        homeCountryId: "US",
+      });
+      expect(cabinet.findOne).toHaveBeenCalledWith(
+        { countryId: "US", positionId: "secretary_of_state" },
+        expect.anything()
+      );
+      expect(detail.usRepresentation).toBe(status);
+      expect(detail.foreignMinisterOf).toBeNull();
+    }
+  );
 });

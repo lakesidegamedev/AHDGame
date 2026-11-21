@@ -52,4 +52,12 @@ describe("FiscalStatStrip sovereign debt", () => {
       "not part of the numerator"
     );
   });
+
+  it("shows the GDP used for the ratios when a separate GDP figure is on screen", () => {
+    render(<FiscalStatStrip {...base} gdpGrowth={2} ratioGdp={40_000_000} />);
+
+    expect(screen.getByText("₽50.0M")).toBeTruthy();
+    expect(screen.getByText("Budget GDP ₽40.0M")).toBeTruthy();
+    expect(screen.getByText("0.3% of budget GDP")).toBeTruthy();
+  });
 });

@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
+import { isImfBoardMember } from "@/lib/imf/isImfBoardMember";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
@@ -19,7 +20,11 @@ export async function GET(_req: Request) {
 
   if (!imfCorp) {
     return NextResponse.json({
+      currentTurn: null,
       imfCorp: null,
+      managingDirector: null,
+      viewerIsBoardMember: false,
+      viewerIsManagingDirector: false,
       boardMembers: [],
       totalReceivedAnchor: 0,
       activeSovereignBailouts: [],
@@ -31,16 +36,24 @@ export async function GET(_req: Request) {
     .map((s) => s.characterId)
     .filter((id): id is ObjectId => !!id);
 
-  const boardCharacters =
-    shareholderCharIds.length > 0
+  const directorId = imfCorp.ceoVacant ? null : imfCorp.ceoId;
+  const leadershipIds = directorId ? [...shareholderCharIds, directorId] : shareholderCharIds;
+  const leadership =
+    leadershipIds.length > 0
       ? await charactersCollection(db)
-          .find({ _id: { $in: shareholderCharIds } })
+          .find({ _id: { $in: leadershipIds } })
           .project<{ _id: ObjectId; name: string; sequentialId?: number }>({
             name: 1,
             sequentialId: 1,
           })
           .toArray()
       : [];
+  const director = leadership.find((character) => directorId?.equals(character._id));
+  const viewerId = auth.user.character?._id;
+  const viewerIsBoardMember = viewerId
+    ? isImfBoardMember({ imfCorpShareholders: imfCorp.shareholders, characterId: viewerId })
+    : false;
+  const boardIds = new Set(shareholderCharIds.map((id) => id.toString()));
 
   const activeBailouts = await federalBudgetCollection(db)
     .find({ imfSovereignBailoutActive: true })
@@ -73,11 +86,22 @@ export async function GET(_req: Request) {
       liquidCapital: imfCorp.liquidCapital ?? 0,
       liquidCurrencyCode: imfCorp.liquidCurrencyCode ?? "USD",
     },
-    boardMembers: boardCharacters.map((c) => ({
-      characterId: c._id.toString(),
-      name: c.name,
-      sequentialId: c.sequentialId ?? null,
-    })),
+    managingDirector: director
+      ? {
+          characterId: director._id.toString(),
+          name: director.name,
+          sequentialId: director.sequentialId ?? null,
+        }
+      : null,
+    viewerIsBoardMember,
+    viewerIsManagingDirector: Boolean(viewerId && director?._id.equals(viewerId)),
+    boardMembers: leadership
+      .filter((character) => boardIds.has(character._id.toString()))
+      .map((character) => ({
+        characterId: character._id.toString(),
+        name: character.name,
+        sequentialId: character.sequentialId ?? null,
+      })),
     totalReceivedAnchor,
     activeSovereignBailouts: activeBailouts.map((b) => ({
       countryCode: b.countryId ?? String(b._id),

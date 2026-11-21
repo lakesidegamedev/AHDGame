@@ -78,15 +78,16 @@ interface ElectionRow {
 }
 
 /**
- * Load the panel for a character, or null when it should not show (past the
- * first days, or every goal already done).
+ * Show the panel automatically for new characters with steps left. Players
+ * can also reopen it from Profile at any time.
  */
 export async function loadFirstDays(
   db: Db,
   character: FirstDaysCharacter,
-  now: Date = new Date()
+  now: Date = new Date(),
+  mode: "automatic" | "requested" = "automatic"
 ): Promise<FirstDaysData | null> {
-  if (!isInFirstDays(character, now.getTime())) return null;
+  if (mode === "automatic" && !isInFirstDays(character, now.getTime())) return null;
 
   const [campaigns, candidacies, elections] = await Promise.all([
     actionLogsCollection<Document>(db).countDocuments(
@@ -140,5 +141,5 @@ export async function loadFirstDays(
     races,
     skippedTutorial: character.tutorial?.experience === "skip",
   };
-  return firstDaysComplete(data) ? null : data;
+  return mode === "automatic" && firstDaysComplete(data) ? null : data;
 }

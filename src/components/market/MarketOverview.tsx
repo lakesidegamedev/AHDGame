@@ -36,6 +36,7 @@ export function MarketOverview({
   commoditiesLoading,
   sectorsLoading,
   offersLoading,
+  offersError,
 }: {
   commodities: CommodityData[] | null;
   previews?: MarketOverviewPreviews | null;
@@ -44,6 +45,7 @@ export function MarketOverview({
   commoditiesLoading: boolean;
   sectorsLoading: boolean;
   offersLoading: boolean;
+  offersError: string;
 }) {
   const { formatAmount, formatListingPrice } = useCurrency();
   const stocks = useMarketJson<ExchangeData>(previews?.stocks == null ? STOCKS_PREVIEW_URL : null);
@@ -167,10 +169,14 @@ export function MarketOverview({
       </PreviewCard>
       <PreviewCard
         title="Supply deals"
-        detail={`${offers?.total ?? 0} open`}
+        detail={
+          offers?.enabled
+            ? `${(offers.totalAll ?? offers.total).toLocaleString("en-US")} open across all sources`
+            : undefined
+        }
         href="/market?tab=supply"
         loading={offersLoading}
-        error=""
+        error={offersError}
         empty={offerRows.length === 0}
       >
         {offerRows.map((o) => (

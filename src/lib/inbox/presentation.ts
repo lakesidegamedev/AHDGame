@@ -82,7 +82,6 @@ export function notificationLabel(type: NotificationType): string {
 }
 
 const URGENT_TYPES: ReadonlySet<NotificationType> = new Set([
-  "crisis",
   "player_attack",
   "corp_nationalization_risk",
   "corp_hostile_takeover_available",

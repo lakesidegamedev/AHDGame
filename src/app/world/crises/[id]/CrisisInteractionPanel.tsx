@@ -3,7 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
-import type { CrisisDecisionNode, CrisisEffect } from "@/lib/db/types/crisis";
+import type { CrisisDecisionNode, CrisisDecisionOption, CrisisEffect } from "@/lib/db/types/crisis";
 import type { RefugeeReceptionResult } from "@/lib/livingConflict/rules/refugeeReception";
 import type { ConflictCivilianLossResult } from "@/lib/livingConflict/rules/civilianLoss";
 import { CrisisEffectChip } from "@/components/crises/CrisisRowParts";
@@ -342,6 +342,41 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
   );
 }
 
+function OptionPreview({
+  option,
+  currency,
+}: {
+  option: CrisisDecisionOption;
+  currency: string | null;
+}) {
+  const costs: string[] = [];
+  if (option.requiredBudget && option.requiredBudget > 0) {
+    const amount = option.requiredBudget.toLocaleString("en-US");
+    costs.push(
+      currency ? `${currency} ${amount} from the treasury` : `${amount} from the treasury`
+    );
+  }
+  if (option.treasuryCostPctGdp && option.treasuryCostPctGdp > 0) {
+    const share = new Intl.NumberFormat("en-US", {
+      style: "percent",
+      maximumFractionDigits: 4,
+    }).format(option.treasuryCostPctGdp);
+    costs.push(`${share} of national GDP from the treasury`);
+  }
+  const turns = option.durationReductionTurns;
+
+  return (
+    <div className="mt-1.5 space-y-0.5 text-xs text-foreground/90">
+      <div>{costs.length > 0 ? costs.join(" + ") : "No fixed treasury cost listed."}</div>
+      {turns != null && turns > 0 && (
+        <div>
+          Shortens the crisis by up to {turns} {turns === 1 ? "turn" : "turns"}.
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Interactive crisis-decision panel for the crisis detail page. Consumes
  * GET /api/crises/[id]/interaction and submits decisions via
@@ -365,6 +400,8 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
     alreadyPledged: boolean;
   } | null>(null);
   const [campaignBrief, setCampaignBrief] = useState<CampaignBrief | null>(null);
+  const [showCampaignBrief, setShowCampaignBrief] = useState(true);
+  const [responseCurrency, setResponseCurrency] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const load = useCallback(async () => {
@@ -382,6 +419,8 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
       setResponseRole(data.responseRole ?? null);
       setAidContext(data.aidContext ?? null);
       setCampaignBrief(data.campaignBrief ?? null);
+      setShowCampaignBrief(data.showCampaignBrief !== false);
+      setResponseCurrency(data.responseCurrency ?? null);
     } catch {
       setInteraction(null);
     } finally {
@@ -491,7 +530,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
       </div>
 
       <div className="p-5 space-y-4">
-        {campaignBrief && <CampaignBriefPanel brief={campaignBrief} />}
+        {showCampaignBrief && campaignBrief && <CampaignBriefPanel brief={campaignBrief} />}
 
         {/* Active decision node */}
         {!resolved && currentNode && (
@@ -576,6 +615,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                       >
                         <div className="text-sm font-medium text-foreground">{option.label}</div>
                         <div className="text-xs text-muted mt-0.5">{option.description}</div>
+                        <OptionPreview option={option} currency={responseCurrency} />
                         <div className="mt-1 flex flex-wrap gap-1">
                           {option.campaignCommitment ? (
                             <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted">
@@ -630,7 +670,9 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs px-2 py-0.5 rounded-full border border-card-border bg-card-elevated text-muted">
-                {interaction.resolutionOutcome === "auto" ? "Auto-resolved" : "Resolved"}
+                {interaction.resolutionOutcome === "auto"
+                  ? "Response window closed"
+                  : "Response complete"}
               </span>
             </div>
             {terminalNode?.outcomeMessage ? (

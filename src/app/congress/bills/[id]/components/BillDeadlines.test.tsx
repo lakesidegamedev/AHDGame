@@ -39,6 +39,17 @@ describe("DeadlineCountdown", () => {
     expect(screen.getByText(/Awaiting result/)).toBeTruthy();
     expect(screen.queryByText(/Expired/)).toBeNull();
   });
+  it("shows the sign-or-veto deadline and remaining turns on the President's desk", () => {
+    currentTurn = 105;
+    render(<DeadlineCountdown deadline={null} deadlineTurn={110} kind="presidentialAction" />);
+    expect(screen.getByText(/Sign or veto by Turn 110 · 5 turns/)).toBeTruthy();
+    expect(screen.queryByTitle(/Voting closes/)).toBeNull();
+  });
+  it("shows what happens once the President's deadline arrives", () => {
+    currentTurn = 110;
+    render(<DeadlineCountdown deadline={null} deadlineTurn={110} kind="presidentialAction" />);
+    expect(screen.getByText(/Awaiting automatic enactment/)).toBeTruthy();
+  });
   it("keeps the wall-clock Expired label for legacy bills with no closing turn", () => {
     render(<DeadlineCountdown deadline={past} />);
     expect(screen.getByText(/Expired/)).toBeTruthy();

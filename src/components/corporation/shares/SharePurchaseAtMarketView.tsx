@@ -126,11 +126,19 @@ export function SharePurchaseAtMarketView({
   homeCurrencyCode,
   corpCurrency,
 }: SharePurchaseAtMarketViewProps) {
-  const { formatAmount, toInternalFrom, forexRates, forexSpreadStrengths, ratesLoading } =
-    useCurrency();
+  const {
+    formatAmount,
+    formatPriceOrder,
+    toInternalFrom,
+    forexRates,
+    forexSpreadStrengths,
+    ratesLoading,
+  } = useCurrency();
   const { euroMonetaryUnion } = useWorldFlags();
   const exchangeRates = forexRates;
   const loadingRates = ratesLoading && !forexRates;
+  const formatQuote = (localPrice: number) =>
+    formatPriceOrder(toInternalFrom(localPrice, corpCurrency), corpCurrency);
 
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -183,15 +191,15 @@ export function SharePurchaseAtMarketView({
       {equityMarketPoolActive && (
         <div className="grid grid-cols-3 gap-2 rounded-lg border border-card-border bg-card-elevated/40 p-3 text-xs">
           <div>
-            <div className="text-muted">Bid</div>
+            <div className="text-muted">Market sell price</div>
             <div className="mt-0.5 tabular-nums font-semibold text-error">
-              {formatAmount(toInternalFrom(marketBidPrice, corpCurrency), corpCurrency)}
+              {formatQuote(marketBidPrice)}
             </div>
           </div>
           <div>
-            <div className="text-muted">Ask</div>
+            <div className="text-muted">Market buy price</div>
             <div className="mt-0.5 tabular-nums font-semibold text-success">
-              {formatAmount(toInternalFrom(marketAskPrice, corpCurrency), corpCurrency)}
+              {formatQuote(marketAskPrice)}
             </div>
           </div>
           <div>
@@ -420,6 +428,12 @@ export function SharePurchaseAtMarketView({
 
           {quantity > 0 && (
             <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted">Price per share</span>
+                <span className="tabular-nums font-medium">
+                  {formatQuote(buyAsInvestmentBank ? referencePrice : marketAskPrice)}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted">Total cost</span>
                 <span
@@ -650,6 +664,12 @@ export function SharePurchaseAtMarketView({
 
           {quantity > 0 && (
             <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted">Price per share</span>
+                <span className="tabular-nums font-medium">
+                  {formatQuote(sellAsInvestmentBank ? referencePrice : marketBidPrice)}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted">Proceeds</span>
                 <span className="tabular-nums font-medium text-success">

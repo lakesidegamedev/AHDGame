@@ -87,6 +87,7 @@ export function FirstDaysPanel({
 
   return (
     <section
+      id="first-steps"
       aria-label={t("aria")}
       className="rounded-md border border-primary/30 bg-primary/5"
       data-coach="first-days"
@@ -202,17 +203,15 @@ export function FirstDaysPanel({
         </li>
       </ol>
 
-      {data.skippedTutorial && (
-        <p className="border-t border-card-border/60 px-4 py-2 text-body-xs text-muted">
-          {t.rich("skippedTour", {
-            link: (chunks) => (
-              <Link href="/tutorial" className="text-primary hover:underline">
-                {chunks}
-              </Link>
-            ),
-          })}
-        </p>
-      )}
+      <p className="border-t border-card-border/60 px-4 py-2 text-body-xs text-muted">
+        {t.rich(data.skippedTutorial ? "skippedTour" : "tutorial", {
+          link: (chunks) => (
+            <Link href="/tutorial" className="text-primary hover:underline">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
     </section>
   );
 }

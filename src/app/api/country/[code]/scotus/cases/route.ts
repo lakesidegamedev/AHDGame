@@ -1,4 +1,4 @@
-// GET /api/country/[code]/scotus/cases - History of past Docket cases and their outcomes (affirmed/diverged).
+// GET /api/country/[code]/scotus/cases - Pending and decided Docket cases.
 // Auth: requireBasicAuth
 // Errors: 400, 401, 404
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
@@ -7,7 +7,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getScotusCaseHistory } from "@/lib/scotus/queries";
+import { getScotusCaseHistory, getScotusUpcomingCases } from "@/lib/scotus/queries";
+import { getScotusPresetSeed } from "@/lib/scotus/presetData";
+import { getGameStateCore } from "@/lib/gameState";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -24,13 +26,18 @@ export async function GET(request: Request, context: RouteContext) {
       return errorResponse(404, "Country not found");
     }
     if (!countryHasFeature("supremeCourtDocket", countryId)) {
-      return NextResponse.json({ cases: [] });
+      return NextResponse.json({ cases: [], upcomingCases: [] });
     }
 
     const preset = new URL(request.url).searchParams.get("preset") ?? undefined;
     const db = await getDb();
-    const cases = await getScotusCaseHistory(db, countryId, preset);
-    return NextResponse.json({ cases });
+    const [cases, upcomingCases, gameState] = await Promise.all([
+      getScotusCaseHistory(db, countryId, preset),
+      getScotusUpcomingCases(db, countryId, preset),
+      getGameStateCore(db),
+    ]);
+    const seed = getScotusPresetSeed(preset ?? gameState?.preset ?? "");
+    return NextResponse.json({ cases, upcomingCases, proceduralOnly: seed?.docket.length === 0 });
   } catch (error) {
     return handleRouteError(error);
   }
