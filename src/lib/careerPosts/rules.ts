@@ -33,9 +33,9 @@ const OFFICE_EXIT_TYPES = new Set<CareerEvent["type"]>([
  * only the type, state and cabinet position count.
  */
 export function officeKey(office: OfficeType): string {
-  const record = office as unknown as Record<string, unknown>;
-  const state = typeof record.state === "string" ? record.state : "";
-  const positionId = typeof record.positionId === "string" ? record.positionId : "";
+  const state = "state" in office && typeof office.state === "string" ? office.state : "";
+  const positionId =
+    "positionId" in office && typeof office.positionId === "string" ? office.positionId : "";
   return `office:${office.type}:${state}:${positionId}`;
 }
 

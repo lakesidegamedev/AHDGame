@@ -7,7 +7,7 @@ summary: >-
   and CEO roles, and show when an office ended at the end of a term.
 tags: [profiles, career-history, achievements]
 badges: [minor]
-areas: [web, engine]
+areas: [fullstack]
 ---
 
 ## What changed
