@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { hemicycleLayout, benchLayout, horseshoeLayout } from "@/lib/charts/seatingLayouts";
 import type { SeatingStyle } from "@/lib/legislature/process";
 import { seatVoteColors, seatingThreshold, SEAT_VOTE_COLORS, type VoteCounts } from "./voteSeating";
+import { meetsBillPassRule, type BillPassRule } from "@/lib/congress/billPassRule";
 
 export type { SeatingStyle };
 
@@ -12,6 +13,7 @@ export function VoteSeatingChart({
   votes,
   eligible,
   width = 440,
+  passRule,
   requiredPct,
   requiredPctOfCast = false,
 }: {
@@ -19,6 +21,8 @@ export function VoteSeatingChart({
   votes: VoteCounts;
   eligible: number;
   width?: number;
+  /** Rule applied to Ayes and Nays by the floor vote engine. */
+  passRule?: BillPassRule;
   /**
    * Pass threshold as a percentage of seats. Omit for a simple majority
    * (the default). Set to 60 for an invoked filibuster (3/5 cloture) or 67
@@ -72,7 +76,13 @@ export function VoteSeatingChart({
     requiredPct != null && requiredPctOfCast
       ? { need: Math.max(1, Math.ceil((votesCast * requiredPct) / 100)), displayPct: requiredPct }
       : seatingThreshold(eligible, requiredPct);
-  const passing = votes.for >= need;
+  const passing = passRule
+    ? meetsBillPassRule(votes.for, votes.against, passRule)
+    : votes.for >= need;
+  const forOrAgainst = votes.for + votes.against;
+  const additionalAyes = passRule
+    ? Math.max(1, passRule === "twoThirds" ? 2 * votes.against : votes.against + 1) - votes.for
+    : 0;
   const taLabel = style === "horseshoe";
 
   if (eligible <= 0 || pts.length === 0) return null;
@@ -101,43 +111,65 @@ export function VoteSeatingChart({
         )}
       </svg>
       <div style={{ textAlign: "center", marginTop: 10 }}>
-        <div
-          className="tabular-nums"
-          style={{
-            fontFamily: "var(--font-geist-mono)",
-            fontSize: 28,
-            fontWeight: 800,
-            lineHeight: 1,
-            color: passing ? "var(--success)" : "var(--foreground)",
-          }}
-        >
-          {votes.for}
-          <span
-            style={{
-              color: "var(--muted)",
-              fontWeight: 600,
-              fontSize: 11,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginLeft: 6,
-            }}
-          >
-            {taLabel ? "Tá" : "Ayes"}
-          </span>
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--muted)",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            marginTop: 4,
-            fontWeight: 700,
-          }}
-        >
-          {displayPct}% {requiredPct != null && requiredPctOfCast ? "of votes cast " : ""}needed to
-          pass
-        </div>
+        {passRule ? (
+          <div className="mx-auto mt-2 max-w-xs space-y-1 text-body-xs text-muted">
+            <p className={passing ? "font-semibold text-success" : "font-semibold text-foreground"}>
+              {passing
+                ? "This tally meets the passage rule"
+                : forOrAgainst > 0
+                  ? `${additionalAyes} more ${additionalAyes === 1 ? "Aye" : "Ayes"} needed at the current Nay count`
+                  : "No Ayes or Nays yet"}
+            </p>
+            <p>
+              {passRule === "twoThirds" ? "Two-thirds of Ayes and Nays" : "More Ayes than Nays"}{" "}
+              required. Abstentions are excluded.
+            </p>
+            <p>
+              {votes.for} Ayes out of {forOrAgainst} votes for or against. Each member&apos;s vote
+              counts for the seats they hold.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div
+              className="tabular-nums"
+              style={{
+                fontFamily: "var(--font-geist-mono)",
+                fontSize: 28,
+                fontWeight: 800,
+                lineHeight: 1,
+                color: passing ? "var(--success)" : "var(--foreground)",
+              }}
+            >
+              {votes.for}
+              <span
+                style={{
+                  color: "var(--muted)",
+                  fontWeight: 600,
+                  fontSize: 11,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginLeft: 6,
+                }}
+              >
+                {taLabel ? "Tá" : "Ayes"}
+              </span>
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginTop: 4,
+                fontWeight: 700,
+              }}
+            >
+              {displayPct}% {requiredPct != null && requiredPctOfCast ? "of votes cast " : ""}needed
+              to pass
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
