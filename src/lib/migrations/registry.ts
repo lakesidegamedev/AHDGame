@@ -148,6 +148,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
+import { migration as faqPartyLeadership } from "./entries/2026-11-21-faq-party-leadership";
 import { migration as backfillSpinOffTechBaselines } from "./entries/2026-10-08-backfill-spinoff-tech-baselines";
 import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-media-product-projects-v1-index";
 import { migration as bankTreasuryTradeIndexes } from "./entries/2026-10-04-bank-treasury-trade-indexes";
@@ -426,6 +427,7 @@ export const MIGRATIONS: Migration[] = [
   moveFrackingToExtraction,
   linearBuildDelivery,
   corporationsWikiMargins,
+  faqPartyLeadership,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
