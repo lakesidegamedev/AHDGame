@@ -33,7 +33,14 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "/api/auth/me") return new Response(JSON.stringify({ user: {} }));
-      if (url.startsWith("/api/auth/character")) return new Response(JSON.stringify(startChar));
+      if (url.startsWith("/api/auth/character")) {
+        return new Response(
+          JSON.stringify({
+            ...startChar,
+            actionPrices: { poll: 36662, pollLarge: 109985, canvass: 134 },
+          })
+        );
+      }
       if (url === "/api/actions/execute" && init?.method === "POST") {
         return new Response(
           JSON.stringify({ success: true, message: "Campaigned 5 times", character: afterChar })
@@ -59,6 +66,21 @@ describe("useActionsController", () => {
     expect(JSON.parse(String(post![1]!.body))).toEqual({ actionType: "campaign", count: 5 });
     expect(result.current.character?.politicalInfluence).toBe(17);
     expect(showToast).toHaveBeenCalledWith("Campaigned 5 times", "success");
+  });
+
+  it("uses the final server price on both actions views", async () => {
+    const { result } = renderHook(() => useActionsController({ viewMode: "compact" }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    const c = result.current;
+    for (const [type, price] of [
+      ["poll", 36662],
+      ["pollLarge", 109985],
+      ["canvass", 134],
+    ] as const) {
+      const card = c.cards.find((item) => item.type === type)!;
+      expect(actionCardProps(c, card, 0, "cards").quotedFundCost).toBe(price);
+      expect(actionCardProps(c, card, 0, "compact").quotedFundCost).toBe(price);
+    }
   });
 
   it("builds card props that run the same execute", async () => {

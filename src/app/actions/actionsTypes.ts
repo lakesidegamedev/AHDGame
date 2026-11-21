@@ -81,6 +81,8 @@ export interface ActionCardProps {
   campaignCurrency: CurrencyCode;
   /** Campaign balance for affordability (matches execute when forex is on). */
   displayCampaignFunds: number;
+  /** Final local price from the server. Null means the action could not be priced. */
+  quotedFundCost?: number | null;
   /** Personal spendable balance for convert-cash UI (matches execute when forex is on). */
   displayPersonalWealth: number;
   /** Home state document failed to load — GDP-scaled costs cannot be shown; block those actions. */

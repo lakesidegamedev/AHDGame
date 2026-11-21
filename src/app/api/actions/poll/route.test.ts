@@ -11,6 +11,7 @@ import { projectCampaignPoll } from "@/lib/campaignTargeting/poll";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { getGameState } from "@/lib/gameState";
 import { resolvePresidentApproval } from "@/lib/elections/engine/presidentialCoattail";
+import { loadCampaignActionPrices } from "@/lib/actions/campaignActionPrices";
 import { POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -262,6 +263,27 @@ describe("commissioning a campaign-aware poll", () => {
     const response = await POST(request());
     expect(response.status).toBe(200);
     expect(db.collection("characters").updateOne.mock.calls[0][1].$inc.funds).toBe(-8952);
+  });
+
+  it("quotes the same adjusted poll price on Actions that the server debits", async () => {
+    const character = makeCharacter({
+      funds: 100_000,
+      actions: 10,
+      stats: { intellect: 10 } as Character["stats"],
+    });
+    db.collection("characters").findOne.mockResolvedValue(character);
+    db.collection("gameConfig").findOne.mockResolvedValue({ campaignEraPriceLevelEnabled: true });
+    db.collection("gameState").findOne.mockResolvedValue({ preset: "1991-default" });
+
+    const quotes = await loadCampaignActionPrices(db as unknown as Db, character);
+    expect(quotes.canvass).toBe(36);
+    expect(quotes.poll).not.toBe(25_000);
+    expect(quotes.pollLarge).not.toBe(75_000);
+
+    expect((await POST(request())).status).toBe(200);
+    expect(db.collection("characters").updateOne.mock.calls[0][1].$inc.funds).toBe(
+      -Number(quotes.poll)
+    );
   });
 
   it("rejects a character with no allocated intellect before charging", async () => {

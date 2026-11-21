@@ -163,7 +163,7 @@ export async function buildPollOverview({
     ? campaignLocalRate(character.countryId ?? "US", campaignRates)
     : 1;
 
-  const toLocal = (anchor: number) => Math.round(forexEnabled ? anchor * campaignRate : anchor);
+  const toLocal = (anchor: number) => anchor * campaignRate;
 
   const partyColors = await loadPollPartyColors(db, character.countryId ?? "US", [
     character.party,
@@ -188,6 +188,7 @@ export async function buildPollOverview({
     fundCostLarge: largeFundCost,
     // LOCAL twins of the anchor quotes at the frozen campaign rate, the exact
     // amounts POST debits, so the page never prices at live forex or shows ₳.
+    priceAvailable: tierQuote.ok,
     fundCostLocal: toLocal(fundCost),
     fundCostSmallLocal: toLocal(smallFundCost),
     fundCostLargeLocal: toLocal(largeFundCost),
@@ -198,11 +199,9 @@ export async function buildPollOverview({
     // Quoted costs are ANCHOR; the character balance is LOCAL. Convert at
     // the boundary for comparison.
     canAffordSmall:
-      localCampaignBalance(character, forexEnabled) >=
-      (forexEnabled ? smallFundCost * campaignRate : smallFundCost),
+      smallQuote.ok && localCampaignBalance(character, forexEnabled) >= toLocal(smallFundCost),
     canAffordLarge:
-      localCampaignBalance(character, forexEnabled) >=
-      (forexEnabled ? largeFundCost * campaignRate : largeFundCost),
+      largeQuote.ok && localCampaignBalance(character, forexEnabled) >= toLocal(largeFundCost),
     hasActionsSmall: character.actions >= getPollActionCost("small"),
     hasActionsLarge: character.actions >= getPollActionCost("large"),
     // Stored results from the last commissioned poll
