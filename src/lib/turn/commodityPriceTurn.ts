@@ -103,6 +103,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { readPreviousCommodityPrices } from "./commodity/previousPrices";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -325,34 +326,7 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
         projection: { commodity: 1, nudgePrice: 1 },
       })
       .toArray(),
-    // Existing commodity prices for drift baseline and peg state
-    commodityPricesCollection(db)
-      .find(
-        {},
-        {
-          projection: {
-            commodity: 1,
-            globalPrice: 1,
-            statePrices: 1,
-            // Sourcing quotes these as each foreign seller's ask.
-            nationalPrices: 1,
-            hardPeg: 1,
-            stateHardPegs: 1,
-            stateNudges: 1,
-            scarcityMult: 1,
-            scarcityMultByCountry: 1,
-            // Momentum-mode ratchet (commodityFixStage >= 1) reads its
-            // trailing imbalance window back from the previous turn.
-            scarcityImbalanceHistory: 1,
-            scarcityImbalanceHistoryByCountry: 1,
-            buildDemandCapGap: 1,
-            // Plants household re-anchor: prior global supply for the
-            // PLANTS_HOUSEHOLD_SUPPLY_CAP clamp.
-            globalSupply: 1,
-          },
-        }
-      )
-      .toArray(),
+    readPreviousCommodityPrices(db),
     stateBudgetsCollection(db)
       .find({}, { projection: { stateId: 1, stateGdp: 1 } })
       .toArray(),
