@@ -118,6 +118,7 @@ describe("seedImfInstitution", () => {
         _id: imfId,
         sequentialId: 42,
         imfInstitution: true,
+        ceoType: "npp",
       },
     });
     const result = await seedImfInstitution(db as never, {
@@ -130,8 +131,10 @@ describe("seedImfInstitution", () => {
     expect(updateArgs[0]).toBeDefined();
     const set = (updateArgs[0][1] as { $set: Record<string, unknown> }).$set as {
       ceoId: ObjectId;
+      ceoType: string;
     };
     expect(set.ceoId.equals(sh1)).toBe(true);
+    expect(set.ceoType).toBe("character");
   });
 
   it("skips repair when repairExisting is false and IMF exists", async () => {

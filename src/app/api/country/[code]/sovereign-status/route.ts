@@ -106,6 +106,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     demand,
     dsa,
     crisisState: budget?.sovereignCrisisState ?? "normal",
+    consecutiveFailedAuctions: budget?.failedAuctionConsecutiveCount ?? 0,
     openDecisionId: surfaced?.state === "open" ? (surfaced._id?.toString() ?? null) : null,
     activeLegislativePhase,
     crisisAutoActionAt: budget?.crisisAutoActionAt ?? null,
