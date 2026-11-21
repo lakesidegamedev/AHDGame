@@ -318,3 +318,24 @@ describe("own-site deliveries (ticket 1757)", () => {
     expect(screen.getByText(/worth about M4200 at your asking price/)).toBeTruthy();
   });
 });
+
+describe("MarketMoneyPanel unsold note on a mixed-output site", () => {
+  it("names the unsold product instead of calling the whole market oversupplied", () => {
+    const { container } = render(
+      <MarketMoneyPanel
+        plants={{ ...plants, truth: { ...plants.truth!, soldFraction: 0.45 } } as PlantsData}
+        sectorType="technology"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Campus Co" }}
+        outputCount={2}
+        outputs={[
+          { label: "Electronics & Semiconductors", soldFraction: 0.98 },
+          { label: "Software & IT Services", soldFraction: 0.1 },
+        ]}
+      />
+    );
+    expect(container.textContent).toContain("Most of it was Software & IT Services (10% sold)");
+    expect(container.textContent).toContain("Electronics & Semiconductors (98% sold) found buyers");
+    expect(container.textContent).not.toContain("oversupplied");
+  });
+});
