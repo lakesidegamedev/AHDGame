@@ -209,6 +209,7 @@ async function prepare_enrichElection(
     states: statesForEnrichment,
     electionSeatId,
     preferBallotParty: isEnded,
+    includePrimaryScoreBreakdown: isFull && inPrimary && !isEnded,
   });
 
   // Determine current user's character ID. Multi-profile aware: prefer the
@@ -298,18 +299,29 @@ async function prepare_enrichElection(
             gameTime.currentTurn
           )
         );
+        const primaryScore = campaignPrimaryScore(
+          candidate.primaryScore,
+          bonus,
+          PRIMARY_SHARE_SOFTMAX_TEMPERATURE
+        );
         return {
           ...candidate,
-          primaryScore: campaignPrimaryScore(
-            candidate.primaryScore,
-            bonus,
-            PRIMARY_SHARE_SOFTMAX_TEMPERATURE
-          ),
+          primaryScore,
+          ...(candidate.primaryScoreBreakdown && {
+            primaryScoreBreakdown: {
+              ...candidate.primaryScoreBreakdown,
+              campaignAdjustment: primaryScore - candidate.primaryScore,
+              score: primaryScore,
+            },
+          }),
         };
       });
     }
   }
   let byParty = groupCandidatesByParty(primaryCandidates, partyMap);
+  if (inPrimary && !isPresident) {
+    for (const group of byParty) group.primaryShareBasis = "estimate";
+  }
 
   // Ballot-consistent primary standings: where the primary has accrued real
   // ballots (see recordPrimarySnapshots), the live page shows CUMULATIVE
@@ -324,8 +336,10 @@ async function prepare_enrichElection(
         primaryVotes
       );
       if (!shares) continue;
+      group.primaryShareBasis = "counted";
       for (const groupCandidate of group.candidates) {
         groupCandidate.sharePct = shares.get(groupCandidate.id) ?? groupCandidate.sharePct;
+        groupCandidate.primaryVotesCounted = primaryVotes[groupCandidate.id] ?? 0;
       }
       group.candidates.sort((a, b) => (primaryVotes[b.id] ?? 0) - (primaryVotes[a.id] ?? 0));
     }
