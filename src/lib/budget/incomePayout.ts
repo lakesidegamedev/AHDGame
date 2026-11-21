@@ -71,7 +71,12 @@ interface PayoutReceipt {
   turn: number;
   worldId: string;
   fingerprint: string;
-  credits: (IncomeCredit & { net: number; currentTax: number; arrearsPaid: number })[];
+  credits: (IncomeCredit & {
+    net: number;
+    currentTax: number;
+    arrearsPaid: number;
+    reportingRate?: number;
+  })[];
 }
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const idFor = (value: string) => new ObjectId(hash(value).slice(0, 24));
@@ -90,6 +95,8 @@ export async function creditIncomeAfterTax(
      * with this set the stored receipt wins instead of throwing.
      */
     acceptAppliedReceipt?: boolean;
+    /** Use the credit transaction's observed rate for gross LOC reporting on replay. */
+    recordReportingRates?: boolean;
   } = {}
 ): Promise<PayoutReceipt["credits"]> {
   if (!credits.length) return [];
@@ -108,7 +115,10 @@ export async function creditIncomeAfterTax(
       if (previous && previous.turn > turn)
         throw new Error("Stale income payout cannot be replayed");
       if (previous?.turn === turn) {
-        if (previous.fingerprint !== fingerprint && !options.acceptAppliedReceipt)
+        if (
+          previous.fingerprint !== fingerprint &&
+          (!options.acceptAppliedReceipt || options.recordReportingRates)
+        )
           throw new Error("Accepted income payout changed");
         return previous.credits;
       }
@@ -434,8 +444,8 @@ export async function creditIncomeAfterTax(
         if (!names.has(actorKey)) throw new Error("Income recipient unavailable");
         const context = contexts.get(actorKey);
         const eligible = debtsByActor.get(actorKey) ?? [];
-        const sourceFx =
-          rates.get(credit.currency) ?? (!context && eligible.length === 0 ? 1 : undefined);
+        const quotedRate = rates.get(credit.currency);
+        const sourceFx = quotedRate ?? (!context && eligible.length === 0 ? 1 : undefined);
         if (!sourceFx || !Number.isFinite(sourceFx) || sourceFx <= 0)
           throw new Error("Income payout exchange rate unavailable");
         const taxable = context && turn >= (context.taxStartTurn ?? turn);
@@ -591,6 +601,12 @@ export async function creditIncomeAfterTax(
           net: plan.net,
           currentTax: plan.currentTax,
           arrearsPaid: plan.arrearsPaid,
+          ...(options.recordReportingRates &&
+          credit.ownerCollection === "characters" &&
+          credit.gross > 0 &&
+          quotedRate !== undefined
+            ? { reportingRate: quotedRate }
+            : {}),
         });
       }
       if (walletOps.characters.length) {
