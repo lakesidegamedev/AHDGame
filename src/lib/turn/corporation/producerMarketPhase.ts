@@ -92,6 +92,8 @@ export async function runCorporationProducerMarket(
   input: {
     worldEpoch: string;
     turn: number;
+    /** The funded host already checked for a frozen receipt under the turn fence. */
+    recoveryChecked?: boolean;
     corporations: readonly Corporation[];
     deferCorporateCreditsFor?: ReadonlySet<string>;
     prepare: () => readonly PreparedSector[];
@@ -125,7 +127,7 @@ export async function runCorporationProducerMarket(
     close?: Parameters<typeof settleProducerTurn>[1]["close"];
   }
 ) {
-  const resumed = await resumeProducerTurn(db, input);
+  const resumed = input.recoveryChecked ? null : await resumeProducerTurn(db, input);
   if (resumed) return publishHostState(db, input.corporations, resumed);
   const timings: StageTimings = {};
   const clock = stageClock(timings);
@@ -226,9 +228,9 @@ export async function runCorporationProducerMarket(
   return published;
 }
 
-type SettledContext = NonNullable<Awaited<ReturnType<typeof resumeProducerTurn>>>;
+type SettledContext = Omit<NonNullable<Awaited<ReturnType<typeof resumeProducerTurn>>>, "request">;
 
-async function publishHostState(
+export async function publishHostState(
   db: Db,
   corporations: readonly Corporation[],
   settled: SettledContext

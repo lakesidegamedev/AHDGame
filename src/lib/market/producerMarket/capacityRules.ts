@@ -48,7 +48,7 @@ function nonNegative(value: number, label: string): number {
 
 /**
  * Validate the reconciled opening without advancing or consuming construction.
- * `openTurn` bounds orders already in flight. An adjacent advance can also
+ * `openTurn` bounds orders already in flight. An advance can also
  * admit a paid order placed on `pendingOrderTurn` with its full value undelivered.
  */
 export function validateProducerCapacityState(
@@ -99,7 +99,7 @@ export function advanceProducerCapacity(input: {
     turn > state.completedTurn + 1 + PRODUCER_CATCH_UP_TURNS
   )
     throw new Error("Capacity requires the next unsettled turn");
-  const pendingOrderTurn = turn === state.completedTurn + 1 ? turn : undefined;
+  const pendingOrderTurn = turn;
   validateProducerCapacityState(state, turn - 1, pendingOrderTurn);
   nonNegative(input.activeFraction, "active fraction");
   nonNegative(input.operatingRecipeRatio, "operating recipe ratio");

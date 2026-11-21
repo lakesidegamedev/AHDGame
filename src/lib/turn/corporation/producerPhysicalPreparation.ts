@@ -212,6 +212,7 @@ export type ProducerPhysicalEnv = Pick<
   wholePlants?: boolean;
   /** Last settled funded producer turn when missed turns leave it behind the previous turn. */
   producerOpeningTurn?: number;
+  producerOpeningTurnsBySector?: ReadonlyMap<string, number>;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -300,7 +301,10 @@ export function prepareProducerPhysicalSector(input: {
   const { env, corporation: corp, sector } = input;
   const { lookups, currentTurn, currentYear } = env;
   // The last settled receipt steers this run, even when missed turns sit between.
-  const openingTurn = env.producerOpeningTurn ?? currentTurn - 1;
+  const openingTurn =
+    env.producerOpeningTurnsBySector?.get(sector._id.toHexString()) ??
+    env.producerOpeningTurn ??
+    currentTurn - 1;
   const countryId = sector.countryId ?? corp.countryId;
   const currency = resolveSectorHostCurrencyCode(sector, corp);
   if (!countryId || !currency) throw new Error("Producer location requires a reconciled currency");
@@ -425,7 +429,7 @@ export function prepareProducerPhysicalSector(input: {
   const prepared = prepareProducerSector({
     worldEpoch: input.worldEpoch,
     turn: currentTurn,
-    openingTurn: env.producerOpeningTurn,
+    openingTurn,
     sector: withStateBooks(sector),
     // A site with no accessible resource still retains its recipe for selling
     // old goods. Its current physical output is zero, never a fallback yield.

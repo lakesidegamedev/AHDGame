@@ -52,6 +52,7 @@ import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import { recordBackgroundTrade } from "@/lib/turn/corporation/backgroundTraders";
 import { runCorporationProducerMarket } from "@/lib/turn/corporation/producerMarketPhase";
 
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 
@@ -64,9 +65,8 @@ import type { RunFundedProducerTurnStageContext } from "@/lib/turn/corporation/f
 export async function settleFundedProducerTurn(
   context: RunFundedProducerTurnStageContext
 ): Promise<FundedProducerTurnResult> {
-  const treasuryFunded = context.treasuryFunded;
-
   const settled = await runCorporationProducerMarket(context.db, {
+    recoveryChecked: true,
     worldEpoch: context.worldEpoch,
     turn: context.turn,
     corporations: context.lookups.corporations,
@@ -171,6 +171,56 @@ export async function settleFundedProducerTurn(
     close: context.closeAtSettlement,
   });
 
+  return publishFundedProducerTurn(context, settled);
+}
+
+export type PublishedProducerMarket = Awaited<ReturnType<typeof runCorporationProducerMarket>>;
+export type FundedPublicationContext = Pick<
+  RunFundedProducerTurnStageContext,
+  | "db"
+  | "turn"
+  | "worldEpoch"
+  | "lookups"
+  | "advanceCtx"
+  | "stateAdvances"
+  | "corpById"
+  | "openingTurn"
+  | "idleSectorIds"
+  | "scopeById"
+  | "traders"
+  | "background"
+  | "openingShareByCountry"
+  | "shortageOn"
+  | "carryShare"
+  | "publicWallet"
+  | "investmentWallet"
+  | "tariffCollector"
+  | "tariffScopes"
+  | "countryCurrency"
+  | "rateOf"
+  | "treasuryFunded"
+  | "budgetIdByCountry"
+  | "apply"
+  | "input"
+  | "fundedReceiptOf"
+> & {
+  zeroSalesPreviouslyPublished?: boolean;
+  demand: Pick<
+    RunFundedProducerTurnStageContext["demand"],
+    | "headcountBySectorId"
+    | "backgroundOffers"
+    | "backgroundOrders"
+    | "firstWalletByCorp"
+    | "planSector"
+    | "householdSource"
+  > & { funding: { countryId: string }[]; investmentFunding: { countryId: string }[] };
+};
+
+export async function publishFundedProducerTurn(
+  context: FundedPublicationContext,
+  settled: PublishedProducerMarket
+): Promise<FundedProducerTurnResult> {
+  const treasuryFunded = context.treasuryFunded;
   // Unspent advance returns now, before the remittance sweep later in the turn
   // reads this cash as profit. Keep the in-memory cash the legacy pass reads in step.
   const returned = await returnStateRunAdvances(
@@ -178,9 +228,17 @@ export async function settleFundedProducerTurn(
     context.advanceCtx,
     context.stateAdvances
   );
-  for (const [id, local] of returned) {
-    const corp = context.corpById.get(id);
-    if (corp) corp.liquidCapital = (corp.liquidCapital ?? 0) - local;
+  if (returned.size > 0) {
+    const rows = await corporationsCollection(context.db)
+      .find(
+        { _id: { $in: [...returned.keys()].map((id) => new ObjectId(id)) } },
+        { projection: { liquidCapital: 1, pendingOperatingCash: 1 } }
+      )
+      .toArray();
+    for (const row of rows) {
+      const corp = context.corpById.get(String(row._id));
+      if (corp) corp.liquidCapital = row.liquidCapital + (row.pendingOperatingCash ?? 0);
+    }
   }
 
   const supportBySector =
@@ -265,18 +323,38 @@ export async function settleFundedProducerTurn(
     // so AI mothballing does not park plants that were never able to sell.
     sectorUpdates.push({
       updateOne: {
-        filter: { _id: new ObjectId(id) },
+        filter: {
+          _id: new ObjectId(id),
+          "producerSettlement.worldEpoch": context.worldEpoch,
+          "producerSettlement.turn": context.turn,
+          "producerSettlement.zeroSalesCounted": { $ne: true },
+        },
         update:
           soldUnits > 0
             ? {
-                $set: { demandThrottleFactor: throttle, ...throughput, producerZeroSalesTurns: 0 },
+                $set: {
+                  "producerSettlement.zeroSalesCounted": true,
+                  demandThrottleFactor: throttle,
+                  ...throughput,
+                  producerZeroSalesTurns: 0,
+                },
               }
-            : receipt.producedUnits > 0
+            : receipt.producedUnits > 0 && !context.zeroSalesPreviouslyPublished
               ? {
                   $inc: { producerZeroSalesTurns: 1 },
-                  $set: { demandThrottleFactor: throttle, ...throughput },
+                  $set: {
+                    "producerSettlement.zeroSalesCounted": true,
+                    demandThrottleFactor: throttle,
+                    ...throughput,
+                  },
                 }
-              : { $set: { demandThrottleFactor: throttle, ...throughput } },
+              : {
+                  $set: {
+                    "producerSettlement.zeroSalesCounted": true,
+                    demandThrottleFactor: throttle,
+                    ...throughput,
+                  },
+                },
       },
     });
   }
