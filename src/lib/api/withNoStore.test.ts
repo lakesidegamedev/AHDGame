@@ -31,19 +31,17 @@ describe("withNoStore", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store, no-transform");
   });
 
-  it("compresses a large JSON body at the origin when the client accepts gzip", async () => {
+  it("returns a large JSON body as readable plain JSON while origin compression is off", async () => {
     const rows = Array.from({ length: 200 }, (_, i) => ({ i, label: "repetitive value" }));
     const handler = withNoStore(async (_request: Request) => NextResponse.json({ rows }));
     const res = await handler(
       new Request("https://example.test/api/thing", {
-        headers: { "accept-encoding": "gzip" },
+        headers: { "accept-encoding": "br, gzip" },
       })
     );
-    expect(res.headers.get("content-encoding")).toBe("gzip");
+    expect(res.headers.get("content-encoding")).toBeNull();
     expect(res.headers.get("Cache-Control")).toBe("no-store, no-transform");
-    const { gunzipSync } = await import("node:zlib");
-    const decoded = JSON.parse(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8"));
-    expect(decoded).toEqual({ rows });
+    expect(await res.json()).toEqual({ rows });
   });
 
   it("does not compress when the handler opts out", async () => {

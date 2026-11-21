@@ -16,6 +16,22 @@ import { NextResponse } from "next/server";
  * decodes. Pure transfer-size win; the compatibility fix is unchanged.
  */
 
+/**
+ * Next 16.4.5 drops `Content-Encoding` and `Content-Length` from every route
+ * handler Response (FORBIDDEN_HEADERS in next/dist/server/send-response.js),
+ * so a body we compress reaches the client as compressed bytes with no
+ * encoding header and `res.json()` fails. Until a Next release forwards those
+ * headers, origin compression must stay off and bodies go out as plain JSON.
+ * The guard test in jsonCompression.test.ts fails when Next stops stripping,
+ * as the reminder to flip this back on.
+ */
+export const ORIGIN_JSON_COMPRESSION_ENABLED = false;
+
+export interface CompressJsonOptions {
+  /** Override the module switch (tests only). */
+  enabled?: boolean;
+}
+
 const gzipAsync = promisify(gzip);
 const brotliAsync = promisify(brotliCompress);
 
@@ -100,8 +116,10 @@ function withAcceptEncodingVary(headers: Headers): void {
  */
 export async function compressJsonResponse(
   response: Response,
-  request: Request | undefined
+  request: Request | undefined,
+  options: CompressJsonOptions = {}
 ): Promise<Response> {
+  if (!(options.enabled ?? ORIGIN_JSON_COMPRESSION_ENABLED)) return response;
   if (!request) return response;
   if (response.status < 200 || response.status === 204 || response.status === 304) return response;
   if (!isJsonResponse(response)) return response;
@@ -160,7 +178,8 @@ export async function compressJsonResponse(
 export async function compressedJson(
   request: Request,
   data: unknown,
-  init: ResponseInit = {}
+  init: ResponseInit = {},
+  options: CompressJsonOptions = {}
 ): Promise<Response> {
-  return compressJsonResponse(NextResponse.json(data, init), request);
+  return compressJsonResponse(NextResponse.json(data, init), request, options);
 }
