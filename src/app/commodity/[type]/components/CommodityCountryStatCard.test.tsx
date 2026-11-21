@@ -63,7 +63,18 @@ describe("commodity country card", () => {
     expect(screen.getAllByText("91.5K units")).toHaveLength(2);
     expect(screen.getAllByText("161.9K units/day")).toHaveLength(2);
     expect(screen.getAllByText("98% of local offers sold")).toHaveLength(2);
+    expect(screen.getAllByText(/most local offers sold/i)).toHaveLength(2);
     expect(screen.queryByText(/surplus/i)).toBeNull();
+  });
+
+  it.each([
+    [{ supply: 100, funded: 150, filled: 100 }, /worth scouting/i],
+    [{ supply: 100, funded: 80, filled: 60 }, /build selectively/i],
+    [{ supply: 100, funded: 60, filled: 60 }, /be cautious about adding supply/i],
+  ] as const)("reflects the actual orders and sales in the build outlook", (book, advice) => {
+    renderCard({ ...market, ...book, imports: 0, exports: 0 });
+
+    expect(screen.getAllByText(advice)).toHaveLength(2);
   });
 
   it("labels estimates and does not infer sales when the funded book is missing", () => {
@@ -71,6 +82,7 @@ describe("commodity country card", () => {
 
     expect(screen.getAllByText("Estimated domestic demand")).toHaveLength(2);
     expect(screen.getAllByText("Unavailable")).toHaveLength(2);
+    expect(screen.getAllByText(/country-wide sales data is limited/i)).toHaveLength(2);
     expect(screen.queryByText("Exports")).toBeNull();
   });
 

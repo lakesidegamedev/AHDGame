@@ -14,9 +14,19 @@ import {
 import type { MapMode } from "./CommodityMapModeToggle";
 import { formatUnits } from "../lib/helpers";
 import {
+  countryBuildOutlook,
   fundedCountryTradeTotals,
   type FundedCountryMarket,
 } from "@/lib/market/producerMarket/fundedCountryViewRules";
+
+const BUILD_OUTLOOK_COPY = {
+  "unfilled-orders":
+    "Worth scouting states where buyers could pay but didn’t get their orders filled.",
+  mixed: "Build selectively. Some buyers went unserved while local offers went unsold.",
+  "unsold-offers": "Be cautious about adding supply. Local producers had unsold offers.",
+  "strong-sales": "Most local offers sold. Look for a state with unmet demand before building.",
+  unknown: "Check the local market before building. Country-wide sales data is limited.",
+} satisfies Record<ReturnType<typeof countryBuildOutlook>, string>;
 
 interface CommodityCountryStatCardProps {
   countryId: CountryId;
@@ -274,6 +284,11 @@ function CardContent({
           sub={percentSold}
         />
       </div>
+
+      <p className="mx-3 mb-3 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-xs leading-relaxed text-muted">
+        <strong className="font-semibold text-foreground">Thinking of building?</strong>{" "}
+        {BUILD_OUTLOOK_COPY[countryBuildOutlook(market)]}
+      </p>
 
       {/* Actions */}
       <div className="px-4 py-3 border-t border-card-border space-y-2">
