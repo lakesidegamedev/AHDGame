@@ -11,6 +11,7 @@ import {
   boostFractionForQuality,
   eventPool,
   hitProbability,
+  liftCapRatio,
   newVenture,
   qualityFromInvestment,
   referenceFundingPerTurn,
@@ -301,10 +302,10 @@ describe("funding target against real revenue scale", () => {
   });
 });
 
-describe("repricing at completion", () => {
+describe("growth during development", () => {
   function finish(venture: ProductVenture, liftedRevenueAnchor: number): ProductVenture {
     let current = venture;
-    const funding = referenceFundingPerTurn(current.targetAnchor);
+    const funding = referenceFundingPerTurn(current.targetAnchor) * 2;
     for (let turn = venture.startedTurn + 1; turn < venture.startedTurn + 400; turn++) {
       const step = advanceDevelopment(current, {
         turn,
@@ -319,16 +320,33 @@ describe("repricing at completion", () => {
     throw new Error("never completed");
   }
 
-  it("judges a product against the business it would lift at release", () => {
-    const steady = finish(make("reprice-a"), 100_000);
-    const expanded = finish(make("reprice-a"), 1_000_000);
-    expect(expanded.targetAnchor).toBe(ventureTargetAnchor(1_000_000));
-    expect(expanded.finalQuality!).toBeLessThan(steady.finalQuality!);
+  it("judges the product against the target fixed at the start", () => {
+    const venture = make("grow-a");
+    const steady = finish(venture, venture.targetAnchor / 1.5);
+    const expanded = finish(venture, venture.targetAnchor * 500);
+    expect(expanded.targetAnchor).toBe(venture.targetAnchor);
+    expect(expanded.finalQuality).toBe(steady.finalQuality);
+    expect(expanded.hitProbability).toBe(steady.hitProbability);
   });
 
-  it("never lowers the original target when revenue fell", () => {
-    const venture = make("reprice-b");
-    const shrunk = finish(venture, 10);
-    expect(shrunk.targetAnchor).toBe(venture.targetAnchor);
+  it("caps a hit's lift at the business size the target was priced on", () => {
+    expect(liftCapRatio(1_500, 1_000)).toBe(1);
+    expect(liftCapRatio(1_500, 500)).toBe(1);
+    expect(liftCapRatio(1_500, 10_000)).toBeCloseTo(0.1, 10);
+    expect(liftCapRatio(1_500, 0)).toBe(1);
+  });
+
+  it("scales the stored boost down when the lifted business grew", () => {
+    for (let i = 0; i < 200; i++) {
+      const venture = make(`grow-hit-${i}`);
+      const priced = venture.targetAnchor / 1.5;
+      const steady = finish(venture, priced);
+      if (steady.outcome !== "hit") continue;
+      const grown = finish(venture, priced * 4);
+      expect(grown.outcome).toBe("hit");
+      expect(grown.boostFraction!).toBeCloseTo(steady.boostFraction! / 4, 3);
+      return;
+    }
+    throw new Error("no hit found in 200 seeds");
   });
 });

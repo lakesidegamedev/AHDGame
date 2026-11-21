@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { newVenture, referenceFundingPerTurn } from "./engine";
 import { settleCancelledVentureReceipt } from "./refund";
-import { loadVentureBoostBySectorId, processProductVentures } from "./turn";
+import { hitLiftSentence, loadVentureBoostBySectorId, processProductVentures } from "./turn";
 import type { ProductVenture } from "./types";
 
 const corpId = new ObjectId();
@@ -277,5 +277,16 @@ describe("loadVentureBoostBySectorId", () => {
       enabled: { media: true, manufacturing: true },
     });
     expect(none.get(sectorId.toString())).toBeUndefined();
+  });
+});
+
+describe("hitLiftSentence", () => {
+  it("names the cap only when the business outgrew the product", () => {
+    expect(hitLiftSentence(0.15, 1)).toBe(
+      "Revenue across your matching sectors rises 15% for the next three days."
+    );
+    expect(hitLiftSentence(0.005, 0.05)).toContain("rises 0.5%");
+    expect(hitLiftSentence(0.005, 0.05)).toContain("business size the product was developed for");
+    expect(hitLiftSentence(0.0002, 0.001)).toContain("less than 0.1%");
   });
 });

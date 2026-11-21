@@ -20,6 +20,7 @@ import {
   advanceBoost,
   advanceDevelopment,
   getVentureEvent,
+  liftCapRatio,
   stackedBoostMultiplier,
 } from "./engine";
 import { liftedSectorIds, getVentureLine, type VentureSector } from "./lines";
@@ -105,6 +106,21 @@ const RESULT_TITLES = {
   hit: (name: string) => `${name} is a hit`,
   flop: (name: string) => `${name} flopped`,
 };
+
+/** Player copy for a hit's lift, naming the cap when the business outgrew the product. */
+export function hitLiftSentence(boostFraction: number, capRatio: number): string {
+  const percent = boostFraction * 100;
+  const shown =
+    percent >= 1
+      ? `${Math.round(percent)}%`
+      : percent >= 0.1
+        ? `${percent.toFixed(1)}%`
+        : "less than 0.1%";
+  const base = `Revenue across your matching sectors rises ${shown} for the next three days.`;
+  return capRatio < 1
+    ? `${base} The lift covers the business size the product was developed for, not the growth since.`
+    : base;
+}
 
 export async function processProductVentures(
   args: ProcessVenturesArgs
@@ -283,7 +299,7 @@ export async function processProductVentures(
           type: "corp_product_result",
           title: (hit ? RESULT_TITLES.hit : RESULT_TITLES.flop)(venture.name),
           message: hit
-            ? `${venture.name} (${line?.label ?? "product"}) is out at quality ${step.venture.finalQuality}. Revenue across your matching sectors rises ${Math.round((step.venture.boostFraction ?? 0) * 100)}% for the next three days.`
+            ? `${venture.name} (${line?.label ?? "product"}) is out at quality ${step.venture.finalQuality}. ${hitLiftSentence(step.venture.boostFraction ?? 0, liftCapRatio(step.venture.targetAnchor, liftedRevenueAnchor))}`
             : `${venture.name} (${line?.label ?? "product"}) did not find an audience at quality ${step.venture.finalQuality}. The money spent is not recovered and there is no ongoing penalty.`,
           metadata: { ...base, outcome: step.venture.outcome },
         });
