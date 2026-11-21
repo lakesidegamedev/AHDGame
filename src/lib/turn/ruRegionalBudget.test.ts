@@ -97,7 +97,7 @@ describe("processRURegionalBudgets", () => {
     expect(cen.surplus).toBeCloseTo(cen.unionGrant - expectedCost, 0);
   });
 
-  it("counts consecutive deficit turns and downgrades the most expensive programme", async () => {
+  it("counts deficit turns without automatically repealing regional services", async () => {
     const bigLaw = RU_LAWS.find((l) => l.id === "ru.infrastructure.publicHousing.primary")!;
     wire({
       regions: [REGIONS[0]],
@@ -117,11 +117,7 @@ describe("processRURegionalBudgets", () => {
     await processRURegionalBudgets(db as unknown as Db, 11);
     const policyWrites = (db.collectionMocks.statePolicies.bulkWrite as ReturnType<typeof vi.fn>)
       .mock.calls;
-    expect(policyWrites.length).toBe(1);
-    const op = policyWrites[0][0][0].updateOne;
-    expect(op.filter).toMatchObject({ stateId: "CEN", legislationTypeId: bigLaw.id });
-    expect(op.update.$set.policyOptionIndex).toBe(3);
-    expect(op.update.$set.policyOptionId).toBe("l3");
+    expect(policyWrites).toHaveLength(0);
   });
 
   it("uses the baseline grants pool when the live spending pool is negative", async () => {

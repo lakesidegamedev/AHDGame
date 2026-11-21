@@ -45,10 +45,8 @@ import {
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { freshMilitaryDiversion } from "@/lib/military/arsenal";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import {
-  energyProductivityMultiplier,
-  plantUtilizationForInputs,
-} from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantUtilizationForInputs } from "@/lib/corporations/rules/energyProductivityRamp";
+import { plantThroughputMultiplier } from "@/lib/corporations/rules/plantThroughput";
 import { getInputMultiplier, getOutputMultiplier } from "@/lib/utils/productionPolicy";
 import {
   effectiveInputDemandRealPhase,
@@ -350,7 +348,7 @@ export function computeSectorCommodityUnits(
       ? plantUtilizationForInputs(
           sector.producedUnits,
           sector.capacityUnits,
-          energyProductivityMultiplier(sector.sectorType, currentTurn, context.preset)
+          plantThroughputMultiplier(sector, currentTurn, context.preset)
         )
       : 1;
 

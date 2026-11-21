@@ -163,16 +163,16 @@ async function prepare_enrichElection(
   // For state-level primary alignment, look up the cached lean of the seat's region.
   // Presidential races have no single regional electorate, so they skip this fetch.
   const electionSeatId = election.seatId ?? null;
+  const localRegionId =
+    !isPresident && electionSeatId ? parseSeatId(electionSeatId).localRegionId : null;
+  let localRegionState: State | null | undefined;
   const statesForEnrichment = new Map<string, State>();
-  if (!isPresident && electionSeatId) {
-    const localRegionId = parseSeatId(electionSeatId).localRegionId;
-    if (localRegionId) {
-      const stateDoc =
-        deps.localRegionState !== undefined
-          ? deps.localRegionState
-          : await statesCollection(db).findOne({ _id: localRegionId, countryId });
-      if (stateDoc) statesForEnrichment.set(localRegionId, stateDoc);
-    }
+  if (localRegionId) {
+    localRegionState =
+      deps.localRegionState !== undefined
+        ? deps.localRegionState
+        : await statesCollection(db).findOne({ _id: localRegionId, countryId });
+    if (localRegionState) statesForEnrichment.set(localRegionId, localRegionState);
   }
 
   // Phase
@@ -269,7 +269,10 @@ async function prepare_enrichElection(
                 election.countryId,
                 election.state,
                 undefined,
-                election.campaignRulesVersion ?? 0
+                election.campaignRulesVersion ?? 0,
+                election.state === localRegionId && election.countryId === countryId
+                  ? localRegionState
+                  : undefined
               )
             )?.cells;
     if (cells?.length) {

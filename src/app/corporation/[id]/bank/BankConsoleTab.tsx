@@ -128,7 +128,7 @@ export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, count
             </section>
           )}
         </>
-      ) : canMutate && data.eligibleTypes.length > 0 ? (
+      ) : canMutate ? (
         <CharterIssueForm
           data={data}
           canMutate={canMutate}

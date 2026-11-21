@@ -1,3 +1,4 @@
+import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
 import { migration as linearBuildDelivery } from "./entries/2026-11-17-linear-build-delivery";
@@ -424,6 +425,7 @@ export const MIGRATIONS: Migration[] = [
   wikiRevisionsIndexes,
   moveFrackingToExtraction,
   linearBuildDelivery,
+  corporationsWikiMargins,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

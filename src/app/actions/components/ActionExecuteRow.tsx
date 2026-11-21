@@ -3,7 +3,7 @@
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { campaignLocalRate, getCampaignCurrency } from "@/lib/campaigns/rules/currency";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import { useState, useMemo } from "react";
+import { useId, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import {
@@ -18,6 +18,7 @@ type BatchCount = 5 | 10;
 
 export interface ActionExecuteRowProps {
   actionType: string;
+  actionLabel: string;
   character: Character;
   homeState: ActionStateEconomics | null;
   blocked: boolean;
@@ -31,6 +32,7 @@ export interface ActionExecuteRowProps {
 
 export default function ActionExecuteRow({
   actionType,
+  actionLabel,
   character,
   homeState,
   blocked,
@@ -40,8 +42,12 @@ export default function ActionExecuteRow({
   forexEnabled = false,
 }: ActionExecuteRowProps) {
   const { baseRates } = useCurrency();
-  const { preset, campaignPriceLevel } = useWorldFlags();
-  const campaignRate = forexEnabled ? campaignLocalRate(character.countryId ?? "US", baseRates) : 1;
+  const { preset, campaignPriceLevel, nationalGdpPerCapita } = useWorldFlags();
+  const nationalBasis = nationalGdpPerCapita?.[character.countryId ?? "US"];
+  const campaignRate = forexEnabled
+    ? campaignLocalRate(character.countryId ?? "US", baseRates, preset)
+    : 1;
+  const batchHintId = useId();
   const [confirmCount, setConfirmCount] = useState<BatchCount | null>(null);
 
   const state = homeState ?? undefined;
@@ -52,7 +58,7 @@ export default function ActionExecuteRow({
   );
 
   const sim5 = useMemo(() => {
-    if (!batchable) return null;
+    if (blocked || !batchable) return null;
     return simulateActionBatch(
       character,
       state,
@@ -60,10 +66,11 @@ export default function ActionExecuteRow({
       5,
       forexEnabled,
       campaignRate,
-      { preset, priceLevel: campaignPriceLevel }
+      { preset, priceLevel: campaignPriceLevel, nationalGdpPerCapita: nationalBasis }
     );
   }, [
     batchable,
+    blocked,
     character,
     state,
     actionType,
@@ -71,10 +78,11 @@ export default function ActionExecuteRow({
     campaignRate,
     preset,
     campaignPriceLevel,
+    nationalBasis,
   ]);
 
   const sim10 = useMemo(() => {
-    if (!batchable) return null;
+    if (blocked || !batchable) return null;
     return simulateActionBatch(
       character,
       state,
@@ -82,10 +90,11 @@ export default function ActionExecuteRow({
       10,
       forexEnabled,
       campaignRate,
-      { preset, priceLevel: campaignPriceLevel }
+      { preset, priceLevel: campaignPriceLevel, nationalGdpPerCapita: nationalBasis }
     );
   }, [
     batchable,
+    blocked,
     character,
     state,
     actionType,
@@ -93,6 +102,7 @@ export default function ActionExecuteRow({
     campaignRate,
     preset,
     campaignPriceLevel,
+    nationalBasis,
   ]);
 
   const can5 = batchable && sim5?.ok;
@@ -101,7 +111,7 @@ export default function ActionExecuteRow({
   // Only computed when a batch is refused, to tell the player how far they can go.
   const afford5 = useMemo(
     () =>
-      batchable && !can5
+      !blocked && batchable && !can5
         ? getBatchAffordability(
             character,
             state,
@@ -112,11 +122,13 @@ export default function ActionExecuteRow({
             {
               preset,
               priceLevel: campaignPriceLevel,
+              nationalGdpPerCapita: nationalBasis,
             }
           )
         : null,
     [
       batchable,
+      blocked,
       can5,
       character,
       state,
@@ -125,11 +137,12 @@ export default function ActionExecuteRow({
       campaignRate,
       preset,
       campaignPriceLevel,
+      nationalBasis,
     ]
   );
   const afford10 = useMemo(
     () =>
-      batchable && !can10
+      !blocked && batchable && !can10
         ? getBatchAffordability(
             character,
             state,
@@ -140,11 +153,13 @@ export default function ActionExecuteRow({
             {
               preset,
               priceLevel: campaignPriceLevel,
+              nationalGdpPerCapita: nationalBasis,
             }
           )
         : null,
     [
       batchable,
+      blocked,
       can10,
       character,
       state,
@@ -153,6 +168,7 @@ export default function ActionExecuteRow({
       campaignRate,
       preset,
       campaignPriceLevel,
+      nationalBasis,
     ]
   );
 
@@ -177,47 +193,53 @@ export default function ActionExecuteRow({
 
   const pendingConfirm = confirmCount === 5 ? sim5 : confirmCount === 10 ? sim10 : null;
 
+  const batchHint = afford5?.title ?? afford10?.title;
+
   return (
     <>
-      <div
-        className={`flex flex-wrap items-center gap-1.5 ${compact ? "justify-end sm:flex-nowrap w-full sm:w-auto" : ""}`}
-      >
-        <button
-          type="button"
-          onClick={() => onExecute(actionType, 1)}
-          disabled={blocked || isBusy}
-          className={`${btnBase} ${primary} ${compact ? "min-w-[72px] flex-1 sm:flex-none" : "flex-1 min-w-0 sm:flex-none"}`}
+      <div className={compact ? "w-full" : undefined}>
+        <div
+          className={`flex flex-wrap items-center gap-1.5 ${compact ? "justify-end w-full" : ""}`}
         >
-          {executingKey === execKey
-            ? compact
-              ? "..."
-              : "Executing..."
-            : compact
-              ? "Execute"
-              : "Execute action"}
-        </button>
+          <button
+            type="button"
+            onClick={() => onExecute(actionType, 1)}
+            disabled={blocked || isBusy}
+            className={`${btnBase} ${primary} ${compact ? "min-w-[72px] flex-1 sm:flex-none" : "flex-1 min-w-0 sm:flex-none"}`}
+          >
+            {executingKey === execKey ? "Working…" : actionLabel}
+          </button>
 
-        {batchable && (
-          <>
-            <button
-              type="button"
-              onClick={() => setConfirmCount(5)}
-              disabled={blocked || isBusy || !can5}
-              title={afford5?.title}
-              className={`${btnBase} ${batchIdle} ${!can5 ? "opacity-40" : ""} ${compact ? "min-w-[36px]" : ""}`}
-            >
-              ×5
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmCount(10)}
-              disabled={blocked || isBusy || !can10}
-              title={afford10?.title}
-              className={`${btnBase} ${batchIdle} ${!can10 ? "opacity-40" : ""} ${compact ? "min-w-[36px]" : ""}`}
-            >
-              ×10
-            </button>
-          </>
+          {batchable && (
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirmCount(5)}
+                disabled={blocked || isBusy || !can5}
+                aria-label={`${actionLabel} 5 times`}
+                aria-describedby={!can5 && batchHint ? batchHintId : undefined}
+                className={`${btnBase} ${batchIdle} ${!can5 ? "opacity-40" : ""} ${compact ? "min-w-[36px]" : ""}`}
+              >
+                5 times
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmCount(10)}
+                disabled={blocked || isBusy || !can10}
+                aria-label={`${actionLabel} 10 times`}
+                aria-describedby={!can10 && batchHint ? batchHintId : undefined}
+                className={`${btnBase} ${batchIdle} ${!can10 ? "opacity-40" : ""} ${compact ? "min-w-[36px]" : ""}`}
+              >
+                10 times
+              </button>
+            </>
+          )}
+        </div>
+
+        {batchHint && (
+          <p id={batchHintId} className="mt-1 text-body-xs text-muted">
+            {batchHint}
+          </p>
         )}
       </div>
 
@@ -240,12 +262,12 @@ export default function ActionExecuteRow({
                 id="batch-confirm-title"
                 className="text-heading-sm font-semibold text-foreground"
               >
-                Run ×{confirmCount}?
+                {actionLabel} {confirmCount} times?
               </h2>
               <p className="mt-2 text-body-sm text-muted">
                 This will spend{" "}
                 <span className="font-semibold text-foreground">
-                  {pendingConfirm.totalActionPoints} AP
+                  {pendingConfirm.totalActionPoints} action points
                 </span>{" "}
                 total and change campaign funds by{" "}
                 <span
@@ -254,7 +276,7 @@ export default function ActionExecuteRow({
                   {pendingConfirm.netFundsChange >= 0 ? "+" : ""}
                   {formatCurrencyFaceAmount(
                     pendingConfirm.netFundsChange * campaignRate,
-                    getCampaignCurrency(character.countryId ?? "US")
+                    getCampaignCurrency(character.countryId ?? "US", preset)
                   )}
                 </span>
                 .
@@ -277,7 +299,7 @@ export default function ActionExecuteRow({
                   disabled={isBusy}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
                 >
-                  Confirm ×{confirmCount}
+                  {actionLabel} {confirmCount} times
                 </button>
               </div>
             </div>

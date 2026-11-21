@@ -161,7 +161,7 @@ Steel demand is twice supply (D/S 2.0) and electricity demand is 1.5 times suppl
 - Steel input: -40 x 0.2 x ln(2) = **-5.5 points**.
 - Electricity input: -40 x 0.1 x ln(1.5) = **-1.6 points**.
 
-Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming sector helps a steel-producing manufacturing or construction sector. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
+Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming sector helps a steel-producing Manufacturing sector or a Defense sector running Naval Systems. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
 
 **Upstream shortages:** If your sector requires Steel and the global steel D/S ratio rises to 2x, your margin takes about -27.7 points per unit of steel rate (-5.5 at a 0.2 rate). Competitors who are vertically integrated (owning both the steel buyer and a steel-producing sector) partially insulate themselves. **Downstream windfalls:** If you are a steel producer and supply tightens, your producing sector benefits from the shortage while your competitors suffer. Timing sector entries to commodity cycles can significantly boost profits.
 
@@ -304,7 +304,7 @@ The point for a player is simple: a commodity that stores well can be held throu
 
 | Commodity | Typical suppliers | Typical buyers |
 | --- | --- | --- |
-| Steel & Metals | Manufacturing, Construction | Construction, Defense, Real Estate |
+| Steel & Metals | Manufacturing (steel-producing strategies), Defense (Naval Systems) | Construction, Defense, Real Estate |
 | Electronics & Semiconductors | Technology, Defense | Manufacturing, Healthcare, Telecommunications |
 | Energy (Electricity) | Energy | All sectors (universal input) |
 | Industrial Chemicals | Chemical Industries | Extraction, Manufacturing, Chemical Industries, Energy, Technology, Defense |

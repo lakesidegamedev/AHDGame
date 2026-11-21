@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
+import { producerRunBudget } from "@/lib/market/producerMarket/productionPlan";
 import {
   prepareProducerPhysicalSector,
   withStateBooks,
@@ -58,6 +59,51 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("carries the last settled advertising offer into its shortage-price plan", () => {
+    const { input, env, sector } = fixture();
+    sector.sectorType = "media";
+    env.stockCoverTurns = 1;
+    env.shortageAskStage = 2;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: 0,
+      soldUnits: 1,
+      products: [
+        {
+          commodity: "advertising",
+          book: "world",
+          offeredUnits: 20,
+          soldUnits: 1,
+          askingUnitPrice: 10,
+        },
+      ],
+    };
+    const { plan } = prepareProducerPhysicalSector(input).prepared;
+    expect(plan.recentOfferedByOutput).toEqual({ "advertising|world": 20 });
+    expect(plan.recentSoldByOutput).toEqual({ "advertising|world": 1 });
+    expect(plan.recentAskByOutput).toEqual({ "advertising|world": 10 });
+  });
+
+  it("funds the extra 2027 Standard retail throughput with proportional input purchases", () => {
+    const { input, sector, env } = fixture();
+    sector.sectorType = "retail";
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    const { prepared } = prepareProducerPhysicalSector(input);
+    const { plan, target } = prepared;
+    const before = { ...plan, outputMultiplier: plan.outputMultiplier / 1.26 };
+    const billedInputBudget = (p: typeof plan) =>
+      producerRunBudget([p]).variableNeed.get(p.accountId)! -
+      p.labourCost -
+      (p.otherOperatingCost - (p.idleOperatingCost ?? p.otherOperatingCost));
+
+    expect(billedInputBudget(plan)).toBeGreaterThan(0);
+    expect(billedInputBudget(plan)).toBeCloseTo(billedInputBudget(before) * 1.26, 8);
+    expect(plan.outputs).toHaveLength(1);
+    expect(plan.outputs[0]).toMatchObject({ commodity: "retail", unitsPerOutput: 1 });
+    expect(target.capacity.ownedDailyUnits).toBe(sector.capitalStock);
+    expect(target.capacity.paidBookAnchor).toBe(sector.capacityBookAnchor);
+  });
+
   it("reuses era prices without changing regional prices or country-specific plans", () => {
     for (const countryId of ["US", "UK", "JP"] as const) {
       const { input, env } = fixture();
@@ -148,6 +194,26 @@ describe("physical producer preparation", () => {
     sector.sellOutsideFirst = true;
     expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBe(true);
   });
+
+  it("adds financed throughput for fintech while retaining both products and the input recipe", () => {
+    const { input, sector, env } = fixture();
+    sector.strategyId = "fintech";
+    env.currentYear = 2027;
+    env.lookups.preset = "2019-default";
+    const prior = prepareProducerPhysicalSector(input).prepared;
+    env.lookups.preset = "2027-default";
+    const current = prepareProducerPhysicalSector(input).prepared;
+
+    expect(current.plan.outputMultiplier).toBeCloseTo(prior.plan.outputMultiplier * 3, 10);
+    expect(current.plan.inputs).toEqual(prior.plan.inputs);
+    expect(current.plan.outputs).toEqual(prior.plan.outputs);
+    expect(current.plan.outputs.map((output) => output.commodity).sort()).toEqual([
+      "financial_services",
+      "software",
+    ]);
+    expect(current.target.capacity).toEqual(prior.target.capacity);
+  });
+
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
     sector.producerInventory!.outputStock = [
@@ -641,6 +707,113 @@ describe("physical producer preparation", () => {
     expect(halted.prepared.plan.outputMultiplier).toBe(0);
     expect(halted.prepared.plan.labourCost).toBe(running.prepared.plan.labourCost);
     expect(halted.prepared.plan.otherOperatingCost).toBe(running.prepared.plan.otherOperatingCost);
+  });
+
+  it("lets loss-making mines serve recent buyers from held stock", () => {
+    const { input, env, sector } = fixture();
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    env.runPlanStage = 3;
+    env.demandPlanStage = 1;
+    sector.sectorType = "extraction";
+    sector.strategyId = "iron_mining";
+    env.lookups.stateResourceCapacityByState.set(sector.stateId, { iron: 1000 });
+    const stock = [{ commodity: "iron", book: "world", units: 15, quoteUnitCost: 10 }];
+    sector.producerInventory!.outputStock = stock;
+    const line = {
+      commodity: "iron",
+      book: "world",
+      offeredUnits: 30,
+      soldUnits: 12,
+      internalDeliveredUnits: 0,
+      revenue: 200,
+    };
+    const previous = {
+      worldEpoch: "world",
+      turn: 0,
+      activeUnits: 40,
+      producedUnits: 20,
+      offeredUnits: 30,
+      soldUnits: 12,
+      revenue: 200,
+      inputsConsumed: 400,
+      profit: 1,
+      products: [line],
+    };
+    const record = sector as unknown as { producerSettlement: unknown };
+    record.producerSettlement = previous;
+    const profitable = prepareProducerPhysicalSector(input).prepared.plan;
+    record.producerSettlement = { ...previous, profit: -200 };
+    const losing = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(losing.plannedRunShare).toBeCloseTo(profitable.plannedRunShare! * 0.7);
+    expect(losing.outputMultiplier).toBeCloseTo(profitable.outputMultiplier * 0.7);
+    expect(losing.otherOperatingCost).toBeLessThan(profitable.otherOperatingCost);
+    expect(losing.outputStock).toEqual(profitable.outputStock);
+
+    record.producerSettlement = {
+      ...previous,
+      profit: -200,
+      products: [{ ...line, internalDeliveredUnits: 1 }],
+    };
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(
+      profitable.plannedRunShare
+    );
+    record.producerSettlement = { ...previous, profit: -200 };
+    sector.producerInventory!.outputStock = [{ ...stock[0], units: 14 }];
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(
+      profitable.plannedRunShare
+    );
+  });
+
+  it("trims a loss-making mine's run when partial stock can replace the cut", () => {
+    const { input, env, sector } = fixture();
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    env.runPlanStage = 3;
+    env.demandPlanStage = 1;
+    sector.sectorType = "extraction";
+    sector.strategyId = "iron_mining";
+    env.lookups.stateResourceCapacityByState.set(sector.stateId, { iron: 1000 });
+    const lot = { commodity: "iron", book: "world", units: 5, quoteUnitCost: 10 };
+    sector.producerInventory!.outputStock = [lot];
+    const previous = {
+      worldEpoch: "world",
+      turn: 0,
+      activeUnits: 40,
+      plannedRunShare: 1,
+      producedUnits: 20,
+      offeredUnits: 30,
+      soldUnits: 12,
+      revenue: 200,
+      inputsConsumed: 400,
+      profit: -200,
+      products: [
+        {
+          commodity: "iron",
+          book: "world",
+          producedUnits: 20,
+          offeredUnits: 30,
+          soldUnits: 12,
+          internalDeliveredUnits: 0,
+          revenue: 200,
+        },
+      ],
+    };
+    const record = sector as unknown as { producerSettlement: unknown };
+    record.producerSettlement = { ...previous, profit: 1 };
+    const normal = prepareProducerPhysicalSector(input).prepared.plan;
+
+    record.producerSettlement = previous;
+    const trimmed = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(trimmed.plannedRunShare).toBeCloseTo(normal.plannedRunShare! * 0.8);
+    expect(trimmed.outputMultiplier).toBeCloseTo(normal.outputMultiplier * 0.8);
+    expect(trimmed.labourCost).toBeLessThan(normal.labourCost);
+    expect(trimmed.outputStock).toEqual([lot]);
+
+    sector.producerInventory!.outputStock = [{ ...lot, units: 1 }];
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(
+      normal.plannedRunShare
+    );
   });
 
   it("bills extraction materials only for the resource share the state can supply", () => {

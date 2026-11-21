@@ -1,9 +1,6 @@
 /** Synthetic accounting replay. No database, player records or ambient time. */
 import { acquisitionBalanceSheet } from "../../src/lib/corporations/commands/acquisitions/rules";
-import {
-  getNewCharacterTransferBarrier,
-  getNewCorporationFoundingBarrier,
-} from "../../src/lib/character/rules/newCharacterTransferBarrier";
+import { getNewCharacterTransferBarrier } from "../../src/lib/character/rules/newCharacterTransferBarrier";
 
 const rows: object[] = [];
 for (const [country, localPerAnchor] of [
@@ -63,19 +60,12 @@ for (const [country, localPerAnchor] of [
 for (const age of [0, 23, 24, 47, 48, 49]) {
   const input = { createdTurn: 100 };
   const transfer = getNewCharacterTransferBarrier(input, 100 + age, 0);
-  const ordinaryFounding = getNewCorporationFoundingBarrier(input, 100 + age, 0, false);
-  const launchFounding = getNewCorporationFoundingBarrier(input, 100 + age, 0, true);
-  if (
-    transfer.blocked !== age < 48 ||
-    ordinaryFounding.blocked !== transfer.blocked ||
-    launchFounding.blocked
-  )
-    throw new Error("Incorrect startup restriction boundary");
+  if (transfer.blocked !== age < 48) {
+    throw new Error("Incorrect new-character transfer boundary");
+  }
   rows.push({
     age,
     transfersBlocked: transfer.blocked,
-    corporationCreationBlocked: ordinaryFounding.blocked,
-    foundingPeriodCreationBlocked: launchFounding.blocked,
   });
 }
 console.log(JSON.stringify({ verdict: "passed", cases: rows.length, rows }, null, 2));

@@ -1,7 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import type { GovernmentType } from "@/lib/constants/countries";
-import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { buildGovernmentTypeMap } from "@/lib/landing/governmentTypeMap";
 import type { LaunchScheduleInput } from "@/lib/landing/rules/launchSchedule";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
@@ -10,21 +9,10 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
-/** Crisis fields the marketing landing consumes (serializable). */
-export type LandingCrisisSnapshot = {
-  _id: string;
-  name: string;
-  description: string;
-  heroImage?: string;
-  scope: "global" | "country" | "region";
-  countryIds: string[];
-};
-
 export type LandingDataSnapshot = {
   seedYear: number;
   /** The world's in-game year now; equals `seedYear` until turns move it on. */
   currentYear: number;
-  crises: LandingCrisisSnapshot[];
   playerCounts: Record<string, number>;
   governmentTypes: Record<string, GovernmentType>;
   /** Inputs for `resolveLaunchSchedule`; the page resolves them against its own clock. */
@@ -44,7 +32,7 @@ export function invalidateLandingDataCache(): void {
 
 async function loadLandingData(): Promise<LandingDataSnapshot> {
   const db = await getDb();
-  const [config, gs, crisisList, enabledIds, countRows, countryStateDocs] = await Promise.all([
+  const [config, gs, enabledIds, countRows, countryStateDocs] = await Promise.all([
     gameConfigCollection(db).findOne(
       { _id: "default" },
       { projection: { seedYear: 1, maintenanceMode: 1, maintenanceExpectedEnd: 1 } }
@@ -61,7 +49,6 @@ async function loadLandingData(): Promise<LandingDataSnapshot> {
         },
       }
     ),
-    listCrises(db, null, "active"),
     getEnabledCountryIdsFromDb(db),
     charactersCollection(db)
       .aggregate<{ _id: string | null; count: number }>([
@@ -87,15 +74,6 @@ async function loadLandingData(): Promise<LandingDataSnapshot> {
   }
 
   const governmentTypes = buildGovernmentTypeMap(countryStateDocs);
-  const crises = crisisList.crises.map((c) => ({
-    _id: String(c._id),
-    name: c.name,
-    description: c.description,
-    heroImage: c.heroImage,
-    scope: c.scope,
-    countryIds: c.countryIds,
-  }));
-
   const nextTurn = gs?.nextScheduledTurn ? new Date(gs.nextScheduledTurn) : null;
   const launch: LaunchScheduleInput = {
     maintenanceMode: normalizeMaintenanceMode(config?.maintenanceMode),
@@ -106,7 +84,7 @@ async function loadLandingData(): Promise<LandingDataSnapshot> {
       nextTurn && !Number.isNaN(nextTurn.getTime()) ? nextTurn.toISOString() : null,
   };
 
-  return { seedYear, currentYear, crises, playerCounts, governmentTypes, launch };
+  return { seedYear, currentYear, playerCounts, governmentTypes, launch };
 }
 
 /**

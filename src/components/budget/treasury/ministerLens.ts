@@ -1,3 +1,4 @@
+import { nominalTaxBaseGrowthPct } from "@/lib/budget/rules/nominalGrowth";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 
 /**
@@ -123,21 +124,30 @@ export function describeProjectionAssumptions(i: {
   gdpGrowth: number;
   inflationRate: number;
 }): string {
-  const growth = `${i.gdpGrowth >= 0 ? "+" : "-"}${Math.abs(i.gdpGrowth).toFixed(1)}%`;
+  const signed = (value: number) => `${value >= 0 ? "+" : "-"}${Math.abs(value).toFixed(1)}%`;
+  const revenueRate = nominalTaxBaseGrowthPct(i.gdpGrowth, i.inflationRate);
   const spendingRate = i.inflationRate + MINISTER_SPENDING_DRIFT_PP;
-  const spending = `${spendingRate >= 0 ? "+" : "-"}${Math.abs(spendingRate).toFixed(1)}%`;
   return (
-    `Assumes ${growth} real GDP growth, ${i.inflationRate.toFixed(1)}% inflation; ` +
-    `spending ${spending} (inflation + ${MINISTER_SPENDING_DRIFT_PP.toFixed(1)}pp demographics).`
+    `Assumes ${signed(i.gdpGrowth)} real GDP growth, ${i.inflationRate.toFixed(1)}% inflation; ` +
+    `revenue ${signed(revenueRate)} (real plus inflation), ` +
+    `spending ${signed(spendingRate)} (inflation + ${MINISTER_SPENDING_DRIFT_PP.toFixed(1)}pp demographics).`
   );
 }
 
 /**
- * Illustrative next-FY projection: revenue tracks GDP growth, spending tracks
- * inflation + a ~1.4pp demographic drift; a projected deficit adds to debt.
+ * Illustrative next-FY projection. Revenue is a nominal stock, so it grows with
+ * the same real-plus-inflation rate the tax bases use; spending is nominal too
+ * and grows with inflation plus a ~1.4pp demographic drift. A projected deficit
+ * adds to debt.
+ *
+ * The GDP denominator stays on real `gdpGrowth` because the stored debt-to-GDP
+ * ratio divides nominal debt by this engine's real GDP series; growing it by
+ * inflation here would put the card on a different basis from the ratio beside
+ * it.
  */
 export function deriveMinisterProjection(i: MinisterInputs): MinisterProjection {
-  const projRevenue = i.revenueTotal * (1 + i.gdpGrowth / 100);
+  const projRevenue =
+    i.revenueTotal * (1 + nominalTaxBaseGrowthPct(i.gdpGrowth, i.inflationRate) / 100);
   const projSpending = i.spendingTotal * (1 + (i.inflationRate + MINISTER_SPENDING_DRIFT_PP) / 100);
   const projSurplus = projRevenue - projSpending;
   const projDebt = i.debtPrincipal + Math.max(0, -projSurplus);

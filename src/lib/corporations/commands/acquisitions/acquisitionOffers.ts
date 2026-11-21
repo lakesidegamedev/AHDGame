@@ -31,6 +31,8 @@ import {
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
+import { logger } from "@/lib/observability/logger";
+import { acquisitionSettlementsCollection } from "@/lib/db/repositories/acquisitionSettlements";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
 
@@ -262,14 +264,14 @@ export async function proposeAcquisitionOffer(
     // Executor threw after refunding the acquirer; nothing dangling stays
     // pending since no human could ever resolve it.
     await offers.updateOne(
-      { _id: offer._id },
+      { _id: offer._id, status: "accepted" },
       { $set: { status: "rejected", updatedAt: new Date() } }
     );
     throw err;
   }
   if (!result.ok) {
     await offers.updateOne(
-      { _id: offer._id },
+      { _id: offer._id, status: "accepted" },
       { $set: { status: "rejected", updatedAt: new Date() } }
     );
     return result;
@@ -350,7 +352,7 @@ export async function acceptAcquisitionOffer(
     // Executor threw mid-flight. Execution is resumable from the settlement
     // record, so release the claim and let the retry finish it.
     await offers.updateOne(
-      { _id: offer._id },
+      { _id: offer._id, status: "accepted" },
       { $set: { status: "pending", updatedAt: new Date() }, $unset: { resolvedAtTurn: "" } }
     );
     throw err;
@@ -359,14 +361,14 @@ export async function acceptAcquisitionOffer(
     // Terminal compensation already ran inside the executor: the offer must
     // NOT return to pending (a retry would re-debit and re-pay). It is closed.
     await offers.updateOne(
-      { _id: offer._id },
+      { _id: offer._id, status: "accepted" },
       { $set: { status: "failed", updatedAt: new Date() } }
     );
     return { ok: false, error: result.error, status: result.status };
   }
   if (!result.ok) {
     await offers.updateOne(
-      { _id: offer._id },
+      { _id: offer._id, status: "accepted" },
       { $set: { status: "pending", updatedAt: new Date() }, $unset: { resolvedAtTurn: "" } }
     );
     return result;
@@ -386,6 +388,89 @@ export async function acceptAcquisitionOffer(
   );
 
   return result;
+}
+
+/** An accepted offer untouched this long has lost its executor; a live run finishes in seconds. */
+export const STRANDED_ACCEPTED_OFFER_MS = 15 * 60 * 1000;
+const STRANDED_OFFER_BATCH = 20;
+
+/**
+ * Finishes offers a dead process left at "accepted". The executor resumes from
+ * the pinned settlement record, so a rerun never pays a leg twice. An offer
+ * whose settlement is already applied is done and is skipped. Runs ahead of
+ * player deal actions, outside the turn.
+ */
+export async function resumeStrandedAcceptedOffers(
+  db: Db,
+  currentTurn: number,
+  now: Date = new Date()
+): Promise<{ resumed: number; failed: number }> {
+  const offers = acquisitionOffersCollection<AcquisitionOffer>(db);
+  const cutoff = new Date(now.getTime() - STRANDED_ACCEPTED_OFFER_MS);
+  const candidates = await offers
+    .find({
+      status: "accepted",
+      updatedAt: { $lt: cutoff },
+      resolvedAtTurn: { $gte: currentTurn - ACQUISITION_OFFER_DURATION_TURNS },
+    })
+    .limit(STRANDED_OFFER_BATCH)
+    .toArray();
+  if (candidates.length === 0) return { resumed: 0, failed: 0 };
+
+  const applied = new Set(
+    (
+      await acquisitionSettlementsCollection(db)
+        .find({ _id: { $in: candidates.map((o) => o._id) }, status: "applied" })
+        .project({ _id: 1 })
+        .toArray()
+    ).map((s) => s._id.toString())
+  );
+
+  let resumed = 0;
+  let failed = 0;
+  for (const offer of candidates) {
+    if (applied.has(offer._id.toString())) continue;
+    // Take the offer by bumping updatedAt so two workers do not resume it at once.
+    const claim = await offers.updateOne(
+      { _id: offer._id, status: "accepted", updatedAt: offer.updatedAt },
+      { $set: { updatedAt: now } }
+    );
+    if (claim.matchedCount === 0) continue;
+
+    try {
+      const result = await executeAgreedAcquisition({ db, offer, currentTurn });
+      if (result.ok) {
+        await offers.updateMany(
+          {
+            _id: { $ne: offer._id },
+            status: "pending",
+            $or: [
+              { targetCorporationId: offer.targetCorporationId },
+              { acquirerCorporationId: offer.targetCorporationId },
+            ],
+          },
+          { $set: { status: "withdrawn", updatedAt: now } }
+        );
+        resumed += 1;
+      } else if (result.terminal) {
+        await offers.updateOne(
+          { _id: offer._id, status: "accepted" },
+          { $set: { status: "failed", updatedAt: new Date() } }
+        );
+        failed += 1;
+      } else {
+        // Refused before any money moved: reopen it for the accepting side.
+        await offers.updateOne(
+          { _id: offer._id, status: "accepted" },
+          { $set: { status: "pending", updatedAt: new Date() }, $unset: { resolvedAtTurn: "" } }
+        );
+      }
+    } catch (err) {
+      // Left accepted: the next sweep retries after the stale window.
+      logger.error("acquisitionOffers", "resume of stranded accepted offer failed", err);
+    }
+  }
+  return { resumed, failed };
 }
 
 export async function resolveAcquisitionOfferStatus(

@@ -38,6 +38,7 @@ export type LedgerAccountKind =
   | "state_party"
   | "campaign_fund"
   | "bond_pool"
+  | "external_deposits" // Modeled deposits outside the stock-checked player balance book.
   | "government"
   | "government_cash"
   | "fund"

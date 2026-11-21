@@ -490,6 +490,13 @@ export function renderCreateCharacterClientView(
     return bits.length > 0 ? `${name}, ${bits.join(" · ")}` : name;
   })();
 
+  const backgroundBlocker = [
+    [formData.demographics.gender, "Choose a gender."],
+    [formData.demographics.race, "Choose a race."],
+    [formData.demographics.education, "Choose an education level."],
+    [formData.demographics.wealth, "Choose a wealth background."],
+  ].find(([choice]) => !choice)?.[1];
+
   const conversationSteps = buildConversationSteps({
     regionNoun,
     partySelectorVisible,
@@ -501,6 +508,17 @@ export function renderCreateCharacterClientView(
       party: noPartiesAvailable || partyTouched,
       stats: statPointsLeft === 0,
       review: requirements.every((r) => r.met),
+    },
+    blockers: {
+      country: "Choose a country.",
+      politician:
+        formData.characterName.trim().length < 2
+          ? "Enter a name with at least two characters."
+          : backgroundBlocker,
+      region: `Choose a home ${regionNoun}.`,
+      compass: "Select a position on the compass.",
+      party: "Select a party or select Independent.",
+      stats: `Allocate ${statPointsLeft} remaining stat point${statPointsLeft === 1 ? "" : "s"}.`,
     },
     summary: {
       country: selectedCountry?.name ?? null,

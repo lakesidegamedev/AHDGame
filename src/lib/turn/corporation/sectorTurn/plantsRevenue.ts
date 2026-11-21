@@ -309,7 +309,7 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
   // folded into this multiplier, not a new leg, keeping produced == offered == ledger.
   const plantsTechOutputMultiplier = plantsEnabled
     ? productionProductivityMultiplier({
-        sectorType: sector.sectorType,
+        sector,
         supply: strategySupply,
         outputRateMult: techEffects.outputRateMult,
         currentTurn,

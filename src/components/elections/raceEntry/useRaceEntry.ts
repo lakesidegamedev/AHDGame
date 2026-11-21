@@ -6,7 +6,7 @@ import type { ConfirmDialogOptions } from "@/hooks/useConfirmDialog";
 import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
 import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
 import { apiErrorText } from "@/lib/errors/catalog";
-import { canEnter, canWithdraw, type EntryRuleRace } from "./entryRules";
+import { canWithdraw, raceEntryBlock, type EntryRuleRace } from "./entryRules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** The parts of an election (full view) the entry flow reads. */
@@ -49,6 +49,7 @@ export function useRaceEntry(
   }
 ): {
   canEnter: boolean;
+  entryBlock: ReturnType<typeof raceEntryBlock>;
   canWithdraw: boolean;
   busy: boolean;
   enter: () => Promise<void>;
@@ -196,8 +197,10 @@ export function useRaceEntry(
     }
   }, [election, confirm, onDone, showToast]);
 
+  const entryBlock = election ? raceEntryBlock(election, amInRace) : null;
   return {
-    canEnter: election ? canEnter(election, amInRace) : false,
+    canEnter: election !== null && entryBlock === null,
+    entryBlock,
     canWithdraw: election ? canWithdraw(election, amInRace) : false,
     busy,
     enter,

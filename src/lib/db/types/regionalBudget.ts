@@ -1,6 +1,9 @@
+import type { RegionalDebtLedger } from "@/lib/budget/rules/regionalDebt";
 import type { CountryId } from "@/lib/constants/countries";
 
 export interface RegionalBudget {
+  financing?: RegionalDebtLedger;
+  interestPayments?: number;
   _id: string; // regionId (e.g., "LON", "SCO", "HOK")
   countryId: CountryId;
   turn: number;

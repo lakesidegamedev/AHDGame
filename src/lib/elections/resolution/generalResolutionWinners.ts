@@ -14,6 +14,7 @@ import { getUkCommonsSeats } from "@/lib/constants/states";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
 import {
   buildPrimaryShareMap,
+  electionAlreadySeated,
   multiSeatOfficialFilter,
   getChamberClass,
 } from "./generalResolutionHelpers";
@@ -401,14 +402,19 @@ export async function selectGeneralElectionWinners({
         election.conversionTerms
       ));
 
+  // A rerun finds rows its own earlier run stamped with this election id. It
+  // must not retire further seats, so the marker is read before any delete.
+  let priorSeating = false;
+  let classlessRetireSeats = 0;
   if (isMultiSeat) {
+    priorSeating = await electionAlreadySeated(db, election, multiSeatOfficialFilter(election));
     if (isSpecialCommonsElection(election.electionType)) {
       // ADDITIVE seating: a by-election fills only its claimed vacancies. Remove
       // holder-less `commons` rows (tombstones for recorded vacancies) up to the
       // seats this race filled, and leave every seated MP untouched; the winner
       // loop below inserts fresh rows for filled seats.
       const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
-      if (seatsFilled > 0) {
+      if (seatsFilled > 0 && !priorSeating) {
         const vacantRows = await electedOfficialsCollection(db)
           .find(
             {
@@ -430,34 +436,13 @@ export async function selectGeneralElectionWinners({
     } else {
       await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
     }
-    // Class-scoped multi-seat chambers (JP Sangiin): the filter above keys on
-    // chamberClass, so councillors seeded WITHOUT a class are invisible to it
-    // — every class election inserted winners beside the seeded roster and
-    // the chamber accumulated without bound (measured 54% overfull). Mirror
-    // of the single-winner classless-retirement below: retire as many
-    // classless legacy rows as seats this election filled, oldest first, so
-    // the chamber converges to its real size as classes cycle.
-    const multiSeatClass = getChamberClass(election);
-    if (multiSeatClass) {
-      const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
-      if (seatsFilled > 0) {
-        const legacyRows = await electedOfficialsCollection(db)
-          .find(
-            {
-              officeType: officeKeyForElectionType(election.electionType, election.countryId),
-              state: election.state,
-              ...(election.countryId ? { countryId: election.countryId } : {}),
-              $and: [{ senateClass: { $exists: false } }, { chamberClass: { $exists: false } }],
-            },
-            { projection: { _id: 1 }, sort: { electedAt: 1 }, limit: seatsFilled }
-          )
-          .toArray();
-        if (legacyRows.length > 0) {
-          await electedOfficialsCollection(db).deleteMany({
-            _id: { $in: legacyRows.map((r) => r._id) },
-          });
-        }
-      }
+    // Class-scoped multi-seat chambers (JP Sangiin): councillors seeded WITHOUT
+    // a class are invisible to the class filter above, so every class election
+    // inserted winners beside the seeded roster and the chamber grew without
+    // bound. The caller retires as many classless rows as seats filled, after
+    // the winners are seated, so the chamber converges as classes cycle.
+    if (getChamberClass(election) && !priorSeating) {
+      classlessRetireSeats = winners.reduce((n, [, s]) => n + s, 0);
     }
   }
   return {
@@ -469,5 +454,7 @@ export async function selectGeneralElectionWinners({
     bgOrdinaryAllocation,
     districted,
     runtimeBlocQuota,
+    priorSeating,
+    classlessRetireSeats,
   };
 }

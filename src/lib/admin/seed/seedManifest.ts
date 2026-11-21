@@ -148,7 +148,13 @@ const REFERENCE: CollectionEntry[] = [
     notes:
       "Reset with world budgets, including optional independently settled all-household resource controls. Historical source imports never create these cash-flow receipts.",
   },
-  { name: "stateBudgets", category: "reference", seededBy: "seedBudgets" },
+  {
+    name: "stateBudgets",
+    category: "reference",
+    seededBy: "seedBudgets",
+    notes:
+      "World reset replaces the budget, including regional cash, debt and settlement receipts.",
+  },
   {
     name: "regionalBudgets",
     category: "runtime",

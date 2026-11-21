@@ -127,6 +127,16 @@ async function handleGET() {
       });
     }
     const constituencies = getConstituenciesForUkRegion(regionId);
+    // Other countries also have a "primeMinister" office, but Westminster
+    // constituency data exists only for UK regions. No constituencies for the
+    // region means there is nothing to pick, so the picker stays hidden.
+    if (constituencies.length === 0) {
+      return NextResponse.json({
+        eligible: false,
+        constituencies: [],
+        selected: null,
+      });
+    }
     return NextResponse.json({
       eligible: true,
       officeType: office.type,

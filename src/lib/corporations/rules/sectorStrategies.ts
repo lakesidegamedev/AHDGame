@@ -38,6 +38,12 @@ const UNKNOWN_SECTOR_STRATEGY: SectorStrategy = {
   demand: {},
 };
 
+const FOCUSED_MINING_CHEMICAL_DEMAND_2027 = 0.12;
+const FOCUSED_MINING_STRATEGIES = new Set(["oil_gas", "natural_gas_drilling", "rare_earth_mining"]);
+const MINING_POWER_EQUIPMENT_SCALE_2027 = 0.85;
+const MINING_POWER_EQUIPMENT_STRATEGIES = new Set(["standard", "oil_gas", "natural_gas_drilling"]);
+const DIVERSIFIED_MINING_POWER_HAULAGE_SCALE_2027 = 0.65;
+
 /**
  * Build the model recipes from existing physical input baskets and output
  * patterns. Output rates retain the default sector's base-value budget; input
@@ -125,6 +131,28 @@ function strategyForPreset(
       resizedDemand[commodity] = (resizedDemand[commodity] ?? 0) * STANDARD_RETAIL_INPUT_SCALE_2027;
     }
     return { ...strategy, demand: resizedDemand };
+  }
+  if (era === "2027" && sectorType === "extraction") {
+    const reduceChemicals = FOCUSED_MINING_STRATEGIES.has(strategy.id);
+    const reducePowerAndEquipment = MINING_POWER_EQUIPMENT_STRATEGIES.has(strategy.id);
+    if (reduceChemicals || reducePowerAndEquipment) {
+      const resizedDemand = { ...(demand ?? strategy.demand) };
+      if (reduceChemicals) resizedDemand.chemicals = FOCUSED_MINING_CHEMICAL_DEMAND_2027;
+      if (reducePowerAndEquipment) {
+        for (const commodity of ["energy", "steel", "vehicles"] as const) {
+          const amount = resizedDemand[commodity];
+          if (amount != null) resizedDemand[commodity] = amount * MINING_POWER_EQUIPMENT_SCALE_2027;
+        }
+      }
+      if (strategy.id === "standard") {
+        for (const commodity of ["energy", "vehicles", "freight"] as const) {
+          const amount = resizedDemand[commodity];
+          if (amount != null)
+            resizedDemand[commodity] = amount * DIVERSIFIED_MINING_POWER_HAULAGE_SCALE_2027;
+        }
+      }
+      return { ...strategy, demand: resizedDemand };
+    }
   }
   return demand ? { ...strategy, demand: { ...demand } } : strategy;
 }

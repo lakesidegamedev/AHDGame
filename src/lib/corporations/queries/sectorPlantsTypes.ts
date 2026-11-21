@@ -150,6 +150,7 @@ export interface SectorPlantsSection {
   /** Cash-backed orders in each output's actual market. National rows include the region. */
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
+  strategyBuildRoom?: Record<string, number | null>;
   /**
    * True when this sector's own demand throttle bound last turn. Its idle
    * capacity is what buyers' room fills first (output can climb by the probe

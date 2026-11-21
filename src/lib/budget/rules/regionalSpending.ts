@@ -37,8 +37,10 @@ export function resolveRegionalSpending(input: {
     return { spending: authorizedSpending, authorizedSpending, settlement: undefined };
   const negativeCredit = input.laws.reduce((sum, l) => sum + Math.max(0, -l.annualCost), 0);
   const settlement = settleRegionalBudget({
+    allowBorrowing: true,
     availableBudget: input.revenue + Math.max(0, input.cash) + negativeCredit,
-    reservedNonProgramSpending: input.baseSpending.resourceProspecting ?? 0,
+    reservedNonProgramSpending:
+      (input.baseSpending.resourceProspecting ?? 0) + (input.baseSpending.interestPayments ?? 0),
     claims: [...input.services, ...input.laws.map((l) => l.claim), ...input.programs],
   });
   const fundedById = new Map(settlement.programs.map((p) => [p.programId, p.fundedAmount]));
@@ -57,7 +59,10 @@ export function resolveRegionalSpending(input: {
     settlement,
     spending: {
       byCategory: actual,
-      resourceProspecting: settlement.reservedNonProgramSpending,
+      resourceProspecting: input.baseSpending.resourceProspecting ?? 0,
+      ...(input.baseSpending.interestPayments !== undefined
+        ? { interestPayments: input.baseSpending.interestPayments }
+        : {}),
       total:
         Object.values(actual).reduce((sum, n) => sum + n, 0) +
         settlement.reservedNonProgramSpending,

@@ -91,7 +91,7 @@ export const WIKI_LAST_UPDATED: Record<string, string> = {
   "game-starting-state": "2026-10-30",
   "general-elections": "2026-10-30",
   generals: "2026-10-30",
-  "getting-started": "2026-11-05",
+  "getting-started": "2026-11-20",
   "global-response-crises": "2026-11-08",
   glossary: "2026-10-30",
   "government-approval": "2026-11-08",
