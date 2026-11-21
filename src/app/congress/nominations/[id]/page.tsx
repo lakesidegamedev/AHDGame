@@ -1,5 +1,7 @@
 "use client";
 
+import { cabinetSenateVoteSummary } from "@/lib/cabinet/senateVoteSummary";
+
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -102,7 +104,7 @@ function NominationDetailContent() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 gap-4">
         <p className="text-error text-sm">{error}</p>
         <Link
-          href="/congress?chamber=senate&tab=bills"
+          href="/country/us/legislature?chamber=senate&tab=bills&view=confirmations"
           className="text-sm text-primary hover:underline"
         >
           ← Back to Senate bills
@@ -116,7 +118,8 @@ function NominationDetailContent() {
   const vFor = nom.votesFor ?? 0;
   const vAgainst = nom.votesAgainst ?? 0;
   const vAbs = nom.votesAbstain ?? 0;
-  const total = vFor + vAgainst + vAbs || 1;
+  const votesCounted = vFor + vAgainst + vAbs;
+  const total = votesCounted || 1;
   const pctFor = (vFor / total) * 100;
   const pctAgainst = (vAgainst / total) * 100;
   const pctAbstain = (vAbs / total) * 100;
@@ -160,7 +163,7 @@ function NominationDetailContent() {
           </h1>
 
           <p className="text-sm text-muted leading-relaxed">
-            Cabinet nomination · Senate confirmation required. Simple majority within 24 hours.
+            Confirmation requires more Yeas than Nays when voting closes. Abstentions are excluded.
           </p>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted pt-1 border-t border-card-border/40">
@@ -232,7 +235,15 @@ function NominationDetailContent() {
               ✗ {vAgainst} Against ({Number.isFinite(pctAgainst) ? pctAgainst.toFixed(0) : 0}%)
             </span>
             {vAbs > 0 && <span className="text-muted">– {vAbs} Abstain</span>}
+            <span className="text-muted">{votesCounted} Senate votes counted</span>
           </div>
+
+          {nom.status === "active" && (
+            <p className="text-sm font-medium text-foreground">
+              {cabinetSenateVoteSummary(vFor, vAgainst)} Senators can change their vote before it
+              closes.
+            </p>
+          )}
 
           {nom.myVote && (
             <p className="text-xs text-muted">

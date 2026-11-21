@@ -27,6 +27,7 @@ export function CongressBillsTab({
   myChamber,
   hasActiveBill,
   countryId,
+  initialStatusFilter = "all",
 }: {
   activeTab: ChamberTab;
   canPropose: boolean;
@@ -34,6 +35,7 @@ export function CongressBillsTab({
   myChamber?: "house" | "senate" | null;
   hasActiveBill?: boolean;
   countryId: CountryId;
+  initialStatusFilter?: "all" | "confirmations";
 }) {
   const [bills, setBills] = useState<BillDisplay[]>([]);
   const [nominations, setNominations] = useState<NominationDisplay[]>([]);
@@ -44,7 +46,10 @@ export function CongressBillsTab({
     Record<string, BillProposalAutoFailWarning | null>
   >({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedStatus, setStatusFilter] = useState<string>(initialStatusFilter);
+  const statusFilter =
+    activeTab !== "senate" && selectedStatus === "confirmations" ? "all" : selectedStatus;
+  const confirmationsOnly = statusFilter === "confirmations";
   const [showPropose, setShowPropose] = useState(false);
   const [voteFilter, setVoteFilter] = useState<BillVoteFilter>("all");
 
@@ -109,12 +114,14 @@ export function CongressBillsTab({
     return () => controller.abort();
   }, [fetchAll]);
 
-  const filteredBills = bills.filter((b) =>
-    matchesCongressBillStatusFilter(
-      b.status,
-      statusFilter as "all" | "active" | "enrolled" | "signed" | "failed"
-    )
-  );
+  const filteredBills = confirmationsOnly
+    ? []
+    : bills.filter((b) =>
+        matchesCongressBillStatusFilter(
+          b.status,
+          statusFilter as "all" | "active" | "enrolled" | "signed" | "failed"
+        )
+      );
 
   const voteFiltered = (() => {
     if (voteFilter === "voted")
@@ -124,8 +131,10 @@ export function CongressBillsTab({
     return filteredBills;
   })();
 
-  const filteredNominations =
-    activeTab === "senate" && (statusFilter === "all" || statusFilter === "active")
+  const cabinetNominations = nominations.filter((nomination) => nomination.kind === "cabinet");
+  const filteredNominations = confirmationsOnly
+    ? cabinetNominations
+    : activeTab === "senate" && (statusFilter === "all" || statusFilter === "active")
       ? nominations
       : [];
 
@@ -170,6 +179,7 @@ export function CongressBillsTab({
     ])
   ) as Record<string, number>;
   const openVotes = statusCounts.active;
+  statusCounts.confirmations = cabinetNominations.length;
 
   const billMap = new Map(voteFiltered.map((b) => [b.id, b]));
   const nomMap = new Map(filteredNominations.map((n) => [`${n.kind}:${n.id}`, n]));
@@ -250,6 +260,9 @@ export function CongressBillsTab({
               { key: "enrolled", label: "President" },
               { key: "signed", label: "Signed" },
               { key: "failed", label: "Failed" },
+              ...(activeTab === "senate"
+                ? [{ key: "confirmations", label: "Cabinet confirmations" }]
+                : []),
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -278,7 +291,7 @@ export function CongressBillsTab({
         <BillListControls
           voteFilter={voteFilter}
           onVoteFilterChange={setVoteFilter}
-          showVoteFilter={!!myChamber}
+          showVoteFilter={!!myChamber && !confirmationsOnly}
         />
 
         {loading ? (
@@ -287,6 +300,11 @@ export function CongressBillsTab({
               <ListRowSkeleton key={i} lines={3} withBadge />
             ))}
           </div>
+        ) : confirmationsOnly && sortedItems.length === 0 ? (
+          <EmptyState
+            title="No open cabinet confirmations"
+            body="New nominations appear here while the Senate vote is open."
+          />
         ) : sortedItems.length === 0 ? (
           <EmptyState
             title={
