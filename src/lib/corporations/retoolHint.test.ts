@@ -127,7 +127,7 @@ describe("computeRetoolHint", () => {
   });
 });
 
-// A single-product healthcare plant, turn 108 of a funded world (ticket 1875).
+// A single-product healthcare plant, turn 108 of a funded world.
 // The settlement is what the plant was paid on; the clearing fill is a separate
 // legacy reading of the same turn.
 const T108_SETTLEMENT: RetoolHintSettlement = {
@@ -181,7 +181,7 @@ const GLUTTED = (c: CommodityType) =>
     : { supply: 2_000, demand: 10_000 };
 
 describe("computeRetoolHint on a funded producer market", () => {
-  it("reads the settlement, not the clearing fill, for the ticket 1875 plant", () => {
+  it("reads the settlement, not the clearing fill, for a plant that sold 95% of its offer", () => {
     expect(computeRetoolHint(healthcare())).toBeNull();
     // Even in a glutted book the plant sold 95% of what it offered, so it is
     // climbing on its own and gets no advice. The 55% clearing fill would have
