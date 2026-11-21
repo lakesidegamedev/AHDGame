@@ -8,8 +8,10 @@ describe("isActionRequired", () => {
   });
   it("flags unread action-type notifications", () => {
     expect(isActionRequired({ kind: "notif", unread: true, type: "bill_vote_open" })).toBe(true);
-    expect(isActionRequired({ kind: "notif", unread: true, type: "crisis" })).toBe(true);
     expect(isActionRequired({ kind: "notif", unread: true, type: "election_opened" })).toBe(true);
+  });
+  it("treats broad crisis notifications as updates, even while unread", () => {
+    expect(isActionRequired({ kind: "notif", unread: true, type: "crisis" })).toBe(false);
   });
   it("does not flag non-action or read notifications", () => {
     expect(isActionRequired({ kind: "notif", unread: true, type: "bill_passed_chamber" })).toBe(

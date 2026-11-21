@@ -348,6 +348,7 @@ function StateBillDetailContent() {
                   }}
                   eligible={bill.eligibleSeats}
                   width={460}
+                  passRule="majority"
                 />
               </div>
             )}

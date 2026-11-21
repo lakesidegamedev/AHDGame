@@ -144,6 +144,16 @@ describe("MarketHub", () => {
     await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
   });
 
+  it("counts open Supply Deals from all sources on Overview", async () => {
+    search = "";
+    render(<MarketHub />);
+
+    expect(await screen.findByText("7 open across all sources")).toBeTruthy();
+    expect(
+      calls.some((url) => url.startsWith("/api/supply-offers") && url.includes("kind=all"))
+    ).toBe(true);
+  });
+
   it("restores a collapsed chart from storage", async () => {
     search = "";
     window.localStorage.setItem("market.chartOpen", "0");

@@ -16,6 +16,27 @@ const DEFAULT_PARTY_ROLE_LABELS: Record<PartyRoleLabelKey, string> = {
   treasurer: "National Treasurer",
   committee: "National Committee",
 };
+const OFFICER_ROLES: readonly PartyLeadershipTitleKey[] = ["chair", "viceChair", "treasurer"];
+
+function standardPartyRoleLabel(countryId: string, key: PartyRoleLabelKey): string {
+  const config = COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId];
+  return config?.partyRoleLabels?.[key] ?? DEFAULT_PARTY_ROLE_LABELS[key];
+}
+
+export function partyRoleTitleConflicts(
+  countryId: string,
+  key: PartyLeadershipTitleKey,
+  titles: PartyLeadershipTitles
+): boolean {
+  const title = titles[key]?.trim().toLowerCase();
+  if (!title) return false;
+  return OFFICER_ROLES.some(
+    (role) =>
+      role !== key &&
+      (title === standardPartyRoleLabel(countryId, role).toLowerCase() ||
+        title === titles[role]?.trim().toLowerCase())
+  );
+}
 
 /**
  * Country-aware label for a party leadership / committee role. A party title
@@ -30,12 +51,11 @@ export function getPartyRoleLabel(
   key: PartyRoleLabelKey,
   leadershipTitles?: PartyLeadershipTitles | null
 ): string {
-  const partyTitle = key === "committee" ? null : leadershipTitles?.[key]?.trim();
-  if (partyTitle) return partyTitle;
-
-  const config = COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId];
-  const override = config?.partyRoleLabels?.[key];
-  return override ?? DEFAULT_PARTY_ROLE_LABELS[key];
+  if (key !== "committee" && leadershipTitles) {
+    const partyTitle = leadershipTitles[key]?.trim();
+    if (partyTitle && !partyRoleTitleConflicts(countryId, key, leadershipTitles)) return partyTitle;
+  }
+  return standardPartyRoleLabel(countryId, key);
 }
 
 export const DEFAULT_COMMITTEE_MEMBER_TITLE = "Committeeman";

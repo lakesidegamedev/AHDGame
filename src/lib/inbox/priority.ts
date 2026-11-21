@@ -4,7 +4,7 @@ import type { NotificationType } from "@/lib/db/types/notifications";
 export const ACTION_TYPES: ReadonlySet<NotificationType> = new Set([
   "bill_vote_open",
   "party_whip_issued",
-  "crisis",
+  // Crisis notices go to affected players. The live Crisis Board shows which ones need a response.
   "player_event",
   "ceo_vote_offer",
   "corp_vote_opened",

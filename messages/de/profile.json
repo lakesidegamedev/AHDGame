@@ -256,6 +256,7 @@
       "share": "Teilen"
     },
     "firstDays": {
+      "link": "Erste Schritte",
       "aria": "Deine ersten Tage",
       "title": "Deine ersten Tage",
       "titleYear": "Deine ersten Tage im Jahr {year}",
@@ -270,14 +271,15 @@
       "partyTitle": "Tritt einer Partei bei",
       "partyBody": "Eine Partei gibt dir eine Vorwahl, einen gemeinsamen Aktionspool und Leute zum Planen. Wähle eine, die Mitglieder aus deiner Heimatregion aufnimmt.",
       "partyDone": "Du bist in einer Partei.",
-      "raceTitle": "Tritt in eine Wahl ein, die noch offen ist",
+      "raceTitle": "Finde eine offene Wahl in deiner Nähe",
       "raceBody": "Diese Wahlen in deiner Heimatregion nehmen noch Kandidaten an, die am frühesten schließenden zuerst.",
       "raceCloses": "schließt in {hours} {hours, plural, one {Stunde} other {Stunden}}, {count} {count, plural, one {Kandidat} other {Kandidaten}}",
       "raceCandidates": "{count} {count, plural, one {Kandidat} other {Kandidaten}}",
       "raceNone": "Derzeit kannst du dich in deiner Region für keine Wahl anmelden.",
       "raceDone": "Kandidatur eingereicht.",
       "browseRaces": "Wahlen ansehen",
-      "skippedTour": "Du hast die Tour übersprungen. Die <link>Grundlagen in zwei Minuten</link> findest du hier, wann immer du willst."
+      "skippedTour": "Du hast die Tour übersprungen. Die <link>Grundlagen in zwei Minuten</link> findest du hier, wann immer du willst.",
+      "tutorial": "Im <link>Tutorial</link> findest du weitere Tipps für den Einstieg."
     }
   }
 }

@@ -61,7 +61,9 @@ export function SupplyOfferRow({
 }) {
   const { formatAmount } = useCurrency();
   const takers = corporations.filter((c) => c.id !== offer.corporationId);
-  const [corpId, setCorpId] = useState(takers[0]?.id ?? "");
+  const [selectedCorpId, setSelectedCorpId] = useState("");
+  const corpId =
+    takers.length === 1 ? takers[0].id : (takers.find((c) => c.id === selectedCorpId)?.id ?? "");
   const [volume, setVolume] = useState(String(offer.volumeCap));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -147,15 +149,20 @@ export function SupplyOfferRow({
         <p className="text-xs text-muted">You need a corporation you run to take this offer.</p>
       ) : (
         <div className="flex flex-wrap items-end gap-2">
-          {takers.length > 1 && (
+          {takers.length === 1 ? (
+            <p className="self-center text-xs text-muted">
+              Taking with <span className="font-medium text-foreground">{takers[0].name}</span>
+            </p>
+          ) : (
             <label className="text-xs">
               Take with
               <select
                 className={`${control} block`}
                 value={corpId}
-                onChange={(e) => setCorpId(e.target.value)}
+                onChange={(e) => setSelectedCorpId(e.target.value)}
                 disabled={busy}
               >
+                <option value="">Choose a corporation</option>
                 {takers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -185,12 +192,14 @@ export function SupplyOfferRow({
           >
             {busy ? "Taking..." : "Take offer"}
           </button>
-          <Link
-            href={negotiateHref(corpId, offer)}
-            className="inline-flex h-8 items-center rounded-md border border-card-border px-3 text-xs font-medium text-foreground hover:bg-card-elevated"
-          >
-            Negotiate
-          </Link>
+          {corpId && (
+            <Link
+              href={negotiateHref(corpId, offer)}
+              className="inline-flex h-8 items-center rounded-md border border-card-border px-3 text-xs font-medium text-foreground hover:bg-card-elevated"
+            >
+              Negotiate
+            </Link>
+          )}
         </div>
       )}
       {message && (

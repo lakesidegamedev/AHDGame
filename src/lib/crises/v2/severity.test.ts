@@ -6,6 +6,7 @@ import {
   acceptLeverUses,
   applySeverityStep,
   computeSeverityStep,
+  inactionGraceTurns,
   forecastInaction,
 } from "./severity";
 import type { CrisisInstance } from "./types";
@@ -15,6 +16,23 @@ const def = makeDefinition();
 function inst(extra: Partial<CrisisInstance> = {}): CrisisInstance {
   return { ...createCrisisInstance(def, 0), stage: "onset", severity: 40, ...extra };
 }
+
+it("only advertises a grace period if inactivity can increase severity", () => {
+  expect(inactionGraceTurns(def, "onset")).toBe(1);
+  expect(inactionGraceTurns(def, "aftermath")).toBeNull();
+  expect(
+    inactionGraceTurns(
+      {
+        ...def,
+        severity: {
+          ...def.severity,
+          inaction: { graceTurns: 100_000, maxPerTurn: 0, perTurn: 0, growthPerTurn: 0 },
+        },
+      },
+      "onset"
+    )
+  ).toBeNull();
+});
 
 describe("computeSeverityStep", () => {
   it("adds driver terms scaled by their coefficients", () => {

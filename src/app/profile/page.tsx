@@ -6,6 +6,7 @@ import {
   loadCampaignCurrencyRates,
   loadCampaignPriceLevel,
 } from "@/lib/campaigns/campaignCurrency";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -136,7 +137,7 @@ import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtS
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
-async function getCharacterData() {
+async function getCharacterData(firstStepsRequested: boolean) {
   const user = await getAuthUser();
   if (!user) return null;
 
@@ -221,11 +222,12 @@ async function getCharacterData() {
   // No-op once a character is past its onboarding window.
   after(() => recordOnboardingProgress(db, character));
 
-  // First-days panel for a new character (null once past the first days or
-  // every goal is done). Never let it break the profile.
-  const firstDaysPromise: Promise<FirstDaysData | null> = loadFirstDays(db, character).catch(
-    () => null
-  );
+  const firstDaysPromise: Promise<FirstDaysData | null> = loadFirstDays(
+    db,
+    character,
+    new Date(),
+    firstStepsRequested ? "requested" : "automatic"
+  ).catch(() => null);
 
   // New-player onboarding checklist: derive step completion only while the
   // card is actually shown (not dismissed, reward not yet claimed).
@@ -460,9 +462,17 @@ async function getCharacterData() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default async function ProfilePage() {
-  const [t, locale] = await Promise.all([getTranslations("profile"), getLocale()]);
-  const data = await getCharacterData();
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ firstSteps?: string | string[] }>;
+} = {}) {
+  const [t, locale, query] = await Promise.all([
+    getTranslations("profile"),
+    getLocale(),
+    searchParams,
+  ]);
+  const data = await getCharacterData(query?.firstSteps === "1");
   if (!data) {
     // `getCharacterData` returns null for both "not authenticated" and
     // "authenticated but no character". Disambiguate so an authenticated
@@ -858,13 +868,17 @@ export default async function ProfilePage() {
         notices={
           <>
             <ConstituencySelector />
-            {firstDays && (
+            {firstDays ? (
               <FirstDaysPanel
                 data={firstDays}
                 year={gameYear}
                 campaignCost={campaignCost}
                 partiesHref={partiesUrl(character.countryId)}
               />
+            ) : (
+              <Link href="/profile?firstSteps=1#first-steps" className={PROFILE_LINK_CLASS}>
+                {t("firstDays.link")}
+              </Link>
             )}
             <OnboardingFlaggedCard
               checklist={onboardingChecklist}

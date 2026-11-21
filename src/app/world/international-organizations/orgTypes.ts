@@ -152,6 +152,7 @@ export interface OrgViewerInfo {
   foreignMinisterCountryName: string | null;
   headOfGovernmentOf: CountryId | null;
   headOfGovernmentCountryName: string | null;
+  usRepresentation?: "vacant" | "npp" | null;
   /** Diplomatic actions the viewer's acting country has left this turn. */
   diplomaticActionsRemaining: number;
   /** Per-turn diplomatic-action cap (cosmetic denominator for the UI chip). */

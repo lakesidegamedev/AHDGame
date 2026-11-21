@@ -408,6 +408,10 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
             )}
             {pageTab === "bills" && (
               <CongressBillsTab
+                key={searchParams.get("view")}
+                initialStatusFilter={
+                  searchParams.get("view") === "confirmations" ? "confirmations" : "all"
+                }
                 activeTab={activeTab}
                 canPropose={billsCanPropose}
                 adminOverride={billsAdminOverride}

@@ -24,7 +24,8 @@ interface AlertStateRow {
 const COPY: Record<AlertKind, (name: string) => { title: string; message: string }> = {
   decision: (name) => ({
     title: `${name}: new decision`,
-    message: "A decision is open. Review the options and respond before the window closes.",
+    message:
+      "A decision opened. Check the crisis page to see who can respond and whether it is still open.",
   }),
   stage: (name) => ({
     title: `${name}: developments`,

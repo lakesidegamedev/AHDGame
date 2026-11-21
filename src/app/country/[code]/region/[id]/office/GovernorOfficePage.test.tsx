@@ -8,6 +8,7 @@ import { loadIndependenceDesireSnapshots } from "@/lib/governorOffice/devolution
 import { getDb } from "@/lib/mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import GovernorOfficePage from "./page";
+import { LegislationTab } from "./tabs/LegislationTab";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({}) }));
 vi.mock("@/lib/auth", () => ({ getAuthUserWithCharacter: vi.fn() }));
@@ -81,4 +82,22 @@ describe("regional government sovereignty readout", () => {
     expect(screen.queryByRole("button", { name: "Sovereignty" })).toBeNull();
     expect(loadIndependenceDesireSnapshots).not.toHaveBeenCalled();
   });
+});
+
+it("explains signature and veto when there are no bills on the governor's desk", () => {
+  render(
+    <LegislationTab
+      legislationVersion="v1"
+      countryId="US"
+      stateId="OH"
+      awaitingAssentBills={[]}
+      viewerCanManage
+      legislationActivity={null}
+      eligibleNpps={[]}
+      legislationTypes={[]}
+    />
+  );
+
+  expect(screen.getByRole("heading", { name: "Bills to sign or veto" })).toBeTruthy();
+  expect(screen.getByText(/back to the legislature for an override vote/)).toBeTruthy();
 });

@@ -10,13 +10,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function stubInteraction() {
+function stubInteraction(showCampaignBrief = true) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
       ok: true,
       json: async () => ({
         canInteract: true,
+        showCampaignBrief,
+        responseCurrency: "USD",
         multiResponder: true,
         alreadyResponded: false,
         interaction: {
@@ -34,6 +36,9 @@ function stubInteraction() {
                   optionId: "mobilize",
                   label: "Mobilize and stand firm",
                   description: "Put forces and public credibility behind your position.",
+                  requiredBudget: 4000,
+                  treasuryCostPctGdp: 0.012,
+                  durationReductionTurns: 3,
                   effects: [
                     {
                       effectType: "tick",
@@ -100,6 +105,16 @@ describe("CrisisInteractionPanel national capacity", () => {
     expect(
       screen.getByText(/Logistics reflects support equipment across your formations/i)
     ).toBeTruthy();
+  });
+
+  it("shows the cost and timing on the choice even without a campaign briefing", async () => {
+    stubInteraction(false);
+    render(<CrisisInteractionPanel crisisId="crisis-1" />);
+
+    expect(await screen.findByText(/USD 4,000 from the treasury/)).toBeTruthy();
+    expect(screen.getByText(/1.2% of national GDP/)).toBeTruthy();
+    expect(screen.getByText("Shortens the crisis by up to 3 turns.")).toBeTruthy();
+    expect(screen.queryByText("Treasury debt 77.40% GDP")).toBeNull();
   });
 
   it("does not leak floating-point residue into effect chips", async () => {

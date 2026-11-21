@@ -22,6 +22,7 @@ vi.mock("@/lib/corporations/dailyGrossRevenue", () => ({
   corpDailyGrossRevenuePricingLocal: vi.fn().mockResolvedValue({
     dailyGrossRevenueLocal: 2_635_025_293.53,
     capacityFloorApplied: true,
+    techCashFloorLocal: 4_900_000,
   }),
 }));
 
@@ -80,6 +81,7 @@ describe("GET /api/corporation/[id]/tech", () => {
       dailyGrossOperatingScale: 2_635_025_294,
       defaultRevenueFraction: 0.05,
       capacityFloorApplied: true,
+      minimumCashCost: 4_900_000,
     });
   });
 

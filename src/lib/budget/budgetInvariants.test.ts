@@ -119,7 +119,7 @@ describe("reconcileFederalBudgetInvariants", () => {
           find: () => ({ toArray: async () => budgetDocs }),
           bulkWrite: async (ops: Op[]) => {
             onWrite?.(ops);
-            return { ok: 1 };
+            return { modifiedCount: ops.length };
           },
         };
       },
@@ -150,6 +150,23 @@ describe("reconcileFederalBudgetInvariants", () => {
     expect(ops[0].updateOne.update.$set["debt.interestRate"]).toBeGreaterThan(0);
     expect(ops[0].updateOne.update.$set.debtToGdpRatio).toBeCloseTo(0.05, 10);
     expect(typeof ops[0].updateOne.update.$set.creditRating).toBe("string");
+  });
+
+  it("refreshes the ratio when a bond transaction already updated principal", async () => {
+    const ops: Op[] = [];
+    const db = stubDb(
+      [{ _id: "BAL", countryId: "BAL", ...clean, gdpSmoothed: 80_000, debtToGdpRatio: 0.07 }],
+      bondDocs(5000),
+      (o) => ops.push(...o)
+    );
+    const result = await reconcileFederalBudgetInvariants(db, 673);
+    expect(result.corrected).toBe(1);
+    expect(ops[0].updateOne.filter).toMatchObject({
+      "debt.principal": 5000,
+      gdpSmoothed: 80_000,
+    });
+    expect(ops[0].updateOne.update.$set.debtToGdpRatio).toBeCloseTo(0.0625, 10);
+    expect(ops[0].updateOne.update.$set).not.toHaveProperty("debt.principal");
   });
 
   it("zeroes principal when the ledger is empty, without touching cash", async () => {

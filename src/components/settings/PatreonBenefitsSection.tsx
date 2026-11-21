@@ -542,8 +542,8 @@ export function PatreonBenefitsSection() {
         <div className="mb-4">
           <h5 className="text-base font-semibold text-foreground">Claiming benefits & support</h5>
           <p className="mt-1 text-sm text-muted">
-            Patreon benefits are applied automatically when you link your Patreon account. If your
-            benefits are missing or incorrect, you have two options:
+            If you have a Patreon membership and your in-game benefits are missing or incorrect,
+            open a support ticket or contact the team here.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

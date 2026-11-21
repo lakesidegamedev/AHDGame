@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Slider } from "@/components/ui";
 import {
   IMF_BOARD_RATE_DELTA_BOUND,
+  IMF_BOARD_OVERRIDE_WINDOW_TURNS,
   IMF_BOARD_CAPTURE_DELTA_BOUND,
 } from "@/lib/sovereignDefault/constants";
 
@@ -20,6 +21,7 @@ interface Props {
   overrides: Override[];
   currentTurn: number | null;
   isBoardMember: boolean;
+  isManagingDirector?: boolean;
   onActioned: () => void;
 }
 
@@ -27,13 +29,25 @@ export function PendingBoardOverridesPanel({
   overrides,
   currentTurn,
   isBoardMember,
+  isManagingDirector,
   onActioned,
 }: Props) {
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-sm font-semibold">Pending board decisions</h2>
+      <h2 className="text-sm font-semibold">
+        {isBoardMember ? "Your board decisions" : "IMF board decisions"}
+      </h2>
+      {isManagingDirector && (
+        <p className="mt-1 text-xs font-medium">Your role is managing director.</p>
+      )}
+      <p className="mt-2 text-sm text-muted">
+        A country starts the bailout through its debt crisis process. After a bailout is granted,
+        the board has {IMF_BOARD_OVERRIDE_WINDOW_TURNS} turns to adjust terms or issue a statement.
+        The board can take one action per bailout. If it takes no action, the original terms stay in
+        place.
+      </p>
       {overrides.length === 0 ? (
-        <p className="mt-2 text-xs text-zinc-500">No open override windows.</p>
+        <p className="mt-2 text-sm text-muted">No bailouts are waiting for a board decision.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {overrides.map((o) => (

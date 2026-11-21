@@ -17,6 +17,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
     inputSymbol: "$",
     formatAmount: (n: number) => String(n),
     formatPrice: (n: number) => String(n),
+    formatPriceOrder: (n: number) => String(n),
     forexRates: fx.rates,
     forexSpreadStrengths: {},
     ratesLoading: false,
@@ -95,6 +96,15 @@ function enterQuantity(value: number) {
 afterEach(() => {
   cleanup();
   fx.rates = { USD: 1, GBP: 1 };
+});
+
+it("shows the buy quote separately from the reference price", () => {
+  setup({ corporation: corporation({ sharePrice: 1, marketAskPrice: 1.0025 }) });
+  expect(screen.getByText("Reference price")).toBeTruthy();
+
+  enterQuantity(1000);
+  expect(screen.getByText("Price per share")).toBeTruthy();
+  expect(screen.getByText("1.0025")).toBeTruthy();
 });
 
 describe("holding bucket sale selection", () => {

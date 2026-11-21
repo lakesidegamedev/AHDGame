@@ -38,8 +38,11 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
     .map((sh) => sh.fundId)
     .filter((id): id is ObjectId => id !== undefined);
 
-  const isImperialCeo = corporation.ceoType === "imperial";
-  const isNppCeo = corporation.ceoType === "npp";
+  // The IMF seed assigns a player as director. Older repairs left the previous CEO type behind.
+  const hasImfDirector =
+    corporation.imfInstitution && shareholderIds.some((id) => id.equals(corporation.ceoId));
+  const isImperialCeo = !hasImfDirector && corporation.ceoType === "imperial";
+  const isNppCeo = !hasImfDirector && corporation.ceoType === "npp";
   const ceoPromise = isImperialCeo
     ? imperialCharactersCollection<Document>(db).findOne(
         { _id: corporation.ceoId },

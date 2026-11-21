@@ -143,7 +143,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
   const hasSession = useHasSession();
   const offers = useMarketJson<SupplyOffersResponse>(
     hasSession && (tab === "overview" || tab === "commodities")
-      ? `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
+      ? `/api/supply-offers?${offersQuery({ ...DEFAULT_OFFER_FILTERS, kind: "all" }, 1, SUPPLY_PAGE_SIZE)}`
       : null
   );
   const list = commodities.data?.commodities ?? null;
@@ -291,6 +291,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
               commoditiesLoading={commodities.loading}
               sectorsLoading={sectors.loading}
               offersLoading={offers.loading}
+              offersError={offers.error}
             />
           )}
           {tab === "stocks" && <StocksPanel exchange={exchangeApi} />}
