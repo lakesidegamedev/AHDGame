@@ -496,6 +496,12 @@ export const FUNDAMENTAL_GROWTH_PREMIUM_WEIGHT = 0.15;
 /** Number of political turns used to compute the rolling-average earnings. */
 export const FUNDAMENTAL_ROLLING_AVG_TURNS = 3;
 
+/**
+ * Settled turns of profit a funded sector's value averages. Even, so a run that
+ * alternates good and bad turns averages to a steady value.
+ */
+export const FUNDED_VALUATION_PROFIT_TURNS = 4;
+
 // ─── Bond-income interest-rate-risk valuation adjustments ─────────────────
 /**
  * Multiplier applied to the bond-coupon-derived slice of normalized earnings

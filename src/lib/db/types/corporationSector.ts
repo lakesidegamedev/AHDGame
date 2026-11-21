@@ -686,6 +686,13 @@ export interface CorporateSector {
    */
   plantsUpkeepMarginBasisAnchor?: number;
   /**
+   * Funded valuation: profit per turn (anchor) of the last few settled turns,
+   * oldest first, keyed by settled turn. The sector's value capitalizes their
+   * average. Written by the corporation turn; absent until a funded turn values
+   * the sector.
+   */
+  valuationProfitHistory?: { turn: number; profit: number }[];
+  /**
    * The assembled physical P&L the turn actually booked for this sector,
    * persisted so read surfaces stop rebuilding it from `effectiveProfitMargin`.
    *
