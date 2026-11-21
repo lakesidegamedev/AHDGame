@@ -123,11 +123,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       return p?.abbreviation ?? p?.name ?? party;
     };
 
+    const leaderCharacter = leader?.characterId
+      ? await charactersCollection(db).findOne(
+          { _id: leader.characterId },
+          { projection: { sequentialId: 1, avatarUrl: 1 } }
+        )
+      : null;
+
     return NextResponse.json({
       leader: leader
         ? {
             characterId: leader.characterId?.toString() ?? null,
             characterName: leader.characterName,
+            avatarUrl: leaderCharacter?.avatarUrl,
+            profileHref: leaderCharacter
+              ? `/character/${leaderCharacter.sequentialId ?? leaderCharacter._id}`
+              : undefined,
             party: resolvePartyLabel(leader.party),
           }
         : null,

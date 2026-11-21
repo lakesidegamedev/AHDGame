@@ -1,6 +1,5 @@
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
-import Link from "next/link";
 import {
   getGovernmentFormationsCollection,
   getPMAppointmentVotesCollection,
@@ -15,7 +14,7 @@ import { PartyChip } from "@/app/congress/components/CongressShared";
 import { SectionLabel } from "@/components/ui";
 import { OfficePlaques } from "./components/OfficePlaques";
 import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
-import { Avatar } from "@/components/Avatar";
+import { OfficeholderPortrait } from "@/components/OfficeholderPortrait";
 import type { Character, CongressLeader, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import {
   type CountryId,
@@ -763,47 +762,29 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
         <div className="space-y-6">
           <div className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
             <div className="p-6">
-              <SectionLabel as="h3">Leader of the opposition</SectionLabel>
-              {oppositionLeaderChar ? (
-                <div className="flex items-center gap-4">
-                  <Link href={oppositionHref!} className="shrink-0">
-                    <Avatar
-                      url={oppositionLeaderChar.avatarUrl}
-                      name={oppositionLeaderChar.name}
-                      size="h-16 w-16"
-                      className="rounded-xl text-2xl ring-2 ring-card-border"
-                    />
-                  </Link>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={oppositionHref!}
-                      className="text-body-lg font-semibold text-foreground transition-colors hover:text-primary"
-                    >
-                      {oppositionLeaderChar.name}
-                    </Link>
-                    <div className="mt-1">
-                      {oppositionPartyDoc ? (
-                        <PartyChip
-                          partyName={oppositionPartyDoc.name}
-                          partyColor={oppositionPartyDoc.color}
-                          partyId={oppositionLeaderChar.party}
-                          countryId={countryId}
-                          logoUrl={oppositionPartyDoc.logoUrl}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
+              <OfficeholderPortrait
+                role={<SectionLabel as="h3">Leader of the opposition</SectionLabel>}
+                holder={
+                  oppositionLeaderChar && {
+                    name: oppositionLeaderChar.name,
+                    avatarUrl: oppositionLeaderChar.avatarUrl,
+                    href: oppositionHref ?? undefined,
+                  }
+                }
+              />
+              {oppositionLeaderChar && oppositionPartyDoc && (
+                <div className="mt-2 flex justify-center">
+                  <PartyChip
+                    partyName={oppositionPartyDoc.name}
+                    partyColor={oppositionPartyDoc.color}
+                    partyId={oppositionLeaderChar.party}
+                    countryId={countryId}
+                    logoUrl={oppositionPartyDoc.logoUrl}
+                  />
                 </div>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-card-elevated text-2xl text-muted ring-2 ring-dashed ring-card-border">
-                    —
-                  </div>
-                  <div className="flex-1">
-                    <p className="italic text-muted">Vacant</p>
-                    <p className="mt-0.5 text-body-sm text-muted">{surface.oppositionNote}</p>
-                  </div>
-                </div>
+              )}
+              {!oppositionLeaderChar && (
+                <p className="mt-2 text-center text-body-sm text-muted">{surface.oppositionNote}</p>
               )}
             </div>
           </div>

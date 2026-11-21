@@ -419,6 +419,7 @@ export async function getNationalCommitteeState(
             id: member.sequentialId?.toString() ?? member._id.toString(),
             sequentialId: member.sequentialId,
             name: member.name,
+            avatarUrl: member.avatarUrl,
           }));
 
   const election =

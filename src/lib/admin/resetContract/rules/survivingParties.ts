@@ -62,6 +62,7 @@ export const PARTY_FIELD_CONTRACT: PartyFieldContract = Object.freeze({
 
   territoryMutation: clear(WORLD),
   leadershipTitles: clear("Officer titles are set by the old world's officers."),
+  committeeTitles: clear("Committee and member titles are set by the old world's chair."),
   politicalStrengthCap: clear(WORLD),
   psInvestmentBudget: clear(WORLD),
   nppActionPoints: clear(WORLD),
