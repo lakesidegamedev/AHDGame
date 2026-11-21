@@ -1,3 +1,13 @@
+import { createHash } from "node:crypto";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
+import type { LedgerEntry } from "@/lib/ledger/types";
+import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
+import { householdOpeningAlreadyApplied, reconcileAppliedFunding } from "./fundingRetryReconcile";
+import { producerMoveLedgerLegs } from "@/lib/market/producerMarket/liveFundingRules";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+
+import { resumeFundedProducerTurn, snapshotFundedHost } from "./fundedProducerRecovery";
+import { reconcileExcludedEntrants } from "./reconcileExcludedEntrants";
 import { settleFundedProducerTurn } from "@/lib/turn/corporation/settleFundedProducerTurn";
 /**
  * The live funded producer turn.
@@ -16,17 +26,12 @@ import { settleFundedProducerTurn } from "@/lib/turn/corporation/settleFundedPro
  * margin from it, and the producer profit per corporation the settlement paid.
  */
 
-import { createHash } from "node:crypto";
-import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
-import type { LedgerEntry } from "@/lib/ledger/types";
 import {
   FISCAL_SCALE_STAGE,
   bookPrimarySpendingPerTurn,
   treasuryPublicFunding,
 } from "@/lib/budget/rules/fiscalScale";
 import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
-import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
-import { householdOpeningAlreadyApplied, reconcileAppliedFunding } from "./fundingRetryReconcile";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -41,7 +46,6 @@ import {
   householdTransferMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
-  producerMoveLedgerLegs,
   batchProducerMoves,
   publicFundingMoves,
   treasuryPublicFundingMoves,
@@ -104,7 +108,6 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
-import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 import { producerHouseholdSourceCollection } from "@/lib/db/repositories/producerHouseholdSource";
 import { producerPublicCarryCollection } from "@/lib/db/repositories/producerPublicCarry";
@@ -261,6 +264,13 @@ async function prepareRunFundedProducerTurn(
 ) {
   const { lookups, worldEpoch, turn } = input;
   const openingTurn = await readProducerOpeningTurn(db, worldEpoch, turn);
+  const entrantOpeningTurns = await reconcileExcludedEntrants(
+    db,
+    lookups,
+    worldEpoch,
+    turn,
+    openingTurn
+  );
   await admitNewProducerEntrants(db, lookups, worldEpoch, turn);
   const rates = lookups.exchangeRatesByCurrency;
   const rateOf = (code: string | null | undefined) => {
@@ -366,6 +376,7 @@ async function prepareRunFundedProducerTurn(
   const demandEnv = {
     ...input.env,
     producerOpeningTurn: openingTurn,
+    producerOpeningTurnsBySector: entrantOpeningTurns,
     ...(lastClearing
       ? { lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
       : {}),
@@ -429,59 +440,7 @@ async function prepareRunFundedProducerTurn(
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
   await createProducerWallets(db, worldEpoch, walletScopes);
 
-  const apply = async (
-    moves: ReturnType<typeof publicFundingMoves>,
-    options: { tolerateRejected?: boolean } = {}
-  ) => {
-    const entries: LedgerEntry[] = [];
-    for (const move of moves) {
-      let result = await applyMoneyMove(db, move);
-      // An existing key may be a move a crash left half done: finish it.
-      if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
-      // A Treasury-funded move whose guarded debit found less cash than read
-      // moved nothing; the public buyer goes without this turn.
-      if (result.status === "rejected" && options.tolerateRejected) continue;
-      // Turn 697 (2026-11-05): an attempt applied this turn's funding batch, then failed later in
-      // the turn. Each retry rebuilt the batch with slightly different amounts under the same key,
-      // which the journal rightly refused, and the turn stalled for hours. A mint-and-credit batch
-      // whose key is already applied this turn is brought to the new amounts with one keyed
-      // correction per retry instead of being re-minted.
-      if (result.status === "rejected") {
-        const corrected = await reconcileAppliedFunding(db, move);
-        if (corrected) continue;
-        // The household opening seed lands once per world (its key carries the
-        // world epoch). A retry after a later failure in the same turn rebuilds it
-        // from that attempt's wage bill, so the amount can differ and the journal
-        // refuses the repeat. The seed already landed: it is done, not a failure.
-        if (await householdOpeningAlreadyApplied(db, move)) continue;
-      }
-      if (result.status !== "applied" && result.status !== "replayed")
-        throw new Error(`Producer money move ${move.key} ${result.status}`);
-      // Witness the move in the ledger, like the settlement witnesses its own
-      // cash; the id derives from the move key, so a replay adds nothing.
-      const legs = producerMoveLedgerLegs(move);
-      if (legs)
-        entries.push({
-          _id: new ObjectId(
-            createHash("sha256").update(`${move.key}:ledger`).digest("hex").slice(0, 24)
-          ),
-          turn,
-          createdAt: new Date(),
-          txType: "producer_market_transfer",
-          legs,
-          balanced: Math.abs(legs.reduce((sum, leg) => sum + leg.anchorAmount, 0)) < 1e-6,
-          emitSite: "producerMarket/fundedProducerTurn",
-        });
-    }
-    if (entries.length > 0)
-      await ledgerEntriesCollection(db)
-        .insertMany(entries, { ordered: false })
-        .catch((error: unknown) => {
-          // Duplicate ids are replays already witnessed; anything else is real.
-          const writeErrors = (error as { writeErrors?: { code?: number }[] }).writeErrors;
-          if (!writeErrors || writeErrors.some((e) => e.code !== 11000)) throw error;
-        });
-  };
+  const apply = producerMoveApplier(db, turn);
 
   const publicFundingRows = demand.funding.map((f) => {
     const currency = countryCurrency.get(f.countryId)!;
@@ -859,6 +818,7 @@ async function prepareRunFundedProducerTurn(
         (transfer) => input.withholdCorporateTax !== true || transfer.reason !== "ai_dividend"
       ),
       meta: {
+        fundedHost: snapshotFundedHost(hostContext),
         deferredCorporateDistributions,
         paidByCountry: paid,
         supportBySector: bySector,
@@ -898,43 +858,41 @@ async function prepareRunFundedProducerTurn(
     plans: demand.preparedSectors.map((p) => p.plan),
     stateCorpIds,
   });
-  return {
-    kind: "context" as const,
-    context: {
-      advanceCtx,
-      apply,
-      background,
-      budgetIdByCountry,
-      carryShare,
-      closeAtSettlement,
-      corpById,
-      countryCurrency,
-      db,
-      demand,
-      fundedReceiptOf,
-      idleSectorIds,
-      input,
-      investmentWallet,
-      lastOutcome,
-      lookups,
-      openingShareByCountry,
-      openingTurn,
-      publicWallet,
-      rateOf,
-      scopeById,
-      shortageOn,
-      stateAdvances,
-      tariffCollector,
-      tariffScopes,
-      traders,
-      treasuryFunded,
-      turn,
-      validRevenueShare,
-      worldEpoch,
-      walletScopes,
-      rates,
-    },
+  const hostContext = {
+    advanceCtx,
+    apply,
+    background,
+    budgetIdByCountry,
+    carryShare,
+    closeAtSettlement,
+    corpById,
+    countryCurrency,
+    db,
+    demand,
+    fundedReceiptOf,
+    idleSectorIds,
+    input,
+    investmentWallet,
+    lastOutcome,
+    lookups,
+    openingShareByCountry,
+    openingTurn,
+    publicWallet,
+    rateOf,
+    scopeById,
+    shortageOn,
+    stateAdvances,
+    tariffCollector,
+    tariffScopes,
+    traders,
+    treasuryFunded,
+    turn,
+    validRevenueShare,
+    worldEpoch,
+    walletScopes,
+    rates,
   };
+  return { kind: "context" as const, context: hostContext };
 }
 export type RunFundedProducerTurnStageContext = Extract<
   Awaited<ReturnType<typeof prepareRunFundedProducerTurn>>,
@@ -944,6 +902,8 @@ export type RunFundedProducerTurnStageContext = Extract<
 export async function runFundedProducerTurn(
   ...args: Parameters<typeof prepareRunFundedProducerTurn>
 ): Promise<FundedProducerTurnResult> {
+  const resumed = await resumeFundedProducerTurn(...args);
+  if (resumed) return resumed;
   const prepared = await prepareRunFundedProducerTurn(...args);
   return settleFundedProducerTurn(prepared.context);
 }
@@ -1125,4 +1085,56 @@ async function loadTreasuryFundingBudgets(
 /** A configured sales-advance revenue share is used only inside (0, 1]. */
 function validRevenueShare(share: number | undefined): share is number {
   return typeof share === "number" && Number.isFinite(share) && share > 0 && share <= 1;
+}
+
+export function producerMoveApplier(db: Db, turn: number) {
+  return async (
+    moves: ReturnType<typeof publicFundingMoves>,
+    options: { tolerateRejected?: boolean } = {}
+  ) => {
+    const entries: LedgerEntry[] = [];
+    for (const move of moves) {
+      let result = await applyMoneyMove(db, move);
+      // An existing key may be a move a crash left half done: finish it.
+      if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
+      // A Treasury-funded move whose guarded debit found less cash than read
+      // moved nothing; the public buyer goes without this turn.
+      if (result.status === "rejected" && options.tolerateRejected) continue;
+      // Reconcile a previously applied funding batch rather than minting it twice.
+      if (result.status === "rejected") {
+        const corrected = await reconcileAppliedFunding(db, move);
+        if (corrected) continue;
+        // The household opening seed lands once per world (its key carries the
+        // world epoch). A retry after a later failure in the same turn rebuilds it
+        // from that attempt's wage bill, so the amount can differ and the journal
+        // refuses the repeat. The seed already landed: it is done, not a failure.
+        if (await householdOpeningAlreadyApplied(db, move)) continue;
+      }
+      if (result.status !== "applied" && result.status !== "replayed")
+        throw new Error(`Producer money move ${move.key} ${result.status}`);
+      // Witness the move in the ledger, like the settlement witnesses its own
+      // cash; the id derives from the move key, so a replay adds nothing.
+      const legs = producerMoveLedgerLegs(move);
+      if (legs)
+        entries.push({
+          _id: new ObjectId(
+            createHash("sha256").update(`${move.key}:ledger`).digest("hex").slice(0, 24)
+          ),
+          turn,
+          createdAt: new Date(),
+          txType: "producer_market_transfer",
+          legs,
+          balanced: Math.abs(legs.reduce((sum, leg) => sum + leg.anchorAmount, 0)) < 1e-6,
+          emitSite: "producerMarket/fundedProducerTurn",
+        });
+    }
+    if (entries.length > 0)
+      await ledgerEntriesCollection(db)
+        .insertMany(entries, { ordered: false })
+        .catch((error: unknown) => {
+          // Duplicate ids are replays already witnessed; anything else is real.
+          const writeErrors = (error as { writeErrors?: { code?: number }[] }).writeErrors;
+          if (!writeErrors || writeErrors.some((e) => e.code !== 11000)) throw error;
+        });
+  };
 }
