@@ -16,10 +16,14 @@ import type { MarketContext } from "@/lib/market/marketContext";
 import type { buildCorporationLookups } from "./buildLookups";
 import {
   computeBrandLoyaltyUpdates,
+  computeFundedBrandLoyaltyUpdates,
   type CorpLoyaltyInput,
   type CorpLoyaltyUpdate,
+  type FundedCorpLoyaltyInput,
+  type FundedLoyaltySectorInput,
   type LoyaltySectorInput,
 } from "./brandLoyaltyTurn";
+import { fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
 import {
   getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
@@ -124,6 +128,11 @@ export interface ClearingPrePassInput {
    * Absent or false on legacy turns, which are unchanged.
    */
   fundedProducerTurn?: boolean;
+  /**
+   * The funded world's epoch on a funded producer turn. Brand loyalty then
+   * scores what plants really sold (computeFundedBrandLoyaltyUpdates).
+   */
+  fundedWorldEpoch?: string;
 }
 
 /**
@@ -169,7 +178,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     politicalMediaOrders = [],
     treasuryCashLedgerEnabled,
     fundedProducerTurn = false,
+    fundedWorldEpoch,
   } = input;
+  const fundedLoyaltyEpoch = fundedProducerTurn ? fundedWorldEpoch : undefined;
   let { contractedByCorpCommodity } = input;
   // The era price table depends only on the world's unit scale. Every offer leg
   // in this pass (and every per-commodity mix weight) reads it, so it is built
@@ -187,7 +198,13 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
   // clearing-input build, joined to clearing results after the pass.
   const loyaltySectorMeta = new Map<
     string,
-    { corpId: string; revenueAnchor: number; commodities: string[] }
+    {
+      corpId: string;
+      revenueAnchor: number;
+      commodities: string[];
+      /** Funded turn, non-media: funded sell-through, null with no current sale. */
+      fundedFill?: number | null;
+    }
   >();
   const sectorCorpId = new Map<string, string>();
   // Clearing invariant breaches for this turn's warning channel. Deterministic text per book so replays record each breach once downstream.
@@ -633,6 +650,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             commodities: Object.keys(rates.supply ?? {}).filter(
               (c) => (rates.supply?.[c as keyof typeof rates.supply] ?? 0) > 0
             ),
+            ...(fundedLoyaltyEpoch && sector.sectorType !== "media"
+              ? { fundedFill: fundedSellThrough(sector, fundedLoyaltyEpoch, turn ?? 0) }
+              : {}),
           });
         }
       }
@@ -1042,7 +1062,40 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     // results and advance each corp's loyalty. Shadow-safe, the resulting
     // brandLoyalty/brandPostureNorm are persisted, but nothing READS them until
     // the slice pre-pass (A2b, brandLoyaltySliceEnabled) is turned on.
-    if (brandLoyaltyEnabled) {
+    if (brandLoyaltyEnabled && fundedLoyaltyEpoch) {
+      // Funded turn: fill is what each plant really sold. Media advertising
+      // still settles in this pass, so its clearing fill is its real sale.
+      const byCorp = new Map<string, FundedCorpLoyaltyInput>();
+      for (const [sectorId, meta] of loyaltySectorMeta) {
+        let fill: number | null | undefined = meta.fundedFill;
+        if (fill === undefined) {
+          const clearing = market.clearingBySectorId?.get(sectorId);
+          fill =
+            clearing && clearingFillMeasured(clearing, lookups.initializedLaggedBooks)
+              ? clearing.soldFraction
+              : null;
+        }
+        // No current sale on record: no loyalty signal from this sector.
+        if (fill == null) continue;
+        let entry = byCorp.get(meta.corpId);
+        if (!entry) {
+          const corp = lookups.corpById.get(meta.corpId);
+          entry = {
+            corpId: meta.corpId,
+            priorLoyalty: corp?.brandLoyalty,
+            priorNorm: corp?.brandPostureNorm,
+            sectors: [],
+          };
+          byCorp.set(meta.corpId, entry);
+        }
+        (entry.sectors as FundedLoyaltySectorInput[]).push({
+          revenueAnchor: meta.revenueAnchor,
+          fill,
+          commodities: meta.commodities,
+        });
+      }
+      brandLoyaltyUpdates = computeFundedBrandLoyaltyUpdates([...byCorp.values()]);
+    } else if (brandLoyaltyEnabled) {
       const byCorp = new Map<string, CorpLoyaltyInput>();
       for (const [sectorId, meta] of loyaltySectorMeta) {
         const clearing = market.clearingBySectorId?.get(sectorId);
@@ -1068,6 +1121,8 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         });
       }
       brandLoyaltyUpdates = computeBrandLoyaltyUpdates([...byCorp.values()]);
+    }
+    if (brandLoyaltyEnabled) {
       // Keep the in-memory corp docs consistent with the just-computed values so
       // the corporationHistory snapshot (built later from corpById) charts the
       // CURRENT turn's loyalty, not last turn's.

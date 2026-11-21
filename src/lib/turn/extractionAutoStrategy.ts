@@ -51,6 +51,7 @@ import { isParentDirectedStrategyProtected } from "@/lib/turn/npp/rules/parentDi
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { nppSoldShare, soldShareWorldOf } from "@/lib/turn/npp/rules/fundedSellThrough";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
@@ -320,6 +321,9 @@ export async function processExtractionAutoStrategy(
   preloadedGameState?: {
     lastExtractionAutoStrategyTurn?: number;
     nppEntryViabilityMode?: NppEntryViabilityMode;
+    /** With producerOpening, selects the funded sold share (rules/fundedSellThrough). */
+    worldEpochId?: string;
+    producerOpening?: { worldEpoch: string; turn: number };
   }
 ): Promise<ExtractionAutoStrategyResult> {
   const lastTurn = preloadedGameState?.lastExtractionAutoStrategyTurn ?? 0;
@@ -329,6 +333,7 @@ export async function processExtractionAutoStrategy(
   const placementViabilityMode = nppEntryViabilityModeFrom(
     preloadedGameState?.nppEntryViabilityMode
   );
+  const soldShareWorld = soldShareWorldOf(preloadedGameState, currentTurn);
 
   // Resolved ONCE per run and threaded into both passes' rescale calls — the
   // D9 capacity renormalization below is plants-only.
@@ -602,6 +607,7 @@ export async function processExtractionAutoStrategy(
       | "stateId"
       | "strategyId"
       | "soldFraction"
+      | "producerSettlement"
       | "transitionCooldownUntilTurn"
       | "parentDirectedStrategy"
       | "capitalStock"
@@ -626,6 +632,10 @@ export async function processExtractionAutoStrategy(
         stateId: 1,
         strategyId: 1,
         soldFraction: 1,
+        "producerSettlement.worldEpoch": 1,
+        "producerSettlement.turn": 1,
+        "producerSettlement.offeredUnits": 1,
+        "producerSettlement.soldUnits": 1,
         transitionCooldownUntilTurn: 1,
         parentDirectedStrategy: 1,
         capitalStock: 1,
@@ -733,7 +743,7 @@ export async function processExtractionAutoStrategy(
         strategies,
         priceRatioOf,
         headroomOf,
-        soldFraction: s.soldFraction,
+        soldFraction: nppSoldShare(s, soldShareWorld),
         scoreOf: forecastContext
           ? (strategy) =>
               forecastStrategyContribution(

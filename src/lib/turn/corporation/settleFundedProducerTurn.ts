@@ -45,6 +45,7 @@ import { fundedShortageBuildOps } from "@/lib/turn/corporation/sectorTurn/shorta
 import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
+import { fundedLowSaleStreakStep, fundedSellThrough } from "@/lib/turn/npp/rules/fundedSellThrough";
 
 import { returnStateRunAdvances } from "@/lib/turn/corporation/stateRunAdvance";
 import { backgroundTradeOutcomes } from "@/lib/market/producerMarket/backgroundTradeRules";
@@ -277,6 +278,8 @@ export async function publishFundedProducerTurn(
   // A plant whose run short inputs cut was billed wages on the share it made;
   // its reported crew is that share of the planned crew.
   const headcountBySectorId = new Map(context.demand.headcountBySectorId);
+  // This turn's sell-through per settled sector, for the low-sale streak.
+  const sellThroughBySectorId = new Map<string, number | null>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
     const billed =
@@ -304,6 +307,10 @@ export async function publishFundedProducerTurn(
         fundedDemandThrottle(r.soldUnits, r.offeredUnits)
       );
       throughputBySectorId.set(sector._id.toHexString(), fundedInputThroughput(r));
+      sellThroughBySectorId.set(
+        sector._id.toHexString(),
+        fundedSellThrough({ producerSettlement: r }, context.worldEpoch)
+      );
     }
   }
   // Consecutive zero-sales turns per settled sector (AI mothballing reads it),
@@ -329,32 +336,24 @@ export async function publishFundedProducerTurn(
           "producerSettlement.turn": context.turn,
           "producerSettlement.zeroSalesCounted": { $ne: true },
         },
-        update:
+        // A resumed turn whose outcomes were already published may have counted
+        // its streaks: it can still reset them, never extend them again.
+        update: settledSectorCounterUpdate(
+          {
+            "producerSettlement.zeroSalesCounted": true,
+            demandThrottleFactor: throttle,
+            ...throughput,
+          },
           soldUnits > 0
-            ? {
-                $set: {
-                  "producerSettlement.zeroSalesCounted": true,
-                  demandThrottleFactor: throttle,
-                  ...throughput,
-                  producerZeroSalesTurns: 0,
-                },
-              }
+            ? "reset"
             : receipt.producedUnits > 0 && !context.zeroSalesPreviouslyPublished
-              ? {
-                  $inc: { producerZeroSalesTurns: 1 },
-                  $set: {
-                    "producerSettlement.zeroSalesCounted": true,
-                    demandThrottleFactor: throttle,
-                    ...throughput,
-                  },
-                }
-              : {
-                  $set: {
-                    "producerSettlement.zeroSalesCounted": true,
-                    demandThrottleFactor: throttle,
-                    ...throughput,
-                  },
-                },
+              ? "increment"
+              : "hold",
+          noRepeatIncrement(
+            fundedLowSaleStreakStep(sellThroughBySectorId.get(id) ?? null),
+            context.zeroSalesPreviouslyPublished === true
+          )
+        ),
       },
     });
   }
@@ -830,4 +829,30 @@ export async function publishFundedProducerTurn(
     deferredDistributions,
     turnWarnings: [...(settled.result.turnWarnings ?? []), ...context.background.warnings],
   };
+}
+
+type StreakStep = "increment" | "reset" | "hold";
+
+/**
+ * One settled sector's write: the given fields plus the zero-sales and
+ * low-sale streaks. A reset sets the counter to 0, an increment adds one, a
+ * hold leaves the stored value untouched.
+ */
+export function settledSectorCounterUpdate(
+  set: Partial<CorporateSector> & { "producerSettlement.zeroSalesCounted"?: true },
+  zeroSales: StreakStep,
+  lowSale: StreakStep
+): { $set: Record<string, unknown>; $inc?: Record<string, number> } {
+  const $set: Record<string, unknown> = { ...set };
+  const $inc: Record<string, number> = {};
+  if (zeroSales === "reset") $set.producerZeroSalesTurns = 0;
+  else if (zeroSales === "increment") $inc.producerZeroSalesTurns = 1;
+  if (lowSale === "reset") $set.fundedLowSaleTurns = 0;
+  else if (lowSale === "increment") $inc.fundedLowSaleTurns = 1;
+  return Object.keys($inc).length > 0 ? { $set, $inc } : { $set };
+}
+
+/** A replayed settlement may reset a streak but never extends it twice. */
+export function noRepeatIncrement(step: StreakStep, alreadyPublished: boolean): StreakStep {
+  return alreadyPublished && step === "increment" ? "hold" : step;
 }

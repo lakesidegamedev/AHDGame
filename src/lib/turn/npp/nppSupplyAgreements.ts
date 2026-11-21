@@ -6,6 +6,11 @@ import type {
   NppAgreementDecision,
 } from "@/lib/logistics/nppSupplyDecisions";
 import {
+  nppSoldShare,
+  soldShareWorldOf,
+  type SoldShareWorld,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
+import {
   NPP_CONTRACT_MAX_ACCEPT_PREMIUM,
   NPP_CONTRACT_GLUT_PREMIUM,
   commoditiesOf,
@@ -274,6 +279,10 @@ export const NPP_SUPPLY_SECTOR_PROJECTION = {
   capitalStock: 1,
   producedUnits: 1,
   soldFraction: 1,
+  "producerSettlement.worldEpoch": 1,
+  "producerSettlement.turn": 1,
+  "producerSettlement.offeredUnits": 1,
+  "producerSettlement.soldUnits": 1,
   throughputFactor: 1,
   mothballed: 1,
   strategyId: 1,
@@ -348,7 +357,16 @@ export function toExistingNppAgreement(a: SupplyAgreement): ExistingNppAgreement
   };
 }
 
-export function toParty(corp: Corporation, sectors: CorporateSector[]): NppAgreementParty {
+/**
+ * `soldFraction` on each party sector is the sold share the contract rules
+ * read (rules/fundedSellThrough nppSoldShare): funded sales on a funded turn,
+ * the legacy figure otherwise. Without a world it is the legacy figure.
+ */
+export function toParty(
+  corp: Corporation,
+  sectors: CorporateSector[],
+  soldShareWorld?: SoldShareWorld
+): NppAgreementParty {
   return {
     corpId: corp._id.toString(),
     countryId: corp.countryId,
@@ -358,7 +376,7 @@ export function toParty(corp: Corporation, sectors: CorporateSector[]): NppAgree
       sectorType: s.sectorType,
       capitalStock: s.capitalStock,
       producedUnits: s.producedUnits,
-      soldFraction: s.soldFraction,
+      soldFraction: soldShareWorld ? nppSoldShare(s, soldShareWorld) : s.soldFraction,
       throughputFactor: s.throughputFactor,
       mothballed: s.mothballed,
       strategyId: s.strategyId,
@@ -612,7 +630,10 @@ export async function processNppSupplyAgreements(
     }>(db)
       .find({})
       .toArray(),
-    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, worldEpochId: 1, producerOpening: 1 } }
+    ),
     tradeEmbargoesCollection(db)
       .find(
         {
@@ -669,7 +690,10 @@ export async function processNppSupplyAgreements(
     sectorsByCorp.set(key, list);
   }
 
-  const parties = nppCorps.map((c) => toParty(c, sectorsByCorp.get(c._id.toString()) ?? []));
+  const soldShareWorld = soldShareWorldOf(gameState, turn);
+  const parties = nppCorps.map((c) =>
+    toParty(c, sectorsByCorp.get(c._id.toString()) ?? [], soldShareWorld)
+  );
   const nppIds = new Set(nppCorps.map((c) => c._id.toString()));
 
   const agreements: ExistingNppAgreement[] = rawAgreements.map(toExistingNppAgreement);
