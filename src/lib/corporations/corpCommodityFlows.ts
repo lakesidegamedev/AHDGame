@@ -104,9 +104,9 @@ export interface CorpCommodityFlow {
   icon: string;
   color: string;
   unit: string;
-  /** Physical output units per turn (0 when the corp only consumes it). */
+  /** Physical output units per day (0 when the corp only consumes it). */
   outputUnits: number;
-  /** Physical consumption units per turn (0 when the corp only produces it). */
+  /** Physical consumption units per day (0 when the corp only produces it). */
   consumptionUnits: number;
   /** outputUnits − consumptionUnits (net physical position). */
   netUnits: number;

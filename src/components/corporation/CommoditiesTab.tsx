@@ -112,7 +112,7 @@ export default function CommoditiesTab({
     const priced = rows.filter((c) => c.market.price != null);
     const total = priced.reduce((sum, c) => sum + amount(c) * (c.market.price ?? 0), 0);
     const count = `${rows.length} ${rows.length === 1 ? "commodity" : "commodities"}`;
-    return priced.length > 0 ? `${count}, ${formatAmount(total)} per turn` : count;
+    return priced.length > 0 ? `${count}, ${formatAmount(total)}/day at market prices` : count;
   };
 
   const stockCells = (c: CorpCommodityFlow) => {
@@ -218,15 +218,18 @@ export default function CommoditiesTab({
                       <Th align="right">Consumed</Th>
                       <Th
                         align="right"
-                        title="Consumption valued at the current market price, per turn"
+                        title="Input use per day valued at the current market price"
                       >
-                        Cost
+                        Market value
                       </Th>
                     </>
                   ) : (
                     <>
                       <Th align="right">Output</Th>
-                      <Th align="right" title="Output valued at the current market price, per turn">
+                      <Th
+                        align="right"
+                        title="Production per day valued at the current market price"
+                      >
                         Value
                       </Th>
                       <Th
@@ -235,7 +238,10 @@ export default function CommoditiesTab({
                       >
                         Net production
                       </Th>
-                      <Th align="right" title="Net production valued at the current market price">
+                      <Th
+                        align="right"
+                        title="Net production per day valued at the current market price"
+                      >
                         Net value
                       </Th>
                     </>
@@ -297,16 +303,17 @@ export default function CommoditiesTab({
   return (
     <div className="space-y-6">
       <DenseSection
-        title="Per-turn commodity flows"
+        title="Daily commodity flows"
         meta={`${commodities.length} ${commodities.length === 1 ? "commodity" : "commodities"}`}
       >
         <p className="py-1 text-xs text-muted">
-          Net production is this corporation&apos;s own output minus its input use, added up across
-          every site. Purchases do not change it. A surplus here does not mean your own plants got
-          it: output reaches another of your sites only through your supply policy and freight. The
-          private supply line under a commodity shows where consumed inputs came from. Stock and
-          cover are the world&apos;s shadow inventory from the market ledger, not this
-          corporation&apos;s.
+          Market value uses current prices for all output and input use. Cash sales and purchases
+          come from actual trades. Net production is this corporation&apos;s own output minus its
+          input use, added up across every site. Purchases do not change it. A surplus here does not
+          mean your own plants got it: output reaches another of your sites only through your supply
+          policy and freight. The private supply line under a commodity shows where consumed inputs
+          came from. Stock and cover are the world&apos;s shadow inventory from the market ledger,
+          not this corporation&apos;s.
         </p>
         {features.length > 0 && (
           <p className="pb-1 text-xs text-muted">
@@ -477,7 +484,7 @@ function RegionBreakdown({
   const partialNote = "Excludes commodities with no market price.";
 
   return (
-    <DenseSection title="By region" meta="units per turn, valued at market price">
+    <DenseSection title="By region" meta="per day at market prices">
       <TableScroll>
         <table className="w-full border-collapse">
           <thead>
@@ -485,10 +492,10 @@ function RegionBreakdown({
               <Th>State</Th>
               <Th>Consumes</Th>
               <Th>Produces</Th>
-              <Th align="right" title="Consumption valued at the current market price, per turn">
-                Input cost
+              <Th align="right" title="Input use per day valued at the current market price">
+                Input value
               </Th>
-              <Th align="right" title="Output valued at the current market price, per turn">
+              <Th align="right" title="Production per day valued at the current market price">
                 Output value
               </Th>
               <Th align="right">Net value</Th>
