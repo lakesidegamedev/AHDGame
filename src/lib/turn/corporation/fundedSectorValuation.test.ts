@@ -51,3 +51,77 @@ describe("fundedSectorValuation own-site credit", () => {
     expect(credited.internalSupplyCharge).toBeUndefined();
   });
 });
+
+describe("fundedSectorValuation recent settled profit", () => {
+  const plant = (history?: { turn: number; profit: number }[]) =>
+    ({ capacityBookAnchor: 1000, valuationProfitHistory: history }) as unknown as CorporateSector;
+  const turn = (sector: CorporateSector, settledTurn: number, profit: number) =>
+    fundedSectorValuation({
+      sector,
+      receipt: { turn: settledTurn, revenue: profit, profit, producedUnits: 1, soldUnits: 1 },
+      result: { hourlyRevenue: profit, costs: 0 },
+      currentTurn: settledTurn,
+      currentYear: 2020,
+      eraUnitScale: 1,
+    });
+  const play = (profits: [number, number][]) => {
+    let sector = plant();
+    return profits.map(([t, p]) => {
+      const out = turn(sector, t, p);
+      sector = plant(out.profitHistory);
+      return out.valueAnchor;
+    });
+  };
+  // 48 turns a year at 15%: each unit of profit per turn is worth 320.
+  const worth = (profit: number) => Math.round(profit * 320);
+
+  it("keeps a plant that alternates good and bad turns at a steady value", () => {
+    const values = play(Array.from({ length: 10 }, (_, i) => [50 + i, i % 2 ? 100 : 160]));
+    for (const v of values.slice(3)) expect(v).toBe(worth(130));
+  });
+
+  it("follows a sustained step within four settled turns, up and down", () => {
+    const up = play([
+      [1, 100],
+      [2, 100],
+      [3, 100],
+      [4, 100],
+      [5, 200],
+      [6, 200],
+      [7, 200],
+      [8, 200],
+    ]);
+    expect(up.slice(4)).toEqual([worth(125), worth(150), worth(175), worth(200)]);
+    const down = play([
+      [1, 200],
+      [2, 200],
+      [3, 200],
+      [4, 200],
+      [5, 0],
+      [6, 0],
+      [7, 0],
+      [8, 0],
+    ]);
+    // The last turn is back on the paid capacity book once earnings are gone.
+    expect(down.slice(4)).toEqual([worth(150), worth(100), worth(50), 1000]);
+  });
+
+  it("does not count turns that were never settled", () => {
+    const values = play([
+      [106, 100],
+      [107, 100],
+      [108, 100],
+      [114, 100],
+    ]);
+    expect(values.at(-1)).toBe(worth(100));
+  });
+
+  it("returns the history to store, keyed by the settled turn", () => {
+    const out = turn(plant([{ turn: 7, profit: 10 }]), 8, 30);
+    expect(out.profitHistory).toEqual([
+      { turn: 7, profit: 10 },
+      { turn: 8, profit: 30 },
+    ]);
+    expect(out.valueAnchor).toBe(worth(20));
+  });
+});

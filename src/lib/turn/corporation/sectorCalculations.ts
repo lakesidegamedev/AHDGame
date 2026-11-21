@@ -1,3 +1,4 @@
+import type { SettledProfitEntry } from "@/lib/market/producerMarket/rules/recentSettledProfit";
 import { settleCorporationAccounts } from "@/lib/turn/corporation/settleCorporationAccounts";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 
@@ -80,6 +81,7 @@ function prepareProcessSectors(
 ) {
   const fundedResults = new Map<string, ReturnType<typeof fundedSectorResult>>();
   const fundedDaily = new Map<string, (anchorPerTurn: number) => number>();
+  const fundedProfitHistory = new Map<string, SettledProfitEntry[]>();
   const currentTurn = typeof turn === "number" ? turn : 1;
 
   const totalRevenueGenerated = 0;
@@ -307,6 +309,7 @@ function prepareProcessSectors(
       fundDividendAccruals,
       funded,
       fundedDaily,
+      fundedProfitHistory,
       fundedResults,
       growthInvestmentByOperatingState,
       internalSupplyResults,
