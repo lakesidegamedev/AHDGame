@@ -532,7 +532,7 @@
         "working": "Working",
         "scoringShow": "How primary scoring works",
         "scoringHide": "Hide scoring detail",
-        "scoring": "Primary share = candidate score ÷ total in that party. Score = party alignment (40, split into state-lean 25 + party 15 where available) + favorability (35) + in-region influence (25). NPP opponents take a 25% score penalty against players.",
+        "scoring": "Before votes are counted, larger differences in candidate scores produce wider leads in the estimate. Scores reflect policy alignment, favorability and influence, with adjustments for campaigns and non-player opponents.",
         "advancing": "Projected to advance",
         "standing": "Your standing: {position} of {n}, {gap} pts {leading, select, true {ahead} other {behind}}",
         "endorsedBy": "Endorsed by",
