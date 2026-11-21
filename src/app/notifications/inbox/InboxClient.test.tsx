@@ -204,6 +204,22 @@ describe("InboxClient bell deep link", () => {
 
   const readOld = (id: string): InboxItem => ({ ...notif(id), unread: false, action: false });
 
+  it("opens the Mail tab from the header link without marking any message read", () => {
+    mockSearch = "tab=mail";
+    mockUseInboxData.mockReturnValue(
+      hookResult([notif("n1"), { ...notif("thread"), kind: "mail", messages: [] }], vi.fn())
+    );
+
+    render(<InboxClient />);
+
+    expect(screen.getByRole("tab", { name: /^Mail/ }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.queryByText("Title n1")).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ method: "PATCH" })
+    );
+  });
+
   it("selects the notification named by ?id even when it is outside the default view", async () => {
     mockSearch = "id=n3";
     mockUseInboxData.mockReturnValue(

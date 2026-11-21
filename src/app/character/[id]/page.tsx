@@ -30,6 +30,7 @@ import { getSiteUrl } from "@/lib/siteMetadata";
 import type { Character, CongressLeader, SupremeCourtSeat, ElectedOfficial } from "@/lib/db/types";
 import { PolicyDemographicsCard } from "@/app/profile/components/PolicyDemographicsCard";
 import type { CompassMarker } from "@/components/PoliticalCompass";
+import { ProfileMessageButton } from "@/app/profile/components/ProfileMessageButton";
 import { InteractCard } from "@/app/profile/components/InteractCard";
 import { PlayerSafetyActions } from "@/components/profile/PlayerSafetyActions";
 import { hasBlocked } from "@/lib/safety/playerSafety";
@@ -620,6 +621,16 @@ export default async function CharacterPage({ params }: PageProps) {
                 typeof character.sequentialId === "number"
                   ? `/wiki/${playerWikiSlug(character.sequentialId)}`
                   : undefined
+              }
+              messageAction={
+                canInfluence && !viewerHasBlocked ? (
+                  <ProfileMessageButton
+                    toCharacterId={character._id.toString()}
+                    toCharacterName={character.name}
+                    className="rounded-md border border-card-border px-3 py-2 text-body-sm font-medium text-foreground hover:bg-card-elevated"
+                    label="Message"
+                  />
+                ) : undefined
               }
               bioHidden={viewerHasBlocked}
             />

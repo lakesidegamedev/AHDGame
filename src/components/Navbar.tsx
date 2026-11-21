@@ -19,6 +19,7 @@ import {
   type NavbarUser,
 } from "./navbar/navbarTypes";
 import { isActionRequiredType } from "@/lib/inbox/priority";
+import { NavMailLink } from "@/components/navbar/NavMailLink";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
@@ -570,6 +571,10 @@ export const Navbar = React.memo(function Navbar({
                   />
                 </svg>
               </Link>
+            )}
+
+            {showProfile && (
+              <NavMailLink className="rounded-lg p-2 text-muted hover:bg-card hover:text-foreground" />
             )}
 
             {showProfile && (

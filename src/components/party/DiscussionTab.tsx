@@ -5,6 +5,7 @@ import { CardSkeleton, Skeleton } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { COMMUNITY_DISCORD_URL } from "@/lib/communityLinks";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 const MAX_CONTENT = 1000;
@@ -233,7 +234,15 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
           </div>
         ) : posts.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted italic">
-            No posts yet. Be the first to start the discussion.
+            <p>No posts yet. Be the first to start the discussion.</p>
+            <a
+              href={COMMUNITY_DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-link underline"
+            >
+              Join the game Discord
+            </a>
           </div>
         ) : (
           posts.map((post) => (
