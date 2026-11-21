@@ -42,6 +42,7 @@ const EFF_MARGIN_100 = softCapEffectiveMargin(100) / 100;
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { withAuthoredEraRates } from "@/lib/currency/corporationCapital";
 
 /** Sum all currency amounts for a character from a currency-aware payment map */
 function getTotalPayment(map: Map<string, Map<CurrencyCode, number>>, charId: string): number {
@@ -1594,6 +1595,77 @@ describe("corporate tax deduction", () => {
 });
 
 // ── Dividend payouts ──────────────────────────────────────────────────────────
+
+describe("corporation payout currency", () => {
+  it.each([
+    { preset: "2027-default", currency: "EUR", liveRate: 1.25 },
+    { preset: "1991-default", currency: "IEP", liveRate: 0.75 },
+    { preset: undefined, currency: "IEP", liveRate: 0.75 },
+  ] as const)(
+    "denominates salary and dividend components in $currency for $preset",
+    ({ preset, currency, liveRate }) => {
+      const turn = 108;
+      const ceoId = new ObjectId();
+      const shareholderId = new ObjectId();
+      const corp = makeCorp({
+        ceoId,
+        ceoType: "character",
+        countryId: "IE",
+        headquartersState: "DUB",
+        legalStructure: "ie_uc",
+        isPrivate: true,
+        liquidCurrencyCode: currency,
+        ceoSalary: 100 * TURNS_PER_DAY * liveRate,
+        totalShares: 4,
+        shareholders: [
+          {
+            characterId: shareholderId,
+            shares: 4,
+            holdingTerms: {
+              longTermShares: 1,
+              longTermCostBasisAnchor: 0,
+              shortTermLots: [{ acquiredTurn: turn, shares: 3, costBasisAnchor: 0 }],
+            },
+          },
+        ],
+      });
+      const sector = makeSector(corp._id, {
+        countryId: "IE",
+        stateId: "DUB",
+        revenue: 1_000 * TURNS_PER_DAY * liveRate,
+      });
+      const lookups = baseLookups([corp], [sector]);
+      lookups.preset = preset;
+      lookups.exchangeRatesByCurrency.set(currency, liveRate);
+      // The modern live book contains only EUR. The producer lookup also has
+      // authored predecessor rates for sector accounting.
+      withAuthoredEraRates(lookups.exchangeRatesByCurrency, preset);
+      if (currency === "EUR") {
+        const legacyRate = lookups.exchangeRatesByCurrency.get("IEP");
+        expect(legacyRate).toBeGreaterThan(0);
+        expect(legacyRate).not.toBe(liveRate);
+      }
+      lookups.passThroughOwnerTaxStartTurn = turn - 11; // Halfway through the phase-in.
+      lookups.personalTopIncomeTaxRateByCountry = new Map([["IE", 20]]);
+
+      const result = processSectors(lookups, turn, new Date());
+
+      // ₳500 operating profit less ₳100 salary and ₳40 owner tax leaves ₳360.
+      // The 30% distribution is ₳108, one quarter capital and half taxed at source.
+      for (const [payment, anchor] of [
+        [result.ceoSalaryPayments.get(ceoId.toString()), 100],
+        [result.dividendPayments.get(shareholderId.toString()), 108],
+        [result.capitalDividendPayments.get(shareholderId.toString()), 27],
+        [result.passThroughTaxedDividendPayments.get(shareholderId.toString()), 54],
+      ] as const) {
+        const local = payment?.get(currency) ?? NaN;
+        expect([...(payment?.keys() ?? [])]).toEqual([currency]);
+        expect(local).toBeCloseTo(anchor * liveRate, 8);
+        expect(local / liveRate).toBeCloseTo(anchor, 8);
+      }
+    }
+  );
+});
 
 describe("dividend payments to shareholders", () => {
   it("does not reserve dividends for issued IPO shares awaiting placement", () => {
