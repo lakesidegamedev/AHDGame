@@ -2,6 +2,7 @@
  * Build advice uses funded orders minus deliveries, scoped to the markets each
  * output can serve. fundedBuildDemand keeps missing measurements unknown.
  */
+import type { BuildDemandCapGap } from "@/lib/market/rules/buildDemandCap";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type {
   FundedCountryBookRow,
@@ -20,6 +21,10 @@ export interface BuildDemandRow {
   unmet: number | null;
   /** New capacity after known idle output and queues, in this candidate's output mix. */
   capacityUnits?: number | null;
+  /** Daily modeled demand hidden by the cap, after existing supply. */
+  capHiddenUnmet?: number;
+  /** Room after idle and queued capacity, including the modeled cap signal. */
+  estimatedCapacityUnits?: number | null;
 }
 
 /** Actual cash-backed orders, not modelled trade or unclaimed market share.
@@ -33,6 +38,7 @@ export function fundedBuildDemand(input: {
   countries: readonly FundedCountryBookRow[];
   regions?: readonly FundedRegionalBookRow[];
   regionalUnitScale: number;
+  capGaps?: ReadonlyMap<CommodityType, BuildDemandCapGap>;
 }): BuildDemandRow[] {
   return Object.entries(input.supply)
     .filter(([, rate]) => (rate ?? 0) > 0)
@@ -50,12 +56,16 @@ export function fundedBuildDemand(input: {
       const measuredEmpty = regional && input.regions !== undefined && !row;
       const funded = measuredEmpty ? 0 : valid(row?.funded);
       const delivered = measuredEmpty ? 0 : valid(row?.filled);
+      const capGap = input.capGaps?.get(commodity);
+      const regionalCapGap = capGap?.byState[input.stateId];
+      const primaryCapGap = regional ? regionalCapGap : capGap?.byCountry[input.countryId];
       const primary: BuildDemandRow = {
         commodity,
         scope: regional ? "regional" : "national",
         funded,
         delivered,
         unmet: funded == null || delivered == null ? null : Math.max(0, funded - delivered),
+        ...(primaryCapGap ? { capHiddenUnmet: primaryCapGap } : {}),
       };
       if (regional) return [primary];
       const local = input.regions?.find(
@@ -70,6 +80,7 @@ export function fundedBuildDemand(input: {
         {
           commodity,
           scope: "regional" as const,
+          ...(regionalCapGap ? { capHiddenUnmet: regionalCapGap } : {}),
           funded: localFunded,
           delivered: localFilled,
           unmet:
