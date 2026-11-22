@@ -96,7 +96,7 @@ describe("corporation income statement", () => {
     render(
       <FinancialsTab
         corporation={{ countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail}
-        financials={{ ...financials, constructionCash: { turn: 23, paid: 260_869, refunded: 0 } }}
+        financials={financials}
         balanceSheet={null}
         bondInfo={null}
         corpId="test"
