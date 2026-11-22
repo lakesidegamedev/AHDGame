@@ -21,20 +21,23 @@ import { type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareRevenueOf, type MarketShareBasis } from "@/lib/corporations/rules/marketShareBasis";
+import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 
 /**
- * Revenue that counts toward market share. A sector with no delivered capacity
- * yet (a founding sector inside its build window) carries a nameplate revenue
- * figure that nothing has earned, so it must not claim share. Sectors whose
- * capacity fields are absent (legacy rows, narrow projections) count as before.
+ * Revenue that counts toward market share on the given basis (capacity unless
+ * a caller passes "earned"); see rules/marketShareBasis.
  */
-export function shareRevenueLocal(sector: {
-  revenue?: number;
-  capitalStock?: number;
-  plantCount?: number;
-}): number {
-  if (sector.capitalStock === 0 && !((sector.plantCount ?? 0) > 0)) return 0;
-  return sector.revenue ?? 0;
+export function shareRevenueLocal(
+  sector: {
+    revenue?: number;
+    realizedRevenue?: number;
+    capitalStock?: number;
+    plantCount?: number;
+  },
+  basis: MarketShareBasis = "capacity"
+): number {
+  return shareRevenueOf(sector, basis);
 }
 
 /** Bounded market share percentage (0–100) given anchor-denominated inputs. */
@@ -71,11 +74,13 @@ export function buildCorporationNationalRevenueShareByMarket(
       | "stateId"
       | "sectorType"
       | "revenue"
+      | "realizedRevenue"
       | "capitalStock"
       | "plantCount"
     >
   >,
-  countryByStateId: ReadonlyMap<string, CountryId> = new Map()
+  countryByStateId: ReadonlyMap<string, CountryId> = new Map(),
+  basis: MarketShareBasis = "capacity"
 ): Map<string, number> {
   // A legacy row may lack its denormalized countryId even though another row
   // in the same state has it. Learn that mapping from the snapshot before
@@ -95,10 +100,8 @@ export function buildCorporationNationalRevenueShareByMarket(
     const countryId =
       (sector.countryId as CountryId | undefined) ?? resolvedCountryByStateId.get(sector.stateId);
     if (!countryId) continue;
-    const revenue =
-      typeof shareRevenueLocal(sector) === "number" && Number.isFinite(shareRevenueLocal(sector))
-        ? Math.max(0, shareRevenueLocal(sector)!)
-        : 0;
+    const shareRevenue = shareRevenueLocal(sector, basis);
+    const revenue = Number.isFinite(shareRevenue) ? Math.max(0, shareRevenue) : 0;
     const nationalMarketKey = marketKey(countryId, sector.sectorType);
     const corporationKey = corporationNationalSectorShareKey(
       sector.corporationId,
@@ -145,6 +148,8 @@ interface BuildSectorMarketShareInputs {
   stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>;
   /** FX rates so per-corp local revenue normalizes to ₳. */
   exchangeRatesByCurrency: ReadonlyMap<CurrencyCode, number>;
+  /** Revenue basis for share; capacity when absent. */
+  basis?: MarketShareBasis;
   /**
    * @deprecated Ignored. Kept so callers compile until the field is removed.
    */
@@ -172,7 +177,8 @@ function sectorAnchorIndex(
   sectors: readonly CorporateSector[],
   stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>,
   exchangeRatesByCurrency: ReadonlyMap<CurrencyCode, number>,
-  corpById?: ReadonlyMap<string, CorpCapitalCurrencyInfo>
+  corpById?: ReadonlyMap<string, CorpCapitalCurrencyInfo>,
+  basis: MarketShareBasis = "capacity"
 ): SectorAnchorIndex {
   const anchors = new Array<number>(sectors.length);
   const countries = new Array<CountryId | undefined>(sectors.length);
@@ -189,7 +195,7 @@ function sectorAnchorIndex(
       owner,
       exchangeRatesByCurrency
     );
-    anchors[i] = readCorpEconomicAnchor(shareRevenueLocal(sector), hostCode, hostRate);
+    anchors[i] = readCorpEconomicAnchor(shareRevenueLocal(sector, basis), hostCode, hostRate);
   }
   return { anchors, countries };
 }
@@ -264,10 +270,10 @@ function localShareFromIndex(
 export function buildMarketShareBySectorId(
   inputs: BuildSectorMarketShareInputs
 ): Map<string, number> {
-  const { sectors, stateById, exchangeRatesByCurrency, corpById } = inputs;
+  const { sectors, stateById, exchangeRatesByCurrency, corpById, basis } = inputs;
   return localShareFromIndex(
     sectors,
-    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById)
+    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById, basis)
   );
 }
 
@@ -287,10 +293,10 @@ export function buildMarketShareBySectorId(
 export function buildNationalDominanceShareBySectorId(
   inputs: BuildSectorMarketShareInputs
 ): Map<string, number> {
-  const { sectors, stateById, exchangeRatesByCurrency, corpById } = inputs;
+  const { sectors, stateById, exchangeRatesByCurrency, corpById, basis } = inputs;
   return nationalShareFromIndex(
     sectors,
-    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById),
+    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById, basis),
     stateById
   );
 }
@@ -354,8 +360,8 @@ export function buildSectorShareMaps(inputs: BuildSectorMarketShareInputs): {
   marketShareBySectorId: Map<string, number>;
   nationalDominanceShareBySectorId: Map<string, number>;
 } {
-  const { sectors, stateById, exchangeRatesByCurrency, corpById } = inputs;
-  const index = sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById);
+  const { sectors, stateById, exchangeRatesByCurrency, corpById, basis } = inputs;
+  const index = sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency, corpById, basis);
   return {
     marketShareBySectorId: localShareFromIndex(sectors, index),
     nationalDominanceShareBySectorId: nationalShareFromIndex(sectors, index, stateById),
@@ -378,6 +384,7 @@ export async function fetchSectorMarketSharePercent(
     | "stateId"
     | "sectorType"
     | "revenue"
+    | "realizedRevenue"
     | "countryId"
     | "capitalStock"
     | "plantCount"
@@ -398,6 +405,7 @@ export async function fetchSectorMarketSharePercent(
   _plantsEnabledOverride?: boolean
 ): Promise<number> {
   const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
+  const basis = await loadMarketShareBasis(db);
 
   const [state, siblingSectors, fxByCurrency] = await Promise.all([
     statesCollection(db).findOne(
@@ -411,6 +419,7 @@ export async function fetchSectorMarketSharePercent(
           projection: {
             _id: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
             corporationId: 1,
@@ -438,7 +447,7 @@ export async function fetchSectorMarketSharePercent(
   ): number => {
     const owner = ownerById.get(s.corporationId?.toString() ?? "") ?? fallbackOwner;
     return readCorpEconomicAnchor(
-      shareRevenueLocal(s),
+      shareRevenueLocal(s, basis),
       resolveSectorHostCurrencyCode({ countryId }, owner),
       fxRateForSectorHostFromMap({ countryId }, owner, fxByCurrency)
     );
@@ -511,6 +520,7 @@ export async function fetchCorporationNationalSectorSharesByCountry(
           stateId: 1,
           sectorType: 1,
           revenue: 1,
+          realizedRevenue: 1,
           capitalStock: 1,
           plantCount: 1,
         },
@@ -520,7 +530,8 @@ export async function fetchCorporationNationalSectorSharesByCountry(
 
   const shareByMarket = buildCorporationNationalRevenueShareByMarket(
     nationalSectors,
-    countryByStateId
+    countryByStateId,
+    await loadMarketShareBasis(db)
   );
   for (const countryId of countryIds) {
     result.set(
@@ -589,6 +600,7 @@ export async function fetchMarketSharePercentForSectors(
       | "stateId"
       | "sectorType"
       | "revenue"
+      | "realizedRevenue"
       | "countryId"
       | "corporationId"
       | "capitalStock"
@@ -600,6 +612,7 @@ export async function fetchMarketSharePercentForSectors(
 ): Promise<Map<string, number>> {
   if (targetSectors.length === 0) return new Map();
   const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
+  const basis = await loadMarketShareBasis(db);
 
   const stateIds = [...new Set(targetSectors.map((s) => s.stateId))];
   const bucketFilters = targetSectors.map((s) => ({
@@ -621,6 +634,7 @@ export async function fetchMarketSharePercentForSectors(
             countryId: 1,
             corporationId: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
           },
@@ -638,6 +652,7 @@ export async function fetchMarketSharePercentForSectors(
     corpById: await loadSectorOwnerCurrencyInfo(db, siblingSectors),
     stateById: new Map(states.map((s) => [s._id, s])),
     exchangeRatesByCurrency: fxByCurrency,
+    basis,
   });
 
   const result = new Map<string, number>();
@@ -662,6 +677,7 @@ export async function fetchAttackerDefenderShares(
     | "sectorType"
     | "countryId"
     | "revenue"
+    | "realizedRevenue"
     | "capitalStock"
     | "plantCount"
     | "strategyId"
@@ -674,6 +690,7 @@ export async function fetchAttackerDefenderShares(
   _plantsEnabled: boolean = false
 ): Promise<{ defenderSharePercent: number; attackerSharePercent: number }> {
   const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
+  const basis = await loadMarketShareBasis(db);
 
   const [state, siblingSectors, fxByCurrency] = await Promise.all([
     statesCollection(db).findOne(
@@ -688,6 +705,7 @@ export async function fetchAttackerDefenderShares(
             _id: 1,
             corporationId: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
             sectorType: 1,
@@ -713,7 +731,7 @@ export async function fetchAttackerDefenderShares(
   ): number => {
     const owner = ownerById.get(s.corporationId?.toString() ?? "") ?? fallbackOwner;
     return readCorpEconomicAnchor(
-      shareRevenueLocal(s),
+      shareRevenueLocal(s, basis),
       resolveSectorHostCurrencyCode({ countryId }, owner),
       fxRateForSectorHostFromMap({ countryId }, owner, fxByCurrency)
     );

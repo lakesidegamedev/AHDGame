@@ -8,6 +8,7 @@ import { pacedGrowthUnits } from "@/lib/turn/npp/rules/buildPacing";
 import type { CorporateSector } from "@/lib/db/types";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 import { bucketKey } from "@/lib/market/marketBuckets";
+import { shareRevenueOf, type MarketShareBasis } from "@/lib/corporations/rules/marketShareBasis";
 
 /** A sized reinvestment candidate: replacement plus growth units for one sector. */
 export interface ReinvestCandidate {
@@ -33,6 +34,7 @@ export interface ReinvestCandidate {
 export type LocalShareLookup = (
   sector: Pick<CorporateSector, "stateId" | "sectorType"> & {
     revenue?: number;
+    realizedRevenue?: number;
   }
 ) => number;
 
@@ -42,17 +44,24 @@ export type LocalShareLookup = (
  * is every rival in the bucket, so the ratio needs no conversion.
  */
 export function buildLocalRevenueShareLookup(
-  sectors: readonly Pick<CorporateSector, "stateId" | "sectorType" | "revenue">[]
+  sectors: readonly Pick<
+    CorporateSector,
+    "stateId" | "sectorType" | "revenue" | "realizedRevenue"
+  >[],
+  basis: MarketShareBasis = "capacity"
 ): LocalShareLookup {
+  const revenueOf = (s: Parameters<LocalShareLookup>[0]): number =>
+    basis === "earned" ? shareRevenueOf(s, basis) : (s.revenue ?? 0);
   const revenueByBucket = new Map<string, number>();
   const keyOf = (s: Parameters<LocalShareLookup>[0]) => bucketKey(s.stateId, s.sectorType);
   for (const sector of sectors) {
-    const revenue = Number.isFinite(sector.revenue) ? Math.max(0, sector.revenue) : 0;
+    const own = revenueOf(sector);
+    const revenue = Number.isFinite(own) ? Math.max(0, own) : 0;
     const key = keyOf(sector);
     revenueByBucket.set(key, (revenueByBucket.get(key) ?? 0) + revenue);
   }
   return (sector) =>
-    computeMarketSharePercent(sector.revenue ?? 0, revenueByBucket.get(keyOf(sector)) ?? 0);
+    computeMarketSharePercent(revenueOf(sector), revenueByBucket.get(keyOf(sector)) ?? 0);
 }
 
 /**

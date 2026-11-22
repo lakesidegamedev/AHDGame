@@ -66,6 +66,8 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerSalesAdvanceRevenueShare: 1,
   producerAskBuyerTieStage: 1,
   producerSellerPreferenceStage: 1,
+  autopilotBuildRoomStage: 1,
+  marketShareEarnedStage: 1,
   producerPriceMaxMultiplier: 1,
   producerFundedRestartStage: 1,
   producerIdleRetireStage: 1,

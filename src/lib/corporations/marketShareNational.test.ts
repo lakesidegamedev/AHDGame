@@ -61,6 +61,7 @@ describe("fetchCorporationNationalSectorSharesByCountry", () => {
           stateId: 1,
           sectorType: 1,
           revenue: 1,
+          realizedRevenue: 1,
           capitalStock: 1,
           plantCount: 1,
         },

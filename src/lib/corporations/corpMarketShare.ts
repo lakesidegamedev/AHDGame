@@ -20,6 +20,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { computeMarketSharePercent, loadSectorOwnerCurrencyInfo } from "./marketShare";
+import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
+import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -74,11 +76,17 @@ export async function loadIndustryBasis(
   const [sectorsInScope, fxByCurrency] = await Promise.all([
     corporateSectorsCollection(db)
       .find({ sectorType: { $in: types }, stateId: { $in: stateIds } })
-      .project<Pick<CorporateSector, "corporationId" | "sectorType" | "stateId" | "revenue">>({
+      .project<
+        Pick<
+          CorporateSector,
+          "corporationId" | "sectorType" | "stateId" | "revenue" | "realizedRevenue"
+        >
+      >({
         corporationId: 1,
         sectorType: 1,
         stateId: 1,
         revenue: 1,
+        realizedRevenue: 1,
       })
       .toArray(),
     loadValuationFxRates(db),
@@ -88,10 +96,13 @@ export async function loadIndustryBasis(
   // its owner: a domestic sector carries the owner's stamped home currency, a
   // cross-border one the host's era-blind code. Resolve per sector with the owner.
   const ownerById = await loadSectorOwnerCurrencyInfo(db, sectorsInScope);
-  const anchorFor = (sec: Pick<CorporateSector, "corporationId" | "revenue">): number => {
+  const basis = await loadMarketShareBasis(db);
+  const anchorFor = (
+    sec: Pick<CorporateSector, "corporationId" | "revenue" | "realizedRevenue">
+  ): number => {
     const owner = ownerById.get(sec.corporationId.toString()) ?? null;
     return readCorpEconomicAnchor(
-      sec.revenue,
+      basis === "earned" ? shareRevenueOf(sec, basis) : sec.revenue,
       resolveSectorHostCurrencyCode({ countryId }, owner),
       fxRateForSectorHostFromMap({ countryId }, owner, fxByCurrency)
     );

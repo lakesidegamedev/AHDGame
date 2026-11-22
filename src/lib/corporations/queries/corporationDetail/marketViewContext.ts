@@ -6,6 +6,7 @@ import type { GameState } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { buildMarketShareBySectorId } from "@/lib/corporations/marketShare";
+import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -140,6 +141,7 @@ export async function loadMarketViewContext(
     corpById,
     stateById,
     exchangeRatesByCurrency: fxByCurrency,
+    basis: await loadMarketShareBasis(db),
   });
 
   const globalPriceRatioByCommodity = new Map<CommodityType, number>();

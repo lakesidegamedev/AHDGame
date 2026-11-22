@@ -4,13 +4,15 @@ import {
   buildCorporationNationalRevenueShareByMarket,
   corporationNationalSectorShareKey,
 } from "@/lib/corporations/marketShare";
+import type { MarketShareBasis } from "@/lib/corporations/rules/marketShareBasis";
 import type { NppPlantsContext } from "@/lib/turn/npp/corpDecisionTypes";
 
 /** Build a zero-query national-share resolver from the NPP phase snapshot. */
 export function buildNppNationalShareResolver(
-  sectors: CorporateSector[]
+  sectors: CorporateSector[],
+  basis: MarketShareBasis = "capacity"
 ): NonNullable<NppPlantsContext["nationalShareOf"]> {
-  const shares = buildCorporationNationalRevenueShareByMarket(sectors);
+  const shares = buildCorporationNationalRevenueShareByMarket(sectors, new Map(), basis);
   return (corporationId, countryId, sectorType) =>
     shares.get(
       corporationNationalSectorShareKey(corporationId, countryId as CountryId, sectorType)
