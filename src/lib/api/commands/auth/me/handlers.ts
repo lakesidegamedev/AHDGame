@@ -1,3 +1,5 @@
+import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
+import { characterScopeClause, mailCharacterMatch } from "@/lib/notifications/characterScope";
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
@@ -249,6 +251,10 @@ export const GET = withNoStore(async () => {
       }));
     }
 
+    const activeScope = await loadActiveCharacterScope(db, new ObjectId(userId));
+    const unreadScope = characterScopeClause(new ObjectId(userId), activeScope);
+    const unreadScopeMatch = unreadScope ? { $and: [unreadScope] } : {};
+
     if (character) {
       const [state, party, unread, unreadMail] = await Promise.all([
         statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
@@ -261,10 +267,12 @@ export const GET = withNoStore(async () => {
         notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
+          ...unreadScopeMatch,
           read: false,
         }),
         playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
+          ...mailCharacterMatch(activeScope),
           read: false,
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },
@@ -279,10 +287,12 @@ export const GET = withNoStore(async () => {
         notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
+          ...unreadScopeMatch,
           read: false,
         }),
         playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
+          ...mailCharacterMatch(activeScope),
           read: false,
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },

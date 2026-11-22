@@ -32,6 +32,7 @@ import { parseCharacterId } from "@/lib/utils/profileUrls";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalNpiOrdinalRank } from "@/lib/character/nationalNpiOrdinalRank";
 import { resolveMemberSince } from "@/lib/character/memberSince";
+import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
 import { loadCharacterByUrlId } from "./characterLoaders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -317,6 +318,7 @@ export async function getCharacterById(characterId: string) {
         accountCreatedAt: user?.createdAt,
         profileCreatedAt: character.createdAt,
         historyStartedAt: gameState?.singleplayerConfig ? null : gameState?.createdAt,
+        additionalCharacter: await isAdditionalCharacter(db, character),
       }),
       discordId: user?.discordId ?? null,
       discordUsername: user?.discordUsername ?? null,

@@ -120,6 +120,7 @@ import { unionContributionIncomePerTurn } from "@/lib/unions/unionContributionIn
 import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
 import { isPatreonActive } from "@/lib/db/types";
 import { resolveMemberSince } from "@/lib/character/memberSince";
+import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -433,6 +434,7 @@ async function getCharacterData(firstStepsRequested: boolean) {
       accountCreatedAt: userDoc?.createdAt,
       profileCreatedAt: character.createdAt,
       historyStartedAt: gameState?.singleplayerConfig ? null : gameState?.createdAt,
+      additionalCharacter: await isAdditionalCharacter(db, character),
     }),
     // Gate on active status exactly as the public profile does, or the owner
     // keeps badges and colors after the pledge lapses that others cannot see.

@@ -9,6 +9,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { markReceivedMailReadMany, sendPlayerMail } from "@/lib/mail/commands/playerMail";
 import { BULK_READ_MAX_IDS } from "@/lib/inbox/bulkRead";
+import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
 import { getInboxMailPage } from "@/lib/mail/queries/playerMail";
 
 const sendMailSchema = z.object({
@@ -36,7 +37,15 @@ export const GET = withNoStore(async (request: Request) => {
     const limit = Number.isFinite(limitRaw) ? Math.min(50, Math.max(1, limitRaw)) : 20;
 
     const db = await getDb();
-    const page = await getInboxMailPage(db, new ObjectId(auth.user.userId), offset, limit);
+    const userOid = new ObjectId(auth.user.userId);
+    const scope = await loadActiveCharacterScope(db, userOid);
+    const page = await getInboxMailPage(
+      db,
+      userOid,
+      offset,
+      limit,
+      scope ? new ObjectId(scope.characterId) : null
+    );
     // The inbox client groups received + sent mail into threads, which needs
     // to know which side of a thread the viewer is on. Returning the viewer's
     // character here saves the page a second full session bootstrap

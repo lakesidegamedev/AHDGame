@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { sendSystemMails } from "./systemMail";
+import { sendSystemMailOnce, sendSystemMails } from "./systemMail";
 
 describe("batched system mail", () => {
   it("writes eleven distinct recipients in one command with system mail fields", async () => {
@@ -41,5 +41,39 @@ describe("batched system mail", () => {
     const collection = vi.fn();
     await sendSystemMails({ collection } as unknown as Db, []);
     expect(collection).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendSystemMailOnce", () => {
+  const params = () => ({
+    toCharacterId: new ObjectId(),
+    toCharacterName: "Recipient",
+    toCharacterSequentialId: 1,
+    toUserId: new ObjectId(),
+    subject: "Your first moves",
+    body: "Hello",
+    senderName: "Game Guide",
+  });
+
+  it("upserts keyed on character, subject and sender so repeats insert nothing", async () => {
+    const updateOne = vi
+      .fn()
+      .mockResolvedValueOnce({ upsertedCount: 1 })
+      .mockResolvedValueOnce({ upsertedCount: 0 });
+    const db = { collection: vi.fn().mockReturnValue({ updateOne }) } as unknown as Db;
+    const p = params();
+    expect(await sendSystemMailOnce(db, p)).toBe(true);
+    expect(await sendSystemMailOnce(db, p)).toBe(false);
+    const [filter, update, options] = updateOne.mock.calls[0]!;
+    expect(filter).toEqual({
+      toCharacterId: p.toCharacterId,
+      subject: "Your first moves",
+      fromCharacterName: "Game Guide",
+      fromCharacterId: { $exists: false },
+    });
+    expect(update.$setOnInsert).toEqual(
+      expect.objectContaining({ toCharacterId: p.toCharacterId })
+    );
+    expect(options).toEqual({ upsert: true });
   });
 });
