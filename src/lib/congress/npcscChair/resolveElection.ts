@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
 import { markCongressLeadershipHeld } from "@/lib/wiki/markCongressLeadership";
 import {
@@ -8,12 +9,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
-import type {
-  NpcscChairElection,
-  NpcscChairNomination,
-  CongressLeader,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { npcscChairNominationsCollection } from "@/lib/db/repositories/npcscChairNominations";
@@ -30,6 +26,14 @@ import { npcscChairElectionsCollection } from "@/lib/db/repositories/npcscChairE
  *   not set).
  */
 export async function resolveNpcscChairElection(
+  db: Db,
+  _partyMap: Map<string, PoliticalParty>,
+  force = false
+): Promise<boolean> {
+  return withSessionDb(db, (tx) => resolveNpcscChairElectionInTransaction(tx, _partyMap, force));
+}
+
+async function resolveNpcscChairElectionInTransaction(
   db: Db,
   _partyMap: Map<string, PoliticalParty>,
   force = false
@@ -82,8 +86,10 @@ export async function resolveNpcscChairElection(
     },
     { upsert: true }
   );
-  markCongressLeadershipHeld(db, winner.nomineeId.toString(), now).catch((err) =>
-    console.error("[NPCSC Chair] Failed to mark congress leadership:", err)
+  await afterCommit(db, () =>
+    markCongressLeadershipHeld(unboundDb(db), winner.nomineeId.toString(), now).catch((err) =>
+      console.error("[NPCSC Chair] Failed to mark congress leadership:", err)
+    )
   );
   // Atomically claim the close so a concurrent resolver cannot also announce.
   const claimed = await claimStatusTransition(
@@ -101,14 +107,16 @@ export async function resolveNpcscChairElection(
         { projection: { avatarUrl: 1 } }
       )
     )?.avatarUrl;
-    sendCountryGameEvent("CN", {
-      title: `Leadership Election Result — ${roleLabel}`,
-      description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
-      color: DISCORD_COLORS.leadership,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
-    }).catch(() => {});
+    await afterCommit(db, () =>
+      sendCountryGameEvent("CN", {
+        title: `Leadership Election Result: ${roleLabel}`,
+        description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
+        color: DISCORD_COLORS.leadership,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
+      }).catch(() => {})
+    );
   }
 
   return true;

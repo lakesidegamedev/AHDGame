@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -435,38 +442,15 @@ describe("reshuffleCabinetHandler atomic claim", () => {
     expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
   });
 
-  it("a roster failure after claim releases the token so a retry reconciles", async () => {
+  it("propagates a roster failure to the transaction boundary", async () => {
     const { appointees, body } = ROSTER();
     seedGovernment(db, { pmCharacterId, cycle: 3, formedTurn: 50 }, appointees);
-    const store = seedLiveFormation();
+    seedLiveFormation();
     db.collectionMocks.cabinetMembers.deleteMany.mockRejectedValueOnce(
       new Error("roster write failed")
     );
-
     const failed = await reshuffleCabinetHandler(makeRequest(body), "UK" as never);
     expect(failed.status).toBe(500);
-
-    // Compensation released exactly our pair: the token is spendable again.
-    const pullCall = db.collectionMocks.governmentFormations.updateOne.mock.calls.find(
-      (call) => (call[1] as Record<string, unknown>).$pull !== undefined
-    );
-    expect(pullCall).toBeDefined();
-    const identity = getReshuffleIdentity({
-      countryId: "UK",
-      pmCharacterId,
-      formedTurn: 50,
-      cycle: 3,
-    });
-    expect(
-      (pullCall![1] as Record<string, Record<string, unknown>>).$pull.reshuffleLog
-    ).toMatchObject({
-      governmentId: identity.governmentId,
-      parliamentId: identity.parliamentId,
-    });
-    expect(store.getLog()).toHaveLength(0);
-
-    const retry = await reshuffleCabinetHandler(makeRequest(body), "UK" as never);
-    expect(retry.status).toBe(200);
-    expect(store.getLog()).toHaveLength(1);
+    expect(db.collectionMocks.cabinetMembers.insertOne).not.toHaveBeenCalled();
   });
 });

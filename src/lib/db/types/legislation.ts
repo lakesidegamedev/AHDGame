@@ -457,7 +457,26 @@ export function isPolicyProvision(p: BillProvision): p is PolicyProvision {
   );
 }
 
+export interface BillLifecycleReceipt {
+  turn: number;
+  fromStatus: string;
+  toStatus: string;
+  chamber?: string;
+  category?: string;
+  provisionFamily?: string;
+  voteMargin: number;
+  counters: {
+    billsProcessed: number;
+    billsPassed: number;
+    billsFailed: number;
+    billsVetoed: number;
+  };
+  enactedCategories: string[];
+  transitionedTo: Record<string, number>;
+}
+
 export interface Bill {
+  lifecycleReceipts?: BillLifecycleReceipt[];
   _id: ObjectId;
   title: string;
   summary: string;

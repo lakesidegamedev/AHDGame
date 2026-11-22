@@ -787,6 +787,9 @@ describe("resetGameWorld", () => {
       expect(db.collectionMocks[name]?.deleteMany).toHaveBeenCalledWith({});
     }
 
+    // Per-turn bill markers must not survive a fresh world.
+    expect(db.collectionMocks.countryGameStates?.drop).toHaveBeenCalledOnce();
+
     // counters: partial delete that spares party_<country> counters.
     expect(db.collectionMocks.counters?.deleteMany).toHaveBeenCalledWith({
       _id: { $not: { $regex: /^party_/ } },

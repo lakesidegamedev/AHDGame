@@ -117,6 +117,7 @@ export async function captureBillStatusChanged(input: {
   await captureServerGameEvent({
     db: input.db,
     event: "bill_status_changed",
+    insertId: `bill-transition:${input.billId}:${input.turn}:${input.fromStatus}:${input.toStatus}`,
     distinctId: "system:bill-lifecycle",
     turn: input.turn,
     iteration: input.iteration,

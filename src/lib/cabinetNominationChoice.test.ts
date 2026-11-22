@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -42,6 +49,8 @@ describe("resolveCabinetNominationChoice", () => {
     db.collection("characters");
     db.collection("centralBanks");
     characterFindOne(db);
+    db.collection("electedOfficials");
+    db.collectionMocks.electedOfficials!.findOne.mockResolvedValue({ characterId: presidentId });
   });
 
   it("accepting stands down the bank chair and queues the seat for the next turn", async () => {
