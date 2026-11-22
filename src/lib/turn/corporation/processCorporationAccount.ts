@@ -128,11 +128,12 @@ function prepareProcessCorporationAccount(
         sectorFxRate
       );
     const fundedReceipt = context.funded?.receiptsBySectorId.get(sectorIdStr);
-    const r: SectorTurnResult = fundedReceipt
+    const funded = fundedReceipt
       ? fundedSectorResult<SectorTurnResult>(legacyResult, fundedReceipt)
-      : legacyResult;
-    if (fundedReceipt) {
-      context.fundedResults.set(sectorIdStr, r);
+      : null;
+    const r: SectorTurnResult = funded ?? legacyResult;
+    if (funded) {
+      context.fundedResults.set(sectorIdStr, funded);
       context.fundedDaily.set(sectorIdStr, (anchorPerTurn: number) =>
         writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
       );
