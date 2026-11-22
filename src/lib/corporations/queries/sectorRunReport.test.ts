@@ -124,8 +124,11 @@ describe("run report", () => {
     const r = buildRunReport(receipt(), 673, LIVE)!;
     expect(r.reason).toBe("losing");
     expect(r.nextShare).toBeCloseTo(0.01);
-    expect(r.unitPrice).toBeCloseTo(43.49);
-    expect(r.unitMaterials).toBeCloseTo(72.29, 1);
+    // Everything went to own sites: no outside sale to take a per-unit figure from.
+    expect(r.unitPrice).toBeNull();
+    expect(r.profitPerUnit).toBeNull();
+    expect(r.ownSiteUnits).toBeCloseTo(4.27);
+    expect(r.ownSiteValueAtAsk).toBeCloseTo(4.27 * 43.49);
     expect(r.ownSiteValued).toBe(true);
     expect(r.turnsToFull).toBeNull();
   });
@@ -134,6 +137,36 @@ describe("run report", () => {
     const r = buildRunReport(receipt(), 673, { ...LIVE, producerCaptiveDeliveryStage: 0 })!;
     expect(r.reason).toBe("no-buyers");
     expect(r.ownSiteValued).toBe(false);
+  });
+
+  it("takes profit per unit from outside sales only and reports own-site deliveries separately", () => {
+    // 100 made: 60 sold outside at 1000, 30 to own sites (ask 800), 10 unsold. Bill 30,000 over 100 made.
+    const r = buildRunReport(
+      receipt({
+        plannedRunShare: 1,
+        plannedUnits: 100,
+        producedUnits: 100,
+        offeredUnits: 70,
+        soldUnits: 60,
+        revenue: 60_000,
+        inputsConsumed: 20_000,
+        labourPaid: 7_000,
+        otherOperatingPaid: 3_000,
+        products: [{ commodity: "iron", internalDeliveredUnits: 30, askingUnitPrice: 800 }],
+      }),
+      673,
+      LIVE
+    )!;
+    // Outside units carry 70% of the bill (60 sold + 10 unsold): 21,000 over 60 sold.
+    const unitCost = r.unitMaterials! + r.unitWages! + r.unitSite!;
+    expect(r.unitPrice).toBeCloseTo(1000);
+    expect(unitCost).toBeCloseTo(21_000 / 60);
+    expect(r.profitPerUnit).toBeCloseTo((60_000 - 21_000) / 60);
+    expect(r.ownSiteUnits).toBe(30);
+    expect(r.ownSiteValueAtAsk).toBe(24_000);
+    // Lines up with the whole sector: outside profit plus the own-site share's value less its cost.
+    const outsideProfit = r.profitPerUnit! * 60;
+    expect(outsideProfit + (24_000 - 9_000)).toBeCloseTo(60_000 + 24_000 - 30_000);
   });
 
   it("says stepping up, with a turn count, for a sold-out run that paid", () => {

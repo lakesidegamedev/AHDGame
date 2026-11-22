@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import type { CostBreakdown } from "@/lib/corporations/rules/costBreakdown";
 import {
   reconcileLastTurn,
   type CashFlowInput,
@@ -12,6 +13,8 @@ interface HistoryProjection {
   turn: number;
   revenue?: number;
   totalCosts?: number;
+  costBreakdown?: CostBreakdown;
+  headcount?: number;
   income?: number;
   dividendPaidPerTurn?: number;
   corporateTaxPaid?: number;
@@ -31,6 +34,8 @@ const HISTORY_PROJECTION = {
   turn: 1,
   revenue: 1,
   totalCosts: 1,
+  costBreakdown: 1,
+  headcount: 1,
   income: 1,
   dividendPaidPerTurn: 1,
   corporateTaxPaid: 1,
@@ -78,7 +83,15 @@ export async function loadLastTurnReconciliation(
   const [previous, txRows] = await Promise.all([
     history.findOne(
       { corporationId: corporation._id, turn: latest.turn - 1 },
-      { projection: { liquidCapital: 1, currencyCode: 1, totalCosts: 1 } }
+      {
+        projection: {
+          liquidCapital: 1,
+          currencyCode: 1,
+          totalCosts: 1,
+          costBreakdown: 1,
+          headcount: 1,
+        },
+      }
     ),
     financialTxLogCollection<TxProjection>(db)
       .find(
@@ -114,6 +127,10 @@ export async function loadLastTurnReconciliation(
         previous && sameCurrency && typeof previous.totalCosts === "number"
           ? previous.totalCosts
           : null,
+      costBreakdown: latest.costBreakdown ?? null,
+      headcount: latest.headcount ?? null,
+      previousCostBreakdown: previous && sameCurrency ? (previous.costBreakdown ?? null) : null,
+      previousHeadcount: previous && sameCurrency ? (previous.headcount ?? null) : null,
     },
     flows
   );

@@ -1714,7 +1714,7 @@ describe("vacateInactiveNationalLeadership — inactivity eviction (#3308)", () 
     const CHAIR_CHAR_ID = new ObjectId();
     const USER_ID = new ObjectId();
 
-    const partyBulkWrite = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+    const partyBulkWrite = vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1 });
     setMockCollection("politicalParties", {
       find: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
@@ -1737,7 +1737,7 @@ describe("vacateInactiveNationalLeadership — inactivity eviction (#3308)", () 
     setMockCollection("users", {
       find: projectFind([{ _id: USER_ID, lastActivity: INACTIVE_TS, createdAt: INACTIVE_TS }]),
     });
-    const coalitionUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+    const coalitionUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1 });
     setMockCollection("coalitions", { updateMany: coalitionUpdateMany });
 
     const { vacateInactiveNationalLeadership } = await import("./nationalPartyElections");

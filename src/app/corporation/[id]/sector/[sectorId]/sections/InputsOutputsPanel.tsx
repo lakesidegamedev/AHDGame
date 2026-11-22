@@ -22,6 +22,7 @@ import DetailsDisclosure from "../components/DetailsDisclosure";
 import UnsoldNote from "../components/UnsoldNote";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
+import { inputBoughtScale } from "@/lib/corporations/rules/inputBoughtUnits";
 import { inputBlockerText } from "@/lib/corporations/rules/inputShortageReading";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
@@ -140,14 +141,10 @@ export default function InputsOutputsPanel({
   // the money panel (ticket 1448). Show last turn as it happened: inputs scaled
   // so units x billed price sums to the booked input bill, outputs at the units
   // actually made and, for a one-product plant, the average price realized.
-  const nameplateInputBill = commodities.demands.reduce(
-    (sum, d) => sum + (d.units > 0 ? d.units * (d.billedUnitPrice ?? d.marketPrice) : 0),
-    0
+  const inputUnitScale = inputBoughtScale(
+    plants.pnl?.inputsAnchor,
+    commodities.demands.map((d) => ({ units: d.units, price: d.billedUnitPrice ?? d.marketPrice }))
   );
-  const inputUnitScale =
-    plants.pnl && plants.pnl.inputsAnchor > 0 && nameplateInputBill > 0
-      ? plants.pnl.inputsAnchor / nameplateInputBill
-      : 1;
   const nameplateOutputUnits = commodities.supplies.reduce(
     (sum, f) => sum + Math.max(0, f.units),
     0

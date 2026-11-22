@@ -1,4 +1,6 @@
-import { badRequest, notFound, unauthorized } from "@/lib/api/errors";
+import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { badRequest, conflict, notFound, unauthorized } from "@/lib/api/errors";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { createAdminLog } from "@/lib/adminLog";
 import { createNotification } from "@/lib/notifications";
@@ -11,7 +13,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, CareerEvent, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types";
+import type { Character, CareerEvent, ElectedOfficial, OfficeType } from "@/lib/db/types";
 import type { CountryConfig } from "@/lib/constants/countries";
 import type { EligibleSenateAppointeeView } from "@/lib/government/dto/governmentView";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
@@ -230,6 +232,29 @@ export async function appointSenator(
   appointee: EligibleSenateAppointeeView;
   termEnd: string;
 }> {
+  const now = new Date();
+  const appointmentId = new ObjectId();
+  return withSessionDb(db, (tx) =>
+    appointSenatorInTransaction(tx, governorUserId, input, now, appointmentId)
+  );
+}
+
+async function appointSenatorInTransaction(
+  db: Db,
+  governorUserId: string,
+  input: {
+    appointeeId?: string;
+    characterId?: string;
+    appointeeType: "character" | "npp";
+    senateClass: 1 | 2 | 3;
+  },
+  now: Date,
+  appointmentId: ObjectId
+): Promise<{
+  success: true;
+  appointee: EligibleSenateAppointeeView;
+  termEnd: string;
+}> {
   const appointeeIdRaw = input.appointeeId ?? input.characterId;
   if (!appointeeIdRaw || !ObjectId.isValid(appointeeIdRaw)) {
     throw badRequest("appointeeId is required");
@@ -256,6 +281,12 @@ export async function appointSenator(
     throw unauthorized("You must be a governor to appoint senators");
   }
 
+  const fence = await officialsCollection.updateOne(
+    { _id: governorOfficial._id, characterId: governorCharacter._id },
+    { $inc: { senateAppointmentRevision: 1 } }
+  );
+  if (fence.matchedCount !== 1) throw conflict("The governor changed. Refresh and try again.");
+
   const validSeat = US_SENATE_2020.some(
     (seat) => seat.state === governorOfficial.state && seat.senateClass === input.senateClass
   );
@@ -264,6 +295,7 @@ export async function appointSenator(
   }
 
   const senateSeat = await officialsCollection.findOne({
+    ...officialsCountryScope("US"),
     officeType: "senate",
     state: governorOfficial.state,
     senateClass: input.senateClass,
@@ -278,7 +310,6 @@ export async function appointSenator(
     senateClass: input.senateClass,
   };
 
-  const now = new Date();
   let appointeeName: string;
   let appointeeParty: string;
   let appointeeUserId: ObjectId | undefined;
@@ -332,9 +363,10 @@ export async function appointSenator(
   const termEnd =
     nextClassElection?.endTime instanceof Date
       ? nextClassElection.endTime
-      : new Date(Date.now() + 6 * 365 * 24 * 60 * 60 * 1000);
+      : new Date(now.getTime() + 6 * 365 * 24 * 60 * 60 * 1000);
 
   const officialFields: Partial<ElectedOfficial> = {
+    countryId: "US",
     officeType: "senate",
     state: governorOfficial.state,
     senateClass: input.senateClass,
@@ -353,16 +385,22 @@ export async function appointSenator(
   }
 
   if (senateSeat) {
-    await officialsCollection.updateOne(
-      { _id: senateSeat._id },
+    const seated = await officialsCollection.updateOne(
+      {
+        _id: senateSeat._id,
+        characterId: senateSeat.characterId ?? null,
+        nppId: senateSeat.nppId ?? null,
+      },
       {
         $set: officialFields,
         $unset: input.appointeeType === "character" ? { nppId: "" } : {},
       }
     );
+    if (seated.matchedCount !== 1)
+      throw conflict("The Senate vacancy changed. Refresh and try again.");
   } else {
     await officialsCollection.insertOne({
-      _id: new ObjectId(),
+      _id: appointmentId,
       createdAt: now,
       ...officialFields,
     } as ElectedOfficial);
@@ -379,36 +417,42 @@ export async function appointSenator(
       { $set: { currentOffice: officeType, updatedAt: now } }
     );
     const gameState = await getGameState(db).catch(() => null);
-    await captureOfficeTransition({
-      db,
-      officeType: "senate",
-      transitionType: "gained",
-      partyId: appointeeParty,
-      selectionMethod: "appointment",
-      tenureTurns: 0,
-      careerStage: 0,
-      nationId: "US",
-      turn: gameState?.currentTurn ?? 0,
-      iteration: gameState?.iteration,
-      flush: true,
-    });
+    await afterCommit(db, () =>
+      captureOfficeTransition({
+        db: unboundDb(db),
+        officeType: "senate",
+        transitionType: "gained",
+        partyId: appointeeParty,
+        selectionMethod: "appointment",
+        tenureTurns: 0,
+        careerStage: 0,
+        nationId: "US",
+        turn: gameState?.currentTurn ?? 0,
+        iteration: gameState?.iteration,
+        flush: true,
+      })
+    );
   }
 
   if (appointeeUserId) {
-    await createNotification({
-      userId: appointeeUserId,
-      title: "Appointed to US Senate",
-      message: `You have been appointed as US Senator for ${governorOfficial.state} (Class ${input.senateClass}) until ${termEnd.toLocaleDateString()}.`,
-      type: "system",
-    });
+    await afterCommit(db, () =>
+      createNotification({
+        userId: appointeeUserId,
+        title: "Appointed to US Senate",
+        message: `You have been appointed as US Senator for ${governorOfficial.state} (Class ${input.senateClass}) until ${termEnd.toLocaleDateString()}.`,
+        type: "system",
+      })
+    );
   }
   if (governorCharacter.userId) {
-    await createNotification({
-      userId: governorCharacter.userId,
-      title: "Senator Appointed",
-      message: `You have appointed ${appointeeName} as US Senator for ${governorOfficial.state}.`,
-      type: "system",
-    });
+    await afterCommit(db, () =>
+      createNotification({
+        userId: governorCharacter.userId,
+        title: "Senator Appointed",
+        message: `You have appointed ${appointeeName} as US Senator for ${governorOfficial.state}.`,
+        type: "system",
+      })
+    );
   }
 
   return {

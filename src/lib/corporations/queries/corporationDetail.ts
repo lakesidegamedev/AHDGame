@@ -1,4 +1,5 @@
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
+import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
 import type { Corporation, GameState, ShareListing, ShareOrder } from "@/lib/db/types";
@@ -327,13 +328,15 @@ export async function loadCorporationDetailView(args: {
       // Bid depth is the smaller of the pool's cash and this turn's block-pacing
       // allowance for the company, so the trade modal never offers a market
       // sell the server will refuse.
-      marketDepthShares:
+      marketDepthShares: displayedMarketDepth(
         equityQuote.active && equityQuote.bidPriceLocal > 0
           ? Math.min(
               equityQuote.bidDepthShares,
               Math.floor(sellPacing.remainingLocal / equityQuote.bidPriceLocal)
             )
           : equityQuote.bidDepthShares,
+        income.totalShares
+      ),
       totalShares: income.totalShares,
       publicFloat: corporation.publicFloat ?? 0,
       pendingIpoShares: unplacedIpoShares(corporation),

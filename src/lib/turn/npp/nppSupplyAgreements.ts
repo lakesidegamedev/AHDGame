@@ -63,12 +63,8 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_LABELS } from "@/lib/constants/commodities";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 
-import {
-  contractCancelEffectiveTurn,
-  CONTRACT_OVERCOMMIT_TOLERANCE,
-  type SupplyAgreement,
-} from "@/lib/db/types/supplyAgreement";
-import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import { contractCancelEffectiveTurn, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { computeSupplierMaxContractableUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 
@@ -171,7 +167,7 @@ export function decideAiSupplyListings(args: {
         const key = `${c}|${stateId ?? NO_STATE}`;
         if (seenSell.has(key)) continue;
         seenSell.add(key);
-        const capacity = computeSupplierCommodityCapacityUnits({
+        const maxContractable = computeSupplierMaxContractableUnits({
           sectors: party.sectors,
           commodity: c,
           isNatcorp: party.isNatcorp,
@@ -179,10 +175,7 @@ export function decideAiSupplyListings(args: {
           ...economy,
           stateId,
         });
-        const spare = Math.max(
-          0,
-          capacity * CONTRACT_OVERCOMMIT_TOLERANCE - live.committedVolume(party.corpId, c, stateId)
-        );
+        const spare = Math.max(0, maxContractable - live.committedVolume(party.corpId, c, stateId));
         const volumeCap = spare * AI_LISTING_CAPACITY_FRACTION;
         if (!(volumeCap > 0)) continue;
         sells.push({
@@ -290,6 +283,7 @@ export const NPP_SUPPLY_SECTOR_PROJECTION = {
   transitionFromStrategyId: 1,
   retoolRescaleApplied: 1,
   transitionStartTurn: 1,
+  contractAchievableUnits: 1,
   productionPolicyLevel: 1,
   embargoSuspended: 1,
   embargoExportExposure: 1,
@@ -384,6 +378,7 @@ export function toParty(
       transitionFromStrategyId: s.transitionFromStrategyId,
       retoolRescaleApplied: s.retoolRescaleApplied,
       transitionStartTurn: s.transitionStartTurn,
+      contractAchievableUnits: s.contractAchievableUnits,
       productionPolicyLevel: s.productionPolicyLevel,
       embargoSuspended: s.embargoSuspended,
       embargoExportExposure: s.embargoExportExposure,

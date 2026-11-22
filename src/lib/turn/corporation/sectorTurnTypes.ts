@@ -80,6 +80,10 @@ export interface SectorTurnResult {
   costs: number;
   /** Idle-capacity or mothball upkeep already included in costs. */
   plantsUpkeepCost: number;
+  /** Workers on the payroll this turn, as written to the sector. */
+  workers?: number;
+  /** The named legs of `costs`, per turn, for the company's cost record. */
+  costParts?: import("@/lib/corporations/rules/costBreakdown").SiteCostParts;
   /** Paid construction value still in the outstanding build queue. */
   constructionInProgressAnchor: number;
   /** Capital book value in capital mode, otherwise sector NPV. */

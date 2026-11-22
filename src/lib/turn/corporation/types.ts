@@ -489,6 +489,10 @@ export interface CorpSnapshot {
   corpId: ObjectId;
   revenue: number;
   totalCosts: number;
+  /** Where `totalCosts` went (₳/turn); the parts sum to the total. */
+  costBreakdown?: import("@/lib/corporations/rules/costBreakdown").CostBreakdown;
+  /** Workers across the company's sectors this turn. */
+  headcount?: number;
   /** Pre-tax operating income minus overhead, before bond flows and dividends (₳/turn). */
   incomePreDividends: number;
   income: number;

@@ -1,4 +1,4 @@
-import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { noConfidenceTargetStillInOffice } from "@/lib/government/rules/noConfidenceTarget";
 /**
@@ -376,6 +376,16 @@ export async function ensureParliamentaryGovernmentFormation(
  * drops below the country's coalition threshold.
  */
 export async function updateParliamentaryGovernmentSeats(
+  db: Db,
+  countryId: CountryId,
+  preset?: string
+): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    updateParliamentaryGovernmentSeatsInTransaction(tx, countryId, preset)
+  );
+}
+
+async function updateParliamentaryGovernmentSeatsInTransaction(
   db: Db,
   countryId: CountryId,
   preset?: string
@@ -1914,6 +1924,20 @@ export async function unformGovernmentAndVacatePM(
     collapsedAt?: Date | null;
   }
 ): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    unformGovernmentAndVacatePMInTransaction(tx, countryId, now, opts)
+  );
+}
+
+async function unformGovernmentAndVacatePMInTransaction(
+  db: Db,
+  countryId: CountryId,
+  now: Date,
+  opts?: {
+    reason?: "snap" | "no-confidence" | "post-election" | "confidence-motion-failed" | "lost-seat";
+    collapsedAt?: Date | null;
+  }
+): Promise<void> {
   const govCol = getGovernmentFormationsCollection(db);
   const existing = await govCol.findOne({ _id: countryId });
   if (!existing) return;
@@ -2020,19 +2044,23 @@ export async function unformGovernmentAndVacatePM(
   );
   await Promise.all(
     departingPlayers.map((player) =>
-      captureOfficeTransition({
-        db,
-        officeType: execKeyVacate,
-        transitionType: "lost",
-        partyId: player.party,
-        selectionMethod:
-          reason === "post-election" || reason === "lost-seat" ? "election" : "removal",
-        tenureTurns:
-          existing.formedTurn != null ? Math.max(0, currentTurn - existing.formedTurn) : undefined,
-        careerStage: player.careerHistory?.length ?? 0,
-        nationId: countryId,
-        turn: currentTurn,
-      })
+      afterCommit(db, () =>
+        captureOfficeTransition({
+          db: unboundDb(db),
+          officeType: execKeyVacate,
+          transitionType: "lost",
+          partyId: player.party,
+          selectionMethod:
+            reason === "post-election" || reason === "lost-seat" ? "election" : "removal",
+          tenureTurns:
+            existing.formedTurn != null
+              ? Math.max(0, currentTurn - existing.formedTurn)
+              : undefined,
+          careerStage: player.careerHistory?.length ?? 0,
+          nationId: countryId,
+          turn: currentTurn,
+        })
+      )
     )
   );
 }
