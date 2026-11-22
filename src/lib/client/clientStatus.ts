@@ -13,7 +13,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
-import { loadFxRatesRecord, corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
+import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -30,10 +30,7 @@ import {
   DEFAULT_PARTY_INFLUENCE_MAX_BONUS,
   DEFAULT_PARTY_INFLUENCE_POOL_MULTIPLIER,
 } from "@/lib/turn/partyInfluenceTurn";
-import {
-  estimateCorpDividendPaidLastTurn,
-  fetchLatestCorpHistoryDividendRows,
-} from "@/lib/corporations/dividendIncomeFromHistory";
+import { loadDividendsReceived } from "@/lib/character/dividendsReceived";
 import {
   cabinetOfficeTypeForCountry,
   resolveOfficeActionBonus,
@@ -212,38 +209,10 @@ export async function handleClientStatus(request: Request) {
           : Promise.resolve([]),
       ]);
 
-      const latestHistByCorp = await fetchLatestCorpHistoryDividendRows(
-        db,
-        dividendCorps.map((c) => c._id)
-      );
-
-      let dividendIncomePerTurn = 0;
-      for (const corp of dividendCorps) {
-        const sh = corp.shareholders.find(
-          (s) => s.imperialCharacterId?.toString() === imperial._id.toString()
-        );
-        if (sh && sh.shares > 0 && corp.totalShares > 0) {
-          const hist = latestHistByCorp.get(corp._id.toString());
-          if (hist) {
-            const totalCorpDividendPaidLocal = estimateCorpDividendPaidLastTurn(hist);
-            const corpCcy =
-              corp.liquidCurrencyCode ??
-              (corp.countryId
-                ? COUNTRY_CURRENCY_MAP[corp.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-                : undefined);
-            const corpFxRate =
-              corpCcy && forexRates && forexRates[corpCcy as CurrencyCode]
-                ? forexRates[corpCcy as CurrencyCode]!
-                : 1.0;
-            const totalCorpDividendPaidAnchor = corpCapitalToAnchor(
-              totalCorpDividendPaidLocal,
-              corpCcy,
-              corpFxRate
-            );
-            dividendIncomePerTurn += totalCorpDividendPaidAnchor * (sh.shares / corp.totalShares);
-          }
-        }
-      }
+      // Dividends actually credited on the newest payout turn, the same figure
+      // the web masthead shows.
+      const dividendsReceived = await loadDividendsReceived(db, imperial._id);
+      const dividendIncomePerTurn = dividendsReceived?.amountAnchor ?? 0;
 
       // Cross-bond coupon accumulator. Each bond contributes LOCAL in
       // `bond.currencyCode` (Task-18B); anchor-normalize before summing so the
@@ -635,38 +604,8 @@ export async function handleClientStatus(request: Request) {
       netPerTurn: toCampaignLocal(fundDistribution.characterReceives) + unionContribution,
     };
 
-    const latestHistByCorp = await fetchLatestCorpHistoryDividendRows(
-      db,
-      dividendCorps.map((c) => c._id)
-    );
-
-    let dividendIncomePerTurn = 0;
-    for (const corp of dividendCorps) {
-      const sh = corp.shareholders.find(
-        (s) => s.characterId?.toString() === character._id.toString()
-      );
-      if (sh && sh.shares > 0 && corp.totalShares > 0) {
-        const hist = latestHistByCorp.get(corp._id.toString());
-        if (hist) {
-          const totalCorpDividendPaidLocal = estimateCorpDividendPaidLastTurn(hist);
-          const corpCcy =
-            corp.liquidCurrencyCode ??
-            (corp.countryId
-              ? COUNTRY_CURRENCY_MAP[corp.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-              : undefined);
-          const corpFxRate =
-            corpCcy && forexRates && forexRates[corpCcy as CurrencyCode]
-              ? forexRates[corpCcy as CurrencyCode]!
-              : 1.0;
-          const totalCorpDividendPaidAnchor = corpCapitalToAnchor(
-            totalCorpDividendPaidLocal,
-            corpCcy,
-            corpFxRate
-          );
-          dividendIncomePerTurn += totalCorpDividendPaidAnchor * (sh.shares / corp.totalShares);
-        }
-      }
-    }
+    const dividendsReceived = await loadDividendsReceived(db, character._id);
+    const dividendIncomePerTurn = dividendsReceived?.amountAnchor ?? 0;
 
     // Cross-bond coupon accumulator. Each bond contributes LOCAL in
     // `bond.currencyCode` (Task-18B); anchor-normalize before summing so the

@@ -13,6 +13,7 @@ import type { Corporation, Bond } from "@/lib/db/types";
 import { getTurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import { withCorpLock } from "@/lib/corporations/corpMoneyLock";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { wholeBondUnits } from "@/lib/bonds/rules/issuanceUnits";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
 import {
   corporateUnderwritingCapacityLocal,
@@ -463,6 +464,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       // the three rules is currently binding.
       exitEquity: Math.round(exitEquityAnchor),
       debtHeadroom: Math.round(debtHeadroom),
+      bondUnitFaceAnchor: corpCapitalToAnchor(BOND_UNIT_FACE_VALUE, bondCurrencyCode, corpFxRate),
       issuanceLimitedBy,
       primaryMarket,
       isCeo,
@@ -732,7 +734,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // `totalIssued` must be LOCAL to match its `currencyCode` tag.
     const corpCurrencyCode = resolveCorpLiquidCurrencyCode(corporation);
     const faceValueLocal = anchorToCorpCapital(faceValue, corpCurrencyCode, postCorpFxRate);
-    const totalUnits = Math.floor(faceValueLocal / BOND_UNIT_FACE_VALUE);
+    const totalUnits = wholeBondUnits(faceValueLocal, BOND_UNIT_FACE_VALUE);
     const actualFaceValueLocal = totalUnits * BOND_UNIT_FACE_VALUE;
     // ₳ mirror for wire + response payload (matches request's faceValue units).
     const actualFaceValueAnchor = corpLiquidCapitalToAnchor(

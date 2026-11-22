@@ -97,7 +97,7 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
             label="Other movements, not itemised"
             amount={fmtSigned(round(cash.unitemised))}
             amountClass={signTone(cash.unitemised)}
-            title="Cash change left after retained income and the lines above, such as payouts that settle a turn later."
+            title="Cash change left after retained income and the lines above, such as a payout or adjustment that is not in the lines above."
           />
         )}
         <StatementLine

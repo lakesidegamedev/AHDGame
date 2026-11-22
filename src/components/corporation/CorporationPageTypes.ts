@@ -1021,6 +1021,8 @@ export interface BondInfo {
   exitEquity?: number;
   /** Remaining debt-ceiling room in ₳, before the per-issuance cap (#1198). */
   debtHeadroom?: number;
+  /** Anchor value of one bond unit (1,000 face in the corporation's own currency). */
+  bondUnitFaceAnchor?: number;
   /** Which rule is currently binding on `maxAllowedIssuance` (#1198). */
   issuanceLimitedBy?: "perIssuance" | "leverage" | "exitEquity";
   /**
