@@ -15,7 +15,7 @@ The stats are set at [character creation](/wiki/create-a-character) and scale ac
 | Favorability | 50 | 0 to 100 | +1 to 3 per ad, drifts down above 60 |
 | Infamy | 0 | 0 to 100 | +2 per Attack, decays 5% per turn |
 | Donor Base level | 1 | no enforced cap, tuned for 0 to 75 | +1 per Build Donor Network |
-| Campaign Funds | ₳250,000 | none | Fundraise, per-turn income, spending |
+| Campaign Funds | ₳250,000 at 2019 prices (about ₳345,000 in a 2027 world) | none | Fundraise, per-turn income, spending |
 | Cash on Hand | ₳1,000,000, ₳2,500,000 or ₳5,000,000 | none | by wealth background, dividends, coupons |
 | Actions | 25 | cap 200 to 250 | +4 base per turn plus bonuses |
 

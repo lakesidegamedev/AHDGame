@@ -84,7 +84,7 @@ That is more than a day of funds for most players, which is why the advice is to
 ## When to move
 
 - **Move between cycles**, early in a build phase, so you have weeks to rebuild before the next primary.
-- **Do not move to chase donor income** unless the gain is large. Per-level donor income is ₳100, ₳200, ₳400 or ₳800 for small, medium, large and mega states, so a small-to-large move multiplies it by four, but you start at level 0.
+- **Do not move to chase donor income** unless the gain is large. Per-level donor income is ₳100, ₳200, ₳400 or ₳800 for small, medium, large and mega states, so a small-to-large move multiplies it by four.
 - **Cross-country moves are heavy.** Check the country is open to players before you commit.
 - Pair a move with a party check: if the destination is outside your party's reach, plan to rejoin or switch.
 

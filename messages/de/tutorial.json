@@ -168,22 +168,22 @@
       },
       "actionAdvertise": {
         "title": "Werbung kommt später",
-        "body": "Anzeigen erhöhen deine Beliebtheit, also ob die Leute dich mögen, nicht ob sie dich kennen. Am Anfang kosten sie etwa fünfmal so viel wie Wahlkampf, an Aktionen wie an Geld. Bau also zuerst deinen Einfluss auf.",
+        "body": "Anzeigen erhöhen deine Beliebtheit, also ob die Leute dich mögen, nicht ob sie dich kennen. Am Anfang kosten sie ein Vielfaches von Wahlkampf, an Aktionen wie an Geld (den genauen Preis zeigt die Aktionsseite). Bau also zuerst deinen Einfluss auf.",
         "next": "Weiter"
       },
       "actionFundraise": {
         "title": "Spendensammeln braucht eine Spenderbasis",
-        "body": "Spendensammeln macht aus deinem Spendernetzwerk Wahlkampfgeld. Ist dein Spenderlevel null, ist die Aktion ausgegraut, weil du niemanden anrufen kannst. Deshalb ist die nächste Karte in deinen ersten Runden wichtiger als diese.",
+        "body": "Spendensammeln macht aus deinem Spendernetzwerk Wahlkampfgeld. Neue Charaktere starten mit Spenderlevel {startingDonorLevel}, du kannst also ab der ersten Runde Spenden sammeln, aber ein kleines Netzwerk bringt wenig ein. Fällt dein Spenderlevel auf null, ist die Aktion ausgegraut, weil du niemanden anrufen kannst. Die nächste Karte zeigt, wie du es ausbaust.",
         "next": "Weiter"
       },
       "actionDonors": {
         "title": "Bau das Spendernetzwerk früh auf",
-        "body": "Das Spendernetzwerk auszubauen kostet anfangs 4 Aktionen und bringt selbst kein Geld. Du brauchst Spenderlevel 1, bevor du überhaupt Spenden sammeln kannst, und jedes Level erhöht, was jedes spätere Spendensammeln einbringt. Bezahlst du deinen Wahlkampf aus eigener Tasche, geht bei der Überweisung die Hälfte des Geldes verloren und deine Verrufenheit steigt. Verrufenheit über 20 kostet dich jede Runde Beliebtheit.",
+        "body": "Das Spendernetzwerk auszubauen kostet anfangs 4 Aktionen und bringt selbst kein Geld. Du startest mit Spenderlevel {startingDonorLevel}, und jedes weitere Level erhöht, was jedes spätere Spendensammeln einbringt. Bezahlst du deinen Wahlkampf aus eigener Tasche, geht bei der Überweisung die Hälfte des Geldes verloren und deine Verrufenheit steigt. Verrufenheit über 20 kostet dich jede Runde Beliebtheit.",
         "next": "Verstanden"
       },
       "fileForRace": {
         "title": "Tritt bei dir zu Hause zu einem Rennen an",
-        "body": "Deine {region}-Seite listet die Rennen, zu denen du wirklich antreten kannst. Ein Sitz im {region}-Parlament ist der übliche erste Anlauf: billig zu bestreiten, echte Macht, und du bekommst eine Abstimmungsbilanz für den nächsten Wahlkampf. Gewinn erst etwas Kleines, dann steig auf.",
+        "body": "Deine {region}-Seite listet die Rennen, zu denen du wirklich antreten kannst. Die Kandidatur ist nur während des Vorwahlfensters eines Rennens offen, und kleine lokale Sitze sind nicht immer offen. Sieh dir die Rennen an, die bei dir zu Hause gerade offen sind: Das Feld \"Deine ersten Tage\" im Profil und die Wahlen-Seite listen sie auf. Sind nur landesweite Rennen offen, baue Einfluss und Geld auf und tritt einer Partei bei, bis die lokale Kandidatur wieder öffnet. Gewinne wenn möglich zuerst etwas Kleines, dann steig auf.",
         "hint": "Öffne den Wahlen-Tab auf deiner {region}-Seite und tritt zu einem Rennen an.",
         "next": "Weiter"
       },

@@ -1,6 +1,6 @@
 export const firstCampaignWalkthroughContent = `# First Campaign Walkthrough
 
-You have 25 actions, ₳250,000 and about six days before a Pennsylvania State Senate primary. This is that campaign played out day by day, with real numbers, from the first click to the last four turns. Other countries use the same clicks with different office names. The kit below is what you get from [Create a Character](/wiki/create-a-character), so do that first if you have not. It follows the plan in [Campaign Strategy](/wiki/campaign-strategy) and expands the overview in [Getting Started](/wiki/getting-started).
+You have 25 actions, ₳250,000 (2019 prices; a 2027 world scales funds and costs up by the same factor) and about six days before a primary. This is one example campaign, a Pennsylvania State Senate primary, played out day by day, with real numbers, from the first click to the last four turns. Filing for a race is only open during its primary window, and small local seats are not always open, so check the **Elections** page and your profile's first-days panel for the races open at home right now, and swap in whichever one is. Other countries use the same clicks with different office names. The kit below is what you get from [Create a Character](/wiki/create-a-character), so do that first if you have not. It follows the plan in [Campaign Strategy](/wiki/campaign-strategy) and expands the overview in [Getting Started](/wiki/getting-started).
 
 The numbers below assume a state with average GDP per person (costs multiplied by 1.0), a large state (Pennsylvania has more than 8 million people), and neutral stats. Your own costs will differ a little, and the in-game quote shows the exact figure before you click.
 
@@ -9,7 +9,7 @@ The numbers below assume a state with average GDP per person (costs multiplied b
 - Home: Pennsylvania. Sliders: Economic -2, Social -1.
 - Open **Parties** and join the Democrats (close to those sliders). To run as an Independent instead, skip this and see the variant at the end.
 - Kit: 25 actions, ₳250,000 Campaign Funds, personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50, Political Influence (PI) 10, donor level 1.
-- Target: Pennsylvania State Senate, primary in about 6 real days.
+- Target: the Pennsylvania State Senate primary in this example, in about 6 real days. Use whichever race is open for you.
 
 \`\`\`guide-screenshot
 dashboard

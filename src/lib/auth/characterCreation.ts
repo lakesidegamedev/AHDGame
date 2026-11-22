@@ -40,7 +40,7 @@ import {
 } from "@/lib/singleplayerHeadOfState";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
-import { sendSystemMail } from "@/lib/mail/systemMail";
+import { sendSystemMailOnce } from "@/lib/mail/systemMail";
 import { onboardingRewardAmount } from "@/lib/onboarding/reward";
 import {
   buildWelcomeMailBody,
@@ -63,8 +63,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
-
-const MIN_STARTING_DONOR_BASE_LEVEL = 1;
+import { MIN_STARTING_DONOR_BASE_LEVEL } from "@/lib/constants/startingDonorLevel";
 
 async function repairLegacyCharacterUserIdIndex(db: Db): Promise<boolean> {
   const collection = charactersCollection<Document>(db);
@@ -550,7 +549,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
     // Welcome mail pointing at the onboarding checklist (best-effort).
     try {
-      await sendSystemMail(db, {
+      await sendSystemMailOnce(db, {
         toCharacterId: characterId,
         toCharacterName: name,
         toCharacterSequentialId: character.sequentialId ?? 0,

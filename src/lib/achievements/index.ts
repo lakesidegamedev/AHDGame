@@ -266,23 +266,43 @@ export async function revokeAchievement(
  * Get all achievements earned by an account, with achievement details.
  * @param userId - the account owner
  */
-export async function getAccountAchievements(userId: ObjectId): Promise<
+export async function getAccountAchievements(
+  userId: ObjectId,
+  scope?: { characterId: ObjectId; includeUntagged: boolean }
+): Promise<
   Array<{
     achievement: Achievement;
     earnedAt: Date;
   }>
 > {
   try {
-    return await loadAccountAchievements(userId);
+    return await loadAccountAchievements(userId, scope);
   } catch (error) {
     console.error("[achievements] getAccountAchievements error:", error);
     return [];
   }
 }
 
-export async function loadAccountAchievements(userId: ObjectId) {
+/**
+ * Keep the rows a character may show: ones it earned, plus untagged legacy
+ * rows unless the character was added after the account's first.
+ */
+export function filterAchievementRowsForCharacter<T extends { characterId?: ObjectId | null }>(
+  rows: T[],
+  scope: { characterId: ObjectId; includeUntagged: boolean }
+): T[] {
+  return rows.filter((row) =>
+    row.characterId ? row.characterId.equals(scope.characterId) : scope.includeUntagged
+  );
+}
+
+export async function loadAccountAchievements(
+  userId: ObjectId,
+  scope?: { characterId: ObjectId; includeUntagged: boolean }
+) {
   const db = await getDb();
-  const cas = await characterAchievementsCollection(db).find({ userId }).toArray();
+  const allRows = await characterAchievementsCollection(db).find({ userId }).toArray();
+  const cas = scope ? filterAchievementRowsForCharacter(allRows, scope) : allRows;
 
   const achievementIds = cas.map((ca) => ca.achievementId);
   if (achievementIds.length === 0) return [];

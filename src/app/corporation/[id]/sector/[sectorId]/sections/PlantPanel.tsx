@@ -26,7 +26,10 @@ import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
-import { estimateSectorFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
+import {
+  estimateSectorFullCapacityOneHopFreightTeu,
+  freightLoadStatus,
+} from "@/lib/logistics/freightVisibility";
 
 interface PlantPanelProps {
   plants: PlantsData;
@@ -51,6 +54,8 @@ interface PlantPanelProps {
   message: string;
   onOpenBuild: () => void;
   onCancelOrder: (orderIndex: number) => void;
+  /** Current production policy level, to explain output above capacity. */
+  productionPolicyLevel?: number;
   onMothball: () => void;
   onReactivate: () => void;
   onResize?: (activePercent: number) => void;
@@ -80,6 +85,7 @@ export default function PlantPanel({
   message,
   onOpenBuild,
   onCancelOrder,
+  productionPolicyLevel = 0,
   onMothball,
   onReactivate,
   onResize,
@@ -135,6 +141,9 @@ export default function PlantPanel({
       marketSupplies.map((supply) => [supply.commodity, supply.units])
     ),
   });
+  const freightStatus = freightState
+    ? freightLoadStatus(freightState.observedLoad, freightState.capacity)
+    : null;
   const countedCampaigns =
     sectorType === "media" && hasRun ? (mediaAdvertisingSupply?.units ?? 0) : null;
 
@@ -167,6 +176,23 @@ export default function PlantPanel({
                         : t("freightStateTurn", { turn: freightState.turn }),
                     capacity: fmtUnits(freightState.capacity),
                   })}
+                </p>
+              )}
+              {freightStatus && freightStatus.status !== "normal" && (
+                <p
+                  role="status"
+                  className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-foreground"
+                >
+                  {freightStatus.status === "congested"
+                    ? t("freightCongested", {
+                        share: Math.round((freightStatus.share ?? 0) * 100),
+                        surcharge: Math.round(freightStatus.surcharge * 100),
+                        limit: fmtUnits(freightStatus.limit),
+                      })
+                    : t("freightBlocked", {
+                        share: Math.round((freightStatus.share ?? 0) * 100),
+                        limit: fmtUnits(freightStatus.limit),
+                      })}
                 </p>
               )}
               {fullCapacityFreightEstimate != null && (
@@ -261,6 +287,7 @@ export default function PlantPanel({
               sectorType={sectorType}
               localMarketOutputs={plants.localMarketOutputs}
               dimmed={mothballed}
+              productionPolicyLevel={productionPolicyLevel}
             />
             {primaryMediaSupply && (
               <div className="mt-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-body-xs text-foreground">
@@ -406,7 +433,10 @@ export default function PlantPanel({
       {/* Build queue ───────────────────────────────────────────────────────*/}
       {plants.buildQueue.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-body-sm font-medium text-muted">Under construction</p>
+          <p className="mb-2 text-body-sm font-medium text-muted">
+            Under construction
+            {plants.buildQueue.length > 1 ? ` · ${plants.buildQueue.length} separate orders` : ""}
+          </p>
           <ul className="space-y-2">
             {plants.buildQueue.map((o) => {
               // Smooth orders deliver capacity every turn across
@@ -434,6 +464,7 @@ export default function PlantPanel({
                           : `${fmtUnits(sitesOrdered)} ${orderedNoun}`}
                       </p>
                       <p className="text-body-xs text-muted">
+                        {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
                             ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(o.costPaidAnchor)} paid`
@@ -446,7 +477,8 @@ export default function PlantPanel({
                         type="button"
                         onClick={() => onCancelOrder(o.orderIndex)}
                         disabled={busy}
-                        title="Cancel this build. You keep what is already built and get 75% of what you paid for the unbuilt part back."
+                        title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back.`}
+                        aria-label={`Cancel the order placed on turn ${o.startTurn}`}
                         className="inline-flex shrink-0 items-center gap-1 rounded-md border border-card-border px-2 py-1 text-body-xs font-medium text-muted transition-colors hover:border-error/40 hover:text-error disabled:opacity-40"
                       >
                         <X className="h-3 w-3" aria-hidden /> Cancel

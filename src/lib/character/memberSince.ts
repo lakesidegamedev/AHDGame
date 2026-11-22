@@ -16,12 +16,16 @@ export function resolveMemberSince({
   accountCreatedAt,
   profileCreatedAt,
   historyStartedAt,
+  additionalCharacter = false,
 }: {
   accountCreatedAt: StoredDate;
   profileCreatedAt: Date;
   /** First surviving world's creation date, which ordinary resets preserve. */
   historyStartedAt?: StoredDate;
+  /** A character added after the account's first reports its own creation date. */
+  additionalCharacter?: boolean;
 }) {
+  if (additionalCharacter) return { date: profileCreatedAt, isApproximate: false };
   const accountDate = validDate(accountCreatedAt);
   const date = accountDate ?? profileCreatedAt;
   const historyStart = validDate(historyStartedAt);

@@ -1,3 +1,5 @@
+import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
+import { characterScopeClause, mailCharacterMatch } from "@/lib/notifications/characterScope";
 import { electionNavLabel } from "@/lib/elections/electionNavLabel";
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { resolveStaffRole } from "@/lib/staff/rules";
@@ -355,6 +357,9 @@ export async function GET() {
     } | null = null;
     const missingDemographics = character ? !character.demographics : false;
 
+    const activeScope = character ? await loadActiveCharacterScope(db, userOid) : null;
+    const unreadScope = characterScopeClause(userOid, activeScope);
+
     if (character) {
       const [
         stateDoc,
@@ -378,10 +383,12 @@ export async function GET() {
         notificationsCollection(db).countDocuments({
           userId: userOid,
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
+          ...(unreadScope ? { $and: [unreadScope] } : {}),
           read: false,
         }),
         playerMailCollection<Document>(db).countDocuments({
           toUserId: userOid,
+          ...mailCharacterMatch(activeScope),
           read: false,
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },

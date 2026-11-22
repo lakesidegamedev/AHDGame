@@ -36,6 +36,9 @@ function fakeDb(collections: Handlers, character: Record<string, unknown> | null
         .mockResolvedValue(
           character ? { _id: characterId, countryId: "US", homeState: "CA", ...character } : null
         ),
+      find: vi.fn().mockReturnValue({
+        limit: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
+      }),
     },
     gameState: {
       findOne: vi.fn().mockResolvedValue({ _id: "current", currentTurn: 100, preset: "default" }),

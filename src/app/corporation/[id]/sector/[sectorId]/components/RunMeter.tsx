@@ -1,5 +1,6 @@
 "use client";
 
+import { getOutputMultiplier } from "@/lib/utils/productionPolicy";
 import { useTranslations } from "next-intl";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
@@ -24,6 +25,8 @@ interface RunMeterProps {
   localMarketOutputs?: string[];
   /** Dim the whole meter (mothballed plants). */
   dimmed?: boolean;
+  /** Current production policy level (-25..25); output above capacity comes from a positive push. */
+  productionPolicyLevel?: number;
 }
 
 type SegmentGroup = "made" | "stopped" | "unplanned";
@@ -78,6 +81,7 @@ export default function RunMeter({
   sectorType,
   localMarketOutputs = [],
   dimmed = false,
+  productionPolicyLevel = 0,
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
   const t = useTranslations("corporations.runHold");
@@ -142,6 +146,15 @@ export default function RunMeter({
   ];
 
   const share = (units: number) => (capacity > 0 ? units / capacity : 0);
+  // A production push can make more than installed capacity. Legend shares
+  // stay "of capacity" (so they can pass 100%, and a note says why), while the
+  // bar is drawn against whichever is larger so it never overflows its track.
+  const overCapacity = capacity > 0 && producedUnits > capacity + 0.5;
+  const barBasis = Math.max(
+    capacity,
+    segments.reduce((sum, s) => sum + Math.max(0, s.units), 0)
+  );
+  const barShare = (units: number) => (barBasis > 0 ? units / barBasis : 0);
 
   /**
    * Drop slices too small to say anything. A cause carrying 0.4 of 693 units
@@ -181,10 +194,17 @@ export default function RunMeter({
           <div
             key={s.key}
             className={`h-full ${s.fill} transition-[width] duration-500`}
-            style={{ width: `${share(s.units) * 100}%` }}
+            style={{ width: `${barShare(s.units) * 100}%` }}
           />
         ))}
       </div>
+      {overCapacity && (
+        <p className="mt-2 text-body-xs text-muted" data-testid="run-over-capacity">
+          {productionPolicyLevel > 0
+            ? `Made ${fmtPct(producedUnits / capacity)} of installed capacity. Your production push (+${productionPolicyLevel}%) runs ${sites} past capacity, up to ${fmtPct(getOutputMultiplier(productionPolicyLevel))} of it, at extra input cost and wear.`
+            : `Made ${fmtPct(producedUnits / capacity)} of installed capacity.`}
+        </p>
+      )}
       {GROUP_ORDER.map((group) => {
         const rows = visible.filter((s) => s.group === group);
         if (rows.length === 0) return null;

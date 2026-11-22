@@ -22,6 +22,7 @@ import {
   topCommodityMovers,
   topStocksForPreview,
 } from "@/lib/market/overviewPreview";
+import { formatCount, formatPercent } from "@/lib/ui/numbers";
 
 const byDesc =
   <T,>(score: (t: T) => number) =>
@@ -106,7 +107,7 @@ export function MarketOverview({
             key={b._id}
             href={`/corporation/${b.corporationSequentialId ?? b.corporationId}`}
             left={`${b.corporationName} ${b.maturityLabel}`}
-            right={`${b.yieldToMaturity.toFixed(2)}%`}
+            right={formatPercent(b.yieldToMaturity, 2)}
           />
         ))}
       </PreviewCard>
@@ -171,7 +172,7 @@ export function MarketOverview({
         title="Supply deals"
         detail={
           offers?.enabled
-            ? `${(offers.totalAll ?? offers.total).toLocaleString("en-US")} open across all sources`
+            ? `${formatCount(offers.totalAll ?? offers.total)} open across all sources`
             : undefined
         }
         href="/market?tab=supply"

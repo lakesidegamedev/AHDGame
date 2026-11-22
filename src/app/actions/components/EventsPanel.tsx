@@ -61,7 +61,7 @@ const ORDER: Record<EventStatus, string> = {
 
 /** Accent colors per tone: icon tile and kind label. */
 export const EVENT_TONES = {
-  rose: { tile: "bg-rose-500/15 text-rose-300 ring-rose-400/30", text: "text-rose-300" },
+  rose: { tile: "bg-error/15 text-error ring-error/30", text: "text-error" },
   amber: { tile: "bg-amber-500/15 text-amber-300 ring-amber-400/30", text: "text-amber-300" },
   zinc: { tile: "bg-zinc-400/15 text-zinc-300 ring-zinc-400/30", text: "text-zinc-300" },
   sky: { tile: "bg-sky-500/15 text-sky-300 ring-sky-400/30", text: "text-sky-300" },

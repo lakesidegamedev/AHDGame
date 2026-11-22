@@ -147,83 +147,93 @@ export function ExperimentalUserMenu({
             {t("common.wallet")}
           </MenuRow>
         )}
-        {showProfile && ((adminCharacters && adminCharacters.length > 1) || imperialCharacter) && (
-          <>
-            <div className="my-1 h-px bg-card-border" />
-            <div className="px-2.5 pb-1 pt-1 text-body-sm font-medium text-muted">
-              {t("userMenu.characters")}
-            </div>
-            {adminCharacters?.map((char) =>
-              char.isActive && !isImperialMode ? (
-                <div
-                  key={char.id}
-                  className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground"
-                >
-                  <span>{char.name}</span>
-                  <span className="text-[10px] text-primary font-medium">{t("common.active")}</span>
-                </div>
-              ) : isImperialMode ? (
-                <button
-                  key={char.id}
-                  type="button"
-                  onClick={() => {
-                    closeAll();
-                    void handleSwitchImperial("character");
-                  }}
-                  disabled={switchingImperial}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
-                >
-                  <span>{char.name}</span>
-                  <span className="text-[10px] text-muted/60">{char.countryId}</span>
-                </button>
-              ) : (
-                <button
-                  key={char.id}
-                  type="button"
-                  onClick={() => {
-                    closeAll();
-                    void handleSwitchCharacter(char.id);
-                  }}
-                  disabled={switchingCharacter}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
-                >
-                  <span>{char.name}</span>
-                  <span className="text-[10px] text-muted/60">{char.countryId}</span>
-                </button>
-              )
-            )}
-            {imperialCharacter && (
-              <>
-                <div className="my-1 h-px bg-card-border" />
-                {isImperialMode ? (
-                  <Link
-                    href={`/imperial/${imperialCharacter.id}`}
-                    onClick={closeAll}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground transition-colors hover:bg-white/5"
+        {showProfile &&
+          ((adminCharacters && adminCharacters.length > 1) ||
+            imperialCharacter ||
+            user.isAdmin) && (
+            <>
+              <div className="my-1 h-px bg-card-border" />
+              <div className="px-2.5 pb-1 pt-1 text-body-sm font-medium text-muted">
+                {t("userMenu.characters")}
+              </div>
+              {adminCharacters?.map((char) =>
+                char.isActive && !isImperialMode ? (
+                  <div
+                    key={char.id}
+                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground"
                   >
-                    <span>{imperialCharacter.name}</span>
+                    <span>{char.name}</span>
                     <span className="text-[10px] text-primary font-medium">
                       {t("common.active")}
                     </span>
-                  </Link>
-                ) : (
+                  </div>
+                ) : isImperialMode ? (
                   <button
+                    key={char.id}
                     type="button"
                     onClick={() => {
                       closeAll();
-                      void handleSwitchImperial("imperial");
+                      void handleSwitchImperial("character");
                     }}
                     disabled={switchingImperial}
                     className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
                   >
-                    <span>{imperialCharacter.name}</span>
-                    <span className="text-[10px] text-amber-400/70">{t("common.imperial")}</span>
+                    <span>{char.name}</span>
+                    <span className="text-[10px] text-muted/60">{char.countryId}</span>
                   </button>
-                )}
-              </>
-            )}
-          </>
-        )}
+                ) : (
+                  <button
+                    key={char.id}
+                    type="button"
+                    onClick={() => {
+                      closeAll();
+                      void handleSwitchCharacter(char.id);
+                    }}
+                    disabled={switchingCharacter}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+                  >
+                    <span>{char.name}</span>
+                    <span className="text-[10px] text-muted/60">{char.countryId}</span>
+                  </button>
+                )
+              )}
+              {imperialCharacter && (
+                <>
+                  <div className="my-1 h-px bg-card-border" />
+                  {isImperialMode ? (
+                    <Link
+                      href={`/imperial/${imperialCharacter.id}`}
+                      onClick={closeAll}
+                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground transition-colors hover:bg-white/5"
+                    >
+                      <span>{imperialCharacter.name}</span>
+                      <span className="text-[10px] text-primary font-medium">
+                        {t("common.active")}
+                      </span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeAll();
+                        void handleSwitchImperial("imperial");
+                      }}
+                      disabled={switchingImperial}
+                      className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+                    >
+                      <span>{imperialCharacter.name}</span>
+                      <span className="text-[10px] text-amber-400/70">{t("common.imperial")}</span>
+                    </button>
+                  )}
+                </>
+              )}
+              {user.isAdmin && (
+                <MenuRow href="/create-character" onNavigate={closeAll}>
+                  {t("userMenu.newCharacter")}
+                </MenuRow>
+              )}
+            </>
+          )}
         <div className="my-1 h-px bg-card-border" />
         <MenuRow href="/settings" onNavigate={closeAll}>
           {t("common.settings")}

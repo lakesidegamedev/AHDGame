@@ -163,6 +163,7 @@
     },
     "userMenu": {
       "characters": "Charaktere",
+      "newCharacter": "Neuer Charakter",
       "accountSection": "Konto",
       "viewSection": "Ansicht",
       "profileSettings": "Profileinstellungen",

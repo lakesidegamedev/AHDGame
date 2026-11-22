@@ -34,6 +34,11 @@ import { createInitialCampaign } from "@/lib/campaigns/createInitialCampaign";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import {
+  holdsCommonsSeatInRace,
+  homeStateBlocks,
+  senateClassBlock,
+} from "@/lib/elections/entryPreview";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import {
   isElectionTypeEntryBlocked,
@@ -405,10 +410,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Nationwide executive races (president, uachtaran) use the country code
     // as state and are exempt from this check.
     if (
-      !isNationwideExecutive &&
-      !(dumaFiling?.allowed && dumaFiling.nationalList) &&
-      election.state &&
-      character.homeState !== election.state
+      homeStateBlocks({
+        isNationwideExecutive,
+        nationalList: Boolean(dumaFiling?.allowed && dumaFiling.nationalList),
+        electionState: election.state,
+        homeState: character.homeState,
+      })
     ) {
       logRequest("POST", path, 403, Date.now() - start);
       return errorResponse(
@@ -419,18 +426,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A seated Senator may only run for re-election to the exact Senate class
     // they currently hold. They cannot abandon their class mid-term to contest
-    // a different Senate seat (e.g. a Class II Senator filing for Class I or
-    // Class III). Running for a non-Senate office is unaffected.
+    // a different Senate seat. Running for a non-Senate office is unaffected.
     const heldOffice = character.currentOffice;
-    const heldSenateClass =
-      heldOffice && heldOffice.type === "senate" && "senateClass" in heldOffice
-        ? heldOffice.senateClass
-        : undefined;
-    if (
-      election.electionType === "senate" &&
-      heldSenateClass != null &&
-      heldSenateClass !== election.senateClass
-    ) {
+    const heldSenateClass = senateClassBlock(heldOffice, election);
+    if (heldSenateClass !== null) {
       logRequest("POST", path, 403, Date.now() - start);
       return errorResponse(
         403,
@@ -440,10 +439,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A sitting Commons MP in this state already holds a seat not on the by-election ballot; seating them would double-seat them (additive resolution never sweeps). The race fills only vacated seats.
     if (
-      isSpecialCommonsElection(election.electionType) &&
-      heldOffice?.type === officeKeyForElectionType(election.electionType) &&
-      "state" in heldOffice &&
-      heldOffice.state === election.state
+      holdsCommonsSeatInRace(heldOffice, {
+        isSpecialCommons: isSpecialCommonsElection(election.electionType),
+        officeKey: officeKeyForElectionType(election.electionType),
+        state: election.state,
+      })
     ) {
       logRequest("POST", path, 403, Date.now() - start);
       return errorResponse(

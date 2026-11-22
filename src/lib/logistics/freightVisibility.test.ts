@@ -3,6 +3,7 @@ import {
   estimateOneHopFreightTeu,
   estimateSectorFullCapacityOneHopFreightTeu,
   estimateStateFullCapacityOneHopFreightTeu,
+  freightLoadStatus,
 } from "./freightVisibility";
 
 describe("freight visibility estimates", () => {
@@ -54,5 +55,26 @@ describe("freight visibility estimates", () => {
         outputByCommodity: {},
       })
     ).toBeNull();
+  });
+});
+
+describe("freightLoadStatus", () => {
+  it("is normal up to capacity", () => {
+    expect(freightLoadStatus(81, 81).status).toBe("normal");
+  });
+  it("is congested past capacity and below the overflow limit", () => {
+    const s = freightLoadStatus(100, 81);
+    expect(s.status).toBe("congested");
+    expect(s.limit).toBeCloseTo(121.5);
+    expect(s.surcharge).toBe(0.35);
+  });
+  it("is blocked at the overflow limit (122 of 81 TEU)", () => {
+    const s = freightLoadStatus(122, 81);
+    expect(s.status).toBe("blocked");
+    expect(Math.round((s.share ?? 0) * 100)).toBe(151);
+  });
+  it("treats any load on a zero-capacity state as blocked", () => {
+    expect(freightLoadStatus(5, 0).status).toBe("blocked");
+    expect(freightLoadStatus(0, 0).status).toBe("normal");
   });
 });
