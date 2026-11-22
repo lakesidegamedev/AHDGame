@@ -78,6 +78,7 @@ export type CapacityDecisionOutcome =
   | "autopilot_no_payback"
   | "autopilot_demand_headroom"
   | "autopilot_capex_cap"
+  | "no_build_room"
   | "growth_throttled_market"
   | "growth_inputs_starved"
   | "cash_cut_run";
@@ -116,6 +117,7 @@ export type ReinvestCapacityGate = Extract<
   | "autopilot_no_payback"
   | "autopilot_demand_headroom"
   | "autopilot_capex_cap"
+  | "no_build_room"
   | "growth_throttled_market"
   | "growth_inputs_starved"
   | "cash_cut_run"

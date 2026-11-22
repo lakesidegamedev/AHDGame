@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveCreditStanding } from "@/lib/corporations/creditStanding";
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 
 import { useState } from "react";
@@ -26,6 +27,7 @@ import { TariffRestrictions } from "./TariffRestrictions";
 import { SubsidyBenefits } from "./SubsidyBenefits";
 import { GroupOverviewCard } from "./GroupOverviewCard";
 import { BalanceSheetRings } from "./finance/BalanceSheetRings";
+import { LastTurnReconciliation } from "./finance/LastTurnReconciliation";
 import { CountryRevenueRing } from "./finance/CountryRevenueRing";
 import { CountryStatement } from "./finance/CountryStatement";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -113,7 +115,6 @@ export default function FinancialsTab({
   const [npvPage, setNpvPage] = useState(0);
 
   const fogged = financialFogOfWar != null;
-  const constructionCash = fogged ? null : financials.constructionCash;
   const est = (text: string) => (fogged ? `~${text}` : text);
   const scale = (daily: number) => scaleMoney(daily, periodView);
   const fmt = (local: number) => est(money.fmt(local));
@@ -146,8 +147,9 @@ export default function FinancialsTab({
   );
   const netMargin = netMarginPct(financials);
 
-  const creditRating = corporation.creditRatingSnapshot ?? bondInfo?.creditRating.rating;
-  const creditScore = corporation.creditCompositeSnapshot ?? bondInfo?.creditRating.compositeScore;
+  const creditStanding = resolveCreditStanding(corporation, bondInfo?.creditRating);
+  const creditRating = creditStanding.rating ?? undefined;
+  const creditScore = creditStanding.composite ?? undefined;
 
   const federalByCountry = Object.entries(financials.federalTaxByCountry ?? {})
     .filter(([, amt]) => amt > 0)
@@ -203,6 +205,14 @@ export default function FinancialsTab({
           </KVList>
           <p className="mt-2 text-xs text-muted">{tArrears("explanation")}</p>
         </DenseSection>
+      )}
+
+      {!fogged && view === "income" && financials.lastTurnReconciliation && (
+        <LastTurnReconciliation
+          data={financials.lastTurnReconciliation}
+          fmt={money.fmt}
+          fmtSigned={money.fmtSigned}
+        />
       )}
 
       {fogged && financialFogOfWar && (
@@ -309,11 +319,12 @@ export default function FinancialsTab({
                   />
                 )}
                 <p className="py-2 text-xs text-muted">
-                  Current estimates use today&apos;s sectors and budgets. Last-turn income is what
-                  the engine recorded before later changes to capacity, production or spending.
+                  Forecast figures use today&apos;s sectors and budgets, so they describe the next
+                  turn. The last recorded turn is shown separately and can differ after changes to
+                  capacity, production or spending.
                 </p>
                 <StatementTable>
-                  <StatementGroup>Current estimate</StatementGroup>
+                  <StatementGroup>Forecast, next turn</StatementGroup>
                   <StatementLine
                     strong
                     label="Gross revenue"
@@ -582,7 +593,7 @@ export default function FinancialsTab({
                     <>
                       <StatementLine
                         strong
-                        label="Net income, current estimate"
+                        label="Net income, forecast"
                         amount={fmtSigned(scale(financials.income))}
                         amountClass={signTone(financials.income)}
                       />
@@ -593,10 +604,10 @@ export default function FinancialsTab({
                       </StatementGroup>
                       <StatementLine
                         indent
-                        label="Difference from current estimate"
+                        label="Difference from forecast"
                         amount={fmtSigned(scale(basis.netIncome - financials.income))}
                         amountClass={signTone(basis.netIncome - financials.income)}
-                        note="Recorded net income less the current estimate"
+                        note="Recorded net income less the forecast"
                       />
                     </>
                   )}
@@ -657,28 +668,6 @@ export default function FinancialsTab({
                       />
                     </>
                   )}
-                  {constructionCash && (
-                    <>
-                      <StatementGroup>
-                        Construction cash, turn {constructionCash.turn}
-                      </StatementGroup>
-                      {constructionCash.paid > 0 && (
-                        <StatementLine
-                          label="Construction paid"
-                          amount={fmtSigned(-constructionCash.paid)}
-                          amountClass="text-error"
-                          note="Cash spent on builds outside operating income"
-                        />
-                      )}
-                      {constructionCash.refunded > 0 && (
-                        <StatementLine
-                          label="Construction refunds"
-                          amount={fmtSigned(constructionCash.refunded)}
-                          amountClass="text-success"
-                        />
-                      )}
-                    </>
-                  )}
                 </StatementTable>
               </>
             )}
@@ -723,7 +712,10 @@ export default function FinancialsTab({
                     hint={creditScore != null ? `${creditScore}/100` : undefined}
                   />
                 )}
-                <KVRow label="Dividend payout" value={`${financials.effectiveDividendRate}%`} />
+                <KVRow
+                  label="Dividend payout"
+                  value={`${financials.dividendPolicyRate ?? financials.effectiveDividendRate}%`}
+                />
               </KVList>
             </DenseSection>
           </aside>

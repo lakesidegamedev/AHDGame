@@ -75,8 +75,16 @@ export interface CorporationHistory {
   shareEscrowBalance?: number;
   revenue: number;
   totalCosts: number;
+  /**
+   * Where `totalCosts` went this turn, in `currencyCode`. Each part is rounded on
+   * write, so the parts can differ from the total by a few units. Absent on rows
+   * written before it existed; those carry the total only.
+   */
+  costBreakdown?: import("@/lib/corporations/rules/costBreakdown").CostBreakdown;
+  /** Workers across the company's sectors when the turn was recorded. Absent on older rows. */
+  headcount?: number;
   income: number;
-  /** Total dividend paid to all shareholders this turn (matches turn processor). */
+  /** Total dividend the corporation paid to all shareholders this turn, in liquidCurrencyCode units. The ledger `corp_dividend` rows are one per recipient, so a recipient's rows sum across every paying corporation and do not equal this figure. */
   dividendPaidPerTurn?: number;
   /**
    * Net dividend income (local ccy, per-turn) this corp received from holding other corps' shares, after FX spread and the 50% dividend-received-deduction tax. Reporting only: the cash was credited to liquidCapital in the dividend phase, not via `income`. Surfaced as a Financials P&L line. Absent when the corp holds no dividend-paying corp shares.
@@ -115,7 +123,7 @@ export interface CorporationHistory {
    * Older snapshots lack this field.
    */
   perTurnBondDragOnNetIncome?: number;
-  /** Total corporate tax paid this turn, federal + state/regional combined (₳/turn). */
+  /** Total corporate tax paid this turn, federal + state/regional combined plus tax on dividends received, in liquidCurrencyCode units. The ledger `corp_tax_paid` row covers operating tax only, so it is lower by the dividend-received tax. */
   corporateTaxPaid?: number;
   /** Federal corporate tax paid this turn, summed across all countries (₳/turn). */
   federalTaxPaid?: number;

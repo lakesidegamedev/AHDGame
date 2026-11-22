@@ -22,6 +22,7 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -178,7 +179,7 @@ export async function GET(request: Request) {
       const id = sec.corporationId.toString();
       const corp = corpMap.get(id);
       const revenueAnchor = readCorpEconomicAnchor(
-        sec.revenue,
+        shareRevenueOf(sec),
         resolveSectorHostCurrencyCode(sec, corp),
         fxRateForSectorHostFromMap(sec, corp, fxByCurrency)
       );

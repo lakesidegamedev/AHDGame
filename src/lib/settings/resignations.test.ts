@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { ObjectId, type Db } from "mongodb";
@@ -173,7 +180,8 @@ describe("resignPosition", () => {
       positionId: "secretary_of_state",
       characterId,
     } as CabinetMember;
-    setFind("cabinetMembers", [member]);
+    db.collection("cabinetMembers").find.mockReturnValueOnce(createAsyncIterableCursor([member]));
+    setFind("cabinetMembers", []);
     vi.mocked(captureOfficeTransition).mockRejectedValueOnce(new Error("Telemetry unavailable"));
 
     const result = await resignPosition(db as unknown as Db, character, `cabinet:${member._id}`);

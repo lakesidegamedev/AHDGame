@@ -740,6 +740,18 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
         context.freightBilling.charge,
     /** P3a: idle-capacity (or mothball) upkeep charged this turn, ₳/turn. */
     plantsUpkeepCost: context.plantsUpkeepCost,
+    workers: context.computedWorkers,
+    ...(physicalPnl && !context.embargoLegacyMothball
+      ? {
+          costParts: {
+            wages: physicalPnl.laborCost,
+            inputs: physicalPnl.inputsCost,
+            maintenance: Math.max(0, physicalPnl.otherOpex) + physicalPnl.upkeep,
+            managementOverhead: 0,
+            freight: context.freightBilling.charge,
+          },
+        }
+      : {}),
     /** P3a: ₳ of paid-but-not-yet-delivered build orders after this turn. */
     constructionInProgressAnchor: context.constructionInProgressAnchor,
     npvContribution: context.market.capitalEnabled ? Math.round(capitalBookAnchor) : sectorNPV,

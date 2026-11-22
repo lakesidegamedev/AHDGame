@@ -153,7 +153,17 @@ export function fundedReceiptOf(
     | "internalSupplyCharge"
     | "valuationCredit"
     | "valuationCharge"
-  > & { turn?: number },
+  > &
+    Partial<
+      Pick<
+        ProducerSectorSettlement,
+        | "inputsConsumed"
+        | "labourPaid"
+        | "labourArrears"
+        | "otherOperatingPaid"
+        | "otherOperatingArrears"
+      >
+    > & { turn?: number },
   transitionSupport: number
 ): FundedReceipt {
   return {
@@ -164,6 +174,9 @@ export function fundedReceiptOf(
     soldUnits: r.soldUnits,
     unsoldProductionCost: r.unsoldProductionCost ?? 0,
     transitionSupport,
+    inputsConsumed: r.inputsConsumed ?? 0,
+    labour: (r.labourPaid ?? 0) + (r.labourArrears ?? 0),
+    siteOperating: (r.otherOperatingPaid ?? 0) + (r.otherOperatingArrears ?? 0),
     // Priced own-site deliveries: without these the sector accounts show no charge or income.
     ...(r.internalSupplyIncome ? { internalSupplyIncome: r.internalSupplyIncome } : {}),
     ...(r.internalSupplyCharge ? { internalSupplyCharge: r.internalSupplyCharge } : {}),

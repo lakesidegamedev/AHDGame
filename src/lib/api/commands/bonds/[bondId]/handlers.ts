@@ -1,4 +1,5 @@
 import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosure";
+import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -475,7 +476,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
         // bid, and the pool can only buy `marketDepthUnits` right now.
         bidPricePerUnit: quote.bidPerUnit,
         askPricePerUnit: quote.askPerUnit,
-        marketDepthUnits: quote.depthUnitsAtBid,
+        marketDepthUnits: displayedMarketDepth(quote.depthUnitsAtBid, totalUnits),
         requestedUnits: bond.requestedUnits ?? null,
         unsoldUnits: bond.unsoldUnits ?? 0,
         primaryFillRatio: bond.primaryFillRatio ?? null,

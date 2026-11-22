@@ -45,5 +45,13 @@ export function inputBlockerText(blocker: InputBlocker): string {
       return "Every offer was priced above your limit.";
     case "not_delivered":
       return "Supply was on offer within your limit but did not reach this plant. Check freight, the trade lane and your funds.";
+    case "no_offers":
+      return "Nobody offered this good in this market.";
+    case "not_eligible":
+      return "Supply was on offer within your limit, but only from sellers this plant cannot buy from because of trade routes, embargoes or tariffs.";
+    case "buyer_budget":
+      return "Supply was on offer within your limit, but the company's funds for this order ran out.";
+    case "freight_capacity":
+      return "Freight capacity ran out. Carriers had no more to sell.";
   }
 }

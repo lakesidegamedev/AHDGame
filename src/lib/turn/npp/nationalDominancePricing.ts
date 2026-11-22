@@ -10,7 +10,7 @@ import type { NppPlantsContext } from "@/lib/turn/npp/corpDecisionTypes";
 export function buildNppNationalShareResolver(
   sectors: CorporateSector[]
 ): NonNullable<NppPlantsContext["nationalShareOf"]> {
-  const shares = buildCorporationNationalRevenueShareByMarket(sectors);
+  const shares = buildCorporationNationalRevenueShareByMarket(sectors, new Map());
   return (corporationId, countryId, sectorType) =>
     shares.get(
       corporationNationalSectorShareKey(corporationId, countryId as CountryId, sectorType)

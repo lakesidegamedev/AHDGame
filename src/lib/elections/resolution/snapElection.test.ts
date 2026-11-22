@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -226,7 +233,7 @@ describe("triggerSnapElection", () => {
   it.each(["pm-trigger", "admin", "regime-change"] as const)(
     "preserves %s announcements",
     async (reason) => {
-      db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+      db.collectionMocks.elections.findOne.mockResolvedValue(null);
       const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
       await triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
         reason,

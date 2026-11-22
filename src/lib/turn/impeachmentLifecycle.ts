@@ -1,5 +1,6 @@
+import type { AnyBulkWriteOperation } from "mongodb";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
-import type { ElectedOfficial } from "@/lib/db/types";
 import type { Impeachment, ImpeachmentStage } from "@/lib/db/types/impeachment";
 import {
   getLowerChamberOfficeType,
@@ -39,10 +40,41 @@ export async function processImpeachmentLifecycle(
   currentTurn: number,
   now: Date
 ): Promise<{ resolved: number }> {
+  return withSessionDb(db, (tx) => processImpeachmentLifecycleInTransaction(tx, currentTurn, now));
+}
+
+async function processImpeachmentLifecycleInTransaction(
+  db: Db,
+  currentTurn: number,
+  now: Date
+): Promise<{ resolved: number }> {
   const open = await impeachmentsCollection(db)
     .find({ stage: { $in: ["house", "senate"] } })
     .toArray();
 
+  if (open.length === 0) return { resolved: 0 };
+  const [holders, recipients] = await Promise.all([
+    electedOfficialsCollection(db)
+      .find(
+        {
+          $or: open.map((imp) =>
+            imp.targetOffice === "governor" && imp.state
+              ? governorOfficialFilter(imp.countryId, imp.state)
+              : getExecutiveOfficialFilter(imp.countryId, "president")
+          ),
+        },
+        { projection: { countryId: 1, officeType: 1, state: 1, characterId: 1 } }
+      )
+      .toArray(),
+    charactersCollection(db)
+      .find(
+        { _id: { $in: open.map((imp) => imp.targetCharacterId) } },
+        { projection: { userId: 1, name: 1 } }
+      )
+      .toArray(),
+  ]);
+  const recipientById = new Map(recipients.map((c) => [c._id.toString(), c]));
+  const stageAdvances: AnyBulkWriteOperation<Impeachment>[] = [];
   let resolved = 0;
 
   const claim = async (imp: Impeachment, stage: ImpeachmentStage): Promise<boolean> => {
@@ -58,11 +90,12 @@ export async function processImpeachmentLifecycle(
 
     // Auto-cancel if the target is no longer the sitting office-holder (resigned,
     // lost office, already succeeded/removed).
-    const holderFilter =
-      isGovernor && imp.state
-        ? governorOfficialFilter(imp.countryId, imp.state)
-        : getExecutiveOfficialFilter(imp.countryId, "president");
-    const holder = await electedOfficialsCollection(db).findOne(holderFilter);
+    const holder = holders.find(
+      (h) =>
+        (h.countryId ?? "US") === imp.countryId &&
+        h.officeType === (isGovernor ? "governor" : "president") &&
+        (!isGovernor || h.state === imp.state)
+    );
     const stillHolds =
       holder?.characterId != null &&
       holder.characterId.toString() === imp.targetCharacterId.toString();
@@ -89,22 +122,21 @@ export async function processImpeachmentLifecycle(
       if (passesSenateConviction(tally)) {
         if (await claim(imp, "convicted")) {
           await removeImpeachedGovernor(db, imp.countryId, imp.state!, imp.targetCharacterId, now);
-          const targetChar = await charactersCollection(db).findOne(
-            { _id: imp.targetCharacterId },
-            { projection: { userId: 1, name: 1 } }
-          );
+          const targetChar = recipientById.get(imp.targetCharacterId.toString());
           if (targetChar?.userId) {
-            await createNotification({
-              userId: targetChar.userId,
-              type: "impeachment_convicted",
-              title: "Removed from Office",
-              message: `${imp.targetName} has been convicted by the ${imp.state} state legislature and removed as Governor.`,
-              metadata: {
-                impeachmentId: imp._id.toString(),
-                countryId: imp.countryId,
-                state: imp.state,
-              },
-            });
+            await afterCommit(db, () =>
+              createNotification({
+                userId: targetChar.userId,
+                type: "impeachment_convicted",
+                title: "Removed from Office",
+                message: `${imp.targetName} has been convicted by the ${imp.state} state legislature and removed as Governor.`,
+                metadata: {
+                  impeachmentId: imp._id.toString(),
+                  countryId: imp.countryId,
+                  state: imp.state,
+                },
+              })
+            );
           }
           resolved++;
         }
@@ -123,22 +155,24 @@ export async function processImpeachmentLifecycle(
         stageVotes
       );
       if (passesHouseImpeachment(tally)) {
-        const advanced = await impeachmentsCollection(db).updateOne(
-          { _id: imp._id, stage: "house" },
-          {
-            $set: {
-              stage: "senate",
-              senateVotingEndsOnTurn: currentTurn + IMPEACHMENT_SENATE_VOTING_TURNS,
-              updatedAt: now,
+        stageAdvances.push({
+          updateOne: {
+            filter: { _id: imp._id, stage: "house" },
+            update: {
+              $set: {
+                stage: "senate",
+                senateVotingEndsOnTurn: currentTurn + IMPEACHMENT_SENATE_VOTING_TURNS,
+                updatedAt: now,
+              },
+              // whippedFromVote is a single map shared by both stages, so a
+              // House-stage snapshot would otherwise follow the case into the
+              // Senate stage and show those members a "Whipped by Party" badge
+              // for a vote they can no longer cast.
+              $unset: { whippedFromVote: "" },
             },
-            // whippedFromVote is a single map shared by both stages, so a
-            // House-stage snapshot would otherwise follow the case into the
-            // Senate stage and show those members a "Whipped by Party" badge
-            // for a vote they can no longer cast.
-            $unset: { whippedFromVote: "" },
-          }
-        );
-        if (advanced.modifiedCount > 0) resolved++;
+          },
+        });
+        resolved++;
       } else if (await claim(imp, "dismissed")) {
         resolved++;
       }
@@ -155,18 +189,17 @@ export async function processImpeachmentLifecycle(
     if (upperOffice && passesSenateConviction(tally)) {
       if (await claim(imp, "convicted")) {
         await removeImpeachedExecutive(db, imp.countryId, "president", imp.targetCharacterId, now);
-        const targetChar = await charactersCollection(db).findOne(
-          { _id: imp.targetCharacterId },
-          { projection: { userId: 1, name: 1 } }
-        );
+        const targetChar = recipientById.get(imp.targetCharacterId.toString());
         if (targetChar?.userId) {
-          await createNotification({
-            userId: targetChar.userId,
-            type: "impeachment_convicted",
-            title: "Removed from Office",
-            message: `${imp.targetName} has been convicted by the ${imp.countryId} Senate and removed from the presidency.`,
-            metadata: { impeachmentId: imp._id.toString(), countryId: imp.countryId },
-          });
+          await afterCommit(db, () =>
+            createNotification({
+              userId: targetChar.userId,
+              type: "impeachment_convicted",
+              title: "Removed from Office",
+              message: `${imp.targetName} has been convicted by the ${imp.countryId} Senate and removed from the presidency.`,
+              metadata: { impeachmentId: imp._id.toString(), countryId: imp.countryId },
+            })
+          );
         }
         resolved++;
       }
@@ -175,5 +208,10 @@ export async function processImpeachmentLifecycle(
     }
   }
 
+  if (stageAdvances.length > 0) {
+    const advanced = await impeachmentsCollection(db).bulkWrite(stageAdvances);
+    if (advanced.matchedCount !== stageAdvances.length)
+      throw new Error("Impeachment stage changed during resolution");
+  }
   return { resolved };
 }

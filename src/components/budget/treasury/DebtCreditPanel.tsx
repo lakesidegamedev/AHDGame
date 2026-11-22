@@ -45,7 +45,10 @@ function KV({ label, value, delta }: { label: string; value: string; delta?: Rea
 interface DebtCreditPanelProps {
   sym: string;
   principal: number;
+  /** The rate the "Why this rate" table composes from today's inputs. */
   interestRate: number;
+  /** Rate stored at the last rollover; shown only when it differs. */
+  bookedRate?: number;
   ceiling: number;
   ceilingLabel: string;
   debtToGdp: number;
@@ -63,6 +66,7 @@ export function DebtCreditPanel({
   sym,
   principal,
   interestRate,
+  bookedRate,
   ceiling,
   ceilingLabel,
   debtToGdp,
@@ -108,6 +112,9 @@ export function DebtCreditPanel({
           }
         />
         <KV label="Effective rate" value={`${(interestRate * 100).toFixed(2)}%`} />
+        {bookedRate != null && Math.abs(bookedRate - interestRate) > 0.00005 && (
+          <KV label="Booked at last rollover" value={`${(bookedRate * 100).toFixed(2)}%`} />
+        )}
         <KV label={ceilingLabel} value={money(ceiling)} />
       </div>
 

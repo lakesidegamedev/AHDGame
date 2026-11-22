@@ -143,8 +143,9 @@ export function advanceStock(args: {
 }
 
 /**
- * Days of cover: how many turns current stock would satisfy demand with no
- * production. null when the commodity is non-storable or has no demand.
+ * Days of cover: current stock over the ledger's demand, which is a daily
+ * rate, so the result is in days of demand. null when the commodity is
+ * non-storable or has no demand.
  */
 export function daysOfCover(
   commodity: CommodityType,

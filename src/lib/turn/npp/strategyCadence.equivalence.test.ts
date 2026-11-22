@@ -260,7 +260,7 @@ function replay(
       new Set<string>(),
       () => null,
       plantsCtx,
-      uniformDemandSignals(f.headroom ? ROOM_UNITS : 0)
+      uniformDemandSignals(ROOM_UNITS)
     );
     const normalized = normalize({ turn, eligible, decision });
     trace.push([
