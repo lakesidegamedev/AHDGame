@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { moveProducerLiabilities } from "./producerLiabilities";
 
 export async function transferFundedSite(
@@ -27,7 +27,8 @@ export async function transferFundedSite(
   const targetId = full
     ? input.source._id
     : new ObjectId(createHash("sha256").update(input.key).digest("hex").slice(0, 24));
-  return runRequiredTransaction(
+  return runWithDbSession(
+    db,
     async (session) => {
       const coll = corporateSectorsCollection(db);
       const already = await coll.findOne(

@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { noConfidenceTargetStillInOffice } from "@/lib/government/rules/noConfidenceTarget";
 /**
@@ -24,8 +25,8 @@ import { noConfidenceTargetStillInOffice } from "@/lib/government/rules/noConfid
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { PoliticalParty, CareerEvent, OfficeType, BillStatus, Bill } from "@/lib/db/types";
-import type { Coalition } from "@/lib/db/types/coalition";
+import type { PoliticalParty, CareerEvent, OfficeType, BillStatus } from "@/lib/db/types";
+
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import {
   getGovernmentFormationsCollection,
@@ -942,14 +943,16 @@ export async function appointPrimeMinister(
   // re-appointment (repeated formation vote, redeploy overlap) must not spam
   // "New … Appointed".
   if (!isSameHolder) {
-    sendCountryGameEvent(countryId, {
-      title: `New ${config.executiveTitle} Appointed`,
-      description: `**${characterName}** has been appointed as ${config.executiveTitle} of ${config.name}.`,
-      color: DISCORD_COLORS.govFormed,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      ...(appointedPerson?.avatarUrl ? { thumbnail: { url: appointedPerson.avatarUrl } } : {}),
-    }).catch(() => {});
+    afterCommit(db, () =>
+      sendCountryGameEvent(countryId, {
+        title: `New ${config.executiveTitle} Appointed`,
+        description: `**${characterName}** has been appointed as ${config.executiveTitle} of ${config.name}.`,
+        color: DISCORD_COLORS.govFormed,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        ...(appointedPerson?.avatarUrl ? { thumbnail: { url: appointedPerson.avatarUrl } } : {}),
+      })
+    ).catch(() => {});
   }
 }
 
@@ -1146,6 +1149,18 @@ export async function resolveParliamentaryAppointmentVote(
   now: Date,
   officeLayout?: RuntimeCountryOffices
 ): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    resolveParliamentaryAppointmentVoteInTransaction(tx, countryId, voteId, now, officeLayout)
+  );
+}
+
+async function resolveParliamentaryAppointmentVoteInTransaction(
+  db: Db,
+  countryId: CountryId,
+  voteId: ObjectId,
+  now: Date,
+  officeLayout?: RuntimeCountryOffices
+): Promise<void> {
   const votesColl = getPMAppointmentVotesCollection(db);
   const govColl = getGovernmentFormationsCollection(db);
   const offices = officeLayout ?? (await loadRuntimeCountryOffices(db, countryId));
@@ -1281,39 +1296,43 @@ export async function resolveParliamentaryAppointmentVote(
       : null;
     if (nomineeChar?.userId) {
       const config = offices.config;
-      await createNotifications([
-        {
-          userId: nomineeChar.userId,
-          title: `Appointed ${config.executiveTitle}`,
-          message: `Your appointment as ${config.executiveTitle} has been confirmed (${vote.votesFor} ayes, ${vote.votesAgainst} nays).`,
-          type: "system",
-          metadata: { recipientCharacterId: vote.nomineeCharacterId!.toString() },
-        },
-      ]);
+      await afterCommit(db, () =>
+        createNotifications([
+          {
+            userId: nomineeChar.userId,
+            title: `Appointed ${config.executiveTitle}`,
+            message: `Your appointment as ${config.executiveTitle} has been confirmed (${vote.votesFor} ayes, ${vote.votesAgainst} nays).`,
+            type: "system",
+            metadata: { recipientCharacterId: vote.nomineeCharacterId!.toString() },
+          },
+        ])
+      );
     }
 
     const config = offices.config;
-    sendCountryGameEvent(countryId, {
-      title: vote.isConfidenceMotion
-        ? `${config.executiveTitle} Survives Confidence Motion`
-        : "Government Formed",
-      description: vote.isConfidenceMotion
-        ? `**${vote.nomineeName}** has won the post-election confidence motion (${vote.votesFor} ayes, ${vote.votesAgainst} nays) and remains as ${config.executiveTitle}.`
-        : `**${vote.nomineeName}** has been confirmed as ${config.executiveTitle} (${vote.votesFor}–${vote.votesAgainst}).`,
-      color: DISCORD_COLORS.govFormed,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      cardVoteSplit: [
-        {
-          label: config.legislature.lowerChamber.name,
-          votesFor: vote.votesFor,
-          votesAgainst: vote.votesAgainst,
-          votesAbstain: 0,
-          seats: existing?.totalSeats,
-        },
-      ],
-      ...(nomineeChar?.avatarUrl ? { thumbnail: { url: nomineeChar.avatarUrl } } : {}),
-    }).catch(() => {});
+    afterCommit(db, () =>
+      sendCountryGameEvent(countryId, {
+        title: vote.isConfidenceMotion
+          ? `${config.executiveTitle} Survives Confidence Motion`
+          : "Government Formed",
+        description: vote.isConfidenceMotion
+          ? `**${vote.nomineeName}** has won the post-election confidence motion (${vote.votesFor} ayes, ${vote.votesAgainst} nays) and remains as ${config.executiveTitle}.`
+          : `**${vote.nomineeName}** has been confirmed as ${config.executiveTitle} (${vote.votesFor}–${vote.votesAgainst}).`,
+        color: DISCORD_COLORS.govFormed,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        cardVoteSplit: [
+          {
+            label: config.legislature.lowerChamber.name,
+            votesFor: vote.votesFor,
+            votesAgainst: vote.votesAgainst,
+            votesAbstain: 0,
+            seats: existing?.totalSeats,
+          },
+        ],
+        ...(nomineeChar?.avatarUrl ? { thumbnail: { url: nomineeChar.avatarUrl } } : {}),
+      })
+    ).catch(() => {});
   } else {
     await govColl.updateOne({ _id: countryId }, { $set: { activeVoteId: null, updatedAt: now } });
     // PM appointment votes are character-only; the null arm is defensive.
@@ -1337,22 +1356,24 @@ export async function resolveParliamentaryAppointmentVote(
           reason: "confidence-motion-failed",
         });
         const config = offices.config;
-        sendCountryGameEvent(countryId, {
-          title: `${config.executiveTitle} Loses Confidence Motion`,
-          description: `**${vote.nomineeName}** lost the post-election confidence motion (${vote.votesFor} ayes, ${vote.votesAgainst} nays) and has been removed from office.`,
-          color: DISCORD_COLORS.govCollapsed,
-          footer: { text: "A House Divided" },
-          timestamp: now.toISOString(),
-          cardVoteSplit: [
-            {
-              label: config.legislature.lowerChamber.name,
-              votesFor: vote.votesFor,
-              votesAgainst: vote.votesAgainst,
-              votesAbstain: 0,
-            },
-          ],
-          ...(nomineeChar?.avatarUrl ? { thumbnail: { url: nomineeChar.avatarUrl } } : {}),
-        }).catch(() => {});
+        afterCommit(db, () =>
+          sendCountryGameEvent(countryId, {
+            title: `${config.executiveTitle} Loses Confidence Motion`,
+            description: `**${vote.nomineeName}** lost the post-election confidence motion (${vote.votesFor} ayes, ${vote.votesAgainst} nays) and has been removed from office.`,
+            color: DISCORD_COLORS.govCollapsed,
+            footer: { text: "A House Divided" },
+            timestamp: now.toISOString(),
+            cardVoteSplit: [
+              {
+                label: config.legislature.lowerChamber.name,
+                votesFor: vote.votesFor,
+                votesAgainst: vote.votesAgainst,
+                votesAbstain: 0,
+              },
+            ],
+            ...(nomineeChar?.avatarUrl ? { thumbnail: { url: nomineeChar.avatarUrl } } : {}),
+          })
+        ).catch(() => {});
       }
     }
 
@@ -1364,14 +1385,16 @@ export async function resolveParliamentaryAppointmentVote(
       const message = vote.isConfidenceMotion
         ? `You lost the confidence motion (${vote.votesFor} confidence, ${vote.votesAgainst} no confidence).`
         : `Your appointment as ${config.executiveTitle} was rejected (${vote.votesFor} ayes, ${vote.votesAgainst} nays).`;
-      await createNotifications([
-        {
-          userId: nomineeChar.userId,
-          title,
-          message,
-          type: "system",
-        },
-      ]);
+      await afterCommit(db, () =>
+        createNotifications([
+          {
+            userId: nomineeChar.userId,
+            title,
+            message,
+            type: "system",
+          },
+        ])
+      );
     }
   }
 }
@@ -1413,6 +1436,18 @@ export function noConfidenceMotionCarries(input: {
  * Resolve an expired no-confidence vote for the given country.
  */
 export async function resolveParliamentaryNoConfidenceVote(
+  db: Db,
+  countryId: CountryId,
+  voteId: ObjectId,
+  now: Date,
+  officeLayout?: RuntimeCountryOffices
+): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    resolveParliamentaryNoConfidenceVoteInTransaction(tx, countryId, voteId, now, officeLayout)
+  );
+}
+
+async function resolveParliamentaryNoConfidenceVoteInTransaction(
   db: Db,
   countryId: CountryId,
   voteId: ObjectId,
@@ -1521,23 +1556,25 @@ export async function resolveParliamentaryNoConfidenceVote(
       });
     }
 
-    sendCountryGameEvent(countryId, {
-      title: "Government Collapses — No Confidence Vote Passed",
-      description: `A vote of no confidence has passed (${vote.votesFor} - ${vote.votesAgainst}). The ${offices.config.executiveTitle} has been removed from office.`,
-      color: DISCORD_COLORS.govCollapsed,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      cardVoteSplit: [
-        {
-          label: offices.config.legislature.lowerChamber.name,
-          votesFor: vote.votesFor,
-          votesAgainst: vote.votesAgainst,
-          votesAbstain: 0,
-          seats: govFormationForTally?.totalSeats ?? undefined,
-        },
-      ],
-      ...(pmChar?.avatarUrl ? { thumbnail: { url: pmChar.avatarUrl } } : {}),
-    }).catch(() => {});
+    afterCommit(db, () =>
+      sendCountryGameEvent(countryId, {
+        title: "Government Collapses — No Confidence Vote Passed",
+        description: `A vote of no confidence has passed (${vote.votesFor} - ${vote.votesAgainst}). The ${offices.config.executiveTitle} has been removed from office.`,
+        color: DISCORD_COLORS.govCollapsed,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        cardVoteSplit: [
+          {
+            label: offices.config.legislature.lowerChamber.name,
+            votesFor: vote.votesFor,
+            votesAgainst: vote.votesAgainst,
+            votesAbstain: 0,
+            seats: govFormationForTally?.totalSeats ?? undefined,
+          },
+        ],
+        ...(pmChar?.avatarUrl ? { thumbnail: { url: pmChar.avatarUrl } } : {}),
+      })
+    ).catch(() => {});
   } else {
     await govColl.updateOne({ _id: countryId }, { $set: { activeVoteId: null, updatedAt: now } });
 
@@ -1563,10 +1600,19 @@ export async function resolveParliamentaryNoConfidenceVote(
         { countryId, status: "active" },
         { $set: { status: "cancelled", closedAt: now, updatedAt: now } }
       );
+      const nomineeIds = activeAppointments.flatMap((appointment) =>
+        appointment.nomineeCharacterId ? [appointment.nomineeCharacterId] : []
+      );
+      const nominees =
+        nomineeIds.length > 0
+          ? await charactersCollection(db)
+              .find({ _id: { $in: nomineeIds } }, { projection: { _id: 1, userId: 1 } })
+              .toArray()
+          : [];
+      const nomineeById = new Map(nominees.map((nominee) => [nominee._id.toString(), nominee]));
       for (const appt of activeAppointments) {
-        // PM appointment votes are character-only; the null arm is defensive.
         const nominee = appt.nomineeCharacterId
-          ? await charactersCollection(db).findOne({ _id: appt.nomineeCharacterId })
+          ? nomineeById.get(appt.nomineeCharacterId.toString())
           : null;
         if (nominee?.userId) {
           notificationInputs.push({
@@ -1594,7 +1640,7 @@ export async function resolveParliamentaryNoConfidenceVote(
     }
   }
 
-  await createNotifications(notificationInputs);
+  await afterCommit(db, () => createNotifications(notificationInputs));
 }
 
 // ---------------------------------------------------------------------------
@@ -2110,23 +2156,27 @@ export async function openConfidenceMotionForIncumbent(
     ? await (await getCharactersCollection(db)).findOne({ _id: gov.pmCharacterId })
     : null;
   if (pmChar?.userId) {
-    await createNotifications([
-      {
-        userId: pmChar.userId,
-        title: `${config.executiveTitle} Confidence Motion`,
-        message: `A post-election confidence motion has opened. ${chamberName} members will vote over the next ${PM_VOTE_DURATION_HOURS} hours on whether you remain ${config.executiveTitle}.`,
-        type: "system",
-        metadata: { recipientCharacterId: gov.pmCharacterId?.toString() },
-      },
-    ]);
+    await afterCommit(db, () =>
+      createNotifications([
+        {
+          userId: pmChar.userId,
+          title: `${config.executiveTitle} Confidence Motion`,
+          message: `A post-election confidence motion has opened. ${chamberName} members will vote over the next ${PM_VOTE_DURATION_HOURS} hours on whether you remain ${config.executiveTitle}.`,
+          type: "system",
+          metadata: { recipientCharacterId: gov.pmCharacterId?.toString() },
+        },
+      ])
+    );
   }
-  sendCountryGameEvent(countryId, {
-    title: `${config.executiveTitle} Confidence Motion Opened`,
-    description: `A post-election confidence motion is underway for **${gov.pmName}**. ${chamberName} members have ${PM_VOTE_DURATION_HOURS} hours to vote.`,
-    color: DISCORD_COLORS.govFormed,
-    footer: { text: "A House Divided" },
-    timestamp: now.toISOString(),
-  }).catch(() => {});
+  afterCommit(db, () =>
+    sendCountryGameEvent(countryId, {
+      title: `${config.executiveTitle} Confidence Motion Opened`,
+      description: `A post-election confidence motion is underway for **${gov.pmName}**. ${chamberName} members have ${PM_VOTE_DURATION_HOURS} hours to vote.`,
+      color: DISCORD_COLORS.govFormed,
+      footer: { text: "A House Divided" },
+      timestamp: now.toISOString(),
+    })
+  ).catch(() => {});
 
   return { opened: true, voteId };
 }

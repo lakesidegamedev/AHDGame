@@ -7,7 +7,7 @@ import {
   corpLiquidCapitalToAnchor,
   anchorToCorpLiquidCapital,
 } from "@/lib/currency/corporationCapital";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 
 export async function consolidateStateCash(
   db: Db,
@@ -18,7 +18,8 @@ export async function consolidateStateCash(
   const preview = await coll.findOne({ _id: fromId }, { projection: { liquidCapital: 1 } });
   if (!preview?.liquidCapital) return;
   const rates = await loadFxRatesByCurrency(db);
-  await runRequiredTransaction(
+  await runWithDbSession(
+    db,
     async (session) => {
       const source = await coll.findOne(
         { _id: fromId },

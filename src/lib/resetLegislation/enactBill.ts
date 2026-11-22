@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 import { bookRegionalLawDemand } from "./regionalEnactmentBudget";
 /** Transactional persistence shell for a server-authored v2 law bill. */
 import { applyV2VoterReactions, type V2BillBallots } from "./voterReactions";
@@ -45,7 +46,7 @@ export async function applyResetLawBillEnactment(
   const resetCountry = country as ResetCountry;
   if (!Number.isSafeInteger(turn) || turn < 1) throw new Error("Invalid v2 enactment turn");
   const receiptId = bill._id.toString();
-  return runRequiredTransaction(async (session) => {
+  return enactmentTransaction(db, async (session) => {
     const existingReceipt = await resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(
       db
     ).findOne({ _id: receiptId }, { session });
@@ -300,7 +301,7 @@ async function applyRegionalResetLawBillEnactment(
   if (!Number.isSafeInteger(turn) || turn < 1) throw new Error("Invalid v2 enactment turn");
   const resetCountry = country as ResetCountry;
   const receiptId = bill._id.toString();
-  return runRequiredTransaction(async (session) => {
+  return enactmentTransaction(db, async (session) => {
     const receipts = resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(db);
     const existingReceipt = await receipts.findOne({ _id: receiptId }, { session });
     if (existingReceipt) return { applied: false, programs: existingReceipt.programIds.length };
@@ -417,4 +418,12 @@ async function applyRegionalResetLawBillEnactment(
     );
     return { applied: true, programs: programIds.length };
   });
+}
+
+async function enactmentTransaction<T>(
+  db: Db,
+  work: (session: import("mongodb").ClientSession) => Promise<T>
+): Promise<T> {
+  const session = boundSession(db);
+  return session ? work(session) : runRequiredTransaction(work, { client: db.client });
 }

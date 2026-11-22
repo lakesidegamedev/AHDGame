@@ -36,6 +36,32 @@ describe("cleanupPartyPositionsOnSwitch — campaigner cleanup (Phase D)", () =>
     });
   });
 
+  it("removes regional and committee ballots while scoping departure to the old country", async () => {
+    const regionalElectionId = new ObjectId();
+    const committeeElectionId = new ObjectId();
+    db.collection("statePartyElections").find.mockReturnValue({
+      toArray: async () => [{ _id: regionalElectionId }],
+    });
+    db.collection("nationalCommitteeElections").find.mockReturnValue({
+      toArray: async () => [{ _id: committeeElectionId }],
+    });
+    const { cleanupPartyPositionsOnSwitch } = await import("./electionCandidacy");
+    await cleanupPartyPositionsOnSwitch(characterId, "1", "2", "US");
+    expect(db.collection("statePartyElections").find).toHaveBeenCalledWith({
+      partyId: "1",
+      status: "voting",
+      countryId: "US",
+    });
+    expect(db.collection("statePartyVotes").deleteMany).toHaveBeenCalledWith({
+      electionId: { $in: [regionalElectionId] },
+      $or: [{ voterId: characterId }, { candidateId: characterId }],
+    });
+    expect(db.collection("nationalCommitteeVotes").deleteMany).toHaveBeenCalledWith({
+      electionId: { $in: [committeeElectionId] },
+      voterId: characterId,
+    });
+  });
+
   it("pulls character from national campaignerIds when leaving party", async () => {
     db.collectionMocks["politicalParties"]!.findOne.mockResolvedValue({
       _id: partyObjectId,

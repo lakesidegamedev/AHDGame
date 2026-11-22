@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 /**
  * Audit S6 — the previously-bypassed national enactment paths (pocket-sign and
  * veto-override) now run budget validation. Uses the REAL billEnactment module

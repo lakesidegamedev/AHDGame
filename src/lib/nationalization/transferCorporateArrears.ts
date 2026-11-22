@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { combineLiabilityBooks } from "./rules/financialHoldings";
 
 /** Corporate arrears keep their original denomination and creditor jurisdiction. */
@@ -18,7 +18,8 @@ export async function transferCorporateArrears(
   const preview = await corps.findOne({ _id: fromId }, { projection });
   if (!preview?.operatingCashArrearsByCurrency && !preview?.federalTaxArrearsAnchorByCountry)
     return;
-  await runRequiredTransaction(
+  await runWithDbSession(
+    db,
     async (session) => {
       const source = await corps.findOne({ _id: fromId }, { session, projection });
       const target = await corps.findOne({ _id: toId }, { session, projection });

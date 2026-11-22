@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Shared helpers for the bill-lifecycle engine and the (legacy) US processor.
  * Extracted from billLifecycle.ts so both it and the unified engine can use them
@@ -78,18 +79,20 @@ export async function notifyPresidentBillAwaitingSignature(
   );
   if (!presidentChar?.userId) return;
 
-  await createNotifications([
-    {
-      userId: presidentChar.userId,
-      type: "bill_enrolled",
-      title: "Bill Awaiting Your Signature",
-      message: `"${bill.title}" passed Congress and is on your desk. Sign or veto it before the deadline, or it may become law without your signature.`,
-      metadata: {
-        billId: bill._id.toString(),
-        recipientCharacterId: presidentOfficial.characterId.toString(),
+  await afterCommit(db, () =>
+    createNotifications([
+      {
+        userId: presidentChar.userId,
+        type: "bill_enrolled",
+        title: "Bill Awaiting Your Signature",
+        message: `"${bill.title}" passed Congress and is on your desk. Sign or veto it before the deadline, or it may become law without your signature.`,
+        metadata: {
+          billId: bill._id.toString(),
+          recipientCharacterId: presidentOfficial.characterId!.toString(),
+        },
       },
-    },
-  ]);
+    ])
+  );
 }
 
 /** Notify all seated members of a chamber that a bill vote has opened. */
@@ -125,14 +128,16 @@ export async function notifyChambersVoteOpen(
   // Harmless while only the US reached this; PR3 fans it across a whole bloc.
   const chamberName = chamberNameForOfficeType(bill.countryId ?? "US", chamberType);
 
-  await createNotifications(
-    chars.map((c) => ({
-      userId: c.userId,
-      type: "bill_vote_open",
-      title: "Vote Now Open",
-      message: `Voting on "${bill.title}" is now open in the ${chamberName}.`,
-      metadata: { billId: bill._id.toString(), recipientCharacterId: c._id.toString() },
-    }))
+  await afterCommit(db, () =>
+    createNotifications(
+      chars.map((c) => ({
+        userId: c.userId,
+        type: "bill_vote_open",
+        title: "Vote Now Open",
+        message: `Voting on "${bill.title}" is now open in the ${chamberName}.`,
+        metadata: { billId: bill._id.toString(), recipientCharacterId: c._id.toString() },
+      }))
+    )
   );
 }
 
@@ -183,29 +188,31 @@ export async function notifyBillsVoteOpen(
     characterIdsByChamber.set(key, recipientIds);
   }
 
-  await createNotifications(
-    openings.flatMap(({ bill, chamberType }) => {
-      const recipientIds =
-        characterIdsByChamber.get(`${bill.countryId ?? "US"}:${chamberType}`) ?? [];
-      const chamberName = chamberNameForOfficeType(bill.countryId ?? "US", chamberType);
-      return [...recipientIds].flatMap((characterId) => {
-        const character = characterById.get(characterId);
-        return character?.userId
-          ? [
-              {
-                userId: character.userId,
-                type: "bill_vote_open" as const,
-                title: "Vote Now Open",
-                message: `Voting on "${bill.title}" is now open in the ${chamberName}.`,
-                metadata: {
-                  billId: bill._id.toString(),
-                  recipientCharacterId: character._id.toString(),
+  await afterCommit(db, () =>
+    createNotifications(
+      openings.flatMap(({ bill, chamberType }) => {
+        const recipientIds =
+          characterIdsByChamber.get(`${bill.countryId ?? "US"}:${chamberType}`) ?? [];
+        const chamberName = chamberNameForOfficeType(bill.countryId ?? "US", chamberType);
+        return [...recipientIds].flatMap((characterId) => {
+          const character = characterById.get(characterId);
+          return character?.userId
+            ? [
+                {
+                  userId: character.userId,
+                  type: "bill_vote_open" as const,
+                  title: "Vote Now Open",
+                  message: `Voting on "${bill.title}" is now open in the ${chamberName}.`,
+                  metadata: {
+                    billId: bill._id.toString(),
+                    recipientCharacterId: character._id.toString(),
+                  },
                 },
-              },
-            ]
-          : [];
-      });
-    })
+              ]
+            : [];
+        });
+      })
+    )
   );
 }
 
@@ -308,14 +315,16 @@ export async function notifySponsor(
   const info = notifMap[type];
   if (!info?.title) return;
 
-  await createNotifications(
-    chars.map((c) => ({
-      userId: c.userId,
-      type: info.nType,
-      title: info.title,
-      message: info.message,
-      metadata: { billId: bill._id.toString(), recipientCharacterId: c._id.toString() },
-    }))
+  await afterCommit(db, () =>
+    createNotifications(
+      chars.map((c) => ({
+        userId: c.userId,
+        type: info.nType,
+        title: info.title,
+        message: info.message,
+        metadata: { billId: bill._id.toString(), recipientCharacterId: c._id.toString() },
+      }))
+    )
   );
 }
 

@@ -1,3 +1,5 @@
+import { leadershipVoterFilter } from "./leadershipVoterFilter";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -7,13 +9,10 @@ import { isUserActive } from "@/lib/players/playerActivity";
 import type {
   StatePartyElection,
   StatePartyElectionPosition,
-  StatePartyVote,
   StatePartyCandidate,
   StatePartyOrg,
   PoliticalParty,
   Character,
-  User,
-  GameState,
 } from "@/lib/db/types";
 import { DEFAULT_LEGACY_COUNTRY_ID, type CountryId } from "@/lib/constants/countries";
 import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
@@ -345,6 +344,24 @@ export async function processCompletedElections(
   countryId?: CountryId
 ): Promise<number> {
   const db = await getDb();
+  const pending = await statePartyElectionsCollection(db)
+    .find(
+      applyOptionalCountryScope({ status: "voting", endTurn: { $lte: currentTurn } }, countryId),
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  if (pending.length === 0) return 0;
+  return withSessionDb(db, (tx) =>
+    processCompletedElectionsInTransaction(tx, currentTurn, effectiveNow, countryId)
+  );
+}
+
+async function processCompletedElectionsInTransaction(
+  db: import("mongodb").Db,
+  currentTurn: number,
+  effectiveNow = new Date(),
+  countryId?: CountryId
+): Promise<number> {
   const now = new Date(effectiveNow);
 
   // Turn-based resolution only. The wall-clock endTime branch was removed: under
@@ -371,7 +388,10 @@ export async function processCompletedElections(
   const bannedCharacterIds = await getBannedCharacterIds(db);
   const bannedVoterObjectIds = [...bannedCharacterIds].map((id) => new ObjectId(id));
 
-  const voteMatch: Record<string, unknown> = { electionId: { $in: electionIds } };
+  const voteMatch: Record<string, unknown> = {
+    electionId: { $in: electionIds },
+    ...(await leadershipVoterFilter(db, endedElections)),
+  };
   if (bannedVoterObjectIds.length > 0) {
     voteMatch.voterId = { $nin: bannedVoterObjectIds };
   }
@@ -471,6 +491,13 @@ export async function processCompletedElections(
     topVoteCount: number;
   };
   const winningResults: WinningResult[] = [];
+  const vacancies: Array<{
+    orgKey: string;
+    position: StatePartyElectionPosition;
+    holderId: ObjectId;
+    stateId: string;
+    partyId: string;
+  }> = [];
 
   for (const election of endedElections) {
     const { stateId, partyId, position } = election;
@@ -515,9 +542,12 @@ export async function processCompletedElections(
         topVoteCount: voteCounts[0]?.count ?? 0,
       });
     } else {
-      console.log(
-        `[StatePartyElections] ${stateId}_${partyId} ${position}: no candidates — position unchanged`
-      );
+      const orgKey = `${stateId}_${partyId}`;
+      const holderId = orgMap.get(orgKey)?.[POSITION_FIELD[position]] ?? null;
+      const incumbentStood =
+        holderId && candidates.some((candidate) => candidate.characterId.equals(holderId));
+      if (holderId && !incumbentStood)
+        vacancies.push({ orgKey, position, holderId, stateId, partyId });
     }
   }
 
@@ -556,12 +586,14 @@ export async function processCompletedElections(
         if (currentHolder && currentHolder.equals(r.winnerId)) {
           setUpdates[otherField] = null;
           notifications.push(
-            notifyLeadershipVacatedForNewRole(
-              r.winnerId,
-              r.election.stateId,
-              r.election.partyId,
-              otherPos,
-              r.election.position
+            afterCommit(db, () =>
+              notifyLeadershipVacatedForNewRole(
+                r.winnerId,
+                r.election.stateId,
+                r.election.partyId,
+                otherPos,
+                r.election.position
+              )
             )
           );
         }
@@ -578,28 +610,40 @@ export async function processCompletedElections(
       const field = POSITION_FIELD[position];
       const previousHolderId = org?.[field] ?? null;
 
-      notifications.push(notifyLeadershipElected(winnerId, stateId, partyId, position, winnerName));
       notifications.push(
-        import("@/lib/achievements")
-          .then(async ({ awardAchievement, resolveUserIdFromCharacter }) => {
-            const winnerUserId = await resolveUserIdFromCharacter(winnerId);
-            if (winnerUserId) await awardAchievement(winnerUserId, "party_leader", winnerId);
-          })
-          .catch((e) => console.error("Achievement check failed:", e))
+        afterCommit(db, () =>
+          notifyLeadershipElected(winnerId, stateId, partyId, position, winnerName)
+        )
+      );
+      notifications.push(
+        afterCommit(db, () =>
+          import("@/lib/achievements")
+            .then(async ({ awardAchievement, resolveUserIdFromCharacter }) => {
+              const winnerUserId = await resolveUserIdFromCharacter(winnerId);
+              if (winnerUserId) await awardAchievement(winnerUserId, "party_leader", winnerId);
+            })
+            .catch((e) => console.error("Achievement check failed:", e))
+        )
       );
       if (previousHolderId && !previousHolderId.equals(winnerId)) {
-        notifications.push(notifyLeadershipRemoved(previousHolderId, stateId, partyId, position));
+        notifications.push(
+          afterCommit(db, () =>
+            notifyLeadershipRemoved(previousHolderId, stateId, partyId, position)
+          )
+        );
       }
       for (const cand of candidates) {
         if (!cand.characterId.equals(winnerId)) {
           notifications.push(
-            notifyLeadershipLost(
-              cand.characterId,
-              stateId,
-              partyId,
-              position,
-              cand.characterName,
-              winnerName
+            afterCommit(db, () =>
+              notifyLeadershipLost(
+                cand.characterId,
+                stateId,
+                partyId,
+                position,
+                cand.characterName,
+                winnerName
+              )
             )
           );
         }
@@ -610,6 +654,32 @@ export async function processCompletedElections(
     }
   }
 
+  for (const vacancy of vacancies) {
+    if (
+      winningResults.some(
+        (result) =>
+          `${result.election.stateId}_${result.election.partyId}` === vacancy.orgKey &&
+          result.winnerId.equals(vacancy.holderId)
+      )
+    )
+      continue;
+    orgOps.push({
+      updateOne: {
+        filter: { _id: vacancy.orgKey },
+        update: { $set: { [POSITION_FIELD[vacancy.position]]: null, updatedAt: now } },
+      },
+    });
+    notifications.push(
+      afterCommit(db, () =>
+        notifyLeadershipRemoved(
+          vacancy.holderId,
+          vacancy.stateId,
+          vacancy.partyId,
+          vacancy.position
+        )
+      )
+    );
+  }
   await statePartyElectionsCollection(db).bulkWrite(electionOps);
 
   // Terminalize the resolved elections' candidacies. The candidate docs are

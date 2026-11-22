@@ -1,3 +1,11 @@
+vi.mock("./leadershipVoterFilter", () => ({ leadershipVoterFilter: async () => ({}) }));
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 /**
  * Tests for statePartyElections.ts focused on the cross-position auto-vacate
  * behavior that prevents a single character from holding multiple state party

@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 /**
  * Connected synthetic-actor tests (issue #1993).
  *
@@ -177,6 +184,14 @@ function matchesCondition(value: unknown, cond: unknown): boolean {
 
 function matches(doc: Doc, filter: Record<string, unknown>): boolean {
   for (const [key, cond] of Object.entries(filter ?? {})) {
+    if (key === "$or") {
+      if (!(cond as Record<string, unknown>[]).some((part) => matches(doc, part))) return false;
+      continue;
+    }
+    if (key === "$and") {
+      if (!(cond as Record<string, unknown>[]).every((part) => matches(doc, part))) return false;
+      continue;
+    }
     const value = key.includes(".") ? getPath(doc, key) : doc[key];
     if (!matchesCondition(value, cond)) return false;
   }
