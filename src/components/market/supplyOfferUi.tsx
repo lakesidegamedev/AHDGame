@@ -19,6 +19,7 @@ import {
   type OfferSortDir,
   type OfferView,
 } from "@/lib/corporations/supplyExchange/offerOrdering";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import type { OfferCorporation } from "./SupplyOfferRow";
 
 type OfferFilters = OfferView;
@@ -72,15 +73,15 @@ export function formatVolume(value: number): string {
 
 export function offerPremiumLabel(premium: number): string {
   const value = Math.round(premium * 1000) / 10;
-  if (value === 0) return "At market";
+  if (value === 0) return "At reference";
   return `${value > 0 ? "+" : ""}${value}%`;
 }
 
 /** Plain-words reading of a premium, so "+20%" is not mistaken for "20% of the price". */
 export function offerPremiumDescription(premium: number): string {
   const value = Math.abs(Math.round(premium * 1000) / 10);
-  if (value === 0) return "At the market price";
-  return `${value}% ${premium > 0 ? "above" : "below"} the market price`;
+  if (value === 0) return "At the reference price";
+  return `${value}% ${premium > 0 ? "above" : "below"} the reference price`;
 }
 
 /** Per-unit price the offer settles at, or null without a market price. */
@@ -89,13 +90,16 @@ export function offerUnitPrice(premium: number, marketPrice: number | undefined)
   return marketPrice * (1 + premium);
 }
 
-/** Estimated value of one turn of the offer at the current market price, or null without a price. */
+/**
+ * Estimated value of one turn of the offer at the reference price, or null
+ * without a price. The cap is a daily figure; one turn moves 1/TURNS_PER_DAY.
+ */
 export function offerValuePerTurn(
   offer: Pick<SupplyListingView, "volumeCap" | "pricePremium">,
   marketPrice: number | undefined
 ): number | null {
   if (marketPrice == null || !Number.isFinite(marketPrice)) return null;
-  return offer.volumeCap * marketPrice * (1 + offer.pricePremium);
+  return (offer.volumeCap / TURNS_PER_DAY) * marketPrice * (1 + offer.pricePremium);
 }
 
 /**
@@ -287,7 +291,7 @@ export function SupplyFilterBar({
         >
           {offerSortsFor(!showCommodity).map((key) => (
             <option key={key} value={key}>
-              {key === "premium" && showCommodity ? "Price vs market" : OFFER_SORT_LABELS[key]}
+              {key === "premium" && showCommodity ? "Price vs reference" : OFFER_SORT_LABELS[key]}
             </option>
           ))}
         </select>

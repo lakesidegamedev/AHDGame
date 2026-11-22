@@ -555,6 +555,46 @@ describe("short input rows", () => {
     expect(container.querySelector("[data-short-input='pharmaceuticals']")).toBeNull();
   });
 
+  it("shows needed, arrived, missing and the blocker from the plant's own receipt", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) =>
+        d.commodity === "pharmaceuticals"
+          ? {
+              ...d,
+              inputAvailability: 0.5,
+              inputReceipt: {
+                turn: 7,
+                neededPerDay: 240,
+                arrivedPerDay: 144,
+                missingPerDay: 96,
+                blocker: "price_above_limit" as const,
+              },
+            }
+          : {
+              ...d,
+              inputAvailability: 1,
+              inputReceipt: {
+                turn: 7,
+                neededPerDay: 10,
+                arrivedPerDay: 10,
+                missingPerDay: 0,
+              },
+            }
+      ),
+    };
+    const { container } = renderPanel(c, idlePlants);
+    const marked = container.querySelectorAll("[data-short-input]");
+    expect(Array.from(marked).map((n) => n.getAttribute("data-short-input"))).toEqual([
+      "pharmaceuticals",
+    ]);
+    const detail = container.querySelector("[data-short-detail='pharmaceuticals']")!;
+    expect(detail.textContent).toContain("needed 240");
+    expect(detail.textContent).toContain("arrived 144");
+    expect(detail.textContent).toContain("missing 96");
+    expect(detail.textContent).toContain("above your limit");
+  });
+
   it("says so when inputs stopped the run but no input row is short", () => {
     const c: CommoditiesData = {
       ...healthcare,

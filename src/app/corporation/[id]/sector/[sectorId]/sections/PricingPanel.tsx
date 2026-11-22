@@ -175,9 +175,18 @@ export default function PricingPanel({
                 <span className="font-semibold text-foreground">
                   {formatPrice(a.askingUnitPrice)}
                 </span>
+                {a.paidUnitPrice != null && (
+                  <>
+                    , you were paid{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatPrice(a.paidUnitPrice)}
+                    </span>{" "}
+                    on average
+                  </>
+                )}
                 {a.marketUnitPrice != null && (
                   <>
-                    , buyers paid{" "}
+                    , lane price{" "}
                     <span className="font-semibold text-foreground">
                       {formatPrice(a.marketUnitPrice)}
                     </span>
@@ -295,11 +304,12 @@ export default function PricingPanel({
         >
           {settled ? (
             <p className="text-muted text-xs">
-              What this plant was paid last turn, against what everything it offered for outside
-              sale would have earned at its asking price.
+              What this plant was paid last turn, against what the units it offered for outside sale
+              would have earned at its asking price. Output sent to your own sites is left out.
               {sold != null ? ` ${Math.round(sold * 100)}% of what it offered sold.` : ""} Units
               nobody bought earn nothing, so selling 80% of the offer at the asking price reads
-              ×0.80.
+              ×0.80. The lane price in the list above is what cleared the whole lane, not what this
+              plant was paid, so it can differ from this figure.
             </p>
           ) : (
             <p className="text-muted text-xs">
