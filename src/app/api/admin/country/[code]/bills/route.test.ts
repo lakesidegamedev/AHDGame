@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -67,11 +74,16 @@ describe("POST /api/admin/country/[code]/bills", () => {
       },
     };
 
-    db.collectionMocks.bills.findOne.mockResolvedValue(bill);
+    db.collectionMocks.bills.findOne
+      .mockResolvedValueOnce(bill)
+      .mockResolvedValueOnce(bill)
+      .mockResolvedValue({ ...bill, status: "signed" });
     db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 117 });
-    db.collectionMocks.bills.updateOne
-      .mockResolvedValueOnce({ acknowledged: true, matchedCount: 1, modifiedCount: 1 })
-      .mockResolvedValueOnce({ acknowledged: true, matchedCount: 0, modifiedCount: 0 });
+    db.collectionMocks.bills.updateOne.mockResolvedValueOnce({
+      acknowledged: true,
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
 
     const { POST } = await import("./route");
     const response = await POST(
@@ -101,7 +113,7 @@ describe("POST /api/admin/country/[code]/bills", () => {
     );
     expect(retryResponse.status).toBe(200);
     expect(onBillEnacted).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.bills.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks.bills.updateOne).toHaveBeenCalledTimes(1);
   });
 });
 
