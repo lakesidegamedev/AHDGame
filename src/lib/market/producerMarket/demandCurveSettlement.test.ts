@@ -110,4 +110,88 @@ describe("seller preference curve in settlement", () => {
     expect(JSON.stringify(run(false))).toBe(JSON.stringify(off));
     expect(off.tradeReceipt.fills.every((f) => f.supplierOfferIds == null)).toBe(true);
   });
+
+  describe("ordinary pooled pass", () => {
+    const householdOrder = (
+      id: string,
+      units: number,
+      extra: Partial<PurchaseOrder> = {}
+    ): PurchaseOrder => ({
+      id,
+      accountId: "buyer",
+      commodity: "electronics",
+      book: "world",
+      units,
+      maximumUnitPrice: 1000,
+      maximumSpend: 1e9,
+      countryId: "US",
+      ...extra,
+    });
+    const runOrders = (withCurve: boolean, list: PurchaseOrder[]) =>
+      settleProducerMarket({
+        turn: 1,
+        trackCountryBooks: true,
+        accounts: [...accounts, { id: "buyer2", cash: 1e9 }],
+        offers,
+        orders: list,
+        ...(withCurve ? { demandCurve: curve } : {}),
+      });
+    const replayUnits = (result: ReturnType<typeof runOrders>) => {
+      const replay = new Map<string, number>();
+      for (const trade of producerTrades(result.tradeReceipt))
+        replay.set(trade.offerId, (replay.get(trade.offerId) ?? 0) + trade.units);
+      return replay;
+    };
+
+    it("applies the curve to a free-choice order without home-country-first", () => {
+      const list = [householdOrder("households:US", 900)];
+      const result = runOrders(true, list);
+      const sold = new Map(result.offers.map((o) => [o.id, o.soldUnits]));
+      expect(sold.get("o3")!).toBeGreaterThan(0);
+      expect(sold.get("o5")!).toBeGreaterThan(0);
+      expect(result.orders[0].deliveredUnits).toBeCloseTo(900, 6);
+      const revenue = result.offers.reduce((n, o) => n + o.revenue, 0);
+      expect(revenue).toBeCloseTo(result.orders[0].cost, 6);
+      for (const o of result.offers) expect(o.soldUnits).toBeLessThanOrEqual(o.offeredUnits + 1e-9);
+      const replay = replayUnits(result);
+      for (const o of result.offers) expect(replay.get(o.id) ?? 0).toBeCloseTo(o.soldUnits, 6);
+      expect(result.tradeReceipt.fills.every((f) => f.supplierOfferIds != null)).toBe(true);
+    });
+
+    it("leaves the same order cheapest-first with the curve off", () => {
+      const result = runOrders(false, [householdOrder("households:US", 900)]);
+      expect(result.offers.find((o) => o.id === "o3")!.soldUnits).toBe(0);
+      expect(result.tradeReceipt.fills.every((f) => f.supplierOfferIds == null)).toBe(true);
+    });
+
+    it("splits a fair-share group by the curve and conserves units and money", () => {
+      const list = [
+        householdOrder("a", 600, { fairShare: true }),
+        householdOrder("b", 300, { fairShare: true, accountId: "buyer2" }),
+      ];
+      const result = runOrders(true, list);
+      const sold = new Map(result.offers.map((o) => [o.id, o.soldUnits]));
+      expect(sold.get("o3")!).toBeGreaterThan(0);
+      const delivered = result.orders.reduce((n, o) => n + o.deliveredUnits, 0);
+      expect(delivered).toBeCloseTo(900, 5);
+      const byId = new Map(result.orders.map((o) => [o.id, o.deliveredUnits]));
+      expect(byId.get("a")! / byId.get("b")!).toBeCloseTo(2, 4);
+      expect(result.offers.reduce((n, o) => n + o.revenue, 0)).toBeCloseTo(
+        result.orders.reduce((n, o) => n + o.cost, 0),
+        4
+      );
+      for (const o of result.offers) expect(o.soldUnits).toBeLessThanOrEqual(o.offeredUnits + 1e-9);
+      const replay = replayUnits(result);
+      for (const o of result.offers) expect(replay.get(o.id) ?? 0).toBeCloseTo(o.soldUnits, 5);
+    });
+
+    it("keeps a fair-share group cheapest-first with the curve off", () => {
+      const list = [
+        householdOrder("a", 600, { fairShare: true }),
+        householdOrder("b", 300, { fairShare: true, accountId: "buyer2" }),
+      ];
+      const result = runOrders(false, list);
+      expect(result.offers.find((o) => o.id === "o3")!.soldUnits).toBe(0);
+    });
+  });
 });
