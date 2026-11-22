@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../messages/en/profile.json";
 import type { ComponentProps } from "react";
@@ -95,6 +95,7 @@ function enterQuantity(value: number) {
 }
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   fx.rates = { USD: 1, GBP: 1 };
 });
 
@@ -106,6 +107,34 @@ it("shows the buy quote separately from the reference price", () => {
   expect(screen.getByText("Price per share")).toBeTruthy();
   expect(screen.getByText("1.0025")).toBeTruthy();
 });
+
+it("shows cents and submits the exact requested market quantity", async () => {
+  const request = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(Response.json({ error: "Test request" }, { status: 400 }));
+  setup({ corporation: corporation({ marketAskPrice: 10.116 }) });
+
+  enterQuantity(5);
+  expect(screen.getByText("Total cost").nextElementSibling?.textContent).toBe("50.58");
+  fireEvent.click(screen.getByRole("button", { name: "Buy shares" }));
+
+  await waitFor(() => expect(screen.getByText("Test request")).toBeTruthy());
+  expect(request).toHaveBeenCalledWith(
+    "/api/corporations/target/shares/buy",
+    expect.objectContaining({ body: JSON.stringify({ shares: 5, buyAsCorporation: false }) })
+  );
+});
+
+it.each([-5, 0, 999_999_999])(
+  "keeps invalid market buy input %s and blocks submission",
+  (value) => {
+    setup({ isCeo: false, myCashOnHand: 500 });
+    expect(enterQuantity(value)).toBe(String(value));
+    expect(screen.getByRole("button", { name: "Buy shares" })).toHaveProperty("disabled", true);
+    expect(screen.getByPlaceholderText("Quantity").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.queryByText("After purchase")).toBeNull();
+  }
+);
 
 describe("holding bucket sale selection", () => {
   it("shows purchase age and caps a personal sale to the selected bucket", () => {
@@ -153,12 +182,17 @@ describe("holding bucket sale selection", () => {
 });
 
 describe("personal CEO market purchases", () => {
-  it("caps a first purchase at the allowance even with no history", () => {
+  const buyButton = () => screen.getByRole("button", { name: "Buy shares" });
+
+  it("rejects a first purchase above the allowance even with no history", () => {
     setup();
-    expect(enterQuantity(100_001)).toBe("100000");
+    expect(enterQuantity(100_001)).toBe("100001");
+    expect(buyButton()).toHaveProperty("disabled", true);
+    expect(screen.getByText(/allows 100,000 more shares/)).toBeTruthy();
     expect(enterQuantity(100_000)).toBe("100000");
+    expect(buyButton()).toHaveProperty("disabled", false);
   });
-  it("shows filled and reserved shares separately and caps at the remainder", () => {
+  it("shows filled and reserved shares separately and rejects orders above the remainder", () => {
     const corp = corporation();
     setup({
       corporation: corporation({
@@ -171,15 +205,17 @@ describe("personal CEO market purchases", () => {
       }),
     });
     expect(screen.getByText(/35,000 reserved/)).toBeTruthy();
-    expect(enterQuantity(25_001)).toBe("25000");
+    expect(enterQuantity(25_001)).toBe("25001");
+    expect(buyButton()).toHaveProperty("disabled", true);
   });
   it("keeps the allowance when foreign exchange rates are missing", () => {
     fx.rates = null;
     setup({ myCurrencyBalances: { GBP: 1_000_000 }, myHomeCurrency: "USD" });
     fireEvent.click(screen.getByRole("button", { name: "$0.00" }));
     fireEvent.click(screen.getByText("GBP"));
-    expect(enterQuantity(200_000)).toBe("100000");
-    expect(enterQuantity(200_000)).toBe("100000");
+    expect(enterQuantity(200_000)).toBe("200000");
+    expect(buyButton()).toHaveProperty("disabled", true);
+    expect(screen.getByText(/allows 100,000 more shares/)).toBeTruthy();
   });
   it.each(["corporation", "bank"] as const)(
     "bypasses the personal cap for %s purchases",
@@ -207,11 +243,17 @@ describe("personal CEO market purchases", () => {
   );
   it("still obeys affordability and float", () => {
     setup({ myCashOnHand: 500, corporation: corporation({ publicFloat: 300 }) });
-    expect(enterQuantity(200_000)).toBe("300");
+    expect(enterQuantity(200_000)).toBe("200000");
+    expect(buyButton()).toHaveProperty("disabled", true);
+    expect(screen.getByText(/Only 300 shares are available/)).toBeTruthy();
   });
   it("still obeys affordability below the allowance", () => {
     setup({ myCashOnHand: 500 });
-    expect(enterQuantity(200_000)).toBe("500");
+    expect(enterQuantity(501)).toBe("501");
+    expect(buyButton()).toHaveProperty("disabled", true);
+    expect(screen.getByText(/You can afford up to 500 shares/)).toBeTruthy();
+    expect(enterQuantity(500)).toBe("500");
+    expect(buyButton()).toHaveProperty("disabled", false);
   });
   it("does not cap a non-CEO", () => {
     setup({ isCeo: false });

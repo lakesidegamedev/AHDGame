@@ -63,6 +63,7 @@ interface BuildCapacityDialogProps {
   onSubmit: (units: number, financing?: ConstructionFinanceRequest) => void;
   /** Set when the last build was refused for the operating reserve: confirms it past the reserve. */
   onOverrideReserve?: () => void;
+  reserveOverrideUnits?: number;
 }
 
 /** Nobody builds this many at once; the cap only stops a stray paste locking the dialog. */
@@ -112,6 +113,7 @@ export default function BuildCapacityDialog({
   errorMessage,
   onSubmit,
   onOverrideReserve,
+  reserveOverrideUnits,
   onWithdrawFinancing,
 }: BuildCapacityDialogProps) {
   const t = useTranslations("corporations.sectorInvestment");
@@ -131,10 +133,9 @@ export default function BuildCapacityDialog({
   const [financingChoice, setFinancingChoice] = useState<ConstructionFinanceChoice | null>(null);
   // Drop stale consent before a reopened dialog can submit the previous quote.
   if (!open && financingChoice !== null) setFinancingChoice(null);
-  // Raw text while the field is focused. Without it, clamping on every keystroke
-  // means the field can never be empty, so a player cannot clear "1" and type
-  // "250" - the leading digit keeps getting eaten.
+  // Retain the entered count until the player edits it or uses a step control.
   const [countDraft, setCountDraft] = useState<string | null>(null);
+  const invalidCount = countDraft !== null && count === 0;
 
   /** Set the count from a control (not from typing) and drop any in-flight draft. */
   function commitCount(next: number) {
@@ -383,16 +384,14 @@ export default function BuildCapacityDialog({
                 value={countDraft ?? String(count)}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
-                  const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 7);
-                  setCountDraft(digits);
-                  // An empty field reads as zero, so the cost preview and the
-                  // build button go quiet instead of quoting a stale number.
-                  setCount(digits === "" ? 0 : clampCount(Number(digits)));
+                  const raw = e.target.value;
+                  const entered = raw.trim();
+                  const next = /^\d+$/.test(entered) ? Number(entered) : 0;
+                  setCountDraft(raw);
+                  setCount(next > 0 && next <= MAX_FACILITIES ? next : 0);
                 }}
-                onBlur={() => {
-                  setCountDraft(null);
-                  if (count < 1) setCount(1);
-                }}
+                aria-invalid={invalidCount}
+                aria-describedby={invalidCount ? "build-count-error" : undefined}
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp") {
                     e.preventDefault();
@@ -428,6 +427,11 @@ export default function BuildCapacityDialog({
               +10
             </StepButton>
           </div>
+          {invalidCount && (
+            <p id="build-count-error" className="mt-2 text-body-xs text-error">
+              {t("invalidBuildCount", { max: MAX_FACILITIES })}
+            </p>
+          )}
           {sectorType !== "logistics" && (
             <button
               type="button"
@@ -456,10 +460,15 @@ export default function BuildCapacityDialog({
         <dl className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-4">
           <Stat
             label={t("buildTotal")}
-            value={money(preview.total)}
+            value={preview.safeCount > 0 ? money(preview.total) : t("notAvailable")}
             tone={affordable ? "default" : "error"}
           />
-          <Stat label={t("firstOpening")} value={t("inTurns", { turns: firstOpeningTurns })} />
+          <Stat
+            label={t("firstOpening")}
+            value={
+              preview.safeCount > 0 ? t("inTurns", { turns: firstOpeningTurns }) : t("notAvailable")
+            }
+          />
           <Stat
             label={t("profitPerTurn")}
             value={returns ? money(returns.profitPerTurn) : t("notAvailable")}
@@ -595,7 +604,7 @@ export default function BuildCapacityDialog({
             {errorMessage}
           </p>
         )}
-        {errorMessage && onOverrideReserve && (
+        {errorMessage && onOverrideReserve && reserveOverrideUnits === preview.safeUnits && (
           <Button
             variant="secondary"
             onClick={onOverrideReserve}

@@ -1195,6 +1195,9 @@ export default function SectorDetailPage() {
             onOverrideReserve={
               reserveRetry ? () => void runCapacityAction(reserveRetry) : undefined
             }
+            reserveOverrideUnits={
+              typeof reserveRetry?.units === "number" ? reserveRetry.units : undefined
+            }
           />
         )}
       </main>
