@@ -168,7 +168,7 @@
       },
       "actionAdvertise": {
         "title": "Advertising is for later",
-        "body": "Adverts raise Favorability, which is whether people like you rather than whether they have heard of you. At the start they cost about five times as much as campaigning, in both actions and money, so raise your influence first.",
+        "body": "Adverts raise Favorability, which is whether people like you rather than whether they have heard of you. At the start they cost several times as much as campaigning, in both actions and money (Actions shows the exact price), so raise your influence first.",
         "next": "Next"
       },
       "actionFundraise": {

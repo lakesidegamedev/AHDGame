@@ -78,7 +78,7 @@ Notifications and the turn summary list resolved elections and bills. If a candi
 
 ## What a first day of actions looks like
 
-A new character has 25 actions, ₳250,000 of campaign funds, favorability 50, PI 10 and donor level 1. The costs below are base figures before your state's GDP scaling; the game shows your exact quote.
+A new character has 25 actions, ₳250,000 of campaign funds at 2019 prices (about ₳345,000 in a 2027 world), favorability 50, PI 10 and donor level 1. The costs below are base figures before your state's GDP scaling; the game shows your exact quote.
 
 | Step | Actions | Funds | Result |
 |---|---|---|---|

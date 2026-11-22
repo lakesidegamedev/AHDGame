@@ -41,7 +41,7 @@ elections
 | Number | What it is | What it buys |
 | --- | --- | --- |
 | **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, and most other moves. Declaring for a race costs none. |
-| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units, scaled down in earlier eras. | Ads, polls, donor building, and influence operations. |
+| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units at 2019 prices, scaled to the world's era: about 345,000 in a 2027 world, less in earlier eras. | Ads, polls, donor building, and influence operations. |
 | **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal. Above 60 it slips a little every turn. |
 | **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
@@ -70,7 +70,7 @@ campaign-advertise-action-cost
 | Run Advertisements, once | 7 | -₳140,000 | At starting Favorability. The action cost rises with Favorability, not falls. |
 | Hold the remaining actions | 6 | none | Canvass, or respond to a race that opens. Declaring is free. |
 
-That leaves about ₳81,000 of your ₳250,000, assuming a state with average GDP per person and a neutral Fundraising stat. Richer states cost up to 2 times as much and poorer ones as little as 0.85 times. Do the Fundraise before the ad, because the ad alone costs more than half your starting funds.
+That leaves about ₳81,000 of a ₳250,000 start (figures at 2019 prices; a 2027 world scales costs and funds alike), assuming a state with average GDP per person and a neutral Fundraising stat. Richer states cost up to 2 times as much and poorer ones as little as 0.85 times. Do the Fundraise before the ad, because the ad alone costs more than half your starting funds.
 
 Costs scale with your stats and state, so the funds numbers in the game will differ from the table. The action costs can move too: Campaign costs 1 action below 20 PI and rises to 2 at 20, 3 at 40, 4 at 60, and 5 at 80. Build Donor Network starts at 4 and rises with donor level, and Run Advertisements costs 5 below 30 Favorability, 6 at 30 to 49, 7 at 50 to 69, 8 at 70 to 84, and 9 at 85 or above. The table uses a new character's starting values.
 
