@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -71,7 +78,7 @@ describe("resolveLeadershipElection — announce idempotency", () => {
     expect(resolved).toBe(true);
     expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
     expect(sendCountryGameEvent).toHaveBeenCalledWith("US", {
-      title: "Leadership Election Result \u2014 House Minority Leader",
+      title: "Leadership Election Result: House Minority Leader",
       description: "**Winner** has been elected as **House Minority Leader** in the House.",
       color: 0,
       footer: { text: "A House Divided" },

@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 /**
  * Tests for the head-of-state appointment resolution (spec §2.3 — RU Chairman
  * of the Presidium, joint-sitting vote over both Supreme Soviet chambers).

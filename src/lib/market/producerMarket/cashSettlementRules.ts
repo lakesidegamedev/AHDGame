@@ -18,6 +18,29 @@ export type ProducerCashBinding = {
   | { kind: "economyAccount"; economyAccountId: string }
 );
 
+export interface ProducerCashOverdraw {
+  accountId: string;
+  openingLocal: number;
+  debitLocal: number;
+  currency: string;
+}
+
+/** One or more participants would be debited past what they could spend. */
+export class ProducerCashOverdrawError extends Error {
+  constructor(readonly overdrawn: readonly ProducerCashOverdraw[]) {
+    super(
+      `Producer cash overdraws its opening balance: ${overdrawn
+        .slice(0, 5)
+        .map(
+          (o) =>
+            `${o.accountId} debit ${o.debitLocal} ${o.currency} against opening ${o.openingLocal}`
+        )
+        .join("; ")}${overdrawn.length > 5 ? ` (+${overdrawn.length - 5} more)` : ""}`
+    );
+    this.name = "ProducerCashOverdrawError";
+  }
+}
+
 /**
  * Participants settle their net cash change once, after all prices and deliveries
  * are frozen. No receipt can target a bank vault, deposit balance or loan asset.
@@ -50,18 +73,27 @@ export function producerCashTransition(input: {
   if (opening.size !== closing.size || [...opening.keys()].some((id) => !closing.has(id)))
     throw new Error("Producer participants changed during settlement");
   const changes = input.cashChanges ? producerCashChangeMap(input.cashChanges) : null;
+  const overdrawnByChange = new Set<string>();
   if (changes) {
     if (changes.size !== opening.size || [...changes.keys()].some((id) => !opening.has(id)))
       throw new Error("Producer cash change participants differ from the snapshots");
     for (const [id, cash] of opening) {
       const expected = cash + changes.get(id)!;
+      if (!Number.isFinite(expected))
+        throw new Error(`Producer cash changes differ from the closing snapshot (account ${id})`);
+      // Spending past the opening balance is an overdraw, reported with the
+      // account so the caller can keep it out of buying and clear again.
+      if (expected < -1e-7) {
+        overdrawnByChange.add(id);
+        continue;
+      }
       if (
-        !Number.isFinite(expected) ||
-        expected < -1e-7 ||
         Math.abs(Math.max(0, expected) - closing.get(id)!) >
-          producerCashSnapshotTolerance(expected, closing.get(id)!)
+        producerCashSnapshotTolerance(expected, closing.get(id)!)
       )
-        throw new Error("Producer cash changes differ from the closing snapshot");
+        throw new Error(
+          `Producer cash changes differ from the closing snapshot (account ${id}: opening ${cash}, change ${changes.get(id)}, closing ${closing.get(id)})`
+        );
     }
   }
   const bindings = new Map<string, ProducerCashBinding>();
@@ -102,6 +134,7 @@ export function producerCashTransition(input: {
   let net = 0;
   let gross = 0;
   const legs: TransitionLeg[] = [];
+  const overdrawn: ProducerCashOverdraw[] = [];
   for (const [id, cash] of [...opening].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
     const change = changes?.get(id) ?? closing.get(id)! - cash;
     net += change;
@@ -110,12 +143,34 @@ export function producerCashTransition(input: {
     const binding = bindings.get(id)!;
     let amount = Math.abs(change) * binding.localPerAnchor;
     if (!Number.isFinite(amount)) throw new Error("Non-finite native producer cash transfer");
+    if (overdrawnByChange.has(id)) {
+      overdrawn.push({
+        accountId: id,
+        openingLocal: binding.openingCashLocal,
+        debitLocal: amount,
+        currency: binding.currency,
+      });
+      continue;
+    }
     // Spending every unit converts anchor back to local and can overshoot the
     // stored balance by float noise, which the write's overdraft guard refuses.
-    if (change < 0 && amount > binding.openingCashLocal) {
-      if (amount - binding.openingCashLocal > Math.max(1e-7, binding.openingCashLocal * 1e-12))
-        throw new Error("Producer cash overdraws its opening balance");
-      amount = binding.openingCashLocal;
+    // A company already below zero has nothing to spend: the market gave it no
+    // budget, so a debit there is pro-rata dust. Measure against what it could
+    // spend and drop dust, or one negative balance stops every turn.
+    const spendableLocal = Math.max(0, binding.openingCashLocal);
+    if (change < 0 && amount > spendableLocal) {
+      const dust = Math.max(1e-7, 1e-7 * binding.localPerAnchor, spendableLocal * 1e-12);
+      if (amount - spendableLocal > dust) {
+        overdrawn.push({
+          accountId: id,
+          openingLocal: binding.openingCashLocal,
+          debitLocal: amount,
+          currency: binding.currency,
+        });
+        continue;
+      }
+      amount = spendableLocal;
+      if (!(amount > 0)) continue;
     }
     legs.push({
       kind: change < 0 ? "debit" : "credit",
@@ -150,6 +205,7 @@ export function producerCashTransition(input: {
       note: `Producer operating settlement ${id}`,
     });
   }
+  if (overdrawn.length > 0) throw new ProducerCashOverdrawError(overdrawn);
   if (
     !Number.isFinite(net) ||
     !Number.isFinite(gross) ||
