@@ -103,7 +103,9 @@ describe("FirstDaysPanel", () => {
     expect(submit).toHaveBeenCalledTimes(1);
 
     resolveCampaign(Response.json({ message: "Campaigned: +1.0 influence" }));
-    expect(await screen.findByText("Campaign 3 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
+    expect(
+      await screen.findByText("Campaign 3 of 3 done. Campaigned: +1.0 influence")
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /campaign at home/i })).toBeNull();
     expect(router.refresh).toHaveBeenCalledTimes(1);
   });
