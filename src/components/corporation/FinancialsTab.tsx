@@ -113,6 +113,7 @@ export default function FinancialsTab({
   const [npvPage, setNpvPage] = useState(0);
 
   const fogged = financialFogOfWar != null;
+  const constructionCash = fogged ? null : financials.constructionCash;
   const est = (text: string) => (fogged ? `~${text}` : text);
   const scale = (daily: number) => scaleMoney(daily, periodView);
   const fmt = (local: number) => est(money.fmt(local));
@@ -614,7 +615,11 @@ export default function FinancialsTab({
                   {basis.dividendPaid > 0 && (
                     <StatementLine
                       indent
-                      label={`Dividends (${financials.effectiveDividendRate}%)`}
+                      label={
+                        basis.isRealized
+                          ? "Dividends paid, last turn"
+                          : `Dividends (${financials.effectiveDividendRate}%)`
+                      }
                       amount={est(`(${money.fmt(Math.round(scale(basis.dividendPaid)))})`)}
                       pct={pctOf(basis.dividendPaid)}
                     />
@@ -650,6 +655,28 @@ export default function FinancialsTab({
                         amount={fmtSigned(Math.round(scale(cashAfterContracts(financials))))}
                         amountClass={signTone(cashAfterContracts(financials))}
                       />
+                    </>
+                  )}
+                  {constructionCash && (
+                    <>
+                      <StatementGroup>
+                        Construction cash, turn {constructionCash.turn}
+                      </StatementGroup>
+                      {constructionCash.paid > 0 && (
+                        <StatementLine
+                          label="Construction paid"
+                          amount={fmtSigned(-constructionCash.paid)}
+                          amountClass="text-error"
+                          note="Cash spent on builds outside operating income"
+                        />
+                      )}
+                      {constructionCash.refunded > 0 && (
+                        <StatementLine
+                          label="Construction refunds"
+                          amount={fmtSigned(constructionCash.refunded)}
+                          amountClass="text-success"
+                        />
+                      )}
                     </>
                   )}
                 </StatementTable>

@@ -42,7 +42,7 @@ import {
 } from "@/lib/corporations/realizedGrowth";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
-import { queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
+import { queueUndeliveredCost, resolveBuildSettledTurn } from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
 import { sectorDailyRevenueBasis } from "@/lib/corporations/dailyRevenueBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
@@ -191,6 +191,8 @@ export interface SectorRowContext {
   corporation: Corporation;
   sectors: CorporateSector[];
   currentTurn: number;
+  /** `gameState.buildDeliverySettledTurn`: fallback for a sector with no delivery stamp. */
+  worldBuildSettledTurn?: number | null;
   /** First funded turn of the market transition; absent before the funded market. */
   transitionFirstFundedTurn?: number;
   plantsMode: boolean;
@@ -241,6 +243,8 @@ export interface PhysicalRollups {
   totalCapacityUnits: number;
   totalProducedUnits: number;
   totalSoldUnits: number;
+  /** Units handed to the company's own sites, summed over sectors. */
+  totalOwnSiteUnits: number;
   totalConstructionInProgressAnchor: number;
   mothballedSectorCount: number;
   buildingSectorCount: number;
@@ -312,6 +316,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   let totalCapacityUnits = 0;
   let totalProducedUnits = 0;
   let totalSoldUnits = 0;
+  let totalOwnSiteUnits = 0;
   let totalConstructionInProgressAnchor = 0;
   let mothballedSectorCount = 0;
   let buildingSectorCount = 0;
@@ -749,7 +754,15 @@ export function buildSectorDetails(ctx: SectorRowContext) {
         )
       : null;
     const buildQueueSummary = plantsMode
-      ? summarizeBuildQueue(sector.buildQueue, currentTurn)
+      ? summarizeBuildQueue(
+          sector.buildQueue,
+          currentTurn,
+          resolveBuildSettledTurn(
+            currentTurn,
+            sector.buildDeliverySettledTurn,
+            ctx.worldBuildSettledTurn
+          )
+        )
       : null;
     const sectorFillRate = computeFillRate(producedUnits, soldUnits);
     // Share of the fill shortfall that is a DELIVERY failure, not a demand
@@ -802,6 +815,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalCapacityUnits += capacityUnits ?? 0;
       totalProducedUnits += producedUnits ?? 0;
       totalSoldUnits += soldUnits ?? 0;
+      totalOwnSiteUnits += (producedUnits ?? 0) * (ownSite?.share ?? 0);
       totalConstructionInProgressAnchor += constructionInProgressAnchor ?? 0;
       if (mothballed) mothballedSectorCount += 1;
       if (buildQueueSummary) {
@@ -935,6 +949,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalCapacityUnits,
       totalProducedUnits,
       totalSoldUnits,
+      totalOwnSiteUnits,
       totalConstructionInProgressAnchor,
       mothballedSectorCount,
       buildingSectorCount,

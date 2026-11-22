@@ -738,7 +738,11 @@ export default function OverviewTab({
             title="Operations"
             summary={
               physical?.fillRate != null
-                ? `${Math.round(physical.fillRate * 100)}% of output sold`
+                ? `${Math.round(physical.fillRate * 100)}% of output sold${
+                    physical.ownSiteShare
+                      ? `, ${Math.round(physical.ownSiteShare * 100)}% to your sites`
+                      : ""
+                  }`
                 : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
             }
           >
@@ -798,9 +802,16 @@ export default function OverviewTab({
                           : "n/a"
                       }
                       hint={
-                        physical.buildingSectorCount > 0
-                          ? `${physical.buildingSectorCount} building`
-                          : undefined
+                        [
+                          physical.ownSiteShare
+                            ? `${Math.round(physical.ownSiteShare * 100)}% sent to your own sites, not unsold`
+                            : null,
+                          physical.buildingSectorCount > 0
+                            ? `${physical.buildingSectorCount} building`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || undefined
                       }
                     />
                   </>

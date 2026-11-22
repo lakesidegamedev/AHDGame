@@ -4,11 +4,15 @@ import Link from "next/link";
 import type { CorpTabId, SectorDetail } from "./CorporationPageTypes";
 import { DenseSection, SmallButton } from "./dense/DenseKit";
 import { sectorBuildUrl } from "./plantsPresentation";
+import {
+  OVERSUPPLIED_UNSOLD,
+  outputPlacement,
+  placementSentence,
+  type OutputPlacement,
+} from "@/lib/corporations/rules/outputPlacement";
 
-/** Fill at or above this sells (almost) everything the plants make. */
-const SOLD_OUT_FILL = 0.98;
-/** Fill below this means the plants make clearly more than the market takes. */
-const OVERSUPPLIED_FILL = 0.85;
+/** Unsold share at or below this means the plants place (almost) everything they make. */
+const SOLD_OUT_UNSOLD = 0.02;
 /** Undelivered share above this is worth flagging as a freight problem. */
 const DELIVERY_LIMIT_FLAG = 0.05;
 
@@ -17,6 +21,8 @@ export interface GrowthLeverSector {
   label: string;
   /** Whole-number percent. */
   value: number;
+  /** Sold to buyers, sent to own sites and unsold, in words. */
+  detail?: string;
 }
 
 export interface GrowthLevers {
@@ -38,6 +44,13 @@ export function buildGrowthLevers(sectors: SectorDetail[]): GrowthLevers {
   const running = sectors
     .filter((s) => !s.mothballed && (s.capacityUnits ?? 0) > 0 && s.fillRate != null)
     .sort((a, b) => (b.capacityUnits ?? 0) - (a.capacityUnits ?? 0));
+  // Output sent to the company's own sites is used, so it is never unsold.
+  const placement = (s: SectorDetail): OutputPlacement =>
+    outputPlacement({ sold: s.fillRate, ownSites: s.ownSiteShare }) ?? {
+      sold: 0,
+      ownSites: 0,
+      unsold: 1,
+    };
   const pick = (
     test: (s: SectorDetail) => boolean,
     value: (s: SectorDetail) => number
@@ -45,17 +58,22 @@ export function buildGrowthLevers(sectors: SectorDetail[]): GrowthLevers {
     running
       .filter(test)
       .slice(0, 3)
-      .map((s) => ({ id: s._id, label: sectorLabel(s), value: Math.round(value(s) * 100) }));
+      .map((s) => ({
+        id: s._id,
+        label: sectorLabel(s),
+        value: Math.round(value(s) * 100),
+        detail: placementSentence(placement(s)),
+      }));
   const delivery = (s: SectorDetail) => s.deliveryLimitedFraction ?? 0;
   return {
     soldOut: pick(
-      (s) => (s.fillRate ?? 0) >= SOLD_OUT_FILL,
-      (s) => s.fillRate ?? 0
+      (s) => placement(s).unsold <= SOLD_OUT_UNSOLD,
+      (s) => 1 - placement(s).unsold
     ),
     deliveryLimited: pick((s) => delivery(s) > DELIVERY_LIMIT_FLAG, delivery),
     oversupplied: pick(
-      (s) => (s.fillRate ?? 1) < OVERSUPPLIED_FILL && delivery(s) <= DELIVERY_LIMIT_FLAG,
-      (s) => s.fillRate ?? 0
+      (s) => placement(s).unsold > OVERSUPPLIED_UNSOLD && delivery(s) <= DELIVERY_LIMIT_FLAG,
+      (s) => placement(s).unsold
     ),
   };
 }
@@ -84,7 +102,7 @@ function SectorLinks({
             {item.label}
           </Link>
           <span className="tabular-nums text-muted">
-            {item.value}% {suffix}
+            {item.detail ?? `${item.value}% ${suffix}`}
           </span>
         </li>
       ))}
@@ -117,9 +135,9 @@ export function GrowthLeversPanel({
         {levers.soldOut.length > 0 && (
           <div>
             <p className="font-medium text-foreground">
-              Build here: these sectors sell everything they make.
+              Build here: everything these sectors make is sold or used by your own sites.
             </p>
-            <SectorLinks corpId={corpId} items={levers.soldOut} suffix="sold" build />
+            <SectorLinks corpId={corpId} items={levers.soldOut} suffix="placed" build />
           </div>
         )}
         {levers.deliveryLimited.length > 0 && (
@@ -133,9 +151,9 @@ export function GrowthLeversPanel({
         {levers.oversupplied.length > 0 && (
           <div>
             <p className="font-medium text-foreground">
-              Do not build here: these sectors make more than the market takes.
+              Do not build here: outside buyers leave part of what these sectors make unsold.
             </p>
-            <SectorLinks corpId={corpId} items={levers.oversupplied} suffix="sold" />
+            <SectorLinks corpId={corpId} items={levers.oversupplied} suffix="unsold" />
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
