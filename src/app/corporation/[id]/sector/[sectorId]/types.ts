@@ -286,6 +286,8 @@ export interface PricingData {
   effectivePosture: number | null;
   /** Funded settlement or legacy market estimate; absent on older payloads. */
   salesBasis?: "settlement" | "estimate";
+  /** CEO only: last turn's asking price per output beside what its market paid, anchor per unit. */
+  asks?: { commodity: string; askingUnitPrice: number; marketUnitPrice: number | null }[];
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;
   /** Share of output handed to the company's own sites last turn (CEO only). Not a sale. */

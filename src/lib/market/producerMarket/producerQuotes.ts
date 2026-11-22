@@ -389,6 +389,11 @@ export function quoteProducer(input: {
    * automatic ask anchors here; absent (no trade) it falls back to the reference.
    */
   clearingUnitPrice?: number;
+  /**
+   * The slow market price a non-zero posture is measured from
+   * (postureAnchorRules). Absent falls back to the clearing price.
+   */
+  postureAnchorUnitPrice?: number;
   /** This output sold nothing last turn: an automatic ask drops its markup. */
   soldNothingLastTurn?: boolean;
   variableUnitCost: number;
@@ -469,8 +474,17 @@ export function quoteProducer(input: {
   // price alone can sit above the clearing. A plant whose costs exceed the
   // market sells at the market and takes the loss.
   const clearing = input.clearingUnitPrice;
-  const anchor =
+  const market =
     clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;
+  // A chosen posture is measured from the slow anchor, not last turn's clearing:
+  // a discount measured from a clearing it set itself compounds every turn
+  // (ticket 1880: US electronics 586, 494, then a 395 ask). Automatic sellers
+  // (no markup) still ask the market.
+  const postureAnchor = input.postureAnchorUnitPrice;
+  const anchor =
+    markup !== 0 && postureAnchor != null && Number.isFinite(postureAnchor) && postureAnchor > 0
+      ? postureAnchor
+      : market;
   // A seller that sold nothing last turn asks no more than the clearing, so an ask
   // stuck above the book steps down instead of repeating.
   const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);

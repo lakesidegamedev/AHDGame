@@ -300,6 +300,9 @@ export function buildProducerInputOrders({
         policy: output.policy,
         referenceUnitPrice: output.referenceUnitPrice,
         ...(clearingUnitPrice != null ? { clearingUnitPrice } : {}),
+        ...(input.postureAnchorByLane?.[lane] != null
+          ? { postureAnchorUnitPrice: input.postureAnchorByLane[lane] }
+          : {}),
         ...(recentSold === 0 ? { soldNothingLastTurn: true } : {}),
         variableUnitCost:
           output.unitsPerOutput > 0
