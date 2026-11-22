@@ -20,7 +20,11 @@ import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { advanceProducerEconomy } from "./production";
 import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
-import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
+import {
+  producerCashTransition,
+  ProducerCashOverdrawError,
+  type ProducerCashBinding,
+} from "./cashSettlementRules";
 import {
   closingProducerCash,
   ProducerCashChanges,
@@ -667,78 +671,112 @@ export async function settleProducerTurn(
     };
     clock.lap("capacityMs");
     const electricityPassLimit = production.maximumPlanningPasses;
-    const payload: FrozenProducerTurn = {
-      version: 1,
-      createdAt: new Date().toISOString(),
-      worldEpoch: input.worldEpoch,
-      request: production,
-      bindings: input.bindings,
-      targets: input.targets,
-      capacities,
-      result: (() => {
-        phaseSteps.mark("producerMarket.prepare");
-        const market = advanceProducerEconomy(
-          production,
-          input.planningBudgetMs == null && input.executionBudgetMs == null
-            ? undefined
-            : {
-                maximumElapsedMs: input.planningBudgetMs ?? Number.MAX_VALUE,
-                elapsedMs: () => performance.now() - started,
-                checkBudget,
-              },
-          timings
-        );
-        phaseSteps.mark("producerMarket.advanceEconomy");
-        recordEconomyBreakdown(timings);
-        clock.lap("advanceEconomyMs"); // total; the economy's own stages are itemised by advanceProducerEconomy
-        // Freeze the actual pass count so offline replay does not need a clock.
-        // The requested ceiling and stop reason remain in the diagnostics.
-        if (market.planning) production.maximumPlanningPasses = market.planning.passes;
-        return input.close
-          ? applySettlementClose(
-              market,
-              input.close(market),
-              new Set(input.bindings.map((b) => b.accountId))
-            )
-          : market;
-      })(),
+    // Freeze one market run. Runs again at most once, below, with the
+    // companies a first run would overdraw kept out of buying.
+    const freeze = async () => {
+      const runStarted = performance.now();
+      const payload: FrozenProducerTurn = {
+        version: 1,
+        createdAt: new Date().toISOString(),
+        worldEpoch: input.worldEpoch,
+        request: production,
+        bindings: input.bindings,
+        targets: input.targets,
+        capacities,
+        result: (() => {
+          phaseSteps.mark("producerMarket.prepare");
+          const market = advanceProducerEconomy(
+            production,
+            input.planningBudgetMs == null && input.executionBudgetMs == null
+              ? undefined
+              : {
+                  maximumElapsedMs: input.planningBudgetMs ?? Number.MAX_VALUE,
+                  elapsedMs: () => performance.now() - runStarted,
+                  checkBudget,
+                },
+            timings
+          );
+          phaseSteps.mark("producerMarket.advanceEconomy");
+          recordEconomyBreakdown(timings);
+          clock.lap("advanceEconomyMs"); // total; the economy's own stages are itemised by advanceProducerEconomy
+          // Freeze the actual pass count so offline replay does not need a clock.
+          // The requested ceiling and stop reason remain in the diagnostics.
+          if (market.planning) production.maximumPlanningPasses = market.planning.passes;
+          return input.close
+            ? applySettlementClose(
+                market,
+                input.close(market),
+                new Set(input.bindings.map((b) => b.accountId))
+              )
+            : market;
+        })(),
+      };
+      clock.lap("closeMs");
+      phaseSteps.mark("producerMarket.close");
+      const electricityReport = compareElectricity(
+        production,
+        payload.result,
+        input.targets,
+        electricityPassLimit
+      );
+      clock.lap("electricityComparisonMs");
+      phaseSteps.mark("producerMarket.electricityComparison");
+      validateTargets(payload);
+      clock.lap("validateTargetsMs");
+      phaseSteps.mark("producerMarket.validateTargets");
+      // The market is fully computed here. The execution deadline guards the
+      // expensive clearing only: encoding and staging a finished receipt must not
+      // discard it, because a retry recomputes the same market against the same
+      // ceiling. The phase timeout still bounds this tail and keeps late completion.
+      const encoded = encodeReceipt(payload);
+      phaseSteps.mark("producerMarket.encodeReceipt");
+      clock.lap("encodeReceiptMs");
+      const candidate: ProducerTurnRecord = {
+        _id: key,
+        worldEpoch: input.worldEpoch,
+        turn,
+        status: "frozen",
+        ...(production.electricityNetwork
+          ? { electricityNetwork: production.electricityNetwork }
+          : {}),
+        ...(electricityReport ? { electricityReport } : {}),
+        digest: encoded.digest,
+        payload: encoded.payload,
+      };
+      // Validate native balances and restricted cash targets before claiming any receipt.
+      const verification = await verifyPhysicalTargets(db, payload);
+      return { payload, encoded, candidate, verification };
     };
-    clock.lap("closeMs");
-    phaseSteps.mark("producerMarket.close");
-    const electricityReport = compareElectricity(
-      production,
-      payload.result,
-      input.targets,
-      electricityPassLimit
-    );
-    clock.lap("electricityComparisonMs");
-    phaseSteps.mark("producerMarket.electricityComparison");
-    validateTargets(payload);
-    clock.lap("validateTargetsMs");
-    phaseSteps.mark("producerMarket.validateTargets");
-    // The market is fully computed here. The execution deadline guards the
-    // expensive clearing only: encoding and staging a finished receipt must not
-    // discard it, because a retry recomputes the same market against the same
-    // ceiling. The phase timeout still bounds this tail and keeps late completion.
-    const encoded = encodeReceipt(payload);
-    phaseSteps.mark("producerMarket.encodeReceipt");
-    clock.lap("encodeReceiptMs");
-    const candidate: ProducerTurnRecord = {
-      _id: key,
-      worldEpoch: input.worldEpoch,
-      turn,
-      status: "frozen",
-      ...(production.electricityNetwork
-        ? { electricityNetwork: production.electricityNetwork }
-        : {}),
-      ...(electricityReport ? { electricityReport } : {}),
-      digest: encoded.digest,
-      payload: encoded.payload,
-    };
-    // Validate native balances and restricted cash targets before claiming any receipt.
-    const verification = await verifyPhysicalTargets(db, payload);
-    cashWithLedger(redirectFrozenOwnerCash(payload, verification.cashRedirect), candidate.digest);
+    let frozenRun = await freeze();
+    let isolationWarnings: string[] = [];
+    try {
+      cashWithLedger(
+        redirectFrozenOwnerCash(frozenRun.payload, frozenRun.verification.cashRedirect),
+        frozenRun.candidate.digest
+      );
+    } catch (error) {
+      if (!(error instanceof ProducerCashOverdrawError)) throw error;
+      // One company's bad cash result must not stop every player's turn. Keep
+      // the accounts it names (and any dissolved owners booked onto them) out
+      // of buying and clear again; a second failure stops the turn as before.
+      const named = new Set(error.overdrawn.map((o) => o.accountId));
+      for (const [from, to] of frozenRun.verification.cashRedirect)
+        if (named.has(to)) named.add(from);
+      production.excludedBuyerAccounts = [...named].sort();
+      production.maximumPlanningPasses = electricityPassLimit;
+      isolationWarnings = [
+        `producer settlement isolated ${named.size} account(s) after a cash overdraw; they bought nothing this turn and need review: ${error.message}`,
+      ];
+      console.error(`[producerSettlement] turn ${turn}: ${isolationWarnings[0]}`);
+      frozenRun = await freeze();
+      cashWithLedger(
+        redirectFrozenOwnerCash(frozenRun.payload, frozenRun.verification.cashRedirect),
+        frozenRun.candidate.digest
+      );
+    }
+    const { payload, encoded, candidate, verification } = frozenRun;
     candidate.settlementWarnings = [
+      ...isolationWarnings,
       ...verification.turnWarnings,
       ...producerPlanningWarnings(payload.result.planning),
     ];

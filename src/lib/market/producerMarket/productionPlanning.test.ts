@@ -127,3 +127,17 @@ describe("production planning execution limits", () => {
     ).toThrow("runtime budget");
   });
 });
+
+describe("excluded buyers", () => {
+  it("clears nothing for an account kept out of buying, so it cannot spend past its cash", () => {
+    const delivered = (result: ReturnType<typeof advanceProducerEconomy>) =>
+      result.orderOutcomes
+        .filter((o) => o.accountId === "households")
+        .reduce((sum, o) => sum + o.deliveredUnits, 0);
+    expect(delivered(advanceProducerEconomy(request()))).toBeGreaterThan(0);
+    const isolated = advanceProducerEconomy({ ...request(), excludedBuyerAccounts: ["households"] });
+    expect(delivered(isolated)).toBe(0);
+    const change = isolated.cashChanges?.find((c) => c.accountId === "households")?.change ?? 0;
+    expect(change).toBeGreaterThanOrEqual(0);
+  });
+});
