@@ -327,7 +327,11 @@
       "raceDone": "Race entry complete.",
       "browseRaces": "Browse elections",
       "skippedTour": "You skipped the tour. The <link>two-minute basics</link> are here whenever you want them.",
-      "tutorial": "Open the <link>tutorial</link> for more ways to get started."
+      "tutorial": "Open the <link>tutorial</link> for more ways to get started.",
+      "campaignWorking": "Campaigning...",
+      "campaignLanded": "Campaign {done} of {goal} done. {message}",
+      "campaignLandedPlain": "Campaign {done} of {goal} done.",
+      "turnProcessing": "A turn is processing, so actions take a few seconds to confirm. Each click spends money once it lands; wait for the confirmation before clicking again."
     },
     "stockHoldings": {
       "all": "All Stock Holdings",

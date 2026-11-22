@@ -10,6 +10,7 @@ import { captureProductEvent } from "@/lib/analytics/capture";
 import { apiErrorText } from "@/lib/errors/catalog";
 import type { FirstDaysData } from "@/lib/onboarding/firstDays";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { useGameTurnStatus } from "@/hooks/useGameEvents";
 
 /**
  * "Your first days" panel on the profile of a new character.
@@ -35,6 +36,16 @@ export function FirstDaysPanel({
   const [campaigning, setCampaigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState<string | null>(null);
+  // Count confirmed campaigns locally so a landed click shows at once. The
+  // server refresh can lag several seconds while a turn processes, and a
+  // counter that does not move reads as a lost click (players re-clicked and
+  // paid twice).
+  const [confirmedCampaigns, setConfirmedCampaigns] = useState(data.campaigns);
+  useEffect(() => {
+    setConfirmedCampaigns((local) => Math.max(local, data.campaigns));
+  }, [data.campaigns]);
+  const turnStatus = useGameTurnStatus();
+  const turnProcessing = turnStatus?.isProcessing === true;
   const viewed = useRef(false);
 
   useEffect(() => {
@@ -48,9 +59,10 @@ export function FirstDaysPanel({
     });
   }, [data]);
 
-  const campaignDone = data.campaigns >= data.campaignGoal;
+  const campaignDone = confirmedCampaigns >= data.campaignGoal;
 
   async function campaign() {
+    if (campaigning) return;
     setCampaigning(true);
     setError(null);
     try {
@@ -64,8 +76,14 @@ export function FirstDaysPanel({
         setError(apiErrorText(body, t("campaignFailed")));
         return;
       }
-      setLastGain(typeof body.message === "string" ? body.message : null);
-      void captureProductEvent("first_days_campaigned", { campaigns: data.campaigns + 1 });
+      const done = confirmedCampaigns + 1;
+      setConfirmedCampaigns(done);
+      setLastGain(
+        typeof body.message === "string"
+          ? t("campaignLanded", { done, goal: data.campaignGoal, message: body.message })
+          : t("campaignLandedPlain", { done, goal: data.campaignGoal })
+      );
+      void captureProductEvent("first_days_campaigned", { campaigns: done });
       router.refresh();
     } catch {
       setError(t("campaignFailed"));
@@ -105,7 +123,10 @@ export function FirstDaysPanel({
           {step(campaignDone, 1)}
           <div className="min-w-0 flex-1">
             <p className="text-body-sm font-medium text-foreground">
-              {t("campaignTitle", { done: data.campaigns, goal: data.campaignGoal })}
+              {t("campaignTitle", {
+                done: Math.min(confirmedCampaigns, data.campaignGoal),
+                goal: data.campaignGoal,
+              })}
             </p>
             <p className="mt-0.5 text-body-xs leading-relaxed text-muted">
               {t("campaignBody", { influence: data.influence.toFixed(1) })}
@@ -115,7 +136,7 @@ export function FirstDaysPanel({
                 {campaignCost ? (
                   <>
                     <Button size="sm" onClick={campaign} isLoading={campaigning}>
-                      {t("campaignButton")}
+                      {campaigning ? t("campaignWorking") : t("campaignButton")}
                     </Button>
                     <span className="text-body-xs text-muted">
                       {t("campaignCost", campaignCost)}
@@ -129,7 +150,16 @@ export function FirstDaysPanel({
                 </Link>
               </div>
             )}
-            {lastGain && <p className="mt-1 text-body-xs text-success">{lastGain}</p>}
+            {turnProcessing && !campaignDone && (
+              <p className="mt-1 text-body-xs text-muted" role="status">
+                {t("turnProcessing")}
+              </p>
+            )}
+            {lastGain && (
+              <p className="mt-1 text-body-xs text-success" role="status">
+                {lastGain}
+              </p>
+            )}
             <InlineError error={error} className="mt-1 text-body-xs text-error" />
           </div>
         </li>

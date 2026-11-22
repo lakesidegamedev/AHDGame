@@ -283,7 +283,11 @@
       "raceDone": "Kandidatur eingereicht.",
       "browseRaces": "Wahlen ansehen",
       "skippedTour": "Du hast die Tour übersprungen. Die <link>Grundlagen in zwei Minuten</link> findest du hier, wann immer du willst.",
-      "tutorial": "Im <link>Tutorial</link> findest du weitere Tipps für den Einstieg."
+      "tutorial": "Im <link>Tutorial</link> findest du weitere Tipps für den Einstieg.",
+      "campaignWorking": "Wahlkampf läuft...",
+      "campaignLanded": "Wahlkampf {done} von {goal} erledigt. {message}",
+      "campaignLandedPlain": "Wahlkampf {done} von {goal} erledigt.",
+      "turnProcessing": "Eine Runde wird verarbeitet, daher dauert die Bestätigung einige Sekunden. Jeder Klick kostet Geld, sobald er ankommt; warte auf die Bestätigung, bevor du erneut klickst."
     }
   }
 }
