@@ -8,14 +8,12 @@ export type AutoBuildRoomGate = "no_build_room";
  * and computer-run companies), reading the same verdict as the build dialog.
  * Buyers must have unmet demand for the output; a room that was not measured is
  * no room. A build sized on a measured shortage is demand-led and passes.
- * Returns null when the build may proceed or the stage is off.
+ * Returns null when the build may proceed.
  */
 export function evaluateAutoBuildRoomGate(args: {
-  stage: number | null | undefined;
   roomUnits: number | null | undefined;
   demandLed: boolean;
 }): AutoBuildRoomGate | null {
-  if (!((args.stage ?? 0) >= 1)) return null;
   if (args.demandLed) return null;
   return buildRoomVerdict(args.roomUnits) === "room" ? null : "no_build_room";
 }

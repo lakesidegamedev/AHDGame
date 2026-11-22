@@ -63,7 +63,6 @@ function run(args: { autopilot: boolean; stage?: number; room: number | null }) 
       now: new Date("2026-01-01"),
       modifiers: AUTOPILOT_MODIFIERS,
       strategyLoopEnabled: false,
-      ...(args.stage ? { buildRoomStage: args.stage } : {}),
     },
     candidatesByCountry(pools),
     new Set(),
@@ -78,51 +77,32 @@ describe("automatic build room gate", () => {
   for (const autopilot of [true, false]) {
     const who = autopilot ? "autopilot" : "computer-run";
 
-    it(`${who}: a market with no unmet demand gets no build once the stage is on`, () => {
-      const decision = run({ autopilot, stage: 1, room: 0 });
+    it(`${who}: a market with no unmet demand gets no build`, () => {
+      const decision = run({ autopilot, room: 0 });
       expect(decision.reinvestments ?? []).toEqual([]);
       const gates = (decision.capacityObservations ?? []).map((o) => o.outcome);
       expect(gates).toContain("no_build_room");
     });
 
-    it(`${who}: an unmeasured room gets no build once the stage is on`, () => {
-      const decision = run({ autopilot, stage: 1, room: null });
+    it(`${who}: an unmeasured room gets no build`, () => {
+      const decision = run({ autopilot, room: null });
       expect(decision.reinvestments ?? []).toEqual([]);
     });
 
-    it(`${who}: a market with room builds the same as with the stage off`, () => {
-      const on = run({ autopilot, stage: 1, room: 1_000_000 });
-      const off = run({ autopilot, room: 1_000_000 });
-      expect((on.reinvestments ?? []).length).toBeGreaterThan(0);
-      expect((on.reinvestments ?? []).map((b) => [b.units, Math.round(b.costLocal)])).toEqual(
-        (off.reinvestments ?? []).map((b) => [b.units, Math.round(b.costLocal)])
-      );
+    it(`${who}: a market with room builds`, () => {
+      const decision = run({ autopilot, room: 1_000_000 });
+      expect((decision.reinvestments ?? []).length).toBeGreaterThan(0);
     });
   }
-
-  it("computer-run company with the stage off still builds without room", () => {
-    const decision = run({ autopilot: false, room: 0 });
-    expect((decision.reinvestments ?? []).length).toBeGreaterThan(0);
-  });
 });
 
 describe("evaluateAutoBuildRoomGate", () => {
-  it("is inert while the stage is off", () => {
-    expect(evaluateAutoBuildRoomGate({ stage: 0, roomUnits: 0, demandLed: false })).toBeNull();
-    expect(
-      evaluateAutoBuildRoomGate({ stage: undefined, roomUnits: null, demandLed: false })
-    ).toBeNull();
-  });
   it("refuses no room and unmeasured room", () => {
-    expect(evaluateAutoBuildRoomGate({ stage: 1, roomUnits: 0, demandLed: false })).toBe(
-      "no_build_room"
-    );
-    expect(evaluateAutoBuildRoomGate({ stage: 1, roomUnits: null, demandLed: false })).toBe(
-      "no_build_room"
-    );
+    expect(evaluateAutoBuildRoomGate({ roomUnits: 0, demandLed: false })).toBe("no_build_room");
+    expect(evaluateAutoBuildRoomGate({ roomUnits: null, demandLed: false })).toBe("no_build_room");
   });
   it("passes measured room and demand-led builds", () => {
-    expect(evaluateAutoBuildRoomGate({ stage: 1, roomUnits: 5, demandLed: false })).toBeNull();
-    expect(evaluateAutoBuildRoomGate({ stage: 1, roomUnits: 0, demandLed: true })).toBeNull();
+    expect(evaluateAutoBuildRoomGate({ roomUnits: 5, demandLed: false })).toBeNull();
+    expect(evaluateAutoBuildRoomGate({ roomUnits: 0, demandLed: true })).toBeNull();
   });
 });

@@ -81,7 +81,8 @@ function growthFor(strategyId: string): number {
       preset: "2019-default",
       primeRateOf: () => 0,
       costOfLivingOf: () => null,
-    }
+    },
+    { unmetDemandUnitsOf: () => 1_000_000 }
   );
   return (decision.reinvestments ?? []).reduce((sum, build) => sum + build.units, 0);
 }
