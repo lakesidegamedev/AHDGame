@@ -79,6 +79,7 @@ import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
 import { PoliticalStanding } from "./components/PoliticalStanding";
 import { FinancialStrip } from "./components/FinancialStrip";
+import { MoneyHistoryPanel } from "./components/MoneyHistoryPanel";
 import { CareerHistory } from "./components/CareerHistory";
 import {
   fetchPartyHistory,
@@ -983,6 +984,7 @@ export default async function ProfilePage({
                 }}
                 portfolioHref="/portfolio"
               />
+              <MoneyHistoryPanel />
             </section>
 
             <ProfileAchievements
