@@ -57,6 +57,32 @@ describe("PulseStrip", () => {
     expect(screen.getAllByText(/▲/).length).toBeGreaterThan(0);
   });
 
+  it("distinguishes the current primary deficit from the debt-stability threshold", () => {
+    render(
+      <PulseStrip
+        countryId="US"
+        pulse={{
+          ...pulse,
+          credit: {
+            ...pulse.credit,
+            debtTrajectory: "rising",
+            primaryBalancePct: -9.4,
+            stabilisingPrimaryBalancePct: -0.8,
+          },
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText("Current budget shows a primary deficit of 9.4% of budget GDP.")
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Debt-to-GDP is projected to rise. It would hold steady at a primary deficit of 0.8% of budget GDP."
+      )
+    ).toBeTruthy();
+  });
+
   it("renders em-dashes when hero values are missing", () => {
     render(
       <PulseStrip
