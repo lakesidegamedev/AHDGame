@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -389,9 +389,15 @@ export function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind:
     };
   }, [canViewExtendedTabsEarly, countryCode, stateId, partyId]);
 
+  // The URL tab is applied once per distinct query string. Re-applying it on
+  // every stateParty refetch (each treasury/loyalty save refetches) yanked the
+  // player back to the tab named in the URL after they had clicked elsewhere.
+  const appliedRouteTabKey = useRef<string | null>(null);
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (!tabParam || !stateParty) return;
+    const routeKey = searchParams.toString();
+    if (appliedRouteTabKey.current === routeKey) return;
     const allowedTabs = canViewExtendedTabsEarly
       ? new Set<StateMainTab>([
           "overview",
@@ -407,6 +413,9 @@ export function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind:
     if (canViewExtendedTabsEarly && canInfluenceEarly) allowedTabs.add("actions");
     if (canViewExtendedTabsEarly && user?.isAdmin) allowedTabs.add("admin");
     const subParam = searchParams.get("sub");
+    if (allowedTabs.has(tabParam as StateMainTab)) {
+      appliedRouteTabKey.current = routeKey;
+    }
     queueMicrotask(() => {
       if (allowedTabs.has(tabParam as StateMainTab)) {
         setActiveTab(tabParam as StateMainTab);
