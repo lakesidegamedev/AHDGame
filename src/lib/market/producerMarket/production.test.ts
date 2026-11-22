@@ -1375,6 +1375,57 @@ describe("receipt-backed production", () => {
     expect(
       traded(advanceProducerEconomy({ ...args, clearingPriceByLane: { "goods|state:CA": 2 } }))
     ).toBeCloseTo(3.3);
+    // A steady anchor replaces last turn's clearing for the automatic ask.
+    expect(
+      traded(
+        advanceProducerEconomy({
+          ...args,
+          clearingPriceByLane: { "goods|world": 2 },
+          postureAnchorByLane: { "goods|world": 3 },
+        })
+      )
+    ).toBeCloseTo(3.3);
+  });
+
+  it("keeps a shortage raise above the clearing even when the steady anchor is lower", () => {
+    const lane = "advertising|world";
+    const producer = plant({
+      inputs: [],
+      outputs: [
+        {
+          commodity: "advertising",
+          book: "world",
+          unitsPerOutput: 1,
+          policy: { kind: "automatic", targetMarkup: 0 },
+          referenceUnitPrice: 10,
+          storable: false,
+        },
+      ],
+      capacityUnits: 20,
+      recentSoldUnits: 20,
+      recentSoldByOutput: { [lane]: 20 },
+      recentAskByOutput: { [lane]: 12 },
+      recentOfferedByOutput: { [lane]: 20 },
+    });
+    const result = advanceProducerEconomy({
+      turn: 2,
+      accounts,
+      producers: [producer],
+      clearingPriceByLane: { [lane]: 10 },
+      postureAnchorByLane: { [lane]: 9 },
+      shortageAsk: { pressureByLane: { [lane]: 2 }, advertisingFromClearing: true },
+      externalOrders: [
+        {
+          id: "buyer",
+          accountId: "households",
+          commodity: "advertising",
+          book: "world",
+          units: 20,
+          maximumUnitPrice: 11.75,
+        },
+      ],
+    });
+    expect(result.producers[0].products[0].askingUnitPrice).toBeCloseTo(10.5);
   });
 
   it.each([
