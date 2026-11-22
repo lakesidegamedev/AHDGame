@@ -1,5 +1,6 @@
 "use client";
 
+import { quoteShareIssuance } from "@/lib/corporations/shareIssuanceQuote";
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useMemo } from "react";
@@ -85,10 +86,15 @@ export default function ShareIssuanceModal({
   const dilutionFraction =
     corporation.totalShares > 0 ? newSharesToIssue / corporation.totalShares : 0;
   const requiresVote = !corporation.isPrivate && dilutionFraction > 0.1;
-  const issuanceProceeds = newSharesToIssue * corporation.sharePrice;
-  const newTotalShares = corporation.totalShares + newSharesToIssue;
-  const dilutedPrice = (corporation.sharePrice * corporation.totalShares) / newTotalShares;
-  const priceChangePct = ((dilutedPrice - corporation.sharePrice) / corporation.sharePrice) * 100;
+  const issuanceQuote = quoteShareIssuance({
+    sharePrice: corporation.sharePrice,
+    totalShares: corporation.totalShares,
+    issuePercent,
+  });
+  const issuanceProceeds = issuanceQuote.proceeds;
+  const newTotalShares = issuanceQuote.newTotalShares;
+  const dilutedPrice = issuanceQuote.priceAfterIssue;
+  const priceChangePct = issuanceQuote.priceChangePct;
 
   // ─── CEO self-issuance derived values ────────────────────────────────────────
   const ceoPricePerShare = corporation.sharePrice * (1 + CEO_PREMIUM); // LOCAL
@@ -335,7 +341,7 @@ export default function ShareIssuanceModal({
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-card-border pt-2">
-                  <span className="text-muted">Price after dilution</span>
+                  <span className="text-muted">Price after issue (proceeds kept as cash)</span>
                   <span className="tabular-nums font-medium text-warning">
                     {fmtLocalPrice(dilutedPrice)}{" "}
                     <span className="text-xs text-muted">({priceChangePct.toFixed(1)}%)</span>
@@ -344,7 +350,9 @@ export default function ShareIssuanceModal({
               </div>
 
               <div className="rounded-lg border border-warning/25 bg-warning/5 px-3 py-2.5 text-xs text-warning">
-                Dilutes all existing shareholders proportionally.
+                Existing holders give up {issuanceQuote.ownershipGivenUpPct.toFixed(1)}% of the
+                company. The price shown counts the proceeds as company value; the market may move
+                it, and an underwriting fee is taken from the proceeds.
               </div>
             </div>
           )}

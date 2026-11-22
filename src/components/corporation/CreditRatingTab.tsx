@@ -18,6 +18,7 @@ import {
   MAX_BOND_ISSUANCE_FRACTION,
   CORPORATE_CREDIT_MATURITY_HORIZON_TURNS,
 } from "@/lib/constants/bonds";
+import { weightedComponentComposite } from "@/lib/corporations/creditStanding";
 import { assessMaturityLiquidity } from "@/lib/bonds/rules/maturityLiquidity";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -278,8 +279,17 @@ function WhatIfDebtPanel({
     return calculateCreditScore(newLiquid, newDebt, cd.annualIncome, newAnnual, newEquity, {
       bondDefaultCreditPenaltyActive: penalty,
       nearTermLiquidityScore: maturity.liquidityScore ?? undefined,
+      insiderConcentrationPenalty: corporation.insiderConcentrationActive === true,
+      indexInclusionUpgrade: corporation.indexInclusionActive === true,
     });
-  }, [bondInfo, liqAnchor, clampedDebtDelta, toInternalFrom]);
+  }, [
+    bondInfo,
+    liqAnchor,
+    clampedDebtDelta,
+    toInternalFrom,
+    corporation.insiderConcentrationActive,
+    corporation.indexInclusionActive,
+  ]);
 
   const canSlideDebt = debtSliderBounds.max > debtSliderBounds.min;
   if (!bondInfo.creditDiagnostics || !whatIf) return null;
@@ -331,12 +341,16 @@ function WhatIfDebtPanel({
         </div>
         <KVList>
           <KVRow label="Simulated rating" value={whatIf.rating} />
-          <KVRow label="Simulated composite" value={`${whatIf.compositeScore}/100`} />
           <KVRow
-            label="New-issue coupon"
+            label="Simulated composite"
+            value={`${whatIf.compositeScore}/100`}
+            hint="today's figures, before the turn's smoothing"
+          />
+          <KVRow
+            label="New-issue coupon (2 years)"
             value={
               isFiniteNumber(bondInfo.creditRating.primeRate)
-                ? `${getBondCouponRate(bondInfo.creditRating.primeRate, whatIf.rating).toFixed(2)}%`
+                ? `${getBondCouponRate(bondInfo.creditRating.primeRate, whatIf.rating, 96).toFixed(2)}%`
                 : "n/a"
             }
           />
@@ -417,6 +431,7 @@ export default function CreditRatingTab({
 
   const cr = bondInfo.creditRating;
   const cd = bondInfo.creditDiagnostics;
+  const componentComposite = weightedComponentComposite(cr.components, CREDIT_RATING_WEIGHTS);
   const currentSpread = CREDIT_RATING_SPREADS[cr.rating as CreditRating];
   const couponHint =
     isFiniteNumber(cr.primeRate) && isFiniteNumber(currentSpread)
@@ -477,12 +492,17 @@ export default function CreditRatingTab({
               <KVRow
                 label="Composite"
                 value={`${cr.compositeScore}/100`}
+                hint={
+                  componentComposite !== cr.compositeScore
+                    ? `components below add up to ${componentComposite} today; the turn blends 75% of that with 25% of last turn's score`
+                    : undefined
+                }
                 title={`Built from ${Math.round(CREDIT_RATING_WEIGHTS.debtToEquity * 100)}% debt, ${Math.round(CREDIT_RATING_WEIGHTS.interestCoverage * 100)}% interest cover, ${Math.round(CREDIT_RATING_WEIGHTS.profitability * 100)}% profit and ${Math.round(CREDIT_RATING_WEIGHTS.liquidity * 100)}% cash.`}
               />
             </KVList>
             <KVList>
               <KVRow
-                label="Coupon on new issues"
+                label="Coupon on new issues (2 years)"
                 value={
                   isFiniteNumber(cr.effectiveCouponRate)
                     ? `${cr.effectiveCouponRate.toFixed(2)}%`
@@ -640,11 +660,15 @@ export default function CreditRatingTab({
             {cd && (
               <>
                 <KVRow
-                  label="Book equity"
+                  label="Equity used for score"
                   value={formatAmount(cd.totalEquity)}
-                  title="Cash plus the estimated worth of working sectors: what the score measures debt and profit against."
+                  title="Cash plus the estimated worth of working sectors and builds in progress, less arrears. This is not the balance sheet's book value, which counts assets at cost less debt."
                 />
-                <KVRow label="Annual income (est.)" value={formatAmount(cd.annualIncome)} />
+                <KVRow
+                  label="Annual operating income (est.)"
+                  value={formatAmount(cd.annualIncome)}
+                  title="Estimated sector operating income per turn, times turns per year. Before tax and dividends."
+                />
                 <KVRow label="Annual coupons" value={formatAmount(cd.annualCouponObligations)} />
                 <KVRow
                   label="Debt to equity"

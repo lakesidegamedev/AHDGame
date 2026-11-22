@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveCreditStanding } from "@/lib/corporations/creditStanding";
 import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
 import { sectorDisplayProfit } from "./sectorSortUtils";
 
@@ -475,14 +476,8 @@ export default function OverviewTab({
     primaryType
   );
   const activeBonds = bondInfo?.bonds.filter((b) => !b.defaulted && !b.matured).length ?? 0;
-  const snapshotComposite = corporation.creditCompositeSnapshot;
-  const liveComposite = bondInfo?.creditRating.compositeScore;
-  const creditComposite =
-    typeof snapshotComposite === "number" && Number.isFinite(snapshotComposite)
-      ? snapshotComposite
-      : typeof liveComposite === "number" && Number.isFinite(liveComposite)
-        ? liveComposite
-        : null;
+  const creditStanding = resolveCreditStanding(corporation, bondInfo?.creditRating);
+  const creditComposite = creditStanding.composite;
 
   const myHolding = myCharacterId
     ? corporation.shareholders.find((sh) => sh.characterId === myCharacterId)
@@ -515,7 +510,7 @@ export default function OverviewTab({
     : null;
 
   const { mode, setMode } = useCorpOverviewMode();
-  const leverageRating = corporation.creditRatingSnapshot ?? bondInfo?.creditRating.rating ?? null;
+  const leverageRating = creditStanding.rating;
   const perTurn = (daily: number) => scaleMoney(daily, "turn");
   const retainedPerTurn = basis ? perTurn(basis.retained) : null;
   const runwayTurns =

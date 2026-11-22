@@ -1,4 +1,5 @@
 import type { useCorpMoney } from "../dense/DenseKit";
+import { quoteChangeAgainst } from "../market/corpIdentity";
 
 type CorpMoney = ReturnType<typeof useCorpMoney>;
 
@@ -46,12 +47,13 @@ export function QuoteBoard({
   poolActive: boolean;
   currentTurn?: number | null;
 }) {
-  const up = (dayChange?.changePct ?? 0) >= 0;
+  const change = dayChange != null ? quoteChangeAgainst(price, dayChange.prevClose) : null;
+  const up = (change?.changePct ?? 0) >= 0;
   const tone = dayChange == null ? "text-muted" : up ? "text-success" : "text-error";
   const hasQuote =
     poolActive && bid != null && ask != null && Number.isFinite(bid) && Number.isFinite(ask);
   const drawn = series.length >= 2 ? sparkPaths(series, dayChange?.prevClose ?? null) : null;
-  const moneyChange = dayChange != null ? price - dayChange.prevClose : null;
+  const moneyChange = change?.changeMoney ?? null;
 
   // The line covers the whole drawn window, so it is coloured by the change
   // across that window and not by the last turn. Colouring an eighteen-turn
@@ -97,7 +99,7 @@ export function QuoteBoard({
         </span>
         {dayChange != null && (
           <span className={`flex flex-col gap-0.5 font-mono text-[15px] font-semibold ${tone}`}>
-            {up ? "▲" : "▼"} {Math.abs(dayChange.changePct).toFixed(2)}%
+            {up ? "▲" : "▼"} {Math.abs(change?.changePct ?? 0).toFixed(2)}%
             {moneyChange != null && (
               <small className="text-[11px] font-medium text-muted">
                 {moneyChange >= 0 ? "+" : "-"}

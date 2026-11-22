@@ -294,10 +294,10 @@ export interface CorporationDetail {
   pendingCeoCharacterId: string | null;
   createdAt: string;
   /**
-   * Persisted, announced credit rating from the last turn's snapshot. Matches the
-   * credit-rating-change notification. Preferred over the live-recomputed
-   * `bondInfo.creditRating.rating` for the DISPLAY label (the live recompute
-   * double-smooths and can diverge). Absent for pre-snapshot (legacy) corps.
+   * Credit rating snapshot from the last turn. Matches the
+   * credit-rating-change notification. Display goes through
+   * `resolveCreditStanding`, which prefers the live bond-info rating and falls
+   * back to this. Absent for pre-snapshot (legacy) corps.
    */
   creditRatingSnapshot?: string;
   /**
