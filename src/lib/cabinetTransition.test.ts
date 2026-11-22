@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { clearCabinetOnTransition } from "./cabinetTransition";
@@ -94,6 +101,7 @@ describe("clearCabinetOnTransition", () => {
     await clearCabinetOnTransition(db as any, "US");
 
     expect(memberCol.deleteMany).toHaveBeenCalledWith({
+      countryId: "US",
       positionId: { $in: expect.arrayContaining(["secretary_of_state", "attorney_general"]) },
     });
     // UK positions must NOT be in the set
@@ -130,7 +138,7 @@ describe("clearCabinetOnTransition", () => {
     await clearCabinetOnTransition(db as any, "US");
 
     expect(nominationCol.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ status: { $in: ["proposed", "active"] } }),
+      expect.objectContaining({ status: { $in: ["proposed", "active", "awaiting_choice"] } }),
       expect.objectContaining({ $set: expect.objectContaining({ status: "withdrawn" }) })
     );
   });
@@ -160,14 +168,14 @@ describe("clearCabinetOnTransition", () => {
     await clearCabinetOnTransition(db as any, "US");
 
     // Helper still flushes once with an empty list — never with any input
-    expect(createNotifications).toHaveBeenCalledWith([]);
+    expect(createNotifications).not.toHaveBeenCalled();
   });
 
   it("is a no-op when there are no members", async () => {
     const { db, memberCol } = makeMockDb();
     await expect(clearCabinetOnTransition(db as any, "UK")).resolves.not.toThrow();
     expect(memberCol.deleteMany).toHaveBeenCalledOnce();
-    expect(createNotifications).toHaveBeenCalledWith([]);
+    expect(createNotifications).not.toHaveBeenCalled();
   });
 
   it("restores a cleared parliamentary minister's currentOffice to their legislative seat", async () => {

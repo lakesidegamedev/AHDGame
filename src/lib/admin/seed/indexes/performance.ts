@@ -96,6 +96,14 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  await ensureIndex(
+    db,
+    "bills",
+    { "lifecycleReceipts.turn": 1, countryId: 1, originChamber: 1 },
+    { name: "bills_lifecycle_receipts_turn" },
+    log
+  );
+
   // bills — list filters + sort
   await ensureIndex(
     db,

@@ -20,6 +20,7 @@ import type { LegacyLeverRef } from "@/lib/crises/v2/types";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import type { Character } from "@/lib/db/types";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
+import { optionsForGlobalResponder } from "@/lib/livingConflict/globalResponse";
 import { logger } from "@/lib/observability/logger";
 import {
   checkLeverEligibility,
@@ -87,7 +88,10 @@ export async function pullLeverWithDecision(
     return fail("out_of_jurisdiction", "This decision is not yours to make");
   }
 
-  const option = ref.optionId ? node.options?.find((o) => o.optionId === ref.optionId) : undefined;
+  const nodeOptions = crisis.globalResponse
+    ? optionsForGlobalResponder(crisis, node, actor.countryId)
+    : node.options;
+  const option = ref.optionId ? nodeOptions?.find((o) => o.optionId === ref.optionId) : undefined;
   if (ref.kind !== "aid" && !option) return fail("not_found", "No such option on this decision");
   if (option?.requiredApproval) {
     const approval = await governmentApprovalsCollection<{ approvalRating?: number }>(db).findOne({

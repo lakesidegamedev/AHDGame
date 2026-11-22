@@ -833,6 +833,7 @@ export default function SectorDetailPage() {
                 sector={sector}
                 corporation={corporation}
                 financials={financials}
+                supplies={commodities?.supplies ?? []}
                 capitalEnabled={!!capital}
                 clearingEnabled={!!pricing}
                 room={

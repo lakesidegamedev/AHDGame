@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /*
  * One-Party State Bill Lifecycle Processor
  *
@@ -294,8 +295,8 @@ async function processCountryBills(
   // popular→party coupling reads a fresh popularLegitimacy value. No-op
   // when the country lacks a popularMoodProfile (set on the one-party states
   // — CN, RU and DD — today).
-  await processCountryPopularDrift(db, config, currentTurn, enactedCategories).catch((err) =>
-    console.error(`${countryId} popular legitimacy drift failed:`, err)
+  await applyCountryBillEffect(db, countryId, currentTurn, "popular", (tx) =>
+    processCountryPopularDrift(tx, config, currentTurn, enactedCategories)
   );
 
   // ── Ruling-party confidence drift ───────────────────────────────────────
@@ -304,8 +305,8 @@ async function processCountryBills(
   // purges processed once consumed so drift is not double-counted next turn.
   // The confidence turn reads the freshly-updated popularLegitimacy
   // (from the popular drift above) for its coupling-bleed input.
-  await processCountryConfidenceDrift(db, countryId, currentTurn, enactedCategories).catch((err) =>
-    console.error(`${countryId} confidence drift failed:`, err)
+  await applyCountryBillEffect(db, countryId, currentTurn, "confidence", (tx) =>
+    processCountryConfidenceDrift(tx, countryId, currentTurn, enactedCategories)
   );
 
   // ── Regime escalation tick ──────────────────────────────────────────────
@@ -313,8 +314,8 @@ async function processCountryBills(
   // update dwell counters + advance stage transitions + offer decision
   // events. Self-heals a "stable" row on first tick so existing CN games
   // pick up the state machine without an explicit seed.
-  await processCountryEscalation(db, countryId, currentTurn).catch((err) =>
-    console.error(`${countryId} escalation tick failed:`, err)
+  await applyCountryBillEffect(db, countryId, currentTurn, "escalation", (tx) =>
+    processCountryEscalation(tx, countryId, currentTurn)
   );
 
   return { enacted, failed };
@@ -477,3 +478,25 @@ export const processBLRBillLifecycle = (now: Date, context?: BillLifecycleRuntim
   processOnePartyBillLifecycleForCountry("BLR", now, context);
 export const processBALBillLifecycle = (now: Date, context?: BillLifecycleRuntimeContext) =>
   processOnePartyBillLifecycleForCountry("BAL", now, context);
+
+export async function applyCountryBillEffect(
+  db: Db,
+  countryId: CountryId,
+  turn: number,
+  effect: "popular" | "confidence" | "escalation",
+  work: (tx: Db) => Promise<void>
+): Promise<void> {
+  await withSessionDb(db, async (tx) => {
+    const state = await countryGameStatesCollection(tx).findOne(
+      { _id: countryId },
+      { projection: { billPoliticalEffectTurns: 1 } }
+    );
+    if ((state?.billPoliticalEffectTurns?.[effect] ?? -1) >= turn) return;
+    await work(tx);
+    await countryGameStatesCollection(tx).updateOne(
+      { _id: countryId },
+      { $set: { [`billPoliticalEffectTurns.${effect}`]: turn } },
+      { upsert: true }
+    );
+  });
+}

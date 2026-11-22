@@ -1,6 +1,7 @@
 import { BSON, MongoClient, ObjectId } from "mongodb";
 import type { CountryState } from "@/lib/db/types/countryState";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { onBillEnacted } from "@/lib/billEnactment";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
@@ -50,6 +51,7 @@ describe.skipIf(!uri)("1991 democratic bill dispatch on isolated Mongo", () => {
   it.each(["PL", "CS", "HU", "RO", "BG", "YU"] as CountryId[])(
     "advances %s without another country's bills or regime writes",
     async (countryId) => {
+      vi.mocked(onBillEnacted).mockClear();
       const db = client.db(`ahd_test_1991_bills_${new ObjectId().toHexString()}`);
       try {
         const country = getCountryConfig(countryId, "1991-default");
@@ -135,9 +137,10 @@ describe.skipIf(!uri)("1991 democratic bill dispatch on isolated Mongo", () => {
         expect((await db.collection("bills").findOne({ _id: billId }))?.status).toBe("signed");
         expect((await db.collection("bills").findOne({ _id: foreignId }))?.status).toBe("active");
         expect(await processOnePartyBillLifecycleForCountry(countryId, NOW)).toEqual({
-          enacted: 0,
+          enacted: 1,
           failed: 0,
         });
+        expect(onBillEnacted).toHaveBeenCalledTimes(1);
         expect(await db.collection("countryLeaderStates").countDocuments()).toBe(0);
         expect(await db.collection("purgeEvents").countDocuments()).toBe(0);
       } finally {

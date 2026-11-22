@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { notifyAndRestoreClearedHolders } from "@/lib/cabinetTransition";
@@ -16,6 +17,13 @@ import type { CountryId } from "@/lib/constants/countries";
  * inserting a phase there is needlessly fragile.
  */
 export async function expireLapsedActingAppointments(
+  db: Db,
+  currentTurn: number
+): Promise<{ expired: number }> {
+  return withSessionDb(db, (tx) => expireLapsedActingAppointmentsInTransaction(tx, currentTurn));
+}
+
+async function expireLapsedActingAppointmentsInTransaction(
   db: Db,
   currentTurn: number
 ): Promise<{ expired: number }> {
