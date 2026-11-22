@@ -96,7 +96,7 @@ describe("corporation income statement", () => {
     render(
       <FinancialsTab
         corporation={{ countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail}
-        financials={financials}
+        financials={{ ...financials, constructionCash: { turn: 23, paid: 260_869, refunded: 0 } }}
         balanceSheet={null}
         bondInfo={null}
         corpId="test"
@@ -111,6 +111,9 @@ describe("corporation income statement", () => {
     expect(screen.getByText("Difference from current estimate")).toBeTruthy();
     expect(screen.getByText("-M6400")).toBeTruthy();
     expect(screen.getByText(/Current estimates use today's sectors and budgets/)).toBeTruthy();
+    expect(screen.getByText("Construction cash, turn 23")).toBeTruthy();
+    expect(screen.getByText("Construction paid")).toBeTruthy();
+    expect(screen.getByText("-M260869")).toBeTruthy();
   });
   it("shows the federal tax charged on bond coupon income under Federal tax", () => {
     const props = {

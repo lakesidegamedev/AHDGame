@@ -14,6 +14,7 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { retoolOperatingCapacityRatio } from "@/lib/corporations/retooling/rules";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
+import { CONTRACT_OVERCOMMIT_TOLERANCE } from "@/lib/db/types/supplyAgreement";
 
 /**
  * Sector snapshot the plants-tier supply-agreement capacity check needs.
@@ -231,4 +232,19 @@ export function computeSupplierCommodityAchievableUnits(args: {
     units += scaled * weight;
   }
   return units;
+}
+
+/**
+ * Most a supplier may commit per day for one commodity. Nameplate headroom
+ * (CONTRACT_OVERCOMMIT_TOLERANCE) is never allowed to promise more than the
+ * latest recorded output the plants could reach; when no output is recorded
+ * yet, nameplate headroom is the only basis.
+ */
+export function maxContractableUnits(
+  capacityUnits: number,
+  achievableUnits: number | null
+): number {
+  const nameplateCeiling = capacityUnits * CONTRACT_OVERCOMMIT_TOLERANCE;
+  if (achievableUnits === null || !Number.isFinite(achievableUnits)) return nameplateCeiling;
+  return Math.max(0, Math.min(nameplateCeiling, achievableUnits));
 }

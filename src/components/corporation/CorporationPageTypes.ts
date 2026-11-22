@@ -53,6 +53,8 @@ interface CorporationPhysicalRollup {
   soldUnits: number;
   /** Σsold ÷ Σproduced, not the mean of per-sector ratios. Null if nothing ran. */
   fillRate: number | null;
+  /** Share of output sent to the company's own sites (0-1). Insider-only; null when none. */
+  ownSiteShare?: number | null;
   /** Capacity paid for but not yet productive, ₳. */
   constructionInProgressAnchor: number;
   unitsOnOrder: number;
@@ -624,6 +626,8 @@ export interface Financials {
   realizedIncome?: number;
   /** Turn the realized figure was booked on (for the "actual, last turn" chip). */
   realizedIncomeTurn?: number;
+  /** Recorded one-time movements in local currency, with no period scaling. */
+  constructionCash?: { turn: number; paid: number; refunded: number };
   /**
    * Dividends the engine actually paid out of last turn's income (daily display
    * units, local currency). `realizedIncome` is ALREADY net of this. Present

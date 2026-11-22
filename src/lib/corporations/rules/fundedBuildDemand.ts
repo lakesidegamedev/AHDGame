@@ -27,6 +27,16 @@ export interface BuildDemandRow {
   estimatedCapacityUnits?: number | null;
 }
 
+/**
+ * Units ordered, never below units filled. Funded is a budget estimate at the
+ * buyers' bid prices; a buyer who paid less than its bid receives more than
+ * the estimate covered, and a filled unit was necessarily an order.
+ */
+function orderedAtLeastFilled(funded: number | null, filled: number | null): number | null {
+  if (funded == null || filled == null) return funded;
+  return Math.max(funded, filled);
+}
+
 /** Actual cash-backed orders, not modelled trade or unclaimed market share.
  * National demand includes the region, so these rows must never be summed.
  * Foreign orders are deliberately not promised without buyer-route eligibility.
@@ -54,8 +64,8 @@ export function fundedBuildDemand(input: {
       // An explicitly published empty regional book is measured zero. An older
       // receipt without the regional measurement is unknown, never a glut.
       const measuredEmpty = regional && input.regions !== undefined && !row;
-      const funded = measuredEmpty ? 0 : valid(row?.funded);
       const delivered = measuredEmpty ? 0 : valid(row?.filled);
+      const funded = orderedAtLeastFilled(measuredEmpty ? 0 : valid(row?.funded), delivered);
       const capGap = input.capGaps?.get(commodity);
       const regionalCapGap = capGap?.byState[input.stateId];
       const primaryCapGap = regional ? regionalCapGap : capGap?.byCountry[input.countryId];
@@ -71,10 +81,12 @@ export function fundedBuildDemand(input: {
       const local = input.regions?.find(
         (r) => r.stateId === input.stateId && r.commodity === commodity
       );
-      const localFunded =
-        input.regions === undefined ? null : valid((local?.funded ?? 0) * input.regionalUnitScale);
       const localFilled =
         input.regions === undefined ? null : valid((local?.filled ?? 0) * input.regionalUnitScale);
+      const localFunded = orderedAtLeastFilled(
+        input.regions === undefined ? null : valid((local?.funded ?? 0) * input.regionalUnitScale),
+        localFilled
+      );
       // Primary national row last: keyed consumers select the full market, not its subset.
       return [
         {

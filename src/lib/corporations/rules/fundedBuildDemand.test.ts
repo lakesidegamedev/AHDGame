@@ -100,4 +100,18 @@ describe("funded build demand", () => {
         expect(rows.at(-1)?.unmet).toBe(localOnly ? 0 : 90);
       }
   });
+
+  it("never reports more filled than ordered", () => {
+    const rows = fundedBuildDemand({
+      ...input,
+      supply: { network_services: 0.4 },
+      countries: [book("network_services", "UK", 100, 117)],
+      regions: [{ stateId: "SCO", commodity: "network_services", funded: 2, filled: 3 }],
+    });
+    for (const row of rows) {
+      expect(row.funded).toBeGreaterThanOrEqual(row.delivered ?? 0);
+      expect(row.unmet).toBe(0);
+    }
+    expect(rows.at(-1)).toMatchObject({ scope: "national", funded: 117, delivered: 117 });
+  });
 });

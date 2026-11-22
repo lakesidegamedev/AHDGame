@@ -13,6 +13,7 @@
  * needed.
  */
 
+import { plantBuildProgress } from "@/lib/corporations/rules/plantBuildProgress";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 import { OWN_TRUCK_HAUL_TITLE, ownTruckHaulLabel } from "@/lib/corporations/ownTruckHaul";
 import { type FillRateBand } from "@/lib/corporations/financialFogOfWar";
@@ -145,12 +146,19 @@ function formatPlantCount(plants: number): string {
  */
 function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
   const size = Math.max(1, plantUnits);
-  const ordered = queue.unitsOrdered / size;
-  const remaining = queue.unitsRemaining / size;
+  const whole = plantBuildProgress(
+    queue.orderUnits ?? [
+      {
+        unitsOrdered: queue.unitsOrdered,
+        unitsDelivered: queue.unitsOrdered - queue.unitsRemaining,
+      },
+    ],
+    size
+  );
   return {
-    ordered,
-    remaining,
-    delivered: Math.max(0, ordered - remaining),
+    ordered: whole.ordered,
+    remaining: whole.building,
+    delivered: whole.built,
     perTurn: queue.unitsPerTurn > 0 ? queue.unitsPerTurn / size : null,
   };
 }

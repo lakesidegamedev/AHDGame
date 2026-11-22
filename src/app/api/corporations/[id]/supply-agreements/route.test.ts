@@ -141,8 +141,9 @@ describe("GET corporation supply agreements", () => {
     const body = await response.json();
 
     expect(body.capacityByCommodity.steel.currentCapacityUnits).toBeGreaterThan(0);
-    expect(body.capacityByCommodity.steel.maxContractUnits).toBeGreaterThan(
-      body.capacityByCommodity.steel.currentCapacityUnits
+    // The legal commitment never promises more than the output the plants reached.
+    expect(body.capacityByCommodity.steel.maxContractUnits).toBeLessThanOrEqual(
+      body.capacityByCommodity.steel.achievableUnits
     );
     expect(body.capacityByCommodity.steel.achievableUnits).toBeGreaterThan(0);
   });

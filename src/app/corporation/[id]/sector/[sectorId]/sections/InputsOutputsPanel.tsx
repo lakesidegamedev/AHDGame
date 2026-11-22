@@ -22,6 +22,7 @@ import DetailsDisclosure from "../components/DetailsDisclosure";
 import UnsoldNote from "../components/UnsoldNote";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
+import { inputBlockerText } from "@/lib/corporations/rules/inputShortageReading";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
 interface InputsOutputsPanelProps {
@@ -111,12 +112,16 @@ export default function InputsOutputsPanel({
   // Without this the run report said "the Inputs list names the missing input"
   // while no row was marked unless the callout's own thresholds passed.
   const bindingCommodity = commodities.throughput?.bindingInput ?? null;
+  // A settled receipt is this plant's own record, so it decides the flag when
+  // it has a row for the input. Without one, fall back to the world market and
+  // the binding input.
   const shortInputs = new Set(
     commodities.demands
-      .filter(
-        (f) =>
-          (f.inputAvailability != null && f.inputAvailability < 0.999) ||
-          (showsInputShortfall && f.commodity === bindingCommodity)
+      .filter((f) =>
+        f.inputReceipt
+          ? f.inputReceipt.missingPerDay > 0
+          : (f.inputAvailability != null && f.inputAvailability < 0.999) ||
+            (showsInputShortfall && f.commodity === bindingCommodity)
       )
       .map((f) => f.commodity)
   );
@@ -218,6 +223,11 @@ export default function InputsOutputsPanel({
                   marketReference={f.billedUnitPrice == null}
                   priceText={flowPrice(f.billedUnitPrice ?? f.marketPrice)}
                   short={shortInputs.has(f.commodity)}
+                  shortDetail={
+                    f.inputReceipt && f.inputReceipt.missingPerDay > 0 ? (
+                      <ShortageDetail flow={f} reading={f.inputReceipt} />
+                    ) : null
+                  }
                   offers={
                     shortInputs.has(f.commodity) ? (
                       <InputOffersHint flow={f} variant="short" />
@@ -480,7 +490,7 @@ export default function InputsOutputsPanel({
           )}
           {commodities.throughput && (
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted">Input availability applied last turn</dt>
+              <dt className="text-muted">Share of your planned run the inputs allowed last turn</dt>
               <dd className="tabular-nums text-foreground">
                 {fmtPct(commodities.throughput.applied)}
               </dd>
@@ -599,12 +609,30 @@ function OwnSupplyNote({
   );
 }
 
+function ShortageDetail({
+  flow,
+  reading,
+}: {
+  flow: CommodityFlow;
+  reading: NonNullable<CommodityFlow["inputReceipt"]>;
+}) {
+  const unit = flow.unit ? `${flow.unit}/day` : "per day";
+  return (
+    <p data-short-detail={flow.commodity} className="w-full text-body-xs text-muted">
+      Last settled turn (turn {reading.turn}): needed {fmtUnits(reading.neededPerDay, 1)}, arrived{" "}
+      {fmtUnits(reading.arrivedPerDay, 1)}, missing {fmtUnits(reading.missingPerDay, 1)} {unit}.
+      {reading.blocker ? ` ${inputBlockerText(reading.blocker)}` : ""}
+    </p>
+  );
+}
+
 function FlowRow({
   flow,
   priceText,
   right,
   badge,
   short = false,
+  shortDetail = null,
   offers = null,
   marketReference = false,
 }: {
@@ -615,6 +643,8 @@ function FlowRow({
   badge: React.ReactNode;
   /** Input rows only: this input fell short last turn. */
   short?: boolean;
+  /** Input rows only: needed, arrived and missing units, and the blocker. */
+  shortDetail?: React.ReactNode;
   /** Input rows only: link to the sellers of a short input. */
   offers?: React.ReactNode;
 }) {
@@ -675,6 +705,7 @@ function FlowRow({
       </span>
       {right && <span className="shrink-0">{right}</span>}
       {offers && <span className="shrink-0">{offers}</span>}
+      {shortDetail}
     </li>
   );
 }

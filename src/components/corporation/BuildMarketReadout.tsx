@@ -1,3 +1,4 @@
+import { buildRoomVerdict } from "@/lib/corporations/rules/buildRoomVerdict";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import { useTranslations } from "next-intl";
 import type { BuildDemandRow } from "@/lib/corporations/rules/fundedBuildDemand";
@@ -19,11 +20,14 @@ export default function BuildMarketReadout({
   unitsPerFacility,
   site,
   sites,
+  measuredRoomUnits,
 }: {
   rows: BuildDemandRow[];
   unitsPerFacility: number;
   site: string;
   sites: string;
+  /** The sector page's room-to-build figure, so both screens give one answer. */
+  measuredRoomUnits?: number | null;
 }) {
   const t = useTranslations("corporations.sectorInvestment.marketReadout");
   const readout = buildMarketReadout(rows, unitsPerFacility);
@@ -55,7 +59,11 @@ export default function BuildMarketReadout({
           ? capSignal
             ? t("headlinePaidOrdersCovered")
             : t("headlineNoneWaiting", { facilities: sites })
-          : t("headlineUnknown");
+          : buildRoomVerdict(measuredRoomUnits) === "none"
+            ? t("headlineNoRoom", { facilities: sites })
+            : buildRoomVerdict(measuredRoomUnits) === "room"
+              ? t("headlineRoomMeasured", { facilities: sites })
+              : t("headlineUnknown");
 
   return (
     <section

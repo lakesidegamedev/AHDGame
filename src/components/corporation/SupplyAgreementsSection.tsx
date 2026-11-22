@@ -22,6 +22,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { contractMoney } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import {
   negotiateDraftFromSearch,
   type NegotiateDraft,
@@ -154,6 +155,9 @@ export default function SupplyAgreementsSection({
   const [capacityByCommodity, setCapacityByCommodity] = useState<
     Partial<Record<CommodityType, CapacitySnapshot>>
   >({});
+  const [contractReferencePrices, setContractReferencePrices] = useState<
+    Partial<Record<CommodityType, number>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -181,6 +185,7 @@ export default function SupplyAgreementsSection({
       if (res.ok) {
         const data = (await res.json()) as {
           agreements: SupplyAgreement[];
+          contractReferencePrices?: Partial<Record<CommodityType, number>>;
           capacityByCommodity?: Partial<Record<CommodityType, CapacitySnapshot>>;
           capacityByState?: Partial<Record<CommodityType, Record<string, StateCapacitySnapshot>>>;
           buyerStatesByCommodity?: Partial<
@@ -188,6 +193,7 @@ export default function SupplyAgreementsSection({
           >;
         };
         setAgreements(data.agreements ?? []);
+        setContractReferencePrices(data.contractReferencePrices ?? {});
         setCapacityByCommodity(data.capacityByCommodity ?? {});
         setCapacityByState(data.capacityByState ?? {});
         setBuyerStatesByCommodity(data.buyerStatesByCommodity);
@@ -549,7 +555,7 @@ export default function SupplyAgreementsSection({
           <span>
             Volume cap:{" "}
             <span className="font-medium text-foreground tabular-nums">
-              {formatUnits(a.volumeCap)}/turn
+              {formatUnits(a.volumeCap)}/day
             </span>
           </span>
           <span>
@@ -1101,6 +1107,56 @@ export default function SupplyAgreementsSection({
             <p className="text-[11px] text-muted">
               {t("negotiation.priceHelp", { band: BAND_PCT, aiFloor: AI_FLOOR_PCT })}
             </p>
+            {(() => {
+              const reference = contractReferencePrices[commodity];
+              if (!(typeof reference === "number" && reference > 0)) {
+                return (
+                  <p className="text-[11px] text-muted">{t("negotiation.moneyNoReference")}</p>
+                );
+              }
+              const cap = Number(volumeCap);
+              const money = contractMoney({
+                volumeCapPerDay: Number.isFinite(cap) && cap > 0 ? cap : 0,
+                pricePremium: premiumPct / 100,
+                referenceUnitPrice: reference,
+                durationTurns: durationTurns === "" ? null : Number(durationTurns),
+              });
+              const unit = COMMODITY_UNITS[commodity];
+              return (
+                <ul className="space-y-0.5 rounded-lg border border-card-border bg-card-elevated p-2 text-[11px] text-muted">
+                  <li>
+                    {t("negotiation.moneyReference", {
+                      percent: fmtPremium(premiumPct / 100),
+                      price: formatAnchor(money.referenceUnitPrice),
+                      unit,
+                    })}
+                  </li>
+                  <li>
+                    {t("negotiation.moneyUnitPrice", {
+                      price: formatAnchor(money.unitPrice),
+                      unit,
+                    })}
+                  </li>
+                  {money.unitsPerTurn > 0 && (
+                    <li>
+                      {t("negotiation.moneyPerTurn", {
+                        units: formatUnits(money.unitsPerTurn),
+                        unit,
+                        value: formatAnchor(money.valuePerTurn),
+                      })}
+                    </li>
+                  )}
+                  {money.unitsPerTurn > 0 && money.valueOverTerm !== null && (
+                    <li>
+                      {t("negotiation.moneyOverTerm", {
+                        turns: Number(durationTurns),
+                        value: formatAnchor(money.valueOverTerm),
+                      })}
+                    </li>
+                  )}
+                </ul>
+              );
+            })()}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
