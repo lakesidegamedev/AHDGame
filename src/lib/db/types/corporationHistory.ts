@@ -75,6 +75,14 @@ export interface CorporationHistory {
   shareEscrowBalance?: number;
   revenue: number;
   totalCosts: number;
+  /**
+   * Where `totalCosts` went this turn, in `currencyCode`. Each part is rounded on
+   * write, so the parts can differ from the total by a few units. Absent on rows
+   * written before it existed; those carry the total only.
+   */
+  costBreakdown?: import("@/lib/corporations/rules/costBreakdown").CostBreakdown;
+  /** Workers across the company's sectors when the turn was recorded. Absent on older rows. */
+  headcount?: number;
   income: number;
   /** Total dividend the corporation paid to all shareholders this turn, in liquidCurrencyCode units. The ledger `corp_dividend` rows are one per recipient, so a recipient's rows sum across every paying corporation and do not equal this figure. */
   dividendPaidPerTurn?: number;

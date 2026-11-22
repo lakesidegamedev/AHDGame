@@ -15,6 +15,8 @@
  * Pure: plain data in, plain data out.
  */
 
+import type { SiteCostParts } from "@/lib/corporations/rules/costBreakdown";
+
 /** Sector fields only the funded settlement writes. */
 export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   "capitalStock",
@@ -58,6 +60,10 @@ export interface FundedReceipt {
   unsoldProductionCost?: number;
   /** Anchor per turn: transition floor support this sector received. */
   transitionSupport?: number;
+  /** Anchor per turn: inputs consumed, wages and the site running bill, for the cost record. */
+  inputsConsumed?: number;
+  labour?: number;
+  siteOperating?: number;
 }
 
 export interface LegacySectorResultLike {
@@ -79,6 +85,8 @@ export interface LegacySectorResultLike {
   fundedDominancePenaltyPp?: number;
   /** Compliance cost inside `costs` on a funded turn (set by `fundedSectorResult`). */
   fundedComplianceCost?: number;
+  /** The legs of `costs` the company's cost record names, per turn. */
+  costParts?: SiteCostParts;
 }
 
 /**
@@ -94,7 +102,7 @@ export interface LegacySectorResultLike {
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
-): T {
+): T & { costParts: SiteCostParts } {
   // Management allocations stay out of economic revenue, tax and valuation bases.
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
@@ -105,8 +113,16 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
     growthCost +
     compliance +
     (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
+  const managementOverhead = (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   return {
     ...legacy,
+    costParts: {
+      wages: Math.max(0, finite(r.labour ?? 0)),
+      inputs: Math.max(0, finite(r.inputsConsumed ?? 0)),
+      maintenance: Math.max(0, finite(r.siteOperating ?? 0)),
+      managementOverhead,
+      freight: 0,
+    },
     hourlyRevenue: revenue,
     hourlyGrowthCost: growthCost,
     ...(legacy.growthInvestmentAnchor !== undefined

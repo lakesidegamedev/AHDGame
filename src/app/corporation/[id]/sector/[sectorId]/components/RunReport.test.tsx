@@ -31,7 +31,7 @@ describe("run report card", () => {
     };
     const unsold = render(<RunReport report={{ ...base, unsoldShare: 0.12 }} {...props} />);
     const text = unsold.container.textContent ?? "";
-    expect(text).toContain("Each unit sold or sent to your own sites last turn");
+    expect(text).toContain("Each unit sold to outside buyers last turn");
     expect(text).toContain("includes the 12% you made but did not sell");
     cleanup();
     const sold = render(<RunReport report={{ ...base, unsoldShare: 0 }} {...props} />);
@@ -61,6 +61,27 @@ describe("run report card", () => {
     }
   });
 
+  it("gives own-site deliveries their own line, separate from the per-unit headline", () => {
+    const props = {
+      capacityUnits: 1000,
+      producedUnits: 900,
+      idleCauses: [],
+      sectorType: "healthcare" as const,
+    };
+    const base = { ...losing, unitPrice: 600, unitMaterials: 300, unitWages: 100, unitSite: 50 };
+    const withOwn = render(
+      <RunReport report={{ ...base, ownSiteUnits: 40, ownSiteValueAtAsk: 24_000 }} {...props} />
+    );
+    const line = withOwn.getByTestId("own-site-line").textContent ?? "";
+    expect(line).toContain("40 units");
+    expect(line).toContain("₳24K");
+    expect(line).toContain("asking price");
+    expect(line).not.toMatch(/[–—]/);
+    cleanup();
+    const none = render(<RunReport report={{ ...base, ownSiteUnits: 0 }} {...props} />);
+    expect(none.queryByTestId("own-site-line")).toBeNull();
+  });
+
   it("names a loss-cut mine as losing, shows the unit loss, and leads with the price fix (ticket 1765)", () => {
     const { container } = render(
       <RunReport
@@ -78,7 +99,7 @@ describe("run report card", () => {
     expect(text).toContain("Cut back: losing money");
     expect(text).not.toContain("Stepping back up");
     expect(text).toMatch(/Loses ₳54 a unit/);
-    expect(text).toContain("valued at your asking price");
+    expect(text).not.toContain("own-site-line");
     const fixes = Array.from(container.querySelectorAll("ol li")).map((li) => li.textContent);
     expect(fixes[0]).toContain("The price is below your cost");
     // 35 of 10,500 units is under 1% of capacity: not worth a fix row.

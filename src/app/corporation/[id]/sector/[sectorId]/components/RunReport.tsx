@@ -185,7 +185,8 @@ export default function RunReport({
   const ownSiteCharge = (report.unitOwnSiteCharge ?? 0) > 0;
   const unitCost = costs.reduce((n, c) => n + c.value, 0);
   const scale = Math.max(unitCost, price ?? 0) * 1.05;
-  const margin = price != null ? price - unitCost : null;
+  const margin = report.profitPerUnit ?? (price != null ? price - unitCost : null);
+  const ownSiteUnits = report.ownSiteUnits ?? 0;
   const nextUp = report.nextShare > report.plannedShare + 0.0005;
   const nextDown = report.nextShare < report.plannedShare - 0.0005;
 
@@ -228,9 +229,7 @@ export default function RunReport({
       {price != null && unitCost > 0 && (
         <div data-testid="unit-economics">
           <p className="mb-1 text-body-xs font-medium text-muted">
-            {report.ownSiteValued
-              ? "Each unit sold or sent to your own sites last turn"
-              : "Each unit sold last turn"}
+            Each unit sold to outside buyers last turn
           </p>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-track">
             <div className="flex h-full">
@@ -264,14 +263,21 @@ export default function RunReport({
             {(report.unsoldShare ?? 0) >= 0.005
               ? ` The cost includes the ${fmtPct(report.unsoldShare ?? 0)} you made but did not sell.`
               : ""}
-            {report.ownSiteValued
-              ? " Units sent to your own sites are valued at your asking price."
-              : ""}
             {ownSiteCharge
               ? " Charged by your sites is what your own farms and mines billed this sector for inputs. It is income to those sites, so your company as a whole is unaffected."
               : ""}
           </p>
         </div>
+      )}
+
+      {ownSiteUnits > 0 && (
+        <p className="text-body-xs text-muted" data-testid="own-site-line">
+          Sent to your own sites last turn: {fmtUnits(ownSiteUnits)} units, worth{" "}
+          <span className="font-semibold text-foreground">
+            {formatAmount(report.ownSiteValueAtAsk ?? 0)}
+          </span>{" "}
+          at your asking price. Not a sale, so not in the per-unit figures above.
+        </p>
       )}
 
       {fixes.length > 0 && (
