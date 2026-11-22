@@ -1,3 +1,4 @@
+import type { OfferMissReason } from "@/lib/market/producerMarket/rules/unfilledReasons";
 import type { ProducerOperatingResult } from "@/lib/market/producerMarket/productionPlan";
 
 type ProductRow = Pick<
@@ -8,7 +9,8 @@ type ProductRow = Pick<
   | "soldUnits"
   | "internalDeliveredUnits"
   | "revenue"
->;
+> &
+  Partial<Pick<ProducerOperatingResult["products"][number], "unservedBy">>;
 
 export interface SettledProductSales {
   produced: number;
@@ -18,6 +20,8 @@ export interface SettledProductSales {
   unsold: number;
   /** Anchor currency cash receipts for outside sales. */
   revenue: number;
+  /** Buyers' unfilled units by why this ask missed them; absent on older receipts. */
+  unservedBy?: Partial<Record<OfferMissReason, number>>;
 }
 
 export function settledProductSales(
@@ -42,6 +46,14 @@ export function settledProductSales(
     row.sold += product.soldUnits;
     row.ownSites += product.internalDeliveredUnits ?? 0;
     row.revenue += product.revenue;
+    if (product.unservedBy) {
+      const by = (row.unservedBy ??= {});
+      for (const [reason, units] of Object.entries(product.unservedBy) as [
+        OfferMissReason,
+        number,
+      ][])
+        by[reason] = (by[reason] ?? 0) + units;
+    }
     row.unsold = Math.max(0, row.offered - row.sold - row.ownSites);
     sales.set(product.commodity, row);
   }
