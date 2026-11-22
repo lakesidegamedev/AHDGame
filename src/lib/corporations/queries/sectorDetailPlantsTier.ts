@@ -803,6 +803,7 @@ export async function buildSectorDetailPlantsTier({
       ),
       sector,
       sectorType,
+      worldBuildSettledTurn: gameState?.buildDeliverySettledTurn,
       commodityTollModels: commodityDominanceCtx ? commodityTollModels(commodityDominanceCtx) : [],
       currentTurn,
       currentYear: techCurrentYear,
