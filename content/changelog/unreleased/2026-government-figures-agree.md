@@ -6,7 +6,7 @@ summary: >-
   same figure the same way.
 tags: [budget, economy, rankings]
 badges: [patch]
-areas: [economy]
+areas: [frontend]
 ---
 
 ## What changed
