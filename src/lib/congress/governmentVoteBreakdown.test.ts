@@ -124,7 +124,9 @@ describe("computeCabinetNominationTally", () => {
     });
     const calls = db.collectionMocks["electedOfficials"]!.find.mock.calls;
     const filter = calls[0]![0] as Record<string, unknown>;
-    expect(filter.countryId).toBe("US");
+    expect(filter.$and).toEqual([
+      { $or: [{ countryId: "US" }, { countryId: { $exists: false } }] },
+    ]);
     expect(filter.officeType).toBe("senate");
   });
 

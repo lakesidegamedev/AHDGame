@@ -661,7 +661,7 @@ export function StatusBar({
                   )}
                 </div>
                 <div className="flex justify-between text-[11px] border-t border-card-border/60 pt-1.5">
-                  <span className="text-muted font-semibold">Net / hr</span>
+                  <span className="text-muted font-semibold">Net per turn</span>
                   <span
                     className={`font-bold tabular-nums ${
                       stats.campaignIncomeBreakdown.netPerTurn >= 0

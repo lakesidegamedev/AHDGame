@@ -1,4 +1,5 @@
 "use client";
+import { resolveCreditStanding } from "@/lib/corporations/creditStanding";
 import type { ReactNode } from "react";
 import type { CorporationDetailPageViewContext } from "./page";
 
@@ -164,7 +165,9 @@ export function renderCorporationDetailPageView(
             isCeo={isCeo}
             corpId={id}
             exchangeLabel={exchangeLabel}
-            creditRating={corporation.creditRatingSnapshot ?? bondInfo?.creditRating?.rating}
+            creditRating={
+              resolveCreditStanding(corporation, bondInfo?.creditRating).rating ?? undefined
+            }
             // Retained income after dividends, from the shared basis. Realized figures are already net of payout, so netting `dividendDistribution` again shows a loss on a profitable corp.
             retainedDaily={financials != null ? corpIncomeBasis(financials).retained : null}
             revenueGrowth={
@@ -176,7 +179,9 @@ export function renderCorporationDetailPageView(
                 : null
             }
             netIncomeDaily={financials != null ? corpIncomeBasis(financials).netIncome : null}
-            effectiveDividendRate={financials?.effectiveDividendRate ?? null}
+            effectiveDividendRate={
+              financials?.dividendPolicyRate ?? financials?.effectiveDividendRate ?? null
+            }
             periodView={periodView}
             financialFogOfWar={financialFogOfWar}
             ceoIsInactive={ceoIsInactive}

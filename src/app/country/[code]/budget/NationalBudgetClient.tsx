@@ -15,6 +15,7 @@ import {
 } from "@/components/budget/treasury/BudgetBreakdownPanel";
 import { DebtCreditPanel } from "@/components/budget/treasury/DebtCreditPanel";
 import { DebtPathChart } from "@/components/budget/treasury/DebtPathChart";
+import { explainSovereignRate } from "@/lib/budget/rules/sovereignRate";
 import { SovereignRatePanel } from "@/components/budget/treasury/SovereignRatePanel";
 import { MaturityLadderPanel } from "@/components/budget/treasury/MaturityLadderPanel";
 import { EconomicIndicators } from "@/components/budget/treasury/EconomicIndicators";
@@ -417,6 +418,7 @@ export function NationalBudgetClient() {
   // One derivation for the rate card, the debt path and the economy payload, on
   // the bases the fiscal-year rollover prices.
   const sovereignInputs = sovereignInputsFromBudget(budget);
+  const sovereignRate = explainSovereignRate(sovereignInputs);
   const treasuryBalance = data.treasuryReserve ?? -(budget.debt?.principal ?? 0);
   // The `??` is load-bearing. `loadFederalBudgetDetail`'s historical-FY branch
   // returns early and never sets `liveGdpUnits`, so a snapshot view falls back
@@ -583,7 +585,8 @@ export function NationalBudgetClient() {
           <DebtCreditPanel
             sym={moneyPrefix}
             principal={budget.debt.principal}
-            interestRate={budget.debt.interestRate}
+            interestRate={sovereignRate.effectiveRate}
+            bookedRate={budget.debt.interestRate}
             ceiling={budget.debt.ceiling}
             ceilingLabel={labels.ceilingLabel}
             debtToGdp={budget.debtToGdpRatio}

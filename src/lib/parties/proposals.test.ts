@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -1643,6 +1650,7 @@ describe("attemptResolution — atomic resolution claim", () => {
     const collection = vi.fn().mockImplementation((name: string) => {
       if (name === "committeeProposals") {
         return {
+          findOne: vi.fn().mockResolvedValue(null),
           updateOne: vi.fn().mockImplementation((filter: Record<string, unknown>) => {
             proposalUpdateCall += 1;
             const kind = proposalUpdateCall === 1 ? "claim" : "status";

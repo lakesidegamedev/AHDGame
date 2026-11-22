@@ -34,6 +34,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 
 import { fundedSectorResult } from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector } from "@/lib/turn/corporation/sectorTurn";
+import type { SectorTurnResult } from "@/lib/turn/corporation/sectorTurnTypes";
 import { fundedSectorValuation } from "@/lib/turn/corporation/fundedSectorValuation";
 import {
   perTurnIssuerBondInterestExpense,
@@ -42,6 +43,11 @@ import {
 
 import { settledMediaAdvertisingAnchor } from "@/lib/products/rules/mediaProductRules";
 import { allocateProductDevelopmentBudget } from "@/lib/products/rules/productBudgets";
+import {
+  addSiteCostParts,
+  buildCostBreakdown,
+  emptySiteCostParts,
+} from "@/lib/corporations/rules/costBreakdown";
 
 import {
   blendedOwnerRate,
@@ -71,6 +77,8 @@ function prepareProcessCorporationAccount(
   let corpGrowthNumer = 0;
   let corpGrowthDenom = 0;
   let corpCosts = 0;
+  const siteCostParts = emptySiteCostParts();
+  let corpHeadcount = 0;
   // Worker-morale accumulators (#84): revenue-weighted average sector wageLevel
   // drives an R&D-efficiency multiplier below. Neutral (avg 1) when labour off.
   let corpWageWeighted = 0;
@@ -120,9 +128,12 @@ function prepareProcessCorporationAccount(
         sectorFxRate
       );
     const fundedReceipt = context.funded?.receiptsBySectorId.get(sectorIdStr);
-    const r = fundedReceipt ? fundedSectorResult(legacyResult, fundedReceipt) : legacyResult;
-    if (fundedReceipt) {
-      context.fundedResults.set(sectorIdStr, r);
+    const fundedResult = fundedReceipt
+      ? fundedSectorResult<SectorTurnResult>(legacyResult, fundedReceipt)
+      : null;
+    const r: SectorTurnResult = fundedResult ?? legacyResult;
+    if (fundedResult) {
+      context.fundedResults.set(sectorIdStr, fundedResult);
       context.fundedDaily.set(sectorIdStr, (anchorPerTurn: number) =>
         writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
       );
@@ -166,6 +177,9 @@ function prepareProcessCorporationAccount(
     // Suspended (embargoed foreign) sectors are mothballed: no operating cost
     // either, so the corp neither earns nor bleeds while dormant.
     corpCosts += r.costs;
+    if (r.costParts) addSiteCostParts(siteCostParts, r.costParts);
+    const crew = r.workers ?? sector.workers;
+    corpHeadcount += typeof crew === "number" && Number.isFinite(crew) ? Math.max(0, crew) : 0;
     context.sectorsProcessed++;
 
     // Accumulate revenue-weighted diagnostic data for margin breakdown
@@ -369,6 +383,11 @@ function prepareProcessCorporationAccount(
   }
 
   const totalCorpCosts = costsBeforeCeo + actualCeoSalary;
+  const costBreakdown = buildCostBreakdown(
+    siteCostParts,
+    totalCorpCosts - corpCosts,
+    totalCorpCosts
+  );
   const incomePreDividends = corpRevenue - totalCorpCosts;
 
   // Corporate tax (territorial, per-sector): each sector pays its country's federal rate and its state's rate on its revenue-weighted apportioned share of corp income. Corp-level overhead is allocated across sectors by revenue share. Losing sectors pay 0; profitable sectors pay even if corp total is negative (nexus-based). Loss-making corps with all-negative sectors pay 0 in both tiers.
@@ -680,6 +699,8 @@ function prepareProcessCorporationAccount(
       shouldZeroCeoSalary,
       taxPaidByCountry,
       totalCorpCosts,
+      costBreakdown,
+      corpHeadcount,
       totalFederalTax,
       totalStateTax,
       incomePreDividends,

@@ -17,7 +17,7 @@ import type {
   CorporationDetail,
   Financials,
 } from "../CorporationPageTypes";
-import { revenueSplit } from "./keyStatisticsModel";
+import { recordedRevenueSplit, revenueSplit } from "./keyStatisticsModel";
 
 export interface KeyStatisticsProps {
   corporation: CorporationDetail;
@@ -123,7 +123,12 @@ export function KeyStatistics({
   const priceToBook =
     bookValue != null && bookValue > 0 ? corporation.marketCapitalization / bookValue : null;
 
-  const split = basis ? revenueSplit(financials, basis) : null;
+  const recorded = financials.lastTurnReconciliation?.statement ?? null;
+  const recordedTurn = financials.lastTurnReconciliation?.turn;
+  // A recorded turn is drawn from its own books end to end; otherwise the forecast is used throughout.
+  const recordedSplit = basis?.isRealized && recorded ? recordedRevenueSplit(recorded) : null;
+  const splitRevenue = recordedSplit ? (recorded?.revenue ?? 0) : financials.totalRevenue;
+  const split = recordedSplit ?? (basis ? revenueSplit(financials, basis) : null);
   const splitSegments: LedgerSegment[] = split
     ? (
         [
@@ -137,7 +142,7 @@ export function KeyStatistics({
         label,
         value,
         tone,
-        display: `${Math.round((value / financials.totalRevenue) * 100)}%`,
+        display: `${Math.round((value / splitRevenue) * 100)}%`,
       }))
     : [];
 
@@ -216,12 +221,17 @@ export function KeyStatistics({
           <KVRow
             label="Dividend"
             value={
-              financials.effectiveDividendRate > 0 ? `${financials.effectiveDividendRate}%` : "None"
+              (financials.dividendPolicyRate ?? financials.effectiveDividendRate) > 0
+                ? `${financials.dividendPolicyRate ?? financials.effectiveDividendRate}%`
+                : "None"
             }
             hint={
-              financials.effectiveDividendRate > (corporation.dividendRate ?? 0)
-                ? "legal floor"
-                : undefined
+              financials.effectiveDividendRate === 0 && (financials.dividendPolicyRate ?? 0) > 0
+                ? "none at a forecast loss"
+                : (financials.dividendPolicyRate ?? financials.effectiveDividendRate) >
+                    (corporation.dividendRate ?? 0)
+                  ? "legal floor"
+                  : undefined
             }
             action={isCeo ? <RowLink onClick={() => onTabChange("ceo")}>Set</RowLink> : undefined}
           />
@@ -243,7 +253,9 @@ export function KeyStatistics({
           split ? (
             <div>
               <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
-                Where revenue goes
+                {recordedSplit && recordedTurn != null
+                  ? `Where revenue went, turn ${recordedTurn}`
+                  : "Where revenue goes"}
               </div>
               <StackBar label="Where revenue goes" segments={splitSegments} />
             </div>
@@ -251,9 +263,15 @@ export function KeyStatistics({
         }
       >
         <KVList>
-          <KVRow lead label={`Revenue${suffix}`} value={est(fmt(scale(financials.totalRevenue)))} />
+          <KVRow
+            lead
+            label={`Revenue${suffix}`}
+            value={est(fmt(scale(financials.totalRevenue)))}
+            hint={basis?.isRealized ? "forecast" : undefined}
+          />
           <KVRow
             label={`Operating income${suffix}`}
+            hint={basis?.isRealized ? "forecast" : undefined}
             value={
               <span className={signTone(financials.operatingIncome)}>
                 {est(fmtSigned(scale(financials.operatingIncome)))}
@@ -270,7 +288,13 @@ export function KeyStatistics({
                   {est(fmtSigned(scale(basis.netIncome)))}
                 </span>
               }
-              hint={basis.isRealized ? undefined : "projected"}
+              hint={
+                basis.isRealized
+                  ? recordedTurn != null
+                    ? `recorded, turn ${recordedTurn}`
+                    : "recorded"
+                  : "projected"
+              }
             />
           )}
           {basis && basis.dividendPaid > 0 && (

@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -13,10 +20,10 @@ vi.mock("@/lib/analytics/officeTransitionAnalytics", () => ({
   captureOfficeTransition: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("appointment telemetry isolation", () => {
+describe("admin appointment state reads", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("keeps an appointment successful when optional telemetry reads fail", async () => {
+  it("fails closed when outgoing offices cannot be read", async () => {
     const db = createMockDb();
     const characterId = new ObjectId();
     db.collection("characters");
@@ -28,7 +35,7 @@ describe("appointment telemetry isolation", () => {
     db.collectionMocks.characters.find.mockReturnValue({
       toArray: vi.fn().mockRejectedValue(new Error("telemetry read failed")),
     } as never);
-    vi.mocked(getGameState).mockRejectedValue(new Error("clock unavailable"));
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
     await expect(
       adminAppointPrimeMinister(
         db as unknown as Db,
@@ -37,7 +44,7 @@ describe("appointment telemetry isolation", () => {
         COUNTRY_CONFIGS.UK,
         characterId.toString()
       )
-    ).resolves.toMatchObject({ success: true });
-    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalled();
+    ).rejects.toThrow("telemetry read failed");
+    expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
   });
 });

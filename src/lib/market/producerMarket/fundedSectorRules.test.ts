@@ -38,6 +38,23 @@ describe("funded sector result", () => {
     expect(r.x).toBe(1);
   });
 
+  it("names the wage, input, site and overhead legs the company's cost record reads", () => {
+    const r = fundedSectorResult(
+      { ...legacy, fundedSizeCostPp: 5 },
+      { ...receipt, inputsConsumed: 20, labour: 30, siteOperating: 8 }
+    );
+    expect(r.costParts).toEqual({
+      wages: 30,
+      inputs: 20,
+      maintenance: 8,
+      managementOverhead: 5,
+      freight: 0,
+    });
+    // The named legs never exceed the costs the sector booked.
+    const named = Object.values(r.costParts!).reduce((n, v) => n + v, 0);
+    expect(named).toBeLessThanOrEqual(r.costs + 1e-9);
+  });
+
   it("reports zero margin with no sales", () => {
     expect(
       fundedSectorResult(legacy, { ...receipt, revenue: 0, profit: -50 }).effectiveMargin

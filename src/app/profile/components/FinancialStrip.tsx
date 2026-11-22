@@ -31,7 +31,10 @@ export interface PersonalIncomeData {
    */
   ceoSalaryCurrencyCode?: string | null;
   bondIncomePerTurn?: number;
+  /** Expected dividends per turn if every company pays what it last paid. A forecast. */
   dividendIncomePerTurn?: number;
+  /** Dividends actually credited on the newest payout turn (anchor units). */
+  dividendsReceived?: { turn: number; amountAnchor: number } | null;
   /** Per-currency wallet balances (post-forex). Personal is liquid; savings is high-yield. */
   forexBalances?: {
     personal: Partial<Record<CurrencyCode, number>>;
@@ -329,7 +332,8 @@ function CashPanel({
         {/* Income flows that credit to personal cash */}
         {(ceoSalaryPerHour > 0 ||
           (personalIncome.bondIncomePerTurn ?? 0) > 0 ||
-          (personalIncome.dividendIncomePerTurn ?? 0) > 0) && (
+          (personalIncome.dividendIncomePerTurn ?? 0) > 0 ||
+          personalIncome.dividendsReceived != null) && (
           <div
             className={`space-y-1.5${forexCurrencies.length > 0 ? " border-t border-card-border pt-1.5" : ""}`}
           >
@@ -353,15 +357,26 @@ function CashPanel({
                 </span>
               </div>
             )}
-            {(personalIncome.dividendIncomePerTurn ?? 0) > 0 && (
+            {personalIncome.dividendsReceived != null ? (
               <div className="flex justify-between">
-                <span className="text-muted">{t("dividendIncome")}</span>
+                <span className="text-muted">
+                  {t("dividendsReceived", { turn: personalIncome.dividendsReceived.turn })}
+                </span>
                 <span className="text-success tabular-nums">
-                  {t("plusPerTurn", {
-                    amount: formatFull(personalIncome.dividendIncomePerTurn!, currencyCode),
-                  })}
+                  +{formatFull(personalIncome.dividendsReceived.amountAnchor, currencyCode)}
                 </span>
               </div>
+            ) : (
+              (personalIncome.dividendIncomePerTurn ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted">{t("dividendExpected")}</span>
+                  <span className="text-success tabular-nums">
+                    {t("plusPerTurn", {
+                      amount: formatFull(personalIncome.dividendIncomePerTurn!, currencyCode),
+                    })}
+                  </span>
+                </div>
+              )
             )}
           </div>
         )}

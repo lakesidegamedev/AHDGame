@@ -3,6 +3,7 @@ import type { InternalTransferPricing } from "./internalTransferPricingRules";
 import type { ProducerQuotePolicy } from "./rules";
 import { laneKeyOf } from "./laneKey";
 import type { InputReceipt } from "./rules/inputReceipt";
+import type { OfferMissReason } from "./rules/unfilledReasons";
 
 export interface PurchasedStock {
   commodity: string;
@@ -248,6 +249,11 @@ export interface ProducerOperatingResult {
      */
     ownSiteDemandUnits?: number;
     realizedUnitPrice: number | null;
+    /**
+     * Only when some of this offer stayed unsold: buyers' unfilled units in the
+     * same book, by why this ask did not reach them. Absent on older receipts.
+     */
+    unservedBy?: Partial<Record<OfferMissReason, number>>;
     unsoldUnits: number;
     lostUnits: number;
   }>;

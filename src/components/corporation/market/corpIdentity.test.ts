@@ -35,3 +35,13 @@ describe("computeDayChange", () => {
     expect(r!.changePct).toBe(0);
   });
 });
+
+describe("quoteChangeAgainst", () => {
+  it("gives percent and money change from the same previous close", async () => {
+    const { quoteChangeAgainst } = await import("./corpIdentity");
+    const c = quoteChangeAgainst(3.24, 2.4);
+    expect(c.changeMoney).toBeCloseTo(0.84, 9);
+    expect(c.changePct).toBeCloseTo(35, 6);
+    expect(c.changePct / 100).toBeCloseTo(c.changeMoney / 2.4, 9);
+  });
+});

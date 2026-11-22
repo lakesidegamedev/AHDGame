@@ -20,6 +20,7 @@ import {
   runSignals,
   type PriorReceipt,
 } from "@/lib/market/producerMarket/outputResponseRules";
+import { outsideSalesUnitEconomics } from "@/lib/corporations/rules/outsideSalesUnitEconomics";
 import type { CorporateSector } from "@/lib/db/types";
 
 /** Why the plan sits below a full run, in the planner's terms. */
@@ -49,7 +50,10 @@ export interface RunReport {
   turnsToFull: number | null;
   /** What last turn's run was cut by, if anything. */
   cutBy: string[];
-  /** ₳ per unit sold, from last turn's receipt. Own-site deliveries are valued at the asking price. */
+  /**
+   * ₳ per unit sold to outside buyers, from last turn's receipt. Output sent to the
+   * company's own sites is not in these figures; see ownSiteUnits.
+   */
   unitPrice: number | null;
   unitMaterials: number | null;
   unitWages: number | null;
@@ -62,8 +66,14 @@ export interface RunReport {
   unitOwnSiteCharge?: number | null;
   /** Share of what was made that did not sell, 0-1. The unit costs above already carry its bill. */
   unsoldShare?: number;
-  /** True when some output went to the company's own sites and is valued at the ask. */
+  /** True when some output went to the company's own sites last turn. */
   ownSiteValued: boolean;
+  /** Units handed to the company's own sites last turn. */
+  ownSiteUnits?: number;
+  /** Those units at the plant's asking price, ₳ per turn. */
+  ownSiteValueAtAsk?: number;
+  /** unitPrice less every unit cost, per unit sold outside; null when nothing sold outside. */
+  profitPerUnit?: number | null;
 }
 
 export interface RunReportStages {
@@ -88,12 +98,6 @@ export function turnsToFullRun(share: number, additive: boolean): number {
     turns++;
   }
   return turns;
-}
-
-function ownSiteChargePerUnit(charge: number | undefined, sold: number | undefined): number | null {
-  const units = typeof sold === "number" && Number.isFinite(sold) ? sold : 0;
-  if (!(units > 0)) return null;
-  return typeof charge === "number" && Number.isFinite(charge) && charge > 0 ? charge / units : 0;
 }
 
 export function buildRunReport(
@@ -143,8 +147,8 @@ export function buildRunReport(
               ? "kept-low-after-cut"
               : "stepping-up"
             : "buyers-took-less";
-  const ownSiteValued =
-    captive && (raw.products ?? []).some((p) => (p.internalDeliveredUnits ?? 0) > 0);
+  const outside = outsideSalesUnitEconomics(raw);
+  const ownSiteValued = captive && outside.ownSiteUnits > 0;
   return {
     plannedShare,
     madeShare,
@@ -152,13 +156,16 @@ export function buildRunReport(
     reason,
     turnsToFull: reason === "stepping-up" ? turnsToFullRun(nextShare, runPlan) + 1 : null,
     cutBy,
-    unitPrice: signals.unitPrice,
-    unitMaterials: signals.unitMaterials,
-    unitWages: signals.unitWages,
-    unitSite: signals.unitSite,
-    unitOwnSiteCharge: ownSiteChargePerUnit(raw.internalSupplyCharge, raw.soldUnits),
+    unitPrice: outside.unitPrice,
+    unitMaterials: outside.unitMaterials,
+    unitWages: outside.unitWages,
+    unitSite: outside.unitSite,
+    unitOwnSiteCharge: outside.unitOwnSiteCharge,
+    profitPerUnit: outside.profitPerUnit,
     unsoldShare: signals.unsoldShare,
     ownSiteValued,
+    ownSiteUnits: outside.ownSiteUnits,
+    ownSiteValueAtAsk: outside.ownSiteValueAtAsk,
   };
 }
 

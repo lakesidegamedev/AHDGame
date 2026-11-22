@@ -584,9 +584,9 @@ export function BudgetDisplay({
               highlight: false,
             },
             {
-              label: "Deficit-to-GDP",
-              value: `${deficitToGdp.toFixed(2)}%`,
-              note: null,
+              label: "Budget balance, % of GDP",
+              value: `${deficitToGdp > 0 ? "+" : ""}${deficitToGdp.toFixed(2)}%`,
+              note: deficitToGdp < 0 ? "deficit" : deficitToGdp > 0 ? "surplus" : null,
               highlight: deficitToGdp < -5,
             },
           ].map((ind) => (

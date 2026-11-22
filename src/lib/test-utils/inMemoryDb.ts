@@ -140,7 +140,7 @@ function equalsAny(value: unknown, operand: unknown): boolean {
   return sameValue(value, operand);
 }
 
-/** Range operators compare like with like: numbers, strings or dates. */
+/** Range operators compare like with like: numbers, strings, dates or ObjectIds. */
 function orderedCompare(
   value: unknown,
   operand: unknown,
@@ -150,6 +150,8 @@ function orderedCompare(
   if (typeof value === "string" && typeof operand === "string") return test(value, operand);
   if (value instanceof Date && operand instanceof Date)
     return test(value.getTime(), operand.getTime());
+  if (value instanceof ObjectId && operand instanceof ObjectId)
+    return test(value.toHexString(), operand.toHexString());
   return false;
 }
 

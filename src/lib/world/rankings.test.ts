@@ -138,3 +138,33 @@ describe("toggleCompared", () => {
     expect(toggleCompared(full, "US")).toEqual(["UK", "DE"]);
   });
 });
+
+describe("rankNations with saturated scores", () => {
+  const country = (countryId: string, value: number) => ({
+    countryId,
+    name: countryId,
+    hasData: true,
+    categories: { economic: { debtToGdp: { value, score: 0 } } },
+    categoryScores: {},
+    overallScore: null,
+  });
+
+  it("orders equal scores by the raw measure in the metric's direction", () => {
+    const rows = rankNations(
+      [country("B", 206.8), country("A", 143.9), country("C", 170)],
+      { kind: "metric", category: "economic", metric: "debtToGdp" },
+      { higherIsBetter: false }
+    );
+    expect(rows.map((r) => r.countryId)).toEqual(["A", "C", "B"]);
+    expect(rows.map((r) => r.rank)).toEqual([1, 2, 3]);
+  });
+
+  it("still shares a rank when score and value both match", () => {
+    const rows = rankNations(
+      [country("A", 150), country("B", 150)],
+      { kind: "metric", category: "economic", metric: "debtToGdp" },
+      { higherIsBetter: false }
+    );
+    expect(rows.map((r) => r.rank)).toEqual([1, 1]);
+  });
+});

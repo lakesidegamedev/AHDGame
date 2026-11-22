@@ -185,6 +185,7 @@ export default function MarketPositionPanel({
       soldOutside: sale.settledSales.sold,
       ownSites: sale.settledSales.ownSites,
       unsold: sale.unsold,
+      unservedBy: sale.settledSales.unservedBy,
     });
     return reason ? [{ commodity: row.commodity, text: UNSERVED_DEMAND_TEXT[reason] }] : [];
   });

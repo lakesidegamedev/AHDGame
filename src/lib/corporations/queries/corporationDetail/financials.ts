@@ -11,6 +11,8 @@ export interface DividendMirror {
   corpDividendRateClamped: number;
   legalMinDividendPct: number;
   effectiveDividendRate: number;
+  /** The payout rate that applies once income is positive; not zeroed by a forecast loss. */
+  policyDividendRate: number;
   dividendDistribution: number;
 }
 
@@ -28,8 +30,8 @@ export function computeDividendDistribution(
 ): DividendMirror {
   const corpDividendRateClamped = Math.min(corporation.dividendRate ?? 0, MAX_DIVIDEND_RATE);
   const legalMinDividendPct = (corpLegalStructure.minimumDividendRate ?? 0) * 100;
-  const effectiveDividendRate =
-    income > 0 ? Math.max(corpDividendRateClamped, legalMinDividendPct, activeFloorPct) : 0;
+  const policyDividendRate = Math.max(corpDividendRateClamped, legalMinDividendPct, activeFloorPct);
+  const effectiveDividendRate = income > 0 ? policyDividendRate : 0;
   const dividendDistribution =
     effectiveDividendRate > 0 && income > 0
       ? Math.min(income * (effectiveDividendRate / 100), income)
@@ -38,6 +40,7 @@ export function computeDividendDistribution(
     corpDividendRateClamped,
     legalMinDividendPct,
     effectiveDividendRate,
+    policyDividendRate,
     dividendDistribution,
   };
 }
@@ -160,6 +163,7 @@ export function buildFinancials(inputs: FinancialsInputs) {
       : {}),
     dividendRate: corporation.dividendRate ?? 0,
     effectiveDividendRate: dividend.effectiveDividendRate,
+    dividendPolicyRate: dividend.policyDividendRate,
     dividendDistribution: Math.round(dividend.dividendDistribution),
     // Realized revenue growth under plants; below plants (or with too little
     // history to annualize honestly) the legacy sector average still applies.

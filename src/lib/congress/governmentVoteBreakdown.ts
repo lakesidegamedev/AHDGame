@@ -1,7 +1,7 @@
+import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { buildVotesByParty, type VoteByParty } from "@/lib/congress/billVoting";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -73,7 +73,7 @@ export async function buildVoterPartyAndWeightMaps(
     orClauses.length > 0
       ? await electedOfficialsCollection(db)
           .find({
-            countryId,
+            $and: [officialsCountryScope(countryId)],
             officeType: Array.isArray(lowerChamberKey) ? { $in: lowerChamberKey } : lowerChamberKey,
             $or: orClauses,
           })

@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { bondIssueIncomePreview } from "@/lib/bonds/bondIssueIncomePreview";
-import { BOND_DEFAULT_CREDIT_PENALTY_TURNS } from "@/lib/constants/bonds";
+import { floorToBondUnits } from "@/lib/bonds/rules/issuanceUnits";
+import { BOND_DEFAULT_CREDIT_PENALTY_TURNS, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondData, BondInfo, CorporationDetail, Financials } from "./CorporationPageTypes";
 import BondHistoryPanel from "./bonds/BondHistoryPanel";
@@ -266,7 +267,8 @@ export default function BondsTab({
           // place all three rules live (per-issuance cap, 2x going-concern equity,
           // 1x exit equity). Re-deriving one here lets the quoted ceiling drift
           // from the enforced one. Fallbacks cover an older deploy's response.
-          const toBondUnits = (v: number) => Math.max(0, Math.floor(v / 1_000) * 1_000);
+          const unitFace = bondInfo.bondUnitFaceAnchor ?? 1_000;
+          const toBondUnits = (v: number) => Math.max(0, floorToBondUnits(v, unitFace));
           const maxIssuableDebt =
             bondInfo.debtHeadroom !== undefined
               ? toBondUnits(bondInfo.debtHeadroom)
@@ -281,7 +283,8 @@ export default function BondsTab({
           // alone can push it under the minimum for a corp whose headroom
           // sits between the dust floor and the flat minimum, leaving it
           // with no legal issuance at all. The slider still steps in
-          // A1,000 units; only its endpoint is exact.
+          // whole bond units (1,000 face in the bond's own currency); only its
+          // endpoint is exact.
           const effectiveCap =
             bondInfo.maxAllowedIssuance !== undefined
               ? Math.max(0, bondInfo.maxAllowedIssuance)
@@ -378,7 +381,7 @@ export default function BondsTab({
                         type="range"
                         min={0}
                         max={effectiveCap}
-                        step={1000}
+                        step={unitFace}
                         value={bondIssueFaceValue}
                         onChange={(e) => setBondIssueFaceValue(Number(e.target.value))}
                         disabled={sliderDisabled}
@@ -430,9 +433,9 @@ export default function BondsTab({
                           ? formatAmountIn(effectiveMin, liquidCode)
                           : `$${effectiveMin.toLocaleString("en-US")}`}
                       </span>
-                      , in units of{" "}
+                      , in whole units, each with a face value of{" "}
                       <span className="font-mono tabular-nums">
-                        {liquidCode ? formatAmountIn(1_000, liquidCode) : "$1,000"}
+                        {fmtMoney(BOND_UNIT_FACE_VALUE)}
                       </span>
                       .
                     </p>
@@ -440,9 +443,9 @@ export default function BondsTab({
 
                   {fundableNow !== null && !bondsUnavailable && (
                     <p className="text-[11px] text-muted">
-                      The bond market pool can fund about{" "}
+                      The bond market pool, shared by every issuer, has about{" "}
                       <span className="font-mono tabular-nums">{inLiquid(fundableNow)}</span> of
-                      this issue now.
+                      cash for new bonds now. That is a market limit, not your borrowing limit.
                       {parsedFaceValue > fundableNow && (
                         <>
                           {" "}
@@ -474,10 +477,20 @@ export default function BondsTab({
                       label={`Coupon, ${MATURITIES.find((m) => m.turns === bondIssueMaturity)?.label ?? `${bondIssueMaturity} turns`}`}
                       value={`${couponRate.toFixed(2)}%`}
                     />
-                    <KVRow label="Per-issuance cap" value={formatFull(perIssuanceCap)} />
+                    <KVRow
+                      label="Cap per issue"
+                      value={formatFull(perIssuanceCap)}
+                      title="25% of annual revenue, with a floor. One issue cannot exceed this, whatever your debt room."
+                    />
+                    <KVRow
+                      label="Largest issue now"
+                      value={formatFull(effectiveCap)}
+                      title="The lower of the cap per issue and the debt room left. This is the slider's maximum."
+                    />
                     {maxIssuableDebt !== null && (
                       <KVRow
-                        label="Debt headroom"
+                        label="Debt room left"
+                        title="How much more debt your equity allows in total, across issues."
                         value={
                           maxIssuableDebt === 0 ? (
                             <span className="text-error">At debt limit</span>
@@ -586,9 +599,9 @@ export default function BondsTab({
         }
       >
         <p className="py-1 text-xs text-muted">
-          Tradable corporate bonds issued by this corporation. Each unit has a $1,000 face value,
-          and the face value below is repaid in full on the maturity turn, out of liquid capital, in
-          one payment.
+          Tradable corporate bonds issued by this corporation. Each unit has a face value of{" "}
+          {fmtMoney(BOND_UNIT_FACE_VALUE)}, and the face value below is repaid in full on the
+          maturity turn, out of liquid capital, in one payment.
           {bondInfo.imfFacility && " IMF facility debt is shown above, not in this table."}
         </p>
         {bondInfo.bonds.length === 0 ? (
