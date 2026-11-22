@@ -39,6 +39,8 @@ export type ProducerEconomyInput = {
   spilloverShare?: number;
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
+  /** Seller preference curve for free-choice orders (demandCurveRules). Absent = cheapest first. */
+  demandCurve?: import("./demandCurveRules").DemandCurveInput;
   /** Companies that explicitly chose market first: their own orders clear after outside buyers (rules.ts). */
   marketFirstAccounts?: readonly string[];
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */

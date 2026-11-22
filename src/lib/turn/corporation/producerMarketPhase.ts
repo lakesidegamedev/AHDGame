@@ -109,6 +109,7 @@ export async function runCorporationProducerMarket(
       | "eligibleOffersByOrder"
       | "spilloverShare"
       | "ownSitesFirst"
+      | "demandCurve"
       | "marketFirstAccounts"
       | "stockCoverTurns"
       | "clearingPriceByLane"
