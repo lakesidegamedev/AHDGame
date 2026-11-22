@@ -4,7 +4,6 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { candidate, candidatesByCountry } from "./__fixtures__/marketCandidates";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { AUTOPILOT_MODIFIERS } from "@/lib/corporations/autopilot";
-import { ceoArchetypeModifiers } from "../ceoArchetype";
 import { makeNppCorpDecision } from "./makeCorpDecision";
 import type { PlacementSignals } from "./marketSignals";
 import { evaluateAutoBuildRoomGate } from "@/lib/corporations/rules/autoBuildRoomGate";
@@ -62,7 +61,7 @@ function run(args: { autopilot: boolean; stage?: number; room: number | null }) 
       sectors,
       turn: 242,
       now: new Date("2026-01-01"),
-      modifiers: args.autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers("cautious"),
+      modifiers: AUTOPILOT_MODIFIERS,
       strategyLoopEnabled: false,
       ...(args.stage ? { buildRoomStage: args.stage } : {}),
     },
