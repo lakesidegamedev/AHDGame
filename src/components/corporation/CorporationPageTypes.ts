@@ -53,6 +53,8 @@ interface CorporationPhysicalRollup {
   soldUnits: number;
   /** Σsold ÷ Σproduced, not the mean of per-sector ratios. Null if nothing ran. */
   fillRate: number | null;
+  /** Share of output sent to the company's own sites (0-1). Insider-only; null when none. */
+  ownSiteShare?: number | null;
   /** Capacity paid for but not yet productive, ₳. */
   constructionInProgressAnchor: number;
   unitsOnOrder: number;
