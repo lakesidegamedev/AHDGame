@@ -29,6 +29,7 @@ import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechCon
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -223,8 +224,9 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
           missingCostCount++;
           continue;
         }
-        current += toCorpCurrency(estimate.current, sector);
-        projected += toCorpCurrency(estimate.projected, sector);
+        // laborCost is stored per financial day; the preview is per turn.
+        current += toCorpCurrency(estimate.current, sector) / TURNS_PER_DAY;
+        projected += toCorpCurrency(estimate.projected, sector) / TURNS_PER_DAY;
       }
       wages = {
         wageLevel,

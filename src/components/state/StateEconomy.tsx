@@ -86,6 +86,9 @@ interface EconomySector {
   /** "country" when that room is one figure shared across the whole country. */
   roomToBuildScope?: "state" | "country" | null;
   owners: SectorOwner[];
+  /** What the plants here actually make and use, as share of revenue; absent when no plant runs. */
+  plantSupplyMix?: { commodity: string; rate: number }[];
+  plantDemandMix?: { commodity: string; rate: number }[];
 }
 
 interface EconomyData {

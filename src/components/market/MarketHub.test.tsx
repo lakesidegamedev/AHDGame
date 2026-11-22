@@ -254,7 +254,7 @@ describe("MarketHub", () => {
     render(<MarketHub />);
     await waitFor(() => expect(screen.getByText("+10%")).toBeTruthy(), { timeout: 5000 });
     expect(screen.getByText("Offering")).toBeTruthy();
-    expect(screen.getByText("~A660")).toBeTruthy();
+    expect(screen.getByText("~A22")).toBeTruthy();
   });
 
   it("falls back to the overview for an unknown tab", () => {
