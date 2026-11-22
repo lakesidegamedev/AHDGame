@@ -78,6 +78,28 @@ describe("MarketMoneyPanel period and scope labels", () => {
   });
 });
 
+it("shows settled offers rather than production when buyers take stock", () => {
+  render(
+    <MarketMoneyPanel
+      plants={{
+        ...plants,
+        producedUnits: 900,
+        settledOffer: { turn: 42, offered: 4000, sold: 3200, ownSites: 800, unsold: 0 },
+      }}
+      sectorType="technology"
+      financials={null}
+      corporation={{ _id: "corp", name: "Test Company" }}
+    />
+  );
+  expect(screen.getByText("Settled turn 42 · quantities per financial day")).toBeTruthy();
+  expect(screen.getByText("4,000")).toBeTruthy();
+  expect(screen.getByText("Sold outside")).toBeTruthy();
+  expect(screen.getByText("3,200")).toBeTruthy();
+  expect(screen.getByText("Sent to own sites")).toBeTruthy();
+  expect(screen.getByText("800")).toBeTruthy();
+  expect(screen.getByText("80% sold")).toBeTruthy();
+});
+
 describe("signed cost lines (ticket 1122)", () => {
   // Same prod newsroom as sectorDetailPlants.test.ts: $322K revenue, $70.6K of
   // wages, a $34K operating credit, $285K of profit. The credit has to be on

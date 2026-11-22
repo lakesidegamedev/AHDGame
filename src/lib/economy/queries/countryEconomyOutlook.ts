@@ -86,6 +86,7 @@ export interface CountryEconomyOutlook {
       debtToGdpRatio: number | null;
       /** Which way the ratio is moving, from the same debt-dynamics identity the rollover prices. */
       debtTrajectory: DebtTrajectory | null;
+      primaryBalancePct: number | null;
       /** Primary balance, in percent of GDP, that holds the ratio flat. */
       stabilisingPrimaryBalancePct: number | null;
       /** Ladder rate the path is priced at, in percent, before premiums. */
@@ -261,8 +262,8 @@ export async function buildCountryEconomyOutlook(
   // Display only, but on the rollover's own bases: the same helper the budget
   // page's rate card and debt chart read, priced off the ladder rate before
   // premiums.
-  const debtRate =
-    budget && ratioGdp > 0 ? explainSovereignRate(sovereignInputsFromBudget(budget)) : null;
+  const debtInputs = budget && ratioGdp > 0 ? sovereignInputsFromBudget(budget) : null;
+  const debtRate = debtInputs ? explainSovereignRate(debtInputs) : null;
   const debtPath = debtRate?.path ?? null;
 
   const publishedBoard = await readResetMetricBoard(db, countryId);
@@ -311,6 +312,7 @@ export async function buildCountryEconomyOutlook(
         rating: budget?.creditRating ?? null,
         debtToGdpRatio: budget?.debtToGdpRatio ?? null,
         debtTrajectory: debtPath?.trajectory ?? null,
+        primaryBalancePct: debtInputs ? round2(debtInputs.primaryBalanceToGdp * 100) : null,
         stabilisingPrimaryBalancePct:
           debtPath === null ? null : round2(debtPath.stabilisingPrimaryBalanceToGdp * 100),
         debtPathBasisPct: debtRate === null ? null : round2(debtRate.afterImfCapRate * 100),
