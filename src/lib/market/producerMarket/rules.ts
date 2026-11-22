@@ -603,9 +603,10 @@ function prepareSettleProducerMarket(input: {
         (offer) => offer.accountId !== order.accountId && (!eligible || eligible.has(offer.id))
       );
     if (input.demandCurve && wanted > 0) {
-      const rows = levels.flatMap(([price, offers]) =>
-        price > order.maximumUnitPrice ? [] : eligibleRows(offers)
-      );
+      const eligibleByPrice = new Map<number, ProducerOffer[]>();
+      for (const [price, offers] of levels)
+        if (price <= order.maximumUnitPrice) eligibleByPrice.set(price, eligibleRows(offers));
+      const rows = [...eligibleByPrice.values()].flat();
       const allocation = allocateDemandCurve({
         offers: rows.map((offer) => ({
           id: offer.id,
@@ -617,13 +618,25 @@ function prepareSettleProducerMarket(input: {
         budget: Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order)),
         curve: input.demandCurve,
       });
-      if (allocation) {
+      // One group left means one price with stock: cheapest-first is the same.
+      if (allocation && allocation.length > 1) {
         const rowById = new Map(rows.map((offer) => [offer.id, offer]));
         for (const group of allocation) {
           const members = group.offerIds.map((id) => rowById.get(id)!);
           const total = members.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
           if (!(total > 0) || !(group.units > 0)) continue;
-          settleLevel(group.unitPrice, members, total, group.units, group.offerIds);
+          // A group that is every seller with stock at its price replays from
+          // the fill's price alone; a brand subset names its sellers.
+          const level = eligibleByPrice.get(group.unitPrice) ?? [];
+          const live = level.filter((offer) => remaining.get(offer.id) > 0).length;
+          const take = Math.min(group.units, total);
+          settleLevel(
+            group.unitPrice,
+            members,
+            total,
+            take,
+            members.length === live ? undefined : group.offerIds
+          );
         }
         return { wanted, orderBudget };
       }

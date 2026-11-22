@@ -276,8 +276,9 @@ export interface ProducerGameConfig {
   producerAskBuyerTieStage?: number;
   /**
    * Seller preference stage: >= 1 makes a free-choice buyer order split across
-   * every eligible seller by price, brand loyalty and quality, instead of the
-   * cheapest seller taking everything. 0 or absent = off.
+   * every eligible seller, leaning toward cheaper offers, instead of the
+   * cheapest seller taking everything. >= 2 also weighs brand loyalty and
+   * quality. 0 or absent = off.
    */
   producerSellerPreferenceStage?: number;
 
