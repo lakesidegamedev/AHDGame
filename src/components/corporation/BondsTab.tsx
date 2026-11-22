@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { bondIssueIncomePreview } from "@/lib/bonds/bondIssueIncomePreview";
+import { floorToBondUnits } from "@/lib/bonds/rules/issuanceUnits";
 import { BOND_DEFAULT_CREDIT_PENALTY_TURNS } from "@/lib/constants/bonds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondData, BondInfo, CorporationDetail, Financials } from "./CorporationPageTypes";
@@ -266,7 +267,8 @@ export default function BondsTab({
           // place all three rules live (per-issuance cap, 2x going-concern equity,
           // 1x exit equity). Re-deriving one here lets the quoted ceiling drift
           // from the enforced one. Fallbacks cover an older deploy's response.
-          const toBondUnits = (v: number) => Math.max(0, Math.floor(v / 1_000) * 1_000);
+          const unitFace = bondInfo.bondUnitFaceAnchor ?? 1_000;
+          const toBondUnits = (v: number) => Math.max(0, floorToBondUnits(v, unitFace));
           const maxIssuableDebt =
             bondInfo.debtHeadroom !== undefined
               ? toBondUnits(bondInfo.debtHeadroom)
@@ -281,7 +283,8 @@ export default function BondsTab({
           // alone can push it under the minimum for a corp whose headroom
           // sits between the dust floor and the flat minimum, leaving it
           // with no legal issuance at all. The slider still steps in
-          // A1,000 units; only its endpoint is exact.
+          // whole bond units (1,000 face in the bond's own currency); only its
+          // endpoint is exact.
           const effectiveCap =
             bondInfo.maxAllowedIssuance !== undefined
               ? Math.max(0, bondInfo.maxAllowedIssuance)
@@ -378,7 +381,7 @@ export default function BondsTab({
                         type="range"
                         min={0}
                         max={effectiveCap}
-                        step={1000}
+                        step={unitFace}
                         value={bondIssueFaceValue}
                         onChange={(e) => setBondIssueFaceValue(Number(e.target.value))}
                         disabled={sliderDisabled}

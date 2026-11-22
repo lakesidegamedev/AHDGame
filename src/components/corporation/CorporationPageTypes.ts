@@ -1,3 +1,4 @@
+import type { LastTurnReconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
@@ -545,6 +546,8 @@ export interface CEO {
 export interface Financials {
   /** CEO-only cash balances, not daily income figures. */
   arrears?: { turn: number; paidLastTurn: number; remaining: number };
+  /** Last recorded turn tied to the change in cash, per turn in local currency. Dropped for viewers who only see estimates. */
+  lastTurnReconciliation?: LastTurnReconciliation | null;
   totalRevenue: number;
   /** Sector maintenance, shown NET of labour when the labour system is on. */
   maintenanceCosts: number;
@@ -626,8 +629,6 @@ export interface Financials {
   realizedIncome?: number;
   /** Turn the realized figure was booked on (for the "actual, last turn" chip). */
   realizedIncomeTurn?: number;
-  /** Recorded one-time movements in local currency, with no period scaling. */
-  constructionCash?: { turn: number; paid: number; refunded: number };
   /**
    * Dividends the engine actually paid out of last turn's income (daily display
    * units, local currency). `realizedIncome` is ALREADY net of this. Present
@@ -639,6 +640,8 @@ export interface Financials {
   dividendRate: number;
   /** max(corp.dividendRate clamped, legalStructure.minimumDividendRate × 100). 0 when income ≤ 0. */
   effectiveDividendRate: number;
+  /** Payout rate that applies once income is positive. Differs from effectiveDividendRate when the forecast is a loss. */
+  dividendPolicyRate?: number;
   /** Daily dividend payout in local currency, capped by income. */
   dividendDistribution: number;
   /** Daily dominance regulatory burden in local currency. Already included in operatingCosts. */
@@ -1018,6 +1021,8 @@ export interface BondInfo {
   exitEquity?: number;
   /** Remaining debt-ceiling room in ₳, before the per-issuance cap (#1198). */
   debtHeadroom?: number;
+  /** Anchor value of one bond unit (1,000 face in the corporation's own currency). */
+  bondUnitFaceAnchor?: number;
   /** Which rule is currently binding on `maxAllowedIssuance` (#1198). */
   issuanceLimitedBy?: "perIssuance" | "leverage" | "exitEquity";
   /**

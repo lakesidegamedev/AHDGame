@@ -31,7 +31,7 @@ describe("run report card", () => {
     };
     const unsold = render(<RunReport report={{ ...base, unsoldShare: 0.12 }} {...props} />);
     const text = unsold.container.textContent ?? "";
-    expect(text).toContain("Each unit sold last turn");
+    expect(text).toContain("Each unit sold or sent to your own sites last turn");
     expect(text).toContain("includes the 12% you made but did not sell");
     cleanup();
     const sold = render(<RunReport report={{ ...base, unsoldShare: 0 }} {...props} />);

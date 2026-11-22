@@ -244,20 +244,10 @@ describe("loadCorporationDetailView", () => {
     expect(result.financials.totalRevenue).toBe(0);
     expect(result.balanceSheet.assets.cashOnHand).toBe(corporation.liquidCapital);
     expect(result.financials).not.toHaveProperty("arrears");
-    expect(result.financials).not.toHaveProperty("constructionCash");
 
     db.collection("bankMoneyMoves");
     db.collectionMocks.bankMoneyMoves.find.mockReturnValue({
       toArray: async () => [{ status: "applied", currency: "USD", event: { amount: 75 } }],
-    } as never);
-    db.collectionMocks.corporationHistory.findOne.mockResolvedValue({ income: 0, turn: 10 });
-    db.collection("financialTxLog");
-    db.collectionMocks.financialTxLog.find.mockReturnValue({
-      toArray: async () => [
-        { amount: -210_000, currencyCode: "USD" },
-        { amount: -50_869, currencyCode: "USD" },
-        { amount: 200, currencyCode: "USD" },
-      ],
     } as never);
     const ownerView = await loadCorporationDetailView({
       db: db as unknown as Db,
@@ -273,11 +263,6 @@ describe("loadCorporationDetailView", () => {
       turn: 10,
       paidLastTurn: 75,
       remaining: 125,
-    });
-    expect(ownerView.financials.constructionCash).toEqual({
-      turn: 10,
-      paid: 260_869,
-      refunded: 200,
     });
   });
 

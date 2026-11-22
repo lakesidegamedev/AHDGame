@@ -126,6 +126,7 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     income: fog(financials.income, factor),
     dividendRate: financials.dividendRate,
     effectiveDividendRate: financials.effectiveDividendRate,
+    dividendPolicyRate: financials.dividendPolicyRate,
     dividendDistribution: fog(financials.dividendDistribution, factor),
     dividendIncomeReceived: fog(financials.dividendIncomeReceived, factor),
     regulatoryBurden: fog(financials.regulatoryBurden, factor),

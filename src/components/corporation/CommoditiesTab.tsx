@@ -140,7 +140,7 @@ export default function CommoditiesTab({
           )}
         </Td>
         <Td align="right" className="text-foreground">
-          {c.market.coverTurns != null ? `${c.market.coverTurns.toFixed(1)}t` : ""}
+          {c.market.coverTurns != null ? `${c.market.coverTurns.toFixed(1)}d` : ""}
         </Td>
         <Td numeric={false} className="text-xs">
           <Link
@@ -170,8 +170,11 @@ export default function CommoditiesTab({
       <Th align="right" title="Global stock in the market ledger">
         Stock
       </Th>
-      <Th align="right" title="Turns of global demand the stock covers">
-        Cover
+      <Th
+        align="right"
+        title="Days of global demand the stock covers, at the market ledger's daily demand rate"
+      >
+        Cover (days)
       </Th>
       <Th>
         <span className="sr-only">Market</span>
