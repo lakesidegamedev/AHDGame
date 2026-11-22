@@ -1,6 +1,23 @@
+vi.mock("@/lib/db/sessionDb", () => {
+  let effects: Array<() => Promise<unknown>> = [];
+  return {
+    withSessionDb: async (_db: unknown, work: (db: unknown) => Promise<unknown>) => {
+      effects = [];
+      const result = await work(_db);
+      for (const effect of effects) await effect();
+      return result;
+    },
+    afterCommit: async (_db: unknown, effect: () => Promise<unknown>) => {
+      effects.push(effect);
+    },
+    unboundDb: (db: unknown) => db,
+    boundSession: () => undefined,
+  };
+});
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { DIVERGENT_TENURE_FLOOR_TURNS } from "@/lib/scotus/tenure";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -33,6 +50,10 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
     db.collection("npps");
     db.collection("politicalParties");
     db.collection("electedOfficials");
+    db.collectionMocks.scotusNominations!.bulkWrite.mockImplementation(async (ops) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
   });
 
   it("seats a confirmed NPP nominee, flips isDivergent, and computes ideology as 65% personal + 35% party", async () => {
@@ -100,10 +121,10 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
       })
     );
 
-    expect(db.collectionMocks.scotusNominations!.updateOne).toHaveBeenCalledWith(
+    expect(bulkOps(db.collectionMocks.scotusNominations!.bulkWrite)).toContainEqual([
       { _id: nomination._id, status: "active" },
-      expect.objectContaining({ $set: expect.objectContaining({ status: "confirmed" }) })
-    );
+      expect.objectContaining({ $set: expect.objectContaining({ status: "confirmed" }) }),
+    ]);
 
     const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
     expect(sendCountryGameEvent).toHaveBeenCalledWith(
@@ -148,7 +169,7 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
       votesAbstain: 0,
     } as never);
     db.collectionMocks.characters!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([{ _id: nomineeCharacterId }]),
+      toArray: vi.fn().mockResolvedValue([{ _id: nomineeCharacterId, userId: nomineeUserId }]),
     });
     db.collectionMocks.characters!.findOne.mockResolvedValue({
       _id: nomineeCharacterId,
@@ -266,10 +287,10 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
     expect(result.rejected).toBe(1);
     expect(result.confirmed).toBe(0);
     expect(db.collectionMocks.supremeCourtSeats!.updateOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.scotusNominations!.updateOne).toHaveBeenCalledWith(
+    expect(bulkOps(db.collectionMocks.scotusNominations!.bulkWrite)).toContainEqual([
       { _id: nomination._id, status: "active" },
-      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) })
-    );
+      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) }),
+    ]);
 
     const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
     expect(sendCountryGameEvent).toHaveBeenCalledWith(
@@ -350,7 +371,7 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
     expect(db.collectionMocks.npps!.find).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks.characters!.find).toHaveBeenCalledWith(
       { _id: { $in: nominations.slice(0, 3).map((nom) => nom.nomineeCharacterId) } },
-      { projection: { avatarUrl: 1 } }
+      { projection: { avatarUrl: 1, userId: 1 } }
     );
     expect(db.collectionMocks.npps!.find).toHaveBeenCalledWith(
       { _id: { $in: nominations.slice(3).map((nom) => nom.nomineeNppId) } },
@@ -385,7 +406,7 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
     }
   });
 
-  it("does not publish a terminal card when another worker already claimed rejection", async () => {
+  it("aborts without publishing when a terminal batch no longer matches", async () => {
     const nomination = {
       _id: new ObjectId(),
       countryId: "US",
@@ -407,9 +428,9 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
         return { toArray: vi.fn().mockResolvedValue(isExpiredQuery ? [nomination] : []) } as never;
       }
     );
-    db.collectionMocks.scotusNominations!.updateOne.mockResolvedValue({
+    db.collectionMocks.scotusNominations!.bulkWrite.mockResolvedValue({
       modifiedCount: 0,
-      matchedCount: 1,
+      matchedCount: 0,
     } as never);
     const { computeCabinetNominationTally } =
       await import("@/lib/congress/governmentVoteBreakdown");
@@ -420,9 +441,9 @@ describe("processScotusNominationLifecycle", { timeout: 60000 }, () => {
     } as never);
 
     const { processScotusNominationLifecycle } = await import("./scotusNominationLifecycle");
-    const result = await processScotusNominationLifecycle(new Date(0), db as unknown as Db);
-
-    expect(result.rejected).toBe(0);
+    await expect(
+      processScotusNominationLifecycle(new Date(0), db as unknown as Db)
+    ).rejects.toThrow("Court nomination changed during resolution");
     const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
     expect(sendCountryGameEvent).not.toHaveBeenCalled();
   });

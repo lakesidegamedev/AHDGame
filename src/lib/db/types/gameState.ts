@@ -625,6 +625,7 @@ export interface GameState {
  * US uses the global GameState; additional countries use CountryGameState.
  */
 export interface CountryGameState {
+  billPoliticalEffectTurns?: Partial<Record<"popular" | "confidence" | "escalation", number>>;
   /** Country ID - acts as document _id */
   _id: CountryId;
   /** JP 1991: approved 1994 Shugiin reform applies to later elections only. */

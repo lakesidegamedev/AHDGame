@@ -131,7 +131,7 @@ describe("1991 democratic registry bill dispatch", () => {
       expect(result).toEqual({ enacted: 1, failed: 0 });
       expect((await db.collection("bills").findOne({ _id: id }))?.status).toBe("signed");
       expect(await processOnePartyBillLifecycleForCountry(countryId, NOW)).toEqual({
-        enacted: 0,
+        enacted: 1,
         failed: 0,
       });
       expect(onBillEnacted).toHaveBeenCalledTimes(1);

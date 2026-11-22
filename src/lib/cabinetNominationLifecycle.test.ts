@@ -595,6 +595,10 @@ describe("Fed confirmation cabinet conflict", () => {
       const { getGameState } = await import("@/lib/gameState");
       vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
       db.collection("fomcNominations");
+      db.collectionMocks.fomcNominations.bulkWrite.mockImplementation(async (ops) => ({
+        matchedCount: ops.length,
+        modifiedCount: ops.length,
+      }));
       db.collectionMocks.fomcNominations.find.mockImplementation(
         (query: Record<string, unknown>) =>
           ({
