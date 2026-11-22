@@ -3,12 +3,14 @@ import { SECTOR_DEMAND, SECTOR_SUPPLY } from "@/lib/constants/commodities";
 
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import {
-  CONTRACT_OVERCOMMIT_TOLERANCE,
   AI_SUPPLIER_MAX_DISCOUNT,
   SUPPLY_AGREEMENT_PRICE_BAND,
   type SupplyAgreement,
 } from "@/lib/db/types/supplyAgreement";
-import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import {
+  computeSupplierCommodityCapacityUnits,
+  computeSupplierMaxContractableUnits,
+} from "@/lib/corporations/supplyAgreementCapacity";
 
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import {
@@ -55,6 +57,8 @@ export type NppAgreementParty = {
     transitionFromStrategyId?: string | null;
     retoolRescaleApplied?: boolean;
     transitionStartTurn?: number | null;
+    /** Latest full-policy output; bounds new contract volume. */
+    contractAchievableUnits?: number | null;
     productionPolicyLevel?: number | null;
     embargoSuspended?: boolean | null;
     embargoExportExposure?: number | null;
@@ -363,7 +367,7 @@ export function decideNppSupplyAgreements(args: {
         out.push({ action: "decline", agreementId: a.id, reason: "invalidVolume" });
         continue;
       }
-      const capacity = computeSupplierCommodityCapacityUnits({
+      const maxContractable = computeSupplierMaxContractableUnits({
         sectors: supplier.sectors,
         commodity: a.commodity,
         isNatcorp: supplier.isNatcorp,
@@ -374,7 +378,7 @@ export function decideNppSupplyAgreements(args: {
       const key = `${supplier.corpId}|${a.commodity}|${a.stateId ?? NO_STATE}`;
       const taken = accepted.get(key) ?? 0;
       const spare =
-        capacity * CONTRACT_OVERCOMMIT_TOLERANCE -
+        maxContractable -
         liveBeforeAccepts!.committedVolume(supplier.corpId, a.commodity, a.stateId) -
         taken;
       // Always answer within a turn: sign the proposal as written, or counter
@@ -476,7 +480,7 @@ export function decideNppSupplyAgreements(args: {
     }
 
     for (const { commodity, stateId } of outputScopes.values()) {
-      const capacity = computeSupplierCommodityCapacityUnits({
+      const maxContractable = computeSupplierMaxContractableUnits({
         sectors: supplier.sectors,
         commodity,
         isNatcorp: supplier.isNatcorp,
@@ -486,8 +490,7 @@ export function decideNppSupplyAgreements(args: {
       });
       const uncommitted = Math.max(
         0,
-        capacity * CONTRACT_OVERCOMMIT_TOLERANCE -
-          live.committedVolume(supplier.corpId, commodity, stateId)
+        maxContractable - live.committedVolume(supplier.corpId, commodity, stateId)
       );
       const volumeCap = uncommitted * NPP_CONTRACT_CAPACITY_SHARE;
       if (!(volumeCap > 0)) continue;

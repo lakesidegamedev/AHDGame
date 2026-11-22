@@ -66,7 +66,7 @@ describe.runIf(ENABLED)("committee-proposal vote race against isolated mongod", 
   let db: Db;
 
   beforeAll(async () => {
-    fixture = await startIsolatedMongod("ahd-vote-race-");
+    fixture = await startIsolatedMongod("ahd-vote-race-", { replicaSet: "politicalProposals" });
     db = fixture.db;
   }, 120_000);
 

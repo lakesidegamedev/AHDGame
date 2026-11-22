@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { mergePartyInto } from "@/lib/parties/mergeParty";
 export { mergePartyInto } from "@/lib/parties/mergeParty";
 export type { MergePartyOptions } from "@/lib/parties/mergeParty";
@@ -591,6 +592,18 @@ export async function attemptResolution(
   currentTurn: number,
   options?: { expired?: boolean }
 ): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    attemptResolutionInTransaction(tx, proposal, currentTurn, options)
+  );
+}
+
+async function attemptResolutionInTransaction(
+  db: Db,
+  proposal: CommitteeProposal,
+  currentTurn: number,
+  options?: { expired?: boolean }
+): Promise<void> {
+  proposal = (await committeeProposalsCollection(db).findOne({ _id: proposal._id })) ?? proposal;
   if (proposal.status !== "open") return;
 
   const proposingParty = await politicalPartiesCollection(db).findOne(
@@ -660,13 +673,7 @@ export async function attemptResolution(
   }
   if (outcome === "open") return;
 
-  // Claim the resolution before any effect or status write. Concurrent votes
-  // (or a stuffed burst) can each compute a resolved outcome against the same
-  // open doc; without a claim every one of them applied the effects — a merge
-  // ran its treasury $inc once per resolver. The claim is deliberately never
-  // released: an effect that failed half-way must not be silently retried, so
-  // a claimed-but-open proposal stays open with resolutionError set for an
-  // operator to finish by hand.
+  // The claim and effects commit together. Legacy partial claims require reconciliation.
   const coll = committeeProposalsCollection(db);
   const claimed = await coll.updateOne(
     {

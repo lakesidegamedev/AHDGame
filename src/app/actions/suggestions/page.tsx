@@ -17,6 +17,7 @@ import type { ActionRecommendation, RecommendationCategory } from "@/lib/actions
 import type { Character } from "@/lib/db/types";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
+import { formatPercent } from "@/lib/ui/numbers";
 
 interface ExecuteActionPayload {
   actionType: string;
@@ -295,7 +296,7 @@ export default function SuggestedActionsPage() {
                 <div className="flex flex-col px-5 py-3 min-w-max">
                   <span className="text-body-sm font-medium text-muted">Influence</span>
                   <span className="text-base font-bold tabular-nums text-foreground">
-                    {(character.politicalInfluence ?? 0).toFixed(1)}%
+                    {formatPercent(character.politicalInfluence ?? 0)}
                   </span>
                 </div>
                 <div className="flex flex-col px-5 py-3 min-w-max">
@@ -303,7 +304,7 @@ export default function SuggestedActionsPage() {
                   <span
                     className={`text-base font-bold tabular-nums ${(character.favorability ?? 0) < 40 ? "text-error" : (character.favorability ?? 0) < 60 ? "text-warning" : "text-success"}`}
                   >
-                    {(character.favorability ?? 0).toFixed(1)}%
+                    {formatPercent(character.favorability ?? 0)}
                   </span>
                 </div>
               </>

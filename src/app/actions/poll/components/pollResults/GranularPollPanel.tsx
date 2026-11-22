@@ -9,6 +9,7 @@ import { segmentUncertaintyBand } from "@/lib/demographics/granularPollUncertain
 import { DEMOGRAPHIC_LABELS } from "@/lib/seeds/demographicLabels";
 import { partyHex } from "../../pollHelpers";
 import type { PollData, StoredPoll } from "../../types";
+import { formatScore } from "@/lib/ui/numbers";
 
 type SortKey = string;
 
@@ -674,7 +675,7 @@ export function GranularPollPanel({ poll, pollData }: { poll: StoredPoll; pollDa
                     <dd>
                       <Tooltip content={t("uncertaintyExplanation")}>
                         <span className="cursor-help text-body-lg font-semibold tabular-nums">
-                          ±{segmentUncertainty?.toFixed(1) ?? "-"} pts
+                          ±{segmentUncertainty != null ? formatScore(segmentUncertainty) : "-"} pts
                         </span>
                       </Tooltip>
                     </dd>

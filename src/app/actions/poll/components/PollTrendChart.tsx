@@ -1,6 +1,8 @@
 "use client";
 
 import type { RecentPollEntry } from "./RecentPolls";
+import { formatScore } from "@/lib/ui/numbers";
+import { toneForDelta, toneText } from "@/lib/ui/tone";
 
 const WIDTH = 600;
 const HEIGHT = 180;
@@ -43,8 +45,9 @@ export function PollTrendChart({ polls }: { polls: RecentPollEntry[] }) {
           <span className="h-0.5 w-5 rounded-full bg-secondary" aria-hidden />
           Overall appeal (0 to 50)
         </span>
-        <span className={delta >= 0 ? "text-success" : "text-error"}>
-          {delta >= 0 ? "Up" : "Down"} {Math.abs(delta).toFixed(1)} since the oldest saved poll
+        <span className={toneText(toneForDelta(delta))}>
+          {delta === 0 ? "Unchanged" : delta > 0 ? "Up" : "Down"} {formatScore(Math.abs(delta))}{" "}
+          since the oldest saved poll
         </span>
       </figcaption>
       <div className="overflow-x-auto">
@@ -52,7 +55,7 @@ export function PollTrendChart({ polls }: { polls: RecentPollEntry[] }) {
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="h-auto w-full min-w-[460px]"
           role="img"
-          aria-label={`Overall appeal across your last ${ordered.length} polls, from ${first.toFixed(1)} to ${last.toFixed(1)}`}
+          aria-label={`Overall appeal across your last ${ordered.length} polls, from ${formatScore(first)} to ${formatScore(last)}`}
         >
           {Y_TICKS.map((v) => (
             <g key={v}>
@@ -85,7 +88,7 @@ export function PollTrendChart({ polls }: { polls: RecentPollEntry[] }) {
           {points.map((pt, i) => (
             <g key={`${pt.p.takenAt}-${i}`}>
               <circle cx={pt.x} cy={pt.y} r={4} fill="var(--secondary)">
-                <title>{`Poll ${i + 1}: ${pt.p.overallAppeal.toFixed(1)} appeal`}</title>
+                <title>{`Poll ${i + 1}: ${formatScore(pt.p.overallAppeal)} appeal`}</title>
               </circle>
               <text x={pt.x} y={HEIGHT - 22} textAnchor="middle" fontSize={11} fill="var(--muted)">
                 {i + 1}

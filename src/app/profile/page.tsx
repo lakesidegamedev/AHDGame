@@ -79,6 +79,7 @@ import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
 import { PoliticalStanding } from "./components/PoliticalStanding";
 import { FinancialStrip } from "./components/FinancialStrip";
+import { MoneyHistoryPanel } from "./components/MoneyHistoryPanel";
 import { CareerHistory } from "./components/CareerHistory";
 import {
   fetchPartyHistory,
@@ -492,7 +493,13 @@ export default async function ProfilePage({
     loadCampaignCurrencyRates(db),
     loadCampaignPriceLevel(db),
   ]);
-  const { corporation, bondIncomePerTurn, dividendIncomePerTurn, fxRatesRecord } = financialData;
+  const {
+    corporation,
+    bondIncomePerTurn,
+    dividendIncomePerTurn,
+    dividendsReceived,
+    fxRatesRecord,
+  } = financialData;
 
   const {
     character,
@@ -969,6 +976,7 @@ export default async function ProfilePage({
                   ceoSalaryCurrencyCode: corporation?.liquidCurrencyCode ?? null,
                   bondIncomePerTurn,
                   dividendIncomePerTurn,
+                  dividendsReceived,
                   forexBalances: character.currencyBalances
                     ? {
                         personal: character.currencyBalances.personal,
@@ -978,6 +986,7 @@ export default async function ProfilePage({
                 }}
                 portfolioHref="/portfolio"
               />
+              <MoneyHistoryPanel />
             </section>
 
             <ProfileAchievements

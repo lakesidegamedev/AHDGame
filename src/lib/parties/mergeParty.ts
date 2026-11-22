@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { AnyBulkWriteOperation, Db, Document, ObjectId } from "mongodb";
 
 import type { NPP } from "@/lib/db/types";
@@ -57,6 +58,18 @@ export async function mergePartyInto(
   currentTurn: number,
   options: MergePartyOptions = {}
 ): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    mergePartyIntoInTransaction(tx, sourcePartyId, targetPartyId, currentTurn, options)
+  );
+}
+
+async function mergePartyIntoInTransaction(
+  db: Db,
+  sourcePartyId: ObjectId,
+  targetPartyId: ObjectId,
+  currentTurn: number,
+  options: MergePartyOptions = {}
+): Promise<void> {
   const requireAdjacency = options.requireAdjacency !== false;
   const enforceNppCap = options.enforceNppCap !== false;
   const [proposingParty, targetParty] = await Promise.all([
@@ -78,6 +91,8 @@ export async function mergePartyInto(
         politicalPartiesCollection(db).findOne({ _id: sourcePartyId }),
         politicalPartiesCollection(db).findOne({ _id: targetPartyId }),
       ]);
+      if (proposingParty?.isDefunct && proposingParty.mergedIntoPartyId?.equals(targetPartyId))
+        return;
       if (
         !proposingParty ||
         !targetParty ||
@@ -126,7 +141,15 @@ export async function mergePartyInto(
       //    surviving party's POST-merge organization.
 
       // 3. Transfer national treasury
-      if (proposingParty.treasury > 0) {
+      if (
+        ![
+          proposingParty.treasury ?? 0,
+          targetParty.treasury ?? 0,
+          (proposingParty.treasury ?? 0) + (targetParty.treasury ?? 0),
+        ].every(Number.isFinite)
+      )
+        throw new Error("Invalid party treasury");
+      if ((proposingParty.treasury ?? 0) !== 0) {
         await politicalPartiesCollection(db).updateOne(
           { _id: targetParty._id },
           { $inc: { treasury: proposingParty.treasury }, $set: { updatedAt: now } }
@@ -169,11 +192,18 @@ export async function mergePartyInto(
           resolved.rows.find((row) => row.id === sourceId)?.organizationUnits ??
           resolveOrganizationUnits(org);
         const bonusUnits = Math.floor(sourceUnits * 0.5 * 1_000_000) / 1_000_000;
-        if (bonusUnits <= 0) continue;
+        const treasury = org.treasury ?? 0;
+        if (!Number.isFinite(treasury)) throw new Error("Invalid regional party treasury");
+        if (bonusUnits <= 0 && treasury === 0) continue;
         const targetOrgId = `${org.stateId}_${targetStrId}`;
         const target = stateRows.find(
           (row) => row._id === targetOrgId || row.partyId === targetStrId
         );
+        if (
+          !Number.isFinite(target?.treasury ?? 0) ||
+          !Number.isFinite((target?.treasury ?? 0) + treasury)
+        )
+          throw new Error("Invalid regional party treasury");
         const targetUnits =
           resolved.rows.find((row) => row.id === (target?._id ?? targetOrgId))?.organizationUnits ??
           0;
@@ -181,7 +211,7 @@ export async function mergePartyInto(
         if (target) {
           targetOrgWrites.push({
             updateOne: {
-              filter: { _id: targetOrgId },
+              filter: { _id: target._id ?? targetOrgId },
               update: [
                 {
                   $set: {
@@ -191,8 +221,9 @@ export async function mergePartyInto(
                         bonusUnits,
                       ],
                     },
+                    treasury: { $add: [{ $ifNull: ["$treasury", 0] }, treasury] },
                     lastOrganizationBuildTurn: currentTurn,
-                    hasPresence: true,
+                    hasPresence: bonusUnits > 0 || target.hasPresence === true,
                     updatedAt: now,
                   },
                 },
@@ -214,10 +245,10 @@ export async function mergePartyInto(
                 chairId: null,
                 viceChairId: null,
                 treasurerId: null,
-                treasury: 0,
+                treasury,
                 stateTaxRate: 0,
                 politicalStrength: 0,
-                hasPresence: true,
+                hasPresence: bonusUnits > 0,
                 createdAt: now,
                 updatedAt: now,
               },

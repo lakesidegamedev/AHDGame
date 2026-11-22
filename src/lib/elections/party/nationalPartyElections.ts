@@ -875,6 +875,16 @@ export async function vacateInactiveNationalLeadership(
   currentTurn: number,
   effectiveNow: Date = new Date()
 ): Promise<number> {
+  return withSessionDb(db, (tx) =>
+    vacateInactiveNationalLeadershipInTransaction(tx, currentTurn, effectiveNow)
+  );
+}
+
+async function vacateInactiveNationalLeadershipInTransaction(
+  db: Db,
+  currentTurn: number,
+  effectiveNow: Date = new Date()
+): Promise<number> {
   const now = new Date(effectiveNow);
 
   const parties = await politicalPartiesCollection(db)
@@ -957,11 +967,13 @@ export async function vacateInactiveNationalLeadership(
       vacated += 1;
       if (position === "chair") vacatedChairPartyOids.push(party._id);
       notifications.push(
-        notifyNationalLeadershipVacatedInactive(
-          holder,
-          String(party.sequentialId),
-          position,
-          party.countryId
+        afterCommit(db, () =>
+          notifyNationalLeadershipVacatedInactive(
+            holder,
+            String(party.sequentialId),
+            position,
+            party.countryId
+          )
         )
       );
       console.log(
@@ -971,12 +983,26 @@ export async function vacateInactiveNationalLeadership(
     }
     if (Object.keys(setUpdates).length > 0) {
       setUpdates.updatedAt = now;
-      partyOps.push({ updateOne: { filter: { _id: party._id }, update: { $set: setUpdates } } });
+      partyOps.push({
+        updateOne: {
+          filter: {
+            _id: party._id,
+            ...Object.fromEntries(
+              Object.keys(setUpdates)
+                .filter((key) => key !== "updatedAt")
+                .map((key) => [key, party[key as keyof PoliticalParty]])
+            ),
+          },
+          update: { $set: setUpdates },
+        },
+      });
     }
   }
 
   if (partyOps.length > 0) {
-    await politicalPartiesCollection(db).bulkWrite(partyOps);
+    const cleared = await politicalPartiesCollection(db).bulkWrite(partyOps);
+    if (cleared.matchedCount !== partyOps.length)
+      throw new Error("Party leadership changed during inactivity cleanup");
     // Coalition chair follows the party chair (same as the chairChanges sync):
     // when the party chair is vacated for inactivity, null the led coalition's
     // chairCharacterId so it doesn't dangle on a departed leader.

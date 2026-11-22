@@ -92,7 +92,8 @@ describe("NPP chronic-shortage capacity response", () => {
           candidatesByCountry([pool]),
           new Set(),
           (candidate: CommodityType) => (candidate === commodity ? marketPrice / basePrice : 1),
-          plants
+          plants,
+          { unmetDemandUnitsOf: () => Math.max(0, demand - (sector.producedUnits ?? 0)) }
         );
         for (const update of decision.sectorUpdates) {
           if (update.filter._id.equals(sector._id) && update.update.$push?.buildQueue) {

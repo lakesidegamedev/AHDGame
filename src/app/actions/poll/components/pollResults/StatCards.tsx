@@ -3,6 +3,7 @@
 import { Tooltip } from "@/components/Tooltip";
 import { formatNum, formatTimestamp, appealColor, appealBand, appealFill } from "../../pollHelpers";
 import type { StoredPoll } from "../../types";
+import { formatPercent, formatScore } from "@/lib/ui/numbers";
 
 function weightedGranularTurnout(poll: StoredPoll): number | null {
   const cells = poll.granular?.cells;
@@ -43,7 +44,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
           <dd className="mt-1">
             <div className="flex items-baseline gap-2">
               <span className={`text-display font-bold tabular-nums ${appealColor(overallAppeal)}`}>
-                {overallAppeal.toFixed(1)}
+                {formatScore(overallAppeal)}
               </span>
               <span className="text-body text-muted">of 50</span>
               <span className={`ml-1 text-body font-semibold ${appealColor(overallAppeal)}`}>
@@ -53,7 +54,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
             <div
               className="mt-2 h-2 w-full max-w-xs overflow-hidden rounded-full bg-card-border"
               role="img"
-              aria-label={`Appeal ${overallAppeal.toFixed(1)} out of 50, ${appealBand(overallAppeal)}`}
+              aria-label={`Appeal ${formatScore(overallAppeal)} out of 50, ${appealBand(overallAppeal)}`}
             >
               <div
                 className={`h-full rounded-full ${appealFill(overallAppeal)}`}
@@ -74,7 +75,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
             </div>
             <div className="mt-1 text-body-sm text-muted">
               {turnoutPct != null
-                ? `${turnoutPct.toFixed(1)}% weighted turnout`
+                ? `${formatPercent(turnoutPct)} weighted turnout`
                 : "Weighted turnout across groups"}
             </div>
           </dd>
@@ -90,7 +91,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
               {formatNum(totalPotentialVoters)}
             </div>
             <div className="mt-1 text-body-sm text-muted">
-              {reachPct != null ? `${reachPct.toFixed(1)}% of estimated voters` : "Upper bound"}
+              {reachPct != null ? `${formatPercent(reachPct)} of estimated voters` : "Upper bound"}
             </div>
           </dd>
         </div>

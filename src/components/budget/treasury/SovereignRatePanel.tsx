@@ -72,7 +72,7 @@ export function SovereignRatePanel({ current, previous }: SovereignRatePanelProp
       </div>
 
       <Row
-        label={`Ladder (${now.ladderRating})`}
+        label={`Debt-ratio ladder (${now.ladderRating} band)`}
         current={now.ladderRate}
         previous={before?.ladderRate ?? null}
       />
@@ -98,8 +98,10 @@ export function SovereignRatePanel({ current, previous }: SovereignRatePanelProp
         )}
         {now.maxCapApplied && <p>The hard sovereign ceiling trimmed the sum.</p>}
         <p>
-          The ladder prices today&apos;s debt ratio; the other two rows are premiums on top of it. A
-          negative trajectory row is a discount for a ratio that is falling.
+          The ladder band is set by the debt ratio alone. The credit rating shown elsewhere is the
+          rating on record and can sit a notch away. The ladder prices today&apos;s debt ratio; the
+          other two rows are premiums on top of it. A negative trajectory row is a discount for a
+          ratio that is falling.
         </p>
         {!before && <p>No prior close carried enough detail to break down.</p>}
       </div>

@@ -175,7 +175,7 @@ export function buildCommodityMarketScope(
       marketLabel: "Global Market",
       marketCaption: "Aggregated across all enabled countries.",
       marketPrice: data.globalPrice,
-      priceChange: data.priceChange,
+      priceChange: percentChangeFromBase(data.globalPrice, data.basePrice),
       supply: data.globalSupply,
       demand: data.globalDemand,
       balance: data.globalSupply - data.globalDemand,

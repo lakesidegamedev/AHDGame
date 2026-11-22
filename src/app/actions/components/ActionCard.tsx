@@ -22,6 +22,8 @@ import {
 const FLIPFLOP_AXIS_LABELS = { economic: "Economic", social: "Social" } as const;
 import type { ActionCardProps } from "../actionsTypes";
 import ActionExecuteRow from "./ActionExecuteRow";
+import { Delta } from "@/components/ui/Figure";
+import { formatMoney } from "@/lib/ui/numbers";
 
 const ActionCard = memo(function ActionCard({
   card,
@@ -421,8 +423,7 @@ const ActionCard = memo(function ActionCard({
                       <div className="flex items-center justify-between px-1">
                         <span className="text-body-sm text-muted">Cash you can convert</span>
                         <span className="text-body-sm font-semibold tabular-nums">
-                          {inputSymbol}
-                          {displayCash.toLocaleString("en-US")}
+                          {formatMoney(displayCash, { symbol: inputSymbol })}
                         </span>
                       </div>
 
@@ -459,15 +460,14 @@ const ActionCard = memo(function ActionCard({
                         <dl className="grid grid-cols-2 gap-2 px-1 text-body-sm">
                           <div>
                             <dt className="text-muted">Campaign funds</dt>
-                            <dd className="font-semibold tabular-nums text-success">
-                              +{inputSymbol}
-                              {previewFunds.toLocaleString("en-US")}
+                            <dd className="font-semibold">
+                              <Delta kind="money" value={previewFunds} symbol={inputSymbol} />
                             </dd>
                           </div>
                           <div>
                             <dt className="text-muted">Infamy</dt>
-                            <dd className="font-semibold tabular-nums text-error">
-                              +{previewInfamy}%
+                            <dd className="font-semibold">
+                              <Delta kind="percent" value={previewInfamy} digits={0} invert />
                             </dd>
                           </div>
                         </dl>

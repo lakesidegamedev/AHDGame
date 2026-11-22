@@ -140,7 +140,7 @@ export default function CommoditiesTab({
           )}
         </Td>
         <Td align="right" className="text-foreground">
-          {c.market.coverTurns != null ? `${c.market.coverTurns.toFixed(1)}t` : ""}
+          {c.market.coverTurns != null ? `${c.market.coverTurns.toFixed(1)}d` : ""}
         </Td>
         <Td numeric={false} className="text-xs">
           <Link
@@ -170,8 +170,11 @@ export default function CommoditiesTab({
       <Th align="right" title="Global stock in the market ledger">
         Stock
       </Th>
-      <Th align="right" title="Turns of global demand the stock covers">
-        Cover
+      <Th
+        align="right"
+        title="Days of global demand the stock covers, at the market ledger's daily demand rate"
+      >
+        Cover (days)
       </Th>
       <Th>
         <span className="sr-only">Market</span>
@@ -220,10 +223,15 @@ export default function CommoditiesTab({
                   </Th>
                   {isInputs ? (
                     <>
-                      <Th align="right">Consumed</Th>
                       <Th
                         align="right"
-                        title="Input use per day valued at the current market price"
+                        title="Units a day your plants bought and used in the last settled turn. The sector page shows the same figure."
+                      >
+                        Bought a day
+                      </Th>
+                      <Th
+                        align="right"
+                        title="Units bought per day valued at the current market price"
                       >
                         Market value
                       </Th>
@@ -320,8 +328,8 @@ export default function CommoditiesTab({
           came from. Stock and cover are the world&apos;s shadow inventory from the market ledger,
           not this corporation&apos;s. Prices here are market prices per unit. A sector page shows
           what that plant was charged per unit for each input, which is the market price after the
-          game&apos;s price smoothing, and quantities there are scaled to what the plant bought, so
-          the two screens can differ.
+          game&apos;s price smoothing, so prices can differ. Input quantities are the same on both
+          screens: units bought a day in the last settled turn.
         </p>
         {features.length > 0 && (
           <p className="pb-1 text-xs text-muted">

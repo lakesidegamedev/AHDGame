@@ -8,6 +8,7 @@ import { pacedGrowthUnits } from "@/lib/turn/npp/rules/buildPacing";
 import type { CorporateSector } from "@/lib/db/types";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 import { bucketKey } from "@/lib/market/marketBuckets";
+import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
 
 /** A sized reinvestment candidate: replacement plus growth units for one sector. */
 export interface ReinvestCandidate {
@@ -33,26 +34,32 @@ export interface ReinvestCandidate {
 export type LocalShareLookup = (
   sector: Pick<CorporateSector, "stateId" | "sectorType"> & {
     revenue?: number;
+    realizedRevenue?: number;
   }
 ) => number;
 
 /**
- * Local share from revenue over the bucket's total revenue, the same basis the
+ * Local share from earned revenue over the bucket's total, the same measure the
  * player build path prices on. A sector's revenue is in its host currency, as
  * is every rival in the bucket, so the ratio needs no conversion.
  */
 export function buildLocalRevenueShareLookup(
-  sectors: readonly Pick<CorporateSector, "stateId" | "sectorType" | "revenue">[]
+  sectors: readonly Pick<
+    CorporateSector,
+    "stateId" | "sectorType" | "revenue" | "realizedRevenue"
+  >[]
 ): LocalShareLookup {
+  const revenueOf = (s: Parameters<LocalShareLookup>[0]): number => shareRevenueOf(s);
   const revenueByBucket = new Map<string, number>();
   const keyOf = (s: Parameters<LocalShareLookup>[0]) => bucketKey(s.stateId, s.sectorType);
   for (const sector of sectors) {
-    const revenue = Number.isFinite(sector.revenue) ? Math.max(0, sector.revenue) : 0;
+    const own = revenueOf(sector);
+    const revenue = Number.isFinite(own) ? Math.max(0, own) : 0;
     const key = keyOf(sector);
     revenueByBucket.set(key, (revenueByBucket.get(key) ?? 0) + revenue);
   }
   return (sector) =>
-    computeMarketSharePercent(sector.revenue ?? 0, revenueByBucket.get(keyOf(sector)) ?? 0);
+    computeMarketSharePercent(revenueOf(sector), revenueByBucket.get(keyOf(sector)) ?? 0);
 }
 
 /**

@@ -27,6 +27,7 @@ export type {
   SectorForSale,
   SectorsForSaleResponse,
 } from "./marketEndpoints";
+import { formatCount } from "@/lib/ui/numbers";
 
 export function StocksPanel({ exchange = "global" }: { exchange?: string }) {
   const { data, error, loading } = useMarketJson<ExchangeData>(stocksUrl(exchange));
@@ -115,8 +116,8 @@ export function SectorsPanel() {
     >
       <section className="rounded-xl border border-card-border bg-card shadow-card">
         <p className="px-4 pt-3 text-sm text-muted">
-          {(data?.totalItems ?? 0).toLocaleString()} for sale. Open a sector to review it and buy
-          with a corporation you run.
+          {formatCount(data?.totalItems ?? 0)} for sale. Open a sector to review it and buy with a
+          corporation you run.
         </p>
         <ul className="mt-2">
           {rows.map((s) => {

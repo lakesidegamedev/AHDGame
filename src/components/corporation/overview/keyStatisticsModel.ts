@@ -18,3 +18,28 @@ export function revenueSplit(
     retained: Math.max(0, basis.retained),
   };
 }
+
+/**
+ * The same split drawn from one recorded turn, so every part comes from the
+ * same books. Mixing a forecast operating income with a recorded net income
+ * attributed the whole forecast error to "interest and tax".
+ */
+export function recordedRevenueSplit(statement: {
+  revenue: number;
+  costs: number;
+  tax: number;
+  otherNet: number;
+  dividendPaid: number;
+  retained: number;
+}): { costs: number; interestAndTax: number; dividends: number; retained: number } | null {
+  if (!(Number.isFinite(statement.revenue) && statement.revenue > 0)) return null;
+  if (!(statement.retained >= 0)) return null;
+  const interestAndTax = statement.tax - statement.otherNet;
+  if (interestAndTax < 0) return null;
+  return {
+    costs: Math.max(0, statement.costs),
+    interestAndTax,
+    dividends: Math.max(0, statement.dividendPaid),
+    retained: statement.retained,
+  };
+}

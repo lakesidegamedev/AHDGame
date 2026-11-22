@@ -481,7 +481,10 @@ export default function CentralBankClient({ countryId, apiBasePath, members, chr
                   valueClassName={savingsFlow > 0.5 ? "text-error" : "text-foreground"}
                 />
                 <div className="col-span-2 sm:col-span-1">
-                  <CentralBankFigure label="Reserves" value={reserveHeadline} />
+                  <CentralBankFigure
+                    label="Bank reserves (not Treasury cash)"
+                    value={reserveHeadline}
+                  />
                 </div>
               </>
             }
@@ -791,7 +794,7 @@ export default function CentralBankClient({ countryId, apiBasePath, members, chr
 
               <CentralBankSection
                 title="Credit rating scale"
-                meta="What a borrower with each rating pays over the prime rate."
+                meta="What a private borrower with each rating pays over the prime rate. The government borrows on its own debt-ratio ladder, shown on the Budget page."
               >
                 <div className="overflow-x-auto">
                   <table className="w-full text-body">

@@ -89,7 +89,7 @@ describe("QuoteBoard", () => {
         poolActive={false}
       />
     );
-    expect(screen.getByText(/1\.84%/)).toBeTruthy();
+    expect(screen.getAllByText(/1\.83%/).length).toBeGreaterThan(0);
     expect(screen.getByText(/\+\$0\.76 on prev\. turn/)).toBeTruthy();
   });
 

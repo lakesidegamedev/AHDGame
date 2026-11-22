@@ -35,11 +35,19 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-vi.mock("@/contexts/CurrencyContext", () => ({
-  useCurrency: () => ({
-    formatAmount: (amount: number) => `$${Math.round(amount).toLocaleString("en-US")}`,
-  }),
-}));
+vi.mock("@/contexts/CurrencyContext", () => {
+  const fmt = (amount: number) => `$${Math.round(amount).toLocaleString("en-US")}`;
+  return {
+    useCurrency: () => ({
+      formatAmount: fmt,
+      formatAmountChip: fmt,
+      formatPrice: fmt,
+      formatPriceOrder: fmt,
+      formatFull: fmt,
+      toInternalFrom: (amount: number) => amount,
+    }),
+  };
+});
 
 const marketResponse = {
   suggestions: [
@@ -59,6 +67,7 @@ const marketResponse = {
     },
   ],
   availableCountries: ["US"],
+  liquidCapitalLocal: 25_400,
   liquidCapital: 25_400,
   liquidCurrencyCode: "USD",
   plantsMode: true,
@@ -436,6 +445,8 @@ describe("ExpandMarketModal plants market finder", () => {
 
     await screen.findByText(/Room to build: none right now/);
     expect(screen.queryByText("Best fit")).toBeNull();
+    // Company cash is the company's own figure, not an anchor round trip.
+    expect(screen.getByText(/\$25,400 company cash/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
     await screen.findByText(/Review California/);
     expect(screen.queryByText(/legacy revenue/i)).toBeNull();

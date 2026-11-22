@@ -21,6 +21,7 @@
  * `commodityFlows` ledger row per commodity; that data is only global, so it is
  * market context, not attributed to the corp.
  */
+import { inputBoughtUnitsPerDay } from "@/lib/corporations/rules/inputBoughtUnits";
 import type { CorporateSector } from "@/lib/db/types";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
 import {
@@ -174,6 +175,11 @@ export type FlowSector = Pick<
    * input demand, exactly as the world ledger does. Absent = 1.
    */
   priceLeg?: number | null;
+  /**
+   * Input bill the last settled turn booked, ₳ a day. Used with
+   * `context.globalPriceOf` to report inputs as bought.
+   */
+  inputsBookedPerDay?: number | null;
 };
 
 /** World context the flow derivation needs beyond the sectors themselves. */
@@ -199,6 +205,11 @@ export interface CorpCommodityFlowContext {
   currentYear?: number | null;
   /** `gameConfig.commandEconomyEnabled`. */
   commandEconomyEnabled?: boolean | null;
+  /**
+   * When set, input rows show what the plant bought last turn, the same
+   * quantity the sector page shows, instead of the nameplate derivation.
+   */
+  globalPriceOf?: (commodity: CommodityType) => number | null | undefined;
   /**
    * stateId → the state's extractable deposits. An absent key means "no
    * capacity document" (legacy/uncapped); `null` means a document with no
@@ -380,6 +391,18 @@ export function computeSectorCommodityUnits(
       sector.priceLeg,
       effectiveInputDemandRealPhase(context.inputDemandRealPhase, plantsEnabled)
     );
+  if (context.globalPriceOf) {
+    const bought = inputBoughtUnitsPerDay({
+      revenueAnchor,
+      demandRates: rates.demand,
+      bookedInputsPerDay: sector.inputsBookedPerDay,
+      globalPriceOf: context.globalPriceOf,
+    });
+    for (const [commodity, units] of bought) {
+      if (units > 0) demand.set(commodity, (demand.get(commodity) ?? 0) + units);
+    }
+    return { supply, demand, inMix };
+  }
   for (const [commodity, rate] of Object.entries(rates.demand) as [CommodityType, number][]) {
     if (!rate || rate <= 0) continue;
     const basePrice = COMMODITY_BASE_PRICES[commodity];

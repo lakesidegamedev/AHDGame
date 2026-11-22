@@ -21,20 +21,16 @@ import { type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
 
-/**
- * Revenue that counts toward market share. A sector with no delivered capacity
- * yet (a founding sector inside its build window) carries a nameplate revenue
- * figure that nothing has earned, so it must not claim share. Sectors whose
- * capacity fields are absent (legacy rows, narrow projections) count as before.
- */
+/** Earned revenue that counts toward market share; see rules/marketShareBasis. */
 export function shareRevenueLocal(sector: {
   revenue?: number;
+  realizedRevenue?: number;
   capitalStock?: number;
   plantCount?: number;
 }): number {
-  if (sector.capitalStock === 0 && !((sector.plantCount ?? 0) > 0)) return 0;
-  return sector.revenue ?? 0;
+  return shareRevenueOf(sector);
 }
 
 /** Bounded market share percentage (0–100) given anchor-denominated inputs. */
@@ -71,6 +67,7 @@ export function buildCorporationNationalRevenueShareByMarket(
       | "stateId"
       | "sectorType"
       | "revenue"
+      | "realizedRevenue"
       | "capitalStock"
       | "plantCount"
     >
@@ -95,10 +92,8 @@ export function buildCorporationNationalRevenueShareByMarket(
     const countryId =
       (sector.countryId as CountryId | undefined) ?? resolvedCountryByStateId.get(sector.stateId);
     if (!countryId) continue;
-    const revenue =
-      typeof shareRevenueLocal(sector) === "number" && Number.isFinite(shareRevenueLocal(sector))
-        ? Math.max(0, shareRevenueLocal(sector)!)
-        : 0;
+    const shareRevenue = shareRevenueLocal(sector);
+    const revenue = Number.isFinite(shareRevenue) ? Math.max(0, shareRevenue) : 0;
     const nationalMarketKey = marketKey(countryId, sector.sectorType);
     const corporationKey = corporationNationalSectorShareKey(
       sector.corporationId,
@@ -150,7 +145,7 @@ interface BuildSectorMarketShareInputs {
    */
   preset?: string;
   /**
-   * @deprecated Ignored. Share is revenue-basis in every tier.
+   * @deprecated Ignored.
    */
   plantsEnabled?: boolean;
 }
@@ -378,6 +373,7 @@ export async function fetchSectorMarketSharePercent(
     | "stateId"
     | "sectorType"
     | "revenue"
+    | "realizedRevenue"
     | "countryId"
     | "capitalStock"
     | "plantCount"
@@ -385,16 +381,7 @@ export async function fetchSectorMarketSharePercent(
   >,
   /** The focal sector's owner; siblings resolve their own owners from the db. */
   owningCorp: CorpCapitalCurrencyInfo,
-  /**
-   * Share basis override. Leave undefined and the tier is resolved from the db
-   * handle this function already holds.
-   *
-   * A default no caller overrides would be a silent wrong answer (plants worlds
-   * would compute every share on the legacy revenue basis), so the function
-   * resolves it itself.
-   */
-  // Retained for call-site compatibility. Market share is revenue-basis in every
-  // tier now, so the tier does not select a basis.
+  // Retained for call-site compatibility; the tier does not affect share.
   _plantsEnabledOverride?: boolean
 ): Promise<number> {
   const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
@@ -411,6 +398,7 @@ export async function fetchSectorMarketSharePercent(
           projection: {
             _id: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
             corporationId: 1,
@@ -511,6 +499,7 @@ export async function fetchCorporationNationalSectorSharesByCountry(
           stateId: 1,
           sectorType: 1,
           revenue: 1,
+          realizedRevenue: 1,
           capitalStock: 1,
           plantCount: 1,
         },
@@ -589,13 +578,14 @@ export async function fetchMarketSharePercentForSectors(
       | "stateId"
       | "sectorType"
       | "revenue"
+      | "realizedRevenue"
       | "countryId"
       | "corporationId"
       | "capitalStock"
       | "plantCount"
     >
   >,
-  /** @deprecated Ignored. Share is revenue-basis in every tier. */
+  /** @deprecated Ignored. */
   _plantsEnabled: boolean = false
 ): Promise<Map<string, number>> {
   if (targetSectors.length === 0) return new Map();
@@ -621,6 +611,7 @@ export async function fetchMarketSharePercentForSectors(
             countryId: 1,
             corporationId: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
           },
@@ -662,6 +653,7 @@ export async function fetchAttackerDefenderShares(
     | "sectorType"
     | "countryId"
     | "revenue"
+    | "realizedRevenue"
     | "capitalStock"
     | "plantCount"
     | "strategyId"
@@ -669,8 +661,7 @@ export async function fetchAttackerDefenderShares(
   /** The target sector's owner; siblings resolve their own owners from the db. */
   defenderCorp: CorpCapitalCurrencyInfo,
   attackerCorpId: import("mongodb").ObjectId,
-  // Retained for call-site compatibility. Market share is revenue-basis in every
-  // tier now, so the tier does not select a basis.
+  // Retained for call-site compatibility; the tier does not affect share.
   _plantsEnabled: boolean = false
 ): Promise<{ defenderSharePercent: number; attackerSharePercent: number }> {
   const { loadValuationFxRates } = await import("@/lib/currency/corporationCapital");
@@ -688,6 +679,7 @@ export async function fetchAttackerDefenderShares(
             _id: 1,
             corporationId: 1,
             revenue: 1,
+            realizedRevenue: 1,
             capitalStock: 1,
             plantCount: 1,
             sectorType: 1,
