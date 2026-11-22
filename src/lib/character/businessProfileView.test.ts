@@ -5,6 +5,7 @@ const data = {
   isInvestor: true,
   portfolioValue: 123456,
   dividendIncomePerTurn: 0,
+  dividendsReceived: null,
   bondIncomePerTurn: 0,
   equityHoldingCount: 1,
   bondHoldingCount: 0,
