@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { Impeachment } from "@/lib/db/types/impeachment";
@@ -361,6 +368,13 @@ describe("autoVoteNppsForImpeachmentStage", () => {
       updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
     } as MockDb["collectionMocks"][string];
 
+    db.collectionMocks.electedOfficials.find.mockReturnValueOnce({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { countryId: "US", officeType: "president", characterId: presidentId },
+        ]),
+    } as never);
     await processImpeachmentLifecycle(db as unknown as Db, 10, new Date());
 
     expect(db.collectionMocks.impeachments.updateOne).toHaveBeenCalledWith(
@@ -437,6 +451,13 @@ describe("autoVoteNppsForImpeachmentStage", () => {
       updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
     } as MockDb["collectionMocks"][string];
 
+    db.collectionMocks.electedOfficials.find.mockReturnValueOnce({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { countryId: "US", officeType: "president", characterId: presidentId },
+        ]),
+    } as never);
     await processImpeachmentLifecycle(db as unknown as Db, 10, new Date());
 
     expect(db.collectionMocks.impeachments.updateOne).toHaveBeenCalledWith(
@@ -496,6 +517,13 @@ describe("autoVoteNppsForImpeachmentStage", () => {
       updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
     } as MockDb["collectionMocks"][string];
 
+    db.collectionMocks.electedOfficials.find.mockReturnValueOnce({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { countryId: "US", officeType: "president", characterId: presidentId },
+        ]),
+    } as never);
     await processImpeachmentLifecycle(db as unknown as Db, 10, new Date());
 
     // Prod doc 6a80c184f6e762f349e0718e was acquitted on zero votes cast; the

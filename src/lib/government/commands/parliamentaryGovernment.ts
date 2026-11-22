@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { ApiError, badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { createNotification } from "@/lib/notifications";
 import { clearWhippedFromVote } from "@/lib/congress/clearWhippedVote";
@@ -21,7 +22,7 @@ import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { canTriggerNoConfidence } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -415,6 +416,17 @@ export async function proposeNoConfidence(
   proposerUserId: string,
   proposer: Pick<Character, "_id" | "name">
 ): Promise<{ success: true; voteId: string }> {
+  return withSessionDb(db, (tx) =>
+    proposeNoConfidenceInTransaction(tx, countryId, proposerUserId, proposer)
+  );
+}
+
+async function proposeNoConfidenceInTransaction(
+  db: Db,
+  countryId: CountryId,
+  proposerUserId: string,
+  proposer: Pick<Character, "_id" | "name">
+): Promise<{ success: true; voteId: string }> {
   getParliamentaryCountryConfig(countryId);
   const offices = await loadRuntimeCountryOffices(db, countryId);
   const countryConfig = offices.config;
@@ -508,7 +520,13 @@ export async function proposeNoConfidence(
 
   const voteResult = await getNoConfidenceVotesCollection(db).insertOne(voteDoc);
   const claimResult = await getGovernmentFormationsCollection(db).findOneAndUpdate(
-    { _id: countryId, activeVoteId: null },
+    {
+      _id: countryId,
+      activeVoteId: null,
+      status: "formed",
+      pmCharacterId: govFormation.pmCharacterId ?? null,
+      pmNppId: govFormation.pmNppId ?? null,
+    },
     { $set: { activeVoteId: voteResult.insertedId, updatedAt: now } }
   );
   if (!claimResult) {
@@ -516,16 +534,18 @@ export async function proposeNoConfidence(
     throw badRequest("A no-confidence vote is already in progress");
   }
 
-  await notifyNoConfidenceParticipants(
-    db,
-    countryId,
-    proposerUserId,
-    proposer.name,
-    govFormation.pmCharacterId,
-    targetPmName,
-    offices.lowerOfficeType,
-    countryConfig.legislature.lowerChamber.shortName,
-    countryConfig.executiveTitle
+  await afterCommit(db, () =>
+    notifyNoConfidenceParticipants(
+      unboundDb(db),
+      countryId,
+      proposerUserId,
+      proposer.name,
+      govFormation.pmCharacterId,
+      targetPmName,
+      offices.lowerOfficeType,
+      countryConfig.legislature.lowerChamber.shortName,
+      countryConfig.executiveTitle
+    )
   );
 
   return { success: true, voteId: voteResult.insertedId.toString() };
@@ -597,6 +617,21 @@ export async function castNoConfidenceVote(
 }
 
 export async function triggerPrimeMinisterSnapElection(
+  db: Db,
+  countryId: CountryId,
+  character: Pick<Character, "_id" | "name">
+): Promise<{
+  success: true;
+  message: string;
+  snapElectionsUsed: number;
+  snapElectionsRemaining: number;
+}> {
+  return withSessionDb(db, (tx) =>
+    triggerPrimeMinisterSnapElectionInTransaction(tx, countryId, character)
+  );
+}
+
+async function triggerPrimeMinisterSnapElectionInTransaction(
   db: Db,
   countryId: CountryId,
   character: Pick<Character, "_id" | "name">

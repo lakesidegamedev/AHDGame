@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * Acting cabinet appointments fill vacant seats for one presidency-scoped charge.
  * Only Senate defeats from the current presidency block the same nominee and office.
@@ -23,12 +24,10 @@ import { actingRejectionScope } from "./rules/actingRejection";
 import { initialMinisterialActionFields } from "./ministerialActionPool";
 import {
   hasUnspentActingCharge,
-  refundActingCharge,
   spendActingCharge,
   type ActingChargeKey,
 } from "@/lib/db/collections/actingAppointmentCharges";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
@@ -83,121 +82,112 @@ export async function appointActingCabinetMember(
       return errorResponse(400, "Invalid positionId");
     }
 
-    const db = await getDb();
-    const now = new Date();
+    const database = await getDb();
+    return await withSessionDb(database, async (db) => {
+      const now = new Date();
 
-    // Era gating, same rule the nomination route enforces: a seat outside its
-    // yearEnabled/yearRetired range does not exist yet and cannot be filled,
-    // by confirmation or by an acting appointment.
-    if (!isSeatActive(positionDef, await getLiveGameYear(db), await getManuallyEnabledSeats(db))) {
-      return errorResponse(400, "This cabinet position does not exist in the current era");
-    }
+      // Era gating, same rule the nomination route enforces: a seat outside its
+      // yearEnabled/yearRetired range does not exist yet and cannot be filled,
+      // by confirmation or by an acting appointment.
+      if (
+        !isSeatActive(positionDef, await getLiveGameYear(db), await getManuallyEnabledSeats(db))
+      ) {
+        return errorResponse(400, "This cabinet position does not exist in the current era");
+      }
 
-    const presidentOfficial = await electedOfficialsCollection(db).findOne({
-      countryId,
-      officeType: "president",
-      characterId: { $ne: null },
-    });
-    if (!presidentOfficial?.characterId) {
-      return errorResponse(400, "No President in office");
-    }
+      const presidentOfficial = await electedOfficialsCollection(db).findOne({
+        countryId,
+        officeType: "president",
+        characterId: { $ne: null },
+      });
+      if (!presidentOfficial?.characterId) {
+        return errorResponse(400, "No President in office");
+      }
 
-    const myCharacter = await charactersCollection(db).findOne({
-      userId: new ObjectId(authUser.userId),
-    });
-    if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
-      return errorResponse(403, "Only the President can make acting appointments");
-    }
+      const myCharacter = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
+      if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
+        return errorResponse(403, "Only the President can make acting appointments");
+      }
 
-    const appointeeOid = new ObjectId(characterId);
-    const appointee = await charactersCollection(db).findOne({ _id: appointeeOid });
-    if (!appointee) {
-      return errorResponse(404, "Character not found");
-    }
+      const appointeeOid = new ObjectId(characterId);
+      const appointee = await charactersCollection(db).findOne({ _id: appointeeOid });
+      if (!appointee) {
+        return errorResponse(404, "Character not found");
+      }
 
-    if (
-      (await getIncompatibleOfficeHolders(db, "cabinet", [appointeeOid])).has(
-        appointeeOid.toString()
-      )
-    ) {
-      return errorResponse(
-        400,
-        "Leave the incompatible cabinet or central bank role before nomination"
-      );
-    }
+      if (
+        (await getIncompatibleOfficeHolders(db, "cabinet", [appointeeOid])).has(
+          appointeeOid.toString()
+        )
+      ) {
+        return errorResponse(
+          400,
+          "Leave the incompatible cabinet or central bank role before nomination"
+        );
+      }
 
-    if (!appointee.userId) {
-      return errorResponse(400, "Only player characters can receive acting appointments");
-    }
-    if (appointee.countryId !== countryId) {
-      return errorResponse(
-        400,
-        "Only politicians of this country can receive its cabinet appointments"
-      );
-    }
+      if (!appointee.userId) {
+        return errorResponse(400, "Only player characters can receive acting appointments");
+      }
+      if (appointee.countryId !== countryId) {
+        return errorResponse(
+          400,
+          "Only politicians of this country can receive its cabinet appointments"
+        );
+      }
 
-    const members = getCabinetMembersCollection(db);
+      const members = getCabinetMembersCollection(db);
 
-    // Vacancy only. Without this an acting appointment could evict a confirmed
-    // secretary, which would make confirmation optional.
-    const sitting = await members.findOne({ countryId, positionId });
-    if (sitting) {
-      return errorResponse(409, "This seat is already filled. Dismiss the current holder first.");
-    }
+      // Vacancy only. Without this an acting appointment could evict a confirmed
+      // secretary, which would make confirmation optional.
+      const sitting = await members.findOne({ countryId, positionId });
+      if (sitting) {
+        return errorResponse(409, "This seat is already filled. Dismiss the current holder first.");
+      }
 
-    const chargeKey: ActingChargeKey = {
-      countryId,
-      positionId,
-      presidentCharacterId: presidentOfficial.characterId,
-      presidencyStartedAt: presidentOfficial.electedAt ?? null,
-    };
-    if (!(await hasUnspentActingCharge(db, chargeKey))) {
-      return errorResponse(
-        409,
-        "You have already used your acting appointment for this office. It can only be filled by confirmation now."
-      );
-    }
-
-    // Keep the historical votes, but only this presidency can bar an acting pick.
-    // A failed office-compatibility check is not a Senate defeat.
-    const rejected = await cabinetNominationsCollection(db).findOne({
-      countryId,
-      positionId,
-      nomineeCharacterId: appointeeOid,
-      status: "rejected",
-      proposedByPresidentId: presidentOfficial.characterId,
-      ...actingRejectionScope(presidentOfficial.electedAt ?? null),
-    });
-    if (rejected) {
-      return errorResponse(
-        409,
-        "The Senate rejected this nominee for this office during the current presidency."
-      );
-    }
-
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 1;
-
-    // Charge first, seat second. The ledger's unique index is the real lock:
-    // the `hasUnspentActingCharge` check above can be raced by a double submit,
-    // and a duplicate key here means the charge was already spent. Seating
-    // first would let a losing race keep the seat but skip the charge, which is
-    // exactly the unlimited-appointments hole this whole change closes. The
-    // reverse failure (charge spent, seat not filled) costs one appointment and
-    // is recoverable by confirmation, so it is the safer way to fail.
-    try {
-      await spendActingCharge(db, chargeKey, appointeeOid, currentTurn);
-    } catch (error) {
-      if ((error as { code?: number }).code === 11000) {
+      const chargeKey: ActingChargeKey = {
+        countryId,
+        positionId,
+        presidentCharacterId: presidentOfficial.characterId,
+        presidencyStartedAt: presidentOfficial.electedAt ?? null,
+      };
+      if (!(await hasUnspentActingCharge(db, chargeKey))) {
         return errorResponse(
           409,
           "You have already used your acting appointment for this office. It can only be filled by confirmation now."
         );
       }
-      throw error;
-    }
 
-    try {
+      // Keep the historical votes, but only this presidency can bar an acting pick.
+      // A failed office-compatibility check is not a Senate defeat.
+      const rejected = await cabinetNominationsCollection(db).findOne({
+        countryId,
+        positionId,
+        nomineeCharacterId: appointeeOid,
+        status: "rejected",
+        proposedByPresidentId: presidentOfficial.characterId,
+        ...actingRejectionScope(presidentOfficial.electedAt ?? null),
+      });
+      if (rejected) {
+        return errorResponse(
+          409,
+          "The Senate rejected this nominee for this office during the current presidency."
+        );
+      }
+
+      const gameState = await getGameState();
+      const currentTurn = gameState?.currentTurn ?? 1;
+
+      const fenced = await electedOfficialsCollection(db).updateOne(
+        { _id: presidentOfficial._id, characterId: myCharacter._id },
+        { $inc: { actingAppointmentRevision: 1 } }
+      );
+      if (fenced.matchedCount !== 1) throw new Error("The President changed during appointment");
+
+      await spendActingCharge(db, chargeKey, appointeeOid, currentTurn);
+
       await members.insertOne({
         countryId,
         positionId,
@@ -213,39 +203,31 @@ export async function appointActingCabinetMember(
         createdAt: now,
         updatedAt: now,
       } as never);
-    } catch (error) {
-      // Seating failed after the charge was spent, so give it back: the
-      // President never got the appointment they paid for. Reachable when a
-      // concurrent request wins the seat between the vacancy check and here,
-      // which the seat's own unique index rejects.
-      await refundActingCharge(db, chargeKey).catch(() => undefined);
-      // A duplicate key IS that lost race (seat filled, or the appointee was
-      // just seated elsewhere): a player-visible 409, not a server fault.
-      if (isDuplicateKeyError(error)) {
-        return errorResponse(
-          409,
-          "That seat or appointee was just claimed by another appointment."
-        );
-      }
-      throw error;
-    }
 
-    // From the country's own roster, resolved above, rather than the global
-    // lookup: two countries may share a position id with different names.
-    const posName = positionDef.name;
-    await createNotification({
-      userId: appointee.userId,
-      type: "system",
-      title: "Acting Cabinet Appointment",
-      message: `You have been appointed Acting ${posName} by the President. This appointment lasts ${ACTING_TENURE_TURNS} turns unless the Senate confirms you.`,
-      metadata: { positionId, type: "cabinet_acting_appointed" },
-    });
+      // From the country's own roster, resolved above, rather than the global
+      // lookup: two countries may share a position id with different names.
+      const posName = positionDef.name;
+      await afterCommit(db, () =>
+        createNotification({
+          userId: appointee.userId,
+          type: "system",
+          title: "Acting Cabinet Appointment",
+          message: `You have been appointed Acting ${posName} by the President. This appointment lasts ${ACTING_TENURE_TURNS} turns unless the Senate confirms you.`,
+          metadata: { positionId, type: "cabinet_acting_appointed" },
+        })
+      );
 
-    return NextResponse.json({
-      success: true,
-      message: `${appointee.name} appointed as Acting ${posName}.`,
+      return NextResponse.json({
+        success: true,
+        message: `${appointee.name} appointed as Acting ${posName}.`,
+      });
     });
   } catch (error) {
+    if (isDuplicateKeyError(error))
+      return errorResponse(
+        409,
+        "That acting charge, seat or appointee was just claimed by another appointment."
+      );
     return handleRouteError(error);
   }
 }

@@ -21,6 +21,8 @@ export interface ElectedOfficial {
   senateClass?: SenateClass;
   /** Governor-row fence for concurrent Senate vacancy appointments. */
   senateAppointmentRevision?: number;
+  /** President-row fence for acting appointments and changes of administration. */
+  actingAppointmentRevision?: number;
   /** Staggered multi-seat chamber class (e.g. JP Sangiin 1/2). Distinct from senateClass,
    * which is single-seat US Senate. Needed to scope deletion/sweep when one class
    * resolves so the other class's officials aren't wiped. */
