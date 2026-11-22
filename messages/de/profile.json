@@ -268,6 +268,8 @@
       "campaignTitle": "Wahlkampf in deiner Heimatregion ({done} von {goal})",
       "campaignBody": "Wahlkampf ist die einzige Aktion, die Politischen Einfluss erhöht, und Einfluss vervielfacht jede Spendenaktion und trägt dich in Wahlen. Du hast gerade {influence}.",
       "campaignButton": "Wahlkampf in der Heimatregion",
+      "campaignInProgress": "Wahlkampf läuft",
+      "campaignUnconfirmed": "Das Ergebnis konnte nicht bestätigt werden. Lade die Seite neu und prüfe deinen Fortschritt, bevor du es erneut versuchst.",
       "campaignCost": "{actions, plural, one {# Aktion} other {# Aktionen}} und {funds} aus der Wahlkampfkasse",
       "campaignCostUnavailable": "Unter Aktionen siehst du, ob du Wahlkampf machen kannst.",
       "campaignFailed": "Der Wahlkampf hat nicht geklappt. Versuche es noch einmal.",
