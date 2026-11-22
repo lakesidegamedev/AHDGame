@@ -142,7 +142,9 @@ export function EconomyOutlookClient() {
                 {data.stateOwnership.status.tier !== "none" && (
                   <div className="rounded-xl border border-card-border bg-card px-5 py-4 shadow-sm">
                     <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="text-sm font-bold text-foreground">State ownership</h3>
+                      <h3 className="text-sm font-bold text-foreground">
+                        State ownership concentration
+                      </h3>
                       <span
                         className={`text-lg font-bold tabular-nums ${
                           data.stateOwnership.status.tier === "high"
@@ -160,6 +162,11 @@ export function EconomyOutlookClient() {
                     </div>
                     <p className="mt-2 text-[11px] leading-snug text-muted">
                       {data.stateOwnership.status.note}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-muted">
+                      This is the share of corporate revenue earned by state-owned companies. The
+                      sector tiles show the corporate-owned share of each market, which is a
+                      different measure.
                     </p>
                   </div>
                 )}

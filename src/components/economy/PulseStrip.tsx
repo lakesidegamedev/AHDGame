@@ -30,6 +30,8 @@ export interface PulseData {
     /** Optional so older payloads and fixtures still type-check. */
     debtTrajectory?: "falling" | "stable" | "rising" | null;
     primaryBalancePct?: number | null;
+    /** GDP the ratios divide by (smoothed budget GDP), in millions. */
+    ratioGdpMillions?: number | null;
     stabilisingPrimaryBalancePct?: number | null;
     /** Ladder rate the flat-balance figure is priced at, in percent. */
     debtPathBasisPct?: number | null;
@@ -195,6 +197,14 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
               {(pulse.credit.debtToGdpRatio * 100).toFixed(1)}% debt-to-GDP
             </span>
           )}
+          {pulse.credit.debtToGdpRatio != null &&
+            pulse.credit.ratioGdpMillions != null &&
+            pulse.credit.ratioGdpMillions > 0 && (
+              <span className="block text-[11px] font-normal text-muted">
+                on budget GDP {formatGDP(pulse.credit.ratioGdpMillions, prefix)}, a smoothed figure
+                that can differ from the GDP shown first
+              </span>
+            )}
         </span>
         {primaryBalance != null && (
           <span className="text-[11px] text-muted">

@@ -87,6 +87,8 @@ export interface CountryEconomyOutlook {
       /** Which way the ratio is moving, from the same debt-dynamics identity the rollover prices. */
       debtTrajectory: DebtTrajectory | null;
       primaryBalancePct: number | null;
+      /** GDP the ratios on this card divide by, in millions; null when unavailable. */
+      ratioGdpMillions?: number | null;
       /** Primary balance, in percent of GDP, that holds the ratio flat. */
       stabilisingPrimaryBalancePct: number | null;
       /** Ladder rate the path is priced at, in percent, before premiums. */
@@ -312,6 +314,7 @@ export async function buildCountryEconomyOutlook(
         rating: budget?.creditRating ?? null,
         debtToGdpRatio: budget?.debtToGdpRatio ?? null,
         debtTrajectory: debtPath?.trajectory ?? null,
+        ratioGdpMillions: ratioGdp > 0 ? round2(ratioGdp / 1_000_000) : null,
         primaryBalancePct: debtInputs ? round2(debtInputs.primaryBalanceToGdp * 100) : null,
         stabilisingPrimaryBalancePct:
           debtPath === null ? null : round2(debtPath.stabilisingPrimaryBalanceToGdp * 100),

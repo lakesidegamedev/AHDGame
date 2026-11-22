@@ -20,6 +20,7 @@ interface StateBudgetSectionProps {
 
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { checkTaxLine, reconcileRevenueLines } from "@/lib/budget/rules/stateRevenueLines";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 
 const TAX_BASE_LABELS: Record<string, string> = {
@@ -83,6 +84,9 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
 
   const { budget, grantBreakdown } = data;
   const netBalance = budget.surplus;
+  const { lines: revenueLines, total: revenueTotal } = reconcileRevenueLines(
+    budget.revenue as unknown as Record<string, number | undefined>
+  );
 
   return (
     <div className="space-y-6">
@@ -112,56 +116,63 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
         <div className="rounded-xl border border-card-border bg-card p-4">
           <h3 className="font-medium mb-3">Revenue sources</h3>
           <div className="space-y-2 text-sm">
-            {Object.entries(budget.revenue)
-              .filter(([key]) => key !== "total")
-              .map(([key, value]) => {
-                const taxRate = getNumericField(budget.taxRates, key);
-                // Use stored tax base if available, otherwise derive from revenue/rate
-                const taxBaseField = REVENUE_TO_TAX_BASE[key];
-                const storedTaxBase =
-                  taxBaseField && budget.taxBases
-                    ? (budget.taxBases as unknown as Record<string, number | undefined>)[
-                        taxBaseField
-                      ]
-                    : undefined;
-                const taxBase =
-                  storedTaxBase ?? (taxRate && taxRate > 0 ? value / (taxRate / 100) : 0);
-                const baseLabel = TAX_BASE_LABELS[key] || "Tax Base";
-                return (
-                  <div key={key} className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="capitalize">
-                        {key === "federalGrants"
-                          ? getCountryClientConfig(countryId as CountryId).centralGovernmentLabel
+            {revenueLines.map(({ key, value }) => {
+              const taxRate = getNumericField(budget.taxRates, key);
+              // Use stored tax base if available, otherwise derive from revenue/rate
+              const taxBaseField = REVENUE_TO_TAX_BASE[key];
+              const storedTaxBase =
+                taxBaseField && budget.taxBases
+                  ? (budget.taxBases as unknown as Record<string, number | undefined>)[taxBaseField]
+                  : undefined;
+              const taxBase =
+                storedTaxBase ?? (taxRate && taxRate > 0 ? value / (taxRate / 100) : 0);
+              const baseLabel = TAX_BASE_LABELS[key] || "Tax Base";
+              const check = checkTaxLine(value, taxRate, storedTaxBase);
+              const lagNote =
+                check.computed != null && !check.matches
+                  ? `Base times rate is ${formatMoney(check.computed)}. Booked revenue was set from the tax base as it stood earlier this year.`
+                  : null;
+              return (
+                <div key={key} className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="capitalize">
+                      {key === "federalGrants"
+                        ? getCountryClientConfig(countryId as CountryId).centralGovernmentLabel
+                        : key === "unitemisedRevenue"
+                          ? "Other revenue"
                           : key.replace(/([A-Z])/g, " $1")}
-                      </span>
-                      {taxRate !== undefined && (
-                        <span
-                          className="text-xs text-muted bg-card-muted px-1.5 py-0.5 rounded cursor-help relative group"
-                          title={`${baseLabel}: ${formatMoney(taxBase)} × ${taxRate.toFixed(1)}% = ${formatMoney(value)}`}
-                        >
-                          {taxRate.toFixed(1)}%
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background border border-card-border rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                            <span className="block font-medium text-foreground mb-1">
-                              Revenue calculation
-                            </span>
-                            <span className="block text-muted">
-                              {baseLabel}: {formatMoney(taxBase)}
-                            </span>
-                            <span className="block text-muted">
-                              Tax rate: {taxRate.toFixed(1)}%
-                            </span>
-                            <span className="block text-foreground font-medium mt-1">
-                              = {formatMoney(value)}
-                            </span>
+                    </span>
+                    {taxRate !== undefined && (
+                      <span
+                        className="text-xs text-muted bg-card-muted px-1.5 py-0.5 rounded cursor-help relative group"
+                        title={`${baseLabel}: ${formatMoney(taxBase)} × ${taxRate.toFixed(1)}%${check.matches ? ` = ${formatMoney(value)}` : `. Booked ${formatMoney(value)}. ${lagNote}`}`}
+                      >
+                        {taxRate.toFixed(1)}%
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background border border-card-border rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          <span className="block font-medium text-foreground mb-1">
+                            Revenue calculation
                           </span>
+                          <span className="block text-muted">
+                            {baseLabel}: {formatMoney(taxBase)}
+                          </span>
+                          <span className="block text-muted">Tax rate: {taxRate.toFixed(1)}%</span>
+                          <span className="block text-foreground font-medium mt-1">
+                            {check.matches ? "= " : "Booked: "}
+                            {formatMoney(value)}
+                          </span>
+                          {lagNote && <span className="block text-muted">{lagNote}</span>}
                         </span>
-                      )}
-                    </div>
-                    <span className="font-mono">{formatMoney(value)}</span>
+                      </span>
+                    )}
                   </div>
-                );
-              })}
+                  <span className="font-mono">{formatMoney(value)}</span>
+                </div>
+              );
+            })}
+            <div className="flex justify-between border-t border-card-border pt-2 font-medium">
+              <span>Total revenue</span>
+              <span className="font-mono">{formatMoney(revenueTotal)}</span>
+            </div>
           </div>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-4">
