@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { formatPercentDelta } from "@/lib/ui/numbers";
+import { toneForDelta, toneText } from "@/lib/ui/tone";
 export { vsBasePct } from "@/lib/market/overviewPreview";
 
 export function pctText(value: number | null | undefined, digits = 1): string {
   if (value == null || !Number.isFinite(value)) return "n/a";
-  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
+  return formatPercentDelta(value, digits);
 }
 
 export function toneClass(value: number | null | undefined): string {
-  if (value == null || value === 0) return "text-muted";
-  return value > 0 ? "text-success" : "text-error";
+  return toneText(toneForDelta(value));
 }
 
 export function PanelState({

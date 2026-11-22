@@ -4,6 +4,7 @@ import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { formatNum, appealColor, partyHex } from "../pollHelpers";
 import { EconomicPositionPip, SocialPositionPip } from "./PollCharts";
 import type { ElectionContext, InRaceVoteShare, LastElectionPartySummary } from "../types";
+import { formatPercent, formatScore } from "@/lib/ui/numbers";
 
 function partyVotePct(
   last: LastElectionPartySummary | null | undefined,
@@ -118,7 +119,7 @@ export function ElectionComparisonPanel({
       <div
         className="mt-3 flex h-3 w-full gap-px overflow-hidden rounded-full"
         role="img"
-        aria-label={`Combined pool: ${entries.map((e) => `${e.name} ${share(e.votes).toFixed(1)}%`).join(", ")}`}
+        aria-label={`Combined pool: ${entries.map((e) => `${e.name} ${formatPercent(share(e.votes))}`).join(", ")}`}
       >
         {entries.map((e) => (
           <div
@@ -136,7 +137,7 @@ export function ElectionComparisonPanel({
               style={{ backgroundColor: partyHex(partyColors, e.party) }}
               aria-hidden
             />
-            {e.name} {share(e.votes).toFixed(1)}%
+            {e.name} {formatPercent(share(e.votes))}
           </li>
         ))}
       </ul>
@@ -165,7 +166,7 @@ export function ElectionComparisonPanel({
                     {formatNum(e.votes)}
                   </span>
                   <span className="ml-2 text-body-sm tabular-nums text-muted">
-                    {share(e.votes).toFixed(1)}%
+                    {formatPercent(share(e.votes))}
                   </span>
                 </div>
               </div>
@@ -180,7 +181,7 @@ export function ElectionComparisonPanel({
                   <span
                     className={`w-24 text-right text-body-sm font-medium tabular-nums ${appealColor(e.appeal)}`}
                   >
-                    {e.appeal.toFixed(1)} appeal
+                    {formatScore(e.appeal)} appeal
                   </span>
                 )}
               </div>
@@ -192,8 +193,8 @@ export function ElectionComparisonPanel({
                   <span>
                     Social <SocialPositionPip value={e.social} />
                   </span>
-                  <span>Favorability {e.favorability?.toFixed(0)}%</span>
-                  <span>Influence {e.influence?.toFixed(0)}%</span>
+                  <span>Favorability {formatPercent(e.favorability ?? 0, 0)}</span>
+                  <span>Influence {formatPercent(e.influence ?? 0, 0)}</span>
                 </div>
               )}
             </li>
@@ -245,10 +246,10 @@ export function ElectionComparisonPanel({
                       </span>
                     </th>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {share(e.votes).toFixed(1)}%
+                      {formatPercent(share(e.votes))}
                     </td>
                     <td className="py-2 pl-3 text-right tabular-nums text-muted">
-                      {last != null ? `${last.toFixed(1)}%` : "No data"}
+                      {last != null ? formatPercent(last) : "No data"}
                     </td>
                   </tr>
                 );

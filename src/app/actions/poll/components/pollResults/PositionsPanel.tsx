@@ -4,6 +4,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { EconomicPositionPip, SocialPositionPip } from "../PollCharts";
 import { partyHex } from "../../pollHelpers";
 import type { PollData } from "../../types";
+import { formatPercent, formatScore } from "@/lib/ui/numbers";
 
 function Fact({ label, tip, children }: { label: string; tip: string; children: React.ReactNode }) {
   return (
@@ -32,13 +33,13 @@ export function PositionsPanel({ pollData }: { pollData: PollData }) {
         label="Favorability"
         tip="Favorability (0 to 100%) scales your votes. Voters who don't approve of you won't support you."
       >
-        <span className="text-warning">{character.favorability.toFixed(1)}%</span>
+        <span className="text-warning">{formatPercent(character.favorability)}</span>
       </Fact>
       <Fact
         label="Political influence"
         tip="Influence sets your reach, the fraction of voters who know you exist."
       >
-        <span className="text-secondary">{character.politicalInfluence.toFixed(1)}%</span>
+        <span className="text-secondary">{formatPercent(character.politicalInfluence)}</span>
       </Fact>
       {character.partyOrg != null && (
         <Fact
@@ -51,7 +52,7 @@ export function PositionsPanel({ pollData }: { pollData: PollData }) {
               style={{ backgroundColor: orgColor }}
               aria-hidden
             />
-            {character.partyOrg.toFixed(0)}
+            {formatScore(character.partyOrg, 0)}
             <span className="text-body-sm font-normal text-muted">/ 100</span>
           </span>
         </Fact>

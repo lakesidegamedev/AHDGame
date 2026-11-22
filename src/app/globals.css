@@ -9,8 +9,8 @@
 [data-theme="default"] {
   --background: #14141c;
   --foreground: #e8e8ee;
-  --primary: #dc2626;
-  --primary-dark: #991b1b;
+  --primary: #6d5dfc; /* Violet: actions, tabs and links only; red is reserved for loss */
+  --primary-dark: #5b4bdb;
   --secondary: #1d4ed8;
   --secondary-dark: #1e3a8a;
   --accent: #e8e8ee;
@@ -71,8 +71,8 @@
   --blend-muted: #8f8f9d;
   --blend-mutedDim: #6b6b7a;
   --blend-mutedDimmer: #5f5f70;
-  --blend-accent: #dc2626;
-  --blend-accentInk: #f0a0a0;
+  --blend-accent: #6d5dfc;
+  --blend-accentInk: #c4bcff;
   --blend-positive: #22c55e;
   --blend-caution: #eab308;
   --blend-gold: #d4af37;
@@ -115,8 +115,8 @@
   --blend-muted: #8f8f9d;
   --blend-mutedDim: #6b6b7a;
   --blend-mutedDimmer: #5f5f70;
-  --blend-accent: #dc2626;
-  --blend-accentInk: #f0a0a0;
+  --blend-accent: #6d5dfc;
+  --blend-accentInk: #c4bcff;
   --blend-positive: #22c55e;
   --blend-caution: #eab308;
   --blend-gold: #d4af37;
@@ -127,8 +127,8 @@
 [data-theme="light"] {
   --background: #f8fafc; /* Slate 50 - Softer than pure white */
   --foreground: #0f172a; /* Slate 900 - High contrast, soft black */
-  --primary: #dc2626; /* Red 600 - Standard political red */
-  --primary-dark: #b91c1c; /* Red 700 */
+  --primary: #5b4bdb; /* Violet: actions, tabs and links only; red is reserved for loss */
+  --primary-dark: #4c3fc4;
   --secondary: #2563eb; /* Blue 600 - Clear blue */
   --secondary-dark: #1d4ed8; /* Blue 700 */
   --accent: #0f172a;
@@ -174,8 +174,8 @@
 [data-theme="oled"] {
   --background: #000000;
   --foreground: #ffffff;
-  --primary: #ff3b3b;
-  --primary-dark: #cc2a2a;
+  --primary: #7c6cff; /* Violet: actions, tabs and links only; red is reserved for loss */
+  --primary-dark: #6d5dfc;
   --secondary: #4d8cff;
   --secondary-dark: #2d6fd6;
   --accent: #ffffff;
@@ -207,8 +207,8 @@
 [data-theme="usa"] {
   --background: #0f1e38; /* A brighter, more distinct navy than the default slate */
   --foreground: #fffbeb; /* Amber 50 - Warm parchment white */
-  --primary: #ef4444; /* Red 500 */
-  --primary-dark: #b91c1c; /* Red 700 */
+  --primary: #6d5dfc; /* Violet: actions, tabs and links only; red is reserved for loss */
+  --primary-dark: #5b4bdb;
   --secondary: #3b82f6; /* Blue 500 */
   --secondary-dark: #1d4ed8; /* Blue 700 */
   /* Red 500 and Blue 500 are too dark to read as TEXT on this navy — 3.1:1 on

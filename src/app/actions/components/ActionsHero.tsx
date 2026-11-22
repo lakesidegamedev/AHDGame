@@ -8,6 +8,8 @@ import { HeroImage } from "@/components/HeroImage";
 import { calculateFavorabilityAboveThresholdPenalty } from "@shared/constants/formulas";
 import Link from "next/link";
 import { useState } from "react";
+import { formatPercent } from "@/lib/ui/numbers";
+import { toneText } from "@/lib/ui/tone";
 
 interface ActionsHeroProps {
   character: Character;
@@ -167,9 +169,9 @@ export default function ActionsHero({
           <div>
             <dt className={LABEL_CLASS}>Infamy</dt>
             <dd
-              className={`text-heading font-semibold tabular-nums ${infamy > 20 ? "text-error" : "text-foreground"}`}
+              className={`text-heading font-semibold tabular-nums ${toneText(infamy > 20 ? "warning" : "neutral")}`}
             >
-              {infamy.toFixed(1)}%
+              {formatPercent(infamy)}
             </dd>
           </div>
 
@@ -184,10 +186,10 @@ export default function ActionsHero({
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className={LABEL_CLASS}>Influence</span>
               <span className="text-body font-semibold tabular-nums text-foreground">
-                {influence.toFixed(1)}%
+                {formatPercent(influence)}
               </span>
             </div>
-            <Meter value={influence} fillClass="bg-primary" />
+            <Meter value={influence} fillClass="bg-secondary" />
             <div className="mt-1 text-right text-body-sm text-muted">
               Decay: -{influenceDecay}% per turn
             </div>
@@ -196,7 +198,7 @@ export default function ActionsHero({
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className={LABEL_CLASS}>Favorability</span>
               <span className="text-body font-semibold tabular-nums text-foreground">
-                {favorability.toFixed(1)}%
+                {formatPercent(favorability)}
               </span>
             </div>
             <Meter value={favorability} fillClass="bg-warning" />
