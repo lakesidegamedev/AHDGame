@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
 import { markCongressLeadershipHeld } from "@/lib/wiki/markCongressLeadership";
 import {
@@ -9,18 +10,21 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { computeCongressLeadershipTally } from "@/lib/congress/governmentVoteBreakdown";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
-import type {
-  CongressLeader,
-  SpeakerElection,
-  SpeakerNomination,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
 
 export async function resolveSpeakerElection(
+  db: Db,
+  _partyMap: Map<string, PoliticalParty>,
+  force = false
+): Promise<boolean> {
+  return withSessionDb(db, (tx) => resolveSpeakerElectionInTransaction(tx, _partyMap, force));
+}
+
+async function resolveSpeakerElectionInTransaction(
   db: Db,
   _partyMap: Map<string, PoliticalParty>,
   force = false
@@ -85,8 +89,10 @@ export async function resolveSpeakerElection(
     },
     { upsert: true }
   );
-  markCongressLeadershipHeld(db, winner.nomineeId.toString(), now).catch((err) =>
-    console.error("[Speaker] Failed to mark congress leadership:", err)
+  await afterCommit(db, () =>
+    markCongressLeadershipHeld(unboundDb(db), winner.nomineeId.toString(), now).catch((err) =>
+      console.error("[Speaker] Failed to mark congress leadership:", err)
+    )
   );
   // Atomically claim the close so a concurrent resolver (turn phase racing a
   // real-time action, or two containers overlapping on redeploy) cannot also
@@ -106,14 +112,16 @@ export async function resolveSpeakerElection(
         { projection: { avatarUrl: 1 } }
       )
     )?.avatarUrl;
-    sendCountryGameEvent("US", {
-      title: `Leadership Election Result — ${roleLabel}`,
-      description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
-      color: DISCORD_COLORS.leadership,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
-    }).catch(() => {});
+    await afterCommit(db, () =>
+      sendCountryGameEvent("US", {
+        title: `Leadership Election Result: ${roleLabel}`,
+        description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
+        color: DISCORD_COLORS.leadership,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
+      }).catch(() => {})
+    );
   }
 
   return true;

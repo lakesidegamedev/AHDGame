@@ -347,20 +347,45 @@ export async function runBillLifecycle(
     }
   }
 
-  for (const transition of billStatusTransitions.get(result) ?? []) {
-    await captureBillStatusChanged({
-      db,
-      billId: transition.bill._id.toString(),
-      fromStatus: transition.fromStatus,
-      toStatus: transition.toStatus,
-      scope: "national",
-      chamber: transition.bill.currentChamber ?? transition.bill.originChamber,
-      category: transition.bill.category,
-      provisionFamily: transition.bill.provisions?.[0]?.type,
-      voteMargin: transition.bill.votesFor - transition.bill.votesAgainst,
-      nationId: transition.bill.countryId ?? config.country,
-      turn: transition.turn,
-    });
+  const recorded = await billsCollection(db)
+    .find(
+      {
+        $and: [billCountryScope(config)],
+        originChamber: { $in: config.originChambers },
+        "lifecycleReceipts.turn": currentTurn,
+      },
+      { projection: { _id: 1, countryId: 1, lifecycleReceipts: 1 } }
+    )
+    .toArray();
+  const receipts = recorded.flatMap((bill) =>
+    (bill.lifecycleReceipts ?? [])
+      .filter((receipt) => receipt.turn === currentTurn)
+      .map((receipt) => ({ bill, receipt }))
+  );
+  if (receipts.length > 0) {
+    result.billsProcessed = result.billsPassed = result.billsFailed = result.billsVetoed = 0;
+    result.enactedCategories = [];
+    result.transitionedTo = {};
+    for (const { bill, receipt } of receipts) {
+      for (const key of ["billsProcessed", "billsPassed", "billsFailed", "billsVetoed"] as const)
+        result[key] += receipt.counters[key];
+      result.enactedCategories.push(...receipt.enactedCategories);
+      for (const [status, count] of Object.entries(receipt.transitionedTo))
+        result.transitionedTo[status] = (result.transitionedTo[status] ?? 0) + count;
+      await captureBillStatusChanged({
+        db,
+        billId: bill._id.toString(),
+        fromStatus: receipt.fromStatus,
+        toStatus: receipt.toStatus,
+        scope: "national",
+        chamber: receipt.chamber,
+        category: receipt.category,
+        provisionFamily: receipt.provisionFamily,
+        voteMargin: receipt.voteMargin,
+        nationId: bill.countryId ?? config.country,
+        turn: receipt.turn,
+      });
+    }
   }
   billStatusTransitions.delete(result);
   return result;

@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -81,7 +88,7 @@ describe("resolveNpcscChairElection", () => {
     const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
     expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
     expect(sendCountryGameEvent).toHaveBeenCalledWith("CN", {
-      title: "Leadership Election Result \u2014 Chairman of the NPC Standing Committee",
+      title: "Leadership Election Result: Chairman of the NPC Standing Committee",
       description: "**Winner** has been elected as **Chairman of the NPC Standing Committee**.",
       color: 0,
       footer: { text: "A House Divided" },

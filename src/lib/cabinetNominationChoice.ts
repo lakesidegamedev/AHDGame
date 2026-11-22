@@ -1,3 +1,6 @@
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * Cabinet nomination choice
  *
@@ -76,6 +79,13 @@ export async function resolveCabinetNominationChoice(
   db: Db,
   input: ResolveCabinetNominationChoiceInput
 ): Promise<ResolveCabinetNominationChoiceResult> {
+  return withSessionDb(db, (tx) => resolveCabinetNominationChoiceInTransaction(tx, input));
+}
+
+async function resolveCabinetNominationChoiceInTransaction(
+  db: Db,
+  input: ResolveCabinetNominationChoiceInput
+): Promise<ResolveCabinetNominationChoiceResult> {
   const nomination = await cabinetNominationsCollection(db).findOne({
     _id: input.nominationId,
     status: "awaiting_choice",
@@ -89,6 +99,18 @@ export async function resolveCabinetNominationChoice(
     nomination.choiceExpiresOnTurn <= input.currentTurn
   ) {
     return { ok: false, error: "That offer has expired." };
+  }
+
+  const executive = await electedOfficialsCollection(db).findOne(
+    getExecutiveOfficialFilter(nomination.countryId ?? "US", "president"),
+    { projection: { characterId: 1 } }
+  );
+  if (!executive?.characterId?.equals(nomination.proposedByPresidentId)) {
+    await cabinetNominationsCollection(db).updateOne(
+      { _id: nomination._id, status: "awaiting_choice" },
+      { $set: { status: "withdrawn", updatedAt: input.now } }
+    );
+    return { ok: false, error: "That offer belonged to the previous government." };
   }
 
   const posName = positionName(nomination.positionId);
@@ -142,9 +164,27 @@ export async function resolveCabinetNominationChoice(
         },
       });
     }
-    if (notifications.length > 0) await createNotifications(notifications);
+    if (notifications.length > 0) await afterCommit(db, () => createNotifications(notifications));
     return { ok: true };
   }
+
+  // Re-run the normal confirmation path on the next turn: voting is closed, the
+  // bank office is gone, so the seat is filled without any special-casing.
+  const reactivated = await cabinetNominationsCollection(db).updateOne(
+    { _id: nomination._id, status: "awaiting_choice" },
+    {
+      $set: {
+        status: "active",
+        votingEndsOnTurn: input.currentTurn,
+        votingEndsAt: input.now,
+        updatedAt: input.now,
+      },
+      $unset: { choiceOfferedAt: "", choiceExpiresOnTurn: "", rejectedAt: "", rejectionReason: "" },
+    }
+  );
+
+  if (reactivated.modifiedCount !== 1)
+    throw new Error("The cabinet offer changed during acceptance");
 
   // Accept: stand down from the bank office(s) that bar a cabinet seat. This
   // mirrors the chair resignation route, plus any US Fed board seat held.
@@ -187,21 +227,6 @@ export async function resolveCabinetNominationChoice(
     { arrayFilters: [{ "seat.occupantType": "player", "seat.characterId": input.characterId }] }
   );
 
-  // Re-run the normal confirmation path on the next turn: voting is closed, the
-  // bank office is gone, so the seat is filled without any special-casing.
-  await cabinetNominationsCollection(db).updateOne(
-    { _id: nomination._id, status: "awaiting_choice" },
-    {
-      $set: {
-        status: "active",
-        votingEndsOnTurn: input.currentTurn,
-        votingEndsAt: input.now,
-        updatedAt: input.now,
-      },
-      $unset: { choiceOfferedAt: "", choiceExpiresOnTurn: "", rejectedAt: "", rejectionReason: "" },
-    }
-  );
-
   if (presidentChar?.userId) {
     notifications.push({
       userId: presidentChar.userId,
@@ -228,7 +253,7 @@ export async function resolveCabinetNominationChoice(
       },
     });
   }
-  if (notifications.length > 0) await createNotifications(notifications);
+  if (notifications.length > 0) await afterCommit(db, () => createNotifications(notifications));
   return { ok: true };
 }
 
@@ -315,5 +340,5 @@ export async function expireUnansweredCabinetNominationChoices(
   if (updates.length > 0) {
     await cabinetNominationsCollection(db).bulkWrite(updates);
   }
-  if (notifications.length > 0) await createNotifications(notifications);
+  if (notifications.length > 0) await afterCommit(db, () => createNotifications(notifications));
 }

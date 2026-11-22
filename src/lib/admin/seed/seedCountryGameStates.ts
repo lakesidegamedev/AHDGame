@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
-import type { CountryGameState } from "@/lib/db/types/gameState";
 import type { CountryStatus } from "@/lib/constants/countries";
 import { isShippingPreset, tierFor, type CountryEraTier } from "@/lib/world/eraRoster";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
@@ -162,6 +161,7 @@ export async function seedCountryGameStates(
           updatedAt: now,
         },
         $setOnInsert: {
+          billPoliticalEffectTurns: {},
           currentTurn: 1,
           currentYear: startingYear,
           cycleStartTurn: 1,
