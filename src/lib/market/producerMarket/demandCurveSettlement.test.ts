@@ -155,7 +155,9 @@ describe("seller preference curve in settlement", () => {
       for (const o of result.offers) expect(o.soldUnits).toBeLessThanOrEqual(o.offeredUnits + 1e-9);
       const replay = replayUnits(result);
       for (const o of result.offers) expect(replay.get(o.id) ?? 0).toBeCloseTo(o.soldUnits, 6);
-      expect(result.tradeReceipt.fills.every((f) => f.supplierOfferIds != null)).toBe(true);
+      // Brand splits a price level into named subsets; a whole level stays pooled.
+      expect(result.tradeReceipt.fills.some((f) => f.supplierOfferIds != null)).toBe(true);
+      expect(result.tradeReceipt.fills.some((f) => f.supplierOfferIds == null)).toBe(true);
     });
 
     it("leaves the same order cheapest-first with the curve off", () => {
