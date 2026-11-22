@@ -6,7 +6,7 @@ summary: >-
   Issue Shares and quote screens use matching figures.
 tags: [corporations, bonds, shares]
 badges: [patch]
-areas: [corporations]
+areas: [frontend]
 ---
 
 ## What changed
