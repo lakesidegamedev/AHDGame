@@ -40,6 +40,7 @@ import { loadPortfolioHoldings } from "./corporationDetail/portfolioHoldings";
 import { computeIncomeStatement } from "./corporationDetail/incomeStatement";
 import { loadSubsidiaryContext } from "./corporationDetail/subsidiaryContext";
 import { buildFinancials } from "./corporationDetail/financials";
+import { loadLastTurnReconciliation } from "./corporationDetail/lastTurnReconciliation";
 import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
@@ -512,6 +513,7 @@ export async function loadCorporationDetailView(args: {
             }),
           }
         : {}),
+      lastTurnReconciliation: await loadLastTurnReconciliation(db, corporation),
     },
     sectors: sectorDetails.map((sd) => {
       const tax = income.perSectorTax.get(sd._id.toString());

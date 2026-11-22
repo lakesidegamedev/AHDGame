@@ -227,7 +227,11 @@ export default function RunReport({
 
       {price != null && unitCost > 0 && (
         <div data-testid="unit-economics">
-          <p className="mb-1 text-body-xs font-medium text-muted">Each unit sold last turn</p>
+          <p className="mb-1 text-body-xs font-medium text-muted">
+            {report.ownSiteValued
+              ? "Each unit sold or sent to your own sites last turn"
+              : "Each unit sold last turn"}
+          </p>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-track">
             <div className="flex h-full">
               {costs.map((c) => (

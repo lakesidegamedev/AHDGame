@@ -3,7 +3,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { revenueSplit } from "./keyStatisticsModel";
+import { recordedRevenueSplit, revenueSplit } from "./keyStatisticsModel";
 import { KeyStatistics, type KeyStatisticsProps } from "./KeyStatistics";
 
 const money = {
@@ -135,5 +135,32 @@ describe("KeyStatistics", () => {
       />
     );
     expect(screen.queryByText("Bid / ask")).toBeNull();
+  });
+});
+
+describe("recordedRevenueSplit", () => {
+  const statement = {
+    revenue: 220_112,
+    costs: 208_389,
+    tax: 3_048,
+    otherNet: 0,
+    dividendPaid: 434,
+    retained: 8_241,
+  };
+
+  it("reads every part from the recorded turn and adds back to revenue", () => {
+    const split = recordedRevenueSplit(statement)!;
+    expect(split.costs + split.interestAndTax + split.dividends + split.retained).toBe(
+      statement.revenue
+    );
+    expect(split.interestAndTax).toBe(3_048);
+  });
+
+  it("matches the Finance statement tax, not a forecast-minus-recorded gap", () => {
+    expect(recordedRevenueSplit({ ...statement, otherNet: -1_000 })!.interestAndTax).toBe(4_048);
+  });
+
+  it("is null for a loss, as the forecast split is", () => {
+    expect(recordedRevenueSplit({ ...statement, retained: -5 })).toBeNull();
   });
 });
