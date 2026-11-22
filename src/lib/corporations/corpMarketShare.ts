@@ -21,7 +21,6 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { computeMarketSharePercent, loadSectorOwnerCurrencyInfo } from "./marketShare";
 import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
-import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -59,8 +58,7 @@ export async function loadIndustryBasis(
   db: Db,
   countryId: CountryId,
   types: CorporationType[],
-  // Retained for call-site compatibility; market share is revenue-basis in every
-  // tier now, so the tier no longer selects a different basis.
+  // Retained for call-site compatibility; the tier does not affect share.
   _plantsEnabled: boolean = false
 ): Promise<Map<CorporationType, IndustryBasis>> {
   const out = new Map<CorporationType, IndustryBasis>();
@@ -96,13 +94,12 @@ export async function loadIndustryBasis(
   // its owner: a domestic sector carries the owner's stamped home currency, a
   // cross-border one the host's era-blind code. Resolve per sector with the owner.
   const ownerById = await loadSectorOwnerCurrencyInfo(db, sectorsInScope);
-  const basis = await loadMarketShareBasis(db);
   const anchorFor = (
     sec: Pick<CorporateSector, "corporationId" | "revenue" | "realizedRevenue">
   ): number => {
     const owner = ownerById.get(sec.corporationId.toString()) ?? null;
     return readCorpEconomicAnchor(
-      basis === "earned" ? shareRevenueOf(sec, basis) : sec.revenue,
+      shareRevenueOf(sec),
       resolveSectorHostCurrencyCode({ countryId }, owner),
       fxRateForSectorHostFromMap({ countryId }, owner, fxByCurrency)
     );
@@ -140,7 +137,7 @@ export async function computeCorpMarketShare(
   db: Db,
   corporation: Pick<Corporation, "_id" | "countryId">,
   corpSectors: Pick<CorporateSector, "sectorType">[],
-  /** @deprecated Ignored. Share is revenue-basis in every tier. */
+  /** @deprecated Ignored. */
   plantsEnabled: boolean = false
 ): Promise<CorpMarketSharePosition[]> {
   const focalId = corporation._id.toString();

@@ -74,7 +74,6 @@ import {
   scaleSiteStatement,
   sectorSiteStatement,
 } from "@/lib/corporations/rules/siteStatement";
-import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
@@ -471,7 +470,6 @@ export async function buildSectorDetailPlantsTier({
         sectors: allSectorsRaw,
         stateById: new Map(allStates.map((candidate) => [candidate._id, candidate])),
         exchangeRatesByCurrency: siblingFxByCurrency,
-        basis: await loadMarketShareBasis(db),
       }).get(sector._id.toString()) ?? 0;
     // Same governor bounds the turn processor resolves (turn/corporation
     // index.ts), read from gameConfig, not gameState, so the "market support"

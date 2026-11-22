@@ -114,11 +114,6 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   // Minimum plant share for public buying and household transfers. Fresh worlds
   // only: a running world switches it on as a deliberate staged change.
   producerDemandFloorStage: 1,
-  // Automatic builds only where buyers have unmet demand, and market share on
-  // earned revenue. Fresh worlds only: a running world switches each on as a
-  // deliberate staged change.
-  autopilotBuildRoomStage: 1,
-  marketShareEarnedStage: 1,
   // Growth signal measured as value added. A running world keeps gross output
   // so a basis switch cannot show up as a recession.
   outputBasis: "value_added",

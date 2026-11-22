@@ -44,7 +44,6 @@ import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { loadReceiptLanePrices } from "@/lib/corporations/queries/receiptLanePrices";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
-import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { getNationalCommodityBalance } from "@/lib/commodity-map";
 import { buildDepositCapacityRows } from "@/lib/corporations/strategyRevenuePreview";
@@ -240,7 +239,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
 
     // Market position: totals, market share, competitors,
     // see computeSectorMarketPosition.
-    const marketShareBasis = await loadMarketShareBasis(db);
     const sectorDetailPreset = resolvePresetIdFromGameState(gameState);
     const sectorDetailUnitScale = getEraUnitScale(sectorDetailPreset);
     const { effectiveMarket, marketShare, competitors, attackExposure } =
@@ -252,7 +250,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         siblingCorps,
         siblingsSectors,
         siblingFxByCurrency,
-        basis: marketShareBasis,
       });
 
     const stateCountryMap = new Map<string, string>(
