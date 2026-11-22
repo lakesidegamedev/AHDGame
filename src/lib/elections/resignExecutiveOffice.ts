@@ -1,3 +1,4 @@
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
 import type { Character, CareerEvent, ElectedOfficial, OfficeType } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -7,7 +8,6 @@ import {
 } from "@/lib/elections/executiveOfficeFilters";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
-import type { GameState } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -65,17 +65,19 @@ export async function resignExecutiveOffice(
   const gameState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
-  await captureOfficeTransition({
-    db,
-    officeType,
-    transitionType: "left",
-    partyId: character.party,
-    selectionMethod: "resignation",
-    tenureTurns: 0,
-    careerStage: character.careerHistory?.length ?? 0,
-    nationId: countryId,
-    turn: gameState?.currentTurn ?? 0,
-    iteration: gameState?.iteration,
-    flush: true,
-  });
+  await afterCommit(db, () =>
+    captureOfficeTransition({
+      db: unboundDb(db),
+      officeType,
+      transitionType: "left",
+      partyId: character.party,
+      selectionMethod: "resignation",
+      tenureTurns: 0,
+      careerStage: character.careerHistory?.length ?? 0,
+      nationId: countryId,
+      turn: gameState?.currentTurn ?? 0,
+      iteration: gameState?.iteration,
+      flush: true,
+    })
+  );
 }

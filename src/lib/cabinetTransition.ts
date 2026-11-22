@@ -68,7 +68,7 @@ export async function notifyAndRestoreClearedHolders(
       const restoreOffice = {
         type: seat.officeType,
         state: seat.state,
-        ...(seat.officeType === "commons" && seat.constituencyId
+        ...(seat.constituencyId
           ? {
               constituency: seat.constituency ?? seat.constituencyId,
               constituencyId: seat.constituencyId,

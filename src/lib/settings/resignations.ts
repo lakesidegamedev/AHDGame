@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { GameState } from "@/lib/db/types";
@@ -20,15 +21,13 @@ import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnC
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
-import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
+import { resignCabinetSeat } from "@/lib/cabinet/resignMember";
 import type {
   CabinetMember,
   Character,
   CentralBank,
   CongressLeader,
   ElectedOfficial,
-  ElectionCandidate,
-  ParliamentaryGovernment,
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
@@ -503,23 +502,9 @@ async function resignCabinet(
   character: Character,
   member: CabinetMember,
   now: Date
-): Promise<boolean> {
-  // NPP-held seats have no character holder and cannot resign down this path.
-  if (!member.characterId || !member.characterId.equals(character._id)) return false;
-  const result = await cabinetMembersCollection(db).deleteOne({
-    _id: member._id,
-    characterId: character._id,
-  });
-  if (result.deletedCount === 0) return false;
-  // A surviving second row keeps the holder in cabinet (issue #2049): repoint
-  // at it instead of clearing. Only a fully departed holder clears office.
-  if (
-    currentOfficeMatchesCabinet(character.currentOffice, member) &&
-    !(await preserveSurvivingCabinetRow(db, member.countryId, character._id, now))
-  ) {
-    await clearCurrentOfficeForOffice(db, character._id, character.currentOffice, now);
-  }
-  return true;
+): Promise<{ removed: boolean; leftCabinet: boolean }> {
+  if (!member.characterId?.equals(character._id)) return { removed: false, leftCabinet: false };
+  return resignCabinetSeat(db, member, now);
 }
 
 async function resignNationalPartyRole(
@@ -615,8 +600,11 @@ async function applyPosition(
         });
       case "prime-minister":
         return resignPrimeMinister(db, character, position.countryId, now);
-      case "cabinet":
-        return resignCabinet(db, character, position.member, now);
+      case "cabinet": {
+        const exit = await resignCabinet(db, character, position.member, now);
+        officeChanged = exit.leftCabinet;
+        return exit.removed;
+      }
       case "national-party":
         return resignNationalPartyRole(db, character, position.party, position.field, now);
       case "state-party":
@@ -657,23 +645,33 @@ async function applyPosition(
             : position.kind === "central-bank"
               ? position.bank.countryId
               : character.countryId;
-      await captureOfficeTransition({
-        db,
-        officeType,
-        transitionType: "left",
-        selectionMethod: "resignation",
-        partyId: character.party,
-        careerStage: character.careerHistory?.length ?? 0,
-        nationId,
-        turn: options?.telemetryState?.currentTurn ?? 0,
-        iteration: options?.telemetryState?.iteration,
-      }).catch(() => undefined);
+      await afterCommit(db, () =>
+        captureOfficeTransition({
+          db: unboundDb(db),
+          officeType,
+          transitionType: "left",
+          selectionMethod: "resignation",
+          partyId: character.party,
+          careerStage: character.careerHistory?.length ?? 0,
+          nationId,
+          turn: options?.telemetryState?.currentTurn ?? 0,
+          iteration: options?.telemetryState?.iteration,
+        }).catch(() => undefined)
+      );
     }
   }
   return changed;
 }
 
 export async function resignPosition(
+  db: Db,
+  character: Character,
+  positionId: string
+): Promise<ResignPositionResult> {
+  return withSessionDb(db, (tx) => resignPositionInTransaction(tx, character, positionId));
+}
+
+async function resignPositionInTransaction(
   db: Db,
   character: Character,
   positionId: string
@@ -749,6 +747,13 @@ async function withdrawActiveCandidacies(db: Db, characterId: ObjectId, now: Dat
 }
 
 export async function resignAllPositions(db: Db, character: Character): Promise<ResignAllResult> {
+  return withSessionDb(db, (tx) => resignAllPositionsInTransaction(tx, character));
+}
+
+async function resignAllPositionsInTransaction(
+  db: Db,
+  character: Character
+): Promise<ResignAllResult> {
   const freshCharacter =
     (await charactersCollection(db).findOne({ _id: character._id })) ?? character;
   const positions = await discoverPositions(db, freshCharacter);
