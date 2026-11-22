@@ -274,6 +274,12 @@ export interface ProducerGameConfig {
    * match it. 0 or absent = off.
    */
   producerAskBuyerTieStage?: number;
+  /**
+   * Seller preference stage: >= 1 makes a free-choice buyer order split across
+   * every eligible seller by price, brand loyalty and quality, instead of the
+   * cheapest seller taking everything. 0 or absent = off.
+   */
+  producerSellerPreferenceStage?: number;
 
   /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
