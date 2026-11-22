@@ -1,3 +1,4 @@
+import { leadershipEligibilityFilters } from "./leadershipVoterFilter";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -458,14 +459,15 @@ async function processCompletedNationalElectionsInTransaction(
   const bannedCharacterIds = await getBannedCharacterIds(db);
   const bannedVoterObjectIds = [...bannedCharacterIds].map((id) => new ObjectId(id));
 
-  const voteMatch: Record<string, unknown> = { electionId: { $in: electionIds } };
+  const { voterFilter, candidateFilter } = await leadershipEligibilityFilters(db, endedElections);
+  const voteMatch: Record<string, unknown> = { electionId: { $in: electionIds }, ...voterFilter };
   if (bannedVoterObjectIds.length > 0) {
     voteMatch.voterId = { $nin: bannedVoterObjectIds };
   }
 
   const [allCandidatesRaw, voteCountsByElection, parties] = await Promise.all([
     nationalPartyCandidatesCollection(db)
-      .find({ electionId: { $in: electionIds }, status: "active" })
+      .find({ electionId: { $in: electionIds }, status: "active", ...candidateFilter })
       .toArray(),
     nationalPartyVotesCollection(db)
       .aggregate<{

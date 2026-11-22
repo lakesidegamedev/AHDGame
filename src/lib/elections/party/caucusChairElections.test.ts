@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { ObjectId } from "mongodb";
 
@@ -262,20 +269,30 @@ describe("caucusChairElections", () => {
     const completed = await processCompletedCaucusChairElections(96);
 
     expect(completed).toBe(1);
-    expect(caucusCollection.updateOne).toHaveBeenCalledWith(
-      { _id: caucusId },
-      expect.objectContaining({
-        $set: expect.objectContaining({ chairId: winnerId, lastElectedTurn: 96 }),
-        $inc: { termsServed: 1 },
-      })
-    );
-    expect(membershipCollection.updateMany).toHaveBeenCalledWith(
-      { caucusId, memberType: "character", role: "chair", status: "active" },
-      expect.objectContaining({ $set: expect.objectContaining({ role: "member" }) })
-    );
-    expect(membershipCollection.updateOne).toHaveBeenCalledWith(
-      { caucusId, memberType: "character", memberId: winnerId, status: "active" },
-      expect.objectContaining({ $set: expect.objectContaining({ role: "chair" }) })
-    );
+    expect(caucusCollection.bulkWrite).toHaveBeenCalledWith([
+      {
+        updateOne: {
+          filter: { _id: caucusId },
+          update: expect.objectContaining({
+            $set: expect.objectContaining({ chairId: winnerId, lastElectedTurn: 96 }),
+            $inc: { termsServed: 1 },
+          }),
+        },
+      },
+    ]);
+    expect(membershipCollection.bulkWrite).toHaveBeenCalledWith([
+      {
+        updateMany: {
+          filter: { caucusId, memberType: "character", role: "chair", status: "active" },
+          update: expect.objectContaining({ $set: expect.objectContaining({ role: "member" }) }),
+        },
+      },
+      {
+        updateOne: {
+          filter: { caucusId, memberType: "character", memberId: winnerId, status: "active" },
+          update: expect.objectContaining({ $set: expect.objectContaining({ role: "chair" }) }),
+        },
+      },
+    ]);
   });
 });

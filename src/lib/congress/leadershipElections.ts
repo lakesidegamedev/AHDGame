@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { ObjectId } from "mongodb";
 import type { Db, Filter } from "mongodb";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
@@ -20,19 +21,12 @@ import {
   senateElectionRoleToLeader,
 } from "@/lib/congress/leadership/electionRoleMap";
 import type {
-  CongressLeader,
   SenateLeadershipElection,
   SenateLeadershipElectionRole,
   HouseLeadershipElection,
   HouseLeadershipElectionRole,
   SenateLeadershipNomination,
   HouseLeadershipNomination,
-  SpeakerElection,
-  SpeakerNomination,
-  BundestagspraesidentElection,
-  NpcscChairElection,
-  CppccChairElection,
-  ElectedOfficial,
   LeadershipRole,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -111,6 +105,18 @@ export async function resolveLeadershipElection(
   leaderRole: LeadershipRole,
   chamber: ChamberKind,
   force = false
+): Promise<boolean> {
+  return withSessionDb(db, (tx) =>
+    resolveLeadershipElectionInTransaction(tx, role, leaderRole, chamber, force)
+  );
+}
+
+async function resolveLeadershipElectionInTransaction(
+  db: Db,
+  role: SenateLeadershipElectionRole | HouseLeadershipElectionRole,
+  leaderRole: LeadershipRole,
+  chamber: ChamberKind,
+  force: boolean
 ): Promise<boolean> {
   type ChamberNomination = SenateLeadershipNomination | HouseLeadershipNomination;
 
@@ -199,22 +205,23 @@ export async function resolveLeadershipElection(
     { upsert: true }
   );
 
-  // Mark leadership achievement
-  try {
-    const { markCongressLeadershipHeld } = await import("@/lib/wiki/markCongressLeadership");
-    await markCongressLeadershipHeld(db, winner.nomineeId.toString(), now);
-  } catch (err) {
-    console.error(
-      JSON.stringify({
-        error: "mark_leadership_failed",
-        operation: "leadership_election_resolution",
-        chamber,
-        role,
-        timestamp: now.toISOString(),
-        details: err instanceof Error ? err.message : "Unknown error",
-      })
-    );
-  }
+  await afterCommit(db, async () => {
+    try {
+      const { markCongressLeadershipHeld } = await import("@/lib/wiki/markCongressLeadership");
+      await markCongressLeadershipHeld(unboundDb(db), winner.nomineeId.toString(), now);
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          error: "mark_leadership_failed",
+          operation: "leadership_election_resolution",
+          chamber,
+          role,
+          timestamp: now.toISOString(),
+          details: err instanceof Error ? err.message : "Unknown error",
+        })
+      );
+    }
+  });
 
   // Atomically claim the close so a concurrent resolver (turn phase racing a
   // real-time action, or two containers overlapping on redeploy) cannot also
@@ -235,14 +242,16 @@ export async function resolveLeadershipElection(
         { projection: { avatarUrl: 1 } }
       )
     )?.avatarUrl;
-    sendCountryGameEvent("US", {
-      title: `Leadership Election Result — ${roleLabel}`,
-      description: `**${winner.nomineeName}** has been elected as **${roleLabel}** in the ${chamberLabel}.`,
-      color: DISCORD_COLORS.leadership,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
-    }).catch(() => {});
+    await afterCommit(db, () =>
+      sendCountryGameEvent("US", {
+        title: `Leadership Election Result: ${roleLabel}`,
+        description: `**${winner.nomineeName}** has been elected as **${roleLabel}** in the ${chamberLabel}.`,
+        color: DISCORD_COLORS.leadership,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
+      }).catch(() => {})
+    );
   }
 
   return true;
