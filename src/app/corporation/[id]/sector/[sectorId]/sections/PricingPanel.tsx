@@ -8,6 +8,8 @@ import { GOUGE_JUMP, CONSISTENCY_BAND } from "@/lib/market/brandLoyalty";
 import type { PricingData } from "../types";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 
 const POSTURE_STEPS = [-0.2, -0.1, -0.05, 0, 0.05, 0.1, 0.2] as const;
 
@@ -36,6 +38,7 @@ export default function PricingPanel({
 }: PricingPanelProps) {
   const supplyText = useTranslations("corporations.internalSupply");
   const costPlusText = useTranslations("corporations.costPlusPricing");
+  const { formatPrice } = useCurrency();
   const [draft, setDraft] = useState<number | null>(pricing.posture);
   const [pricingMode, setPricingMode] = useState<"market" | "costPlus">(
     pricing.pricingMode ?? "market"
@@ -157,8 +160,34 @@ export default function PricingPanel({
       <p className="text-xs text-muted mb-4">
         {pricingMode === "costPlus"
           ? costPlusText("explanation")
-          : "Your posted price relative to the market. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
+          : "Automatic asks last turn's market price. A set posture is measured from a steadier market price that moves at most 6% a turn, so undercutting cannot drag it down 20% a turn. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
       </p>
+
+      {pricing.asks && pricing.asks.length > 0 && (
+        <ul className="mb-3 space-y-0.5 text-xs" aria-label="Asking prices last turn">
+          {pricing.asks.map((a) => (
+            <li key={a.commodity} className="flex justify-between gap-3 tabular-nums">
+              <span className="text-muted">
+                {COMMODITY_LABELS[a.commodity as CommodityType] ?? a.commodity}
+              </span>
+              <span>
+                asked{" "}
+                <span className="font-semibold text-foreground">
+                  {formatPrice(a.askingUnitPrice)}
+                </span>
+                {a.marketUnitPrice != null && (
+                  <>
+                    , buyers paid{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatPrice(a.marketUnitPrice)}
+                    </span>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <p className="mb-3 text-xs text-muted">
         {supplyText("pricingHint")}{" "}

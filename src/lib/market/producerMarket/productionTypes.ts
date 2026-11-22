@@ -49,6 +49,8 @@ export type ProducerEconomyInput = {
   stockCoverTurns?: number;
   /** Last turn's clearing price per lane (`laneKeyOf`), the anchor for automatic asks. */
   clearingPriceByLane?: Readonly<Record<string, number>>;
+  /** Slow market price per lane that a non-zero pricing posture is measured from (postureAnchorRules). */
+  postureAnchorByLane?: Readonly<Record<string, number>>;
   /** Country of a producing site, so offers and its input orders carry one. */
   countryOfProducer?: (producerId: string) => string | undefined;
   /** Build the per-country funded book on the final settlement (see fundedBookRules). */

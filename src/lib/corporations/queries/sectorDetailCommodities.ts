@@ -8,6 +8,7 @@ import { settledProductSales } from "@/lib/corporations/rules/settledProductSale
 import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
+import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
@@ -110,6 +111,45 @@ export function outputRevenueShares(
  * what actually sold. The legacy figures are sent only for a plant with no
  * funded sale record, labelled as an estimate.
  */
+/** One output's posted asking price against what its market paid last turn, anchor per unit. */
+export interface PricingAsk {
+  commodity: string;
+  askingUnitPrice: number;
+  marketUnitPrice: number | null;
+}
+
+/** Offer-weighted ask per output, beside the price buyers paid in that book. */
+export function pricingAsks(
+  products:
+    | readonly {
+        commodity: string;
+        book: string;
+        offeredUnits: number;
+        askingUnitPrice?: number;
+      }[]
+    | undefined,
+  laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined
+): PricingAsk[] {
+  const rows = new Map<string, { offered: number; askValue: number; market: number | null }>();
+  for (const product of products ?? []) {
+    const ask = product.askingUnitPrice;
+    if (!(product.offeredUnits > 0) || typeof ask !== "number" || !(ask > 0)) continue;
+    const market = laneClearingPrices?.[laneKeyOf(product.commodity, product.book)];
+    const row = rows.get(product.commodity) ?? { offered: 0, askValue: 0, market: null };
+    row.offered += product.offeredUnits;
+    row.askValue += ask * product.offeredUnits;
+    if (row.market == null && typeof market === "number" && market > 0) row.market = market;
+    rows.set(product.commodity, row);
+  }
+  return [...rows]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([commodity, row]) => ({
+      commodity,
+      askingUnitPrice: row.askValue / row.offered,
+      marketUnitPrice: row.market,
+    }));
+}
+
 export function pricingSalesReading(
   sector: Pick<
     CorporateSector,
@@ -439,6 +479,7 @@ export async function buildSectorCommoditySections(args: {
         costPlusEnabled?: boolean;
         costPlusReady?: boolean;
         pricingMode?: "market" | "costPlus";
+        asks?: PricingAsk[];
       }
     | undefined;
   if (market.clearingEnabled) {
@@ -452,6 +493,9 @@ export async function buildSectorCommoditySections(args: {
         isCeo && typeof corporation.brandPostureNorm === "number"
           ? corporation.brandPostureNorm
           : undefined,
+      ...(isCeo && fundedRecord
+        ? { asks: pricingAsks(fundedRecord.products, args.laneClearingPrices) }
+        : {}),
     };
   }
 
