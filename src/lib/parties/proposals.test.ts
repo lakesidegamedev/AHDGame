@@ -1650,6 +1650,7 @@ describe("attemptResolution — atomic resolution claim", () => {
     const collection = vi.fn().mockImplementation((name: string) => {
       if (name === "committeeProposals") {
         return {
+          findOne: vi.fn().mockResolvedValue(null),
           updateOne: vi.fn().mockImplementation((filter: Record<string, unknown>) => {
             proposalUpdateCall += 1;
             const kind = proposalUpdateCall === 1 ? "claim" : "status";
