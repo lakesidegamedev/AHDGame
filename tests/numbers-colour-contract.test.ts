@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { RuleTester } from "eslint";
+import { ESLint, RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
 import { describe, expect, it } from "vitest";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -75,4 +75,12 @@ describe("numbers-colour baseline", () => {
     expect(new Set(baseline).size).toBe(baseline.length);
     for (const f of baseline) expect(existsSync(f), f).toBe(true);
   });
+
+  it("switches the rule off for baseline files inside bracketed route folders", async () => {
+    const bracketed = baseline.find((f) => f.includes("["));
+    expect(bracketed).toBeDefined();
+    const config = await new ESLint().calculateConfigForFile(bracketed!);
+    const setting = config.rules?.["local/numbers-colour-contract"];
+    expect(Array.isArray(setting) ? setting[0] : setting).toBe(0);
+  }, 120_000);
 });

@@ -182,7 +182,9 @@ const eslintConfig = defineConfig([
     rules: { "local/numbers-colour-contract": "error" },
   },
   {
-    files: numbersColourBaseline,
+    // Escape glob metacharacters: Next route folders like `[id]` would
+    // otherwise read as character classes and never match their own file.
+    files: numbersColourBaseline.map((file) => file.replace(/[[\]()*?{}!]/g, "\\$&")),
     rules: { "local/numbers-colour-contract": "off" },
   },
   // Test files: any is unavoidable in mock setup and test assertions
