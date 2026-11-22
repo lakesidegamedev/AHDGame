@@ -10,6 +10,7 @@ import {
   decideNppSupplyAgreements,
   indexLiveAgreements,
   nppContractPremium,
+  AI_LISTING_CAPACITY_FRACTION,
   decideAiSupplyListings,
   buildTradeBlocked,
   aiListingId,
@@ -28,6 +29,7 @@ import {
 import type { CommodityType } from "@/lib/constants/commodities";
 import { sellerFill } from "@/lib/logistics/nppSupplyDecisions";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import { computeSupplierMaxContractableUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { CONTRACT_OVERCOMMIT_TOLERANCE } from "@/lib/db/types/supplyAgreement";
 
 const TURN = 10;
@@ -1174,5 +1176,69 @@ describe("open-ended AI contract backfill", () => {
     );
     const id = new ObjectId().toString();
     expect(aiContractBackfillExpiry(id, turn)).toBe(aiContractBackfillExpiry(id, turn));
+  });
+});
+
+describe("computer-run suppliers are bounded by achievable output", () => {
+  const withAchievable = (units: number) =>
+    miner({
+      sectors: [{ ...miner().sectors[0]!, contractAchievableUnits: units }],
+    });
+  const achievable = (units: number) =>
+    computeSupplierMaxContractableUnits({
+      sectors: withAchievable(units).sectors,
+      commodity: "iron",
+      isNatcorp: false,
+      turn: TURN,
+    });
+
+  it("the shared bound is below the nameplate ceiling when output is low", () => {
+    const nameplate = computeSupplierMaxContractableUnits({
+      sectors: miner().sectors,
+      commodity: "iron",
+      isNatcorp: false,
+      turn: TURN,
+    });
+    expect(achievable(100)).toBeLessThan(nameplate);
+    expect(achievable(100)).toBeGreaterThan(0);
+  });
+
+  it("counters a player buy proposal down to the achievable volume", () => {
+    const bound = achievable(100);
+    const d = decideNppSupplyAgreements({
+      turn: TURN,
+      plantsEnabled: true,
+      parties: [withAchievable(100)],
+      agreements: [
+        {
+          id: "pb1",
+          supplierCorpId: "seller1",
+          buyerCorpId: "player1",
+          commodity: "iron",
+          volumeCap: 1e12,
+          pricePremium: 0,
+          status: "pending",
+          proposedByCorpId: "player1",
+        },
+      ],
+      priceRatioOf: prices({}),
+      staggerEligible: always,
+      externalBuyers: new Map([["player1", { countryId: "US" }]]),
+    });
+    expect(d).toEqual([
+      { action: "counter", agreementId: "pb1", pricePremium: 0, volumeCap: Math.floor(bound) },
+    ]);
+  });
+
+  it("sizes the standing sell listing from the achievable bound", () => {
+    const out = decideAiSupplyListings({
+      turn: TURN,
+      plantsEnabled: true,
+      agreements: [],
+      priceRatioOf: prices({ iron: 1.05 }),
+      parties: [withAchievable(100)],
+    });
+    const sell = out.find((x) => x.side === "sell" && x.commodity === "iron");
+    expect(sell!.volumeCap).toBeCloseTo(achievable(100) * AI_LISTING_CAPACITY_FRACTION, 6);
   });
 });

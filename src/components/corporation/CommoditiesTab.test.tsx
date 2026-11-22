@@ -115,7 +115,7 @@ describe("CommoditiesTab private supply", () => {
     await waitFor(() => expect(screen.getByText("Advertising & Media")).toBeTruthy());
     // Consumption only: the inputs table carries it, outputs says there are none.
     expect(
-      within(screen.getByRole("table", { name: "Inputs" })).getByText("Consumed")
+      within(screen.getByRole("table", { name: "Inputs" })).getByText("Bought a day")
     ).toBeTruthy();
     expect(screen.getByText("This corporation produces no commodities.")).toBeTruthy();
     expect(
@@ -237,7 +237,7 @@ describe("CommoditiesTab by region", () => {
     render(<CommoditiesTab corpId="7" />);
     await screen.findByText("Pennsylvania");
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers.indexOf("Consumed")).toBeLessThan(headers.indexOf("Output"));
+    expect(headers.indexOf("Bought a day")).toBeLessThan(headers.indexOf("Output"));
     expect(headers.indexOf("Consumes")).toBeLessThan(headers.indexOf("Produces"));
   });
 

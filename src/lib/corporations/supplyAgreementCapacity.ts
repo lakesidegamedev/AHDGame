@@ -248,3 +248,18 @@ export function maxContractableUnits(
   if (achievableUnits === null || !Number.isFinite(achievableUnits)) return nameplateCeiling;
   return Math.max(0, Math.min(nameplateCeiling, achievableUnits));
 }
+
+/**
+ * Most a supplier may newly commit per day for one commodity in one scope:
+ * capacity and achievable output resolved together, then bounded. The player
+ * propose path and the computer-run matcher both call this, so a new offer,
+ * match or renewal can never promise more than the plants can reach.
+ */
+export function computeSupplierMaxContractableUnits(
+  args: Parameters<typeof computeSupplierCommodityCapacityUnits>[0]
+): number {
+  return maxContractableUnits(
+    computeSupplierCommodityCapacityUnits(args),
+    computeSupplierCommodityAchievableUnits(args)
+  );
+}
