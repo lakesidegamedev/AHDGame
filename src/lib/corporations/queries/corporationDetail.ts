@@ -46,6 +46,7 @@ import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
@@ -187,22 +188,44 @@ export async function loadCorporationDetailView(args: {
     });
 
   const portfolio = await loadPortfolioHoldings(db, corporation, currentTurn, fxByCurrency);
+  const liquidCurrencyCode =
+    corporation.liquidCurrencyCode ??
+    COUNTRY_CURRENCY_MAP[corporation.countryId as CountryId] ??
+    "USD";
+  const recordedTurn = portfolio.latestCorpIncomeRow?.turn;
+  const constructionRowsPromise =
+    viewerOwnsCorporation && corporation.ceoVacant !== true && recordedTurn != null
+      ? financialTxLogCollection(db)
+          .find(
+            {
+              subjectType: "corporation",
+              subjectId: corporation._id,
+              turn: recordedTurn,
+              type: { $in: ["corp_capacity_build", "corp_capacity_build_refund"] },
+            },
+            { projection: { amount: 1, currencyCode: 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]);
 
-  const income = await computeIncomeStatement({
-    db,
-    corporation,
-    currentTurn,
-    totals,
-    wageBillAnchorPerTurnBySectorId,
-    restatement,
-    fxByCurrency,
-    federalBudgets,
-    stateBudgetsForTax,
-    sectorDetails,
-    portfolio,
-    bankingPolicyPromise,
-    gameState,
-  });
+  const [income, constructionRows] = await Promise.all([
+    computeIncomeStatement({
+      db,
+      corporation,
+      currentTurn,
+      totals,
+      wageBillAnchorPerTurnBySectorId,
+      restatement,
+      fxByCurrency,
+      federalBudgets,
+      stateBudgetsForTax,
+      sectorDetails,
+      portfolio,
+      bankingPolicyPromise,
+      gameState,
+    }),
+    constructionRowsPromise,
+  ]);
 
   const subsidiary = await loadSubsidiaryContext(
     db,
@@ -221,6 +244,16 @@ export async function loadCorporationDetailView(args: {
     activeFloorPct: subsidiary.activeFloorPct,
     realizedGrowthRate,
   });
+  const constructionCash =
+    recordedTurn != null &&
+    constructionRows.length > 0 &&
+    constructionRows.every((row) => row.currencyCode === liquidCurrencyCode)
+      ? {
+          turn: recordedTurn,
+          paid: constructionRows.reduce((sum, row) => sum + Math.max(0, -row.amount), 0),
+          refunded: constructionRows.reduce((sum, row) => sum + Math.max(0, row.amount), 0),
+        }
+      : null;
 
   const shareholders = buildShareholderList({
     viewerUserId:
@@ -296,10 +329,7 @@ export async function loadCorporationDetailView(args: {
       headquartersStateName:
         stateNameMap.get(corporation.headquartersState) ?? corporation.headquartersState,
       liquidCapital: Math.round(corporation.liquidCapital),
-      liquidCurrencyCode:
-        corporation.liquidCurrencyCode ??
-        COUNTRY_CURRENCY_MAP[corporation.countryId as CountryId] ??
-        "USD",
+      liquidCurrencyCode,
       recentNetIncome: Math.round(income.income),
       marketingBudget: corporation.marketingBudget,
       ceoSalary: income.ceoSalary,
@@ -470,6 +500,7 @@ export async function loadCorporationDetailView(args: {
     ceoIsInactive,
     financials: {
       ...financials,
+      ...(constructionCash ? { constructionCash } : {}),
       ...(viewerOwnsCorporation && corporation.ceoVacant !== true
         ? {
             arrears: await loadArrearsView({
