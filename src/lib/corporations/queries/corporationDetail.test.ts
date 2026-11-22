@@ -869,7 +869,9 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
     expect(row.buildQueueSummary).toEqual({
       orders: 1,
       unitsOrdered: 800,
-      unitsRemaining: 200,
+      // Delivery counts up to the last settled turn, one behind the schedule here.
+      unitsRemaining: expect.closeTo(216.67, 1),
+      orderUnits: [{ unitsOrdered: 800, unitsDelivered: expect.closeTo(583.33, 1) }],
       unitsPerTurn: 800 / 48,
       lastOnlineTurn: 52,
       nextOnlineTurn: 52,
@@ -892,6 +894,7 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       producedUnits: 4_000,
       soldUnits: 1_200,
       fillRate: 0.3,
+      ownSiteShare: null,
       constructionInProgressAnchor: 62_500,
       unitsOnOrder: 800,
       buildingSectorCount: 1,

@@ -59,7 +59,7 @@ describe("BuildQueueBadge", () => {
   });
 
   it("counts plants and shows per-turn arrival when given a plant size", () => {
-    // 3.4 plants of 25 units on order, half still to land, ramping in 2 a turn.
+    // 3 whole plants of 25 units on order, one fully arrived, ramping in 2 a turn.
     render(
       <BuildQueueBadge
         queue={{
@@ -74,9 +74,9 @@ describe("BuildQueueBadge", () => {
         plantUnits={25}
       />
     );
-    expect(screen.getByText(/\+1\.7 building/)).toBeTruthy();
+    expect(screen.getByText(/\+2 building/)).toBeTruthy();
     expect(screen.getByText(/done turn 539/)).toBeTruthy();
-    expect(screen.getByText(/1\.7 of 3\.4 in/)).toBeTruthy();
+    expect(screen.getByText(/1 of 3 in/)).toBeTruthy();
     expect(screen.getByText(/about 0\.5 a turn/)).toBeTruthy();
   });
 
@@ -94,7 +94,7 @@ describe("BuildQueueBadge", () => {
     render(
       <BuildQueueBadge queue={queue} plantUnits={250} plantSingular="mine" plantPlural="mines" />
     );
-    expect(screen.getByText(/\+0\.8 building/)).toBeTruthy();
+    expect(screen.getByText(/\+1 building/)).toBeTruthy();
     expect(screen.getByText(/done turn 614/)).toBeTruthy();
     expect(screen.queryByText(/a turn/)).toBeNull();
     const label = buildProgressLabel(queue, 250, "mine", "mines");

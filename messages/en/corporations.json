@@ -254,7 +254,9 @@
         "headlineSomeWaiting": "New {facilities} would mostly sell {waiting}. {covered} buyers are already served.",
         "headlineSomePaidOrdersWaiting": "There are unfilled paid orders for {waiting}. The cap estimates below show possible additional demand.",
         "headlineNoneWaiting": "Existing producers can already serve every paid order. New {facilities} would have to win sales from them.",
-        "headlineUnknown": "There is not enough sales data yet to say how many buyers are waiting.",
+        "headlineUnknown": "Per-product buyer orders are not measured yet for this market.",
+        "headlineNoRoom": "No room to build right now: unmet orders are already covered by existing and queued capacity. New {facilities} would have to win sales from other producers.",
+        "headlineRoomMeasured": "There is room for new {facilities} in this market. Per-product orders are not measured yet.",
         "chipWaiting": "Buyers waiting",
         "chipIdle": "Spare capacity covers it",
         "chipCovered": "Covered",
@@ -274,7 +276,7 @@
         "sidebarCapEstimate": "Possible demand hidden by the cap",
         "headlinePaidOrdersCovered": "Last turn’s paid orders were covered. The cap may have hidden other demand.",
         "capEstimate": "The cap figures are estimates from the demand model. Paid orders show what buyers actually placed.",
-        "capProduct": "Estimated demand hidden by the cap after existing supply: {units} units a day.",
+        "capProduct": "Model estimate of demand hidden by the cap, after existing supply: {units} units a day. It is not counted in room to build.",
         "capRoom": "Including the estimate, there may be room for {count, plural, one {# {site}} other {# {sites}}} after idle and queued capacity. Paid orders show what buyers actually placed."
       }
     },

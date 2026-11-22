@@ -35,6 +35,19 @@ describe("buildGrowthLevers", () => {
     expect(levers.oversupplied.map((s) => s.id)).toEqual(["glut"]);
   });
 
+  it("never calls output sent to own sites unsold", () => {
+    const levers = buildGrowthLevers([
+      sector({ _id: "internal", fillRate: 0.54, ownSiteShare: 0.46 }),
+      sector({ _id: "glut", fillRate: 0.54, ownSiteShare: 0 }),
+    ]);
+    expect(levers.soldOut.map((s) => s.id)).toEqual(["internal"]);
+    expect(levers.soldOut[0].detail).toBe(
+      "54% sold to buyers, 46% sent to your own sites, 0% unsold"
+    );
+    expect(levers.oversupplied.map((s) => s.id)).toEqual(["glut"]);
+    expect(levers.oversupplied[0].detail).toBe("54% sold to buyers, 46% unsold");
+  });
+
   it("keeps the three largest sectors per group", () => {
     const levers = buildGrowthLevers(
       [1, 2, 3, 4].map((n) => sector({ _id: `s${n}`, capacityUnits: n * 100 }))
