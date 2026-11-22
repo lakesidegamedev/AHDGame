@@ -24,6 +24,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import { EventItem, type EventTone } from "./EventsPanel";
+import { formatMoney } from "@/lib/ui/numbers";
 
 interface ActiveCrisisData {
   crisis: Crisis;
@@ -93,9 +94,9 @@ const SEVERITY_STYLES: Record<
   { border: string; tone: EventTone; badge: string; label: string }
 > = {
   high: {
-    border: "border-rose-500/40",
+    border: "border-error/40",
     tone: "rose",
-    badge: "bg-rose-500/10 text-rose-400",
+    badge: "bg-error/10 text-error",
     label: SEVERITY_BAND_LABEL.high,
   },
   medium: {
@@ -425,8 +426,8 @@ export default function CrisisActionCard() {
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-muted">Response fund</span>
                       <span className="tabular-nums">
-                        ${interaction.collectiveCurrent.toLocaleString("en-US")} / $
-                        {interaction.collectiveTarget?.toLocaleString("en-US")}
+                        {formatMoney(interaction.collectiveCurrent)} /{" "}
+                        {formatMoney(interaction.collectiveTarget ?? 0)}
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -498,7 +499,7 @@ export default function CrisisActionCard() {
                             )}
                             {option.collectiveContribution && (
                               <div className="text-xs text-primary mt-1">
-                                Contribute ${option.collectiveContribution.toLocaleString("en-US")}
+                                Contribute {formatMoney(option.collectiveContribution)}
                               </div>
                             )}
                             {option.effects.length > 0 && (

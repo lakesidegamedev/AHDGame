@@ -483,7 +483,7 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
     expect(await screen.findByRole("heading", { name: "Recession" })).toBeTruthy();
     expect(crisisSeverity({ effects: RECESSION_EFFECTS as never })).toBe("medium");
     expect(document.querySelector('[class*="border-amber-500/40"]')).toBeTruthy();
-    expect(document.querySelector('[class*="border-rose-500/40"]')).toBeNull();
+    expect(document.querySelector('[class*="border-error/40"]')).toBeNull();
   });
 
   it("counts a one-off shock that carries no tick at all", async () => {
@@ -497,7 +497,7 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
 
     await screen.findByRole("heading", { name: "Recession" });
     expect(crisisSeverity({ effects: gdpLoss as never })).toBe("high");
-    expect(document.querySelector('[class*="border-rose-500/40"]')).toBeTruthy();
+    expect(document.querySelector('[class*="border-error/40"]')).toBeTruthy();
   });
 });
 

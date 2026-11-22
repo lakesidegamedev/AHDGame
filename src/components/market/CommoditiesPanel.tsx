@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
+import { formatCount } from "@/lib/ui/numbers";
 
 function balance(c: CommodityData): { label: string; tone: string; title?: string } {
   if (c.globalDemand <= 0 && c.globalSupply <= 0) return { label: "No trade", tone: "text-muted" };
@@ -108,8 +109,7 @@ export function CommoditiesPanel({
                       {pctText(c.priceChange)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">
-                      {Math.round(c.globalSupply).toLocaleString()} /{" "}
-                      {Math.round(c.globalDemand).toLocaleString()}
+                      {formatCount(c.globalSupply)} / {formatCount(c.globalDemand)}
                     </td>
                     <td className={`px-3 py-2 text-xs font-medium ${bal.tone}`} title={bal.title}>
                       {bal.label}

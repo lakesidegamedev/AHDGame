@@ -32,6 +32,8 @@ import type {
   Time,
   UTCTimestamp,
 } from "lightweight-charts";
+import { formatPercentDelta } from "@/lib/ui/numbers";
+import { toneForDelta, toneText } from "@/lib/ui/tone";
 
 /* ------------------------------------------------------------------ */
 /* Range model: turns on the wire, labels in the UI.                   */
@@ -599,6 +601,10 @@ export function MarketOverview({
     };
   }, [candles, chartReady, compare, exchangeApi, turns]);
 
+  const hasPlottable = candles.some(
+    (c) => [c.open, c.high, c.low, c.close].every(Number.isFinite) && c.high > 0
+  );
+  const noChart = failed || !hasPlottable;
   const last = candles[candles.length - 1];
   const first = candles[0];
   const rangeChg = last && first ? last.close - first.open : 0;
@@ -635,11 +641,10 @@ export function MarketOverview({
                 </span>{" "}
                 <span
                   title={`${range} raw capitalization change from first open to last close; includes changes in listings and valuation coverage`}
-                  className={`font-mono font-bold ${rangeChg >= 0 ? "text-success" : "text-error"}`}
+                  className={`font-mono font-bold ${toneText(toneForDelta(rangeChg))}`}
                 >
-                  {rangeChg >= 0 ? "+" : ""}
-                  {formatAmount(Math.round(rangeChg))} ({rangeChg >= 0 ? "+" : ""}
-                  {rangeChgPct.toFixed(2)}%)
+                  {rangeChg > 0 ? "+" : ""}
+                  {formatAmount(Math.round(rangeChg))} ({formatPercentDelta(rangeChgPct, 2)})
                 </span>
               </div>
             )}
@@ -834,7 +839,7 @@ export function MarketOverview({
           </details>
         )}
         <div className="relative h-60 sm:h-80">
-          <div ref={containerRef} className="h-full w-full" />
+          <div ref={containerRef} className={`h-full w-full ${noChart ? "invisible" : ""}`} />
           <div
             ref={tooltipRef}
             style={{ display: "none" }}
@@ -843,11 +848,13 @@ export function MarketOverview({
           {loading && candles.length === 0 && (
             <Skeleton className="absolute inset-0 h-full w-full" />
           )}
-          {!loading && (failed || candles.length === 0) && (
-            <p className="absolute inset-0 flex items-center justify-center bg-card text-sm text-muted">
+          {!loading && noChart && (
+            <p className="absolute inset-0 flex items-center justify-center bg-card px-4 text-center text-sm text-muted">
               {failed
                 ? "Market data could not be refreshed. Try again shortly."
-                : "No market history available yet for this range."}
+                : candles.length === 0
+                  ? "No market history available yet for this range."
+                  : "No listed company has a market value yet, so there is nothing to chart."}
             </p>
           )}
         </div>

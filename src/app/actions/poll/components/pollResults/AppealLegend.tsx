@@ -1,10 +1,12 @@
 "use client";
 
+import { toneSolid } from "@/lib/ui/tone";
+
 const BANDS = [
-  { fill: "bg-green-500", label: "35 and up: strong" },
-  { fill: "bg-yellow-500", label: "20 to 35: moderate" },
-  { fill: "bg-orange-500", label: "10 to 20: weak" },
-  { fill: "bg-red-500", label: "under 10: very weak" },
+  { fill: toneSolid("gain"), label: "35 and up: strong" },
+  { fill: toneSolid("warning"), label: "20 to 35: moderate" },
+  { fill: "bg-warning/50", label: "10 to 20: weak" },
+  { fill: toneSolid("loss"), label: "under 10: very weak" },
 ];
 
 const FACTORS = [
