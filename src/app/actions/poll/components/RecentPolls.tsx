@@ -3,6 +3,7 @@
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { formatNum } from "../pollHelpers";
 import { PollTrendChart } from "./PollTrendChart";
+import { formatPercent, formatScore } from "@/lib/ui/numbers";
 
 export type RecentPollEntry = {
   takenAt: string;
@@ -48,7 +49,7 @@ export function RecentPolls({ polls, limit }: { polls: RecentPollEntry[]; limit:
               <div>
                 <dt className="text-body-sm text-muted">Appeal</dt>
                 <dd className="text-body font-semibold tabular-nums">
-                  {p.overallAppeal.toFixed(1)}
+                  {formatScore(p.overallAppeal)}
                 </dd>
               </div>
               <div>
@@ -61,7 +62,7 @@ export function RecentPolls({ polls, limit }: { polls: RecentPollEntry[]; limit:
                 <div>
                   <dt className="text-body-sm text-muted">Vote share</dt>
                   <dd className="text-body font-semibold tabular-nums">
-                    {p.inRaceVoteShare.toFixed(1)}%
+                    {formatPercent(p.inRaceVoteShare)}
                   </dd>
                 </div>
               )}
