@@ -46,7 +46,7 @@ describe("allocateDemandCurve", () => {
     expect(out[0].offerIds).toEqual(["a", "b"]);
   });
 
-  it("gives a seller 20% dearer 0.8^4 of the weight per unit", () => {
+  it("gives a seller 20% dearer (100/120)^k of the weight per unit", () => {
     const out = allocateDemandCurve({
       offers: [offer("cheap", 100, 1000), offer("dear", 120, 1000)],
       wanted: 500,
@@ -56,7 +56,7 @@ describe("allocateDemandCurve", () => {
     const cheap = unitsOf(out, "cheap");
     const dear = unitsOf(out, "dear");
     expect(cheap + dear).toBeCloseTo(500, 9);
-    expect(dear / cheap).toBeCloseTo(Math.pow(100 / 120, 4), 9);
+    expect(dear / cheap).toBeCloseTo(Math.pow(100 / 120, DEMAND_CURVE_PRICE_SENSITIVITY), 9);
   });
 
   it("weights preference 1.25 against 0.75 at the same price", () => {
@@ -165,10 +165,11 @@ describe("allocateDemandCurve", () => {
     })!;
     const cheapShare = (unitsOf(out, "cheapA") + unitsOf(out, "cheapB")) / 12191;
     const dearShare = dear.reduce((n, _, i) => n + unitsOf(out, `d${i}`), 0) / (143 * 7);
-    expect(cheapShare).toBeGreaterThan(0.65);
-    expect(cheapShare).toBeLessThan(0.69);
-    expect(dearShare).toBeGreaterThan(0.2);
-    expect(dearShare).toBeLessThan(0.28);
+    // A 25% gap leaves the dearer sellers a real but small share.
+    expect(cheapShare).toBeGreaterThan(0.66);
+    expect(cheapShare).toBeLessThan(0.68);
+    expect(dearShare).toBeGreaterThan(0.1);
+    expect(dearShare).toBeLessThan(0.14);
     expect(out.reduce((n, g) => n + g.units, 0)).toBeCloseTo(8291, 6);
   });
 });
