@@ -23,6 +23,7 @@ import {
   COMMODITY_UNITS,
   EXTRACTABLE_RESOURCES,
 } from "@/lib/constants/commodities";
+import type { CommodityType } from "@/lib/constants/commodities";
 
 import {
   MAX_GROWTH_RATE,
@@ -219,8 +220,16 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
 
       {/* Commodity badges for selected sector */}
       {(() => {
-        const supplies = SECTOR_SUPPLY[selectedType] ?? [];
-        const demands = SECTOR_DEMAND[selectedType] ?? [];
+        // Plants here set the mix. Only a market with no plants falls back to
+        // the sector type's default recipe.
+        const supplies = (sector.plantSupplyMix ?? SECTOR_SUPPLY[selectedType] ?? []) as {
+          commodity: CommodityType;
+          rate: number;
+        }[];
+        const demands = (sector.plantDemandMix ?? SECTOR_DEMAND[selectedType] ?? []) as {
+          commodity: CommodityType;
+          rate: number;
+        }[];
         if (supplies.length === 0 && demands.length === 0) return null;
         return (
           <div className="flex flex-wrap gap-2">

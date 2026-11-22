@@ -97,7 +97,7 @@ it("shows settled offers rather than production when buyers take stock", () => {
   expect(screen.getByText("3,200")).toBeTruthy();
   expect(screen.getByText("Sent to own sites")).toBeTruthy();
   expect(screen.getByText("800")).toBeTruthy();
-  expect(screen.getByText("80% sold")).toBeTruthy();
+  expect(screen.getByText("80% sold, 20% to own sites")).toBeTruthy();
 });
 
 describe("signed cost lines (ticket 1122)", () => {

@@ -522,6 +522,7 @@ export default function BuildCapacityDialog({
         {showReadout && plants.buildDemand && (
           <BuildMarketReadout
             rows={plants.buildDemand}
+            measuredRoomUnits={plants.measuredDemandGapUnits}
             unitsPerFacility={unitsPerFacility}
             site={site}
             sites={sites}

@@ -1,5 +1,6 @@
 "use client";
 
+import { outputPlacement } from "@/lib/corporations/rules/outputPlacement";
 import {
   listOutputs,
   outputSalesSplit,
@@ -18,6 +19,7 @@ import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
+import { SOLD_SHARE_POOL_NOTE } from "@/lib/corporations/rules/soldShareReading";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,
@@ -86,6 +88,11 @@ export default function MarketMoneyPanel({
     : (truth?.soldFraction ?? null);
   const split = outputSalesSplit(outputs);
   const ownSite = settlement?.ownSites ?? plants.ownSiteUnits ?? 0;
+  // Internal deliveries are never counted as unsold.
+  const placement = outputPlacement({
+    sold: sellingShare,
+    ownSites: offered > 0 ? ownSite / offered : 0,
+  });
   const saleBasis = settlement ? "units offered, including stock" : "units made";
   // Delivery-limited share: made, offered, and no freight network could carry
   // it. Without naming it this reads as a demand failure on every surface, and
@@ -240,8 +247,16 @@ export default function MarketMoneyPanel({
         <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <UnitTile
             label="Selling"
-            value={sellingShare != null ? `${fmtPct(sellingShare)} sold` : "n/a"}
-            tone={sellingShare == null ? "muted" : sellingShare < 0.5 ? "warning" : "success"}
+            value={
+              sellingShare != null
+                ? `${fmtPct(sellingShare)} sold${
+                    placement && placement.ownSites > 0
+                      ? `, ${fmtPct(placement.ownSites)} to own sites`
+                      : ""
+                  }`
+                : "n/a"
+            }
+            tone={placement == null ? "muted" : placement.unsold > 0.5 ? "warning" : "success"}
             help={
               (truth.soldByCommodity.length > 0
                 ? `Units buyers took divided by ${saleBasis}, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. Share of offers sold by product: ${truth.soldByCommodity
@@ -321,7 +336,7 @@ export default function MarketMoneyPanel({
           chip={
             !settlement && plants.fillRate != null ? `${fmtPct(plants.fillRate)} sold` : undefined
           }
-          help="Units buyers actually took. The share that sells is set by your price against the market and by how much demand is left here."
+          help={`Units buyers actually took. ${SOLD_SHARE_POOL_NOTE}`}
         />
         {settlement && (
           <UnitTile
@@ -392,7 +407,7 @@ export default function MarketMoneyPanel({
       {/* Glut explainer: below half fill the missing sales are not a pricing
           tweak away, the market simply does not want the output. Say so plainly
           (same tone as the demand-gap copy above, ticket #1027 follow-up). */}
-      {sellingShare != null && sellingShare < 0.5 && !split && (
+      {placement != null && placement.unsold > 0.5 && !split && (
         <p className="mt-2 text-body-sm text-muted">
           {deliveryLimitedShown
             ? "The rest of the shortfall is demand. Output beyond what buyers need goes unsold, and extra sales have to be won from rivals on price."

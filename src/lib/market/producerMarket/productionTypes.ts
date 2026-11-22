@@ -33,6 +33,12 @@ export type ProducerEconomyInput = {
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
   maximumPlanningPasses?: number;
   /**
+   * Accounts that may not buy this turn: their orders and input credit are
+   * dropped before clearing. Set only when a first settlement would have
+   * debited them past their cash, so one company cannot stop the turn.
+   */
+  excludedBuyerAccounts?: readonly string[];
+  /**
    * Same-turn spillover of household spend stranded in sold-out lanes onto the
    * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
    */

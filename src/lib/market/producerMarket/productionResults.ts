@@ -1,6 +1,7 @@
 /** Turns a cleared producer market into per-producer operating results and closing accounts. */
 import type { ProducerEconomyInput } from "./productionTypes";
 import type { ProducerOffer, PurchaseOrder } from "./rules";
+import { buildInputReceipt, type InputReceipt } from "./rules/inputReceipt";
 import { type ProducerPayable, accrueProducerPayable } from "./payablesRules";
 import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
 import { minorInputs, minorInputShortfallCost } from "./makeDoRules";
@@ -116,6 +117,46 @@ export function buildProducerOperatingResults({
     rows.push({ unitPrice: offer.unitPrice, units });
     unsoldByBook.set(key, rows);
   }
+  const inputReceiptsOf = (p: ProductionPlan): InputReceipt[] => {
+    const maximum = physicalMaximum.get(p.id)!;
+    const minor = minorInputs(
+      p.inputs.map((r) => ({ unitsPerOutput: r.unitsPerOutput, unitValue: r.maximumUnitPrice }))
+    );
+    const receipts: InputReceipt[] = [];
+    for (const [k, recipe] of p.inputs.entries()) {
+      const need = maximum * recipe.unitsPerOutput;
+      if (minor[k] || !(need > 0)) continue;
+      const stockUnits = p.inputStock
+        .filter((s) => s.commodity === recipe.commodity)
+        .reduce((n, s) => n + s.units, 0);
+      const boughtUnits = orderIdsForInput(p.id, recipe.commodity).reduce(
+        (sum, id) => sum + (ordersById.get(id)?.deliveredUnits ?? 0),
+        0
+      );
+      // Scanning the unsold book is only needed to name a blocker, so plants
+      // that got everything skip it; this runs for every plant every turn.
+      let unsoldWithinLimitUnits = 0;
+      let unsoldAboveLimitUnits = 0;
+      if (need - stockUnits - boughtUnits > 1e-9 * Math.max(1, need)) {
+        const unsold = unsoldByBook.get(JSON.stringify([recipe.commodity, recipe.book])) ?? [];
+        for (const row of unsold) {
+          if (row.unitPrice <= recipe.maximumUnitPrice) unsoldWithinLimitUnits += row.units;
+          else unsoldAboveLimitUnits += row.units;
+        }
+      }
+      receipts.push(
+        buildInputReceipt({
+          commodity: recipe.commodity,
+          neededUnits: need,
+          stockUnits,
+          boughtUnits,
+          unsoldWithinLimitUnits,
+          unsoldAboveLimitUnits,
+        })
+      );
+    }
+    return receipts;
+  };
   /**
    * The scarcest input of a plant short inputs cut: the major input whose
    * stock, purchases and unsold supply within its limit price cover the least
@@ -464,6 +505,10 @@ export function buildProducerOperatingResults({
       ...(p.priorGlutTurns != null ? { priorGlutTurns: p.priorGlutTurns } : {}),
       ...probeFields,
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
+      ...(() => {
+        const inputReceipts = inputReceiptsOf(p);
+        return inputReceipts.length > 0 ? { inputReceipts } : {};
+      })(),
       ...(() => {
         const binding = billedRunShare.has(p.id) ? bindingInputOf(p) : undefined;
         return binding ? { bindingInput: binding } : {};

@@ -14,6 +14,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import FundedBuildDemand from "./FundedBuildDemand";
+import { buildRoomVerdict } from "@/lib/corporations/rules/buildRoomVerdict";
 import BuildMarketReadout from "./BuildMarketReadout";
 import { CAPACITY_UNIT_LABEL, formatUnits, roomInPlantsLabel } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
@@ -73,6 +74,11 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
     titleId,
     toggleCountry,
   } = context;
+  // Only a market with measured room can be the best place to build.
+  const bestFitIndex =
+    suggestionMode === "unowned"
+      ? suggestions.findIndex((s) => canEnterNow(s) && buildRoomVerdict(roomFor(s)) === "room")
+      : -1;
 
   return (
     <div
@@ -444,6 +450,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       <ul className="list-none divide-y divide-card-border/40">
                         {suggestions.map((s, i) => {
                           const room = roomFor(s);
+                          const verdict = buildRoomVerdict(room);
                           const sharedRoom =
                             (s.roomScope ?? null) === "country" || countrySharedDemand;
                           const showCountryEstimate =
@@ -490,7 +497,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                     >
                                       {s.stateName}
                                     </span>
-                                    {i === 0 && suggestionMode === "unowned" && open && (
+                                    {i === bestFitIndex && (
                                       <span className="shrink-0 rounded bg-success/15 px-1 py-0.5 text-[9px] font-bold text-success">
                                         Best fit
                                       </span>
@@ -528,9 +535,11 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                         : "shared above"
                                       : `new ${facilityPlural(selectedType)}`}
                                   </span>
-                                  {open && showCountryEstimate && (room ?? 0) <= 0 && (
+                                  {open && showCountryEstimate && verdict !== "room" && (
                                     <span className="mt-0.5 block text-[9px] font-normal leading-snug text-warning">
-                                      You can still build here
+                                      {verdict === "none"
+                                        ? "Do not build here for sales: buyers have no unmet demand"
+                                        : "Room to build is not measured yet"}
                                     </span>
                                   )}
                                 </span>

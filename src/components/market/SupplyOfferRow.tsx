@@ -37,9 +37,9 @@ export function SupplyOfferHeader() {
       <span className={cell}>Company</span>
       <span className={cell}>Their side</span>
       <span className={cell}>Commodity</span>
-      <span className={`${cell} text-right`}>Volume / turn</span>
+      <span className={`${cell} text-right`}>Volume / day</span>
       <span className={`${cell} text-right`}>Est. value / turn</span>
-      <span className={cell}>Vs market</span>
+      <span className={cell}>Vs reference price</span>
       <span className={cell}>Term</span>
     </div>
   );
@@ -54,7 +54,7 @@ export function SupplyOfferRow({
 }: {
   offer: SupplyListingView;
   commodity: SupplyListingView["commodity"];
-  /** Current market price per unit, for the value estimate. */
+  /** Contract reference price per unit (not the board price), for the value estimate. */
   marketPrice?: number;
   corporations: OfferCorporation[];
   onTaken: () => void;
@@ -88,7 +88,7 @@ export function SupplyOfferRow({
       setMessage(
         `Agreement started: you are ${offer.side === "sell" ? "buying" : "selling"} ${size}${
           COMMODITY_UNITS[commodity]
-        } per turn ${offer.side === "sell" ? "from" : "to"} ${offer.corporationName}. It is active now.`
+        } per day ${offer.side === "sell" ? "from" : "to"} ${offer.corporationName}. It is active now.`
       );
       onTaken();
     } catch (e) {
@@ -119,7 +119,7 @@ export function SupplyOfferRow({
         </span>
         <span className="text-sm font-semibold tabular-nums text-foreground md:text-right">
           {formatVolume(offer.volumeCap)}{" "}
-          <span className="text-xs font-normal text-muted">{COMMODITY_UNITS[commodity]}/turn</span>
+          <span className="text-xs font-normal text-muted">{COMMODITY_UNITS[commodity]}/day</span>
         </span>
         <span className="text-sm tabular-nums text-foreground md:text-right">
           {value == null ? "n/a" : `~${formatAmount(Math.round(value))}`}

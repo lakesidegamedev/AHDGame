@@ -35,6 +35,8 @@ export function FirstDaysPanel({
   const [campaigning, setCampaigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState<string | null>(null);
+  const [confirmedCampaigns, setConfirmedCampaigns] = useState(0);
+  const campaignInFlight = useRef(false);
   const viewed = useRef(false);
 
   useEffect(() => {
@@ -48,28 +50,37 @@ export function FirstDaysPanel({
     });
   }, [data]);
 
-  const campaignDone = data.campaigns >= data.campaignGoal;
+  const campaigns = Math.max(data.campaigns, confirmedCampaigns);
+  const campaignDone = campaigns >= data.campaignGoal;
 
   async function campaign() {
+    if (campaignInFlight.current || campaignDone) return;
+    campaignInFlight.current = true;
     setCampaigning(true);
     setError(null);
+    setLastGain(null);
     try {
       const res = await fetch("/api/actions/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ actionType: "campaign" }),
       });
-      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(apiErrorText(body, t("campaignFailed")));
+        const body = await res.json().catch(() => ({}));
+        setError(
+          res.status >= 500 ? t("campaignUnconfirmed") : apiErrorText(body, t("campaignFailed"))
+        );
         return;
       }
+      const body = await res.json();
+      setConfirmedCampaigns(campaigns + 1);
       setLastGain(typeof body.message === "string" ? body.message : null);
-      void captureProductEvent("first_days_campaigned", { campaigns: data.campaigns + 1 });
+      void captureProductEvent("first_days_campaigned", { campaigns: campaigns + 1 });
       router.refresh();
     } catch {
-      setError(t("campaignFailed"));
+      setError(t("campaignUnconfirmed"));
     } finally {
+      campaignInFlight.current = false;
       setCampaigning(false);
     }
   }
@@ -105,7 +116,7 @@ export function FirstDaysPanel({
           {step(campaignDone, 1)}
           <div className="min-w-0 flex-1">
             <p className="text-body-sm font-medium text-foreground">
-              {t("campaignTitle", { done: data.campaigns, goal: data.campaignGoal })}
+              {t("campaignTitle", { done: campaigns, goal: data.campaignGoal })}
             </p>
             <p className="mt-0.5 text-body-xs leading-relaxed text-muted">
               {t("campaignBody", { influence: data.influence.toFixed(1) })}
@@ -114,8 +125,13 @@ export function FirstDaysPanel({
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {campaignCost ? (
                   <>
-                    <Button size="sm" onClick={campaign} isLoading={campaigning}>
-                      {t("campaignButton")}
+                    <Button
+                      size="sm"
+                      onClick={campaign}
+                      disabled={campaigning}
+                      aria-busy={campaigning}
+                    >
+                      {t(campaigning ? "campaignInProgress" : "campaignButton")}
                     </Button>
                     <span className="text-body-xs text-muted">
                       {t("campaignCost", campaignCost)}
@@ -129,7 +145,11 @@ export function FirstDaysPanel({
                 </Link>
               </div>
             )}
-            {lastGain && <p className="mt-1 text-body-xs text-success">{lastGain}</p>}
+            {lastGain && (
+              <p role="status" className="mt-1 text-body-xs text-success">
+                {lastGain}
+              </p>
+            )}
             <InlineError error={error} className="mt-1 text-body-xs text-error" />
           </div>
         </li>

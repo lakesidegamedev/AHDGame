@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { checkBalancedTransfer } from "@/lib/banking/rules/invariants";
-import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
+import {
+  producerCashTransition,
+  ProducerCashOverdrawError,
+  type ProducerCashBinding,
+} from "./cashSettlementRules";
 
 const bindings: ProducerCashBinding[] = [
   {
@@ -90,6 +94,76 @@ describe("closed producer cash settlement", () => {
       ],
     });
     expect(receipt.legs.find((leg) => leg.kind === "debit")?.amount).toBe(local);
+  });
+
+  it("drops pro-rata dust debited from a company already below zero instead of stopping the turn", () => {
+    // Live t135: a company stored at -130,308 USD has 0 to spend; a 1e-11 anchor
+    // residue from clearing must not read as an overdraw of its whole deficit.
+    const receipt = producerCashTransition({
+      ...args(),
+      bindings: [
+        { ...bindings[1], openingCashLocal: -130308.17513509704 },
+        { ...bindings[0], openingCashLocal: 200 },
+      ],
+      opening: [
+        { id: "seller", cash: 0 },
+        { id: "buyer", cash: 100 },
+      ],
+      closing: [
+        { id: "seller", cash: 0 },
+        { id: "buyer", cash: 100 + 1e-11 },
+      ],
+      cashChanges: [
+        { accountId: "seller", change: -1e-11 },
+        { accountId: "buyer", change: 1e-11 },
+      ],
+    });
+    expect(receipt.legs.filter((leg) => leg.kind === "debit")).toEqual([]);
+    expect(checkBalancedTransfer(receipt.legs, receipt.key)).toEqual([]);
+  });
+
+  it("names every account a settlement would overdraw", () => {
+    let caught: unknown;
+    try {
+      producerCashTransition({
+        ...args(),
+        closing: [
+          { id: "buyer", cash: 0 },
+          { id: "seller", cash: 120 },
+        ],
+        opening: [
+          { id: "buyer", cash: 100 },
+          { id: "seller", cash: 20 },
+        ],
+        cashChanges: [
+          { accountId: "buyer", change: -100 },
+          { accountId: "seller", change: 100 },
+        ],
+        bindings: [{ ...bindings[0], openingCashLocal: 200 }, bindings[1]],
+      });
+      producerCashTransition({
+        ...args(),
+        bindings: [{ ...bindings[0], openingCashLocal: -50 }, bindings[1]],
+        opening: [
+          { id: "buyer", cash: 0 },
+          { id: "seller", cash: 20 },
+        ],
+        closing: [
+          { id: "buyer", cash: 0 },
+          { id: "seller", cash: 50 },
+        ],
+        cashChanges: [
+          { accountId: "buyer", change: -30 },
+          { accountId: "seller", change: 30 },
+        ],
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ProducerCashOverdrawError);
+    expect((caught as ProducerCashOverdrawError).overdrawn.map((o) => o.accountId)).toEqual([
+      "buyer",
+    ]);
   });
 
   it("has no cash legs when within-corporation deliveries change no money", () => {
