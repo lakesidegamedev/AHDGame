@@ -330,6 +330,7 @@ export async function processNppCorporationDecisions(
             countryId: 1,
             sectorType: 1,
             revenue: 1,
+            realizedRevenue: 1,
             corporationId: 1,
             nationalizedAtTurn: 1,
             mothballed: 1,
@@ -487,7 +488,7 @@ export async function processNppCorporationDecisions(
   );
 
   // Local revenue share per sector, built once for the cohort's reinvest pricing.
-  const localShareOf = buildLocalRevenueShareLookup(globalSectors);
+  let localShareOf = buildLocalRevenueShareLookup(globalSectors);
 
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
@@ -515,7 +516,6 @@ export async function processNppCorporationDecisions(
     bankRates = bankSnapshot.bankRates;
     const primeByCountry = bankSnapshot.primeByCountry;
     const colByState = await loadNppCostOfLivingByState(db);
-    const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     const nppGameConfig = await gameConfigCollection<
       {
         commandEconomyEnabled?: boolean;
@@ -550,6 +550,9 @@ export async function processNppCorporationDecisions(
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);
     productFillStage = nppGameConfig?.nppGrowthPerProductFillStage ?? 0;
+    // Dominance pricing reads the same earned-revenue share as every other screen.
+    localShareOf = buildLocalRevenueShareLookup(globalSectors);
+    const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     plants = {
       enabled: true,
       year: plantsYear,

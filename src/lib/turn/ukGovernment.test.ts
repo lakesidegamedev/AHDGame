@@ -64,6 +64,7 @@ vi.mock("@/lib/constants/countries", async (importOriginal) => {
   return {
     ...actual,
     COUNTRY_CONFIGS: {
+      ...actual.COUNTRY_CONFIGS,
       UK: {
         id: "UK",
         name: "United Kingdom",

@@ -67,7 +67,8 @@ const compareNames = (a: RankedNation, b: RankedNation) => a.name.localeCompare(
  */
 export function rankNations(
   countries: readonly RankableCountry[],
-  selection: RankingSelection
+  selection: RankingSelection,
+  options: { higherIsBetter?: boolean } = {}
 ): RankedNation[] {
   const rows: RankedNation[] = countries.map((country) => {
     const figure = selectionFigure(country, selection);
@@ -87,13 +88,22 @@ export function rankNations(
     else unranked.push(row);
   }
 
-  ranked.sort((a, b) => b.score! - a.score! || compareNames(a, b));
+  // A score can saturate (a band's floor or ceiling), so nations with the same
+  // score are ordered by the raw measure in the metric's own direction.
+  const direction = options.higherIsBetter === false ? 1 : -1;
+  const rawOrder = (a: RankedNation, b: RankedNation) =>
+    a.value !== null && b.value !== null && a.value !== b.value
+      ? direction * (a.value - b.value)
+      : 0;
+  ranked.sort((a, b) => b.score! - a.score! || rawOrder(a, b) || compareNames(a, b));
   let lastScore: number | undefined;
+  let lastValue: number | null = null;
   let lastRank = 0;
   ranked.forEach((row, index) => {
-    if (lastScore === undefined || row.score !== lastScore) {
+    if (lastScore === undefined || row.score !== lastScore || row.value !== lastValue) {
       lastRank = index + 1;
       lastScore = row.score!;
+      lastValue = row.value;
     }
     row.rank = lastRank;
   });
@@ -127,13 +137,15 @@ export function compareAcrossMetrics(input: {
   countryIds: readonly string[];
   category: MetricCategoryId;
   metrics: readonly string[];
+  /** Direction of a metric, so saturated scores still order by the raw measure. */
+  higherIsBetter?: (metric: string) => boolean | undefined;
 }): CompareRow[] {
   return input.metrics.map((metric) => {
-    const ranking = rankNations(input.countries, {
-      kind: "metric",
-      category: input.category,
-      metric,
-    });
+    const ranking = rankNations(
+      input.countries,
+      { kind: "metric", category: input.category, metric },
+      { higherIsBetter: input.higherIsBetter?.(metric) }
+    );
     const byCountry = new Map(ranking.map((row) => [row.countryId, row]));
     return {
       metric,

@@ -43,7 +43,7 @@ export interface CommodityFlow {
    * the "clearing" tier couples stock-to-flow into prices.
    */
   stockUnits: number | null;
-  /** Turns of demand the current stock would cover. null when not applicable. */
+  /** Days of demand the current stock would cover (stock over the ledger's daily demand rate). Field name is historical. null when not applicable. */
   coverTurns: number | null;
   /** Units lost to carry/spoilage this turn (includes any cover-cap excess). */
   spoiledUnits: number;

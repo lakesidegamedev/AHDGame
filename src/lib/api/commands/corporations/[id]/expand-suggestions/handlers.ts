@@ -229,6 +229,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         suggestions: [],
         availableCountries: [],
         liquidCapital: liquidCapitalAnchor,
+        liquidCapitalLocal: liquidCapital,
         liquidCurrencyCode,
       });
     }
@@ -571,6 +572,8 @@ export async function GET(request: Request, { params }: RouteParams) {
         : [],
       availableCountries,
       liquidCapital: liquidCapitalAnchor,
+      // Company cash in its own currency, the figure the Overview and Finance tabs show.
+      liquidCapitalLocal: liquidCapital,
       liquidCurrencyCode,
       // Founding quote. Constant across states, unlike the build cost, so it
       // rides on the envelope rather than being repeated per row.

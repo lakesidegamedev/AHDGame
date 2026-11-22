@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, UpdateFilter } from "mongodb";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
@@ -15,6 +16,18 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
  * added is removed again so the party is never listed in two coalitions.
  */
 export async function admitPartyToCoalition(
+  db: Db,
+  coalition: Pick<Coalition, "_id">,
+  party: Pick<PoliticalParty, "_id" | "sequentialId">,
+  from: "pendingInvites" | "joinRequests",
+  now: Date
+): Promise<boolean> {
+  return withSessionDb(db, (tx) =>
+    admitPartyToCoalitionInTransaction(tx, coalition, party, from, now)
+  );
+}
+
+async function admitPartyToCoalitionInTransaction(
   db: Db,
   coalition: Pick<Coalition, "_id">,
   party: Pick<PoliticalParty, "_id" | "sequentialId">,

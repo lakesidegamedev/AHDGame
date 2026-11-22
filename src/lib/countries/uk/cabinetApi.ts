@@ -1,3 +1,6 @@
+import { restoreCharacterOfficeAfterCabinet } from "@/lib/cabinet/restoreOffice";
+export { restoreCharacterOfficeAfterCabinet } from "@/lib/cabinet/restoreOffice";
+import { resignCabinetSeat } from "@/lib/cabinet/resignMember";
 import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
@@ -19,7 +22,6 @@ import {
 } from "@/lib/api/errors";
 import { assertSameCountry } from "@/lib/api/sameCountry";
 import { checkRateLimit, CONGRESS_LIMITS, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Db } from "mongodb";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
@@ -108,49 +110,6 @@ export function duplicateAppointmentMessage(error: unknown): string {
     return "This minister already holds a cabinet post that cannot be combined with this one. Refresh the cabinet and try again.";
   }
   return "A conflicting appointment was just made. Refresh the cabinet and try again.";
-}
-
-/**
- * Restore a departing minister's office after cabinet exit: their legislative
- * seat, or private-citizen status if they hold no seat. Shared by every vacate
- * path so a character is never stranded in a cabinet office they no longer hold.
- */
-export async function restoreCharacterOfficeAfterCabinet(
-  db: Db,
-  countryId: CountryId,
-  holderCharacterId: ObjectId,
-  now: Date
-): Promise<void> {
-  const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-  const lowerOfficial = await electedOfficialsCollection(db).findOne({
-    characterId: holderCharacterId,
-    officeType: { $in: eligibleOfficeTypes },
-    countryId,
-  });
-  if (lowerOfficial) {
-    const restoreOffice: OfficeType =
-      lowerOfficial.officeType === "commons"
-        ? {
-            type: "commons",
-            state: lowerOfficial.state!,
-            ...(lowerOfficial.constituencyId
-              ? {
-                  constituency: lowerOfficial.constituency ?? lowerOfficial.constituencyId,
-                  constituencyId: lowerOfficial.constituencyId,
-                }
-              : {}),
-          }
-        : { type: lowerOfficial.officeType, state: lowerOfficial.state! };
-    await charactersCollection(db).updateOne(
-      { _id: holderCharacterId },
-      { $set: { currentOffice: restoreOffice, updatedAt: now } }
-    );
-  } else {
-    await charactersCollection(db).updateOne(
-      { _id: holderCharacterId },
-      { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
-    );
-  }
 }
 
 export async function getCabinetCharactersHandler(request: Request, countryId: CountryId) {
@@ -672,37 +631,24 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
       // wins, and the loser reports 404 here before restoring an office or
       // writing a gauge event for a seat it never vacated. The holder predicate
       // keeps the delete atomic with the ownership check above.
-      const removed = await getCabinetMembersCollection(db).deleteOne({
-        _id: member._id,
-        characterId: caller._id,
-      });
-      if (removed.deletedCount === 0) {
-        throw notFound("You do not hold this cabinet seat");
-      }
-      await restoreCharacterOfficeAfterCabinet(db, countryId, member.characterId, now);
-      const { currentTurn } = await getGameTime().catch(() => ({ currentTurn: 0 }));
-      await afterCommit(db, () =>
-        captureOfficeTransition({
-          db: unboundDb(db),
-          officeType: countryId === COUNTRY_CONFIGS.UK.id ? "ukCabinet" : "parliamentaryCabinet",
-          transitionType: "left",
-          partyId: member.party,
-          selectionMethod: "resignation",
-          tenureTurns: 0,
-          careerStage: caller.careerHistory?.length ?? 0,
-          nationId: countryId,
-          turn: currentTurn,
-          flush: true,
-        })
-      );
-
-      // A resignation is a flat confidence hit; waves sum to destabilise and
-      // Great Offices of State hit heavier. No consequence until
-      // UK_CONFIDENCE_GAUGE_DISSOLUTION is enabled.
-      // eslint-disable-next-line local/no-country-literals -- the confidence gauge and Great Offices are UK-specific structures (ukGovernment singleton)
-      if (countryId === "UK") {
-        const greatOffice = GREAT_OFFICE_POSITION_IDS.has(positionId);
-        await applyConfidenceEventToGov(db, { kind: "ministerResigned", greatOffice }, now);
+      const exit = await resignCabinetSeat(db, member, now);
+      if (!exit.removed) throw notFound("You do not hold this cabinet seat");
+      if (exit.leftCabinet) {
+        const { currentTurn } = await getGameTime().catch(() => ({ currentTurn: 0 }));
+        await afterCommit(db, () =>
+          captureOfficeTransition({
+            db: unboundDb(db),
+            officeType: countryId === COUNTRY_CONFIGS.UK.id ? "ukCabinet" : "parliamentaryCabinet",
+            transitionType: "left",
+            partyId: member.party,
+            selectionMethod: "resignation",
+            tenureTurns: 0,
+            careerStage: caller.careerHistory?.length ?? 0,
+            nationId: countryId,
+            turn: currentTurn,
+            flush: true,
+          })
+        );
       }
 
       return NextResponse.json({

@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { loadDividendsReceived } from "@/lib/character/dividendsReceived";
 import type { CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
@@ -53,10 +54,13 @@ export async function getFinancialData(characterId: ObjectId) {
     ),
   ]);
 
-  const latestHistByCorp = await fetchLatestCorpHistoryDividendRows(
-    db,
-    corporationsWithShares.map((c) => c._id)
-  );
+  const [latestHistByCorp, dividendsReceived] = await Promise.all([
+    fetchLatestCorpHistoryDividendRows(
+      db,
+      corporationsWithShares.map((c) => c._id)
+    ),
+    loadDividendsReceived(db, characterId),
+  ]);
 
   // Load FX rates before the corp loop so sharePrice can be anchor-normalized.
   // corp.sharePrice is stored in the corp's liquidCurrencyCode (post-v0.2.6 LOCAL);
@@ -149,6 +153,7 @@ export async function getFinancialData(characterId: ObjectId) {
     hasFundHoldings: !!fundPosition,
     bondIncomePerTurn,
     dividendIncomePerTurn,
+    dividendsReceived,
     portfolioValue,
     fxRatesRecord,
     corporation: corporation

@@ -41,7 +41,12 @@ export function EconomicIndicators({
     { label: "Real GDP growth", value: pctSign(gdpGrowth), bad: gdpGrowth < 0 },
     { label: "Wage growth", value: pctSign(wageGrowth), bad: false },
     { label: "Prime rate", value: `${primeRate.toFixed(2)}%`, bad: false },
-    { label: "Deficit-to-GDP", value: `${deficitToGdp.toFixed(1)}%`, bad: deficitToGdp < -5 },
+    {
+      label: "Budget balance, % of GDP",
+      value: pctSign(deficitToGdp),
+      note: deficitToGdp < 0 ? "deficit" : deficitToGdp > 0 ? "surplus" : undefined,
+      bad: deficitToGdp < -5,
+    },
   ];
 
   return (

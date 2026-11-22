@@ -133,6 +133,16 @@ describe("daysOfCover", () => {
   it("is stock over per-turn demand for storables", () => {
     expect(daysOfCover("steel", 3000, 100)).toBe(30);
   });
+
+  it("divides stock by the ledger's daily demand rate, so the result is days", () => {
+    const flow = advanceStock({
+      commodity: "steel",
+      prevStock: 0,
+      supplyUnits: 150,
+      demandUnits: 100,
+    });
+    expect(daysOfCover("steel", flow.stock, 100)).toBe(Math.round((flow.stock / 100) * 10) / 10);
+  });
   it("is null for non-storables and zero demand", () => {
     expect(daysOfCover("energy", 3000, 100)).toBeNull();
     expect(daysOfCover("steel", 3000, 0)).toBeNull();

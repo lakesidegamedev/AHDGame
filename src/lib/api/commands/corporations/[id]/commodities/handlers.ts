@@ -37,6 +37,9 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { matchingSiteReceipt } from "@/lib/corporations/rules/siteStatement";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
 import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
@@ -66,6 +69,8 @@ type CommoditySector = Pick<
   | "militaryDivertedTurn"
   | "clearingFactor"
   | "soldFraction"
+  | "plantsPnl"
+  | "producerSettlement"
 >;
 
 // GET /api/corporations/[id]/commodities — Per-turn commodity output/consumption,
@@ -139,6 +144,10 @@ export async function GET(request: Request, { params }: RouteParams) {
         // Realized price leg, the input-demand deflator's input.
         clearingFactor: 1,
         soldFraction: 1,
+        "plantsPnl.source": 1,
+        "plantsPnl.turn": 1,
+        "producerSettlement.turn": 1,
+        "producerSettlement.inputsConsumed": 1,
         _id: 1,
       })
       .toArray();
@@ -155,6 +164,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       stateResourceCapacityDocs,
       worldPreset,
       supplyAgreements,
+      commodityPriceDocs,
     ] = await Promise.all([
       gameStateCollection(db).findOne(
         { _id: "current" },
@@ -224,6 +234,9 @@ export async function GET(request: Request, { params }: RouteParams) {
             })
             .toArray()
         : Promise.resolve([]),
+      commodityPricesCollection(db)
+        .find({}, { projection: { commodity: 1, globalPrice: 1 } })
+        .toArray(),
     ]);
 
     const currentTurn = gameState?.currentTurn ?? 0;
@@ -350,7 +363,15 @@ export async function GET(request: Request, { params }: RouteParams) {
       ),
       capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock ?? null,
       priceLeg: sectorPriceLeg(sector.clearingFactor, sector.soldFraction),
+      // Same booked bill the sector page shows; null until a turn has settled.
+      inputsBookedPerDay: (() => {
+        const receipt = matchingSiteReceipt(sector);
+        return receipt ? receipt.inputsConsumed * TURNS_PER_DAY : null;
+      })(),
     }));
+    const globalPriceByCommodity = new Map(
+      commodityPriceDocs.map((p) => [p.commodity, p.globalPrice])
+    );
     const stateResourcesByState = new Map(
       stateResourceCapacityDocs.map((doc) => [doc.stateId, doc.resources])
     );
@@ -374,6 +395,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         stateResourcesByState,
         currentYear: gameState?.currentYear,
         commandEconomyEnabled: gameConfig?.commandEconomyEnabled === true,
+        globalPriceOf: (commodity) => globalPriceByCommodity.get(commodity),
       }
     );
 

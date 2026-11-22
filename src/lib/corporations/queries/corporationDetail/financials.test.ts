@@ -45,4 +45,11 @@ describe("computeDividendDistribution (#587)", () => {
     const d = computeDividendDistribution(corp({ dividendRate: 100 }), legal, 0, 400);
     expect(d.dividendDistribution).toBeLessThanOrEqual(400);
   });
+
+  it("keeps the payout rate visible when the forecast is a loss", () => {
+    const d = computeDividendDistribution(corp({ dividendRate: 10 }), legal, 0, -50);
+    expect(d.effectiveDividendRate).toBe(0);
+    expect(d.policyDividendRate).toBe(10);
+    expect(d.dividendDistribution).toBe(0);
+  });
 });

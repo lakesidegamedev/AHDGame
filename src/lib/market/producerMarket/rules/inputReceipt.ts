@@ -1,5 +1,14 @@
+import type { OfferMissReason } from "./unfilledReasons";
+
 /** Why a plant did not get all of an input it planned to use. */
-export type InputBlocker = "sold_out" | "price_above_limit" | "not_delivered";
+export type InputBlocker =
+  | "sold_out"
+  | "price_above_limit"
+  | "not_delivered"
+  | "no_offers"
+  | "not_eligible"
+  | "buyer_budget"
+  | "freight_capacity";
 
 /** One input's needed, arrived and missing units for a turn, in per-turn physical units. */
 export interface InputReceipt {
@@ -27,6 +36,12 @@ export function buildInputReceipt(args: {
   boughtUnits: number;
   unsoldWithinLimitUnits: number;
   unsoldAboveLimitUnits: number;
+  /**
+   * Settlement's own reading of the unsold offers, when it recorded one: the
+   * reason nearest to a sale among them, and whether the book had any offers.
+   * Absent on older receipts, which keep the three-way inference above.
+   */
+  recorded?: { nearestMiss: OfferMissReason | null; bookHadOffers: boolean };
 }): InputReceipt {
   const neededUnits = Math.max(0, args.neededUnits);
   const arrivedUnits = Math.max(0, args.stockUnits) + Math.max(0, args.boughtUnits);
@@ -38,6 +53,12 @@ export function buildInputReceipt(args: {
     missingUnits,
   };
   if (missingUnits <= EPSILON * Math.max(1, neededUnits)) return { ...receipt, missingUnits: 0 };
+  if (args.recorded) {
+    const { nearestMiss, bookHadOffers } = args.recorded;
+    if (nearestMiss) return { ...receipt, blocker: nearestMiss };
+    if (!bookHadOffers) return { ...receipt, blocker: "no_offers" };
+    return { ...receipt, blocker: args.commodity === "freight" ? "freight_capacity" : "sold_out" };
+  }
   return {
     ...receipt,
     blocker:

@@ -27,3 +27,15 @@ export function computeDayChange(
   const changePct = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : 0;
   return { changePct, prevClose };
 }
+
+/**
+ * Percent and money change of the live price against one previous close, so the
+ * two figures on the quote card always describe the same move.
+ */
+export function quoteChangeAgainst(
+  price: number,
+  prevClose: number
+): { changePct: number; changeMoney: number } {
+  const changeMoney = price - prevClose;
+  return { changePct: prevClose > 0 ? (changeMoney / prevClose) * 100 : 0, changeMoney };
+}

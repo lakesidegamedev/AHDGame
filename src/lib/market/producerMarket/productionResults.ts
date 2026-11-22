@@ -2,6 +2,14 @@
 import type { ProducerEconomyInput } from "./productionTypes";
 import type { ProducerOffer, PurchaseOrder } from "./rules";
 import { buildInputReceipt, type InputReceipt } from "./rules/inputReceipt";
+import {
+  OFFER_MISS_PRIORITY,
+  bestMissReason,
+  unservedByReason,
+  type OfferMissReason,
+  type UnfilledDemand,
+} from "./rules/unfilledReasons";
+import { eligibleSetOf } from "./producerQuotes";
 import { type ProducerPayable, accrueProducerPayable } from "./payablesRules";
 import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
 import { minorInputs, minorInputShortfallCost } from "./makeDoRules";
@@ -107,16 +115,81 @@ export function buildProducerOperatingResults({
       })
     : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
-  const unsoldByBook = new Map<string, { unitPrice: number; units: number }[]>();
+  const unsoldByBook = new Map<string, { id: string; unitPrice: number; units: number }[]>();
+  const booksWithOffers = new Set<string>();
   for (const offer of market.tradeReceipt.offers) {
     const settled = offersById.get(offer.id);
+    const key = JSON.stringify([offer.commodity, offer.book]);
+    booksWithOffers.add(key);
     const units = settled ? settled.offeredUnits - settled.deliveredUnits : 0;
     if (!(units > 0)) continue;
-    const key = JSON.stringify([offer.commodity, offer.book]);
     const rows = unsoldByBook.get(key) ?? [];
-    rows.push({ unitPrice: offer.unitPrice, units });
+    rows.push({ id: offer.id, unitPrice: offer.unitPrice, units });
     unsoldByBook.set(key, rows);
   }
+  // What buyers still wanted at close, per book, read only when a short plant or
+  // an unsold product needs a reason. Spend left is the order's own cap and the
+  // account's closing funds, so a buyer that spent its way dry reads as one.
+  const closingFunds = new Map(market.accounts.map((a) => [a.id, a.cash]));
+  const demandOf = (order: PurchaseOrder): UnfilledDemand | null => {
+    const result = ordersById.get(order.id);
+    const missingUnits = result ? result.requestedUnits - result.deliveredUnits : 0;
+    if (!(missingUnits > 1e-9 * Math.max(1, order.units))) return null;
+    const funds =
+      Math.max(0, closingFunds.get(order.accountId) ?? 0) +
+      (salesAdvance.get(order.accountId) ?? 0);
+    const cap =
+      order.maximumSpend != null ? Math.max(0, order.maximumSpend - (result?.cost ?? 0)) : Infinity;
+    return {
+      missingUnits,
+      maximumUnitPrice: order.maximumUnitPrice,
+      eligible: eligibleSetOf(order),
+      ...(order.supplierOfferId ? { supplierOfferId: order.supplierOfferId } : {}),
+      spendLeft: Math.min(cap, funds),
+    };
+  };
+  let tradeOrdersById: Map<string, PurchaseOrder> | null = null;
+  let demandsByBook: Map<string, UnfilledDemand[]> | null = null;
+  const unfilledDemands = (bookId: string): UnfilledDemand[] => {
+    if (!demandsByBook) {
+      demandsByBook = new Map();
+      for (const order of market.tradeReceipt.orders) {
+        const demand = demandOf(order);
+        if (!demand) continue;
+        const key = JSON.stringify([order.commodity, order.book]);
+        const list = demandsByBook.get(key) ?? [];
+        list.push(demand);
+        demandsByBook.set(key, list);
+      }
+    }
+    return demandsByBook.get(bookId) ?? [];
+  };
+  const plantDemands = (ids: readonly string[]): UnfilledDemand[] => {
+    tradeOrdersById ??= new Map(market.tradeReceipt.orders.map((o) => [o.id, o]));
+    return ids.flatMap((id) => {
+      const order = tradeOrdersById!.get(id);
+      const demand = order ? demandOf(order) : null;
+      return demand ? [demand] : [];
+    });
+  };
+  /** Buyers' unfilled units by why this product's ask missed them; only when some stayed unsold. */
+  const unservedFields = (
+    producerId: string,
+    commodity: string,
+    book: string,
+    sold: { offeredUnits: number; deliveredUnits: number }
+  ) => {
+    if (!(sold.offeredUnits - sold.deliveredUnits > 1e-9 * Math.max(1, sold.offeredUnits)))
+      return {};
+    const offerId = JSON.stringify([producerId, "output", commodity]);
+    const ask = postedOffers.get(offerId)?.unitPrice;
+    if (ask == null) return {};
+    const unservedBy = unservedByReason(unfilledDemands(JSON.stringify([commodity, book])), {
+      id: offerId,
+      unitPrice: ask,
+    });
+    return Object.keys(unservedBy).length > 0 ? { unservedBy } : {};
+  };
   const inputReceiptsOf = (p: ProductionPlan): InputReceipt[] => {
     const maximum = physicalMaximum.get(p.id)!;
     const minor = minorInputs(
@@ -137,11 +210,29 @@ export function buildProducerOperatingResults({
       // that got everything skip it; this runs for every plant every turn.
       let unsoldWithinLimitUnits = 0;
       let unsoldAboveLimitUnits = 0;
+      let recorded: { nearestMiss: OfferMissReason | null; bookHadOffers: boolean } | undefined;
       if (need - stockUnits - boughtUnits > 1e-9 * Math.max(1, need)) {
-        const unsold = unsoldByBook.get(JSON.stringify([recipe.commodity, recipe.book])) ?? [];
+        const bookId = JSON.stringify([recipe.commodity, recipe.book]);
+        const unsold = unsoldByBook.get(bookId) ?? [];
         for (const row of unsold) {
           if (row.unitPrice <= recipe.maximumUnitPrice) unsoldWithinLimitUnits += row.units;
           else unsoldAboveLimitUnits += row.units;
+        }
+        const demands = plantDemands(orderIdsForInput(p.id, recipe.commodity));
+        // Only a plant whose own orders went unfilled can name a specific
+        // reason; a gap from stock alone keeps the inference above.
+        if (demands.length > 0) {
+          let nearest = OFFER_MISS_PRIORITY.length;
+          for (const row of unsold) {
+            // Rounding dust left in the book is not supply.
+            if (row.units <= 1e-9 * Math.max(1, need)) continue;
+            const reason = bestMissReason(demands, row);
+            if (reason) nearest = Math.min(nearest, OFFER_MISS_PRIORITY.indexOf(reason));
+          }
+          recorded = {
+            nearestMiss: nearest < OFFER_MISS_PRIORITY.length ? OFFER_MISS_PRIORITY[nearest] : null,
+            bookHadOffers: booksWithOffers.has(bookId),
+          };
         }
       }
       receipts.push(
@@ -152,6 +243,7 @@ export function buildProducerOperatingResults({
           boughtUnits,
           unsoldWithinLimitUnits,
           unsoldAboveLimitUnits,
+          ...(recorded ? { recorded } : {}),
         })
       );
     }
@@ -425,6 +517,7 @@ export function buildProducerOperatingResults({
           ? { captiveUnitValue: marketValue / sold.internalDeliveredUnits }
           : {}),
         realizedUnitPrice: sold.soldUnits > 0 ? sold.revenue / sold.soldUnits : null,
+        ...unservedFields(p.id, output.commodity, output.book, sold),
         unsoldUnits: unsold,
         lostUnits: unsold - kept,
       });

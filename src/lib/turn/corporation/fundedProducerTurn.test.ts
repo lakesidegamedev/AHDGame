@@ -389,4 +389,24 @@ describe("fundedReceiptOf", () => {
       fundedReceiptOf({ revenue: 1, profit: 1, producedUnits: 1, soldUnits: 1 }, 0)
     ).not.toHaveProperty("internalSupplyCharge");
   });
+
+  it("carries inputs, wages and the site bill, arrears included, for the cost record", async () => {
+    const { fundedReceiptOf } = await import("./fundedProducerTurn");
+    expect(
+      fundedReceiptOf(
+        {
+          revenue: 10,
+          profit: 1,
+          producedUnits: 5,
+          soldUnits: 5,
+          inputsConsumed: 4,
+          labourPaid: 3,
+          labourArrears: 1,
+          otherOperatingPaid: 2,
+          otherOperatingArrears: 1,
+        },
+        0
+      )
+    ).toMatchObject({ inputsConsumed: 4, labour: 4, siteOperating: 3 });
+  });
 });

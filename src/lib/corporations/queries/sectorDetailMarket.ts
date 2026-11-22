@@ -47,6 +47,7 @@ import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
+import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
 import {
   sectorMaintenanceAndProfit,
@@ -105,7 +106,7 @@ export function computeSectorMarketPosition(args: {
     // producer's own revenue, or that producer reads as more than 100%.
     siblingRevenueAnchorById.set(
       s._id.toString(),
-      Math.max(0, readCorpEconomicAnchor(s.revenue, hostCode, hostRate))
+      Math.max(0, readCorpEconomicAnchor(shareRevenueOf(s), hostCode, hostRate))
     );
   }
   const totalOwnedRevenue = siblingsSectors.reduce(

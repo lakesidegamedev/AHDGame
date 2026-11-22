@@ -1,4 +1,10 @@
-import { badRequest, notFound, unauthorized } from "@/lib/api/errors";
+import { restoreParliamentarySeats } from "@/lib/parliament/restoreParliamentarySeats";
+import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { clearCabinetOnTransition } from "@/lib/cabinetTransition";
+import { restoreCharacterOfficeAfterCabinet } from "@/lib/cabinet/restoreOffice";
+import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { badRequest, conflict, notFound, unauthorized } from "@/lib/api/errors";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { createAdminLog } from "@/lib/adminLog";
 import { createNotification } from "@/lib/notifications";
@@ -11,7 +17,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, CareerEvent, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types";
+import type { Character, CareerEvent, ElectedOfficial, OfficeType } from "@/lib/db/types";
 import type { CountryConfig } from "@/lib/constants/countries";
 import type { EligibleSenateAppointeeView } from "@/lib/government/dto/governmentView";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
@@ -30,9 +36,20 @@ export async function adminAppointPrimeMinister(
   countryConfig: CountryConfig,
   characterId: string | null
 ): Promise<{ success: true; message: string }> {
+  return withSessionDb(db, (tx) =>
+    adminAppointPrimeMinisterInTransaction(tx, adminUsername, countryId, countryConfig, characterId)
+  );
+}
+
+async function adminAppointPrimeMinisterInTransaction(
+  db: Db,
+  adminUsername: string,
+  countryId: CountryId,
+  countryConfig: CountryConfig,
+  characterId: string | null
+): Promise<{ success: true; message: string }> {
   const now = new Date();
-  const appointmentTurn =
-    (await (characterId ? getGameState(db).catch(() => null) : getGameState(db)))?.currentTurn ?? 0;
+  const appointmentTurn = (await getGameState(db))?.currentTurn ?? 0;
 
   let character: Character | null = null;
   if (characterId) {
@@ -56,12 +73,30 @@ export async function adminAppointPrimeMinister(
       { "currentOffice.type": execKey, countryId },
       { projection: { party: 1, careerHistory: 1 } }
     )
-    .toArray()
-    .catch(() => []);
+    .toArray();
+  const formerNpps = await nppsCollection(db)
+    .find({ countryId, "currentOffice.type": execKey }, { projection: { _id: 1 } })
+    .toArray();
+  await nppsCollection(db).updateMany(
+    { countryId, "currentOffice.type": execKey },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+  await restoreParliamentarySeats(
+    db,
+    countryId,
+    [],
+    formerNpps.map((n) => n._id),
+    now
+  );
   await charactersCollection(db).updateMany(
     { "currentOffice.type": execKey, countryId },
     { $set: { currentOffice: null, updatedAt: now } }
   );
+
+  for (const former of formerHolders) {
+    if (!character || !former._id.equals(character._id))
+      await restoreCharacterOfficeAfterCabinet(db, countryId, former._id, now);
+  }
 
   if (character) {
     const prev = character.currentOffice;
@@ -88,12 +123,17 @@ export async function adminAppointPrimeMinister(
     };
     await charactersCollection(db).updateOne(
       { _id: character._id },
-      { $set: { currentOffice: pmOffice, updatedAt: now }, $push: { careerHistory: pmCareer } }
+      {
+        $set: { currentOffice: pmOffice, updatedAt: now },
+        ...(character.currentOffice?.type === execKey
+          ? {}
+          : { $push: { careerHistory: pmCareer } }),
+      }
     );
   }
 
   const govCol = getGovernmentFormationsCollection(db);
-  const lowerChamberKey = countryConfig.legislature.lowerChamber.key;
+  const lowerChamberKey = getLowerChamberOfficeType(countryId);
   if (character) {
     const partySeqId = character.party?.toString();
     let partySeats = 0;
@@ -115,6 +155,7 @@ export async function adminAppointPrimeMinister(
           status: "formed",
           formationType: "admin",
           pmCharacterId: character._id,
+          pmNppId: null,
           pmName: character.name,
           governingPartyId: partySeqId ?? null,
           totalSeatsSupporting: partySeats,
@@ -137,6 +178,7 @@ export async function adminAppointPrimeMinister(
           status: "pending",
           formationType: null,
           pmCharacterId: null,
+          pmNppId: null,
           pmName: null,
           lostMajority: false,
           activeVoteId: null,
@@ -146,67 +188,70 @@ export async function adminAppointPrimeMinister(
         },
       }
     );
+    await clearCabinetOnTransition(db, countryId);
     await Promise.all([
       cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
       ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
     ]);
   }
 
-  await Promise.all([
-    ...formerHolders
-      .filter((holder) => !character || !holder._id.equals(character._id))
-      .map((holder) =>
-        captureOfficeTransition({
-          db,
-          officeType: execKey,
-          transitionType: "lost",
-          partyId: holder.party,
-          selectionMethod: character ? "appointment" : "removal",
-          tenureTurns: 0,
-          careerStage: holder.careerHistory?.length ?? 0,
-          nationId: countryId,
-          turn: appointmentTurn,
-          flush: true,
-        })
-      ),
-    ...(character
-      ? [
+  await afterCommit(db, async () => {
+    await Promise.all([
+      ...formerHolders
+        .filter((holder) => !character || !holder._id.equals(character._id))
+        .map((holder) =>
           captureOfficeTransition({
-            db,
+            db: unboundDb(db),
             officeType: execKey,
-            transitionType: "gained",
-            partyId: character.party,
-            selectionMethod: "appointment",
+            transitionType: "lost",
+            partyId: holder.party,
+            selectionMethod: character ? "appointment" : "removal",
             tenureTurns: 0,
-            careerStage: (character.careerHistory?.length ?? 0) + 1,
+            careerStage: holder.careerHistory?.length ?? 0,
             nationId: countryId,
             turn: appointmentTurn,
             flush: true,
-          }),
-        ]
-      : []),
-  ]);
+          })
+        ),
+      ...(character
+        ? [
+            captureOfficeTransition({
+              db: unboundDb(db),
+              officeType: execKey,
+              transitionType: "gained",
+              partyId: character.party,
+              selectionMethod: "appointment",
+              tenureTurns: 0,
+              careerStage: (character.careerHistory?.length ?? 0) + 1,
+              nationId: countryId,
+              turn: appointmentTurn,
+              flush: true,
+            }),
+          ]
+        : []),
+    ]);
 
-  await createAdminLog({
-    category: "election",
-    action: character ? "official_appointed" : "official_removed",
-    username: adminUsername,
-    characterName: character?.name ?? "—",
-    adminUsername,
-    details: character
-      ? `Appointed ${character.name} as ${countryConfig.name} ${countryConfig.executiveTitle}`
-      : `Vacated ${countryConfig.name} ${countryConfig.executiveTitle} position`,
-  });
-
-  if (character) {
-    await createNotification({
-      userId: character.userId,
-      type: "system",
-      title: `Appointed ${countryConfig.executiveTitle}`,
-      message: `You have been appointed ${countryConfig.executiveTitle} of ${countryConfig.name} by an admin.`,
-      metadata: { officeType: execKey, type: "executive_appointed" },
+    await createAdminLog({
+      category: "election",
+      action: character ? "official_appointed" : "official_removed",
+      username: adminUsername,
+      characterName: character?.name ?? "—",
+      adminUsername,
+      details: character
+        ? `Appointed ${character.name} as ${countryConfig.name} ${countryConfig.executiveTitle}`
+        : `Vacated ${countryConfig.name} ${countryConfig.executiveTitle} position`,
     });
-  }
+
+    if (character) {
+      await createNotification({
+        userId: character.userId,
+        type: "system",
+        title: `Appointed ${countryConfig.executiveTitle}`,
+        message: `You have been appointed ${countryConfig.executiveTitle} of ${countryConfig.name} by an admin.`,
+        metadata: { officeType: execKey, type: "executive_appointed" },
+      });
+    }
+  });
 
   return {
     success: true,
@@ -225,6 +270,29 @@ export async function appointSenator(
     appointeeType: "character" | "npp";
     senateClass: 1 | 2 | 3;
   }
+): Promise<{
+  success: true;
+  appointee: EligibleSenateAppointeeView;
+  termEnd: string;
+}> {
+  const now = new Date();
+  const appointmentId = new ObjectId();
+  return withSessionDb(db, (tx) =>
+    appointSenatorInTransaction(tx, governorUserId, input, now, appointmentId)
+  );
+}
+
+async function appointSenatorInTransaction(
+  db: Db,
+  governorUserId: string,
+  input: {
+    appointeeId?: string;
+    characterId?: string;
+    appointeeType: "character" | "npp";
+    senateClass: 1 | 2 | 3;
+  },
+  now: Date,
+  appointmentId: ObjectId
 ): Promise<{
   success: true;
   appointee: EligibleSenateAppointeeView;
@@ -256,6 +324,12 @@ export async function appointSenator(
     throw unauthorized("You must be a governor to appoint senators");
   }
 
+  const fence = await officialsCollection.updateOne(
+    { _id: governorOfficial._id, characterId: governorCharacter._id },
+    { $inc: { senateAppointmentRevision: 1 } }
+  );
+  if (fence.matchedCount !== 1) throw conflict("The governor changed. Refresh and try again.");
+
   const validSeat = US_SENATE_2020.some(
     (seat) => seat.state === governorOfficial.state && seat.senateClass === input.senateClass
   );
@@ -264,6 +338,7 @@ export async function appointSenator(
   }
 
   const senateSeat = await officialsCollection.findOne({
+    ...officialsCountryScope("US"),
     officeType: "senate",
     state: governorOfficial.state,
     senateClass: input.senateClass,
@@ -278,7 +353,6 @@ export async function appointSenator(
     senateClass: input.senateClass,
   };
 
-  const now = new Date();
   let appointeeName: string;
   let appointeeParty: string;
   let appointeeUserId: ObjectId | undefined;
@@ -332,9 +406,10 @@ export async function appointSenator(
   const termEnd =
     nextClassElection?.endTime instanceof Date
       ? nextClassElection.endTime
-      : new Date(Date.now() + 6 * 365 * 24 * 60 * 60 * 1000);
+      : new Date(now.getTime() + 6 * 365 * 24 * 60 * 60 * 1000);
 
   const officialFields: Partial<ElectedOfficial> = {
+    countryId: "US",
     officeType: "senate",
     state: governorOfficial.state,
     senateClass: input.senateClass,
@@ -353,16 +428,22 @@ export async function appointSenator(
   }
 
   if (senateSeat) {
-    await officialsCollection.updateOne(
-      { _id: senateSeat._id },
+    const seated = await officialsCollection.updateOne(
+      {
+        _id: senateSeat._id,
+        characterId: senateSeat.characterId ?? null,
+        nppId: senateSeat.nppId ?? null,
+      },
       {
         $set: officialFields,
         $unset: input.appointeeType === "character" ? { nppId: "" } : {},
       }
     );
+    if (seated.matchedCount !== 1)
+      throw conflict("The Senate vacancy changed. Refresh and try again.");
   } else {
     await officialsCollection.insertOne({
-      _id: new ObjectId(),
+      _id: appointmentId,
       createdAt: now,
       ...officialFields,
     } as ElectedOfficial);
@@ -379,36 +460,42 @@ export async function appointSenator(
       { $set: { currentOffice: officeType, updatedAt: now } }
     );
     const gameState = await getGameState(db).catch(() => null);
-    await captureOfficeTransition({
-      db,
-      officeType: "senate",
-      transitionType: "gained",
-      partyId: appointeeParty,
-      selectionMethod: "appointment",
-      tenureTurns: 0,
-      careerStage: 0,
-      nationId: "US",
-      turn: gameState?.currentTurn ?? 0,
-      iteration: gameState?.iteration,
-      flush: true,
-    });
+    await afterCommit(db, () =>
+      captureOfficeTransition({
+        db: unboundDb(db),
+        officeType: "senate",
+        transitionType: "gained",
+        partyId: appointeeParty,
+        selectionMethod: "appointment",
+        tenureTurns: 0,
+        careerStage: 0,
+        nationId: "US",
+        turn: gameState?.currentTurn ?? 0,
+        iteration: gameState?.iteration,
+        flush: true,
+      })
+    );
   }
 
   if (appointeeUserId) {
-    await createNotification({
-      userId: appointeeUserId,
-      title: "Appointed to US Senate",
-      message: `You have been appointed as US Senator for ${governorOfficial.state} (Class ${input.senateClass}) until ${termEnd.toLocaleDateString()}.`,
-      type: "system",
-    });
+    await afterCommit(db, () =>
+      createNotification({
+        userId: appointeeUserId,
+        title: "Appointed to US Senate",
+        message: `You have been appointed as US Senator for ${governorOfficial.state} (Class ${input.senateClass}) until ${termEnd.toLocaleDateString()}.`,
+        type: "system",
+      })
+    );
   }
   if (governorCharacter.userId) {
-    await createNotification({
-      userId: governorCharacter.userId,
-      title: "Senator Appointed",
-      message: `You have appointed ${appointeeName} as US Senator for ${governorOfficial.state}.`,
-      type: "system",
-    });
+    await afterCommit(db, () =>
+      createNotification({
+        userId: governorCharacter.userId,
+        title: "Senator Appointed",
+        message: `You have appointed ${appointeeName} as US Senator for ${governorOfficial.state}.`,
+        type: "system",
+      })
+    );
   }
 
   return {
