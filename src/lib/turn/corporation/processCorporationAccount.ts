@@ -34,6 +34,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 
 import { fundedSectorResult } from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector } from "@/lib/turn/corporation/sectorTurn";
+import type { SectorTurnResult } from "@/lib/turn/corporation/sectorTurnTypes";
 import { fundedSectorValuation } from "@/lib/turn/corporation/fundedSectorValuation";
 import {
   perTurnIssuerBondInterestExpense,
@@ -127,12 +128,11 @@ function prepareProcessCorporationAccount(
         sectorFxRate
       );
     const fundedReceipt = context.funded?.receiptsBySectorId.get(sectorIdStr);
-    const fundedResult = fundedReceipt
-      ? fundedSectorResult(legacyResult, fundedReceipt)
-      : undefined;
-    const r = fundedResult ?? legacyResult;
-    if (fundedResult) {
-      context.fundedResults.set(sectorIdStr, fundedResult);
+    const r: SectorTurnResult = fundedReceipt
+      ? fundedSectorResult<SectorTurnResult>(legacyResult, fundedReceipt)
+      : legacyResult;
+    if (fundedReceipt) {
+      context.fundedResults.set(sectorIdStr, r);
       context.fundedDaily.set(sectorIdStr, (anchorPerTurn: number) =>
         writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
       );
