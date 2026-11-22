@@ -75,11 +75,18 @@ export default function MarketMoneyPanel({
   const corpMoney = (val: number) =>
     formatAmount(liquidCode ? toInternalFrom(val, liquidCode) : val, liquidCode);
 
-  const offered = plants.producedUnits ?? 0;
-  const sold = plants.soldUnits ?? 0;
-  const unsold = plants.unsoldUnits ?? 0;
+  const settlement = plants.settledOffer;
+  const offered = settlement?.offered ?? plants.producedUnits ?? 0;
+  const sold = settlement?.sold ?? plants.soldUnits ?? 0;
+  const unsold = settlement?.unsold ?? plants.unsoldUnits ?? 0;
+  const sellingShare = settlement
+    ? offered > 0
+      ? Math.min(1, sold / offered)
+      : null
+    : (truth?.soldFraction ?? null);
   const split = outputSalesSplit(outputs);
-  const ownSite = plants.ownSiteUnits ?? 0;
+  const ownSite = settlement?.ownSites ?? plants.ownSiteUnits ?? 0;
+  const saleBasis = settlement ? "units offered, including stock" : "units made";
   // Delivery-limited share: made, offered, and no freight network could carry
   // it. Without naming it this reads as a demand failure on every surface, and
   // the two failures call for opposite responses: cut output, versus move more
@@ -233,23 +240,17 @@ export default function MarketMoneyPanel({
         <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <UnitTile
             label="Selling"
-            value={truth.soldFraction != null ? `${fmtPct(truth.soldFraction)} sold` : "n/a"}
-            tone={
-              truth.soldFraction == null
-                ? "muted"
-                : truth.soldFraction < 0.5
-                  ? "warning"
-                  : "success"
-            }
+            value={sellingShare != null ? `${fmtPct(sellingShare)} sold` : "n/a"}
+            tone={sellingShare == null ? "muted" : sellingShare < 0.5 ? "warning" : "success"}
             help={
               (truth.soldByCommodity.length > 0
-                ? `Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. Share of offers sold by product: ${truth.soldByCommodity
+                ? `Units buyers took divided by ${saleBasis}, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. Share of offers sold by product: ${truth.soldByCommodity
                     .map(
                       (s) =>
                         `${COMMODITY_LABELS[s.commodity as CommodityType] ?? s.commodity} ${fmtPct(s.fraction)}`
                     )
                     .join(", ")}.`
-                : "Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale. Units that do not sell cost you money and earn nothing.") +
+                : `Units buyers took divided by ${saleBasis}. Output sent to your own sites is listed separately.`) +
               (deliveryLimitedShown
                 ? ` ${deliveryLabel} limited ${fmtPct(deliveryLimited)} of your output from reaching buyers outside this state. ${deliveryExplanation} ${deliveryAction}`
                 : "") +
@@ -296,19 +297,39 @@ export default function MarketMoneyPanel({
       )}
 
       {/* Units chain ────────────────────────────────────────────────────────*/}
-      <div className="grid grid-cols-3 gap-2">
+      {settlement && (
+        <p className="mb-2 text-body-xs text-muted">
+          Settled turn {settlement.turn} · quantities per financial day
+        </p>
+      )}
+      <div
+        className={settlement ? "grid grid-cols-2 gap-2 sm:grid-cols-4" : "grid grid-cols-3 gap-2"}
+      >
         <UnitTile
           label="Offered"
           value={fmtUnits(offered)}
-          help={`Units your ${sites} made and put on the market today.`}
+          help={
+            settlement
+              ? "Units offered from new production and existing stock."
+              : `Units your ${sites} made and put on the market today.`
+          }
         />
         <UnitTile
-          label="Sold"
+          label={settlement ? "Sold outside" : "Sold"}
           value={fmtUnits(sold)}
           tone="success"
-          chip={plants.fillRate != null ? `${fmtPct(plants.fillRate)} sold` : undefined}
+          chip={
+            !settlement && plants.fillRate != null ? `${fmtPct(plants.fillRate)} sold` : undefined
+          }
           help="Units buyers actually took. The share that sells is set by your price against the market and by how much demand is left here."
         />
+        {settlement && (
+          <UnitTile
+            label="Sent to own sites"
+            value={fmtUnits(ownSite)}
+            help="Units delivered within your company. These do not count as outside sales."
+          />
+        )}
         <UnitTile
           label="Unsold"
           value={fmtUnits(unsold)}
@@ -316,7 +337,9 @@ export default function MarketMoneyPanel({
           help={
             unsold > 0 && deliveryLimitedShown
               ? `Units you made that earned nothing back. ${deliveryLabel} limited about ${fmtUnits(Math.min(deliveryLimitedUnits, unsold))} of them from reaching buyers in other states. ${deliveryExplanation}`
-              : "Units you made that nobody bought. You paid to make them and earned nothing back."
+              : settlement
+                ? "Offered units left after outside sales and own-site deliveries."
+                : "Units you made that nobody bought. You paid to make them and earned nothing back."
           }
         />
       </div>
@@ -369,7 +392,7 @@ export default function MarketMoneyPanel({
       {/* Glut explainer: below half fill the missing sales are not a pricing
           tweak away, the market simply does not want the output. Say so plainly
           (same tone as the demand-gap copy above, ticket #1027 follow-up). */}
-      {truth?.soldFraction != null && truth.soldFraction < 0.5 && !split && (
+      {sellingShare != null && sellingShare < 0.5 && !split && (
         <p className="mt-2 text-body-sm text-muted">
           {deliveryLimitedShown
             ? "The rest of the shortfall is demand. Output beyond what buyers need goes unsold, and extra sales have to be won from rivals on price."

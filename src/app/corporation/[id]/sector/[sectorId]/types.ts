@@ -681,6 +681,15 @@ export interface PlantsData {
   capacityUnits: number | null;
   producedUnits: number | null;
   soldUnits: number | null;
+  /** Daily-equivalent sales quantities from one settled turn, including offers from stock. */
+  settledOffer?: {
+    turn: number;
+    offered: number;
+    sold: number;
+    ownSites: number;
+    unsold: number;
+  };
+
   /** Units handed free to the company's own sites; not sales and not unsold. */
   ownSiteUnits?: number | null;
   unsoldUnits: number | null;

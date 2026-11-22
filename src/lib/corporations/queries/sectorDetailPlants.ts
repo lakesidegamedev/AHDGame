@@ -189,6 +189,20 @@ export function buildSectorPlantsSection(args: {
   const fundedRecord = fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn);
   const salesTurn = fundedRecord?.turn ?? currentTurn;
   const ownSite = ownSiteDeliveries(fundedRecord ?? sector.producerSettlement, salesTurn);
+  const settledOfferedPerTurn = num(fundedRecord?.offeredUnits);
+  const settledSoldPerTurn = num(fundedRecord?.soldUnits);
+  const settledOwnPerTurn = ownSite?.units ?? 0;
+  const settledOffer =
+    fundedRecord && settledOfferedPerTurn != null && settledSoldPerTurn != null
+      ? {
+          turn: fundedRecord.turn,
+          offered: settledOfferedPerTurn * TURNS_PER_DAY,
+          sold: settledSoldPerTurn * TURNS_PER_DAY,
+          ownSites: settledOwnPerTurn * TURNS_PER_DAY,
+          unsold:
+            nonNeg(settledOfferedPerTurn - settledSoldPerTurn - settledOwnPerTurn) * TURNS_PER_DAY,
+        }
+      : undefined;
   const ownSiteShare = ownSite?.share ?? 0;
   const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
@@ -568,6 +582,7 @@ export function buildSectorPlantsSection(args: {
     capacityUnits,
     producedUnits,
     soldUnits,
+    ...(settledOffer ? { settledOffer } : {}),
     ownSiteUnits,
     unsoldUnits,
     idleUnits,
