@@ -66,6 +66,7 @@ import { producerHouseholdSourceCollection } from "@/lib/db/repositories/produce
 import { producerPublicCarryCollection } from "@/lib/db/repositories/producerPublicCarry";
 import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
+import { fundedBuyerDemandRows } from "@/lib/market/producerMarket/fundedBuyerDemandRules";
 import type { RunFundedProducerTurnStageContext } from "@/lib/turn/corporation/fundedProducerTurn";
 
 export async function settleFundedProducerTurn(
@@ -551,6 +552,7 @@ export async function publishFundedProducerTurn(
       worldEpoch: context.worldEpoch,
       turn: context.turn,
       rows,
+      buyerDemand: fundedBuyerDemandRows(settled.result.orderOutcomes ?? [], TURNS_PER_DAY),
       ...((context.input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       laneClearingPrices,
       lanePostureAnchors: nextPostureAnchors(
