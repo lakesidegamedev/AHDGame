@@ -88,6 +88,9 @@ function sector(overrides: Partial<CorporateSector> = {}): CorporateSector {
   } as unknown as CorporateSector;
 }
 
+// Automatic builds need measured room; default to plenty so tests exercise sizing.
+const OPEN_ROOM: PlacementSignals = { unmetDemandUnitsOf: () => 1_000_000 };
+
 function decide(
   c: Corporation,
   sectors: CorporateSector[],
@@ -121,7 +124,7 @@ function decide(
     extra.stateControlled ?? noState,
     extra.prices ?? noPrices,
     plants ?? undefined,
-    extra.placementSignals
+    { ...OPEN_ROOM, ...extra.placementSignals }
   );
 }
 
@@ -866,7 +869,8 @@ describe("NPP capacity reinvestment — a multi-turn world keeps building", () =
         candidatesByCountry([pool()]),
         noState,
         noPrices,
-        plantsCtx
+        plantsCtx,
+        OPEN_ROOM
       );
 
       const writes = queueWrites(decision);

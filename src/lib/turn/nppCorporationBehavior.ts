@@ -88,7 +88,6 @@ import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDomina
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 
 import { buildNppNationalShareResolver } from "@/lib/turn/npp/nationalDominancePricing";
-import { marketShareBasisFromStage } from "@/lib/corporations/rules/marketShareBasis";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNppPriceSignals } from "@/lib/turn/npp/priceSignals";
 import type { RelocationPrimeBank } from "@/lib/corporations/issueRelocationBond";
@@ -497,7 +496,6 @@ export async function processNppCorporationDecisions(
   let conversionPaceShare = 0;
   let fundedRestartStage = 0;
   let productFillStage = 0;
-  let buildRoomStage = 0;
   let shortageGrowthFinanceConfig: ShortageGrowthFinanceConfig | null = null;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
@@ -527,8 +525,6 @@ export async function processNppCorporationDecisions(
         producerCaptiveDeliveryStage?: number;
         nppDividendAfterTaxStage?: number;
         nppGrowthPerProductFillStage?: number;
-        marketShareEarnedStage?: number;
-        autopilotBuildRoomStage?: number;
         plantBuildPriceScale?: number;
       } & ShortageGrowthFinanceConfigInput
     >(db).findOne(
@@ -543,8 +539,6 @@ export async function processNppCorporationDecisions(
           nppShortageGrowthFinanceStage: 1,
           nppDividendAfterTaxStage: 1,
           nppGrowthPerProductFillStage: 1,
-          marketShareEarnedStage: 1,
-          autopilotBuildRoomStage: 1,
           plantBuildPriceScale: 1,
           nppShortageGrowthFinanceCandidateLimit: 1,
           nppShortageGrowthFinanceMaxPaybackTurns: 1,
@@ -556,11 +550,9 @@ export async function processNppCorporationDecisions(
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);
     productFillStage = nppGameConfig?.nppGrowthPerProductFillStage ?? 0;
-    buildRoomStage = nppGameConfig?.autopilotBuildRoomStage ?? 0;
-    const shareBasis = marketShareBasisFromStage(nppGameConfig?.marketShareEarnedStage);
-    // Dominance pricing reads the same share basis as every other screen.
-    localShareOf = buildLocalRevenueShareLookup(globalSectors, shareBasis);
-    const nationalShareOf = buildNppNationalShareResolver(globalSectors, shareBasis);
+    // Dominance pricing reads the same earned-revenue share as every other screen.
+    localShareOf = buildLocalRevenueShareLookup(globalSectors);
+    const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     plants = {
       enabled: true,
       year: plantsYear,
@@ -881,7 +873,6 @@ export async function processNppCorporationDecisions(
         : undefined,
       ...(shortageGrowthFinance && !autopilot ? { shortageGrowthFinance } : {}),
       ...(productFillStage >= 1 ? { productFillStage } : {}),
-      ...(buildRoomStage >= 1 ? { buildRoomStage } : {}),
     };
     let decision = makeNppCorpDecision(
       decisionContext,

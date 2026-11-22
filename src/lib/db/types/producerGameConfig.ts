@@ -283,21 +283,6 @@ export interface ProducerGameConfig {
   producerSellerPreferenceStage?: number;
 
   /**
-   * Automatic build room stage: >= 1 makes every automatic capacity decision
-   * (autopilot and computer-run companies) build only where buyers have unmet
-   * demand for the sector's output, the same room the build dialog shows.
-   * Shortage-led growth is unchanged. 0 or absent = off.
-   */
-  autopilotBuildRoomStage?: number;
-
-  /**
-   * Market share basis stage: >= 1 measures market size, share and the
-   * dominance mechanic on earned revenue instead of capacity revenue. 0 or
-   * absent = off.
-   */
-  marketShareEarnedStage?: number;
-
-  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price
