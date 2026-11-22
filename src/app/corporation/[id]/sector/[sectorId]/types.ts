@@ -747,6 +747,7 @@ export interface PlantsData {
     financing?: import("@/lib/banking/rules/constructionRequest").ConstructionFinanceView;
     unitPriceAnchor: number;
     expansionMultiplier?: number;
+    buildPriceScaleMultiplier?: number;
     /** Price share charged for the first facility in a new market (1 = no discount). */
     foundingMultiplier?: number;
     dominanceMultiplier: number;

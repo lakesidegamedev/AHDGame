@@ -643,6 +643,7 @@ export function buildSectorPlantsSection(args: {
     buildQuote: {
       unitPriceAnchor: oneUnit.unitPriceAnchor,
       expansionMultiplier: oneUnit.expansionMultiplier,
+      buildPriceScaleMultiplier: oneUnit.buildPriceScaleMultiplier,
       foundingMultiplier: foundingBuildMultiplier(currentYear, preset),
       dominanceMultiplier: oneUnit.dominanceMultiplier,
       localDominanceMultiplier: localQuote.dominanceMultiplier,
