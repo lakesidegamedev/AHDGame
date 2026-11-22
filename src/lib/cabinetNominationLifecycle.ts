@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * Cabinet Nomination Lifecycle
  *
@@ -9,7 +10,7 @@ import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility"
 
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
 import { isDirectAppointmentSeat } from "@/lib/constants/cabinetMechanics";
@@ -17,7 +18,8 @@ import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getGameState } from "@/lib/gameState";
-import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
+import { getCabinetSettingsCollection } from "@/lib/db/collections/cabinetSettings";
+import { CABINET_SETTING_COOLDOWN_UNSET } from "@/lib/cabinet/settingCooldowns";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { expireLapsedActingAppointments } from "@/lib/cabinet/actingExpiry";
 import {
@@ -197,11 +199,12 @@ async function seatConfirmedVicePresident(
   // VP nominations are character-only (no NPP vice presidents): the VP
   // nominate route accepts nomineeCharacterId alone. Bail defensively rather
   // than seating a null holder.
-  if (!nom.nomineeCharacterId) return;
+  const nomineeCharacterId = nom.nomineeCharacterId;
+  if (!nomineeCharacterId) return;
 
   // Clear the nominee's other seats so they don't hold two offices simultaneously.
   await electedOfficialsCollection(db).updateMany(
-    { characterId: nom.nomineeCharacterId, officeType: { $nin: ["president", "vicePresident"] } },
+    { characterId: nomineeCharacterId, officeType: { $nin: ["president", "vicePresident"] } },
     {
       $set: {
         characterId: null,
@@ -230,7 +233,7 @@ async function seatConfirmedVicePresident(
     {
       $set: {
         countryId,
-        characterId: nom.nomineeCharacterId,
+        characterId: nomineeCharacterId,
         characterName: nom.nomineeCharacterName,
         party: nom.nomineeParty,
         isNPP: false,
@@ -252,21 +255,23 @@ async function seatConfirmedVicePresident(
     date: now,
   };
   await charactersCollection(db).updateOne(
-    { _id: nom.nomineeCharacterId },
+    { _id: nomineeCharacterId },
     {
       $set: { currentOffice: vpOffice, updatedAt: now },
       $push: { careerHistory: vpCareer },
     }
   );
-  try {
-    if (nomineeUserId) {
-      const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
-      await checkOfficeHeldAchievements(nomineeUserId, nom.nomineeCharacterId, "vicePresident");
+  await afterCommit(db, async () => {
+    try {
+      if (nomineeUserId) {
+        const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
+        await checkOfficeHeldAchievements(nomineeUserId, nomineeCharacterId, "vicePresident");
+      }
+    } catch (e) {
+      console.error("VP achievement check failed:", e);
     }
-  } catch (e) {
-    console.error("VP achievement check failed:", e);
-  }
-  if (existingVp?.characterId && !existingVp.characterId.equals(nom.nomineeCharacterId)) {
+  });
+  if (existingVp?.characterId && !existingVp.characterId.equals(nomineeCharacterId)) {
     await captureOfficeTransition({
       db,
       officeType: "vicePresident",
@@ -279,7 +284,7 @@ async function seatConfirmedVicePresident(
       turn: currentTurn,
     });
   }
-  if (!existingVp?.characterId?.equals(nom.nomineeCharacterId)) {
+  if (!existingVp?.characterId?.equals(nomineeCharacterId)) {
     await captureOfficeTransition({
       db,
       officeType: "vicePresident",
@@ -358,6 +363,38 @@ export async function processCabinetNominationLifecycle(
   }
 
   // ── B. Close expired votes ───────────────────────────────────────────────
+  const pending = await cabinetNominationsCollection(db)
+    .find(
+      {
+        status: "active",
+        $or: [
+          { votingEndsOnTurn: { $lte: currentTurn + 1 } },
+          { votingEndsOnTurn: { $exists: false }, votingEndsAt: { $lte: now } },
+        ],
+      },
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  const expiredCount =
+    pending.length > 0
+      ? await withSessionDb(db, (tx) => resolveExpiredCabinetNominations(tx, now, currentTurn))
+      : 0;
+
+  // Acting appointments lapse on the same cadence as confirmations resolve, so
+  // they share this phase rather than adding one to the registry (whose result
+  // indices are computed by arithmetic).
+  await expireLapsedActingAppointments(db, currentTurn);
+
+  return {
+    nominationsProcessed: activeNominations.length + expiredCount,
+  };
+}
+
+async function resolveExpiredCabinetNominations(
+  db: Db,
+  now: Date,
+  currentTurn: number
+): Promise<number> {
   const expired = await cabinetNominationsCollection(db)
     .find({
       status: "active",
@@ -393,7 +430,6 @@ export async function processCabinetNominationLifecycle(
             { projection: { countryId: 1, positionId: 1, characterId: 1, nppId: 1, party: 1 } }
           )
           .toArray()
-          .catch(() => [])
       : [];
   const priorCabinetBySeat = new Map(
     priorCabinetMembers.map((member) => [`${member.countryId}:${member.positionId}`, member])
@@ -414,6 +450,19 @@ export async function processCabinetNominationLifecycle(
   const notificationInputs: NotificationInput[] = [];
 
   const nominationUpdates: AnyBulkWriteOperation<CabinetNomination>[] = [];
+  const memberOps: AnyBulkWriteOperation<CabinetMember>[] = [];
+  const characterOps: AnyBulkWriteOperation<Character>[] = [];
+  const settingKeys = new Set<string>();
+  const participantIds = expired.flatMap((nom) => [
+    ...(nom.proposedByPresidentId ? [nom.proposedByPresidentId] : []),
+    ...(nom.nomineeCharacterId ? [nom.nomineeCharacterId] : []),
+  ]);
+  const participants = await charactersCollection(db)
+    .find({ _id: { $in: participantIds } }, { projection: { _id: 1, userId: 1 } })
+    .toArray();
+  const participantsById = new Map(
+    participants.map((character) => [character._id.toString(), character])
+  );
 
   for (const nom of expired) {
     // Decide from the seat-weighted recompute scoped to the country's current
@@ -454,14 +503,9 @@ export async function processCabinetNominationLifecycle(
     const votePassed = passed;
     if (blockedByBankOffice) passed = false;
 
-    // Both branches notify the same two people, so read each once per
-    // nomination and share the call site: a duplicated read here counts as a
-    // new per-row Mongo operation in the turn-code architecture review.
-    const presidentChar = await charactersCollection(db).findOne({
-      _id: nom.proposedByPresidentId,
-    });
+    const presidentChar = participantsById.get(nom.proposedByPresidentId?.toString() ?? "");
     const nomineeChar = nom.nomineeCharacterId
-      ? await charactersCollection(db).findOne({ _id: nom.nomineeCharacterId })
+      ? (participantsById.get(nom.nomineeCharacterId.toString()) ?? null)
       : null;
     const posName = isVpNomination
       ? "Vice President"
@@ -526,10 +570,9 @@ export async function processCabinetNominationLifecycle(
           : undefined;
         const nominationNation = (nom.countryId ?? "US") as CountryId;
         const nominationOffice = cabinetOfficeTypeForCountry(nominationNation);
-        await cabinetMembersCollection(db)
-          // Country-scoped: position ids are not unique across countries, so an
-          // unscoped delete here could evict another country's seat holder.
-          .deleteOne({ countryId: nom.countryId, positionId: nom.positionId });
+        memberOps.push({
+          deleteOne: { filter: { countryId: nom.countryId, positionId: nom.positionId } },
+        });
 
         // Vacate any seat the nominee already holds in this cabinet. The
         // cabinetMembers_countryId_characterId_roleSlot unique index allows
@@ -539,9 +582,13 @@ export async function processCabinetNominationLifecycle(
         // nomination stays active forever, failing the whole phase. A
         // Senate-confirmed move vacates the old office.
         if (nom.nomineeCharacterId) {
-          await cabinetMembersCollection(db).deleteMany({
-            countryId: nom.countryId,
-            characterId: nom.nomineeCharacterId,
+          memberOps.push({
+            deleteMany: {
+              filter: {
+                countryId: nom.countryId,
+                characterId: nom.nomineeCharacterId,
+              },
+            },
           });
         }
 
@@ -569,11 +616,11 @@ export async function processCabinetNominationLifecycle(
           createdAt: now,
           updatedAt: now,
         };
-        await cabinetMembersCollection(db).insertOne(member as unknown as CabinetMember);
+        memberOps.push({ insertOne: { document: member } });
 
         // Clear the predecessor's setting cooldowns so the new secretary can change
         // settings immediately (cabinetSettings is keyed by position, not holder).
-        await resetCabinetSettingCooldowns(db, nom.countryId ?? "US", nom.positionId);
+        settingKeys.add(`${nom.countryId ?? "US"}_${nom.positionId}`);
 
         // Add career history entry for cabinet confirmation.
         // Only US flows through the cabinetNominations lifecycle (Senate
@@ -593,10 +640,12 @@ export async function processCabinetNominationLifecycle(
             partyCountryId: nom.countryId,
             date: now,
           };
-          await charactersCollection(db).updateOne(
-            { _id: nom.nomineeCharacterId },
-            { $push: { careerHistory: careerEvent } }
-          );
+          characterOps.push({
+            updateOne: {
+              filter: { _id: nom.nomineeCharacterId },
+              update: { $push: { careerHistory: careerEvent } },
+            },
+          });
         }
         const outgoing = new Map(
           [oldSeatHolder, nomineeOldSeat]
@@ -643,24 +692,26 @@ export async function processCabinetNominationLifecycle(
         }
       }
 
-      await cabinetNominationsCollection(db).updateOne(
-        { _id: nom._id },
-        {
-          $set: {
-            status: "confirmed",
-            confirmedAt: now,
-            updatedAt: now,
-            votesFor: reTally.votesFor,
-            votesAgainst: reTally.votesAgainst,
-            votesAbstain: reTally.votesAbstain,
-            ...(nom.positionId === "vicePresident" && {
-              houseVotesFor: reTally.houseVotesFor,
-              houseVotesAgainst: reTally.houseVotesAgainst,
-              houseVotesAbstain: reTally.houseVotesAbstain,
-            }),
+      nominationUpdates.push({
+        updateOne: {
+          filter: { _id: nom._id },
+          update: {
+            $set: {
+              status: "confirmed",
+              confirmedAt: now,
+              updatedAt: now,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+              ...(nom.positionId === "vicePresident" && {
+                houseVotesFor: reTally.houseVotesFor,
+                houseVotesAgainst: reTally.houseVotesAgainst,
+                houseVotesAbstain: reTally.houseVotesAbstain,
+              }),
+            },
           },
-        }
-      );
+        },
+      });
 
       // Notify President and nominee
       const confirmTitle = isVpNomination ? "VP Confirmed" : "Cabinet Confirmed";
@@ -757,18 +808,18 @@ export async function processCabinetNominationLifecycle(
     }
   }
 
+  if (memberOps.length > 0) await cabinetMembersCollection(db).bulkWrite(memberOps);
+  if (characterOps.length > 0) await charactersCollection(db).bulkWrite(characterOps);
+  if (settingKeys.size > 0)
+    await getCabinetSettingsCollection(db).updateMany(
+      { _id: { $in: [...settingKeys] } },
+      { $unset: { ...CABINET_SETTING_COOLDOWN_UNSET } }
+    );
   if (nominationUpdates.length > 0) {
     await cabinetNominationsCollection(db).bulkWrite(nominationUpdates);
   }
 
-  await createNotifications(notificationInputs);
+  await afterCommit(db, () => createNotifications(notificationInputs));
 
-  // Acting appointments lapse on the same cadence as confirmations resolve, so
-  // they share this phase rather than adding one to the registry (whose result
-  // indices are computed by arithmetic).
-  await expireLapsedActingAppointments(db, currentTurn);
-
-  return {
-    nominationsProcessed: activeNominations.length + expired.length,
-  };
+  return expired.length;
 }

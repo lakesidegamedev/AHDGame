@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -36,6 +37,18 @@ export async function resolveHeadOfStateAppointmentVote(
   now: Date,
   officeLayout?: RuntimeCountryOffices
 ): Promise<void> {
+  return withSessionDb(db, (tx) =>
+    resolveHeadOfStateAppointmentVoteInTransaction(tx, countryId, voteId, now, officeLayout)
+  );
+}
+
+async function resolveHeadOfStateAppointmentVoteInTransaction(
+  db: Db,
+  countryId: CountryId,
+  voteId: ObjectId,
+  now: Date,
+  officeLayout?: RuntimeCountryOffices
+): Promise<void> {
   const votesColl = getPMAppointmentVotesCollection(db);
   const offices = officeLayout ?? (await loadRuntimeCountryOffices(db, countryId));
   await autoAyeNPPsForParliamentaryAppointment(db, countryId, voteId, offices);
@@ -57,6 +70,9 @@ export async function resolveHeadOfStateAppointmentVote(
     vote.votes
   );
   const passed = tally.votesFor > tally.votesAgainst;
+
+  if (passed && !offices.headOfStateOfficeType)
+    throw new Error("The active constitution has no head-of-state office");
 
   const claimed = await votesColl.findOneAndUpdate(
     { _id: voteId, status: "active" },
@@ -139,31 +155,36 @@ export async function resolveHeadOfStateAppointmentVote(
   );
 
   if (nomineeChar?.userId && vote.nomineeCharacterId) {
-    await createNotifications([
-      {
-        userId: nomineeChar.userId,
-        title: `Appointed ${config.headOfStateTitle}`,
-        message: `The legislature has elected you ${config.headOfStateTitle} (${tally.votesFor} ayes, ${tally.votesAgainst} nays).`,
-        type: "system",
-        metadata: { recipientCharacterId: vote.nomineeCharacterId.toString() },
-      },
-    ]);
+    const recipientCharacterId = vote.nomineeCharacterId.toString();
+    await afterCommit(db, () =>
+      createNotifications([
+        {
+          userId: nomineeChar.userId,
+          title: `Appointed ${config.headOfStateTitle}`,
+          message: `The legislature has elected you ${config.headOfStateTitle} (${tally.votesFor} ayes, ${tally.votesAgainst} nays).`,
+          type: "system",
+          metadata: { recipientCharacterId },
+        },
+      ])
+    );
   }
-  sendCountryGameEvent(countryId, {
-    title: `New ${config.headOfStateTitle} Elected`,
-    description: `**${vote.nomineeName}** has been elected ${config.headOfStateTitle} by the legislature (${tally.votesFor}–${tally.votesAgainst}).`,
-    color: DISCORD_COLORS.govFormed,
-    footer: { text: "A House Divided" },
-    timestamp: now.toISOString(),
-    // The appointment vote is a joint sitting of the legislature.
-    cardVoteSplit: [
-      {
-        label: config.legislature?.name ?? "Legislature",
-        votesFor: tally.votesFor,
-        votesAgainst: tally.votesAgainst,
-        votesAbstain: 0,
-      },
-    ],
-    ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
-  }).catch(() => {});
+  await afterCommit(db, () =>
+    sendCountryGameEvent(countryId, {
+      title: `New ${config.headOfStateTitle} Elected`,
+      description: `**${vote.nomineeName}** has been elected ${config.headOfStateTitle} by the legislature (${tally.votesFor}-${tally.votesAgainst}).`,
+      color: DISCORD_COLORS.govFormed,
+      footer: { text: "A House Divided" },
+      timestamp: now.toISOString(),
+      // The appointment vote is a joint sitting of the legislature.
+      cardVoteSplit: [
+        {
+          label: config.legislature?.name ?? "Legislature",
+          votesFor: tally.votesFor,
+          votesAgainst: tally.votesAgainst,
+          votesAbstain: 0,
+        },
+      ],
+      ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
+    }).catch(() => {})
+  );
 }

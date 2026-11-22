@@ -1,7 +1,7 @@
 import { productionOrderOutcomes } from "./productionOrderOutcomes";
 import { markStateServiceSpill } from "./stateServiceSpillRules";
 import { closingProducerCash, ProducerCashChanges } from "./cashChangesRules";
-import { settleProducerMarket, type ProducerOffer } from "./rules";
+import { settleProducerMarket, type ProducerOffer, type PurchaseOrder } from "./rules";
 import { settlePriorProducerPayables } from "./payablesRules";
 import { creditRunShare, producerCreditHeadroom } from "./producerCreditRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
@@ -423,10 +423,13 @@ export function advanceProducerEconomy(
   // run's sales in the clearing. A company whose sales fall short has its line
   // cut until it closes with cash (settleWithinCredit), never below zero.
   const inputCredit: Record<string, number> = {};
+  const excludedBuyers = new Set(input.excludedBuyerAccounts ?? []);
   for (const [id, amount] of salesAdvance) {
     const line = Math.max(0, amount - (deferredBills.get(id) ?? 0));
-    if (line > 0) inputCredit[id] = line;
+    if (line > 0 && !excludedBuyers.has(id)) inputCredit[id] = line;
   }
+  const buying = (orders: readonly PurchaseOrder[]) =>
+    excludedBuyers.size > 0 ? orders.filter((o) => !excludedBuyers.has(o.accountId)) : orders;
   // The cash a household's basket budget is read from (householdSpendRules).
   const householdBudgetCash = (household: { accountId: string; spendFraction: number }) => {
     const held = cash.get(household.accountId)!;
@@ -512,9 +515,11 @@ export function advanceProducerEconomy(
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
-      orders: landedGate
-        ? landedGate([...consumerOrders, ...inputOrders()])
-        : [...consumerOrders, ...inputOrders()],
+      orders: buying(
+        landedGate
+          ? landedGate([...consumerOrders, ...inputOrders()])
+          : [...consumerOrders, ...inputOrders()]
+      ),
       ...(track ? { trackCountryBooks: true } : {}),
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),

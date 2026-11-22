@@ -1,4 +1,4 @@
-import { leadershipVoterFilter } from "./leadershipVoterFilter";
+import { leadershipEligibilityFilters } from "./leadershipVoterFilter";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
@@ -206,10 +206,10 @@ async function processCompletedCommitteeElectionsInTransaction(
   // cleanup helper shipped (or banned via direct DB edits).
   const bannedCharacterIds = await getBannedCharacterIds(db);
 
-  const voterFilter = await leadershipVoterFilter(db, endedElections);
+  const { voterFilter, candidateFilter } = await leadershipEligibilityFilters(db, endedElections);
   const [allCandidatesRaw, allVotesRaw, parties] = await Promise.all([
     nationalCommitteeCandidatesCollection(db)
-      .find({ electionId: { $in: electionIds }, status: "active" })
+      .find({ electionId: { $in: electionIds }, status: "active", ...candidateFilter })
       .toArray(),
     nationalCommitteeVotesCollection(db)
       .find({ electionId: { $in: electionIds }, ...voterFilter })

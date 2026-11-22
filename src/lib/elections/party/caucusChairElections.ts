@@ -1,4 +1,5 @@
-import { ObjectId, type Db } from "mongodb";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import {
   createNotification,
@@ -11,10 +12,8 @@ import type {
   Caucus,
   CaucusChairCandidate,
   CaucusChairElection,
-  CaucusChairVote,
   CaucusMembership,
   Character,
-  NationalPartyElection,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
@@ -198,7 +197,18 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
 export async function processCompletedCaucusChairElections(currentTurn: number): Promise<number> {
   const db = await getDb();
   const now = new Date();
+  const pending = await caucusChairElectionsCollection(db)
+    .find({ status: "voting", endTurn: { $lte: currentTurn } }, { projection: { _id: 1 } })
+    .toArray();
+  if (pending.length === 0) return 0;
+  return withSessionDb(db, (tx) => resolveCaucusChairElections(tx, currentTurn, now));
+}
 
+async function resolveCaucusChairElections(
+  db: Db,
+  currentTurn: number,
+  now: Date
+): Promise<number> {
   const endedElections = await caucusChairElectionsCollection(db)
     .find({ status: "voting", endTurn: { $lte: currentTurn } })
     .toArray();
@@ -282,6 +292,8 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
     updateOne: { filter: { _id: ObjectId }; update: { $set: Record<string, unknown> } };
   }> = [];
 
+  const caucusOps: AnyBulkWriteOperation<Caucus>[] = [];
+  const membershipOps: AnyBulkWriteOperation<CaucusMembership>[] = [];
   for (const election of endedElections) {
     const candidates = candidatesByElection.get(election._id.toString()) ?? [];
     const voteCounts = voteCountsByElection.get(election._id.toString()) ?? [];
@@ -321,39 +333,54 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
     if (!winnerId || !winnerName) continue;
 
     const previousChairId = caucus.chairId;
-    await caucusesCollection(db).updateOne(
-      { _id: caucus._id },
-      {
-        $set: {
-          chairId: winnerId,
-          lastElectedTurn: currentTurn,
-          nextElectionTurn: currentTurn + NATIONAL_ELECTION_DURATION_TURNS,
-          updatedAt: now,
+    caucusOps.push({
+      updateOne: {
+        filter: { _id: caucus._id },
+        update: {
+          $set: {
+            chairId: winnerId,
+            lastElectedTurn: currentTurn,
+            nextElectionTurn: currentTurn + NATIONAL_ELECTION_DURATION_TURNS,
+            updatedAt: now,
+          },
+          $inc: { termsServed: 1 },
         },
-        $inc: { termsServed: 1 },
-      }
-    );
+      },
+    });
 
-    await caucusMembershipsCollection(db).updateMany(
-      { caucusId: caucus._id, memberType: "character", role: "chair", status: "active" },
-      { $set: { role: "member", updatedAt: now } }
-    );
-    await caucusMembershipsCollection(db).updateOne(
-      { caucusId: caucus._id, memberType: "character", memberId: winnerId, status: "active" },
-      { $set: { role: "chair", updatedAt: now } }
-    );
+    membershipOps.push({
+      updateMany: {
+        filter: { caucusId: caucus._id, memberType: "character", role: "chair", status: "active" },
+        update: { $set: { role: "member", updatedAt: now } },
+      },
+    });
+    membershipOps.push({
+      updateOne: {
+        filter: {
+          caucusId: caucus._id,
+          memberType: "character",
+          memberId: winnerId,
+          status: "active",
+        },
+        update: { $set: { role: "chair", updatedAt: now } },
+      },
+    });
 
-    await notifyElectionWinner(caucus, winnerId, winnerName);
-    await notifyElectionLosses(
-      caucus,
-      candidates.filter((candidate) => !candidate.characterId.equals(winnerId)),
-      winnerName
+    await afterCommit(db, () => notifyElectionWinner(caucus, winnerId!, winnerName!));
+    await afterCommit(db, () =>
+      notifyElectionLosses(
+        caucus,
+        candidates.filter((candidate) => !candidate.characterId.equals(winnerId)),
+        winnerName!
+      )
     );
     if (previousChairId && !previousChairId.equals(winnerId)) {
-      await notifyChairRemoved(caucus, previousChairId);
+      await afterCommit(db, () => notifyChairRemoved(caucus, previousChairId));
     }
   }
 
+  if (caucusOps.length > 0) await caucusesCollection(db).bulkWrite(caucusOps);
+  if (membershipOps.length > 0) await caucusMembershipsCollection(db).bulkWrite(membershipOps);
   if (electionBulkOps.length > 0) {
     await caucusChairElectionsCollection(db).bulkWrite(electionBulkOps);
   }
