@@ -17,6 +17,7 @@ import { verifyOpeningProducerPayables, publishProducerPayables } from "./payabl
 import { producerPayableReceiptKeys, type ProducerPayable } from "./payablesRules";
 import { advanceProducerCapacity, type ProducerCapacityState } from "./capacityRules";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { logger } from "@/lib/observability/logger";
 import { advanceProducerEconomy } from "./production";
 import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
@@ -767,7 +768,7 @@ export async function settleProducerTurn(
       isolationWarnings = [
         `producer settlement isolated ${named.size} account(s) after a cash overdraw; they bought nothing this turn and need review: ${error.message}`,
       ];
-      console.error(`[producerSettlement] turn ${turn}: ${isolationWarnings[0]}`);
+      logger.warn("Producer Settlement", `turn ${turn}: ${isolationWarnings[0]}`);
       frozenRun = await freeze();
       cashWithLedger(
         redirectFrozenOwnerCash(frozenRun.payload, frozenRun.verification.cashRedirect),

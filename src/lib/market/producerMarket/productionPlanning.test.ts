@@ -135,7 +135,10 @@ describe("excluded buyers", () => {
         .filter((o) => o.accountId === "households")
         .reduce((sum, o) => sum + o.deliveredUnits, 0);
     expect(delivered(advanceProducerEconomy(request()))).toBeGreaterThan(0);
-    const isolated = advanceProducerEconomy({ ...request(), excludedBuyerAccounts: ["households"] });
+    const isolated = advanceProducerEconomy({
+      ...request(),
+      excludedBuyerAccounts: ["households"],
+    });
     expect(delivered(isolated)).toBe(0);
     const change = isolated.cashChanges?.find((c) => c.accountId === "households")?.change ?? 0;
     expect(change).toBeGreaterThanOrEqual(0);
