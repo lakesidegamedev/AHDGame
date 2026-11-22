@@ -1057,8 +1057,6 @@ describe("quote policies", () => {
     });
 
     it("measures a posture from the slow anchor, not a clearing it set itself", () => {
-      // Ticket 1880: a -20% seller that covered demand set the clearing, and the
-      // next turn discounted that clearing again.
       const quote = quoteProducer({
         ...short,
         demand: [{ units: 1000, maximumUnitPrice: 60 }],

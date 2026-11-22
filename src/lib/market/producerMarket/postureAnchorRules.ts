@@ -1,16 +1,8 @@
 /**
- * The slow market price a pricing posture is measured from.
- *
- * A posture (for example -20%) used to discount last turn's clearing price.
- * When the discounted sellers covered all demand, the clearing became their
- * price, and the next turn discounted that again: US electronics fell from 586
- * to 494 to a 395 ask in two turns (ticket 1880). The anchor here follows the
- * clearing but moves at most POSTURE_ANCHOR_MAX_MOVE a turn in either
- * direction, so a glut still lowers prices and a shortage still raises them,
- * but no posture can compound its own discount or premium.
- *
- * Pure: last turn's anchors and this turn's lane clearing prices in, next
- * anchors out. A lane that did not trade keeps its anchor.
+ * The slow market price a pricing posture is measured from. It follows the
+ * clearing but moves at most POSTURE_ANCHOR_MAX_MOVE a turn, so a discount
+ * that sets the clearing cannot discount its own price again next turn.
+ * A lane that did not trade keeps its anchor.
  */
 
 export const POSTURE_ANCHOR_MAX_MOVE = 0.06;

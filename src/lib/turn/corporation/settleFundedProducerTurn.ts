@@ -226,6 +226,8 @@ export type FundedPublicationContext = Pick<
   | "input"
   | "fundedReceiptOf"
 > & {
+  /** Last turn's posture anchors; null or absent seeds the next ones from this turn's clearing. */
+  priorPostureAnchors?: Readonly<Record<string, number>> | null;
   zeroSalesPreviouslyPublished?: boolean;
   demand: Pick<
     RunFundedProducerTurnStageContext["demand"],
@@ -548,7 +550,7 @@ export async function publishFundedProducerTurn(
       ...((context.input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       laneClearingPrices,
       lanePostureAnchors: nextPostureAnchors(
-        context.lastOutcome?.lanePostureAnchors,
+        context.priorPostureAnchors ?? undefined,
         laneClearingPrices
       ),
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),

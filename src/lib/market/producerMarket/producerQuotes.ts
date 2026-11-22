@@ -476,10 +476,9 @@ export function quoteProducer(input: {
   const clearing = input.clearingUnitPrice;
   const market =
     clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;
-  // A chosen posture is measured from the slow anchor, not last turn's clearing:
-  // a discount measured from a clearing it set itself compounds every turn
-  // (ticket 1880: US electronics 586, 494, then a 395 ask). Automatic sellers
-  // (no markup) still ask the market.
+  // A chosen posture is measured from the slow anchor: a discount taken from a
+  // clearing it set itself would compound every turn. Automatic sellers still
+  // ask the market.
   const postureAnchor = input.postureAnchorUnitPrice;
   const anchor =
     markup !== 0 && postureAnchor != null && Number.isFinite(postureAnchor) && postureAnchor > 0

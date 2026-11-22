@@ -384,6 +384,7 @@ async function prepareRunFundedProducerTurn(
   // clearing history (postureAnchorRules), one bounded read.
   if (lastOutcome && !lastOutcome.lanePostureAnchors) {
     const recent = await producerMarketOutcomesCollection<{
+      _id: string;
       laneClearingPrices?: Record<string, number>;
     }>(db)
       .find(
@@ -903,6 +904,7 @@ async function prepareRunFundedProducerTurn(
     input,
     investmentWallet,
     lastOutcome,
+    priorPostureAnchors: lastOutcome?.lanePostureAnchors ?? null,
     lookups,
     openingShareByCountry,
     openingTurn,
