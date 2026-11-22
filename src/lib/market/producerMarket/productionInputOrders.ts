@@ -296,13 +296,26 @@ export function buildProducerInputOrders({
                 : {}),
             })
           : lastClearingUnitPrice;
+      // Automatic asks follow the steady posture anchor rather than last turn's
+      // clearing, so a seller cannot chase its own previous turn up and down. A
+      // shortage raise above the clearing keeps its ask: the anchor would undo it.
+      const postureAnchor = input.postureAnchorByLane?.[lane];
+      const shortageRaised =
+        clearingUnitPrice != null &&
+        lastClearingUnitPrice != null &&
+        clearingUnitPrice > lastClearingUnitPrice;
+      const askBase =
+        !shortageRaised &&
+        postureAnchor != null &&
+        Number.isFinite(postureAnchor) &&
+        postureAnchor > 0
+          ? postureAnchor
+          : clearingUnitPrice;
       const quoteInput = {
         policy: output.policy,
         referenceUnitPrice: output.referenceUnitPrice,
-        ...(clearingUnitPrice != null ? { clearingUnitPrice } : {}),
-        ...(input.postureAnchorByLane?.[lane] != null
-          ? { postureAnchorUnitPrice: input.postureAnchorByLane[lane] }
-          : {}),
+        ...(askBase != null ? { clearingUnitPrice: askBase } : {}),
+        ...(postureAnchor != null ? { postureAnchorUnitPrice: postureAnchor } : {}),
         ...(recentSold === 0 ? { soldNothingLastTurn: true } : {}),
         variableUnitCost:
           output.unitsPerOutput > 0
@@ -321,7 +334,7 @@ export function buildProducerInputOrders({
         ...quoteInput,
         policy:
           output.policy.kind === "automatic"
-            ? { kind: "manual", unitPrice: clearingUnitPrice ?? output.referenceUnitPrice }
+            ? { kind: "manual", unitPrice: askBase ?? output.referenceUnitPrice }
             : output.policy,
       });
       const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
