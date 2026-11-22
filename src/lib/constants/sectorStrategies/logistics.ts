@@ -1,5 +1,15 @@
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 
+// At 1991 base prices, 41.6% materials plus 19.8% labour and 3.6% overhead leave a 35% margin.
+const STANDARD_INPUT_SCALE = 8 / 9;
+const standardDemand = {
+  energy: 0.159 * STANDARD_INPUT_SCALE,
+  vehicles: 0.158 * STANDARD_INPUT_SCALE,
+  software: 0.079 * STANDARD_INPUT_SCALE,
+  food: 0.048 * STANDARD_INPUT_SCALE,
+  real_estate_services: 0.024 * STANDARD_INPUT_SCALE,
+};
+
 export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
   {
     id: "orbital_logistics",
@@ -26,13 +36,7 @@ export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
     name: "Standard",
     description: "Traditional freight and consulting logistics services.",
     supply: { freight: 0.45, consulting_services: 0.25 },
-    demand: {
-      energy: 0.159,
-      vehicles: 0.158,
-      software: 0.079,
-      food: 0.048,
-      real_estate_services: 0.024,
-    },
+    demand: { ...standardDemand },
   },
   {
     id: "freight_only",
@@ -40,13 +44,7 @@ export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
     description:
       "Pure haulage with no consulting arm: all output is freight, with the same fleet and running costs as Standard.",
     supply: { freight: 0.7 },
-    demand: {
-      energy: 0.159,
-      vehicles: 0.158,
-      software: 0.079,
-      food: 0.048,
-      real_estate_services: 0.024,
-    },
+    demand: { ...standardDemand },
   },
   {
     id: "automated",

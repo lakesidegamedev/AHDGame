@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { baseMarginRow } from "@/lib/economy/repricer/baseMargins";
+import { costPassThroughMultiplier } from "@/lib/market/costPassThrough";
+import { DEFAULT_PROFIT_MARGIN } from "./corporations";
 import {
   computeRateEnvironmentMultiplier,
   computeLatentFinancialDemand,
@@ -25,9 +28,45 @@ import {
   UNOWNED_DRIFT_AMPLITUDE,
   extractionOutputScaleFor,
   commodityMixWeight,
+  SECTOR_DEMAND,
   SECTOR_SUPPLY,
 } from "./commodities";
 import type { CommodityType, GdpGrowthData } from "./commodities";
+
+describe("logistics input costs", () => {
+  const targetCostShare = 1 - DEFAULT_PROFIT_MARGIN / 100;
+
+  it.each(["standard", "freight_only"])(
+    "targets the seed margin at base prices for %s",
+    (strategy) => {
+      const margin = baseMarginRow("logistics", strategy)!;
+      expect(1 - margin.bareMarginPct / 100).toBeCloseTo(targetCostShare, 2);
+    }
+  );
+
+  it("targets the same seed margin with the generic sector recipe", () => {
+    const demand = Object.fromEntries(
+      SECTOR_DEMAND.logistics!.map(({ commodity, rate }) => [commodity, rate])
+    );
+    const margin = baseMarginRow("logistics", "standard", {
+      recipes: { "logistics/standard": demand },
+    })!;
+    expect(1 - margin.bareMarginPct / 100).toBeCloseTo(targetCostShare, 2);
+  });
+
+  it("preserves freight price pass-through when input prices diverge", () => {
+    const ratios = new Map<CommodityType, number>([
+      ["vehicles", 4],
+      ["energy", 0.49],
+      ["software", 2.25],
+    ]);
+    const priorIndexExcess = (0.2 * 1 + 0.15 * -0.3 + 0.1 * 0.5) / 0.54;
+    expect(costPassThroughMultiplier("freight", ratios)).toBeCloseTo(
+      1 + 0.5 * priorIndexExcess,
+      10
+    );
+  });
+});
 
 describe("computeRateEnvironmentMultiplier", () => {
   it("returns 1.0 at neutral rate", () => {

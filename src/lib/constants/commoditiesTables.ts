@@ -698,6 +698,9 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
   ],
 };
 
+// Keep the input mix used by freight pass-through while targeting a 41.6% material share.
+const LOGISTICS_DEMAND_SCALE = 0.416 / 0.54;
+
 /**
  * What each sector type DEMANDS (consumes as inputs).
  *
@@ -840,12 +843,12 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "rare_earth", rate: 0.09 },
   ],
   logistics: [
-    { commodity: "vehicles", rate: 0.2 },
-    { commodity: "energy", rate: 0.15 },
-    { commodity: "software", rate: 0.1 },
-    { commodity: "real_estate_services", rate: 0.03 },
+    { commodity: "vehicles", rate: 0.2 * LOGISTICS_DEMAND_SCALE },
+    { commodity: "energy", rate: 0.15 * LOGISTICS_DEMAND_SCALE },
+    { commodity: "software", rate: 0.1 * LOGISTICS_DEMAND_SCALE },
+    { commodity: "real_estate_services", rate: 0.03 * LOGISTICS_DEMAND_SCALE },
     /** Cold chain and contract food distribution */
-    { commodity: "food", rate: 0.06 },
+    { commodity: "food", rate: 0.06 * LOGISTICS_DEMAND_SCALE },
   ],
   /** Retail: consumer demand across a broad basket (21 of 28 keys), scaled by GDP growth at runtime */
   retail: [

@@ -18,7 +18,7 @@ describe("input-heavy strategy fairness", () => {
     ["manufacturing", "heavy_metals", 0.614],
     ["healthcare", "biotech", 0.547],
     ["defense", "heavy_armor", 0.384],
-    ["logistics", "standard", 0.468],
+    ["logistics", "standard", 0.416],
     ["construction", "standard", 0.5],
     ["construction", "infrastructure", 0.526],
     ["retail", "standard", 0.58],
