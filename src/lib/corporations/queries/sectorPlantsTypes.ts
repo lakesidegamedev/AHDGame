@@ -89,6 +89,15 @@ export interface SectorPlantsSection {
   producedUnits: number | null;
   /** Units that found a buyer. Null until a plants turn has run. */
   soldUnits: number | null;
+  /** Daily-equivalent sales quantities from one settled turn, including offers from stock. */
+  settledOffer?: {
+    turn: number;
+    offered: number;
+    sold: number;
+    ownSites: number;
+    unsold: number;
+  };
+
   /** Units handed free to the company's own sites (funded market). Not sales, not unsold. */
   ownSiteUnits: number | null;
   /** producedUnits − soldUnits − ownSiteUnits, floored at 0. */
