@@ -31,12 +31,18 @@ export async function getInboxMailPage(
   db: Db,
   userId: ObjectId,
   offset: number,
-  limit: number
+  limit: number,
+  toCharacterId?: ObjectId | null
 ): Promise<InboxMailPage> {
   const [result] = await playerMailCollection(db)
     .aggregate<InboxFacet>([
       {
-        $match: { toUserId: userId, deletedByRecipient: false, blockedByRecipient: { $ne: true } },
+        $match: {
+          toUserId: userId,
+          ...(toCharacterId ? { toCharacterId } : {}),
+          deletedByRecipient: false,
+          blockedByRecipient: { $ne: true },
+        },
       },
       {
         $facet: {

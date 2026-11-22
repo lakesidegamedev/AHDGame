@@ -14,7 +14,7 @@ Pick the country you actually want to play. It scopes your elections, parties, l
 
 ![Create character screen with the list of open countries in the Country step](/wiki-images/screens/create-a-character-country-picker.webp)
 
-| Country | Home you pick | First office most people target |
+| Country | Home you pick | Typical first office, when its race is open |
 | --- | --- | --- |
 | United States | State | State Senate, then House |
 | United Kingdom | England, Scotland, Wales or Northern Ireland | MP (Commons) |
@@ -63,7 +63,7 @@ On the same step as your name, pick a wealth background: **Low Income**, **Mediu
 | Starting kit | Value |
 | --- | --- |
 | Actions | 25 (one-time) |
-| Campaign Funds | ₳250,000 (local-currency equivalent) |
+| Campaign Funds | ₳250,000 at 2019 prices, scaled to the world's era (about ₳345,000 in 2027), in local currency |
 | Cash on Hand | ₳1,000,000 (Low), ₳2,500,000 (Medium) or ₳5,000,000 (High), scaled down in earlier eras |
 | Political Influence | 10 |
 | National Influence | 0 |

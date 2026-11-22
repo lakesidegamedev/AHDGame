@@ -22,7 +22,11 @@ const election: RaceEntryElection = {
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   showToast.mockReset();
-  fetchMock = vi.fn(async () => new Response(JSON.stringify({ message: "Done" })));
+  fetchMock = vi.fn(async (url: string) =>
+    String(url).endsWith("/entry-preview")
+      ? new Response(JSON.stringify({ checks: [] }))
+      : new Response(JSON.stringify({ message: "Done" }))
+  );
   vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -45,7 +49,40 @@ describe("useRaceEntry", () => {
       useRaceEntry(election, { onDone: vi.fn(), confirm: async () => false })
     );
     await act(() => result.current.enter());
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/elections/e1/enter", expect.anything());
+  });
+
+  it("disables confirm with the reason when a hard check fails", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            checks: [
+              {
+                id: "homeState",
+                label: "Lives in this region",
+                status: "fail",
+                reason: "Wrong state.",
+              },
+            ],
+          })
+        )
+    );
+    const confirm = vi.fn(async () => false);
+    const { result } = renderHook(() => useRaceEntry(election, { onDone: vi.fn(), confirm }));
+    await act(() => result.current.enter());
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ confirmDisabledReason: "Wrong state." })
+    );
+  });
+
+  it("still confirms when the preview cannot load", async () => {
+    fetchMock.mockImplementation(async () => new Response("{}", { status: 500 }));
+    const confirm = vi.fn(async () => false);
+    const { result } = renderHook(() => useRaceEntry(election, { onDone: vi.fn(), confirm }));
+    await act(() => result.current.enter());
+    const arg = (confirm.mock.calls[0] as unknown[])[0] as { confirmDisabledReason?: string };
+    expect(arg.confirmDisabledReason).toBeUndefined();
   });
 
   it("sends the chosen constituency", async () => {
@@ -54,7 +91,7 @@ describe("useRaceEntry", () => {
       useRaceEntry(hu, { onDone: vi.fn(), confirm: async () => true, constituencyId: "HU-01" })
     );
     await act(() => result.current.enter());
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    expect(fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/enter"))?.[1]).toMatchObject({
       body: JSON.stringify({ constituencyId: "HU-01" }),
     });
   });

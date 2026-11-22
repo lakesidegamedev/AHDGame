@@ -1,3 +1,4 @@
+import { loadActiveCharacterNotificationClause } from "@/lib/notifications/activeScope";
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
@@ -68,6 +69,7 @@ export async function loadSinceAway(
   ]);
   if (!user) return null;
 
+  const unreadScope = await loadActiveCharacterNotificationClause(db, user._id);
   const [snapshots, unreadRows] = await Promise.all([
     character
       ? portfolioHistoryCollection(db)
@@ -94,6 +96,7 @@ export async function loadSinceAway(
             userId: user._id,
             read: false,
             ...notificationTypeFilter(user.notificationPreferences, new Date()),
+            ...(unreadScope ? { $and: [unreadScope] } : {}),
           },
         },
         { $limit: UNREAD_SCAN },

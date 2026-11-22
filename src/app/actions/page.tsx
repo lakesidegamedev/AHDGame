@@ -14,6 +14,7 @@ import ActionCardCompact from "./components/ActionCardCompact";
 import ActionsHero from "./components/ActionsHero";
 import { EventsPanel } from "./components/EventsPanel";
 import { useActionsController } from "./useActionsController";
+import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { actionCardProps } from "./actionCardProps";
 import { getActionImage } from "@/lib/images/actionImages";
 
@@ -62,6 +63,7 @@ export default function ActionsPage() {
   }, []);
   const controller = useActionsController({ viewMode, onStoredViewMode: adoptStoredViewMode });
   const { character, actionCosts, era, countryId, eraLabel } = controller;
+  const turnProcessing = useGameTurnStatus()?.isProcessing === true;
 
   const handleViewModeChange = useCallback((mode: ActionsViewMode) => {
     setViewMode(mode);
@@ -234,6 +236,19 @@ export default function ActionsPage() {
         {/* Presidential endorsement nudge: renders nothing when the player has
             no live presidential race at home or has already endorsed someone */}
         <EndorsePresidentCard />
+
+        {/* While a turn processes, actions take seconds to confirm. Without
+            this, a click that has not answered yet looks lost and players
+            click again, paying twice. */}
+        {turnProcessing && (
+          <p
+            role="status"
+            className="sticky top-2 z-10 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-foreground"
+          >
+            A turn is processing. Actions still work but take a few seconds to confirm. Each click
+            spends once it lands, so wait for the result before clicking again.
+          </p>
+        )}
 
         {/* Filter Tabs + View Toggle */}
         <div className="flex items-center justify-between gap-4">

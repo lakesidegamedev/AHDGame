@@ -9,6 +9,7 @@ import type { FirstDaysData } from "@/lib/onboarding/firstDays";
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@/hooks/useGameEvents", () => ({ useGameTurnStatus: () => null }));
 vi.mock("@/lib/analytics/capture", () => ({ captureProductEvent: vi.fn(async () => {}) }));
 
 import { FirstDaysPanel } from "./FirstDaysPanel";
@@ -62,7 +63,17 @@ describe("FirstDaysPanel", () => {
       "/api/actions/execute",
       expect.objectContaining({ body: JSON.stringify({ actionType: "campaign" }) })
     );
-    expect(screen.getByText("Campaigned: +1.0 influence")).toBeTruthy();
+    expect(screen.getByText("Campaign 1 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
+  });
+
+  it("counts a landed Campaign at once, before the page refresh arrives", async () => {
+    renderPanel({ campaigns: 1 });
+    expect(screen.getByText("Campaign in your home region (1 of 3)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
+    await waitFor(() =>
+      expect(screen.getByText("Campaign in your home region (2 of 3)")).toBeTruthy()
+    );
+    expect(screen.getByText("Campaign 2 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
   });
 
   it("shows why a Campaign failed", async () => {
@@ -92,7 +103,9 @@ describe("FirstDaysPanel", () => {
     expect(submit).toHaveBeenCalledTimes(1);
 
     resolveCampaign(Response.json({ message: "Campaigned: +1.0 influence" }));
-    expect(await screen.findByText("Campaigned: +1.0 influence")).toBeTruthy();
+    expect(
+      await screen.findByText("Campaign 3 of 3 done. Campaigned: +1.0 influence")
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /campaign at home/i })).toBeNull();
     expect(router.refresh).toHaveBeenCalledTimes(1);
   });

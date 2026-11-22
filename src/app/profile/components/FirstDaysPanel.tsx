@@ -10,6 +10,7 @@ import { captureProductEvent } from "@/lib/analytics/capture";
 import { apiErrorText } from "@/lib/errors/catalog";
 import type { FirstDaysData } from "@/lib/onboarding/firstDays";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { useGameTurnStatus } from "@/hooks/useGameEvents";
 
 /**
  * "Your first days" panel on the profile of a new character.
@@ -37,6 +38,9 @@ export function FirstDaysPanel({
   const [lastGain, setLastGain] = useState<string | null>(null);
   const [confirmedCampaigns, setConfirmedCampaigns] = useState(0);
   const campaignInFlight = useRef(false);
+  // While a turn processes a click can take seconds to confirm; say so, or a
+  // landed click reads as lost and players click again and pay twice.
+  const turnProcessing = useGameTurnStatus()?.isProcessing === true;
   const viewed = useRef(false);
 
   useEffect(() => {
@@ -74,7 +78,15 @@ export function FirstDaysPanel({
       }
       const body = await res.json();
       setConfirmedCampaigns(campaigns + 1);
-      setLastGain(typeof body.message === "string" ? body.message : null);
+      setLastGain(
+        typeof body.message === "string"
+          ? t("campaignLanded", {
+              done: campaigns + 1,
+              goal: data.campaignGoal,
+              message: body.message,
+            })
+          : t("campaignLandedPlain", { done: campaigns + 1, goal: data.campaignGoal })
+      );
       void captureProductEvent("first_days_campaigned", { campaigns: campaigns + 1 });
       router.refresh();
     } catch {
@@ -144,6 +156,11 @@ export function FirstDaysPanel({
                   {t("allActions")}
                 </Link>
               </div>
+            )}
+            {turnProcessing && !campaignDone && (
+              <p className="mt-1 text-body-xs text-muted" role="status">
+                {t("turnProcessing")}
+              </p>
             )}
             {lastGain && (
               <p role="status" className="mt-1 text-body-xs text-success">
