@@ -33,4 +33,19 @@ describe("pooled physical supply", () => {
     expect(pool.remaining("b")).toBeCloseTo(4, 12);
     expect(pool.total).toBeCloseTo(4, 12);
   });
+
+  it("treats a rounding overshoot as the whole pool but still rejects a real overdraw", () => {
+    const pool = new ProducerSupplyPool();
+    pool.add("a", 0.1);
+    pool.add("b", 0.2);
+    const total = pool.total;
+    pool.take(total + total * 1e-15);
+    expect(pool.total).toBe(0);
+    expect(pool.pooledSold("a") + pool.pooledSold("b")).toBeCloseTo(total, 12);
+
+    const other = new ProducerSupplyPool();
+    other.add("a", 10);
+    expect(() => other.take(10.001)).toThrow("Invalid pooled producer withdrawal");
+    expect(() => other.take(0)).toThrow("Invalid pooled producer withdrawal");
+  });
 });
