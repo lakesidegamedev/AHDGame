@@ -262,10 +262,17 @@ export default function TopProducersConsumers({
                       ⚙
                     </span>
                     <span className="text-muted font-medium truncate">{source.name}</span>
-                    <span className="text-[10px] text-muted shrink-0">System</span>
+                    <span className="text-[10px] text-muted shrink-0">
+                      {source.receivedUnits != null ? "Buyer" : "System"}
+                    </span>
                   </div>
-                  <span className="text-muted font-medium tabular-nums shrink-0 ml-2">
+                  <span className="text-muted font-medium tabular-nums shrink-0 ml-2 text-right">
                     {formatUnits(source.units, unit)}
+                    {source.receivedUnits != null && (
+                      <span className="block text-[10px] font-normal">
+                        {formatUnits(source.receivedUnits, unit)} received
+                      </span>
+                    )}
                   </span>
                 </div>
               ))}
