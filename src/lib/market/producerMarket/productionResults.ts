@@ -133,18 +133,25 @@ export function buildProducerOperatingResults({
         (sum, id) => sum + (ordersById.get(id)?.deliveredUnits ?? 0),
         0
       );
-      const unsold = unsoldByBook.get(JSON.stringify([recipe.commodity, recipe.book])) ?? [];
-      const within = unsold.filter((row) => row.unitPrice <= recipe.maximumUnitPrice);
+      // Scanning the unsold book is only needed to name a blocker, so plants
+      // that got everything skip it; this runs for every plant every turn.
+      let unsoldWithinLimitUnits = 0;
+      let unsoldAboveLimitUnits = 0;
+      if (need - stockUnits - boughtUnits > 1e-9 * Math.max(1, need)) {
+        const unsold = unsoldByBook.get(JSON.stringify([recipe.commodity, recipe.book])) ?? [];
+        for (const row of unsold) {
+          if (row.unitPrice <= recipe.maximumUnitPrice) unsoldWithinLimitUnits += row.units;
+          else unsoldAboveLimitUnits += row.units;
+        }
+      }
       receipts.push(
         buildInputReceipt({
           commodity: recipe.commodity,
           neededUnits: need,
           stockUnits,
           boughtUnits,
-          unsoldWithinLimitUnits: within.reduce((sum, row) => sum + row.units, 0),
-          unsoldAboveLimitUnits:
-            unsold.reduce((sum, row) => sum + row.units, 0) -
-            within.reduce((sum, row) => sum + row.units, 0),
+          unsoldWithinLimitUnits,
+          unsoldAboveLimitUnits,
         })
       );
     }
