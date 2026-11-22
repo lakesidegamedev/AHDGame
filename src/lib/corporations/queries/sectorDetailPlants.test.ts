@@ -623,6 +623,30 @@ describe("buildSectorPlantsSection", () => {
     expect(s.buildTurns).toBe(36); // manufacturing
   });
 
+  it("credits delivery only up to the settled turn, not the schedule", () => {
+    const order = { unitsOrdered: 1000, costPaidAnchor: 4000, startTurn: 110, onlineTurn: 143 };
+    const at = (settled: number | undefined, world?: number) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        currentTurn: 130,
+        worldBuildSettledTurn: world,
+        sector: sectorFixture({
+          buildQueue: [{ ...order, smooth: true, deliveryBaseFraction: 0 }],
+          buildDeliverySettledTurn: settled,
+        }),
+      }).buildQueue[0];
+    const caught = at(130);
+    expect(caught.unitsDelivered).toBeGreaterThan(0);
+    const lagging = at(110);
+    expect(lagging.unitsDelivered).toBe(0);
+    expect(lagging.progress).toBe(0);
+    // Sector stamp absent: the world stamp applies.
+    expect(at(undefined, 110).unitsDelivered).toBe(0);
+    // Forward ramp still describes the schedule.
+    expect(lagging.unitsPerTurn).toBe(caught.unitsPerTurn);
+  });
+
   it("turns the build queue into countdowns the panel can render", () => {
     const s = buildSectorPlantsSection({
       eraUnitScale: 1,
@@ -632,6 +656,7 @@ describe("buildSectorPlantsSection", () => {
           { unitsOrdered: 40, costPaidAnchor: 4000, startTurn: 90, onlineTurn: 162 },
           { unitsOrdered: 10, costPaidAnchor: 1000, startTurn: 40, onlineTurn: 100 },
         ],
+        buildDeliverySettledTurn: BASE_ARGS.currentTurn,
       }),
     });
     expect(s.buildQueue[0]).toMatchObject({ orderIndex: 0, turnsRemaining: 62 });
