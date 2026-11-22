@@ -1,3 +1,4 @@
+import type { LastTurnReconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
@@ -545,6 +546,8 @@ export interface CEO {
 export interface Financials {
   /** CEO-only cash balances, not daily income figures. */
   arrears?: { turn: number; paidLastTurn: number; remaining: number };
+  /** Last recorded turn tied to the change in cash, per turn in local currency. Dropped for viewers who only see estimates. */
+  lastTurnReconciliation?: LastTurnReconciliation | null;
   totalRevenue: number;
   /** Sector maintenance, shown NET of labour when the labour system is on. */
   maintenanceCosts: number;
@@ -639,6 +642,8 @@ export interface Financials {
   dividendRate: number;
   /** max(corp.dividendRate clamped, legalStructure.minimumDividendRate × 100). 0 when income ≤ 0. */
   effectiveDividendRate: number;
+  /** Payout rate that applies once income is positive. Differs from effectiveDividendRate when the forecast is a loss. */
+  dividendPolicyRate?: number;
   /** Daily dividend payout in local currency, capped by income. */
   dividendDistribution: number;
   /** Daily dominance regulatory burden in local currency. Already included in operatingCosts. */

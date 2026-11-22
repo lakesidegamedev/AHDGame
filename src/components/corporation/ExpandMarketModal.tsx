@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -142,6 +143,8 @@ function useExpandMarketModalContext({
   useBodyScrollLock();
   const resolveCountryName = useCountryDisplayName();
   const { formatAmount } = useCurrency();
+  const [liquidCurrencyCode, setLiquidCurrencyCode] = useState<CurrencyCode | null>(null);
+  const treasuryMoney = useLocalCurrency(liquidCurrencyCode ?? undefined);
   const router = useRouter();
   // Any sector type is buildable, so honor an incoming type in either mode and
   // fall back to the corp's primary type when none is supplied.
@@ -156,7 +159,6 @@ function useExpandMarketModalContext({
   );
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [fetchedLiquidCapital, setFetchedLiquidCapital] = useState<number>(liquidCapital);
-  const [liquidCurrencyCode, setLiquidCurrencyCode] = useState<CurrencyCode | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(
     plantsMode || Boolean(initialSectorType)
   );
@@ -227,8 +229,8 @@ function useExpandMarketModalContext({
               .map((id) => ({ id, name: resolveCountryName(id as CountryId) }))
               .sort((a, b) => a.name.localeCompare(b.name))
           );
-          if (typeof data.liquidCapital === "number") {
-            setFetchedLiquidCapital(data.liquidCapital);
+          if (typeof data.liquidCapitalLocal === "number") {
+            setFetchedLiquidCapital(data.liquidCapitalLocal);
           }
           setLiquidCurrencyCode((data.liquidCurrencyCode as CurrencyCode | null) ?? null);
           setFoundingQuote(
@@ -338,8 +340,8 @@ function useExpandMarketModalContext({
     : "USD";
   const formatMarketAmount = (amount: number, currencyCode: CurrencyCode = activeMarketCurrency) =>
     formatAmount(amount, currencyCode);
-  const formatTreasuryAmount = (amount: number) =>
-    formatAmount(amount, liquidCurrencyCode ?? undefined);
+  // Cash is held and shown in the company's own currency, the same figure as the Overview.
+  const formatTreasuryAmount = (amountLocal: number) => treasuryMoney.fmtAmount(amountLocal);
   const marketCurrencyTitle = `Forex-normalized market revenue. Local display mode shows ${activeMarketCurrency}, the target state's home currency; other display modes convert from the same underlying value.`;
 
   async function handleFoundFirstPlant() {

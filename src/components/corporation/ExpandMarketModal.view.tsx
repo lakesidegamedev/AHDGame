@@ -205,7 +205,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   </p>
                   <p className="mt-0.5 text-xs text-muted">
                     {plantsMode
-                      ? `${OPERATING_SECTOR_TYPE_LABELS[selectedType]} sector · ${formatTreasuryAmount(fetchedLiquidCapital)} available`
+                      ? `${OPERATING_SECTOR_TYPE_LABELS[selectedType]} sector · ${formatTreasuryAmount(fetchedLiquidCapital)} company cash`
                       : suggestionMode === "playerCorp"
                         ? "Sorted by competitor revenue"
                         : "Sorted by revenue capture"}
@@ -284,7 +284,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
               <div
                 className={`${plantsMode ? "hidden" : "flex"} rounded-lg border border-card-border bg-card-elevated/30 px-3 py-2 items-center justify-between`}
               >
-                <span className="text-xs text-muted">Your available capital</span>
+                <span className="text-xs text-muted">Company cash</span>
                 <span className="text-xs font-bold text-foreground">
                   {formatTreasuryAmount(fetchedLiquidCapital)}
                 </span>

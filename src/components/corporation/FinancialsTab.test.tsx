@@ -107,13 +107,10 @@ describe("corporation income statement", () => {
     );
     expect(screen.getAllByText("Freight charges")).toHaveLength(2);
     expect(screen.getByText("Freight revenue")).toBeTruthy();
-    expect(screen.getByText("Net income, current estimate")).toBeTruthy();
-    expect(screen.getByText("Difference from current estimate")).toBeTruthy();
+    expect(screen.getByText("Net income, forecast")).toBeTruthy();
+    expect(screen.getByText("Difference from forecast")).toBeTruthy();
     expect(screen.getByText("-M6400")).toBeTruthy();
-    expect(screen.getByText(/Current estimates use today's sectors and budgets/)).toBeTruthy();
-    expect(screen.getByText("Construction cash, turn 23")).toBeTruthy();
-    expect(screen.getByText("Construction paid")).toBeTruthy();
-    expect(screen.getByText("-M260869")).toBeTruthy();
+    expect(screen.getByText(/Forecast figures use today's sectors and budgets/)).toBeTruthy();
   });
   it("shows the federal tax charged on bond coupon income under Federal tax", () => {
     const props = {

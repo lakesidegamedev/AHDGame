@@ -306,7 +306,7 @@ export default function MarketMoneyPanel({
                   ? "default"
                   : "warning"
             }
-            help="How the money already paid for capacity still under construction relates to what this sector clears. A turn count means profit at today's rate pays that spend back in that many turns. Not at current fills means the sector does not clear a profit at today's sales."
+            help="Turns = money already spent on capacity that is not finished yet, divided by this sector's profit per turn at last turn's sales. It moves when either part moves: new builds raise the first, a change in sales or costs moves the second. Not at current fills means the sector does not clear a profit at those sales."
           />
         </div>
       )}

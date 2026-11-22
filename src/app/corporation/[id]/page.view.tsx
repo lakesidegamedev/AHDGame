@@ -176,7 +176,9 @@ export function renderCorporationDetailPageView(
                 : null
             }
             netIncomeDaily={financials != null ? corpIncomeBasis(financials).netIncome : null}
-            effectiveDividendRate={financials?.effectiveDividendRate ?? null}
+            effectiveDividendRate={
+              financials?.dividendPolicyRate ?? financials?.effectiveDividendRate ?? null
+            }
             periodView={periodView}
             financialFogOfWar={financialFogOfWar}
             ceoIsInactive={ceoIsInactive}
