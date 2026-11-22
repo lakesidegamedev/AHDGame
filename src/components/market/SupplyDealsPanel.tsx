@@ -5,6 +5,7 @@ import { useMarketJson } from "./useMarketJson";
 import { PanelState } from "./marketUi";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import type { CommodityType } from "@/lib/constants/commoditiesCore";
+import { contractReferenceUnitPrice } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import {
   DEFAULT_OFFER_VIEW,
   offerCountLabel,
@@ -34,8 +35,10 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
     ready ? `/api/supply-offers?${offersQuery(filters, page, SUPPLY_PAGE_SIZE)}` : null
   );
   const prices = useMarketJson<{ commodities?: CommodityData[] }>("/api/commodities");
-  const priceOf = (id: string) =>
-    prices.data?.commodities?.find((c) => c.commodity === id)?.globalPrice;
+  const priceOf = (id: string) => {
+    const board = prices.data?.commodities?.find((c) => c.commodity === id)?.globalPrice;
+    return board == null ? undefined : contractReferenceUnitPrice(id as CommodityType, board);
+  };
   const offers = data?.offers ?? [];
   const total = data?.total ?? 0;
   const totalAll = Math.max(total, data?.totalAll ?? total);

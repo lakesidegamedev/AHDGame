@@ -79,13 +79,23 @@ describe("PricingPanel asking prices", () => {
       soldFraction: 0,
       clearingFactor: 0,
       asks: [
-        { commodity: "electronics", askingUnitPrice: 494, marketUnitPrice: 395 },
-        { commodity: "software", askingUnitPrice: 2070, marketUnitPrice: null },
+        {
+          commodity: "electronics",
+          askingUnitPrice: 494,
+          paidUnitPrice: 480,
+          marketUnitPrice: 395,
+        },
+        {
+          commodity: "software",
+          askingUnitPrice: 2070,
+          paidUnitPrice: null,
+          marketUnitPrice: null,
+        },
       ],
     });
     const list = screen.getByRole("list", { name: "Asking prices last turn" });
     expect(list.textContent).toContain("Electronics");
-    expect(list.textContent).toMatch(/asked.*494.*buyers paid.*395/);
+    expect(list.textContent).toMatch(/asked.*494.*you were paid.*480.*lane price.*395/);
     expect(list.textContent).toMatch(/asked.*2,?070/);
     expect(screen.getByText(/moves at most 6% a turn/)).toBeTruthy();
   });

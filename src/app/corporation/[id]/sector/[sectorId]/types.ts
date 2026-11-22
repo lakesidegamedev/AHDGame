@@ -152,6 +152,12 @@ export interface CommodityFlow {
    */
   inputAvailability?: number;
   /**
+   * Demand rows with a settled receipt: this plant's own needed, arrived and
+   * missing units a day for last settled turn, and the blocker when short.
+   * Unlike `inputAvailability` (the whole world market), this is the plant.
+   */
+  inputReceipt?: import("@/lib/corporations/rules/inputShortageReading").InputShortageReading;
+  /**
    * Market clearing (marketSystemMode >= "clearing"), supply rows only: the
    * share of THIS output that actually sold last turn (0, 1). The Pricing
    * panel's headline blends every output together, so this is what tells a
@@ -286,8 +292,16 @@ export interface PricingData {
   effectivePosture: number | null;
   /** Funded settlement or legacy market estimate; absent on older payloads. */
   salesBasis?: "settlement" | "estimate";
-  /** CEO only: last turn's asking price per output beside what its market paid, anchor per unit. */
-  asks?: { commodity: string; askingUnitPrice: number; marketUnitPrice: number | null }[];
+  /**
+   * CEO only: last turn's asking price per output, what this plant was paid on
+   * average, and its lane's clearing price, anchor per unit.
+   */
+  asks?: {
+    commodity: string;
+    askingUnitPrice: number;
+    paidUnitPrice: number | null;
+    marketUnitPrice: number | null;
+  }[];
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;
   /** Share of output handed to the company's own sites last turn (CEO only). Not a sale. */
