@@ -533,12 +533,16 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                       busy={entry.busy}
                       entryMessage={
                         entry.entryBlock
-                          ? t(
-                              entry.entryBlock === "nominationsUnavailable" &&
-                                selected?.stage === "upcoming"
-                                ? "race.nominationsUpcoming"
-                                : `race.${entry.entryBlock}`
-                            )
+                          ? entry.entryBlock === "nominationsUnavailable" &&
+                            selected?.stage !== "upcoming" &&
+                            entryElection?.primaryEndTurn != null
+                            ? t("race.nominationsClosedAt", { turn: entryElection.primaryEndTurn })
+                            : t(
+                                entry.entryBlock === "nominationsUnavailable" &&
+                                  selected?.stage === "upcoming"
+                                  ? "race.nominationsUpcoming"
+                                  : `race.${entry.entryBlock}`
+                              )
                           : undefined
                       }
                       onEnter={() => void entry.enter()}

@@ -6,6 +6,8 @@ import type { ConfirmDialogOptions } from "@/hooks/useConfirmDialog";
 import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
 import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { buildEntryCardMessage } from "./entryCard";
+import { firstFailedCheck, type EntryCheck } from "@/lib/elections/entryPreview";
 import { canWithdraw, raceEntryBlock, type EntryRuleRace } from "./entryRules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
@@ -15,7 +17,11 @@ export interface RaceEntryElection extends EntryRuleRace {
   countryId: string;
   electionType: string;
   state: string;
-  allCandidates: Array<{ isYou: boolean }> | null;
+  allCandidates: Array<{ isYou: boolean; party?: string; partyName?: string }> | null;
+  primaryEndTurn?: number | null;
+  endTurn?: number | null;
+  gameState?: { currentTurn: number } | null;
+  incumbent?: { name: string; party: string } | null;
   hungarianModernAssembly?: { ruleVersion: string };
   japanShugiinRules?: { ruleVersion: string };
   hungarianAssemblyRound?: { round: number };
@@ -29,6 +35,17 @@ export function needsConstituencyPicker(e: RaceEntryElection): boolean {
     e.bulgarianFoundingRound?.round === 1 ||
     Boolean(e.bulgarianFoundingRound?.newNominationDistrictIds?.length)
   );
+}
+
+async function loadEntryChecks(electionId: string): Promise<EntryCheck[] | null> {
+  try {
+    const res = await fetch(`/api/elections/${electionId}/entry-preview`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { checks?: EntryCheck[] };
+    return Array.isArray(data.checks) ? data.checks : null;
+  } catch {
+    return null;
+  }
 }
 
 const NETWORK_ERROR = "Network error. Please try again.";
@@ -115,14 +132,24 @@ export function useRaceEntry(
         return;
       }
     }
-    if (
-      !(await confirm({
-        title: "Enter this race?",
-        message: "This will register your character as a candidate.",
-        confirmLabel: "Enter race",
-      }))
-    )
-      return;
+    const checks = await loadEntryChecks(election.id);
+    const failed = checks ? firstFailedCheck(checks) : null;
+    const confirmed = await confirm({
+      title: "Enter this race?",
+      message: buildEntryCardMessage({
+        checks,
+        schedule: {
+          currentTurn: election.gameState?.currentTurn ?? null,
+          primaryEndTurn: election.primaryEndTurn ?? null,
+          endTurn: election.endTurn ?? null,
+        },
+        candidates: election.allCandidates ?? null,
+        incumbent: election.incumbent ?? null,
+      }),
+      confirmLabel: "Enter race",
+      ...(failed ? { confirmDisabledReason: failed.reason ?? failed.label } : {}),
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const body = japanMixed
