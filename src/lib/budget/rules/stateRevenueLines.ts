@@ -33,15 +33,18 @@ export function checkTaxLine(
  * Lines whose sum is the stated total. Any difference between the booked total
  * and the lines the page lists is shown as its own line instead of being hidden.
  */
-export function reconcileRevenueLines(revenue: Readonly<Record<string, number | undefined>>): {
+export function reconcileRevenueLines(revenue: object): {
   lines: Array<{ key: string; value: number }>;
   total: number;
 } {
-  const lines = Object.entries(revenue)
-    .filter(([key, value]) => key !== "total" && typeof value === "number" && value !== 0)
-    .map(([key, value]) => ({ key, value: value as number }));
+  const entries = Object.entries(revenue) as Array<[string, unknown]>;
+  const lines: Array<{ key: string; value: number }> = [];
+  for (const [key, value] of entries) {
+    if (key !== "total" && typeof value === "number" && value !== 0) lines.push({ key, value });
+  }
   const listed = lines.reduce((sum, line) => sum + line.value, 0);
-  const total = typeof revenue.total === "number" ? revenue.total : listed;
+  const stated = entries.find(([key]) => key === "total")?.[1];
+  const total = typeof stated === "number" ? stated : listed;
   const residual = total - listed;
   if (Math.abs(residual) > Math.max(1, Math.abs(total) * 1e-6)) {
     lines.push({ key: "unitemisedRevenue", value: residual });

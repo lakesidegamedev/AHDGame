@@ -84,9 +84,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
 
   const { budget, grantBreakdown } = data;
   const netBalance = budget.surplus;
-  const { lines: revenueLines, total: revenueTotal } = reconcileRevenueLines(
-    budget.revenue as unknown as Record<string, number | undefined>
-  );
+  const { lines: revenueLines, total: revenueTotal } = reconcileRevenueLines(budget.revenue);
 
   return (
     <div className="space-y-6">
