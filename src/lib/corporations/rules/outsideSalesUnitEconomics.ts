@@ -71,7 +71,9 @@ export function outsideSalesUnitEconomics(receipt: OutsideSalesReceipt): Outside
   const unitPrice = finite(receipt.revenue) / sold;
   const unitMaterials = perSold(finite(receipt.inputsConsumed));
   const unitWages = perSold(finite(receipt.labourPaid) + finite(receipt.labourArrears));
-  const unitSite = perSold(finite(receipt.otherOperatingPaid) + finite(receipt.otherOperatingArrears));
+  const unitSite = perSold(
+    finite(receipt.otherOperatingPaid) + finite(receipt.otherOperatingArrears)
+  );
   const unitOwnSiteCharge = perSold(Math.max(0, finite(receipt.internalSupplyCharge)));
   return {
     unitPrice,
