@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveCreditStanding } from "@/lib/corporations/creditStanding";
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 
 import { useState } from "react";
@@ -146,8 +147,9 @@ export default function FinancialsTab({
   );
   const netMargin = netMarginPct(financials);
 
-  const creditRating = corporation.creditRatingSnapshot ?? bondInfo?.creditRating.rating;
-  const creditScore = corporation.creditCompositeSnapshot ?? bondInfo?.creditRating.compositeScore;
+  const creditStanding = resolveCreditStanding(corporation, bondInfo?.creditRating);
+  const creditRating = creditStanding.rating ?? undefined;
+  const creditScore = creditStanding.composite ?? undefined;
 
   const federalByCountry = Object.entries(financials.federalTaxByCountry ?? {})
     .filter(([, amt]) => amt > 0)
