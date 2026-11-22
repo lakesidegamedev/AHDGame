@@ -1,11 +1,12 @@
 /**
  * Seller choice for one free-choice buyer order. Instead of the cheapest price
  * level taking everything, every eligible seller sells a share that falls
- * steeply with its price and rises with its brand and quality.
+ * steeply with its price and, optionally, rises with its brand and quality.
  */
+import { SELLER_PRICE_PREFERENCE_EXPONENT } from "@/lib/constants/sellerPricePreference";
 
 /** How fast a seller's share falls as its price rises above the cheapest eligible seller. */
-export const DEMAND_CURVE_PRICE_SENSITIVITY = 4;
+export const DEMAND_CURVE_PRICE_SENSITIVITY = SELLER_PRICE_PREFERENCE_EXPONENT;
 /** Largest swing of the preference factor either side of 1 at the extremes of brand and quality. */
 export const DEMAND_CURVE_BRAND_WEIGHT = 0.25;
 
@@ -49,6 +50,69 @@ export interface DemandCurveGroup {
 
 const compareId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
+/** Sellers the curve weighs as one: one price, one preference factor, stock pooled. */
+export interface PreferenceGroup {
+  unitPrice: number;
+  factor: number;
+  /** Units the group still has. */
+  remaining: number;
+}
+
+/**
+ * Units of `wanted` each group sells, in input order. Each group draws in
+ * proportion to remaining x (cheapest / price) ^ sensitivity x factor; a group
+ * whose share exceeds its stock sells all of it and the rest is re-spread over
+ * the others until stable. Spend above `budget` scales every group down
+ * together, so the buyer never spends more than it has. Null means the curve
+ * cannot weigh the groups (a free or invalid cheapest price).
+ */
+export function allocatePreferenceGroups(input: {
+  groups: readonly PreferenceGroup[];
+  wanted: number;
+  budget: number;
+  priceSensitivity: number;
+}): number[] | null {
+  const { groups } = input;
+  const units = groups.map(() => 0);
+  const live = groups.flatMap((group, index) => (group.remaining > 0 ? [index] : []));
+  if (live.length === 0 || !(input.wanted > 0) || !(input.budget > 0)) return units;
+  const pMin = Math.min(...live.map((i) => groups[i].unitPrice));
+  if (!(pMin > 0) || !Number.isFinite(pMin)) return null;
+  const weight = groups.map((group) =>
+    group.remaining > 0
+      ? group.remaining * Math.pow(pMin / group.unitPrice, input.priceSensitivity) * group.factor
+      : 0
+  );
+  if (live.some((i) => !(weight[i] > 0) || !Number.isFinite(weight[i]))) return null;
+  const supply = live.reduce((sum, i) => sum + groups[i].remaining, 0);
+  let free = Math.min(input.wanted, supply);
+  // Water-fill: the group that runs out first at a common rate per unit of
+  // weight is capped at its stock, then the rate is recomputed for the rest.
+  const byCapRatio = [...live].sort(
+    (a, b) =>
+      groups[a].remaining / weight[a] - groups[b].remaining / weight[b] ||
+      groups[a].unitPrice - groups[b].unitPrice ||
+      a - b
+  );
+  let open = live.reduce((sum, i) => sum + weight[i], 0);
+  for (let n = 0; n < byCapRatio.length; n++) {
+    const i = byCapRatio[n];
+    if ((free / open) * weight[i] >= groups[i].remaining) {
+      units[i] = groups[i].remaining;
+      free -= groups[i].remaining;
+      open -= weight[i];
+      continue;
+    }
+    const rate = free / open;
+    for (const rest of byCapRatio.slice(n)) units[rest] = rate * weight[rest];
+    break;
+  }
+  const spend = units.reduce((sum, u, i) => sum + u * groups[i].unitPrice, 0);
+  // A hair under the budget, so float rounding can never spend past it.
+  const fit = spend > input.budget ? (input.budget / spend) * (1 - 1e-12) : 1;
+  return units.map((u, i) => Math.min(groups[i].remaining, u * fit));
+}
+
 /**
  * Splits `wanted` units across the offers. Returns null when the curve cannot
  * weigh the offers (a free or invalid cheapest price), so the caller keeps the
@@ -63,21 +127,11 @@ export function allocateDemandCurve(input: {
 }): DemandCurveGroup[] | null {
   const live = input.offers.filter((offer) => offer.remaining > 0);
   if (live.length === 0 || !(input.wanted > 0) || !(input.budget > 0)) return [];
-  const pMin = Math.min(...live.map((offer) => offer.unitPrice));
-  if (!(pMin > 0) || !Number.isFinite(pMin)) return null;
-
-  type Group = { unitPrice: number; ids: string[]; remaining: number; weight: number };
-  const byKey = new Map<string, Group & { factor: number }>();
+  const byKey = new Map<string, PreferenceGroup & { ids: string[] }>();
   for (const offer of [...live].sort((a, b) => compareId(a.id, b.id))) {
     const factor = input.curve.preferenceByAccount[offer.accountId] ?? 1;
     const key = JSON.stringify([offer.unitPrice, factor]);
-    const group = byKey.get(key) ?? {
-      unitPrice: offer.unitPrice,
-      ids: [],
-      remaining: 0,
-      weight: 0,
-      factor,
-    };
+    const group = byKey.get(key) ?? { unitPrice: offer.unitPrice, factor, remaining: 0, ids: [] };
     group.ids.push(offer.id);
     group.remaining += offer.remaining;
     byKey.set(key, group);
@@ -85,39 +139,14 @@ export function allocateDemandCurve(input: {
   const groups = [...byKey.values()].sort(
     (a, b) => a.unitPrice - b.unitPrice || a.factor - b.factor
   );
-  for (const group of groups)
-    group.weight =
-      group.remaining *
-      Math.pow(pMin / group.unitPrice, input.curve.priceSensitivity) *
-      group.factor;
-  if (groups.some((group) => !(group.weight > 0) || !Number.isFinite(group.weight))) return null;
-
-  const supply = groups.reduce((sum, group) => sum + group.remaining, 0);
-  const target = Math.min(input.wanted, supply);
-  // A group whose offer is smaller than its share per unit of weight is capped
-  // at what it has; the rest of the target is re-spread over the others.
-  const byCapRatio = [...groups].sort(
-    (a, b) => a.remaining / a.weight - b.remaining / b.weight || a.unitPrice - b.unitPrice
-  );
-  const taken = new Map<Group, number>();
-  let free = target;
-  let weight = groups.reduce((sum, group) => sum + group.weight, 0);
-  for (const group of byCapRatio) {
-    if ((free / weight) * group.weight >= group.remaining) {
-      taken.set(group, group.remaining);
-      free -= group.remaining;
-      weight -= group.weight;
-    } else {
-      const lambda = free / weight;
-      for (const rest of byCapRatio) if (!taken.has(rest)) taken.set(rest, lambda * rest.weight);
-      break;
-    }
-  }
-  let spend = 0;
-  for (const [group, units] of taken) spend += units * group.unitPrice;
-  const fit = spend > input.budget ? input.budget / spend : 1;
-  return groups.flatMap((group) => {
-    const units = Math.min(group.remaining, (taken.get(group) ?? 0) * fit);
-    return units > 0 ? [{ unitPrice: group.unitPrice, offerIds: group.ids, units }] : [];
+  const units = allocatePreferenceGroups({
+    groups,
+    wanted: input.wanted,
+    budget: input.budget,
+    priceSensitivity: input.curve.priceSensitivity,
   });
+  if (!units) return null;
+  return groups.flatMap((group, i) =>
+    units[i] > 0 ? [{ unitPrice: group.unitPrice, offerIds: group.ids, units: units[i] }] : []
+  );
 }

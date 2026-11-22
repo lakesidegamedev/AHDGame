@@ -136,12 +136,16 @@ export async function settleFundedProducerTurn(
         ? {
             demandCurve: {
               priceSensitivity: DEMAND_CURVE_PRICE_SENSITIVITY,
-              preferenceByAccount: Object.fromEntries(
-                context.lookups.corporations.map((c) => [
-                  c._id.toHexString(),
-                  sellerPreferenceFactor(c.brandLoyalty, c.averageQuality),
-                ])
-              ),
+              // Stage 1 weighs price alone; stage 2 adds brand and quality.
+              preferenceByAccount:
+                (context.input.env.sellerPreferenceStage ?? 0) >= 2
+                  ? Object.fromEntries(
+                      context.lookups.corporations.map((c) => [
+                        c._id.toHexString(),
+                        sellerPreferenceFactor(c.brandLoyalty, c.averageQuality),
+                      ])
+                    )
+                  : {},
             },
           }
         : {}),
