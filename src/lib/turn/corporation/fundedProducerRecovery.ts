@@ -40,6 +40,7 @@ export function snapshotFundedHost(context: P) {
     carryShare: context.carryShare,
     tariffScopes: context.tariffScopes,
     tariffCollector: [...context.tariffCollector],
+    priorPostureAnchors: context.priorPostureAnchors ?? null,
     env: {
       captiveDeliveryStage: context.input.env.captiveDeliveryStage ?? 0,
       nationalPublicDemandStage: context.input.env.nationalPublicDemandStage ?? 0,
@@ -241,6 +242,7 @@ async function legacySnapshot(db: Db, input: Input, resumed: Resumed): Promise<S
     tariffCollector: [...scopes]
       .filter(([, s]) => s.kind === "tariffCollector")
       .map(([id, s]) => [s.countryId, id]),
+    priorPostureAnchors: null,
     env: {
       captiveDeliveryStage: input.env.captiveDeliveryStage ?? 0,
       nationalPublicDemandStage: input.env.nationalPublicDemandStage ?? 0,

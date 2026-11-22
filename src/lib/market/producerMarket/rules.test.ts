@@ -1056,6 +1056,35 @@ describe("quote policies", () => {
       expect(quote.unitPrice).toBeCloseTo(35.39 * 1.1);
     });
 
+    it("measures a posture from the slow anchor, not a clearing it set itself", () => {
+      const quote = quoteProducer({
+        ...short,
+        demand: [{ units: 1000, maximumUnitPrice: 60 }],
+        clearingUnitPrice: 28,
+        postureAnchorUnitPrice: 35,
+        policy: { kind: "automatic", targetMarkup: -0.2 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(35 * 0.8);
+      expect(
+        quoteProducer({
+          ...short,
+          clearingUnitPrice: 28,
+          postureAnchorUnitPrice: 35,
+          policy: { kind: "automatic", targetMarkup: 0.1 },
+        }).unitPrice
+      ).toBeCloseTo(35 * 1.1);
+    });
+
+    it("keeps an automatic seller on the clearing even when an anchor exists", () => {
+      const quote = quoteProducer({
+        ...short,
+        clearingUnitPrice: 28,
+        postureAnchorUnitPrice: 35,
+        policy: { kind: "automatic", targetMarkup: 0 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(28);
+    });
+
     it("falls back to the reference when nothing cleared", () => {
       expect(
         quoteProducer({ ...short, policy: { kind: "automatic", targetMarkup: 0.1 } }).unitPrice

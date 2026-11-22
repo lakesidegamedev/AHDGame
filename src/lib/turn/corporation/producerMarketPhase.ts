@@ -113,6 +113,7 @@ export async function runCorporationProducerMarket(
       | "marketFirstAccounts"
       | "stockCoverTurns"
       | "clearingPriceByLane"
+      | "postureAnchorByLane"
       | "countryOfProducer"
       | "trackCountryBooks"
       | "credit"
