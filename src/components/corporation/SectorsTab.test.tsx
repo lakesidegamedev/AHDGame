@@ -659,6 +659,7 @@ describe("SectorsTab plants total reconciliation", () => {
         const { container } = render(
           <SectorsTab
             {...baseProps}
+            isCeo={false}
             sectors={manySectors}
             logisticsStrength={value as number | null | undefined}
           />
@@ -672,7 +673,7 @@ describe("SectorsTab plants total reconciliation", () => {
 
     it("shows the corporation's own threshold and rate when strength is known", () => {
       const { container } = render(
-        <SectorsTab {...baseProps} sectors={manySectors} logisticsStrength={100} />
+        <SectorsTab {...baseProps} isCeo={false} sectors={manySectors} logisticsStrength={100} />
       );
       const text = container.textContent ?? "";
       expect(text).toContain("threshold is now 23, with 16 owned");
