@@ -4,6 +4,7 @@ import {
   computeCapitalUsage,
   outputRevenueShares,
   perUnitAnchorAmount,
+  pricingAsks,
   pricingSalesReading,
   resolveThroughputBindingInput,
 } from "@/lib/corporations/queries/sectorDetailCommodities";
@@ -141,5 +142,25 @@ describe("pricingSalesReading", () => {
     expect(pricingSalesReading({ ...legacy, producerSettlement: older }, true).salesBasis).toBe(
       "estimate"
     );
+  });
+});
+
+describe("pricingAsks", () => {
+  it("weights each output's ask by units offered and reads its book's market price", () => {
+    expect(
+      pricingAsks(
+        [
+          { commodity: "software", book: "world", offeredUnits: 1, askingUnitPrice: 2000 },
+          { commodity: "electronics", book: "world", offeredUnits: 3, askingUnitPrice: 400 },
+          { commodity: "electronics", book: "world", offeredUnits: 1, askingUnitPrice: 600 },
+          { commodity: "electronics", book: "world", offeredUnits: 0, askingUnitPrice: 9999 },
+        ],
+        { "electronics|world": 395 }
+      )
+    ).toEqual([
+      { commodity: "electronics", askingUnitPrice: 450, marketUnitPrice: 395 },
+      { commodity: "software", askingUnitPrice: 2000, marketUnitPrice: null },
+    ]);
+    expect(pricingAsks(undefined, undefined)).toEqual([]);
   });
 });

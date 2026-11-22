@@ -39,6 +39,8 @@ export type ProducerEconomyInput = {
   spilloverShare?: number;
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
+  /** Seller preference curve for free-choice orders (demandCurveRules). Absent = cheapest first. */
+  demandCurve?: import("./demandCurveRules").DemandCurveInput;
   /** Companies that explicitly chose market first: their own orders clear after outside buyers (rules.ts). */
   marketFirstAccounts?: readonly string[];
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
@@ -47,6 +49,8 @@ export type ProducerEconomyInput = {
   stockCoverTurns?: number;
   /** Last turn's clearing price per lane (`laneKeyOf`), the anchor for automatic asks. */
   clearingPriceByLane?: Readonly<Record<string, number>>;
+  /** Slow market price per lane that a non-zero pricing posture is measured from (postureAnchorRules). */
+  postureAnchorByLane?: Readonly<Record<string, number>>;
   /** Country of a producing site, so offers and its input orders carry one. */
   countryOfProducer?: (producerId: string) => string | undefined;
   /** Build the per-country funded book on the final settlement (see fundedBookRules). */

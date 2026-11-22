@@ -93,6 +93,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerSalesAdvanceRevenueShare: "",
   nppInsolvencyGraceTurns: "",
   producerAskBuyerTieStage: "",
+  // Seller preference stage, switched on deliberately.
+  producerSellerPreferenceStage: "",
   producerFundedRestartStage: "",
   nppShortageGrowthFinanceStage: "",
   nppGrowthPerProductFillStage: "",

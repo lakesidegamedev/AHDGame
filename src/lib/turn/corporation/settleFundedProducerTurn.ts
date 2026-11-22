@@ -1,4 +1,5 @@
 import type { FundedProducerTurnResult } from "@/lib/turn/corporation/fundedProducerTurn";
+import { nextPostureAnchors } from "@/lib/market/producerMarket/postureAnchorRules";
 import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
 import { markStrugglingTransitionSectors } from "@/lib/turn/corporation/transitionStruggling";
 
@@ -53,6 +54,10 @@ import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import { recordBackgroundTrade } from "@/lib/turn/corporation/backgroundTraders";
 import { runCorporationProducerMarket } from "@/lib/turn/corporation/producerMarketPhase";
 
+import {
+  DEMAND_CURVE_PRICE_SENSITIVITY,
+  sellerPreferenceFactor,
+} from "@/lib/market/producerMarket/demandCurveRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
@@ -127,6 +132,19 @@ export async function settleFundedProducerTurn(
       ...((context.input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((context.input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
       ...(context.input.env.ownSiteValuationCredit ? { ownSiteValuationCredit: true } : {}),
+      ...((context.input.env.sellerPreferenceStage ?? 0) >= 1
+        ? {
+            demandCurve: {
+              priceSensitivity: DEMAND_CURVE_PRICE_SENSITIVITY,
+              preferenceByAccount: Object.fromEntries(
+                context.lookups.corporations.map((c) => [
+                  c._id.toHexString(),
+                  sellerPreferenceFactor(c.brandLoyalty, c.averageQuality),
+                ])
+              ),
+            },
+          }
+        : {}),
       ...((context.input.env.askBuyerTieStage ?? 0) >= 1 ? { askBuyerTieBreak: true } : {}),
       ...((context.input.env.askBuyerTieStage ?? 0) >= 2 ? { askCompetitorsMatch: true } : {}),
       ...((context.input.env.shortageAskStage ?? 0) >= 1 && context.lastOutcome?.bookPressure
@@ -145,6 +163,9 @@ export async function settleFundedProducerTurn(
         : {}),
       ...(context.lastOutcome?.laneClearingPrices
         ? { clearingPriceByLane: context.lastOutcome.laneClearingPrices }
+        : {}),
+      ...(context.lastOutcome?.lanePostureAnchors
+        ? { postureAnchorByLane: context.lastOutcome.lanePostureAnchors }
         : {}),
       // Private companies (player and AI) may owe wages and site bills to keep
       // running; state companies run on the treasury advance above instead.
@@ -205,6 +226,8 @@ export type FundedPublicationContext = Pick<
   | "input"
   | "fundedReceiptOf"
 > & {
+  /** Last turn's posture anchors; null or absent seeds the next ones from this turn's clearing. */
+  priorPostureAnchors?: Readonly<Record<string, number>> | null;
   zeroSalesPreviouslyPublished?: boolean;
   demand: Pick<
     RunFundedProducerTurnStageContext["demand"],
@@ -526,6 +549,10 @@ export async function publishFundedProducerTurn(
       rows,
       ...((context.input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       laneClearingPrices,
+      lanePostureAnchors: nextPostureAnchors(
+        context.priorPostureAnchors ?? undefined,
+        laneClearingPrices
+      ),
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
       ...(settled.result.regionalBooks ? { regionalBuildBooks: settled.result.regionalBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),

@@ -76,6 +76,7 @@ export function producerStageEnv(
         producerSalesAdvanceRevenueShare?: number;
         producerShortageAskMaxStep?: number;
         producerAskBuyerTieStage?: number;
+        producerSellerPreferenceStage?: number;
         producerPriceMaxMultiplier?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
@@ -115,6 +116,7 @@ export function producerStageEnv(
     shortageAskStage: config?.producerShortageAskStage,
     shortageAskMaxStep: config?.producerShortageAskMaxStep,
     askBuyerTieStage: config?.producerAskBuyerTieStage,
+    sellerPreferenceStage: config?.producerSellerPreferenceStage,
     priceMaxMultiplier: config?.producerPriceMaxMultiplier,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
