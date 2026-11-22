@@ -11,6 +11,7 @@ import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
+import { billedInputUnitPrice } from "@/lib/corporations/rules/inputBoughtUnits";
 import { inputShortageReading } from "@/lib/corporations/rules/inputShortageReading";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
@@ -691,15 +692,10 @@ export async function buildSectorCommoditySections(args: {
       // uses, on the GLOBAL ratio. The raw regional `marketPrice` stays for
       // market context, but any P&L line must sum THIS price or the page
       // disagrees with the booked bill.
-      billedUnitPrice: (() => {
-        const cpData = commodityPrices.find((p) => p.commodity === f.commodity);
-        const base = COMMODITY_BASE_PRICES[f.commodity];
-        const ratio =
-          typeof cpData?.globalPrice === "number" && cpData.globalPrice > 0 && base > 0
-            ? cpData.globalPrice / base
-            : 1;
-        return Math.round(base * priceRealizationFactor(ratio) * 100) / 100;
-      })(),
+      billedUnitPrice: billedInputUnitPrice(
+        f.commodity,
+        commodityPrices.find((p) => p.commodity === f.commodity)?.globalPrice
+      ),
       ...(market.throughputEnabled
         ? { inputAvailability: Math.round(inputAvailability(gBal) * 1000) / 1000 }
         : {}),
