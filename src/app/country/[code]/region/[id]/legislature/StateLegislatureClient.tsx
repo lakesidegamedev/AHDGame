@@ -1,5 +1,6 @@
 "use client";
 
+import { displayChamberTotal } from "./displayChamberTotal";
 import ImpeachmentPanel from "@/app/whitehouse/ImpeachmentPanel";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
@@ -63,7 +64,7 @@ function mapToCompositionData(
   return {
     members,
     composition,
-    totalSeats,
+    totalSeats: displayChamberTotal(totalSeats, data.state.filledSeats),
     filledSeats: data.state.filledSeats,
   };
 }
@@ -217,7 +218,7 @@ export function StateLegislatureClient({
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">{chamberLabel}</h1>
           <p className="text-muted">
-            {totalSeats} Seats
+            {data ? displayChamberTotal(totalSeats, data.state.filledSeats) : totalSeats} Seats
             {data && ` · ${data.state.filledSeats} Filled`}
           </p>
           {!ukContext && data?.governor && (
