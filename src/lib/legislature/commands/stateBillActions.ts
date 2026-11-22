@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { applyV2BillVotePolicyShift } from "@/lib/legislature/v2VotePolicyShift";
 import { billVotePositions } from "@/lib/legislature/votePositions";
 import { northernIrelandAssemblyAllows } from "@/lib/countries/uk/northernIreland/service";
@@ -10,7 +11,7 @@ import {
 } from "@/lib/constants/countries";
 import { applyBillVotePolicyShift, shouldApplyVoteShift } from "@/lib/policyShift";
 import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
-import type { ElectedOfficial, GameState, PoliticalParty, StateBill } from "@/lib/db/types";
+
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { createNotification } from "@/lib/notifications";
@@ -306,6 +307,28 @@ export async function takeStateBillGovernorAction(
   action: "signed" | "vetoed",
   vetoMessage?: string
 ): Promise<LegislatureCommandResult> {
+  return withSessionDb(db, (tx) =>
+    takeStateBillGovernorActionInTransaction(
+      tx,
+      countryId,
+      stateId,
+      billId,
+      user,
+      action,
+      vetoMessage
+    )
+  );
+}
+
+async function takeStateBillGovernorActionInTransaction(
+  db: Db,
+  countryId: CountryId,
+  stateId: string,
+  billId: string,
+  user: AuthUserWithCharacter,
+  action: "signed" | "vetoed",
+  vetoMessage?: string
+): Promise<LegislatureCommandResult> {
   // Regional bills go through the regional chief executive (governor / First
   // Minister / Minister-President / Premier) for assent whenever the office is
   // filled — across presidential AND parliamentary systems alike. When the
@@ -435,13 +458,15 @@ export async function takeStateBillGovernorAction(
         { projection: { userId: 1 } }
       );
       if (sponsor) {
-        await createNotification({
-          userId: sponsor.userId,
-          type: "bill_signed",
-          title: "Bill Signed Into Law",
-          message: `Your bill "${bill.title}" has been signed by the Governor and is now law.`,
-          metadata: { billId: bill._id.toString(), stateId },
-        });
+        await afterCommit(db, () =>
+          createNotification({
+            userId: sponsor.userId,
+            type: "bill_signed",
+            title: "Bill Signed Into Law",
+            message: `Your bill "${bill.title}" has been signed by the Governor and is now law.`,
+            metadata: { billId: bill._id.toString(), stateId },
+          })
+        );
       }
     }
 
@@ -458,8 +483,8 @@ export async function takeStateBillGovernorAction(
         bill.sponsorName ??
         "Unknown")
       : (bill.sponsorName ?? "Unknown");
-    generateBillSignedNews(bill.title, sponsorName, "state", stateId).catch((error) =>
-      console.error("[News] Failed to generate state bill news:", error)
+    afterCommit(db, () => generateBillSignedNews(bill.title, sponsorName, "state", stateId)).catch(
+      (error) => console.error("[News] Failed to generate state bill news:", error)
     );
 
     return { status: 200, body: { success: true, action: "signed", statusText: "enacted" } };
@@ -514,18 +539,20 @@ export async function takeStateBillGovernorAction(
       { projection: { userId: 1 } }
     );
     if (sponsor) {
-      await createNotification({
-        userId: sponsor.userId,
-        type: "bill_vetoed",
-        title: "Bill Vetoed",
-        message: `Your bill "${bill.title}" has been vetoed by the Governor. Override voting is now open.`,
-        metadata: { billId: bill._id.toString(), stateId },
-      });
+      await afterCommit(db, () =>
+        createNotification({
+          userId: sponsor.userId,
+          type: "bill_vetoed",
+          title: "Bill Vetoed",
+          message: `Your bill "${bill.title}" has been vetoed by the Governor. Override voting is now open.`,
+          metadata: { billId: bill._id.toString(), stateId },
+        })
+      );
     }
   }
 
-  generateBillVetoedNews(bill.title, "state", stateId, countryId).catch((error) =>
-    console.error("[News] Failed to generate state veto news:", error)
+  afterCommit(db, () => generateBillVetoedNews(bill.title, "state", stateId, countryId)).catch(
+    (error) => console.error("[News] Failed to generate state veto news:", error)
   );
 
   return {

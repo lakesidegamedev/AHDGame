@@ -1,7 +1,7 @@
 /** Novate unpaid operating bills with a site in one transaction; repeated calls cannot move them twice. */
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { transferProducerClaims } from "./rules/fundedOwnership";
 
 export async function moveProducerLiabilities(
@@ -55,5 +55,5 @@ export async function moveProducerLiabilities(
       throw new Error("Missing producer liability account");
   };
   if (input.session) await body(input.session);
-  else await runRequiredTransaction(body, { client: db.client });
+  else await runWithDbSession(db, body, { client: db.client });
 }

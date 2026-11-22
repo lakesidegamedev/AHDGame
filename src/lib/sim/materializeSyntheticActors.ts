@@ -418,6 +418,14 @@ export async function materializeSyntheticActors(
   const statePartyVotes: Array<Record<string, unknown>> = [];
   if (targetOrg) {
     const orgCountryId = (targetOrg.countryId ?? "US") as CountryId;
+    const memberCharacter = characters.find((character) => character._id.equals(memberCharacterId));
+    if (memberCharacter)
+      Object.assign(memberCharacter, {
+        party: targetOrg.partyId,
+        countryId: orgCountryId,
+        homeState: targetOrg.stateId,
+        partyJoinedTurn: turn,
+      });
     for (const position of ["chair"] as const) {
       const existing = await statePartyElectionsCollection<Document>(db).findOne({
         stateId: targetOrg.stateId,

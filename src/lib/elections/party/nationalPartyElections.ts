@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { processCaucusChairElections } from "@/lib/elections/party/caucusChairElections";
@@ -5,11 +6,8 @@ import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
 import type {
   NationalPartyElection,
   NationalPartyElectionPosition,
-  NationalPartyVote,
   NationalPartyCandidate,
   PoliticalParty,
-  GameState,
-  User,
 } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countries";
 import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
@@ -410,6 +408,24 @@ export async function processCompletedNationalElections(
   countryId?: CountryId
 ): Promise<number> {
   const db = await getDb();
+  const pending = await nationalPartyElectionsCollection(db)
+    .find(
+      applyOptionalCountryScope({ status: "voting", endTurn: { $lte: currentTurn } }, countryId),
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  if (pending.length === 0) return 0;
+  return withSessionDb(db, (tx) =>
+    processCompletedNationalElectionsInTransaction(tx, currentTurn, effectiveNow, countryId)
+  );
+}
+
+async function processCompletedNationalElectionsInTransaction(
+  db: import("mongodb").Db,
+  currentTurn: number,
+  effectiveNow = new Date(),
+  countryId?: CountryId
+): Promise<number> {
   const now = new Date(effectiveNow);
 
   // Turn-based resolution only. The wall-clock endTime branch was removed: under
@@ -689,12 +705,14 @@ export async function processCompletedNationalElections(
         if (currentHolder && (currentHolder as ObjectId).equals(r.winnerId)) {
           setUpdates[otherField] = null;
           notifications.push(
-            notifyNationalLeadershipVacatedForNewRole(
-              r.winnerId,
-              r.election.partyId,
-              otherPos,
-              r.election.position,
-              r.election.countryId
+            afterCommit(db, () =>
+              notifyNationalLeadershipVacatedForNewRole(
+                r.winnerId,
+                r.election.partyId,
+                otherPos,
+                r.election.position,
+                r.election.countryId
+              )
             )
           );
           if (otherPos === "chair") {
@@ -715,36 +733,50 @@ export async function processCompletedNationalElections(
       const previousHolderId = party[field] ?? null;
 
       notifications.push(
-        notifyNationalLeadershipElected(winnerId, partyId, position, winnerName, election.countryId)
+        afterCommit(db, () =>
+          notifyNationalLeadershipElected(
+            winnerId,
+            partyId,
+            position,
+            winnerName,
+            election.countryId
+          )
+        )
       );
       notifications.push(
-        import("@/lib/achievements")
-          .then(async ({ awardAchievement, resolveUserIdFromCharacter }) => {
-            const winnerUserId = await resolveUserIdFromCharacter(winnerId);
-            if (winnerUserId) await awardAchievement(winnerUserId, "party_leader", winnerId);
-          })
-          .catch((e) => console.error("Achievement check failed:", e))
+        afterCommit(db, () =>
+          import("@/lib/achievements")
+            .then(async ({ awardAchievement, resolveUserIdFromCharacter }) => {
+              const winnerUserId = await resolveUserIdFromCharacter(winnerId);
+              if (winnerUserId) await awardAchievement(winnerUserId, "party_leader", winnerId);
+            })
+            .catch((e) => console.error("Achievement check failed:", e))
+        )
       );
       if (previousHolderId && !(previousHolderId as ObjectId).equals(winnerId)) {
         notifications.push(
-          notifyNationalLeadershipRemoved(
-            previousHolderId as ObjectId,
-            partyId,
-            position,
-            election.countryId
+          afterCommit(db, () =>
+            notifyNationalLeadershipRemoved(
+              previousHolderId as ObjectId,
+              partyId,
+              position,
+              election.countryId
+            )
           )
         );
       }
       for (const cand of candidates) {
         if (!cand.characterId.equals(winnerId)) {
           notifications.push(
-            notifyNationalLeadershipLost(
-              cand.characterId,
-              partyId,
-              position,
-              cand.characterName,
-              winnerName,
-              election.countryId
+            afterCommit(db, () =>
+              notifyNationalLeadershipLost(
+                cand.characterId,
+                partyId,
+                position,
+                cand.characterName,
+                winnerName,
+                election.countryId
+              )
             )
           );
         }
@@ -780,7 +812,9 @@ export async function processCompletedNationalElections(
         chairChanges.push({ partyOid: party._id as ObjectId, newChairId: null });
       }
       notifications.push(
-        notifyNationalLeadershipNotReStood(holderId, partyId, position, party.countryId)
+        afterCommit(db, () =>
+          notifyNationalLeadershipNotReStood(holderId, partyId, position, party.countryId)
+        )
       );
     }
     partyOps.push({

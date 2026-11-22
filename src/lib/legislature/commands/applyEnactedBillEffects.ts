@@ -7,8 +7,7 @@ type EnactmentBill = Parameters<typeof onBillEnacted>[1];
 
 /**
  * Run the two shared enactment effect layers and reuse their legislation-type
- * catalog read. Errors remain isolated so one legacy effect cannot suppress
- * the independent enactment hook.
+ * catalog read. Both layers must succeed before the surrounding enactment transaction commits.
  */
 export async function applyEnactedBillEffects(
   db: Db,
@@ -16,12 +15,12 @@ export async function applyEnactedBillEffects(
   currentTurn: number,
   labels: { effect: string; enactment: string }
 ): Promise<void> {
-  const legislationTypes = await applyLegislationEffect(db, bill, currentTurn).catch((error) => {
-    console.error(labels.effect, error);
-    return undefined;
-  });
-  const enactment = legislationTypes
-    ? onBillEnacted(db, bill, currentTurn, legislationTypes)
-    : onBillEnacted(db, bill, currentTurn);
-  await enactment.catch((error) => console.error(labels.enactment, error));
+  try {
+    const legislationTypes = await applyLegislationEffect(db, bill, currentTurn);
+    if (legislationTypes) await onBillEnacted(db, bill, currentTurn, legislationTypes);
+    else await onBillEnacted(db, bill, currentTurn);
+  } catch (error) {
+    console.error(labels.enactment, error);
+    throw error;
+  }
 }

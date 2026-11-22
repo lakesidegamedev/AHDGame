@@ -152,3 +152,32 @@ describe("regional bill political positions", () => {
     expect(result.provisions?.[0]).toMatchObject({ economic: 1.5, social: -2.5 });
   });
 });
+
+describe("regional bill decision dates", () => {
+  it("uses recorded decisions rather than proposal dates", () => {
+    const bill = buildBill({
+      status: "enacted",
+      passedAt: "2026-04-18T00:00:00Z",
+      enactedAt: "2026-04-19T00:00:00Z",
+    });
+    const result = mapStateBillToBillDisplay(bill, { chamber: "senate", canVote: false });
+    expect(result.passedAt).toBe(bill.passedAt);
+    expect(result.enactedAt).toBe(bill.enactedAt);
+    expect(result.failedAt).toBeNull();
+  });
+  it("keeps missing historical decision dates unknown", () => {
+    const result = mapStateBillToBillDisplay(buildBill({ status: "failed" }), {
+      chamber: "senate",
+      canVote: false,
+    });
+    expect(result.failedAt).toBeNull();
+    expect(result.enactedAt).toBeNull();
+  });
+  it("uses the recorded failure date", () => {
+    const result = mapStateBillToBillDisplay(
+      buildBill({ status: "failed", failedAt: "2026-04-20T00:00:00Z" }),
+      { chamber: "senate", canVote: false }
+    );
+    expect(result.failedAt).toBe("2026-04-20T00:00:00Z");
+  });
+});
