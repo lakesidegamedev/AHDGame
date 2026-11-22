@@ -1,11 +1,11 @@
 import type { Db, Document, ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
-/** Revalidate membership at resolution so interrupted departure cleanup cannot preserve a ballot. */
-export async function leadershipVoterFilter(
+/** Revalidate membership at resolution so interrupted departure cleanup cannot preserve ballots or candidacies. */
+export async function leadershipEligibilityFilters(
   db: Db,
   elections: readonly { _id: ObjectId; partyId: string; countryId?: string }[]
-): Promise<Document> {
+): Promise<{ voterFilter: Document; candidateFilter: Document }> {
   const partyIds = [...new Set(elections.map((e) => e.partyId))];
   const members = await charactersCollection(db)
     .find(
@@ -29,10 +29,18 @@ export async function leadershipVoterFilter(
     }
     group.electionIds.push(election._id);
   }
-  return {
+  const filterFor = (field: "voterId" | "characterId"): Document => ({
     $or: [...groups.values()].map((group) => ({
       electionId: { $in: group.electionIds },
-      voterId: { $in: group.voters },
+      [field]: { $in: group.voters },
     })),
-  };
+  });
+  return { voterFilter: filterFor("voterId"), candidateFilter: filterFor("characterId") };
+}
+
+export async function leadershipVoterFilter(
+  db: Db,
+  elections: readonly { _id: ObjectId; partyId: string; countryId?: string }[]
+): Promise<Document> {
+  return (await leadershipEligibilityFilters(db, elections)).voterFilter;
 }
