@@ -10,6 +10,8 @@ import noUnawaitedAuthGuard from "./eslint-rules/no-unawaited-auth-guard.js";
 import noDottedBoardPath from "./eslint-rules/no-dotted-board-path.js";
 import noUncodedErrorResponse from "./eslint-rules/no-uncoded-error-response.js";
 import noUnscopedRateLimitKey from "./eslint-rules/no-unscoped-rate-limit-key.js";
+import numbersColourContract from "./eslint-rules/numbers-colour-contract.js";
+import numbersColourBaseline from "./eslint-rules/numbers-colour-baseline.json" with { type: "json" };
 
 const require = createRequire(import.meta.url);
 
@@ -76,6 +78,7 @@ const eslintConfig = defineConfig([
           "no-dotted-board-path": noDottedBoardPath,
           "no-uncoded-error-response": noUncodedErrorResponse,
           "no-unscoped-rate-limit-key": noUnscopedRateLimitKey,
+          "numbers-colour-contract": numbersColourContract,
         },
       },
     },
@@ -170,6 +173,17 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  },
+  // Numbers-and-colour contract: error everywhere except the committed baseline
+  // of existing offenders, which only shrinks.
+  {
+    files: ["src/**/*.tsx"],
+    ignores: ["**/*.test.tsx"],
+    rules: { "local/numbers-colour-contract": "error" },
+  },
+  {
+    files: numbersColourBaseline,
+    rules: { "local/numbers-colour-contract": "off" },
   },
   // Test files: any is unavoidable in mock setup and test assertions
   {
