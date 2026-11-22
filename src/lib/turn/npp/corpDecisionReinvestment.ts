@@ -508,7 +508,6 @@ export function decideNppCapacityReinvestment({
       // for the output, or none measured, means neither leg is ordered. A
       // growth leg sized on a measured shortage is demand-led and passes.
       const roomGate = evaluateAutoBuildRoomGate({
-        stage: ctx.buildRoomStage,
         roomUnits: measuredRoomOf(sector),
         demandLed: shortageSizing != null && growthUnits > 0,
       });

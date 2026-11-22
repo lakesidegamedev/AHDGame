@@ -81,7 +81,8 @@ describe("NPP tech spending budget", () => {
       new Map(),
       new Set(),
       () => null,
-      plants
+      plants,
+      { unmetDemandUnitsOf: () => 1_000_000 }
     );
 
     const cashAfterCapacity = (corp.liquidCapital ?? 0) + decision.liquidCapitalDelta;

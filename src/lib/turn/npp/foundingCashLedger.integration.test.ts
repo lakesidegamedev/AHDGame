@@ -86,7 +86,12 @@ function fixture(row: (typeof cases)[number], mode = "plants", shadow = true) {
   const gapUnits = foundingStarterUnits("manufacturing") * 80;
   memory.seed(
     "commodityPrices",
-    (Object.keys(mix) as CommodityType[]).map((commodity) => ({
+    [
+      ...new Set([
+        ...(Object.keys(mix) as CommodityType[]),
+        ...(Object.keys(getStrategy("technology", "").supply) as CommodityType[]),
+      ]),
+    ].map((commodity) => ({
       _id: new ObjectId(),
       commodity,
       turn: TURN - 1,

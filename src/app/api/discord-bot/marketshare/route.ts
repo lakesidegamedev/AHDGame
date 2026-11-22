@@ -23,7 +23,6 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { shareRevenueOf } from "@/lib/corporations/rules/marketShareBasis";
-import { loadMarketShareBasis } from "@/lib/corporations/marketShareBasisConfig";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -174,14 +173,13 @@ export async function GET(request: Request) {
     // Convert each sector at its OWN host rate. `corporateSectors.revenue` is
     // stored in the SECTOR's host currency, not the corp's, so converting at the
     // corp's rate inflates revenue by the FX gap and corrupts the ranking.
-    const shareBasis = await loadMarketShareBasis(db);
     const revenueAnchorByCorp = new Map<string, number>();
     const ownedRevenueAnchorByState = new Map<string, number>();
     for (const sec of sectorsInScope) {
       const id = sec.corporationId.toString();
       const corp = corpMap.get(id);
       const revenueAnchor = readCorpEconomicAnchor(
-        shareBasis === "earned" ? shareRevenueOf(sec, shareBasis) : sec.revenue,
+        shareRevenueOf(sec),
         resolveSectorHostCurrencyCode(sec, corp),
         fxRateForSectorHostFromMap(sec, corp, fxByCurrency)
       );

@@ -115,8 +115,6 @@ export interface NppCorpDecisionContext {
    * gate as the best per-product sell-through (rules/productFill). Absent = off.
    */
   productFillStage?: number;
-  /** gameConfig.autopilotBuildRoomStage: >= 1 gates every automatic build on measured room. */
-  buildRoomStage?: number;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
   /**
