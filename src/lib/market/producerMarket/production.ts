@@ -519,6 +519,7 @@ export function advanceProducerEconomy(
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
       ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(input.demandCurve ? { demandCurve: input.demandCurve } : {}),
       ...(input.marketFirstAccounts?.length
         ? { marketFirstAccounts: input.marketFirstAccounts }
         : {}),

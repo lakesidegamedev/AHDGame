@@ -53,6 +53,10 @@ import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import { recordBackgroundTrade } from "@/lib/turn/corporation/backgroundTraders";
 import { runCorporationProducerMarket } from "@/lib/turn/corporation/producerMarketPhase";
 
+import {
+  DEMAND_CURVE_PRICE_SENSITIVITY,
+  sellerPreferenceFactor,
+} from "@/lib/market/producerMarket/demandCurveRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
@@ -127,6 +131,19 @@ export async function settleFundedProducerTurn(
       ...((context.input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((context.input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
       ...(context.input.env.ownSiteValuationCredit ? { ownSiteValuationCredit: true } : {}),
+      ...((context.input.env.sellerPreferenceStage ?? 0) >= 1
+        ? {
+            demandCurve: {
+              priceSensitivity: DEMAND_CURVE_PRICE_SENSITIVITY,
+              preferenceByAccount: Object.fromEntries(
+                context.lookups.corporations.map((c) => [
+                  c._id.toHexString(),
+                  sellerPreferenceFactor(c.brandLoyalty, c.averageQuality),
+                ])
+              ),
+            },
+          }
+        : {}),
       ...((context.input.env.askBuyerTieStage ?? 0) >= 1 ? { askBuyerTieBreak: true } : {}),
       ...((context.input.env.askBuyerTieStage ?? 0) >= 2 ? { askCompetitorsMatch: true } : {}),
       ...((context.input.env.shortageAskStage ?? 0) >= 1 && context.lastOutcome?.bookPressure
