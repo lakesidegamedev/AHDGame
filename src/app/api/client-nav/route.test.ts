@@ -127,6 +127,8 @@ describe("GET /api/client-nav", () => {
             return {
               findOne: vi.fn().mockResolvedValue(null),
               find: vi.fn().mockReturnValue({
+                // Active-character scope lookup: one character means no scoping.
+                limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
                 project: vi.fn().mockReturnValue({
                   toArray: vi.fn().mockResolvedValue([]),
                 }),
@@ -167,6 +169,8 @@ describe("GET /api/client-nav", () => {
               // owned by the userId, then counts charters where any of them
               // is a founder. Test stub: one character, zero charters.
               find: vi.fn().mockReturnValue({
+                // Active-character scope lookup: one character means no scoping.
+                limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
                 project: () => ({
                   toArray: vi.fn().mockResolvedValue([{ _id: characterId }]),
                 }),
@@ -306,6 +310,8 @@ describe("GET /api/client-nav", () => {
           return {
             findOne: vi.fn().mockResolvedValue(null),
             find: vi.fn().mockReturnValue({
+              // Active-character scope lookup: one character means no scoping.
+              limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
               project: vi.fn().mockReturnValue({
                 toArray: vi.fn().mockResolvedValue([]),
               }),
@@ -340,6 +346,8 @@ describe("GET /api/client-nav", () => {
             }),
             // Phase 6 — see note in earlier test stub.
             find: vi.fn().mockReturnValue({
+              // Active-character scope lookup: one character means no scoping.
+              limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
               project: () => ({
                 toArray: vi
                   .fn()
@@ -528,6 +536,8 @@ async function stubClientNavDb(userId: ObjectId) {
         return {
           findOne: vi.fn().mockResolvedValue(null),
           find: vi.fn().mockReturnValue({
+            // Active-character scope lookup: one character means no scoping.
+            limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
             project: vi.fn().mockReturnValue({
               toArray: vi.fn().mockResolvedValue([]),
             }),
@@ -560,6 +570,8 @@ async function stubClientNavDb(userId: ObjectId) {
             funds: 5000,
           }),
           find: vi.fn().mockReturnValue({
+            // Active-character scope lookup: one character means no scoping.
+            limit: () => ({ toArray: vi.fn().mockResolvedValue([]) }),
             project: () => ({
               toArray: vi.fn().mockResolvedValue([{ _id: characterId }]),
             }),
