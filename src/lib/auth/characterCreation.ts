@@ -63,8 +63,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
-
-const MIN_STARTING_DONOR_BASE_LEVEL = 1;
+import { MIN_STARTING_DONOR_BASE_LEVEL } from "@/lib/constants/startingDonorLevel";
 
 async function repairLegacyCharacterUserIdIndex(db: Db): Promise<boolean> {
   const collection = charactersCollection<Document>(db);

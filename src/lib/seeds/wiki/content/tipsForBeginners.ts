@@ -46,7 +46,7 @@ The game does not block you from filing at low Political Influence (PI). Your pr
 
 ## 9. First office is the lowest one
 
-Aim for State Senate or the House (or an MP / lower-chamber seat in a parliamentary country). Senate and President wait. Reason: office action bonuses fund the next race, and a lost primary costs a whole cycle.
+Aim for State Senate or the House (or an MP / lower-chamber seat in a parliamentary country) when its race is open. Filing is only open during a race's primary window, so check the Elections page for what is open at home now. If only statewide races are open, build influence and money and join a party until local filing reopens. Senate and President wait. Reason: office action bonuses fund the next race, and a lost primary costs a whole cycle.
 
 ## 10. Party organisation is not optional
 

@@ -78,11 +78,11 @@ Cash on Hand grows from dividends, CEO salary, bond coupons, share sales and wir
 | Number | Value |
 | --- | --- |
 | Base actions per turn | 4 |
-| Starting actions | 25 |
+| Starting actions | 25 (a world setting) |
 | Action cap | 200 (Energy 1) to 250 (Energy 10) |
 | Hoard threshold, penalty | 100 (Energy 1) to 125 (Energy 10), 4 actions per turn |
 | Office pool top-up | 10 main actions for 1 office action, once per turn per pool |
-| Starting Campaign Funds | ₳250,000 |
+| Starting Campaign Funds | ₳250,000 in a modern world, lower in earlier eras |
 | Starting Cash on Hand | ₳1,000,000, ₳2,500,000 or ₳5,000,000 by wealth background, lower in earlier eras |
 
 ## What happens inside a turn

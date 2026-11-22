@@ -5,9 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { buildChapterTour, buildTourSteps } from "@/lib/tutorial/chapters";
-import { coachCountryContext, type CoachCharacter, type TourStep } from "@/lib/tutorial/coachSteps";
+import {
+  coachCountryContext,
+  resolveResumeIndex,
+  type CoachCharacter,
+  type TourStep,
+} from "@/lib/tutorial/coachSteps";
 import { parseTutorialFacts, type TutorialFacts } from "@/lib/tutorial/facts";
 import { tutorialWorldFromFlags, type TutorialWorld } from "@/lib/tutorial/world";
+import { MIN_STARTING_DONOR_BASE_LEVEL } from "@/lib/constants/startingDonorLevel";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import {
@@ -29,7 +35,9 @@ import {
 // old flat tour still carries the v1 done flag, and reusing the key would hide
 // the new tour from them permanently.
 const TUTORIAL_DONE_KEY = "ahd-tutorial-done-v2";
-const TUTORIAL_STEP_KEY = "ahd-tutorial-step-v2";
+// v3: stores the step id, not a list index. An index saved under one world or
+// plan points at a different step (or past the end) once the list changes.
+const TUTORIAL_STEP_KEY = "ahd-tutorial-step-v3";
 const TUTORIAL_START_EVENT = "ahd:start-tutorial";
 
 /** Fire from anywhere (the /tutorial hub) to (re)start the tour. */
@@ -106,6 +114,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
       countryName: ctx.countryName,
       legislatureName: ctx.legislatureName,
       region: t.has(`regionNouns.${nounKey}`) ? t(`regionNouns.${nounKey}`) : ctx.region,
+      startingDonorLevel: MIN_STARTING_DONOR_BASE_LEVEL,
       primaryEndTurn: world.founding?.primaryEndTurn ?? 0,
       generalEndTurn: world.founding?.generalEndTurn ?? 0,
     };
@@ -197,17 +206,13 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
     let startTimer: number | undefined;
     if (!startedRef.current) {
       let done = false;
-      let resume = 0;
       try {
         done = window.localStorage.getItem(TUTORIAL_DONE_KEY) === "1";
-        resume = Number(window.localStorage.getItem(TUTORIAL_STEP_KEY) ?? "0");
       } catch {
         done = false;
       }
-      if (autoStart && !done) {
-        const from = Number.isFinite(resume) && resume > 0 ? resume : 0;
-        startTimer = window.setTimeout(() => begin(from), 0);
-      }
+      // Always begin at the top; the resume effect moves to the saved step by id.
+      if (autoStart && !done) startTimer = window.setTimeout(() => begin(0), 0);
     }
     return () => {
       window.removeEventListener(TUTORIAL_START_EVENT, onStart);
@@ -229,9 +234,16 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
         const res = await fetch("/api/tutorial/plan", { credentials: "same-origin" });
         if (!res.ok) return;
         const data = (await res.json()) as { progress?: { stepId?: string } | null };
-        const stepId = data.progress?.stepId;
+        let stepId = data.progress?.stepId;
+        if (!stepId) {
+          try {
+            stepId = window.localStorage.getItem(TUTORIAL_STEP_KEY) ?? undefined;
+          } catch {
+            /* private mode */
+          }
+        }
         if (cancelled || !stepId) return;
-        const index = steps.findIndex((s) => s.id === stepId);
+        const index = resolveResumeIndex(steps, stepId);
         // Only ever move forward: never drag a player back to an older step.
         if (index > 0) setStep((currentStep) => (index > currentStep ? index : currentStep));
       } catch {
@@ -299,7 +311,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
   useEffect(() => {
     if (!active || !current || !resumeSettled) return;
     try {
-      window.localStorage.setItem(TUTORIAL_STEP_KEY, String(step));
+      window.localStorage.setItem(TUTORIAL_STEP_KEY, current.id);
     } catch {
       /* private mode */
     }
@@ -388,6 +400,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
   // votes, campaigns, files for a race, invests, takes a company, backs a union).
   useEffect(() => {
     const signal = current?.advanceSignal;
+    const stepId = current?.id;
     if (!active || !signal) return;
     let cancelled = false;
     const check = async () => {
@@ -395,7 +408,11 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
         const res = await fetch("/api/onboarding/signals", { credentials: "same-origin" });
         if (!res.ok) return;
         const data = (await res.json()) as Record<string, boolean>;
-        if (!cancelled && data[signal] === true) setStep((s) => s + 1);
+        // Advance only if the player is still on the step this poll belongs to,
+        // so a late answer can never skip the step they moved to meanwhile.
+        if (!cancelled && data[signal] === true) {
+          setStep((s) => (steps[s]?.id === stepId ? s + 1 : s));
+        }
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
           console.debug("TutorialCoach: advance poll failed", err);
@@ -408,7 +425,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
       cancelled = true;
       window.clearInterval(iv);
     };
-  }, [active, current]);
+  }, [active, current, steps]);
 
   const finish = useCallback(() => {
     try {

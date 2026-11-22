@@ -41,7 +41,7 @@ elections
 | Number | What it is | What it buys |
 | --- | --- | --- |
 | **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, and most other moves. Declaring for a race costs none. |
-| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units. | Ads, polls, donor building, and influence operations. |
+| **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units, scaled down in earlier eras. | Ads, polls, donor building, and influence operations. |
 | **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal. Above 60 it slips a little every turn. |
 | **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |

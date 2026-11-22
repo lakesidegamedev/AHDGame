@@ -14,7 +14,7 @@ Pick the country you actually want to play. It scopes your elections, parties, l
 
 ![Create character screen with the list of open countries in the Country step](/wiki-images/screens/create-a-character-country-picker.webp)
 
-| Country | Home you pick | First office most people target |
+| Country | Home you pick | Typical first office, when its race is open |
 | --- | --- | --- |
 | United States | State | State Senate, then House |
 | United Kingdom | England, Scotland, Wales or Northern Ireland | MP (Commons) |
