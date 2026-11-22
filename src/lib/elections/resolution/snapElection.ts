@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 /**
  * Shared snap-election trigger used by the player-facing PM route and the
  * turn-phase auto-snap watcher.
@@ -48,7 +49,7 @@ import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { byElectionTypesFor } from "@/lib/utils/electionLabels";
-import type { CountryGameState, Election, ElectionStatus, GameState, Seat } from "@/lib/db/types";
+import type { Election, ElectionStatus } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { snapElectionResolutionYear, shouldStartVacancySnap } from "@/lib/turn/rules/snapElection";
 import { japanShugiinRulesForRegion } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
@@ -146,21 +147,32 @@ export async function vacateDissolvedLowerChamber(
   ]);
   await Promise.all(
     departing.map((character) =>
-      captureOfficeTransition({
-        db,
-        officeType: lowerChamberKey,
-        transitionType: "lost",
-        partyId: character.party ?? undefined,
-        selectionMethod: "removal",
-        nationId: countryId,
-        turn: currentTurn,
-      })
+      afterCommit(db, () =>
+        captureOfficeTransition({
+          db: unboundDb(db),
+          officeType: lowerChamberKey,
+          transitionType: "lost",
+          partyId: character.party ?? undefined,
+          selectionMethod: "removal",
+          nationId: countryId,
+          turn: currentTurn,
+        })
+      )
     )
   );
-  await flushServerPosthog();
+  await afterCommit(db, () => flushServerPosthog());
 }
 
 export async function triggerSnapElection(
+  db: Db,
+  countryId: CountryId,
+  now: Date,
+  opts: TriggerSnapOptions
+): Promise<TriggerSnapResult> {
+  return withSessionDb(db, (tx) => triggerSnapElectionInTransaction(tx, countryId, now, opts));
+}
+
+async function triggerSnapElectionInTransaction(
   db: Db,
   countryId: CountryId,
   now: Date,
@@ -250,15 +262,14 @@ export async function triggerSnapElection(
 
   // An automatic retry must not dissolve the chamber or spawn races again.
   // Live races identify the same vacancy across turns and process restarts.
-  const liveVacancySnap =
-    opts.reason === "auto-snap"
-      ? await (
-          await getElectionsCollection(db)
-        ).findOne(
-          { countryId, electionType: snapElectionType, status: { $in: ["active", "upcoming"] } },
-          { projection: { _id: 1 } }
-        )
-      : null;
+  const liveVacancySnap = await (
+    await getElectionsCollection(db)
+  ).findOne(
+    { countryId, electionType: snapElectionType, status: { $in: ["active", "upcoming"] } },
+    { projection: { _id: 1 } }
+  );
+  if (liveVacancySnap && opts.reason !== "auto-snap")
+    throw new SnapElectionError("A snap election is already in progress for this chamber");
 
   if (opts.reason === "auto-snap") {
     const unchanged = (): TriggerSnapResult => ({
@@ -467,21 +478,23 @@ export async function triggerSnapElection(
   await resetParliamentaryGovernmentAfterElection(db, countryId, now);
 
   const chamberName = config.legislature.lowerChamber.name;
-  sendCountryGameEvent(countryId, {
-    // An imposed dissolution is not the executive's doing, and a headline
-    // crediting them for it would misdescribe what happened to the country.
-    title: imposed
-      ? `${chamberName} Dissolved Under a Peace Settlement`
-      : `${config.executiveTitle} Dissolves ${chamberName}`,
-    description: imposed
-      ? `The terms of a peace settlement dissolve the ${chamberName} and call fresh elections. All active legislation has been cancelled.`
-      : opts.reason === "auto-snap"
-        ? `**No ${config.executiveTitle}** was appointed within the ${chamberName} vacancy window. The ${chamberName} is automatically dissolved and a snap election called.`
-        : `**${opts.actorName ?? config.executiveTitle}** has dissolved the ${chamberName} and called a snap election. All active legislation has been cancelled.`,
-    color: DISCORD_COLORS.govCollapsed,
-    footer: { text: "A House Divided" },
-    timestamp: now.toISOString(),
-  }).catch(() => {});
+  await afterCommit(db, () =>
+    sendCountryGameEvent(countryId, {
+      // An imposed dissolution is not the executive's doing, and a headline
+      // crediting them for it would misdescribe what happened to the country.
+      title: imposed
+        ? `${chamberName} Dissolved Under a Peace Settlement`
+        : `${config.executiveTitle} Dissolves ${chamberName}`,
+      description: imposed
+        ? `The terms of a peace settlement dissolve the ${chamberName} and call fresh elections. All active legislation has been cancelled.`
+        : opts.reason === "auto-snap"
+          ? `**No ${config.executiveTitle}** was appointed within the ${chamberName} vacancy window. The ${chamberName} is automatically dissolved and a snap election called.`
+          : `**${opts.actorName ?? config.executiveTitle}** has dissolved the ${chamberName} and called a snap election. All active legislation has been cancelled.`,
+      color: DISCORD_COLORS.govCollapsed,
+      footer: { text: "A House Divided" },
+      timestamp: now.toISOString(),
+    }).catch(() => {})
+  );
 
   const usedAfter = imposed ? snapUsed : snapUsed + 1;
   return {
