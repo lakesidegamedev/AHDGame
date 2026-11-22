@@ -26,6 +26,7 @@ import {
   type ExistingNppAgreement,
 } from "./nppSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
+import { sellerFill } from "@/lib/logistics/nppSupplyDecisions";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { CONTRACT_OVERCOMMIT_TOLERANCE } from "@/lib/db/types/supplyAgreement";
 
@@ -78,6 +79,39 @@ describe("nppContractPremium", () => {
     expect(nppContractPremium(0.2, 1)).toBe(NPP_CONTRACT_GLUT_PREMIUM);
     expect(nppContractPremium(0.95, 1.3)).toBe(NPP_CONTRACT_SHORTAGE_PREMIUM);
     expect(nppContractPremium(0.9, 1)).toBe(0);
+  });
+});
+
+describe("AI contract fill reads the funded sale", () => {
+  const corp = { _id: new ObjectId(), countryId: "US", ceoType: "npp" } as unknown as Corporation;
+  const seller = (soldFraction: number, sold?: number) =>
+    ({
+      sectorType: "agriculture",
+      soldFraction,
+      ...(sold == null
+        ? {}
+        : {
+            producerSettlement: { worldEpoch: "e", turn: 10, offeredUnits: 100, soldUnits: sold },
+          }),
+    }) as unknown as CorporateSector;
+  const FUNDED = { fundedWorldEpoch: "e", firstFundedTurn: 2, turn: 10 };
+  const premiumFor = (sector: CorporateSector, world?: typeof FUNDED | { turn: number }) =>
+    nppContractPremium(sellerFill(toParty(corp, [sector], world), "food", 10), 1);
+
+  it("prices a glut from the funded sale in both directions", () => {
+    expect(premiumFor(seller(0.9, 20), FUNDED)).toBe(NPP_CONTRACT_GLUT_PREMIUM);
+    expect(premiumFor(seller(0.2, 90), FUNDED)).toBe(0);
+  });
+
+  it("has no glut evidence without a current funded sale", () => {
+    expect(sellerFill(toParty(corp, [seller(0.2)], FUNDED), "food", 10)).toBeNull();
+    expect(premiumFor(seller(0.2), FUNDED)).toBe(0);
+  });
+
+  it("is unchanged on a legacy world", () => {
+    expect(premiumFor(seller(0.2, 90), { turn: 10 })).toBe(NPP_CONTRACT_GLUT_PREMIUM);
+    expect(premiumFor(seller(0.2, 90))).toBe(NPP_CONTRACT_GLUT_PREMIUM);
+    expect(premiumFor(seller(0.9, 20), { turn: 10 })).toBe(0);
   });
 });
 
@@ -453,7 +487,15 @@ describe("NPP supply pass projections", () => {
   // Keep only the projected keys, as the server does for an inclusion projection.
   const project = <T extends Record<string, unknown>>(doc: T, projection: Record<string, 1>) =>
     Object.fromEntries(
-      Object.entries(doc).filter(([key]) => key === "_id" || key in projection)
+      Object.entries(doc).flatMap(([key, value]) => {
+        if (key === "_id" || key in projection) return [[key, value]];
+        const nested = Object.keys(projection)
+          .filter((p) => p.startsWith(`${key}.`))
+          .map((p) => p.slice(key.length + 1));
+        if (nested.length === 0 || value == null || typeof value !== "object") return [];
+        const sub = value as Record<string, unknown>;
+        return [[key, Object.fromEntries(nested.filter((k) => k in sub).map((k) => [k, sub[k]]))]];
+      })
     ) as unknown as T;
 
   it("loads every sector field the matcher reads", () => {
@@ -490,6 +532,23 @@ describe("NPP supply pass projections", () => {
         ) as unknown as CorporateSector,
       ])
     ).toEqual(toParty(corp, [sector]));
+    const world = { fundedWorldEpoch: "e", firstFundedTurn: 2, turn: 10 };
+    const funded = {
+      ...sector,
+      producerSettlement: {
+        worldEpoch: "e",
+        turn: 10,
+        offeredUnits: 50,
+        soldUnits: 10,
+        revenue: 9,
+      },
+    } as unknown as CorporateSector;
+    const projected = project(
+      funded as unknown as Record<string, unknown>,
+      NPP_SUPPLY_SECTOR_PROJECTION
+    ) as unknown as CorporateSector;
+    expect(toParty(corp, [projected], world)).toEqual(toParty(corp, [funded], world));
+    expect(toParty(corp, [projected], world).sectors[0].soldFraction).toBe(0.2);
   });
 
   it("loads every agreement field the matcher reads", () => {

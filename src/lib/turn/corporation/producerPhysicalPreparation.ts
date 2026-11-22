@@ -188,6 +188,8 @@ export type ProducerPhysicalEnv = Pick<
   householdSavingsDrawShare?: number;
   /** gameConfig.producerAskBuyerTieStage >= 1: near-equal-profit asks prefer the price more buyers can pay. */
   askBuyerTieStage?: number;
+  /** gameConfig.producerSellerPreferenceStage: >= 1 free-choice orders lean toward cheaper sellers; >= 2 also weighs brand and quality. */
+  sellerPreferenceStage?: number;
   /** gameConfig.producerShortageAskStage >= 1: sold-out sellers in a short lane ask a step above the clearing. */
   shortageAskStage?: number;
   /** gameConfig.producerShortageAskMaxStep: largest raise in one turn (shortageAskRules default when absent). */

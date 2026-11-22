@@ -4,6 +4,7 @@ import type { ProducerOffer, PurchaseOrder } from "@/lib/market/producerMarket/p
 import { eligibleSetOf, compareId } from "@/lib/market/producerMarket/producerQuotes";
 import { ProducerSupplyPool } from "@/lib/market/producerMarket/supplyPoolRules";
 import { bookKey } from "@/lib/market/producerMarket/bookKey";
+import { curveSegments, type CurveSegment } from "@/lib/market/producerMarket/curveSegments";
 
 import { sortFundedCountryBookRows } from "@/lib/market/producerMarket/fundedBookRules";
 import { capSharedShares, proRataShares } from "@/lib/market/producerMarket/publicFairShareRules";
@@ -80,7 +81,34 @@ export function settleProducerOrders(
       }
       return result;
     };
-    for (const [price, pool] of context.sortedPoolsByBook.get(key) ?? []) {
+    // With the seller preference curve on, the group first draws each
+    // (price, preference) seller group by its curve share; the cheapest-first
+    // levels then clear whatever the members could not take there (budgets and
+    // limit prices differ per member, and routes limit who reaches whom).
+    const pools = context.sortedPoolsByBook.get(key) ?? [];
+    const curveFirst = context.input.demandCurve
+      ? curveSegments({
+          pools,
+          offersByPool: context.offersByPool,
+          remaining: context.remaining,
+          wanted: members.reduce((sum, m) => sum + Math.max(0, m.wanted), 0),
+          maximumUnitPrice: Math.max(...members.map((m) => m.order.maximumUnitPrice)),
+          budget: Number.MAX_VALUE,
+          curve: context.input.demandCurve,
+          ...(routed
+            ? { reachable: (offer: ProducerOffer) => reachable(offer).live.length > 0 }
+            : {}),
+        })
+      : null;
+    const segments = [
+      ...(curveFirst ?? []).map((segment) => ({
+        price: segment.price,
+        pool: segment.pool,
+        curve: segment as CurveSegment | undefined,
+      })),
+      ...pools.map(([price, pool]) => ({ price, pool, curve: undefined })),
+    ];
+    for (const { price, pool, curve } of segments) {
       context.input.checkBudget?.();
       // What a member could still buy at this level: target, reservation group,
       // limit price, and the order, account and spend-group budgets.
@@ -101,7 +129,7 @@ export function settleProducerOrders(
       // Group them once rather than retaining an order-by-supplier fill matrix.
       const cohorts = new Map<string, { suppliers: ProducerOffer[]; live: Member[] }>();
       if (routed) {
-        for (const supplier of context.offersByPool.get(pool) ?? []) {
+        for (const supplier of curve ? curve.offers : (context.offersByPool.get(pool) ?? [])) {
           const { key, live } = reachable(supplier);
           if (live.length === 0) continue;
           const cohort = cohorts.get(key) ?? {
@@ -112,7 +140,9 @@ export function settleProducerOrders(
           cohorts.set(key, cohort);
         }
       }
-      const levels = routed ? [...cohorts.values()] : [{ suppliers: undefined, live: members }];
+      const levels: { suppliers: readonly ProducerOffer[] | undefined; live: Member[] }[] = routed
+        ? [...cohorts.values()]
+        : [{ suppliers: curve && !curve.wholePool ? curve.offers : undefined, live: members }];
       // Within one price/reachability cohort every purchase draws the same
       // pro-rata seller mix. Use the existing lazy stock primitive instead of
       // walking every seller for every buyer. Flush once before another price
@@ -146,8 +176,15 @@ export function settleProducerOrders(
           internal,
         });
       }
+      // A curve segment sells at most its curve share. Every proposal at this
+      // level shares that cap, so routed cohorts split it the same way they
+      // split a level's stock today.
+      const segmentLimit = curve ? { left: curve.units } : undefined;
       const supplyOf = (suppliers: readonly ProducerOffer[] | undefined) =>
-        suppliers ? routedPools.get(suppliers)!.stock.total : pool.total;
+        Math.min(
+          suppliers ? routedPools.get(suppliers)!.stock.total : pool.total,
+          segmentLimit?.left ?? Infinity
+        );
       for (let round = 0; round <= members.length + cohorts.size; round++) {
         const proposals = levels.flatMap(({ suppliers, live: candidates }) => {
           const supply = supplyOf(suppliers);
@@ -179,6 +216,7 @@ export function settleProducerOrders(
             ...(m.order.quantityGroup
               ? [{ id: m.quantityLimitId!, units: m.quantityGroup!.remaining }]
               : []),
+            ...(segmentLimit ? [{ id: "segment", units: segmentLimit.left }] : []),
           ])
         );
         let short = false;
@@ -198,6 +236,7 @@ export function settleProducerOrders(
             routedPools.get(suppliers)
           );
           moved += take;
+          if (segmentLimit) segmentLimit.left = Math.max(0, segmentLimit.left - take);
           m.wanted = Math.max(0, m.wanted - take);
           if (m.quantityGroup)
             m.quantityGroup.remaining = Math.max(0, m.quantityGroup.remaining - take);
@@ -252,7 +291,44 @@ export function settleProducerOrders(
       wanted = Math.max(0, wanted - ownTake);
       if (quantityGroup && ownTake > 0)
         quantityGroup.remaining = Math.max(0, quantityGroup.remaining - ownTake);
-      for (const [price, pool] of context.sortedPoolsByBook.get(key) ?? []) {
+      const pools = context.sortedPoolsByBook.get(key) ?? [];
+      const curve =
+        context.input.demandCurve && wanted > 0
+          ? curveSegments({
+              pools,
+              offersByPool: context.offersByPool,
+              remaining: context.remaining,
+              wanted,
+              maximumUnitPrice: order.maximumUnitPrice,
+              budget: Math.min(
+                context.budgets.get(order.accountId)!,
+                orderBudget,
+                (0, context.groupBudget)(order)
+              ),
+              curve: context.input.demandCurve,
+            })
+          : null;
+      if (curve) {
+        for (const segment of curve) {
+          const take = Math.min(segment.units, wanted);
+          if (!(take > 0)) continue;
+          const amount = segment.wholePool
+            ? (0, context.buyFromPool)(order, segment.price, segment.pool, take)
+            : (0, context.buyFromPool)(
+                order,
+                segment.price,
+                segment.pool,
+                take,
+                segment.offers,
+                segment.total
+              );
+          wanted = Math.max(0, wanted - take);
+          if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - take);
+          orderBudget = Math.max(0, orderBudget - amount);
+        }
+        return;
+      }
+      for (const [price, pool] of pools) {
         if (!(wanted > 0) || price > order.maximumUnitPrice) break;
         const budget = Math.min(
           context.budgets.get(order.accountId)!,

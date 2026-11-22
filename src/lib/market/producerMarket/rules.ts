@@ -31,6 +31,7 @@ export type {
   ProducerQuotePolicy,
 } from "@/lib/market/producerMarket/producerQuotes";
 import { ProducerSupplyPool } from "./supplyPoolRules";
+import { allocateDemandCurve, type DemandCurveInput } from "./demandCurveRules";
 import { bookKey } from "./bookKey";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 
@@ -151,6 +152,13 @@ function prepareSettleProducerMarket(input: {
    * company's order comes up in id order.
    */
   ownSitesFirst?: boolean;
+  /**
+   * Seller preference curve (demandCurveRules). When set, a free-choice order
+   * in a state-first, home-country or spill pass splits across every eligible
+   * seller by price, brand and quality instead of clearing cheapest first.
+   * Absent = cheapest level first.
+   */
+  demandCurve?: DemandCurveInput;
   /**
    * Companies that explicitly chose to sell on the market first (supply
    * priority "market"). Their own sites get no head start: outside buyers clear
@@ -531,21 +539,26 @@ function prepareSettleProducerMarket(input: {
     // A spill fill is a sale in the seller's book, so price discovery stays per book.
     const tradeBook = "spillBook" in tag ? tag.spillBook : order.book;
     const key = bookKey(order.commodity, tradeBook);
-    for (const [price, offers] of [...byPrice].sort(([a], [b]) => a - b)) {
-      if (!(wanted > 0) || price > order.maximumUnitPrice) break;
-      const rows = offers.filter(
-        (offer) => offer.accountId !== order.accountId && (!eligible || eligible.has(offer.id))
-      );
-      const total = rows.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
-      const budget = Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order));
-      const take = Math.min(wanted, total, price > 0 ? budget / price : wanted);
-      if (!(take > 0)) continue;
+    const settleLevel = (
+      price: number,
+      rows: readonly ProducerOffer[],
+      total: number,
+      take: number,
+      supplierOfferIds?: readonly string[]
+    ): void => {
       const amount = take * price;
       if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
       fills.push(
         fillsWithCountries(
           order,
-          { orderId: order.id, kind: "sale", unitPrice: price, units: take, ...tag },
+          {
+            orderId: order.id,
+            kind: "sale",
+            unitPrice: price,
+            units: take,
+            ...tag,
+            ...(supplierOfferIds ? { supplierOfferIds } : {}),
+          },
           rows
         )
       );
@@ -583,6 +596,59 @@ function prepareSettleProducerMarket(input: {
         seller.deliveredUnits += units;
         seller.revenue += spent;
       }
+    };
+    const levels = [...byPrice].sort(([a], [b]) => a - b);
+    const eligibleRows = (offers: readonly ProducerOffer[]) =>
+      offers.filter(
+        (offer) => offer.accountId !== order.accountId && (!eligible || eligible.has(offer.id))
+      );
+    if (input.demandCurve && wanted > 0) {
+      const eligibleByPrice = new Map<number, ProducerOffer[]>();
+      for (const [price, offers] of levels)
+        if (price <= order.maximumUnitPrice) eligibleByPrice.set(price, eligibleRows(offers));
+      const rows = [...eligibleByPrice.values()].flat();
+      const allocation = allocateDemandCurve({
+        offers: rows.map((offer) => ({
+          id: offer.id,
+          accountId: offer.accountId,
+          unitPrice: offer.unitPrice,
+          remaining: remaining.get(offer.id),
+        })),
+        wanted,
+        budget: Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order)),
+        curve: input.demandCurve,
+      });
+      // One group left means one price with stock: cheapest-first is the same.
+      if (allocation && allocation.length > 1) {
+        const rowById = new Map(rows.map((offer) => [offer.id, offer]));
+        for (const group of allocation) {
+          const members = group.offerIds.map((id) => rowById.get(id)!);
+          const total = members.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+          if (!(total > 0) || !(group.units > 0)) continue;
+          // A group that is every seller with stock at its price replays from
+          // the fill's price alone; a brand subset names its sellers.
+          const level = eligibleByPrice.get(group.unitPrice) ?? [];
+          const live = level.filter((offer) => remaining.get(offer.id) > 0).length;
+          const take = Math.min(group.units, total);
+          settleLevel(
+            group.unitPrice,
+            members,
+            total,
+            take,
+            members.length === live ? undefined : group.offerIds
+          );
+        }
+        return { wanted, orderBudget };
+      }
+    }
+    for (const [price, offers] of levels) {
+      if (!(wanted > 0) || price > order.maximumUnitPrice) break;
+      const rows = eligibleRows(offers);
+      const total = rows.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+      const budget = Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order));
+      const take = Math.min(wanted, total, price > 0 ? budget / price : wanted);
+      if (!(take > 0)) continue;
+      settleLevel(price, rows, total, take);
     }
     return { wanted, orderBudget };
   };

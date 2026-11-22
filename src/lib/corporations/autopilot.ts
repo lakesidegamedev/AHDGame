@@ -68,6 +68,25 @@ export interface AutopilotSignals {
   affordableTech?: string | null;
 }
 
+/**
+ * Whether the distress advisory should show this turn. The stored
+ * `financialDistressSinceTurn` flag is last turn's verdict (the tracker clears it
+ * later in the turn), so a corp that has already recovered must not be re-flagged
+ * from it. The flag only counts while the live figures still show distress:
+ * negative cash, a defaulted unmatured bond, or an unresolved producer bill.
+ * Producer bills keep the advisory whenever any is stalled, which errs toward
+ * showing it; the tracker stays the authority that clears the flag itself.
+ */
+export function distressAdvisoryActive(input: {
+  flagged: boolean;
+  liquidCapital: number | undefined;
+  hasDefaultedBond: boolean;
+  hasStalledProducerBill: boolean;
+}): boolean {
+  if (!input.flagged) return false;
+  return (input.liquidCapital ?? 0) < 0 || input.hasDefaultedBond || input.hasStalledProducerBill;
+}
+
 const ADVISORY_ORDER: readonly CorpAutopilotAdvisoryKind[] = [
   "distress",
   "debt",

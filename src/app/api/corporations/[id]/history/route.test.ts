@@ -445,3 +445,30 @@ it("projects gross bond interest alongside net drag for the costs chart", async 
     }),
   });
 });
+
+describe("GET /api/corporations/[id]/history live balance", () => {
+  it("returns the live turn and cash so a lagging history is detectable", async () => {
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: {
+        _id: new ObjectId(),
+        isPrivate: false,
+        sharePrice: 10,
+        totalShares: 100,
+        liquidCapital: -158269.73,
+        liquidCurrencyCode: "USD",
+      } as any,
+    } as any);
+    db.collectionMocks.corporationHistory.aggregate.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ turn: 107, marketCap: 900, liquidCapital: 618683.36 }]),
+    });
+    const { GET } = await import("./route");
+    const res = await GET(new Request("http://localhost/api/corporations/16/history"), {
+      params: Promise.resolve({ id: "16" }),
+    });
+    const json = await res.json();
+    expect(json.history[0].turn).toBe(107);
+    expect(json.live).toEqual({ turn: 469, liquidCapital: -158269.73, currencyCode: "USD" });
+  });
+});

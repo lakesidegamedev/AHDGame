@@ -221,38 +221,94 @@ describe("buildSectorPlantsSection", () => {
     expect(s.idleCauses.some((c) => c.cause === "demand")).toBe(false);
   });
 
-  it("does not call a settled plant stranded when most of its offer found takers", () => {
-    const section = (soldUnits: number | null) =>
+  describe("sales record", () => {
+    const settlement = (turn: number, soldUnits: number, revenue = soldUnits * 100) =>
+      ({
+        turn,
+        offeredUnits: 20,
+        producedUnits: 20,
+        soldUnits,
+        products: [
+          {
+            commodity: "healthcare_services",
+            book: "state:CA",
+            producedUnits: 20,
+            offeredUnits: 20,
+            soldUnits,
+            internalDeliveredUnits: 0,
+            revenue,
+          },
+        ],
+      }) as unknown as CorporateSector["producerSettlement"];
+    // The legacy pass says this plant has sold under half for 101 turns, is
+    // idle on demand and freight limited; the settlement says it sold out.
+    const legacy = {
+      lowFillTurns: 101,
+      soldFraction: 0,
+      soldByCommodity: { healthcare_services: 0 },
+      soldByCommodityTurn: 108,
+      demandIdleTurns: 7,
+      deliveryLimitedFraction: 0.3,
+      deliveryLimitedFreightClass: "bulk" as const,
+    };
+    const build = (patch: Partial<CorporateSector>, currentTurn = 111) =>
       buildSectorPlantsSection({
         eraUnitScale: 1,
         ...BASE_ARGS,
-        sector: sectorFixture({
-          lowFillTurns: 5,
-          producerSettlement:
-            soldUnits == null
-              ? undefined
-              : ({
-                  turn: 100,
-                  offeredUnits: 20,
-                  producedUnits: 20,
-                  soldUnits,
-                  products: [
-                    {
-                      commodity: "healthcare_services",
-                      book: "state:CA",
-                      producedUnits: 20,
-                      offeredUnits: 20,
-                      soldUnits,
-                      internalDeliveredUnits: 0,
-                      revenue: soldUnits * 100,
-                    },
-                  ],
-                } as unknown as CorporateSector["producerSettlement"]),
-        }),
+        currentTurn,
+        sector: sectorFixture({ ...legacy, ...patch }),
       });
-    expect(section(19).truth.lowFillTurns).toBe(0);
-    expect(section(6).truth.lowFillTurns).toBe(5);
-    expect(section(null).truth.lowFillTurns).toBe(5);
+
+    it("shows a settled plant selling everything no legacy streak, idle line or freight limit", () => {
+      const s = build({
+        producerSettlement: settlement(108, 20),
+        producedUnits: 20,
+        soldUnits: 20,
+      });
+      expect(s.truth.salesBasis).toBe("settlement");
+      expect(s.truth.strandedWarning).toBeNull();
+      expect(s.truth.lowFillTurns).toBeNull();
+      expect(s.truth.deliveryLimitedFraction).toBeNull();
+      expect(s.truth.deliveryLimitedFreightClass).toBeNull();
+      expect(s.idleRetirement).toBeUndefined();
+      expect(s.truth.soldByCommodity).toEqual([{ commodity: "healthcare_services", fraction: 1 }]);
+    });
+
+    it("warns a settled plant under half on its latest turn without stating a streak", () => {
+      const s = build({ producerSettlement: settlement(108, 6), producedUnits: 20, soldUnits: 6 });
+      expect(s.truth.strandedWarning).toEqual({
+        basis: "settlement",
+        takenShare: 0.3,
+        turnsInRow: null,
+      });
+      expect(s.truth.lowFillTurns).toBeNull();
+    });
+
+    it("never falls back to the legacy figures when a settlement exists", () => {
+      const s = build({
+        producerSettlement: settlement(108, 20),
+        producedUnits: undefined,
+        soldUnits: undefined,
+      });
+      expect(s.truth.soldFraction).toBeNull();
+    });
+
+    it("keeps the legacy figures, as an estimate, where there is no funded record", () => {
+      const s = build({ producerSettlement: undefined });
+      expect(s.truth.salesBasis).toBe("estimate");
+      expect(s.truth.lowFillTurns).toBe(101);
+      expect(s.truth.strandedWarning).toMatchObject({ basis: "estimate", turnsInRow: 101 });
+      expect(s.truth.deliveryLimitedFraction).toBe(0.3);
+      expect(s.idleRetirement?.turns).toBe(7);
+      expect(s.truth.soldByCommodity).toEqual([{ commodity: "healthcare_services", fraction: 0 }]);
+    });
+
+    it("reads the legacy figures when the settlement is older than them", () => {
+      const s = build({ producerSettlement: settlement(107, 20) });
+      expect(s.truth.salesBasis).toBe("estimate");
+      expect(s.truth.lowFillTurns).toBe(101);
+      expect(s.truth.strandedWarning?.basis).toBe("estimate");
+    });
   });
 
   it("says a sold-out run cut by an input is held by it, not ramping (ticket 1765)", () => {
@@ -567,6 +623,30 @@ describe("buildSectorPlantsSection", () => {
     expect(s.buildTurns).toBe(36); // manufacturing
   });
 
+  it("credits delivery only up to the settled turn, not the schedule", () => {
+    const order = { unitsOrdered: 1000, costPaidAnchor: 4000, startTurn: 110, onlineTurn: 143 };
+    const at = (settled: number | undefined, world?: number) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        currentTurn: 130,
+        worldBuildSettledTurn: world,
+        sector: sectorFixture({
+          buildQueue: [{ ...order, smooth: true, deliveryBaseFraction: 0 }],
+          buildDeliverySettledTurn: settled,
+        }),
+      }).buildQueue[0];
+    const caught = at(130);
+    expect(caught.unitsDelivered).toBeGreaterThan(0);
+    const lagging = at(110);
+    expect(lagging.unitsDelivered).toBe(0);
+    expect(lagging.progress).toBe(0);
+    // Sector stamp absent: the world stamp applies.
+    expect(at(undefined, 110).unitsDelivered).toBe(0);
+    // Forward ramp still describes the schedule.
+    expect(lagging.unitsPerTurn).toBe(caught.unitsPerTurn);
+  });
+
   it("turns the build queue into countdowns the panel can render", () => {
     const s = buildSectorPlantsSection({
       eraUnitScale: 1,
@@ -576,6 +656,7 @@ describe("buildSectorPlantsSection", () => {
           { unitsOrdered: 40, costPaidAnchor: 4000, startTurn: 90, onlineTurn: 162 },
           { unitsOrdered: 10, costPaidAnchor: 1000, startTurn: 40, onlineTurn: 100 },
         ],
+        buildDeliverySettledTurn: BASE_ARGS.currentTurn,
       }),
     });
     expect(s.buildQueue[0]).toMatchObject({ orderIndex: 0, turnsRemaining: 62 });

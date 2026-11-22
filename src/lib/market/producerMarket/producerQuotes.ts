@@ -3,6 +3,7 @@ import { ProducerSupplyPool } from "@/lib/market/producerMarket/supplyPoolRules"
 import { bookKey } from "@/lib/market/producerMarket/bookKey";
 
 import { nextAutoAsk } from "@/lib/market/producerMarket/autoAskRules";
+import { belowMarketAskFloor } from "@/lib/market/producerMarket/rules/belowMarketFloor";
 
 export interface ProducerOffer {
   id: string;
@@ -389,6 +390,11 @@ export function quoteProducer(input: {
    * automatic ask anchors here; absent (no trade) it falls back to the reference.
    */
   clearingUnitPrice?: number;
+  /**
+   * The slow market price a non-zero posture is measured from
+   * (postureAnchorRules). Absent falls back to the clearing price.
+   */
+  postureAnchorUnitPrice?: number;
   /** This output sold nothing last turn: an automatic ask drops its markup. */
   soldNothingLastTurn?: boolean;
   variableUnitCost: number;
@@ -469,11 +475,25 @@ export function quoteProducer(input: {
   // price alone can sit above the clearing. A plant whose costs exceed the
   // market sells at the market and takes the loss.
   const clearing = input.clearingUnitPrice;
-  const anchor =
+  const market =
     clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;
+  // A chosen posture is measured from the slow anchor: a discount taken from a
+  // clearing it set itself would compound every turn. Automatic sellers still
+  // ask the market.
+  const postureAnchor = input.postureAnchorUnitPrice;
+  const anchor =
+    markup !== 0 && postureAnchor != null && Number.isFinite(postureAnchor) && postureAnchor > 0
+      ? postureAnchor
+      : market;
   // A seller that sold nothing last turn asks no more than the clearing, so an ask
   // stuck above the book steps down instead of repeating.
-  const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  const undercut = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  const postureFloor = belowMarketAskFloor({
+    markup,
+    marketUnitPrice: anchor,
+    unitCost: breakEven,
+  });
+  const ceiling = Math.max(undercut, postureFloor);
   // Sell-through feedback (autoAskRules). With ask memory the controller decides
   // the price: sold out climbs one step, the deadband holds, a shortfall reverts
   // to the previous ask or steps down. Without memory the estimator below still
@@ -505,7 +525,7 @@ export function quoteProducer(input: {
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
   const scored = [...candidates]
-    .filter((price) => price <= ceiling)
+    .filter((price) => price <= ceiling && price >= postureFloor)
     .map(estimate)
     .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice);
   const best = scored[0];

@@ -444,6 +444,8 @@ export async function processCorporationTurn(
     politicalMediaOrders,
     treasuryCashLedgerEnabled,
     fundedProducerTurn: producerPath === "funded",
+    fundedWorldEpoch:
+      producerPath === "funded" ? (gameState?.worldEpochId ?? undefined) : undefined,
   });
   // One read, one guarded bulk write and one re-read for the whole turn's
   // plans, instead of two round trips per order. The map below stays keyed by
@@ -867,6 +869,18 @@ export async function processCorporationTurn(
       buyerDemandByCorpCommodity,
       producedByCorpCommodity,
       achievableByCorpCommodity,
+      // A funded turn with no trade record settles no premium rather than
+      // falling back to the clearing pass's assumed deliveries.
+      fundedTradeReceipt:
+        producerPath === "funded"
+          ? (funded?.tradeReceipt ?? {
+              turn: producerTurn,
+              offers: [],
+              orders: [],
+              fills: [],
+              tradeCount: 0,
+            })
+          : undefined,
       domesticIncomeByCountry,
       foreignIncomeByCountry,
       domesticIncomeByOperatingState,

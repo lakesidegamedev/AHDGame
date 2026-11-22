@@ -66,3 +66,43 @@ describe("CommoditiesPanel — input availability scope labeling", () => {
     expect(badge.getAttribute("title")).toMatch(/not something about your state or region/);
   });
 });
+
+describe("CommoditiesPanel sold share basis", () => {
+  const output = (soldFractionBasis: "settlement" | "estimate"): CommoditiesData => ({
+    supplies: [
+      {
+        ...electricityDemand,
+        inputAvailability: undefined,
+        soldFraction: 0.6,
+        soldFractionBasis,
+      },
+    ],
+    demands: [],
+    commodityMarginModifier: 0,
+  });
+
+  it("labels a legacy sold share as the market estimate", () => {
+    const { container } = render(
+      <CommoditiesPanel
+        commodities={output("estimate")}
+        countryId="US"
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(container.textContent).toContain("60% of this output’s offers sold (market estimate)");
+  });
+
+  it("does not label a settled sold share as an estimate", () => {
+    const { container } = render(
+      <CommoditiesPanel
+        commodities={output("settlement")}
+        countryId="US"
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(container.textContent).toContain("60% of this output’s offers sold");
+    expect(container.textContent).not.toContain("market estimate");
+  });
+});

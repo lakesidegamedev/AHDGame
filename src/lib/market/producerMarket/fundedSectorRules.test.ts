@@ -4,6 +4,7 @@ import {
   fundedDemandThrottle,
   fundedInputThroughput,
   fundedSectorOps,
+  fundedSectorOpsAll,
   fundedSectorResult,
   SETTLEMENT_OWNED_SECTOR_FIELDS,
 } from "./fundedSectorRules";
@@ -258,5 +259,34 @@ describe("funded sector result charges size costs as points of revenue", () => {
 
   it("charges nothing extra when the legacy result carries no size cost", () => {
     expect(fundedSectorResult(legacy, receipt).costs).toBe(80);
+  });
+});
+
+describe("funded sector ops store recent settled profit", () => {
+  const ops = [{ updateOne: { filter: { _id: "s1" }, update: { $set: { revenue: 9 } } } }];
+  const result = fundedSectorResult(legacy, receipt);
+
+  it("writes the valuation history when the valuation produced one", () => {
+    const history = [
+      { turn: 11, profit: 20 },
+      { turn: 12, profit: 30 },
+    ];
+    const out = fundedSectorOpsAll(
+      ops,
+      new Map([
+        ["s1", { receipt, result, daily: (a: number) => a, valuationProfitHistory: history }],
+      ]),
+      24
+    );
+    expect(out[0].updateOne.update.$set).toMatchObject({ valuationProfitHistory: history });
+  });
+
+  it("leaves the stored history alone when the valuation did not run", () => {
+    const out = fundedSectorOpsAll(
+      ops,
+      new Map([["s1", { receipt, result, daily: (a: number) => a }]]),
+      24
+    );
+    expect(out[0].updateOne.update.$set).not.toHaveProperty("valuationProfitHistory");
   });
 });

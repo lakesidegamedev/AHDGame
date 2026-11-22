@@ -8,6 +8,8 @@ import { GOUGE_JUMP, CONSISTENCY_BAND } from "@/lib/market/brandLoyalty";
 import type { PricingData } from "../types";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 
 const POSTURE_STEPS = [-0.2, -0.1, -0.05, 0, 0.05, 0.1, 0.2] as const;
 
@@ -36,6 +38,7 @@ export default function PricingPanel({
 }: PricingPanelProps) {
   const supplyText = useTranslations("corporations.internalSupply");
   const costPlusText = useTranslations("corporations.costPlusPricing");
+  const { formatPrice } = useCurrency();
   const [draft, setDraft] = useState<number | null>(pricing.posture);
   const [pricingMode, setPricingMode] = useState<"market" | "costPlus">(
     pricing.pricingMode ?? "market"
@@ -85,6 +88,10 @@ export default function PricingPanel({
   };
 
   const sold = pricing.soldFraction;
+  // A plant with a funded sale record reads only that record. Without one the
+  // figures are the legacy market pass's estimate, and say so.
+  const settled = pricing.salesBasis === "settlement";
+  const estimate = pricing.salesBasis === "estimate";
   // Output handed to the company's own sites is no sale, but the plant was used.
   const ownSite = pricing.ownSiteFraction ?? 0;
   const used = Math.min(1, (sold ?? 0) + ownSite);
@@ -129,6 +136,7 @@ export default function PricingPanel({
               >
                 {Math.round(sold * 100)}% sold of units offered last turn (all outputs)
                 {ownSiteText ? `, ${ownSiteText}` : ""}
+                {estimate ? " (market estimate)" : ""}
               </span>
             }
             width={260}
@@ -142,6 +150,9 @@ export default function PricingPanel({
               {ownSiteText
                 ? " Output sent to your own sites is not a sale and earns no revenue, so it is counted separately."
                 : ""}
+              {estimate
+                ? " This plant has no settled sales record yet, so this is the market's estimate, not a count of units buyers paid for."
+                : ""}
             </p>
           </InfoTooltip>
         )}
@@ -149,8 +160,34 @@ export default function PricingPanel({
       <p className="text-xs text-muted mb-4">
         {pricingMode === "costPlus"
           ? costPlusText("explanation")
-          : "Your posted price relative to the market. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
+          : "Automatic asks last turn's market price. A set posture is measured from a steadier market price that moves at most 6% a turn, so undercutting cannot drag it down 20% a turn. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
       </p>
+
+      {pricing.asks && pricing.asks.length > 0 && (
+        <ul className="mb-3 space-y-0.5 text-xs" aria-label="Asking prices last turn">
+          {pricing.asks.map((a) => (
+            <li key={a.commodity} className="flex justify-between gap-3 tabular-nums">
+              <span className="text-muted">
+                {COMMODITY_LABELS[a.commodity as CommodityType] ?? a.commodity}
+              </span>
+              <span>
+                asked{" "}
+                <span className="font-semibold text-foreground">
+                  {formatPrice(a.askingUnitPrice)}
+                </span>
+                {a.marketUnitPrice != null && (
+                  <>
+                    , buyers paid{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatPrice(a.marketUnitPrice)}
+                    </span>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <p className="mb-3 text-xs text-muted">
         {supplyText("pricingHint")}{" "}
@@ -249,25 +286,37 @@ export default function PricingPanel({
         <InfoTooltip
           trigger={
             <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
-              Clearing result (last turn)
+              {settled
+                ? "Paid against asking price (last turn)"
+                : `Clearing result (last turn${estimate ? ", market estimate" : ""})`}
             </span>
           }
           width={300}
         >
-          <p className="text-muted text-xs">
-            Realized revenue = sold share × your posted price × the market price level, faded in
-            over 5 game years so repositioning never causes a revenue cliff.
-            {pricing.effectivePosture != null && (
-              <>
-                {" "}
-                Effective posture used:{" "}
-                <span className="font-medium text-foreground tabular-nums">
-                  {postureLabel(pricing.effectivePosture)}
-                </span>
-                {pricing.posture == null ? " (automatic)" : ""}.
-              </>
-            )}
-          </p>
+          {settled ? (
+            <p className="text-muted text-xs">
+              What this plant was paid last turn, against what everything it offered for outside
+              sale would have earned at its asking price.
+              {sold != null ? ` ${Math.round(sold * 100)}% of what it offered sold.` : ""} Units
+              nobody bought earn nothing, so selling 80% of the offer at the asking price reads
+              ×0.80.
+            </p>
+          ) : (
+            <p className="text-muted text-xs">
+              Realized revenue = sold share × your posted price × the market price level, faded in
+              over 5 game years so repositioning never causes a revenue cliff.
+              {pricing.effectivePosture != null && (
+                <>
+                  {" "}
+                  Effective posture used:{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {postureLabel(pricing.effectivePosture)}
+                  </span>
+                  {pricing.posture == null ? " (automatic)" : ""}.
+                </>
+              )}
+            </p>
+          )}
         </InfoTooltip>
         <span
           className={`font-bold tabular-nums ${
@@ -284,7 +333,9 @@ export default function PricingPanel({
 
       {pricing.clearingFactor == null && (
         <p className="mt-2 text-[11px] italic text-muted">
-          Clearing figures appear after the next turn.
+          {settled
+            ? "Nothing was offered for outside sale last turn."
+            : "Clearing figures appear after the next turn."}
         </p>
       )}
     </div>

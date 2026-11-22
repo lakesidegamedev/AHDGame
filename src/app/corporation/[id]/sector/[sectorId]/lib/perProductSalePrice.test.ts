@@ -76,3 +76,47 @@ describe("perProductSalePrices", () => {
     ).toBe(0);
   });
 });
+
+describe("perProductSalePrices on a plant with a funded sale record", () => {
+  it("prices each output from its settled revenue and units, never the legacy revenue split", () => {
+    // The legacy split says software earned 90% of revenue; the settlement
+    // says software sold 10 units for 3,000 and electronics 30 units for 6,000.
+    const prices = perProductSalePrices({
+      supplies: [
+        {
+          commodity: "software",
+          units: 40,
+          soldFraction: 0.25,
+          revenueShare: 0.9,
+          settledUnitPrice: 300,
+        },
+        {
+          commodity: "electronics",
+          units: 40,
+          soldFraction: 0.75,
+          revenueShare: 0.1,
+          settledUnitPrice: 200,
+        },
+      ],
+      revenue: 9_000,
+      soldUnits: 40,
+      settled: true,
+    });
+    expect(prices.get("software")).toBe(300);
+    expect(prices.get("electronics")).toBe(200);
+  });
+
+  it("shows no price for an output that sold nothing", () => {
+    const prices = perProductSalePrices({
+      supplies: [
+        { commodity: "software", units: 40, revenueShare: 0.9 },
+        { commodity: "electronics", units: 40, revenueShare: 0.1, settledUnitPrice: 200 },
+      ],
+      revenue: 9_000,
+      soldUnits: 40,
+      settled: true,
+    });
+    expect(prices.has("software")).toBe(false);
+    expect(prices.get("electronics")).toBe(200);
+  });
+});

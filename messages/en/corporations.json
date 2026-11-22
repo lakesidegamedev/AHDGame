@@ -101,14 +101,16 @@
           "cannotReceive": "Nothing was delivered: none of your plants used {commodity} last turn.",
           "supplierProducedNone": "Nothing was delivered: the supplier produced none of this last turn.",
           "supplierProducedLess": "Supplier produced only {achievable} of {cap} {unit} last turn.",
-          "buyerUsedLess": "Your plants used only {used} of {cap} {unit} last turn, so the rest was not delivered."
+          "buyerUsedLess": "Your plants used only {used} of {cap} {unit} last turn, so the rest was not delivered.",
+          "marketDeliveredLess": "The market delivered {delivered} of {cap} {unit} from this supplier to your plants last turn. The contract price applies only to units actually delivered."
         },
         "supplier": {
           "cannotReceiveLocal": "The buyer can't receive this: {commodity} only reaches plants in the same state, and the buyer had no plant in {state} using it last turn.",
           "cannotReceive": "Nothing was delivered: none of the buyer's plants used {commodity} last turn.",
           "supplierProducedNone": "Nothing was delivered: your plants produced none of this last turn.",
           "supplierProducedLess": "Your plants produced only {achievable} of {cap} {unit} last turn.",
-          "buyerUsedLess": "The buyer's plants used only {used} of {cap} {unit} last turn, so the rest was not delivered."
+          "buyerUsedLess": "The buyer's plants used only {used} of {cap} {unit} last turn, so the rest was not delivered.",
+          "marketDeliveredLess": "The market delivered {delivered} of {cap} {unit} of your output to this buyer last turn. The contract price applies only to units actually delivered."
         }
       }
     },

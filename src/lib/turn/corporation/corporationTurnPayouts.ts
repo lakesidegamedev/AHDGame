@@ -4,6 +4,12 @@ import type { GameState } from "@/lib/db/types";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { type SettleableSupplyAgreement, settleSupplyAgreements } from "./settleSupplyAgreements";
+import {
+  fundedContractTradesOf,
+  fundedPairFlows,
+  fundedPairKeysOf,
+} from "./rules/contractFundedDeliveries";
+import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
 import { COMMODITY_LABELS } from "@/lib/constants/commodities";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { createNotifications } from "@/lib/notifications";
@@ -88,6 +94,7 @@ export async function settleCorporationTurnPayouts({
   buyerDemandByCorpCommodity,
   producedByCorpCommodity,
   achievableByCorpCommodity,
+  fundedTradeReceipt,
   domesticIncomeByCountry,
   foreignIncomeByCountry,
   domesticIncomeByOperatingState,
@@ -130,6 +137,8 @@ export async function settleCorporationTurnPayouts({
   buyerDemandByCorpCommodity: Map<string, Map<string, number>> | undefined;
   producedByCorpCommodity: Map<string, Map<string, number>>;
   achievableByCorpCommodity: Map<string, Map<string, number | null>>;
+  /** This turn's settled funded trades; present only on a funded producer turn. */
+  fundedTradeReceipt?: ProducerTradeReceipt;
   domesticIncomeByCountry: Map<string, number>;
   foreignIncomeByCountry: Map<string, number>;
   domesticIncomeByOperatingState: Map<string, number>;
@@ -335,6 +344,13 @@ export async function settleCorporationTurnPayouts({
             producedByCorpCommodity: market.plantsEnabled ? producedByCorpCommodity : undefined,
             achievableByCorpCommodity: market.plantsEnabled ? achievableByCorpCommodity : undefined,
             plantsEnabled: market.plantsEnabled,
+            // A funded turn prices premiums on what each pair really traded.
+            fundedPairFlows: fundedTradeReceipt
+              ? fundedPairFlows(
+                  fundedContractTradesOf(fundedTradeReceipt),
+                  fundedPairKeysOf(settleableAgreements)
+                )
+              : undefined,
             priceRatioByCommodity: lookups.priceRatioByCommodity,
             turn: turn ?? 0,
             now,

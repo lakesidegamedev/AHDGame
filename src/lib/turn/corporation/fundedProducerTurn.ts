@@ -78,6 +78,11 @@ import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import { tariffCollectorScopes, collectionsAtClose, plantLevies } from "./fundedTariffs";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
+import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/producerQuotes";
+import {
+  POSTURE_ANCHOR_SEED_TURNS,
+  seedPostureAnchors,
+} from "@/lib/market/producerMarket/postureAnchorRules";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
   capCarry,
@@ -129,6 +134,8 @@ export interface FundedProducerTurnResult {
   settledProfitByCorp: Map<string, number>;
   /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
   headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
+  /** The settled trades, for contract settlement later in the turn. */
+  tradeReceipt?: ProducerTradeReceipt;
 }
 
 export { producerStageEnv } from "./producerStageEnv";
@@ -348,6 +355,7 @@ async function prepareRunFundedProducerTurn(
     _id: string;
     clearingPrices?: Record<string, number>;
     laneClearingPrices?: Record<string, number>;
+    lanePostureAnchors?: Record<string, number>;
     bookPressure?: Record<string, number>;
     books?: FundedCountryBookRow[];
   }>(db).findOne(
@@ -356,6 +364,7 @@ async function prepareRunFundedProducerTurn(
       projection: {
         clearingPrices: 1,
         laneClearingPrices: 1,
+        lanePostureAnchors: 1,
         bookPressure: 1,
         ...(freightDispatchOn
           ? {
@@ -371,6 +380,27 @@ async function prepareRunFundedProducerTurn(
       },
     }
   );
+  // The first turn with no stored posture anchors seeds them from the recent
+  // clearing history (postureAnchorRules), one bounded read.
+  if (lastOutcome && !lastOutcome.lanePostureAnchors) {
+    const recent = await producerMarketOutcomesCollection<{
+      _id: string;
+      laneClearingPrices?: Record<string, number>;
+    }>(db)
+      .find(
+        {
+          _id: {
+            $in: Array.from(
+              { length: POSTURE_ANCHOR_SEED_TURNS },
+              (_, i) => `${worldEpoch}:${openingTurn - i}`
+            ),
+          },
+        },
+        { projection: { laneClearingPrices: 1 } }
+      )
+      .toArray();
+    lastOutcome.lanePostureAnchors = seedPostureAnchors(recent.map((o) => o.laneClearingPrices));
+  }
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
@@ -874,6 +904,7 @@ async function prepareRunFundedProducerTurn(
     input,
     investmentWallet,
     lastOutcome,
+    priorPostureAnchors: lastOutcome?.lanePostureAnchors ?? null,
     lookups,
     openingShareByCountry,
     openingTurn,

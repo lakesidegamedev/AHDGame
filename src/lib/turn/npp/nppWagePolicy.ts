@@ -15,6 +15,7 @@ import { sectorShortageScore, type CommodityPriceRatioFn } from "@/lib/turn/npp/
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import type { SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import type { NppSectorUpdateDoc } from "@/lib/turn/npp/corpDecisionTypes";
+import { nppSoldShare, type SoldShareWorld } from "@/lib/turn/npp/rules/fundedSellThrough";
 import {
   NPP_WAGE_BASELINE,
   NPP_WAGE_GLUT_TARGET,
@@ -35,13 +36,15 @@ export function pushNppWageUpdates(args: {
   priceRatioOf: CommodityPriceRatioFn;
   now: Date;
   sectorUpdates: NppWageSectorUpdate[];
+  /** Which sold share the glut test reads (rules/fundedSellThrough nppSoldShare). */
+  soldShareWorld: SoldShareWorld;
 }): void {
-  const { corp, sectorProfits, divestedSectorIds, priceRatioOf, now } = args;
+  const { corp, sectorProfits, divestedSectorIds, priceRatioOf, now, soldShareWorld } = args;
   for (const sp of sectorProfits) {
     if (divestedSectorIds.includes(sp.sector._id)) continue;
     if (sp.sector.mothballed === true) continue;
-    const chronicLowFill =
-      sp.sector.soldFraction != null && sp.sector.soldFraction < CHRONIC_LOW_FILL_THRESHOLD;
+    const soldShare = nppSoldShare(sp.sector, soldShareWorld);
+    const chronicLowFill = soldShare != null && soldShare < CHRONIC_LOW_FILL_THRESHOLD;
     const shortage = sectorShortageScore(
       sp.sector.sectorType,
       sp.sector.countryId ?? corp.countryId,

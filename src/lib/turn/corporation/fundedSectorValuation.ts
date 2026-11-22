@@ -3,7 +3,10 @@
  * funded sector's settled result to the rules in fundedValuationRules.ts.
  */
 import type { CorporateSector } from "@/lib/db/types";
-import { NPV_ANNUAL_DISCOUNT_RATE } from "@/lib/constants/corporations";
+import {
+  FUNDED_VALUATION_PROFIT_TURNS,
+  NPV_ANNUAL_DISCOUNT_RATE,
+} from "@/lib/constants/corporations";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   BOOK_DEPRECIATION_FACTOR,
@@ -14,8 +17,18 @@ import {
   fundedSectorValueAnchor,
 } from "@/lib/market/producerMarket/fundedValuationRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import {
+  averageSettledProfit,
+  recordSettledProfit,
+  type SettledProfitEntry,
+} from "@/lib/market/producerMarket/rules/recentSettledProfit";
 
-/** Value (anchor) and real output (anchor at base prices) of one funded sector. */
+/**
+ * Value (anchor) and real output (anchor at base prices) of one funded sector.
+ * The value capitalizes the average of the last few settled turns' profit, so
+ * one starved turn does not swing the share price; `profitHistory` is what the
+ * sector stores for the next turn.
+ */
 export function fundedSectorValuation(args: {
   sector: CorporateSector;
   receipt: FundedReceipt;
@@ -24,16 +37,23 @@ export function fundedSectorValuation(args: {
   currentTurn: number;
   currentYear: number | undefined;
   eraUnitScale: number;
-}): { valueAnchor: number; realOutputAnchor: number } {
+}): { valueAnchor: number; realOutputAnchor: number; profitHistory: SettledProfitEntry[] } {
   const { sector, receipt, result } = args;
+  // Own-site credit and charge are valuation only, set on the receipt when their stage is on.
+  const profitPerTurn =
+    result.hourlyRevenue -
+    result.costs +
+    (receipt.valuationCredit ?? 0) -
+    (receipt.valuationCharge ?? 0);
+  const profitHistory = recordSettledProfit(
+    sector.valuationProfitHistory,
+    receipt.turn ?? args.currentTurn,
+    profitPerTurn,
+    FUNDED_VALUATION_PROFIT_TURNS
+  );
   return {
     valueAnchor: fundedSectorValueAnchor({
-      // Own-site credit and charge are valuation only, set on the receipt when their stage is on.
-      profitPerTurn:
-        result.hourlyRevenue -
-        result.costs +
-        (receipt.valuationCredit ?? 0) -
-        (receipt.valuationCharge ?? 0),
+      profitPerTurn: averageSettledProfit(profitHistory),
       bookFloorAnchor:
         sectorCapacityBookAnchor(sector, args.currentYear, args.eraUnitScale) *
         BOOK_DEPRECIATION_FACTOR,
@@ -41,5 +61,6 @@ export function fundedSectorValuation(args: {
       annualDiscountRate: NPV_ANNUAL_DISCOUNT_RATE,
     }),
     realOutputAnchor: fundedRealOutputAnchor(receipt.soldUnits, result.outputMixPriceAnchor ?? 0),
+    profitHistory,
   };
 }

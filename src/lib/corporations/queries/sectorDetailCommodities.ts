@@ -7,6 +7,8 @@ import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
+import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
+import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
@@ -101,6 +103,89 @@ export function outputRevenueShares(
   for (const [commodity, sale] of receiptSales)
     shares[commodity] = Math.max(0, sale.revenue) / total;
   return shares;
+}
+
+/**
+ * The Pricing panel's sales figures. The legacy pass still stamps its own fill,
+ * posture and factor, which a funded plant was not paid on; the settlement is
+ * what actually sold. The legacy figures are sent only for a plant with no
+ * funded sale record, labelled as an estimate.
+ */
+/** One output's posted asking price against what its market paid last turn, anchor per unit. */
+export interface PricingAsk {
+  commodity: string;
+  askingUnitPrice: number;
+  marketUnitPrice: number | null;
+}
+
+/** Offer-weighted ask per output, beside the price buyers paid in that book. */
+export function pricingAsks(
+  products:
+    | readonly {
+        commodity: string;
+        book: string;
+        offeredUnits: number;
+        askingUnitPrice?: number;
+      }[]
+    | undefined,
+  laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined
+): PricingAsk[] {
+  const rows = new Map<string, { offered: number; askValue: number; market: number | null }>();
+  for (const product of products ?? []) {
+    const ask = product.askingUnitPrice;
+    if (!(product.offeredUnits > 0) || typeof ask !== "number" || !(ask > 0)) continue;
+    const market = laneClearingPrices?.[laneKeyOf(product.commodity, product.book)];
+    const row = rows.get(product.commodity) ?? { offered: 0, askValue: 0, market: null };
+    row.offered += product.offeredUnits;
+    row.askValue += ask * product.offeredUnits;
+    if (row.market == null && typeof market === "number" && market > 0) row.market = market;
+    rows.set(product.commodity, row);
+  }
+  return [...rows]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([commodity, row]) => ({
+      commodity,
+      askingUnitPrice: row.askValue / row.offered,
+      marketUnitPrice: row.market,
+    }));
+}
+
+export function pricingSalesReading(
+  sector: Pick<
+    CorporateSector,
+    | "producerSettlement"
+    | "soldByCommodityTurn"
+    | "effectivePosture"
+    | "soldFraction"
+    | "clearingFactor"
+  >,
+  isCeo: boolean
+): {
+  salesBasis: "settlement" | "estimate";
+  effectivePosture: number | null;
+  soldFraction: number | null;
+  ownSiteFraction?: number | null;
+  clearingFactor: number | null;
+} {
+  const record = fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn);
+  if (record) {
+    const funded = fundedClearingReading(record, record.turn);
+    return {
+      salesBasis: "settlement",
+      effectivePosture: null,
+      soldFraction: funded?.soldFraction ?? null,
+      // Own-site deliveries are CEO-only intel, like the per-output rows.
+      ...(funded && isCeo ? { ownSiteFraction: funded.ownSiteFraction } : {}),
+      clearingFactor: funded?.clearingFactor ?? null,
+    };
+  }
+  const finiteOrNull = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : null);
+  return {
+    salesBasis: "estimate",
+    effectivePosture: finiteOrNull(sector.effectivePosture),
+    soldFraction: finiteOrNull(sector.soldFraction),
+    clearingFactor: finiteOrNull(sector.clearingFactor),
+  };
 }
 
 export async function buildSectorCommoditySections(args: {
@@ -222,12 +307,18 @@ export async function buildSectorCommoditySections(args: {
   // the plain realization rows/footer would double-report the price leg.
   const marketRealizationEnabled = market.realizationEnabled && !market.clearingEnabled;
 
+  // The funded settlement, when it is the plant's latest sales record. With it,
+  // nothing below falls back to the legacy market fields.
+  const fundedRecord = fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn);
   // Output this sector handed to the company's own other sites last turn. It is
   // not a sale, so the sold share reads zero without it. CEO-only intel.
   const ownSiteProducts = isCeo
-    ? (ownSiteDeliveries(sector.producerSettlement, args.currentTurn ?? 0)?.products ?? [])
+    ? (ownSiteDeliveries(
+        fundedRecord ?? sector.producerSettlement,
+        fundedRecord?.turn ?? args.currentTurn ?? 0
+      )?.products ?? [])
     : [];
-  const receiptSales = settledProductSales(sector.producerSettlement, args.currentTurn ?? 0);
+  const receiptSales = fundedRecord ? settledProductSales(fundedRecord, fundedRecord.turn) : null;
   const ownSiteByCommodity = new Map(ownSiteProducts.map((p) => [p.commodity, p] as const));
 
   // Why an output went unsold last turn: its ask against what buyers in its
@@ -250,11 +341,14 @@ export async function buildSectorCommoditySections(args: {
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
   const soldByCommodity: Partial<Record<string, number>> =
-    sector.soldByCommodity && typeof sector.soldByCommodity === "object"
+    !fundedRecord && sector.soldByCommodity && typeof sector.soldByCommodity === "object"
       ? sector.soldByCommodity
       : {};
   // Each output's share of last turn's realized revenue, so multi-output sectors can show a per-product sale price instead of a blended average. Absent until the sector clears a turn with the field.
-  const revenueShareByCommodity = outputRevenueShares(receiptSales, sector.revenueShareByCommodity);
+  const revenueShareByCommodity = outputRevenueShares(
+    receiptSales,
+    fundedRecord ? null : sector.revenueShareByCommodity
+  );
   const hasRevenueSplit = Object.keys(revenueShareByCommodity).length > 0;
 
   const supplies = supplyFlows.map((f) => {
@@ -329,8 +423,14 @@ export async function buildSectorCommoditySections(args: {
       // "my short commodity isn't selling" on a multi-output sector where a
       // DIFFERENT output is the one sitting unsold (oil_gas: gas clears out in
       // a 2.7x shortage while oil, in glut, does not).
-      ...(market.clearingEnabled && typeof soldFraction === "number" ? { soldFraction } : {}),
+      ...(market.clearingEnabled && typeof soldFraction === "number"
+        ? {
+            soldFraction,
+            soldFractionBasis: receiptSales ? ("settlement" as const) : ("estimate" as const),
+          }
+        : {}),
       ...(isCeo && sale ? { settledSales: sale } : {}),
+      ...(sale && sale.sold > 0 ? { settledUnitPrice: sale.revenue / sale.sold } : {}),
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }
         : {}),
@@ -370,6 +470,7 @@ export async function buildSectorCommoditySections(args: {
   let pricing:
     | {
         posture: number | null;
+        salesBasis?: "settlement" | "estimate";
         effectivePosture: number | null;
         soldFraction: number | null;
         ownSiteFraction?: number | null;
@@ -378,28 +479,13 @@ export async function buildSectorCommoditySections(args: {
         costPlusEnabled?: boolean;
         costPlusReady?: boolean;
         pricingMode?: "market" | "costPlus";
+        asks?: PricingAsk[];
       }
     | undefined;
   if (market.clearingEnabled) {
-    // A funded turn never runs the legacy clearing pass, so its fields keep a
-    // stale reading; last turn's funded receipt is what actually sold.
-    const funded = fundedClearingReading(sector.producerSettlement, args.currentTurn ?? 0);
     pricing = {
       posture: typeof sector.pricingPosture === "number" ? sector.pricingPosture : null,
-      effectivePosture:
-        typeof sector.effectivePosture === "number" ? sector.effectivePosture : null,
-      soldFraction: funded
-        ? funded.soldFraction
-        : typeof sector.soldFraction === "number"
-          ? sector.soldFraction
-          : null,
-      // Own-site deliveries are CEO-only intel, like the per-output rows above.
-      ...(funded && isCeo ? { ownSiteFraction: funded.ownSiteFraction } : {}),
-      clearingFactor: funded
-        ? funded.clearingFactor
-        : typeof sector.clearingFactor === "number"
-          ? sector.clearingFactor
-          : null,
+      ...pricingSalesReading(sector, isCeo),
       // Brand loyalty (Package A): the corp's established price-identity norm,
       // exposed only to the CEO so the Pricing panel can warn about gouging
       // jumps. Corp-level (not sector-level); never sent to non-owners.
@@ -407,6 +493,9 @@ export async function buildSectorCommoditySections(args: {
         isCeo && typeof corporation.brandPostureNorm === "number"
           ? corporation.brandPostureNorm
           : undefined,
+      ...(isCeo && fundedRecord
+        ? { asks: pricingAsks(fundedRecord.products, args.laneClearingPrices) }
+        : {}),
     };
   }
 

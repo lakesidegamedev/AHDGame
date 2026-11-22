@@ -28,6 +28,8 @@ import { pushFundedZeroSalesMothballs } from "@/lib/turn/npp/fundedZeroSalesMoth
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import { pushNppWageUpdates } from "@/lib/turn/npp/nppWagePolicy";
+import { nppSoldShare } from "@/lib/turn/npp/rules/fundedSellThrough";
+import { soldShareWorldOfDecision } from "@/lib/turn/npp/corpDecisionTypes";
 import type { CeoArchetypeModifiers } from "@/lib/npp/ceoArchetype";
 import type { StrategyLevers } from "@/lib/turn/npp/corpStrategy";
 import type { Corporation } from "@/lib/db/types";
@@ -84,6 +86,7 @@ export function applyNppSectorPolicies({
   sectors: CorporateSector[];
   operator: OperatorPermissions;
 }) {
+  const soldShareWorld = soldShareWorldOfDecision(ctx);
   for (const sp of sectorProfits) {
     // Skip sectors being divested
     if (divestedSectorIds.includes(sp.sector._id)) continue;
@@ -198,10 +201,11 @@ export function applyNppSectorPolicies({
     const sectorCountryId = sp.sector.countryId ?? corp.countryId;
     let target = computeMacroProductionPolicy(sp.sector.sectorType, sectorCountryId, priceRatioOf);
     if (target == null) continue;
-    // Fill-awareness (t899): under chronic low fill, cap the production policy
-    // at 0 — a shortage price signal is no reason to ramp output this sector
+    // Fill-awareness: under chronic low fill, cap the production policy at 0.
+    // A shortage price signal is no reason to ramp output this sector
     // demonstrably cannot sell.
-    if (sp.sector.soldFraction != null && sp.sector.soldFraction < CHRONIC_LOW_FILL_THRESHOLD) {
+    const soldShare = nppSoldShare(sp.sector, soldShareWorld);
+    if (soldShare != null && soldShare < CHRONIC_LOW_FILL_THRESHOLD) {
       target = Math.min(target, 0);
     }
     if (target !== (sp.sector.productionPolicy ?? 0)) {
@@ -223,6 +227,7 @@ export function applyNppSectorPolicies({
     priceRatioOf,
     marketSaturationOf: placementSignals?.marketSaturationOf,
     fundedWorldEpoch: ctx.fundedWorldEpoch,
+    soldShareWorld,
   });
   sectorUpdates.push(...mothballUpdates);
   const newlyMothballedIds = new Set(
@@ -326,6 +331,7 @@ export function applyNppSectorPolicies({
     priceRatioOf,
     now,
     sectorUpdates,
+    soldShareWorld,
   });
   return { conversionApplied, conversionCharge };
 }

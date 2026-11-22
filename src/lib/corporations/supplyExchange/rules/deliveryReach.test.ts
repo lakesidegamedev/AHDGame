@@ -134,6 +134,30 @@ describe("agreementDeliveryStatus", () => {
     ).toEqual({ code: "supplierProducedLess", achievable: 12, cap: 70 });
   });
 
+  it("reports a funded short delivery as the market's, not the buyer's use", () => {
+    expect(
+      agreementDeliveryStatus({
+        ...base,
+        lastDeliveredUnits: 0,
+        lastAchievableUnits: 70,
+        lastBuyerConsumptionUnits: 0,
+        lastDeliveryBasis: "funded",
+      })
+    ).toEqual({ code: "marketDeliveredLess", delivered: 0, cap: 70 });
+  });
+
+  it("still blames the supplier's output on a funded delivery when it made too little", () => {
+    expect(
+      agreementDeliveryStatus({
+        ...base,
+        lastDeliveredUnits: 5,
+        lastAchievableUnits: 12,
+        lastBuyerConsumptionUnits: 80,
+        lastDeliveryBasis: "funded",
+      })
+    ).toEqual({ code: "supplierProducedLess", achievable: 12, cap: 70 });
+  });
+
   it("reports a buyer that used less than the cap", () => {
     expect(
       agreementDeliveryStatus({
