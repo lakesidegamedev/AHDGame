@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import { onBillEnacted } from "@/lib/billEnactment";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
@@ -43,6 +44,13 @@ export interface RulingBillInput {
  * handed down, so the vote tally carries the seated majority/minority instead.
  */
 export async function enactRulingBill(
+  db: Db,
+  input: RulingBillInput
+): Promise<{ billId: ObjectId; enactedLawId?: ObjectId }> {
+  return withSessionDb(db, (tx) => enactRulingBillInTransaction(tx, input));
+}
+
+async function enactRulingBillInTransaction(
   db: Db,
   input: RulingBillInput
 ): Promise<{ billId: ObjectId; enactedLawId?: ObjectId }> {

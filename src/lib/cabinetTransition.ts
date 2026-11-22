@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { CABINET_POSITIONS } from "@/lib/constants/cabinet";
 import { UK_CABINET_POSITIONS } from "@/lib/constants/ukCabinet";
@@ -11,8 +12,7 @@ import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
 import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
-import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
-import type { ElectedOfficial } from "@/lib/db/types";
+
 import type { OfficeType } from "@/lib/db/types/character";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
@@ -47,7 +47,7 @@ export async function notifyAndRestoreClearedHolders(
   }
 ): Promise<void> {
   if (memberIds.length === 0) {
-    await createNotifications([]);
+    await afterCommit(db, () => createNotifications([]));
     return;
   }
 
@@ -107,7 +107,7 @@ export async function notifyAndRestoreClearedHolders(
       title: notice.title,
       message: notice.message,
     }));
-  await createNotifications(notifications);
+  await afterCommit(db, () => createNotifications(notifications));
 }
 
 /**

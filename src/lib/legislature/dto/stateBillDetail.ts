@@ -22,6 +22,9 @@ export interface StateBillDetail {
   eligibleSeats: number;
   legislationTypeName: string | null;
   proposedAt: string;
+  passedAt?: string;
+  enactedAt?: string;
+  failedAt?: string;
   votingEndsAt?: string;
   votingEndsOnTurn?: number;
   governorActionDeadline?: string;

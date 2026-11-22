@@ -1,3 +1,5 @@
+import { billStatusTransitions, withBillTransaction } from "./billTransaction";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 /**
  * Unified, config-driven bill-lifecycle engine.
  *
@@ -67,9 +69,6 @@ export interface BillLifecycleResult {
   /** Count of bills transitioned INTO each status — bespoke dispatchers (JP) derive counters. */
   transitionedTo: Record<string, number>;
 }
-
-type BillStatusTransition = { bill: Bill; fromStatus: string; toStatus: string; turn: number };
-const billStatusTransitions = new WeakMap<BillLifecycleResult, BillStatusTransition[]>();
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -194,7 +193,10 @@ function recordTransition(
 
 /** Resolve the sponsor notifier for a config (per-country override or the US default). */
 function resolveNotifier(config: BillLifecycleConfig): SponsorNotifier {
-  return config.notifySponsor ?? defaultNotifySponsor;
+  return (db, bill, status) =>
+    afterCommit(db, () =>
+      (config.notifySponsor ?? defaultNotifySponsor)(unboundDb(db), bill, status)
+    );
 }
 
 /** Fixed evaluator per passRule name — preserves the US rule nuance exactly. */
@@ -286,28 +288,32 @@ export async function runBillLifecycle(
       .toArray();
     const voteOpenings: Array<{ bill: Bill; chamberType: string }> = [];
     for (const storedBill of proposed) {
-      const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
-      const chamberType = firstChamber.officeTypeFor(bill);
-      // Activation is a plain update (matches the legacy processor); the atomic
-      // claim guards the vote-closing transitions, not this idempotent step.
-      await billsCollection(db).updateOne(
-        { _id: bill._id },
-        {
-          $set: {
-            status: "active",
-            currentChamber: chamberType,
-            votingStartedAt: now,
-            votingEndsAt: new Date(now.getTime() + firstChamber.votingDurationHours * HOUR_MS),
-            votingEndsOnTurn: currentTurn + firstChamber.votingDurationHours,
-            updatedAt: now,
-          },
-        }
-      );
-      voteOpenings.push({ bill: { ...bill, currentChamber: chamberType }, chamberType });
-      recordTransition(result, "active", bill, "proposed", currentTurn);
-      result.billsProcessed++;
+      await withBillTransaction(db, result, async (db) => {
+        const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
+        const chamberType = firstChamber.officeTypeFor(bill);
+        // Activation is a plain update (matches the legacy processor); the atomic
+        // claim guards the vote-closing transitions, not this idempotent step.
+        await billsCollection(db).updateOne(
+          { _id: bill._id },
+          {
+            $set: {
+              status: "active",
+              currentChamber: chamberType,
+              votingStartedAt: now,
+              votingEndsAt: new Date(now.getTime() + firstChamber.votingDurationHours * HOUR_MS),
+              votingEndsOnTurn: currentTurn + firstChamber.votingDurationHours,
+              updatedAt: now,
+            },
+          }
+        );
+        await afterCommit(db, async () => {
+          voteOpenings.push({ bill: { ...bill, currentChamber: chamberType }, chamberType });
+        });
+        recordTransition(result, "active", bill, "proposed", currentTurn);
+        result.billsProcessed++;
+      });
     }
-    await notifyBillsVoteOpen(db, voteOpenings);
+    await afterCommit(db, () => notifyBillsVoteOpen(unboundDb(db), voteOpenings));
   }
 
   // ── Close each chamberVote stage in graph order. ──
@@ -409,84 +415,92 @@ async function closeOverrideStage(
   };
 
   for (const storedBill of expired) {
-    const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
-    const claimRevision = voteRevisionFilter(bill, ["vetoOverrideVotes"]);
-    const seatData = await getSeatData(bill.countryId ?? "US");
-    const tally = tallyOverrideByChamber(bill.vetoOverrideVotes, seatData);
-    // Freeze the per-chamber override display so a later election cannot recompute
-    // this concluded override against a new chamber composition (#0982).
-    const overrideDisplaySnapshot = buildOverrideDisplay(bill.vetoOverrideVotes, seatData);
+    await withBillTransaction(db, result, async (db) => {
+      const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
+      const claimRevision = voteRevisionFilter(bill, ["vetoOverrideVotes"]);
+      const seatData = await getSeatData(bill.countryId ?? "US");
+      const tally = tallyOverrideByChamber(bill.vetoOverrideVotes, seatData);
+      // Freeze the per-chamber override display so a later election cannot recompute
+      // this concluded override against a new chamber composition (#0982).
+      const overrideDisplaySnapshot = buildOverrideDisplay(bill.vetoOverrideVotes, seatData);
 
-    const overridePassed = didVetoOverridePass(tally, seatData, stage.chambers);
+      const overridePassed = didVetoOverridePass(tally, seatData, stage.chambers);
 
-    if (overridePassed) {
-      const enacted = await claimStatusTransition(
-        db,
-        "bills",
-        { _id: bill._id, status: stage.status, ...claimRevision },
-        {
-          $set: {
-            status: "signed",
-            presidentAction: "override",
-            enactedAt: now,
-            overrideEnactedAt: now,
-            overrideDisplaySnapshot,
-            updatedAt: now,
-          },
-        }
-      );
-      if (enacted) {
-        // The snapshot was just written by the claim above — the in-memory bill
-        // predates it, and onBillEnacted reads it for the Discord vote chart.
-        await applyEnactedBillEffects(
+      if (overridePassed) {
+        const enacted = await claimStatusTransition(
           db,
-          { ...bill, presidentAction: "override", overrideDisplaySnapshot },
-          currentTurn,
+          "bills",
+          { _id: bill._id, status: stage.status, ...claimRevision },
           {
-            effect: "Veto override legislation effect failed (engine):",
-            enactment: "Bill enactment hook failed (engine veto override):",
+            $set: {
+              status: "signed",
+              presidentAction: "override",
+              enactedAt: now,
+              overrideEnactedAt: now,
+              overrideDisplaySnapshot,
+              updatedAt: now,
+            },
           }
         );
-        await awardLawmakerAchievementForSponsor(bill);
-        await resolveNotifier(config)(db, bill, "signed");
-        if (bill.category) result.enactedCategories.push(bill.category);
-        recordTransition(result, "signed", bill, stage.status, currentTurn);
-        result.billsProcessed++;
-        result.billsPassed++;
-      }
-    } else {
-      const failedClaimed = await claimStatusTransition(
-        db,
-        "bills",
-        { _id: bill._id, status: stage.status, ...claimRevision },
-        {
-          $set: {
-            status: "override_failed",
-            overrideFailedAt: now,
-            overrideDisplaySnapshot,
-            updatedAt: now,
-          },
+        if (enacted) {
+          // The snapshot was just written by the claim above — the in-memory bill
+          // predates it, and onBillEnacted reads it for the Discord vote chart.
+          await applyEnactedBillEffects(
+            db,
+            { ...bill, presidentAction: "override", overrideDisplaySnapshot },
+            currentTurn,
+            {
+              effect: "Veto override legislation effect failed (engine):",
+              enactment: "Bill enactment hook failed (engine veto override):",
+            }
+          );
+          await afterCommit(db, () => awardLawmakerAchievementForSponsor(bill));
+          await resolveNotifier(config)(db, bill, "signed");
+          if (bill.category) result.enactedCategories.push(bill.category);
+          recordTransition(result, "signed", bill, stage.status, currentTurn);
+          result.billsProcessed++;
+          result.billsPassed++;
         }
-      );
-      if (failedClaimed) {
-        // Forensic audit trail (flag-gated, fire-and-forget) — legacy US envelope
-        // shape; houseFor/senateFor stay named for the US chambers' tally keys.
-        recordAudit({
-          source: "turn",
-          phase: "billLifecycle",
-          action: "bill.fail",
-          category: "governance",
-          subject: { type: "bill", id: bill._id.toString(), name: bill.title },
-          refs: { billId: bill._id },
-          meta: { chamber: "veto_override", houseFor: tally.houseFor, senateFor: tally.senateFor },
-          outcome: "ok",
-        });
-        await resolveNotifier(config)(db, bill, "failed");
-        recordTransition(result, "override_failed", bill, stage.status, currentTurn);
-        result.billsProcessed++;
-        result.billsFailed++;
+      } else {
+        const failedClaimed = await claimStatusTransition(
+          db,
+          "bills",
+          { _id: bill._id, status: stage.status, ...claimRevision },
+          {
+            $set: {
+              status: "override_failed",
+              overrideFailedAt: now,
+              overrideDisplaySnapshot,
+              updatedAt: now,
+            },
+          }
+        );
+        if (failedClaimed) {
+          // Forensic audit trail (flag-gated, fire-and-forget) — legacy US envelope
+          // shape; houseFor/senateFor stay named for the US chambers' tally keys.
+          await afterCommit(db, async () => {
+            recordAudit({
+              source: "turn",
+              phase: "billLifecycle",
+              action: "bill.fail",
+              category: "governance",
+              subject: { type: "bill", id: bill._id.toString(), name: bill.title },
+              refs: { billId: bill._id },
+              meta: {
+                chamber: "veto_override",
+                houseFor: tally.houseFor,
+                senateFor: tally.senateFor,
+              },
+              outcome: "ok",
+            });
+          });
+          await resolveNotifier(config)(db, bill, "failed");
+          recordTransition(result, "override_failed", bill, stage.status, currentTurn);
+          result.billsProcessed++;
+          result.billsFailed++;
+        }
       }
-    }
+    });
   }
 }
 
@@ -517,31 +531,33 @@ async function closeExecutiveStage(
     .toArray();
 
   for (const storedBill of expired) {
-    const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
-    const enacted = await claimStatusTransition(
-      db,
-      "bills",
-      { _id: bill._id, status: stage.status },
-      {
-        $set: {
-          status: "signed",
-          presidentAction: "unsigned_law",
-          enactedAt: now,
-          updatedAt: now,
-        },
-      }
-    );
-    if (!enacted) continue;
-    await applyEnactedBillEffects(db, bill, currentTurn, {
-      effect: "Legislation effect apply failed (engine pocket-sign):",
-      enactment: "Bill enactment hook failed (engine pocket-sign):",
+    await withBillTransaction(db, result, async (db) => {
+      const bill = { ...storedBill, countryId: storedBill.countryId ?? config.country };
+      const enacted = await claimStatusTransition(
+        db,
+        "bills",
+        { _id: bill._id, status: stage.status },
+        {
+          $set: {
+            status: "signed",
+            presidentAction: "unsigned_law",
+            enactedAt: now,
+            updatedAt: now,
+          },
+        }
+      );
+      if (!enacted) return;
+      await applyEnactedBillEffects(db, bill, currentTurn, {
+        effect: "Legislation effect apply failed (engine pocket-sign):",
+        enactment: "Bill enactment hook failed (engine pocket-sign):",
+      });
+      await resolveNotifier(config)(db, bill, "signed");
+      await afterCommit(db, () => awardLawmakerAchievementForSponsor(bill));
+      if (bill.category) result.enactedCategories.push(bill.category);
+      recordTransition(result, "signed", bill, stage.status, currentTurn);
+      result.billsProcessed++;
+      result.billsPassed++;
     });
-    await resolveNotifier(config)(db, bill, "signed");
-    await awardLawmakerAchievementForSponsor(bill);
-    if (bill.category) result.enactedCategories.push(bill.category);
-    recordTransition(result, "signed", bill, stage.status, currentTurn);
-    result.billsProcessed++;
-    result.billsPassed++;
   }
 }
 
@@ -587,136 +603,181 @@ async function closeChamberVoteStage(
   );
 
   for (const bill of bills) {
-    const claimRevision = voteRevisionFilter(bill, [stage.voteField]);
-    const officeType = stage.officeTypeFor(bill);
-    const res = await resolvePhaseVotes(
-      db,
-      bill,
-      {
-        voteField: stage.voteField,
-        officeType,
-        countryId: bill.countryId ?? "US",
-        officials,
-      },
-      currentTurn
-    );
-    const fields = tallyFields(stage.voteField, res);
-    const passed =
-      stage.passCheck?.(bill, res.totals) ??
-      (await evaluatePassRule(db, bill, stage.passRule, res.totals, config.governmentType));
+    await withBillTransaction(db, result, async (db) => {
+      const claimRevision = voteRevisionFilter(bill, [stage.voteField]);
+      const officeType = stage.officeTypeFor(bill);
+      const res = await resolvePhaseVotes(
+        db,
+        bill,
+        {
+          voteField: stage.voteField,
+          officeType,
+          countryId: bill.countryId ?? "US",
+          officials,
+        },
+        currentTurn
+      );
+      const fields = tallyFields(stage.voteField, res);
+      const passed =
+        stage.passCheck?.(bill, res.totals) ??
+        (await evaluatePassRule(db, bill, stage.passRule, res.totals, config.governmentType));
 
-    if (!passed) {
-      // Bill-dependent reject routing (JP Sangiin: sangiin-origin fails; else the
-      // Shūgiin gets a 2/3 override). Absent onRejectFn, reject always fails.
-      const rejectOutcome = stage.onRejectFn ? stage.onRejectFn(bill) : stage.onReject;
-      if (typeof rejectOutcome === "object" && rejectOutcome.toStatus) {
-        const targetStage = config.stages.find((s) => s.status === rejectOutcome.toStatus);
-        if (targetStage?.kind === "chamberVote") {
-          await enterChamberVoteStage(
+      if (!passed) {
+        // Bill-dependent reject routing (JP Sangiin: sangiin-origin fails; else the
+        // Shūgiin gets a 2/3 override). Absent onRejectFn, reject always fails.
+        const rejectOutcome = stage.onRejectFn ? stage.onRejectFn(bill) : stage.onReject;
+        if (typeof rejectOutcome === "object" && rejectOutcome.toStatus) {
+          const targetStage = config.stages.find((s) => s.status === rejectOutcome.toStatus);
+          if (targetStage?.kind === "chamberVote") {
+            await enterChamberVoteStage(
+              db,
+              config,
+              stage,
+              targetStage,
+              bill,
+              fields,
+              now,
+              currentTurn,
+              result,
+              claimRevision,
+              voteOpenings
+            );
+            return;
+          }
+        }
+        const claimed = await claimStatusTransition(
+          db,
+          "bills",
+          { _id: bill._id, status: stage.status, ...claimRevision },
+          { $set: { status: "failed", ...fields, failedAt: now, updatedAt: now } }
+        );
+        if (claimed) {
+          // Forensic audit trail (flag-gated, fire-and-forget) — mirrors the legacy
+          // US resolver's bill.fail envelopes; the engine records for every country.
+          await afterCommit(db, async () => {
+            recordAudit({
+              source: "turn",
+              phase: "billLifecycle",
+              action: "bill.fail",
+              category: "governance",
+              subject: { type: "bill", id: bill._id.toString(), name: bill.title },
+              refs: { billId: bill._id },
+              meta: {
+                chamber: stage.voteField === "otherChamberVotes" ? "other" : "origin",
+                votesFor: res.totals.for,
+                votesAgainst: res.totals.against,
+              },
+              outcome: "ok",
+            });
+          });
+          await resolveNotifier(config)(db, bill, "failed");
+          recordTransition(result, "failed", bill, stage.status, currentTurn);
+          result.billsProcessed++;
+          result.billsFailed++;
+        }
+        return;
+      }
+
+      // Passed — resolve the target of this transition.
+      // Joint bills skip the second chamber and go straight to the executive stage,
+      // regardless of this stage's onPassStatus (which points at the second chamber).
+      const isJointShortCircuit =
+        config.flags?.jointSkipsSecondChamber &&
+        bill.originChamber === "joint" &&
+        stage.voteField === "votes";
+      if (isJointShortCircuit) {
+        const jointExec = config.stages.find(
+          (s): s is ExecutiveActionStage => s.kind === "executiveAction"
+        );
+        if (jointExec) {
+          await enterExecutive(
             db,
-            config,
-            stage,
-            targetStage,
             bill,
+            jointExec,
+            stage.voteField,
             fields,
             now,
             currentTurn,
             result,
-            claimRevision,
-            voteOpenings
+            claimRevision
           );
-          continue;
+          return;
         }
       }
-      const claimed = await claimStatusTransition(
-        db,
-        "bills",
-        { _id: bill._id, status: stage.status, ...claimRevision },
-        { $set: { status: "failed", ...fields, failedAt: now, updatedAt: now } }
-      );
-      if (claimed) {
-        // Forensic audit trail (flag-gated, fire-and-forget) — mirrors the legacy
-        // US resolver's bill.fail envelopes; the engine records for every country.
-        recordAudit({
-          source: "turn",
-          phase: "billLifecycle",
-          action: "bill.fail",
-          category: "governance",
-          subject: { type: "bill", id: bill._id.toString(), name: bill.title },
-          refs: { billId: bill._id },
-          meta: {
-            chamber: stage.voteField === "otherChamberVotes" ? "other" : "origin",
-            votesFor: res.totals.for,
-            votesAgainst: res.totals.against,
-          },
-          outcome: "ok",
-        });
-        await resolveNotifier(config)(db, bill, "failed");
-        recordTransition(result, "failed", bill, stage.status, currentTurn);
-        result.billsProcessed++;
-        result.billsFailed++;
-      }
-      continue;
-    }
 
-    // Passed — resolve the target of this transition.
-    // Joint bills skip the second chamber and go straight to the executive stage,
-    // regardless of this stage's onPassStatus (which points at the second chamber).
-    const isJointShortCircuit =
-      config.flags?.jointSkipsSecondChamber &&
-      bill.originChamber === "joint" &&
-      stage.voteField === "votes";
-    if (isJointShortCircuit) {
-      const jointExec = config.stages.find(
-        (s): s is ExecutiveActionStage => s.kind === "executiveAction"
-      );
-      if (jointExec) {
-        await enterExecutive(
-          db,
-          bill,
-          jointExec,
-          stage.voteField,
-          fields,
-          now,
-          currentTurn,
-          result,
-          claimRevision
-        );
-        continue;
-      }
-    }
-
-    const nextStage = config.stages.find((s) => s.status === stage.onPassStatus);
-    if (nextStage?.kind === "executiveAction") {
-      // UK Lords revision flavor: small chance to hold Royal Assent 1–2 turns.
-      const lords = config.lordsRevisionFlavor;
-      const delayTurns = lords ? resolveRevisionDelay(lords, rng) : null;
-      if (delayTurns != null) {
-        await enterLordsRevisionHold(
+      const nextStage = config.stages.find((s) => s.status === stage.onPassStatus);
+      if (nextStage?.kind === "executiveAction") {
+        // UK Lords revision flavor: small chance to hold Royal Assent 1–2 turns.
+        const lords = config.lordsRevisionFlavor;
+        const delayTurns = lords ? resolveRevisionDelay(lords, rng) : null;
+        if (delayTurns != null) {
+          await enterLordsRevisionHold(
+            db,
+            config,
+            bill,
+            stage.voteField,
+            fields,
+            now,
+            currentTurn,
+            delayTurns,
+            result,
+            claimRevision
+          );
+          return;
+        }
+        // Zero-window assent (e.g. UK Royal Assent) enacts immediately; a real
+        // action window (US President) enters the window; intl-org bills that
+        // don't require executive action are signed directly.
+        // UK with lordsRevisionFlavor that missed the roll also enacts immediately
+        // even though windowHours > 0 (the window exists only for delayed bills).
+        if (
+          nextStage.windowHours === 0 ||
+          config.lordsRevisionFlavor != null ||
+          (stage.execActionCheckOnPass &&
+            !billRequiresExecutiveAction(bill, config.hasPresidentialExecutive))
+        ) {
+          await enterSigned(
+            db,
+            config,
+            bill,
+            stage.status,
+            stage.voteField,
+            fields,
+            now,
+            currentTurn,
+            result,
+            claimRevision
+          );
+        } else {
+          await enterExecutive(
+            db,
+            bill,
+            nextStage,
+            stage.voteField,
+            fields,
+            now,
+            currentTurn,
+            result,
+            claimRevision
+          );
+        }
+      } else if (nextStage?.kind === "chamberVote") {
+        // Next stage is another chamber vote — advance into it (reset its votes).
+        await enterChamberVoteStage(
           db,
           config,
+          stage,
+          nextStage,
           bill,
-          stage.voteField,
           fields,
           now,
           currentTurn,
-          delayTurns,
           result,
-          claimRevision
+          claimRevision,
+          voteOpenings
         );
-        continue;
-      }
-      // Zero-window assent (e.g. UK Royal Assent) enacts immediately; a real
-      // action window (US President) enters the window; intl-org bills that
-      // don't require executive action are signed directly.
-      // UK with lordsRevisionFlavor that missed the roll also enacts immediately
-      // even though windowHours > 0 (the window exists only for delayed bills).
-      if (
-        nextStage.windowHours === 0 ||
-        config.lordsRevisionFlavor != null ||
-        (stage.execActionCheckOnPass &&
-          !billRequiresExecutiveAction(bill, config.hasPresidentialExecutive))
-      ) {
+      } else {
+        // Terminal pass (no next stage) — enact directly (e.g. UK single chamber).
         await enterSigned(
           db,
           config,
@@ -729,51 +790,10 @@ async function closeChamberVoteStage(
           result,
           claimRevision
         );
-      } else {
-        await enterExecutive(
-          db,
-          bill,
-          nextStage,
-          stage.voteField,
-          fields,
-          now,
-          currentTurn,
-          result,
-          claimRevision
-        );
       }
-    } else if (nextStage?.kind === "chamberVote") {
-      // Next stage is another chamber vote — advance into it (reset its votes).
-      await enterChamberVoteStage(
-        db,
-        config,
-        stage,
-        nextStage,
-        bill,
-        fields,
-        now,
-        currentTurn,
-        result,
-        claimRevision,
-        voteOpenings
-      );
-    } else {
-      // Terminal pass (no next stage) — enact directly (e.g. UK single chamber).
-      await enterSigned(
-        db,
-        config,
-        bill,
-        stage.status,
-        stage.voteField,
-        fields,
-        now,
-        currentTurn,
-        result,
-        claimRevision
-      );
-    }
+    });
   }
-  await notifyBillsVoteOpen(db, voteOpenings);
+  await afterCommit(db, () => notifyBillsVoteOpen(unboundDb(db), voteOpenings));
 }
 
 /**
@@ -841,7 +861,12 @@ async function enterChamberVoteStage(
   );
   if (claimed) {
     await targetStage.onEnterHook?.(db, bill);
-    voteOpenings.push({ bill: { ...bill, currentChamber: nextChamber }, chamberType: nextChamber });
+    await afterCommit(db, async () => {
+      voteOpenings.push({
+        bill: { ...bill, currentChamber: nextChamber },
+        chamberType: nextChamber,
+      });
+    });
     // A config status string is always a real bill status.
     await resolveNotifier(config)(db, bill, targetStage.status as Bill["status"]);
     recordTransition(result, targetStage.status, bill, passingStage.status, currentTurn);
@@ -894,10 +919,12 @@ async function enterLordsRevisionHold(
   result.billsPassed++;
 
   try {
-    await createSystemNewsPost(
-      `"${bill.title}" has cleared the Commons and faces a short Lords revision before Royal Assent — a procedural ping-pong, not a second elected chamber.`,
-      "legislation",
-      { title: "Lords Revision Holds Bill" }
+    await afterCommit(db, () =>
+      createSystemNewsPost(
+        `"${bill.title}" has cleared the Commons and faces a short Lords revision before Royal Assent — a procedural ping-pong, not a second elected chamber.`,
+        "legislation",
+        { title: "Lords Revision Holds Bill" }
+      )
     );
   } catch {
     // Wire is best-effort.
@@ -972,97 +999,101 @@ async function closeConcurrentVoteStage(
   );
 
   for (const bill of bills) {
-    const ctx = {
-      currentChamber: bill.currentChamber ?? "",
-      countryId: bill.countryId,
-      preset,
-    };
+    await withBillTransaction(db, result, async (db) => {
+      const ctx = {
+        currentChamber: bill.currentChamber ?? "",
+        countryId: bill.countryId,
+        preset,
+      };
 
-    // Resolved PER BILL, not taken from the stage alone: nat/priv supersedes to
-    // two-thirds and is provision-driven. `evaluatePassRule` is deliberately NOT reused
-    // — it bundles Senate cloture, which a concurrent bill never faces (the filibuster
-    // route refuses these outright).
-    const { rule } = getBillPassRule(
-      config.governmentType ??
-        getCountryConfig((bill.countryId ?? "US") as CountryId, preset).governmentType,
-      billHasNatPrivProvision(bill.provisions),
-      billHasDeclareWar(bill.provisions)
-    );
-
-    const chamberOfficeTypes = stage.chambersFor(ctx);
-    const voteFields = chamberOfficeTypes.map((officeType) => stage.voteFieldFor(ctx, officeType));
-    const claimRevision = voteRevisionFilter(bill, voteFields);
-    let fields: Record<string, unknown> = {};
-    let allPassed = true;
-    for (const officeType of chamberOfficeTypes) {
-      const voteField = stage.voteFieldFor(ctx, officeType);
-      const res = await resolvePhaseVotes(
-        db,
-        bill,
-        { voteField, officeType, countryId: bill.countryId ?? "US", officials },
-        currentTurn
+      // Resolved PER BILL, not taken from the stage alone: nat/priv supersedes to
+      // two-thirds and is provision-driven. `evaluatePassRule` is deliberately NOT reused
+      // — it bundles Senate cloture, which a concurrent bill never faces (the filibuster
+      // route refuses these outright).
+      const { rule } = getBillPassRule(
+        config.governmentType ??
+          getCountryConfig((bill.countryId ?? "US") as CountryId, preset).governmentType,
+        billHasNatPrivProvision(bill.provisions),
+        billHasDeclareWar(bill.provisions)
       );
-      // `tallyFields` is parameterised by voteField, so calling it per chamber gives
-      // each its own totals AND its own frozen snapshot (#0982).
-      fields = { ...fields, ...tallyFields(voteField, res) };
-      if (!meetsBillPassRule(res.totals.for, res.totals.against, rule)) allPassed = false;
-    }
 
-    if (!allPassed) {
-      const claimed = await claimStatusTransition(
-        db,
-        "bills",
-        { _id: bill._id, status: stage.status, ...claimRevision },
-        { $set: { status: "failed", ...fields, failedAt: now, updatedAt: now } }
+      const chamberOfficeTypes = stage.chambersFor(ctx);
+      const voteFields = chamberOfficeTypes.map((officeType) =>
+        stage.voteFieldFor(ctx, officeType)
       );
-      if (claimed) {
-        await resolveNotifier(config)(db, bill, "failed");
-        recordTransition(result, "failed", bill, stage.status, currentTurn);
-        result.billsProcessed++;
-        result.billsFailed++;
+      const claimRevision = voteRevisionFilter(bill, voteFields);
+      let fields: Record<string, unknown> = {};
+      let allPassed = true;
+      for (const officeType of chamberOfficeTypes) {
+        const voteField = stage.voteFieldFor(ctx, officeType);
+        const res = await resolvePhaseVotes(
+          db,
+          bill,
+          { voteField, officeType, countryId: bill.countryId ?? "US", officials },
+          currentTurn
+        );
+        // `tallyFields` is parameterised by voteField, so calling it per chamber gives
+        // each its own totals AND its own frozen snapshot (#0982).
+        fields = { ...fields, ...tallyFields(voteField, res) };
+        if (!meetsBillPassRule(res.totals.for, res.totals.against, rule)) allPassed = false;
       }
-      continue;
-    }
 
-    // Passed. Reproduce the DISPATCH only — `enterSigned` already contains
-    // applyLegislationEffect, onBillEnacted, the notifier, the achievement award,
-    // recordTransition and the counters. Calling any of those alongside it double-enacts.
-    const execStage = config.stages.find(
-      (s): s is ExecutiveActionStage => s.kind === "executiveAction"
-    );
-    if (
-      stage.execActionCheckOnPass &&
-      execStage &&
-      billRequiresExecutiveAction(bill, config.hasPresidentialExecutive)
-    ) {
-      await enterExecutive(
+      if (!allPassed) {
+        const claimed = await claimStatusTransition(
+          db,
+          "bills",
+          { _id: bill._id, status: stage.status, ...claimRevision },
+          { $set: { status: "failed", ...fields, failedAt: now, updatedAt: now } }
+        );
+        if (claimed) {
+          await resolveNotifier(config)(db, bill, "failed");
+          recordTransition(result, "failed", bill, stage.status, currentTurn);
+          result.billsProcessed++;
+          result.billsFailed++;
+        }
+        return;
+      }
+
+      // Passed. Reproduce the DISPATCH only — `enterSigned` already contains
+      // applyLegislationEffect, onBillEnacted, the notifier, the achievement award,
+      // recordTransition and the counters. Calling any of those alongside it double-enacts.
+      const execStage = config.stages.find(
+        (s): s is ExecutiveActionStage => s.kind === "executiveAction"
+      );
+      if (
+        stage.execActionCheckOnPass &&
+        execStage &&
+        billRequiresExecutiveAction(bill, config.hasPresidentialExecutive)
+      ) {
+        await enterExecutive(
+          db,
+          bill,
+          execStage,
+          "votes",
+          fields,
+          now,
+          currentTurn,
+          result,
+          claimRevision
+        );
+        return;
+      }
+      // A concurrent close has TWO passage moments. `enterSigned` spreads `...fields`
+      // before `[passedAtField]`, so putting the other chamber's stamp in `fields` lets it
+      // set `passedOriginAt` itself — no signature change.
+      await enterSigned(
         db,
+        config,
         bill,
-        execStage,
+        stage.status,
         "votes",
-        fields,
+        { ...fields, passedOtherChamberAt: now },
         now,
         currentTurn,
         result,
         claimRevision
       );
-      continue;
-    }
-    // A concurrent close has TWO passage moments. `enterSigned` spreads `...fields`
-    // before `[passedAtField]`, so putting the other chamber's stamp in `fields` lets it
-    // set `passedOriginAt` itself — no signature change.
-    await enterSigned(
-      db,
-      config,
-      bill,
-      stage.status,
-      "votes",
-      { ...fields, passedOtherChamberAt: now },
-      now,
-      currentTurn,
-      result,
-      claimRevision
-    );
+    });
   }
 }
 
@@ -1099,7 +1130,7 @@ async function enterExecutive(
     // enterExecutive (enrolled → President) is a US-only path; the US default
     // notifier applies. Parliamentary countries enact via enterSigned instead.
     await defaultNotifySponsor(db, bill, "enrolled");
-    await notifyPresidentBillAwaitingSignature(db, bill);
+    await afterCommit(db, () => notifyPresidentBillAwaitingSignature(unboundDb(db), bill));
     recordTransition(result, "enrolled", bill, bill.status, currentTurn);
     result.billsProcessed++;
     result.billsPassed++;
@@ -1134,7 +1165,7 @@ async function enterSigned(
     enactment: "Bill enactment hook failed (engine signed):",
   });
   await resolveNotifier(config)(db, bill, "signed");
-  await awardLawmakerAchievementForSponsor(bill);
+  await afterCommit(db, () => awardLawmakerAchievementForSponsor(bill));
   if (bill.category) result.enactedCategories.push(bill.category);
   recordTransition(result, "signed", bill, fromStatus, currentTurn);
   result.billsProcessed++;

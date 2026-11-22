@@ -2,7 +2,7 @@ import type { AnyBulkWriteOperation, ClientSession, Db, ObjectId } from "mongodb
 import type { Bond, Corporation } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import {
   loadFxRatesByCurrency,
   resolveCorpLiquidCurrencyCode,
@@ -164,5 +164,5 @@ export async function transferFinancialHoldings(
     if (!options.dryRun && bondOps.length) await bonds.bulkWrite(bondOps, { session });
   };
   if (options.dryRun) await execute();
-  else await runRequiredTransaction(execute, { client: db.client });
+  else await runWithDbSession(db, execute, { client: db.client });
 }

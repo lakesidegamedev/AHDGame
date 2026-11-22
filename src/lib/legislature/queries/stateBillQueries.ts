@@ -12,17 +12,9 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { buildVotesByParty, type ScopedVoteOfficial } from "@/lib/congress/billVoting";
 import { resolveBillCardTally, scopeStateBillVotes } from "@/lib/legislature/stateBillVoteScope";
 import { snapshotWeightMap } from "@/lib/legislature/voteSnapshot";
-import type {
-  AxisPositions,
-  ElectedOfficial,
-  LegislationType,
-  NPP,
-  PoliticalParty,
-  StateBill,
-  State,
-} from "@/lib/db/types";
+import type { AxisPositions, ElectedOfficial } from "@/lib/db/types";
 import { buildVoteShiftPreview } from "@/lib/legislature/voteShiftPreview";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+
 import type { StateBillDetail } from "@/lib/legislature/dto/stateBillDetail";
 import type { StateBillDisplay } from "@/lib/legislature/dto/stateLegislature";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
@@ -233,6 +225,10 @@ export async function listStateLegislatureBills(
         ? legislationTypeMap.get(bill.legislationTypeId)?.name
         : null,
       proposedAt: bill.proposedAt.toISOString(),
+      passedAt: bill.passedAt?.toISOString(),
+      enactedAt: bill.enactedAt?.toISOString(),
+      failedAt: bill.failedAt?.toISOString(),
+
       votingEndsAt: bill.votingEndsAt?.toISOString(),
       votingEndsOnTurn: bill.votingEndsOnTurn,
       governorActionDeadline: bill.governorActionDeadline?.toISOString(),
@@ -624,6 +620,9 @@ export async function getStateLegislatureBillDetail(
       ? (legislationTypeMap.get(bill.legislationTypeId)?.name ?? null)
       : null,
     proposedAt: bill.proposedAt.toISOString(),
+    passedAt: bill.passedAt?.toISOString(),
+    enactedAt: bill.enactedAt?.toISOString(),
+    failedAt: bill.failedAt?.toISOString(),
     votingEndsAt: bill.votingEndsAt?.toISOString(),
     votingEndsOnTurn: bill.votingEndsOnTurn,
     governorActionDeadline: bill.governorActionDeadline?.toISOString(),

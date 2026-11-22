@@ -1,23 +1,13 @@
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type {
-  Election,
-  ElectionCandidate,
-  NPP,
-  StatePartyOrg,
-  StatePartyCandidate,
-  StatePartyElection,
-  NationalPartyCandidate,
-  NationalPartyElection,
-  NationalCommitteeCandidate,
-  NationalCommitteeElection,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { withdrawFromPartyLeadershipElections } from "@/lib/elections/withdrawFromPartyLeadershipElections";
 import { withdrawPlayerEndorsementsOnPartyChange } from "@/lib/elections/playerEndorsements";
-import type { CongressLeader } from "@/lib/db/types";
+
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -443,7 +433,7 @@ export async function cleanupPartyPositionsOnSwitch(
 
   // 3. Withdraw from active state party election candidacies for old party
   const activeStateElections = await statePartyElectionsCollection(db)
-    .find({ partyId: oldParty, status: "voting" })
+    .find({ partyId: oldParty, status: "voting", ...(countryId ? { countryId } : {}) })
     .toArray();
 
   let withdrawnStateElections = 0;
@@ -458,6 +448,10 @@ export async function cleanupPartyPositionsOnSwitch(
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
     withdrawnStateElections = result.modifiedCount;
+    await statePartyVotesCollection(db).deleteMany({
+      electionId: { $in: stateElectionIds },
+      $or: [{ voterId: characterId }, { candidateId: characterId }],
+    });
   }
 
   // 4. Withdraw from the old party's national leadership election candidacies
@@ -487,6 +481,10 @@ export async function cleanupPartyPositionsOnSwitch(
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
     withdrawnCommitteeElections = result.modifiedCount;
+    await nationalCommitteeVotesCollection(db).deleteMany({
+      electionId: { $in: committeeElectionIds },
+      voterId: characterId,
+    });
   }
 
   // 6. Give up the congressional leadership roles (SML, Speaker, whips, PPT)
@@ -807,6 +805,10 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
     withdrawnCommitteeElections = result.modifiedCount;
+    await nationalCommitteeVotesCollection(db).deleteMany({
+      electionId: { $in: committeeElectionIds },
+      voterId: characterId,
+    });
   }
 
   return {

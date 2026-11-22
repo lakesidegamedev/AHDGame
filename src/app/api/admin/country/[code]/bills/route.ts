@@ -9,16 +9,14 @@ import { getDb } from "@/lib/mongodb";
 import { parseBoundedIntParam, parseJsonBody } from "@/lib/api/validate";
 import { adminBillsSchema } from "@/lib/api/schemas/admin";
 import { errorResponse } from "@/lib/api/errors";
-import { onBillEnacted } from "@/lib/billEnactment";
-import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
-import { applyLegislationEffect } from "@/lib/legislationEffects";
-import { claimStatusTransition } from "@/lib/turn/atomicClaim";
+import { forceSignBill } from "@/lib/legislature/commands/forceSignBill";
+
 import { notifyPresidentBillAwaitingSignature } from "@/lib/billLifecycle";
 import { getGameState } from "@/lib/gameState";
-import type { Bill, LegislationType, GameState } from "@/lib/db/types";
+
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
+
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
@@ -128,35 +126,7 @@ export const POST = withAdminRoute(
     const now = new Date();
 
     if (action === "force_sign") {
-      // Atomically claim the enactment so a double-submit (or a turn phase
-      // enacting the same bill) cannot double-apply effects / double-announce.
-      const claimed = await claimStatusTransition(
-        db,
-        "bills",
-        { _id: bill._id, status: bill.status },
-        { $set: { status: "signed", presidentAction: "signed", enactedAt: now, updatedAt: now } }
-      );
-      if (!claimed) {
-        return NextResponse.json({ message: `"${bill.title}" was already signed.` });
-      }
-
-      // Get current turn and record bill enactment
-      const gameState = await gameStateCollection(db).findOne({ _id: "current" });
-      const legislationTypes = await applyLegislationEffect(db, bill, gameState?.currentTurn).catch(
-        (err) => {
-          console.error("Legislation effect apply failed (admin force-sign):", err);
-          return undefined;
-        }
-      );
-      if (gameState) {
-        const enactment = legislationTypes
-          ? onBillEnacted(db, bill, gameState.currentTurn, legislationTypes)
-          : onBillEnacted(db, bill, gameState.currentTurn);
-        await enactment.catch((err) =>
-          console.error("Bill enactment hook failed (admin force-sign):", err)
-        );
-        await flushServerPosthog();
-      }
+      await forceSignBill(db, bill._id, now);
 
       return NextResponse.json({ message: `"${bill.title}" force-signed.` });
     }

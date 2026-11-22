@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -134,6 +141,22 @@ describe("processStateBillTimers — passage threshold", () => {
       _id: new ObjectId(),
       userId: "gov-user",
     });
+  });
+
+  it("routes an NPP-held executive's bill to assent instead of auto-enacting", async () => {
+    db.collectionMocks.electedOfficials!.findOne.mockResolvedValue({
+      characterId: null,
+      nppId: new ObjectId(),
+      isNPP: true,
+      party: "1",
+    });
+    db.collectionMocks
+      .stateBills!.findOneAndUpdate.mockResolvedValueOnce(makeBill(WON_43_28))
+      .mockResolvedValue(null);
+    await processStateBillTimers(new Date("2026-07-13T15:00:00Z"));
+    expect(statusSetForBill()).toBe("passed");
+    const { applyLegislationEffect } = await import("@/lib/legislationEffects");
+    expect(applyLegislationEffect).not.toHaveBeenCalled();
   });
 
   it("passes a bill that won its floor vote 43–28 in a 90-seat chamber", async () => {

@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 import { applyTaxRateChange, applyBucketImpactsToVoters } from "@/lib/legislation/enactTaxRate";
 import { applyCorporateTaxBillChange } from "@/lib/legislature/corporateTaxEnactment";
 import type { V2BillBallots } from "@/lib/resetLegislation/voterReactions";
@@ -188,9 +189,11 @@ export async function applyCentralBankIndependenceProvision(
   // A proposal may predate accession. Its later enactment cannot reclaim
   // monetary authority or create a competing national policy committee.
   if ((await loadEuroMonetaryUnion(db))?.members[countryId]) {
-    await createSystemNewsPost(
-      `${getCountryConfig(countryId)?.name ?? countryId} enacted a central-bank independence law, but rate-setting remains with the common euro authority.`,
-      "legislation"
+    await afterCommit(db, () =>
+      createSystemNewsPost(
+        `${getCountryConfig(countryId)?.name ?? countryId} enacted a central-bank independence law, but rate-setting remains with the common euro authority.`,
+        "legislation"
+      )
     ).catch(() => {});
     return;
   }
@@ -231,7 +234,7 @@ export async function applyCentralBankIndependenceProvision(
     provision.action === "grant"
       ? `The ${bankName} has been granted operational independence: rate-setting passes from the government to the bank${FOMC_COMMITTEE_COUNTRY_IDS.has(countryId) ? " and its policy committee" : "'s governor"}.`
       : `The ${bankName}'s operational independence has been revoked by law: rate-setting returns to the government, and markets have marked down what the bank's word is worth.`;
-  await createSystemNewsPost(newsContent, "legislation").catch(() => {});
+  await afterCommit(db, () => createSystemNewsPost(newsContent, "legislation")).catch(() => {});
 }
 
 /**
@@ -322,18 +325,20 @@ export async function onBillEnacted(
   // `presidentialBillAction.ts`, auto pocket-sign or veto-override enactment
   // in `billLifecycle.ts`). Fires for every enactment, including
   // provision-less/flavor bills, mirroring the country-history event above.
-  recordAudit({
-    // Runs for both API-triggered (direct presidential sign) and turn-phase
-    // (pocket-sign, veto-override) enactments — mirrors `emitTx`'s
-    // `buildAuditEnvelope` convention (financialTxLog/emit.ts) of "system"
-    // when the same hook serves multiple origins.
-    source: "system",
-    action: "bill.enact",
-    category: "governance",
-    subject: { type: "bill", id: bill._id, name: bill.title },
-    refs: { billId: bill._id },
-    meta: { stateId, isNationalBill },
-    outcome: "ok",
+  await afterCommit(db, async () => {
+    recordAudit({
+      // Runs for both API-triggered (direct presidential sign) and turn-phase
+      // (pocket-sign, veto-override) enactments — mirrors `emitTx`'s
+      // `buildAuditEnvelope` convention (financialTxLog/emit.ts) of "system"
+      // when the same hook serves multiple origins.
+      source: "system",
+      action: "bill.enact",
+      category: "governance",
+      subject: { type: "bill", id: bill._id, name: bill.title },
+      refs: { billId: bill._id },
+      meta: { stateId, isNationalBill },
+      outcome: "ok",
+    });
   });
 
   const stateCountryPrefix = stateId.includes("_") ? stateId.split("_", 1)[0] : undefined;
@@ -621,40 +626,44 @@ export async function onBillEnacted(
   // (see referendumWebhooks); skip the generic "Bill Enacted" notice to avoid a
   // duplicate post for the same event.
   if (bill.category !== "reunification") {
-    const enactmentScopeLabel = isNationalBill ? "Federal" : "Regional";
-    const voteSplit = billChamberVoteSplits(
-      bill,
-      resolvedCountry ?? "US",
-      isNationalBill ? "national" : "regional"
-    );
-    const cardMetadata = [
-      "Bill enacted",
-      ...(policyLabel ? [policyLabel] : []),
-      ...(bill.sponsorName ? [`Sponsor: ${bill.sponsorName}`] : []),
-    ];
-    const cardUrl = await generateDiscordEventCard(
-      {
-        eyebrow: `${countryLabel} · ${locationLabel}`,
-        title: bill.title,
-        summary: "Signed into law",
-        metadata: cardMetadata,
-        voteSplit,
-        tone: "positive",
-      },
-      `bill-enacted-${bill._id.toString()}`
-    );
-    sendCountryGameEvent(resolvedCountry ?? "US", {
-      title: `${enactmentScopeLabel} bill enacted: ${bill.title}`,
-      description: cardUrl
-        ? `[View the enacted bill](${billUrl})`
-        : `**${bill.title}** was signed into law.`,
-      color: DISCORD_COLORS.billEnacted,
-      fields: cardUrl ? undefined : embedFields,
-      image: cardUrl ? { url: cardUrl } : undefined,
-      url: billUrl,
-      footer: { text: `${countryLabel} · ${locationLabel}` },
-      timestamp: new Date().toISOString(),
-    }).catch(() => {});
+    await afterCommit(db, async () => {
+      const enactmentScopeLabel = isNationalBill ? "Federal" : "Regional";
+      const voteSplit = billChamberVoteSplits(
+        bill,
+        resolvedCountry ?? "US",
+        isNationalBill ? "national" : "regional"
+      );
+      const cardMetadata = [
+        "Bill enacted",
+        ...(policyLabel ? [policyLabel] : []),
+        ...(bill.sponsorName ? [`Sponsor: ${bill.sponsorName}`] : []),
+      ];
+      const cardUrl = await generateDiscordEventCard(
+        {
+          eyebrow: `${countryLabel} · ${locationLabel}`,
+          title: bill.title,
+          summary: "Signed into law",
+          metadata: cardMetadata,
+          voteSplit,
+          tone: "positive",
+        },
+        `bill-enacted-${bill._id.toString()}`
+      );
+      afterCommit(db, () =>
+        sendCountryGameEvent(resolvedCountry ?? "US", {
+          title: `${enactmentScopeLabel} bill enacted: ${bill.title}`,
+          description: cardUrl
+            ? `[View the enacted bill](${billUrl})`
+            : `**${bill.title}** was signed into law.`,
+          color: DISCORD_COLORS.billEnacted,
+          fields: cardUrl ? undefined : embedFields,
+          image: cardUrl ? { url: cardUrl } : undefined,
+          url: billUrl,
+          footer: { text: `${countryLabel} · ${locationLabel}` },
+          timestamp: new Date().toISOString(),
+        })
+      ).catch(() => {});
+    });
   }
 }
 
