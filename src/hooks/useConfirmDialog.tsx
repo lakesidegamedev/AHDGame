@@ -10,6 +10,8 @@ export interface ConfirmDialogOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /** When set, the confirm button is disabled and this reason is shown. */
+  confirmDisabledReason?: string;
 }
 
 /**
@@ -47,6 +49,9 @@ export function useConfirmDialog(): {
   const dialog = (
     <Modal open={options !== null} title={options?.title ?? ""} onClose={cancel}>
       <p className="whitespace-pre-line text-sm text-muted">{options?.message}</p>
+      {options?.confirmDisabledReason ? (
+        <p className="mt-3 text-sm font-semibold text-error">{options.confirmDisabledReason}</p>
+      ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={cancel}>
           {options?.cancelLabel ?? "Cancel"}
@@ -54,6 +59,7 @@ export function useConfirmDialog(): {
         <Button
           variant={options?.destructive ? "destructive" : "primary"}
           onClick={() => settle(true)}
+          disabled={Boolean(options?.confirmDisabledReason)}
         >
           {options?.confirmLabel ?? "Confirm"}
         </Button>

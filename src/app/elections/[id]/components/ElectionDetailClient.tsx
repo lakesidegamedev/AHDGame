@@ -44,6 +44,7 @@ import { isNightWindow } from "../night/nightModel";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { getStoredConsent } from "@/components/CookieConsent";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { closedFilingLine } from "@/components/elections/raceEntry/entryCard";
 import { useRaceEntry } from "@/components/elections/raceEntry/useRaceEntry";
 import { RaceModeProvider } from "../blend/raceMode/RaceModeContext";
 import { useRaceMode } from "../blend/raceMode/useRaceMode";
@@ -457,6 +458,14 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
           </button>
         )}
       </div>
+    ) : election.myCharId &&
+      !localIsEnded &&
+      !localIsUpcoming &&
+      raceEntry.entryBlock === "nominationsUnavailable" ? (
+      <p className="text-xs text-muted">
+        {closedFilingLine(election.primaryEndTurn)} Open races in your home region are listed under
+        your country&apos;s elections.
+      </p>
     ) : null;
 
   // Below the stage only what the stage does not already show: the race
