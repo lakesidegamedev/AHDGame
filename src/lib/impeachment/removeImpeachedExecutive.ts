@@ -1,6 +1,8 @@
+import { conflict } from "@/lib/api/errors";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type { CareerEvent, ElectedOfficial, GameState, OfficeType } from "@/lib/db/types";
+import type { CareerEvent, OfficeType } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countries";
 import {
   getExecutiveOfficialFilter,
@@ -45,19 +47,21 @@ async function recordRemovalOnCharacter(
   const gameState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
-  await captureOfficeTransition({
-    db,
-    officeType: office.type,
-    transitionType: "lost",
-    partyId: character?.party,
-    selectionMethod: "removal",
-    tenureTurns: 0,
-    careerStage: character?.careerHistory?.length ?? 0,
-    nationId: countryId,
-    turn: gameState?.currentTurn ?? 0,
-    iteration: gameState?.iteration,
-    flush: true,
-  });
+  await afterCommit(db, () =>
+    captureOfficeTransition({
+      db: unboundDb(db),
+      officeType: office.type,
+      transitionType: "lost",
+      partyId: character?.party,
+      selectionMethod: "removal",
+      tenureTurns: 0,
+      careerStage: character?.careerHistory?.length ?? 0,
+      nationId: countryId,
+      turn: gameState?.currentTurn ?? 0,
+      iteration: gameState?.iteration,
+      flush: true,
+    })
+  );
 }
 
 /**
@@ -73,14 +77,28 @@ export async function removeImpeachedExecutive(
   targetCharacterId: ObjectId,
   now: Date
 ): Promise<void> {
-  await electedOfficialsCollection(db).updateOne(
-    getExecutiveOfficialFilter(countryId, officeType),
+  return withSessionDb(db, (tx) =>
+    removeImpeachedExecutiveInTransaction(tx, countryId, officeType, targetCharacterId, now)
+  );
+}
+
+async function removeImpeachedExecutiveInTransaction(
+  db: Db,
+  countryId: CountryId,
+  officeType: ExecutiveOfficeType,
+  targetCharacterId: ObjectId,
+  now: Date
+): Promise<void> {
+  const removed = await electedOfficialsCollection(db).updateOne(
+    { ...getExecutiveOfficialFilter(countryId, officeType), characterId: targetCharacterId },
     {
       $set: { characterId: null, isNPP: false, updatedAt: now },
       $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
     }
   );
 
+  if (removed.matchedCount !== 1)
+    throw conflict("The impeachment target no longer holds this office");
   await recordRemovalOnCharacter(db, countryId, { type: officeType }, targetCharacterId, now);
 }
 
@@ -96,10 +114,27 @@ export async function removeImpeachedGovernor(
   targetCharacterId: ObjectId,
   now: Date
 ): Promise<void> {
-  await electedOfficialsCollection(db).updateOne(governorOfficialFilter(countryId, state), {
-    $set: { characterId: null, isNPP: false, updatedAt: now },
-    $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
-  });
+  return withSessionDb(db, (tx) =>
+    removeImpeachedGovernorInTransaction(tx, countryId, state, targetCharacterId, now)
+  );
+}
 
+async function removeImpeachedGovernorInTransaction(
+  db: Db,
+  countryId: CountryId,
+  state: string,
+  targetCharacterId: ObjectId,
+  now: Date
+): Promise<void> {
+  const removed = await electedOfficialsCollection(db).updateOne(
+    { ...governorOfficialFilter(countryId, state), characterId: targetCharacterId },
+    {
+      $set: { characterId: null, isNPP: false, updatedAt: now },
+      $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
+    }
+  );
+
+  if (removed.matchedCount !== 1)
+    throw conflict("The impeachment target no longer holds this office");
   await recordRemovalOnCharacter(db, countryId, { type: "governor" }, targetCharacterId, now);
 }
