@@ -68,9 +68,15 @@ export class ProducerSupplyPool {
       throw new Error("Producer supply overflow");
   }
 
-  take(units: number): void {
+  take(requested: number): void {
     const total = this.total;
-    if (!(units > 0) || units > total) throw new Error("Invalid pooled producer withdrawal");
+    // Callers size a purchase from sums over the same stock, so rounding can
+    // ask a few ulps past the pool. That dust takes the whole pool; a real
+    // overdraw still stops the turn.
+    if (!(requested > 0) || requested > total + Math.max(1e-9, total * 1e-12))
+      throw new Error("Invalid pooled producer withdrawal");
+    const units = Math.min(requested, total);
+    if (!(units > 0)) return;
     this.hasPooledSales = true;
     const perWeight = units / Math.max(0, this.weight + this.correction);
     this.soldPerWeight += perWeight;
