@@ -15,7 +15,7 @@ page and the first-days panel now say so, and the first-days campaign counter
 moves the moment a click lands, so nobody clicks twice and pays twice.
 
 Before you file for a race you now see a full summary: filing is free, which
-eligibility rules you pass or fail, who else is running and who holds the seat,
+eligibility rules you pass or fail, who else is running,
 when filing and the race close, and what withdrawing costs. If you fail a rule,
 the button says why. A race whose filing has closed says when it closed and
 points you to the races still open at home.

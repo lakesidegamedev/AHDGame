@@ -22,7 +22,7 @@ import {
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { isBgFoundingCampaign } from "@/lib/countries/bg/rules/foundingCampaign1990";
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
-import { isRussianDumaNationalList } from "@/lib/countries/ru/rules/assemblyScope";
+import { usesRussianDumaNationalElectorate } from "@/lib/countries/ru/dumaElectoratePreload";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { getCountryState } from "@/lib/countryState";
@@ -115,7 +115,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       characterCountry,
       homeStateBlocked: homeStateBlocks({
         isNationwideExecutive,
-        nationalList: isRussianDumaNationalList(election),
+        nationalList: usesRussianDumaNationalElectorate(election),
         electionState: election.state,
         homeState: character.homeState,
       }),

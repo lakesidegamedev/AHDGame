@@ -20,8 +20,7 @@ export interface RaceEntryElection extends EntryRuleRace {
   allCandidates: Array<{ isYou: boolean; party?: string; partyName?: string }> | null;
   primaryEndTurn?: number | null;
   endTurn?: number | null;
-  gameState?: { currentTurn: number } | null;
-  incumbent?: { name: string; party: string } | null;
+  gameState?: { currentTurn?: number | null } | null;
   hungarianModernAssembly?: { ruleVersion: string };
   japanShugiinRules?: { ruleVersion: string };
   hungarianAssemblyRound?: { round: number };
@@ -144,7 +143,8 @@ export function useRaceEntry(
           endTurn: election.endTurn ?? null,
         },
         candidates: election.allCandidates ?? null,
-        incumbent: election.incumbent ?? null,
+        // The race payload carries no incumbent while filing is open.
+        incumbent: null,
       }),
       confirmLabel: "Enter race",
       ...(failed ? { confirmDisabledReason: failed.reason ?? failed.label } : {}),

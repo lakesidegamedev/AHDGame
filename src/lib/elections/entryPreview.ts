@@ -214,7 +214,7 @@ export function scheduleLines(s: EntryScheduleInput): string[] {
 }
 
 export interface FieldCandidate {
-  party: string;
+  party?: string;
   partyName?: string;
 }
 
@@ -229,7 +229,7 @@ export function fieldLine(
   } else {
     const byParty = new Map<string, number>();
     for (const c of candidates) {
-      const name = c.partyName ?? c.party;
+      const name = c.partyName ?? c.party ?? "Independent";
       byParty.set(name, (byParty.get(name) ?? 0) + 1);
     }
     const parties = [...byParty].map(([name, n]) => (n > 1 ? `${name} x${n}` : name)).join(", ");
