@@ -212,7 +212,12 @@ export default function CommoditiesTab({
               <thead>
                 <tr>
                   <Th>Commodity</Th>
-                  <Th align="right">Price</Th>
+                  <Th
+                    align="right"
+                    title="The market price per unit, not what your plants were charged"
+                  >
+                    Market price
+                  </Th>
                   {isInputs ? (
                     <>
                       <Th align="right">Consumed</Th>
@@ -313,7 +318,10 @@ export default function CommoditiesTab({
           mean your own plants got it: output reaches another of your sites only through your supply
           policy and freight. The private supply line under a commodity shows where consumed inputs
           came from. Stock and cover are the world&apos;s shadow inventory from the market ledger,
-          not this corporation&apos;s.
+          not this corporation&apos;s. Prices here are market prices per unit. A sector page shows
+          what that plant was charged per unit for each input, which is the market price after the
+          game&apos;s price smoothing, and quantities there are scaled to what the plant bought, so
+          the two screens can differ.
         </p>
         {features.length > 0 && (
           <p className="pb-1 text-xs text-muted">

@@ -2,6 +2,7 @@
 import type { InternalTransferPricing } from "./internalTransferPricingRules";
 import type { ProducerQuotePolicy } from "./rules";
 import { laneKeyOf } from "./laneKey";
+import type { InputReceipt } from "./rules/inputReceipt";
 
 export interface PurchasedStock {
   commodity: string;
@@ -180,6 +181,8 @@ export interface ProducerOperatingResult {
   billedRunShare?: number;
   /** The scarcest major input when short inputs cut the run; set only with billedRunShare. */
   bindingInput?: string;
+  /** Needed, arrived and missing units per major input, with the blocker when short. */
+  inputReceipts?: InputReceipt[];
   /** Cold upkeep inside otherOperatingPaid plus arrears; not a cost of running. */
   idleOperatingCost?: number;
   /**

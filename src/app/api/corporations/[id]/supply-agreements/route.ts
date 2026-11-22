@@ -7,7 +7,6 @@ import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQu
 import { proposeSupplyAgreement } from "@/lib/corporations/commands/supplyAgreements";
 import {
   contractCancelEffectiveTurn,
-  CONTRACT_OVERCOMMIT_TOLERANCE,
   type SupplyAgreementOffer,
   type SupplyAgreement,
 } from "@/lib/db/types/supplyAgreement";
@@ -19,8 +18,11 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import {
   computeSupplierCommodityAchievableUnits,
   computeSupplierCommodityCapacityUnits,
+  maxContractableUnits,
   supplyAgreementSectorStates,
 } from "@/lib/corporations/supplyAgreementCapacity";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { contractReferenceUnitPrice } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import { supportsCorporationWideSupplyAgreement } from "@/lib/market/commodityMarketScope";
 import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import type { State } from "@/lib/db/types/state";
@@ -171,7 +173,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         });
         return {
           currentCapacityUnits,
-          maxContractUnits: currentCapacityUnits * CONTRACT_OVERCOMMIT_TOLERANCE,
+          maxContractUnits: maxContractableUnits(currentCapacityUnits, achievableUnits),
           achievableUnits,
         };
       };
@@ -202,7 +204,18 @@ export async function GET(_request: Request, { params }: RouteParams) {
         ).states.map((stateId) => ({ id: stateId, name: stateNameById.get(stateId) ?? stateId }));
       }
     }
+    const priceRows = await commodityPricesCollection(db)
+      .find({}, { projection: { commodity: 1, globalPrice: 1 } })
+      .toArray();
+    const contractReferencePrices: Partial<Record<CommodityType, number>> = {};
+    for (const row of priceRows) {
+      contractReferencePrices[row.commodity as CommodityType] = contractReferenceUnitPrice(
+        row.commodity as CommodityType,
+        row.globalPrice
+      );
+    }
     return NextResponse.json({
+      contractReferencePrices,
       agreements: agreements.map((a) => ({
         supplierCorpName:
           counterpartyById.get(a.supplierCorpId.toString())?.name ?? "Unknown corporation",
