@@ -1,17 +1,4 @@
-/**
- * Why paid orders in a sector's market stayed unfilled although the company
- * offered that product. Uses only what settlement recorded: units offered,
- * sold outside, sent to own sites, and the ask against what buyers paid.
- *
- * - `sold_out`: everything offered was taken, so buyers wanted more than the
- *   sector made.
- * - `ask_above_buyers`: part of the offer went unsold and buyers paid less than
- *   the ask.
- * - `not_reached`: part of the offer went unsold at a competitive ask, so the
- *   open orders are with buyers the offer did not reach (freight, trade lanes
- *   or another market).
- * - `not_offered`: nothing of this product was offered.
- */
+/** Why paid orders stayed unfilled although the company offered the product, from settlement only. */
 import type { UnsoldReading } from "./unsoldReason";
 
 export type UnservedDemandReason = "sold_out" | "ask_above_buyers" | "not_reached" | "not_offered";
