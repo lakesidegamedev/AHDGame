@@ -242,6 +242,7 @@ async function legacySnapshot(db: Db, input: Input, resumed: Resumed): Promise<S
     tariffCollector: [...scopes]
       .filter(([, s]) => s.kind === "tariffCollector")
       .map(([id, s]) => [s.countryId, id]),
+    priorPostureAnchors: null,
     env: {
       captiveDeliveryStage: input.env.captiveDeliveryStage ?? 0,
       nationalPublicDemandStage: input.env.nationalPublicDemandStage ?? 0,
