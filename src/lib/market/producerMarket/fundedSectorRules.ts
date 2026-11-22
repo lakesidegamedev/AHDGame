@@ -102,7 +102,7 @@ export interface LegacySectorResultLike {
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
-): T {
+): T & { costParts: SiteCostParts } {
   // Management allocations stay out of economic revenue, tax and valuation bases.
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
