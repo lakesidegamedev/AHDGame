@@ -9,6 +9,8 @@ export interface PhysicalPnlView {
    * ratios: a mean lets one tiny plant running at 5% drag the headline
    * for a corporation that is selling everything it makes. */
   fillRate: number | null;
+  /** Share of everything produced that went to the company's own sites (0-1); null when none. */
+  ownSiteShare: number | null;
   constructionInProgressAnchor: number;
   unitsOnOrder: number;
   buildingSectorCount: number;
@@ -38,6 +40,10 @@ export function buildPhysicalPnl(
     // ratios: a mean lets one tiny plant running at 5% drag the headline
     // for a corporation that is selling everything it makes.
     fillRate: computeFillRate(rollups.totalProducedUnits, rollups.totalSoldUnits),
+    ownSiteShare:
+      rollups.totalProducedUnits > 0 && rollups.totalOwnSiteUnits > 0
+        ? Math.min(1, rollups.totalOwnSiteUnits / rollups.totalProducedUnits)
+        : null,
     constructionInProgressAnchor: Math.round(rollups.totalConstructionInProgressAnchor),
     unitsOnOrder: Math.round(rollups.totalUnitsOnOrder),
     buildingSectorCount: rollups.buildingSectorCount,

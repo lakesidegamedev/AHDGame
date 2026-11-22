@@ -168,6 +168,7 @@ export async function loadCorporationDetailView(args: {
       corporation,
       sectors,
       currentTurn,
+      worldBuildSettledTurn: gameState?.buildDeliverySettledTurn,
       transitionFirstFundedTurn: await openingPromise,
       plantsMode,
       commandEconomyEnabled,

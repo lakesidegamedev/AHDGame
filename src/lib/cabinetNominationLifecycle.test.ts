@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -19,6 +26,33 @@ describe("cabinetNominationLifecycle (didPass)", () => {
   });
 });
 
+function cabinetWrites(db: MockDb) {
+  return db.collectionMocks.cabinetMembers.bulkWrite.mock.calls.flatMap(
+    (call) =>
+      call[0] as Array<{
+        deleteOne?: { filter: Record<string, unknown> };
+        deleteMany?: { filter: Record<string, unknown> };
+        insertOne?: { document: Record<string, unknown> };
+      }>
+  );
+}
+function cabinetInserts(db: MockDb) {
+  return cabinetWrites(db).flatMap((op) => (op.insertOne ? [op.insertOne.document] : []));
+}
+function mockParticipantRead(db: MockDb) {
+  db.collectionMocks.characters.find.mockImplementation(
+    (query: { _id?: { $in?: ObjectId[] } }) =>
+      ({
+        toArray: async () =>
+          (
+            await Promise.all(
+              (query._id?.$in ?? []).map((_id) => db.collectionMocks.characters.findOne({ _id }))
+            )
+          ).filter(Boolean),
+      }) as never
+  );
+}
+
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
@@ -38,6 +72,8 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("characters");
+    mockParticipantRead(db);
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const { getGameState } = await import("@/lib/gameState");
@@ -127,7 +163,7 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     } as never);
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
-    expect(db.collectionMocks.cabinetMembers.insertOne).not.toHaveBeenCalled();
+    expect(cabinetInserts(db)).toHaveLength(0);
     const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
     expect(rejectedOps).toHaveLength(1);
     expect(rejectedOps[0]![0]).toEqual({ _id: nom._id });
@@ -172,8 +208,8 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
 
-    expect(db.collectionMocks.cabinetSettings.updateOne).toHaveBeenCalledWith(
-      { _id: "US_secretary_of_treasury" },
+    expect(db.collectionMocks.cabinetSettings.updateMany).toHaveBeenCalledWith(
+      { _id: { $in: ["US_secretary_of_treasury"] } },
       {
         $unset: {
           lastChangedTurn: "",
@@ -225,15 +261,14 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
 
-    expect(db.collectionMocks.cabinetMembers.deleteMany).toHaveBeenCalledWith({
-      countryId: "US",
-      characterId: nomineeId,
+    expect(cabinetWrites(db)).toContainEqual({
+      deleteMany: { filter: { countryId: "US", characterId: nomineeId } },
     });
     // The vacate must land before the insert, or the unique index still throws.
-    const vacateOrder = db.collectionMocks.cabinetMembers.deleteMany.mock.invocationCallOrder[0];
-    const insertOrder = db.collectionMocks.cabinetMembers.insertOne.mock.invocationCallOrder[0];
+    const vacateOrder = cabinetWrites(db).findIndex((op) => op.deleteMany);
+    const insertOrder = cabinetWrites(db).findIndex((op) => op.insertOne);
     expect(vacateOrder).toBeLessThan(insertOrder);
-    const inserted = db.collectionMocks.cabinetMembers.insertOne.mock.calls[0][0];
+    const inserted = cabinetInserts(db)[0];
     expect(inserted.positionId).toBe("attorney_general");
     expect(inserted.characterId).toBe(nomineeId);
   });
@@ -278,14 +313,14 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
       const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
       await processCabinetNominationLifecycle(new Date(0));
 
-      const inserted = db.collectionMocks.cabinetMembers.insertOne.mock.calls[0][0];
+      const inserted = cabinetInserts(db)[0];
       expect(inserted.positionId).toBe("secretary_of_state");
       expect(inserted.characterId).toBeNull();
       expect(inserted.isNPP).toBe(true);
       expect(inserted.nppId).toBe(nppId);
       // No character-doc writes for an NPP nominee: no vacate-by-character, no career push.
-      expect(db.collectionMocks.cabinetMembers.deleteMany).not.toHaveBeenCalled();
-      expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
+      expect(cabinetWrites(db).filter((op) => op.deleteMany)).toHaveLength(0);
+      expect(db.collectionMocks.characters.bulkWrite).not.toHaveBeenCalled();
       const { captureOfficeTransition } = await import("@/lib/analytics/officeTransitionAnalytics");
       expect(captureOfficeTransition).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -383,7 +418,7 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
 
-    expect(db.collectionMocks.cabinetSettings.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.cabinetSettings.updateMany).not.toHaveBeenCalled();
   });
 
   it("seats a Chief of Staff with no Senate votes cast", async () => {
@@ -420,13 +455,13 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
 
-    expect(db.collectionMocks.cabinetMembers.insertOne).toHaveBeenCalledWith(
+    expect(cabinetInserts(db)).toContainEqual(
       expect.objectContaining({ positionId: "chief_of_staff", characterName: "Chief Pick" })
     );
-    expect(db.collectionMocks.cabinetNominations.updateOne).toHaveBeenCalledWith(
+    expect(bulkOps(db.collectionMocks.cabinetNominations.bulkWrite)).toContainEqual([
       { _id: nomination._id },
-      { $set: expect.objectContaining({ status: "confirmed" }) }
-    );
+      { $set: expect.objectContaining({ status: "confirmed" }) },
+    ]);
   });
 
   it("scopes NPP catch-up votes to the nomination's own country, not the US preload (#2889)", async () => {
@@ -515,11 +550,10 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     // Confirmation ends any acting term for the seat: the seat is cleared
     // country-scoped (position ids repeat across countries) and the incoming
     // holder carries none of the acting tenure stamps.
-    expect(db.collectionMocks.cabinetMembers.deleteOne).toHaveBeenCalledWith({
-      countryId: "US",
-      positionId: "secretary_of_treasury",
+    expect(cabinetWrites(db)).toContainEqual({
+      deleteOne: { filter: { countryId: "US", positionId: "secretary_of_treasury" } },
     });
-    const inserted = db.collectionMocks.cabinetMembers.insertOne.mock.calls[0][0];
+    const inserted = cabinetInserts(db)[0];
     expect(inserted.acting).toBeUndefined();
     expect(inserted.actingSinceTurn).toBeUndefined();
     expect(inserted.actingExpiresOnTurn).toBeUndefined();
@@ -542,6 +576,8 @@ describe("Fed confirmation cabinet conflict", () => {
     async ({ countryId, makeChair, isChair }) => {
       vi.clearAllMocks();
       const db = createMockDb();
+      db.collection("characters");
+      mockParticipantRead(db);
       const id = new ObjectId();
       const nom = {
         _id: new ObjectId(),
@@ -595,6 +631,8 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("characters");
+    mockParticipantRead(db);
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const { getGameState } = await import("@/lib/gameState");
@@ -623,17 +661,14 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
   function findMockFor(nomineeId: ObjectId, presidentId: ObjectId) {
     const nomineeUser = new ObjectId();
     const presidentUser = new ObjectId();
-    db.collectionMocks.characters.findOne.mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (query: any) => {
-        const id = String(query?._id);
-        if (id === nomineeId.toString())
-          return Promise.resolve({ _id: nomineeId, userId: nomineeUser });
-        if (id === presidentId.toString())
-          return Promise.resolve({ _id: presidentId, userId: presidentUser });
-        return Promise.resolve(null);
-      }
-    );
+    db.collectionMocks.characters.findOne.mockImplementation((query: { _id?: ObjectId }) => {
+      const id = String(query?._id);
+      if (id === nomineeId.toString())
+        return Promise.resolve({ _id: nomineeId, userId: nomineeUser });
+      if (id === presidentId.toString())
+        return Promise.resolve({ _id: presidentId, userId: presidentUser });
+      return Promise.resolve(null);
+    });
     return { nomineeUser, presidentUser };
   }
 
@@ -722,6 +757,8 @@ describe("processCabinetNominationLifecycle — vice president seating", () => {
   it("awards the Vice President achievement to a confirmed nominee", async () => {
     vi.clearAllMocks();
     const db = createMockDb();
+    db.collection("characters");
+    mockParticipantRead(db);
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const { getGameState } = await import("@/lib/gameState");

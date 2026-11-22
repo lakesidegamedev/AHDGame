@@ -413,6 +413,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
               physicalFactors
             )
           );
+          corpPhysical.ownSiteShare = null;
           // Own draw again: sharing `base` with capacity/CIP would publish the
           // exact on-order-to-capacity ratio.
           corpPhysical.unitsOnOrder = Math.round(
