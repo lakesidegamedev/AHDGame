@@ -32,6 +32,7 @@ import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import { STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
 import {
   deliveredFraction,
+  resolveBuildSettledTurn,
   steadyUnitsPerTurn,
   nextArrivalTurn,
   queueUndeliveredCost,
@@ -135,11 +136,14 @@ export function buildSectorPlantsSection(args: {
    */
   fxSpreadRate: number;
   investment?: SectorPlantsSection["investment"];
+  /** `gameState.buildDeliverySettledTurn`: fallback when the sector has no stamp. */
+  worldBuildSettledTurn?: number | null;
 }): SectorPlantsSection {
   const {
     sector,
     sectorType,
     currentTurn,
+    worldBuildSettledTurn,
     currentYear,
     governorCap,
     governorRampTurns,
@@ -279,10 +283,17 @@ export function buildSectorPlantsSection(args: {
 
   // ─── Build queue ──────────────────────────────────────────────────────────
   const rawQueue: SectorBuildOrder[] = Array.isArray(sector.buildQueue) ? sector.buildQueue : [];
+  const settledTurn = resolveBuildSettledTurn(
+    currentTurn,
+    sector.buildDeliverySettledTurn,
+    worldBuildSettledTurn
+  );
   const buildQueue: PlantBuildOrderView[] = rawQueue.map((o, orderIndex) => {
     // `progress` is the share of capacity actually DELIVERED so far: a linear
     // ramp for a smooth order, a step (0 then 1) for a legacy all-at-once order.
-    const delivered = deliveredFraction(o, currentTurn);
+    // Capped at the settled stamp: when the corporation turn is behind, the
+    // schedule has not actually landed capacity yet.
+    const delivered = deliveredFraction(o, Math.min(currentTurn, settledTurn));
     return {
       orderIndex,
       unitsOrdered: o.unitsOrdered,
