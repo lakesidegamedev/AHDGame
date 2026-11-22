@@ -48,6 +48,8 @@ export interface SyntheticDemandSource {
   name: string;
   type: "system";
   units: number;
+  /** Units the buyer actually received, when the market records it. */
+  receivedUnits?: number;
   description: string;
 }
 
