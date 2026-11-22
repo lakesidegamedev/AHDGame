@@ -647,4 +647,36 @@ describe("SectorsTab plants total reconciliation", () => {
     );
     expect(screen.queryByTestId("sector-total-reconciliation")).toBeNull();
   });
+
+  describe("sprawl rules sentence", () => {
+    const manySectors = Array.from({ length: 16 }, (_, i) =>
+      sector({ _id: `s${i}`, sectorType: "manufacturing", displayName: `Plant ${i}` })
+    );
+
+    it.each([undefined, null, Number.NaN])(
+      "never prints NaN when logistics strength is %s",
+      (value) => {
+        const { container } = render(
+          <SectorsTab
+            {...baseProps}
+            sectors={manySectors}
+            logisticsStrength={value as number | null | undefined}
+          />
+        );
+        const text = container.textContent ?? "";
+        expect(text).toContain("raises the threshold");
+        expect(text).not.toContain("NaN");
+        expect(text).not.toContain("now ");
+      }
+    );
+
+    it("shows the corporation's own threshold and rate when strength is known", () => {
+      const { container } = render(
+        <SectorsTab {...baseProps} sectors={manySectors} logisticsStrength={100} />
+      );
+      const text = container.textContent ?? "";
+      expect(text).toContain("threshold is now 23, with 16 owned");
+      expect(text).not.toContain("NaN");
+    });
+  });
 });

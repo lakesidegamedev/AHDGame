@@ -68,7 +68,7 @@ interface SectorsTabProps {
   /** HQ country — fallback when liquidCurrencyCode is missing (private redaction). */
   countryId?: string | null;
   /** Corporation logistics strength — used for sprawl penalty display */
-  logisticsStrength: number;
+  logisticsStrength?: number | null;
   onAbandonSector: (sectorId: string) => void;
   abandoningSectorId: string | null;
   /** Plants tier, CEO: mothball or reactivate a sector from its row menu. */
@@ -210,7 +210,10 @@ export default function SectorsTab({
 
   const totalSectors = sectors.length;
   const hasSecondaryType = !!corporationSecondaryType;
-  const lsFraction = Math.max(0, logisticsStrength) / LOGISTICS_MAX_SPRAWL_EFFECT;
+  // Logistics strength is hidden from some viewers, so it can be absent or NaN.
+  const lsKnown = typeof logisticsStrength === "number" && Number.isFinite(logisticsStrength);
+  const safeLogisticsStrength = lsKnown ? logisticsStrength : 0;
+  const lsFraction = Math.max(0, safeLogisticsStrength) / LOGISTICS_MAX_SPRAWL_EFFECT;
   const effectiveThreshold = Math.round(
     SPRAWL_SECTOR_THRESHOLD + SPRAWL_SECTOR_THRESHOLD * lsFraction
   );
@@ -218,9 +221,10 @@ export default function SectorsTab({
     SPRAWL_PENALTY_PER_PAIR * (hasSecondaryType ? 2 : 1) * Math.max(0.5, 1 - 0.5 * lsFraction);
   // Logistics sectors never pay sprawl, so an all-logistics corp carries none.
   const sprawlExposed = sectors.some((sector) => !isSprawlExemptSectorType(sector.sectorType));
-  const currentSprawlPenalty = sprawlExposed
-    ? getSprawlModifier(totalSectors, logisticsStrength, hasSecondaryType)
-    : 0;
+  const currentSprawlPenalty =
+    sprawlExposed && lsKnown
+      ? getSprawlModifier(totalSectors, safeLogisticsStrength, hasSecondaryType)
+      : 0;
 
   // Stored money figures are daily (24-turn) rates; moneyTimescale owns the
   // conversion so every surface shows the same number in the same unit.
@@ -285,7 +289,7 @@ export default function SectorsTab({
   const metricContext: SectorTypeMetricContext = {
     plantsMode,
     totalSectors,
-    logisticsStrength,
+    logisticsStrength: safeLogisticsStrength,
     hasSecondaryType,
   };
   // Sectors under the current filter, dossier or not, so the header count and
@@ -445,7 +449,7 @@ export default function SectorsTab({
               <span className="font-medium text-error">
                 {currentSprawlPenalty.toFixed(1)}% on every non-logistics sector margin now.{" "}
               </span>
-            ) : !sprawlExposed ? (
+            ) : !lsKnown ? null : !sprawlExposed ? (
               <span className="text-success">None: logistics sectors are exempt. </span>
             ) : totalSectors >= SPRAWL_SECTOR_THRESHOLD ? (
               <span className="text-success">Offset by Logistics &amp; Operations. </span>
@@ -454,14 +458,21 @@ export default function SectorsTab({
             threshold reduce every non-logistics sector margin by{" "}
             {Math.abs(SPRAWL_PENALTY_PER_PAIR * (hasSecondaryType ? 2 : 1)).toFixed(1)}%
             {hasSecondaryType ? " (doubled because you have a secondary type)" : ""}. Logistics
-            &amp; Operations strength raises the threshold (now{" "}
-            <span className={`${cellNum} text-foreground`}>{effectiveThreshold}</span>, with{" "}
-            <span className={`${cellNum} text-foreground`}>{totalSectors}</span> owned) and cuts the
-            rate (at most by half, at LS {LOGISTICS_MAX_SPRAWL_EFFECT}+) to{" "}
-            <span className={`${cellNum} text-foreground`}>
-              {Math.abs(effectivePenaltyPerPair).toFixed(2)}%
-            </span>{" "}
-            per pair.
+            &amp; Operations strength raises the threshold and cuts the rate (at most by half, at LS{" "}
+            {LOGISTICS_MAX_SPRAWL_EFFECT}+).
+            {lsKnown && (
+              <>
+                {" "}
+                This corporation&apos;s threshold is now{" "}
+                <span className={`${cellNum} text-foreground`}>{effectiveThreshold}</span>, with{" "}
+                <span className={`${cellNum} text-foreground`}>{totalSectors}</span> owned, and the
+                rate is{" "}
+                <span className={`${cellNum} text-foreground`}>
+                  {Math.abs(effectivePenaltyPerPair).toFixed(2)}%
+                </span>{" "}
+                per pair.
+              </>
+            )}
           </p>
         )}
 
