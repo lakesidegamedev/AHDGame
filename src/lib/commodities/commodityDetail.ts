@@ -82,6 +82,7 @@ import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateReso
 import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
 import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
+import { loadFundedBuyerSources } from "@/lib/commodities/fundedBuyerSources";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -728,6 +729,14 @@ export async function getCommodityDetailData(
       };
     }
 
+    // A funded turn names its real non-company buyers; formula rows are not buyers there.
+    const fundedBuyerSources = await loadFundedBuyerSources(
+      db,
+      commodity,
+      currentPrice?.turn,
+      gameState?.worldEpochId
+    );
+
     // ── Synthetic demand sources for display ──────────────────────────────────
     const syntheticDemandSources: {
       name: string;
@@ -843,7 +852,7 @@ export async function getCommodityDetailData(
     }
 
     // Government healthcare expenditure (national budgets: Medicare, NHS, etc.)
-    if (commodity === "healthcare_services") {
+    if (commodity === "healthcare_services" && fundedBuyerSources == null) {
       const federalBudgets = await federalBudgetCollection(db)
         // Whole category map, and alias-resolved below, so this panel reports
         // the same number the turn books. UK/CN/IE spell the category `health`
@@ -1007,7 +1016,7 @@ export async function getCommodityDetailData(
         advertisingBudgetSeparate: commodity === "advertising",
       },
       demandDriver,
-      syntheticDemandSources,
+      syntheticDemandSources: fundedBuyerSources ?? syntheticDemandSources,
       capacityByState,
       totalCapacity,
     };
