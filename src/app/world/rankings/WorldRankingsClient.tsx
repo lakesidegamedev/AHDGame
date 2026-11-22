@@ -102,7 +102,17 @@ export default function WorldRankingsClient() {
     return Object.values(source).sort((a, b) => a.name.localeCompare(b.name));
   }, [state.data]);
 
-  const ranking = useMemo(() => rankNations(countries, selection), [countries, selection]);
+  const ranking = useMemo(
+    () =>
+      rankNations(
+        countries,
+        selection,
+        selection.kind === "metric"
+          ? { higherIsBetter: METRIC_DEFINITIONS.get(selection.metric)?.isHigherBetter }
+          : {}
+      ),
+    [countries, selection]
+  );
 
   const compareRows = useMemo(() => {
     const data = state.data;
@@ -112,6 +122,7 @@ export default function WorldRankingsClient() {
       countryIds: compared,
       category: compareCategory as MetricCategoryId,
       metrics: data.availableMetrics[compareCategory] ?? [],
+      higherIsBetter: (metric) => METRIC_DEFINITIONS.get(metric)?.isHigherBetter,
     });
   }, [compared, compareCategory, countries, state.data]);
 

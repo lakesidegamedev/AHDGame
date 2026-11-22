@@ -38,7 +38,7 @@ describe("SovereignRatePanel", () => {
     render(<SovereignRatePanel current={current} previous={previous} />);
 
     const now = explainSovereignRate(current);
-    expect(screen.getByText(`Ladder (${now.ladderRating})`)).toBeTruthy();
+    expect(screen.getByText(`Debt-ratio ladder (${now.ladderRating} band)`)).toBeTruthy();
     expect(screen.getByText(pct(now.ladderRate))).toBeTruthy();
     expect(screen.getAllByText(pct(now.effectiveRate)).length).toBeGreaterThan(0);
 

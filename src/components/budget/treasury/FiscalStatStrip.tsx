@@ -134,7 +134,7 @@ export function FiscalStatStrip({
         sub={usdNote(
           surplus,
           deficitBasis > 0
-            ? `${deficitToGdp.toFixed(1)}% of ${budgetGdp ? "budget " : ""}GDP`
+            ? `${Math.abs(deficitToGdp).toFixed(1)}% of ${budgetGdp ? "budget " : ""}GDP`
             : undefined
         )}
         delta={
@@ -200,7 +200,7 @@ export function FiscalStatStrip({
             label="Funded treasury cash"
             value={money(treasuryCashLocal)}
             tone="up"
-            sub="spendable cash from taxes, bonds, and other receipts"
+            sub="spendable cash balance, a separate ledger from the yearly budget figures"
           />
           <StatTile
             label="Bank claims due"
