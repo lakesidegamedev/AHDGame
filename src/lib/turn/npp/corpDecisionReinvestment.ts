@@ -32,6 +32,7 @@ import {
   evaluateReinvestPreSizingGate,
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { allowsNppIndustryInvestment } from "./rules/investmentProtection";
+import { evaluateAutoBuildRoomGate } from "@/lib/corporations/rules/autoBuildRoomGate";
 import { gateFill, wholeSellThrough, type ProductFillRow } from "@/lib/turn/npp/rules/productFill";
 import {
   NPP_REINVEST_MAX_QUEUE_DEPTH,
@@ -176,23 +177,21 @@ export function decideNppCapacityReinvestment({
     // reading is no evidence of room.
     // A mine is read on the recipe it actually runs, so a coal mine is not
     // credited with a rare earth shortage.
-    const unmetUnitsOf = (sector: CorporateSector): number =>
-      Math.max(
-        0,
-        placementSignals?.unmetDemandUnitsOf?.(
-          {
-            stateId: sector.stateId,
-            countryId: sector.countryId ?? corp.countryId,
-            sectorType: sector.sectorType,
-          },
-          {
-            aggregate: "mean",
-            ...(sector.sectorType === "extraction"
-              ? { strategyId: sector.strategyId ?? null }
-              : {}),
-          }
-        ) ?? 0
+    const measuredRoomOf = (sector: CorporateSector): number | null => {
+      const measured = placementSignals?.unmetDemandUnitsOf?.(
+        {
+          stateId: sector.stateId,
+          countryId: sector.countryId ?? corp.countryId,
+          sectorType: sector.sectorType,
+        },
+        {
+          aggregate: "mean",
+          ...(sector.sectorType === "extraction" ? { strategyId: sector.strategyId ?? null } : {}),
+        }
       );
+      return measured == null ? null : Math.max(0, measured);
+    };
+    const unmetUnitsOf = (sector: CorporateSector): number => measuredRoomOf(sector) ?? 0;
     // Observation for one evaluated reinvestment candidate; see
     // capacityDecisionTelemetry. `readCashLocal` tracks the running balance so
     // unpriced gates observe cash headroom as current cash.
@@ -505,7 +504,20 @@ export function decideNppCapacityReinvestment({
           observeReinvestCandidate(autopilotGate, sector, replacementUnits, null);
         }
       }
-      const rawUnits = replacementUnits + growthUnits;
+      // The room-to-build gate every automatic build shares: no unmet demand
+      // for the output, or none measured, means neither leg is ordered. A
+      // growth leg sized on a measured shortage is demand-led and passes.
+      const roomGate = evaluateAutoBuildRoomGate({
+        stage: ctx.buildRoomStage,
+        roomUnits: measuredRoomOf(sector),
+        demandLed: shortageSizing != null && growthUnits > 0,
+      });
+      if (roomGate) {
+        growthUnits = 0;
+        observeReinvestCandidate(roomGate, sector, replacementUnits, null);
+      }
+      const orderedReplacementUnits = roomGate ? 0 : replacementUnits;
+      const rawUnits = orderedReplacementUnits + growthUnits;
       // Whole plants: an NPP orders whole plants, at least one.
       const units =
         plants?.wholePlants && rawUnits > 0
@@ -515,7 +527,7 @@ export function decideNppCapacityReinvestment({
             )
           : rawUnits;
       if (!(units > 0)) {
-        if (!autopilotGate && !evidenceGate) {
+        if (!autopilotGate && !evidenceGate && !roomGate) {
           observeReinvestCandidate("below_minimum_order", sector, units, null);
         }
         continue;
@@ -525,7 +537,7 @@ export function decideNppCapacityReinvestment({
         sector,
         units,
         growthUnits,
-        replacementUnits,
+        replacementUnits: orderedReplacementUnits,
         fill,
         unmetUnits,
         interventionPriority,

@@ -47,6 +47,7 @@ import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
+import { shareRevenueOf, type MarketShareBasis } from "@/lib/corporations/rules/marketShareBasis";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
 import {
   sectorMaintenanceAndProfit,
@@ -76,6 +77,8 @@ export function computeSectorMarketPosition(args: {
   >[];
   siblingsSectors: CorporateSector[];
   siblingFxByCurrency: Awaited<ReturnType<typeof loadFxRatesByCurrency>>;
+  /** Revenue basis for market size and share; capacity when absent. */
+  basis?: MarketShareBasis;
 }) {
   const {
     sector,
@@ -84,6 +87,7 @@ export function computeSectorMarketPosition(args: {
     siblingCorps,
     siblingsSectors,
     siblingFxByCurrency,
+    basis = "capacity",
   } = args;
   const siblingCorpMap = new Map(siblingCorps.map((c) => [c._id.toString(), c]));
 
@@ -105,7 +109,14 @@ export function computeSectorMarketPosition(args: {
     // producer's own revenue, or that producer reads as more than 100%.
     siblingRevenueAnchorById.set(
       s._id.toString(),
-      Math.max(0, readCorpEconomicAnchor(s.revenue, hostCode, hostRate))
+      Math.max(
+        0,
+        readCorpEconomicAnchor(
+          basis === "earned" ? shareRevenueOf(s, basis) : s.revenue,
+          hostCode,
+          hostRate
+        )
+      )
     );
   }
   const totalOwnedRevenue = siblingsSectors.reduce(

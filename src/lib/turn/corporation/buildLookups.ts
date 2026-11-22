@@ -52,6 +52,7 @@ import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { CorporationLookups } from "./types";
 import { corpCapitalToAnchor, withAuthoredEraRates } from "@/lib/currency/corporationCapital";
 import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
+import { marketShareBasisFromStage } from "@/lib/corporations/rules/marketShareBasis";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -511,6 +512,7 @@ export async function buildCorporationLookups(
     fundedValuationStage?: number;
     producerTariffStage?: number;
     labourStaffingSlackStage?: number;
+    marketShareEarnedStage?: number;
   }>(db).findOne(
     { _id: "default" },
     {
@@ -527,6 +529,7 @@ export async function buildCorporationLookups(
         fundedValuationStage: 1,
         producerTariffStage: 1,
         labourStaffingSlackStage: 1,
+        marketShareEarnedStage: 1,
       },
     }
   );
@@ -805,6 +808,7 @@ export async function buildCorporationLookups(
     exchangeRatesByCurrency,
     preset: marketSharePreset,
     plantsEnabled: options?.plantsEnabled === true,
+    basis: marketShareBasisFromStage(overheadCfg?.marketShareEarnedStage),
   });
   // Running dominance cost reads the control group's combined shares.
   const dominanceRunningCost =
