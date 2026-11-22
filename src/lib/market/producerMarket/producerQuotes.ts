@@ -3,6 +3,7 @@ import { ProducerSupplyPool } from "@/lib/market/producerMarket/supplyPoolRules"
 import { bookKey } from "@/lib/market/producerMarket/bookKey";
 
 import { nextAutoAsk } from "@/lib/market/producerMarket/autoAskRules";
+import { belowMarketAskFloor } from "@/lib/market/producerMarket/rules/belowMarketFloor";
 
 export interface ProducerOffer {
   id: string;
@@ -486,7 +487,13 @@ export function quoteProducer(input: {
       : market;
   // A seller that sold nothing last turn asks no more than the clearing, so an ask
   // stuck above the book steps down instead of repeating.
-  const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  const undercut = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  const postureFloor = belowMarketAskFloor({
+    markup,
+    marketUnitPrice: anchor,
+    unitCost: breakEven,
+  });
+  const ceiling = Math.max(undercut, postureFloor);
   // Sell-through feedback (autoAskRules). With ask memory the controller decides
   // the price: sold out climbs one step, the deadband holds, a shortfall reverts
   // to the previous ask or steps down. Without memory the estimator below still
@@ -518,7 +525,7 @@ export function quoteProducer(input: {
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
   const scored = [...candidates]
-    .filter((price) => price <= ceiling)
+    .filter((price) => price <= ceiling && price >= postureFloor)
     .map(estimate)
     .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice);
   const best = scored[0];
