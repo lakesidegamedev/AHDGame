@@ -5,6 +5,13 @@
  * turn in the company's own currency.
  */
 
+import {
+  costDrivers,
+  COST_CHANGE_THRESHOLD,
+  type CostBreakdown,
+  type CostDriver,
+} from "./costBreakdown";
+
 /** One cash movement outside the income statement, as logged. */
 export interface CashFlowInput {
   type: string;
@@ -27,6 +34,11 @@ export interface RecordedTurnInput {
   cashBefore: number | null;
   /** Operating costs of the previous recorded turn, when known. */
   previousCosts?: number | null;
+  /** Where this turn's operating costs went, when the turn recorded it. */
+  costBreakdown?: CostBreakdown | null;
+  headcount?: number | null;
+  previousCostBreakdown?: CostBreakdown | null;
+  previousHeadcount?: number | null;
 }
 
 export interface CashFlowLine {
@@ -43,6 +55,13 @@ export interface LastTurnReconciliation {
     costs: number;
     /** Operating costs of the turn before; null when unknown. */
     previousCosts: number | null;
+    /**
+     * What moved operating costs by 10% or more since the turn before, from recorded
+     * categories. Empty when the move is small or categories were not recorded.
+     */
+    costDrivers: CostDriver[];
+    /** True when costs moved 10% or more but one of the two turns has no recorded categories. */
+    costDriversUnrecorded: boolean;
     tax: number;
     /** Bond interest and coupons, dividends received and other non-operating items, net. */
     otherNet: number;
@@ -158,6 +177,28 @@ export function reconcileLastTurn(
   );
   const change =
     recorded.cashBefore == null ? null : round2(recorded.cashAfter - recorded.cashBefore);
+  const previousCosts = recorded.previousCosts ?? null;
+  const bigMove =
+    previousCosts != null &&
+    previousCosts > 0 &&
+    Math.abs(recorded.totalCosts - previousCosts) / previousCosts >= COST_CHANGE_THRESHOLD;
+  const drivers =
+    bigMove && previousCosts != null
+      ? costDrivers(
+          {
+            turn: recorded.turn - 1,
+            totalCosts: previousCosts,
+            costBreakdown: recorded.previousCostBreakdown,
+            headcount: recorded.previousHeadcount,
+          },
+          {
+            turn: recorded.turn,
+            totalCosts: recorded.totalCosts,
+            costBreakdown: recorded.costBreakdown,
+            headcount: recorded.headcount,
+          }
+        )
+      : [];
   const labelled = lines.reduce((sum, l) => sum + l.amount, 0);
   const unitemised = change == null ? null : round2(change - recorded.retained - labelled);
   return {
@@ -165,7 +206,9 @@ export function reconcileLastTurn(
     statement: {
       revenue: recorded.revenue,
       costs: recorded.totalCosts,
-      previousCosts: recorded.previousCosts ?? null,
+      previousCosts,
+      costDrivers: drivers,
+      costDriversUnrecorded: bigMove && !(recorded.costBreakdown && recorded.previousCostBreakdown),
       tax: recorded.tax,
       otherNet,
       dividendPaid: recorded.dividendPaid,

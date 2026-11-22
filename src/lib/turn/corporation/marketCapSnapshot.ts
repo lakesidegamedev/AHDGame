@@ -12,6 +12,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { computeMarketIndex } from "./marketIndex";
+import { mapCostBreakdown } from "@/lib/corporations/rules/costBreakdown";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import type { Document } from "mongodb";
 import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
@@ -454,6 +455,14 @@ export async function snapshotMarketCap(
         shareEscrowBalance: Math.round(s.escrowBalanceAfter),
         revenue: Math.round(writeCorpEconomicLocal(s.revenue, code, rate)),
         totalCosts: Math.round(writeCorpEconomicLocal(s.totalCosts, code, rate)),
+        ...(s.costBreakdown
+          ? {
+              costBreakdown: mapCostBreakdown(s.costBreakdown, (anchor) =>
+                Math.round(writeCorpEconomicLocal(anchor, code, rate))
+              ),
+            }
+          : {}),
+        ...(s.headcount != null ? { headcount: Math.round(s.headcount) } : {}),
         income: Math.round(writeCorpEconomicLocal(s.income, code, rate)),
         dividendPaidPerTurn: Math.round(writeCorpEconomicLocal(s.dividendPaidPerTurn, code, rate)),
         incomePreDividends: Math.round(writeCorpEconomicLocal(s.incomePreDividends, code, rate)),

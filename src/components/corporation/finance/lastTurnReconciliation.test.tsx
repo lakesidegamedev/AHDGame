@@ -34,6 +34,50 @@ describe("LastTurnReconciliation", () => {
   });
 });
 
+describe("cost drivers in the recorded section", () => {
+  const breakdown = (wages: number) => ({
+    wages,
+    inputs: 100,
+    maintenance: 50,
+    managementOverhead: 0,
+    freight: 0,
+    budgets: 0,
+    other: 0,
+  });
+  const base = {
+    turn: 125,
+    revenue: 1000,
+    retained: 0,
+    dividendPaid: 0,
+    tax: 0,
+    cashAfter: 1,
+    cashBefore: 1,
+  };
+
+  it("names wages and headcount when categories were recorded", () => {
+    const data = reconcileLastTurn(
+      {
+        ...base,
+        totalCosts: 250,
+        previousCosts: 200,
+        costBreakdown: breakdown(100),
+        previousCostBreakdown: breakdown(50),
+        headcount: 2070,
+        previousHeadcount: 1505,
+      },
+      []
+    );
+    render(<LastTurnReconciliation data={data} fmt={fmt} fmtSigned={fmtSigned} />);
+    expect(screen.getByText("Wages up 100%, headcount 1,505 to 2,070")).toBeTruthy();
+  });
+
+  it("says only the total is known on older rows", () => {
+    const data = reconcileLastTurn({ ...base, totalCosts: 250, previousCosts: 200 }, []);
+    render(<LastTurnReconciliation data={data} fmt={fmt} fmtSigned={fmtSigned} />);
+    expect(screen.getByText(/not recorded for one of these turns/)).toBeTruthy();
+  });
+});
+
 describe("costChangeNote", () => {
   it("stays quiet for small moves and unknown history", () => {
     expect(costChangeNote(105, 100)).toBeUndefined();

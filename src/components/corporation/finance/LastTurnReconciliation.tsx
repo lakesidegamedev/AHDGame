@@ -1,6 +1,7 @@
 "use client";
 
 import type { LastTurnReconciliation as Reconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
+import { describeCostDriver } from "@/lib/corporations/rules/costBreakdown";
 import {
   DenseSection,
   StatementGroup,
@@ -49,6 +50,20 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
           note={costChangeNote(statement.costs, statement.previousCosts)}
           title="Wages, upkeep and inputs for every sector. They rise when new capacity finishes and starts hiring."
         />
+        {statement.costDrivers.map((driver) => (
+          <StatementLine
+            key={driver.category}
+            indent
+            label={describeCostDriver(driver, fmt)}
+            amount={`${driver.after >= driver.before ? "+" : "-"}${fmt(round(Math.abs(driver.after - driver.before)))}`}
+            title="A main reason operating costs moved, from the categories recorded for these two turns."
+          />
+        ))}
+        {statement.costDriversUnrecorded && (
+          <p className="py-1 pl-4 text-xs text-muted">
+            Costs by type were not recorded for one of these turns, so only the total is shown.
+          </p>
+        )}
         {statement.tax > 0 && <StatementLine indent label="Tax" amount={cost(statement.tax)} />}
         {round(statement.otherNet) !== 0 && (
           <StatementLine

@@ -495,6 +495,8 @@ export function closeCorporationAccount(context: ProcessCorporationAccountStageC
     corpId: context.corp._id,
     revenue: context.corpRevenue,
     totalCosts: context.totalCorpCosts,
+    costBreakdown: context.costBreakdown,
+    headcount: context.corpHeadcount,
     incomePreDividends: context.incomePreDividends,
     income,
     operatingCashIncomeLocal: incomeForBalance,
