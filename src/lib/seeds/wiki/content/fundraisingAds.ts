@@ -6,7 +6,7 @@ Ads turn money into favorability, and favorability scales every vote you win, so
 
 You have two money pools. They are not interchangeable.
 
-- **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000. Every action on this page draws on this pool. It also pays for upgrades and maintenance on the campaign page, each Campaign Presence level in [Political Operations](/wiki/political-operations), each ₳100 canvass in [Canvassing](/wiki/canvassing), and every [Polling](/wiki/polling) action.
+- **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000 in a modern world (less in earlier eras, in local currency). Every action on this page draws on this pool. It also pays for upgrades and maintenance on the campaign page, each Campaign Presence level in [Political Operations](/wiki/political-operations), each ₳100 canvass in [Canvassing](/wiki/canvassing), and every [Polling](/wiki/polling) action.
 - **Cash on Hand:** your personal liquid cash. Among other things it is spent on wire transfers (Portfolio page) or donated into Campaign Funds with a Personal Campaign Donation, which keeps only 50% of it. It starts at ₳1,000,000, ₳2,500,000 or ₳5,000,000 by the wealth background you pick (plus ₳500,000 if you were referred).
 
 If an action shows "-₳100,000", it is Campaign Funds unless the action says "personal cash".

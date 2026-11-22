@@ -173,17 +173,17 @@
       },
       "actionFundraise": {
         "title": "Fundraising needs a donor base",
-        "body": "Fundraise turns your donor network into campaign money. If your donor level is zero it is greyed out, because you have nobody to call. That is why the next card matters more than this one on your first few turns.",
+        "body": "Fundraise turns your donor network into campaign money. New characters start at donor level {startingDonorLevel}, so you can fundraise from the first turn, but a small network pays little. If your donor level ever drops to zero it is greyed out, because you have nobody to call. The next card shows how to grow it.",
         "next": "Next"
       },
       "actionDonors": {
         "title": "Build the donor network early",
-        "body": "Build Donor Network costs 4 actions at first and pays out nothing itself. You need donor level 1 before you can fundraise at all, and each level raises what every later Fundraise pays. Paying for your campaign out of your own pocket loses half the money in the transfer and adds Infamy, and Infamy above 20 drains your Favorability every turn.",
+        "body": "Build Donor Network costs 4 actions at first and pays out nothing itself. You start at donor level {startingDonorLevel}, and each further level raises what every later Fundraise pays. Paying for your campaign out of your own pocket loses half the money in the transfer and adds Infamy, and Infamy above 20 drains your Favorability every turn.",
         "next": "Got it"
       },
       "fileForRace": {
         "title": "File for a race at home",
-        "body": "Your {region} page lists the races you can actually enter. A {region} legislature seat is the usual first run: it is cheap to contest, it is real power, and it gives you a voting record to campaign on next time. Win something small first, then climb.",
+        "body": "Your {region} page lists the races you can actually enter. Filing is only open during a race's primary window, and small local seats are not always open. Look at the races open at home right now: your profile's Your first days panel and the Elections page list them. If only statewide races are open, build influence and money and join a party until local filing reopens. Win something small first when you can, then climb.",
         "hint": "Open the Elections tab on your {region} page and file for a race.",
         "next": "Next"
       },
