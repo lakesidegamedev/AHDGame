@@ -100,6 +100,24 @@ it("shows settled offers rather than production when buyers take stock", () => {
   expect(screen.getByText("80% sold, 20% to own sites")).toBeTruthy();
 });
 
+it("rounds the settled split to the displayed offered total", () => {
+  render(
+    <MarketMoneyPanel
+      plants={{
+        ...plants,
+        settledOffer: { turn: 138, offered: 16698.72, sold: 9174.44, ownSites: 7524.28, unsold: 0 },
+      }}
+      sectorType="energy"
+      financials={null}
+      corporation={{ _id: "corp", name: "Test Company" }}
+    />
+  );
+
+  expect(screen.getByText("16,699")).toBeTruthy();
+  expect(screen.getByText("9,175")).toBeTruthy();
+  expect(screen.getByText("7,524")).toBeTruthy();
+});
+
 describe("signed cost lines (ticket 1122)", () => {
   // Same prod newsroom as sectorDetailPlants.test.ts: $322K revenue, $70.6K of
   // wages, a $34K operating credit, $285K of profit. The credit has to be on
