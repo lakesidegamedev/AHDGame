@@ -40,7 +40,7 @@ import {
 } from "@/lib/singleplayerHeadOfState";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
-import { sendSystemMail } from "@/lib/mail/systemMail";
+import { sendSystemMailOnce } from "@/lib/mail/systemMail";
 import { onboardingRewardAmount } from "@/lib/onboarding/reward";
 import {
   buildWelcomeMailBody,
@@ -550,7 +550,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
     // Welcome mail pointing at the onboarding checklist (best-effort).
     try {
-      await sendSystemMail(db, {
+      await sendSystemMailOnce(db, {
         toCharacterId: characterId,
         toCharacterName: name,
         toCharacterSequentialId: character.sequentialId ?? 0,

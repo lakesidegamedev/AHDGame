@@ -164,6 +164,7 @@
     },
     "userMenu": {
       "characters": "Characters",
+      "newCharacter": "New character",
       "accountSection": "Account",
       "viewSection": "View",
       "profileSettings": "Profile Settings",

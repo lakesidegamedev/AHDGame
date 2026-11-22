@@ -8,6 +8,7 @@ import {
 } from "@/lib/achievements";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAchievementProgressMap } from "@/lib/achievements/progress";
+import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
@@ -36,8 +37,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
+    const additional = await isAdditionalCharacter(db, character);
+
     const [earned, rarityMap, allAchievements] = await Promise.all([
-      getAccountAchievements(character.userId),
+      getAccountAchievements(character.userId, {
+        characterId: character._id,
+        includeUntagged: !additional,
+      }),
       getAchievementRarityMap(),
       getAllAchievements(),
     ]);

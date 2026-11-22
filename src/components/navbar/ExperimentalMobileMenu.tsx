@@ -224,8 +224,11 @@ export function ExperimentalMobileMenu({
             </Link>
           ))}
         </div>
-        {((adminCharacters && adminCharacters.length > 1) || imperialCharacter) && (
+        {((adminCharacters && adminCharacters.length > 1) ||
+          imperialCharacter ||
+          user?.isAdmin) && (
           <MobileCharacterSwitcher
+            canCreateCharacter={Boolean(user?.isAdmin)}
             adminCharacters={adminCharacters}
             imperialCharacter={imperialCharacter}
             isImperialMode={isImperialMode}
@@ -365,8 +368,11 @@ export function ExperimentalMobileMenu({
               )}
             </div>
           </div>
-          {((adminCharacters && adminCharacters.length > 1) || imperialCharacter) && (
+          {((adminCharacters && adminCharacters.length > 1) ||
+            imperialCharacter ||
+            user?.isAdmin) && (
             <MobileCharacterSwitcher
+              canCreateCharacter={Boolean(user?.isAdmin)}
               adminCharacters={adminCharacters}
               imperialCharacter={imperialCharacter}
               isImperialMode={isImperialMode}
@@ -886,6 +892,7 @@ function MobileVersionLink({ onClose }: { onClose: () => void }) {
 }
 
 interface MobileCharacterSwitcherProps {
+  canCreateCharacter?: boolean;
   adminCharacters?: AdminCharacter[];
   imperialCharacter?: ImperialCharacterNav;
   isImperialMode: boolean;
@@ -897,6 +904,7 @@ interface MobileCharacterSwitcherProps {
 }
 
 export function MobileCharacterSwitcher({
+  canCreateCharacter = false,
   adminCharacters,
   imperialCharacter,
   isImperialMode,
@@ -967,6 +975,15 @@ export function MobileCharacterSwitcher({
             </button>
           )}
         </div>
+      )}
+      {canCreateCharacter && (
+        <Link
+          href="/create-character"
+          onClick={onClose}
+          className="mt-1 flex items-center rounded-lg px-2 py-2 text-sm font-medium text-primary transition-colors hover:bg-white/5"
+        >
+          {t("userMenu.newCharacter")}
+        </Link>
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
+import { characterScopeClause, mailCharacterMatch } from "@/lib/notifications/characterScope";
 import type { Db, ObjectId } from "mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import type { Notification, NotificationPreferences } from "@/lib/db/types/notifications";
@@ -24,6 +26,8 @@ export async function loadWidgetExtras(
   preferences: NotificationPreferences | undefined
 ): Promise<WidgetExtras> {
   const now = new Date();
+  const activeScope = await loadActiveCharacterScope(db, userId);
+  const unreadScope = characterScopeClause(userId, activeScope);
   const [state, unread, mail] = await Promise.all([
     getGameStateCollection(db).then((states) =>
       states.findOne(
@@ -43,12 +47,14 @@ export async function loadWidgetExtras(
     notificationsCollection(db).countDocuments({
       userId,
       ...notificationTypeFilter(preferences, now),
+      ...(unreadScope ? { $and: [unreadScope] } : {}),
       read: false,
     }),
     preferences?.muteMail
       ? 0
       : playerMailCollection<Document>(db).countDocuments({
           toUserId: userId,
+          ...mailCharacterMatch(activeScope),
           read: false,
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },

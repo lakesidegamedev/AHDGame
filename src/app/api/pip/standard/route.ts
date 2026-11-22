@@ -1,3 +1,5 @@
+import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
+import { characterScopeClause, mailCharacterMatch } from "@/lib/notifications/characterScope";
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
@@ -46,6 +48,9 @@ export async function GET() {
       { projection: { notificationPreferences: 1 } }
     );
     const visibility = notificationTypeFilter(user?.notificationPreferences, new Date());
+    const activeScope = await loadActiveCharacterScope(db, userId);
+    const unreadScope = characterScopeClause(userId, activeScope);
+    const scopeMatch = unreadScope ? { $and: [unreadScope] } : {};
 
     const [
       homeState,
@@ -72,13 +77,19 @@ export async function GET() {
           })
         : null,
       notificationsCollection(db)
-        .find({ userId, ...visibility, read: false })
+        .find({ userId, ...visibility, ...scopeMatch, read: false })
         .sort({ createdAt: -1 })
         .limit(3)
         .toArray(),
-      notificationsCollection(db).countDocuments({ userId, ...visibility, read: false }),
+      notificationsCollection(db).countDocuments({
+        userId,
+        ...visibility,
+        ...scopeMatch,
+        read: false,
+      }),
       playerMailCollection<Document>(db).countDocuments({
         toUserId: userId,
+        ...mailCharacterMatch(activeScope),
         read: false,
         deletedByRecipient: false,
       }),

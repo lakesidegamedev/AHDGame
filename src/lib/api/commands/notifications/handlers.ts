@@ -21,6 +21,10 @@ import {
 } from "@/lib/notifications/notificationBundle";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import {
+  characterScopeClause,
+  resolveActiveCharacterScope,
+} from "@/lib/notifications/characterScope";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 const notificationsDeleteSchema = z.object({
@@ -32,7 +36,14 @@ const notificationsDeleteSchema = z.object({
 async function loadBundleContext(db: Db, userId: ObjectId) {
   const user = await usersCollection(db).findOne(
     { _id: userId },
-    { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
+    {
+      projection: {
+        _id: 1,
+        notificationBundleUserIds: 1,
+        notificationPreferences: 1,
+        activeCharacterId: 1,
+      },
+    }
   );
   if (!user) return null;
   const bundleUserIds = getNotificationBundleUserIds(user);
@@ -52,7 +63,12 @@ async function loadBundleContext(db: Db, userId: ObjectId) {
       displayName: row?.displayName ?? row?.username ?? "?",
     };
   });
-  return { bundleUserIds, notificationAccounts, preferences: user.notificationPreferences };
+  return {
+    bundleUserIds,
+    notificationAccounts,
+    preferences: user.notificationPreferences,
+    activeCharacterId: user.activeCharacterId ?? null,
+  };
 }
 
 // GET /api/notifications — Paginated notifications; supports bundled accounts via `account` query param
@@ -89,7 +105,7 @@ export const GET = withNoStore(async (request: Request) => {
     const profileScopeCharacters = await charactersCollection(db)
       .find(
         { userId: { $in: queryUserIds } },
-        { projection: { _id: 1, name: 1, userId: 1, avatarUrl: 1 } }
+        { projection: { _id: 1, name: 1, userId: 1, avatarUrl: 1, createdAt: 1 } }
       )
       .toArray();
     const allowedCharacterIds = new Set(profileScopeCharacters.map((c) => c._id.toString()));
@@ -100,6 +116,19 @@ export const GET = withNoStore(async (request: Request) => {
 
     const visibility = notificationTypeFilter(ctx.preferences, new Date());
     const query: Record<string, unknown> = { userId: { $in: queryUserIds }, ...visibility };
+    // Default view is the active character's own inbox; an explicit profile
+    // filter (a character id, or "all") overrides it.
+    const scopeClause =
+      profileParam === null
+        ? characterScopeClause(
+            userId,
+            resolveActiveCharacterScope(
+              profileScopeCharacters.filter((c) => c.userId.equals(userId)),
+              ctx.activeCharacterId
+            )
+          )
+        : null;
+    if (scopeClause) query.$and = [scopeClause];
     if (profileResolution.characterId) {
       query["metadata.recipientCharacterId"] = profileResolution.characterId;
     }
@@ -132,7 +161,14 @@ export const GET = withNoStore(async (request: Request) => {
     const [unreadByUserAgg, unreadByCharacterAgg, listResult] = await Promise.all([
       notificationsCollection(db)
         .aggregate<{ _id: ObjectId; count: number }>([
-          { $match: { userId: { $in: bundleUserIds }, ...visibility, read: false } },
+          {
+            $match: {
+              userId: { $in: bundleUserIds },
+              ...visibility,
+              read: false,
+              ...(scopeClause ? { $and: [scopeClause] } : {}),
+            },
+          },
           { $group: { _id: "$userId", count: { $sum: 1 } } },
         ])
         .toArray(),
