@@ -74,7 +74,9 @@ export class ProducerSupplyPool {
     // ask a few ulps past the pool. That dust takes the whole pool; a real
     // overdraw still stops the turn.
     if (!(requested > 0) || requested > total + Math.max(1e-9, total * 1e-12))
-      throw new Error("Invalid pooled producer withdrawal");
+      throw new Error(
+        `Invalid pooled producer withdrawal: requested ${requested} of ${total} (${this.activeCount} sellers)`
+      );
     const units = Math.min(requested, total);
     if (!(units > 0)) return;
     this.hasPooledSales = true;

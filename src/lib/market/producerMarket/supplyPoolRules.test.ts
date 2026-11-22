@@ -45,7 +45,7 @@ describe("pooled physical supply", () => {
 
     const other = new ProducerSupplyPool();
     other.add("a", 10);
-    expect(() => other.take(10.001)).toThrow("Invalid pooled producer withdrawal");
+    expect(() => other.take(10.001)).toThrow("requested 10.001 of 10 (1 sellers)");
     expect(() => other.take(0)).toThrow("Invalid pooled producer withdrawal");
   });
 });

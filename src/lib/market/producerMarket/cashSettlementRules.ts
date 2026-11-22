@@ -114,7 +114,9 @@ export function producerCashTransition(input: {
     // stored balance by float noise, which the write's overdraft guard refuses.
     if (change < 0 && amount > binding.openingCashLocal) {
       if (amount - binding.openingCashLocal > Math.max(1e-7, binding.openingCashLocal * 1e-12))
-        throw new Error("Producer cash overdraws its opening balance");
+        throw new Error(
+          `Producer cash overdraws its opening balance: account ${id} ${binding.currency} debit ${amount} opening ${binding.openingCashLocal}`
+        );
       amount = binding.openingCashLocal;
     }
     legs.push({
