@@ -780,6 +780,7 @@ export default function SectorDetailPage() {
                     plants={plants}
                     marketSupplies={commodities?.supplies ?? []}
                     freightState={commodities?.freightState}
+                    productionPolicyLevel={sector.productionPolicyLevel ?? 0}
                     sectorType={sector.sectorType}
                     mediaAdvertisingCampaignFactor={sector.mediaAdvertisingCampaignFactor}
                     unionId={sector.unionId}

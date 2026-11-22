@@ -5,6 +5,8 @@
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import { FREIGHT_CLASS_BY_COMMODITY, freightTeuPerUnitHop } from "./freightClass";
+import { FREIGHT_CONGESTION_OVERFLOW } from "./sourcingConstants";
+import { FREIGHT_CONGESTION_SURCHARGE } from "./sourcingPrices";
 
 export type FreightOutputByCommodity = Partial<Record<CommodityType, number>>;
 
@@ -89,4 +91,37 @@ export function estimateStateFullCapacityOneHopFreightTeu(args: {
       : null;
   }
   return result;
+}
+
+/**
+ * Where a state's observed freight load sits against its nominal capacity,
+ * using the same bands the sourcing pass settles with: up to capacity ships at
+ * the normal rate, the overflow band ships at a congestion surcharge, and past
+ * the overflow limit nothing more moves out of the state.
+ */
+export function freightLoadStatus(
+  load: number,
+  capacity: number
+): {
+  status: "normal" | "congested" | "blocked";
+  /** Load as a share of nominal capacity, or null when capacity is zero. */
+  share: number | null;
+  /** TEU at which hauling stops. */
+  limit: number;
+  /** Surcharge on the overflow units' shipping, as a fraction (0.35 = 35%). */
+  surcharge: number;
+} {
+  const limit = capacity * (1 + FREIGHT_CONGESTION_OVERFLOW);
+  const share = capacity > 0 ? load / capacity : null;
+  const status =
+    capacity <= 0
+      ? load > 0
+        ? "blocked"
+        : "normal"
+      : load >= limit
+        ? "blocked"
+        : load > capacity
+          ? "congested"
+          : "normal";
+  return { status, share, limit, surcharge: FREIGHT_CONGESTION_SURCHARGE };
 }
