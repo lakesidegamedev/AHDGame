@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Filter } from "mongodb";
 import { northernIrelandAssemblySuspended } from "@/lib/countries/uk/northernIreland/service";
 import { getDb } from "@/lib/mongodb";
@@ -93,7 +94,6 @@ async function loadRegionalExecutive(
     countryId,
     officeType,
     state: stateId,
-    characterId: { $ne: null },
   });
   cache.executives.set(key, official);
   return official;
@@ -223,20 +223,22 @@ export async function finalizeStateBillEnactment(
         { projection: { _id: 1, userId: 1 } }
       );
       if (sponsor) {
-        await createNotifications([
-          {
-            userId: sponsor.userId,
-            type: "bill_failed_chamber",
-            title: "Bill Blocked: Insufficient State Funds",
-            message: `"${bill.title}" passed the legislature but the state cannot fund it, so it did not become law.`,
-            metadata: {
-              billId: bill._id.toString(),
-              stateId: bill.stateId,
-              countryId: bill.countryId,
-              recipientCharacterId: sponsor._id.toString(),
+        await afterCommit(db, () =>
+          createNotifications([
+            {
+              userId: sponsor.userId,
+              type: "bill_failed_chamber",
+              title: "Bill Blocked: Insufficient State Funds",
+              message: `"${bill.title}" passed the legislature but the state cannot fund it, so it did not become law.`,
+              metadata: {
+                billId: bill._id.toString(),
+                stateId: bill.stateId,
+                countryId: bill.countryId,
+                recipientCharacterId: sponsor._id.toString(),
+              },
             },
-          },
-        ]);
+          ])
+        );
       }
     }
     console.log(
@@ -270,7 +272,6 @@ export async function processStateBillTimers(
     : await getGameState();
   const currentTurnGov = gameStateGov?.currentTurn ?? 1;
   let billsProcessed = 0;
-  const notificationInputs: NotificationInput[] = [];
   const resolutionCache: RegionalResolutionCache = {
     rosters: new Map(),
     states: new Map(),
@@ -287,44 +288,52 @@ export async function processStateBillTimers(
   // concurrent turn runners cannot double-process the same bill (TOCTOU fix).
   // Prefer the game-clock turn deadline; fall back to date for legacy bills.
   for (;;) {
-    const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
-      {
-        ...authorityFilter,
-        status: chamberVote.status,
-        $or: [
-          { votingEndsOnTurn: { $lte: currentTurnGov } },
-          { votingEndsOnTurn: { $exists: false }, votingEndsAt: { $lte: now } },
-        ],
-      },
-      { $set: { status: chamberVote.closingStatus, updatedAt: now } },
-      { returnDocument: "before" }
-    );
-    if (!claimed) break;
-    // Restore the original status so resolveStateBillVoting can compute
-    // pass/fail against the "active" precondition correctly.
-    const bill: StateBill = { ...claimed, status: chamberVote.status };
-    try {
-      await resolveStateBillVoting(
-        db,
-        config,
-        bill,
-        now,
-        notificationInputs,
-        gameStateGov,
-        resolutionCache
+    const processed = await withSessionDb(db, async (db) => {
+      const notificationInputs: NotificationInput[] = [];
+
+      const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
+        {
+          ...authorityFilter,
+          status: chamberVote.status,
+          $or: [
+            { votingEndsOnTurn: { $lte: currentTurnGov } },
+            { votingEndsOnTurn: { $exists: false }, votingEndsAt: { $lte: now } },
+          ],
+        },
+        { $set: { status: chamberVote.closingStatus, updatedAt: now } },
+        { returnDocument: "before" }
       );
-    } catch (err) {
-      // Resolver threw mid-way: revert the transient claim so the bill is
-      // re-picked next turn instead of stranding in vote_closing forever. The
-      // status guard avoids clobbering a status the resolver already advanced.
-      await db
-        .collection<StateBill>(config.collection)
-        .updateOne(
-          { _id: claimed._id, status: chamberVote.closingStatus },
-          { $set: { status: chamberVote.status, updatedAt: now } }
+      if (!claimed) return false;
+      // Restore the original status so resolveStateBillVoting can compute
+      // pass/fail against the "active" precondition correctly.
+      const bill: StateBill = { ...claimed, status: chamberVote.status };
+      try {
+        await resolveStateBillVoting(
+          db,
+          config,
+          bill,
+          now,
+          notificationInputs,
+          gameStateGov,
+          resolutionCache
         );
-      throw err;
-    }
+      } catch (err) {
+        // Resolver threw mid-way: revert the transient claim so the bill is
+        // re-picked next turn instead of stranding in vote_closing forever. The
+        // status guard avoids clobbering a status the resolver already advanced.
+        await db
+          .collection<StateBill>(config.collection)
+          .updateOne(
+            { _id: claimed._id, status: chamberVote.closingStatus },
+            { $set: { status: chamberVote.status, updatedAt: now } }
+          );
+        throw err;
+      }
+
+      await afterCommit(db, () => createNotifications(notificationInputs));
+      return true;
+    });
+    if (!processed) break;
     billsProcessed++;
   }
 
@@ -332,93 +341,108 @@ export async function processStateBillTimers(
   // Atomically transition status to "enacted" so no second caller can claim
   // the same bill in a concurrent turn run.
   for (;;) {
-    const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
-      {
-        ...authorityFilter,
-        status: executiveAssent.status,
-        $or: [
-          { governorActionDeadlineOnTurn: { $lte: currentTurnGov } },
-          {
-            governorActionDeadlineOnTurn: { $exists: false },
-            governorActionDeadline: { $lte: now },
-          },
-        ],
-      },
-      {
-        $set: {
-          status: executiveAssent.onTimeoutStatus,
-          governorAction: "signed",
-          enactedAt: now,
-          updatedAt: now,
+    const processed = await withSessionDb(db, async (db) => {
+      const notificationInputs: NotificationInput[] = [];
+
+      const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
+        {
+          ...authorityFilter,
+          status: executiveAssent.status,
+          $or: [
+            { governorActionDeadlineOnTurn: { $lte: currentTurnGov } },
+            {
+              governorActionDeadlineOnTurn: { $exists: false },
+              governorActionDeadline: { $lte: now },
+            },
+          ],
         },
-      },
-      { returnDocument: "before" }
-    );
-    if (!claimed) break;
-    await recordStateBillStatusChange(
-      db,
-      claimed,
-      claimed.status,
-      executiveAssent.onTimeoutStatus,
-      currentTurnGov,
-      claimed.votesFor - claimed.votesAgainst
-    );
-    const autoSignOutcome = await finalizeStateBillEnactment(
-      db,
-      { ...claimed, status: executiveAssent.onTimeoutStatus },
-      currentTurnGov
-    );
-    if (autoSignOutcome.enacted) {
-      console.log(`[StateBill] Auto-signed bill ${claimed._id} (governor deadline passed)`);
-    }
+        {
+          $set: {
+            status: executiveAssent.onTimeoutStatus,
+            governorAction: "signed",
+            enactedAt: now,
+            updatedAt: now,
+          },
+        },
+        { returnDocument: "before" }
+      );
+      if (!claimed) return false;
+      await recordStateBillStatusChange(
+        db,
+        claimed,
+        claimed.status,
+        executiveAssent.onTimeoutStatus,
+        currentTurnGov,
+        claimed.votesFor - claimed.votesAgainst
+      );
+      const autoSignOutcome = await finalizeStateBillEnactment(
+        db,
+        { ...claimed, status: executiveAssent.onTimeoutStatus },
+        currentTurnGov
+      );
+      if (autoSignOutcome.enacted) {
+        console.log(`[StateBill] Auto-signed bill ${claimed._id} (governor deadline passed)`);
+      }
+
+      await afterCommit(db, () => createNotifications(notificationInputs));
+      return true;
+    });
+    if (!processed) break;
     billsProcessed++;
   }
 
   // 3. Close override voting.
   // Atomically claim each bill to prevent double-processing.
   for (;;) {
-    const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
-      {
-        ...authorityFilter,
-        status: override.status,
-        $or: [
-          { overrideVotingEndsOnTurn: { $lte: currentTurnGov } },
-          {
-            overrideVotingEndsOnTurn: { $exists: false },
-            overrideVotingEndsAt: { $lte: now },
-          },
-        ],
-      },
-      { $set: { status: override.closingStatus, updatedAt: now } },
-      { returnDocument: "before" }
-    );
-    if (!claimed) break;
-    const bill: StateBill = { ...claimed, status: override.status };
-    try {
-      await resolveOverrideVoting(
-        db,
-        config,
-        bill,
-        now,
-        notificationInputs,
-        gameStateGov,
-        resolutionCache
+    const processed = await withSessionDb(db, async (db) => {
+      const notificationInputs: NotificationInput[] = [];
+
+      const claimed = await db.collection<StateBill>(config.collection).findOneAndUpdate(
+        {
+          ...authorityFilter,
+          status: override.status,
+          $or: [
+            { overrideVotingEndsOnTurn: { $lte: currentTurnGov } },
+            {
+              overrideVotingEndsOnTurn: { $exists: false },
+              overrideVotingEndsAt: { $lte: now },
+            },
+          ],
+        },
+        { $set: { status: override.closingStatus, updatedAt: now } },
+        { returnDocument: "before" }
       );
-    } catch (err) {
-      // Revert the transient override claim on failure so it re-resolves next
-      // turn instead of stranding in override_closing. (#2991)
-      await db
-        .collection<StateBill>(config.collection)
-        .updateOne(
-          { _id: claimed._id, status: override.closingStatus },
-          { $set: { status: override.status, updatedAt: now } }
+      if (!claimed) return false;
+      const bill: StateBill = { ...claimed, status: override.status };
+      try {
+        await resolveOverrideVoting(
+          db,
+          config,
+          bill,
+          now,
+          notificationInputs,
+          gameStateGov,
+          resolutionCache
         );
-      throw err;
-    }
+      } catch (err) {
+        // Revert the transient override claim on failure so it re-resolves next
+        // turn instead of stranding in override_closing. (#2991)
+        await db
+          .collection<StateBill>(config.collection)
+          .updateOne(
+            { _id: claimed._id, status: override.closingStatus },
+            { $set: { status: override.status, updatedAt: now } }
+          );
+        throw err;
+      }
+
+      await afterCommit(db, () => createNotifications(notificationInputs));
+      return true;
+    });
+    if (!processed) break;
     billsProcessed++;
   }
 
-  await createNotifications(notificationInputs);
   return { billsProcessed };
 }
 
@@ -495,7 +519,7 @@ async function resolveStateBillVoting(
       executiveOfficeKey
     );
 
-    if (governor && governor.characterId) {
+    if (governor) {
       const advanced = await db.collection<StateBill>(config.collection).updateOne(
         { _id: bill._id },
         {
@@ -520,7 +544,9 @@ async function resolveStateBillVoting(
         );
       }
 
-      const govChar = await loadNotificationCharacter(db, cache, governor.characterId);
+      const govChar = governor.characterId
+        ? await loadNotificationCharacter(db, cache, governor.characterId)
+        : null;
       if (govChar) {
         notificationInputs.push({
           userId: govChar.userId,

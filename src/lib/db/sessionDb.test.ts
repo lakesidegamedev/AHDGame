@@ -6,7 +6,7 @@ vi.mock("./runRequiredTransaction", () => ({
   runRequiredTransaction: mocks.run,
   RequiredTransactionCleanupError: class extends Error {},
 }));
-import { afterCommit, boundSession, unboundDb, withSessionDb } from "./sessionDb";
+import { afterCommit, boundSession, unboundDb, withSessionDb, runWithDbSession } from "./sessionDb";
 describe("session-bound domain shell", () => {
   const session = {} as ClientSession;
   beforeEach(() => {
@@ -39,6 +39,16 @@ describe("session-bound domain shell", () => {
     );
     expect(db.collection("accounts").find).toHaveBeenCalledWith({}, { session });
   });
+  it("joins financial subcommands to the active session", async () => {
+    await withSessionDb(fixture(), async (tx) => {
+      await runWithDbSession(tx, async (nested) => {
+        expect(nested).toBe(session);
+        await tx.collection("accounts").updateOne({}, { $inc: { balance: 1 } });
+      });
+    });
+    expect(mocks.run).toHaveBeenCalledOnce();
+  });
+
   it("never announces an aborted write", async () => {
     const effect = vi.fn(async () => {});
     await expect(

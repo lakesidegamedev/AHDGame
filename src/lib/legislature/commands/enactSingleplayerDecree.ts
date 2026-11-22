@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Bill } from "@/lib/db/types";
 import { applyEnactedBillEffects } from "@/lib/legislature/commands/applyEnactedBillEffects";
 import { getGameState } from "@/lib/gameState";
@@ -12,6 +13,10 @@ import { billsCollection } from "@/lib/db/repositories/bills";
  * multiplayer lifecycle workers from applying the same law twice.
  */
 export async function enactSingleplayerDecree(db: Db, bill: Bill): Promise<boolean> {
+  return withSessionDb(db, (tx) => enactSingleplayerDecreeInTransaction(tx, bill));
+}
+
+async function enactSingleplayerDecreeInTransaction(db: Db, bill: Bill): Promise<boolean> {
   const now = new Date();
   const claimed = await billsCollection(db).updateOne(
     { _id: bill._id, status: "active" },
@@ -44,6 +49,6 @@ export async function enactSingleplayerDecree(db: Db, bill: Bill): Promise<boole
     effect: "Singleplayer decree effect failed:",
     enactment: "Singleplayer decree enactment hook failed:",
   });
-  await flushServerPosthog();
+  await afterCommit(db, () => flushServerPosthog());
   return true;
 }

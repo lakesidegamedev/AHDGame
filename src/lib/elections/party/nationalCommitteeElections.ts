@@ -1,3 +1,5 @@
+import { leadershipVoterFilter } from "./leadershipVoterFilter";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -151,6 +153,24 @@ export async function processCompletedCommitteeElections(
   countryId?: CountryId
 ): Promise<number> {
   const db = await getDb();
+  const pending = await nationalCommitteeElectionsCollection(db)
+    .find(
+      applyOptionalCountryScope({ status: "voting", endTurn: { $lte: currentTurn } }, countryId),
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  if (pending.length === 0) return 0;
+  return withSessionDb(db, (tx) =>
+    processCompletedCommitteeElectionsInTransaction(tx, currentTurn, effectiveNow, countryId)
+  );
+}
+
+async function processCompletedCommitteeElectionsInTransaction(
+  db: import("mongodb").Db,
+  currentTurn: number,
+  effectiveNow = new Date(),
+  countryId?: CountryId
+): Promise<number> {
   const now = new Date(effectiveNow);
 
   // Turn-based resolution only. The wall-clock endTime branch was removed: under
@@ -186,12 +206,13 @@ export async function processCompletedCommitteeElections(
   // cleanup helper shipped (or banned via direct DB edits).
   const bannedCharacterIds = await getBannedCharacterIds(db);
 
+  const voterFilter = await leadershipVoterFilter(db, endedElections);
   const [allCandidatesRaw, allVotesRaw, parties] = await Promise.all([
     nationalCommitteeCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
     nationalCommitteeVotesCollection(db)
-      .find({ electionId: { $in: electionIds } })
+      .find({ electionId: { $in: electionIds }, ...voterFilter })
       .toArray(),
     partyQueries.length > 0
       ? politicalPartiesCollection(db).find({ $or: partyQueries }).toArray()
@@ -301,29 +322,35 @@ export async function processCompletedCommitteeElections(
 
     for (const winner of winners) {
       notifications.push(
-        notifyCommitteeElected(
-          winner.characterId,
-          partyId,
-          electionCountryId,
-          winner.characterName,
-          winner.voteCount
+        afterCommit(db, () =>
+          notifyCommitteeElected(
+            winner.characterId,
+            partyId,
+            electionCountryId,
+            winner.characterName,
+            winner.voteCount
+          )
         )
       );
     }
     for (const prevId of previousCommitteeIds) {
       if (!winnerIds.some((w) => w.equals(prevId))) {
-        notifications.push(notifyCommitteeRemoved(prevId, partyId, electionCountryId));
+        notifications.push(
+          afterCommit(db, () => notifyCommitteeRemoved(prevId, partyId, electionCountryId))
+        );
       }
     }
     const losers = sortedCandidates.slice(COMMITTEE_SIZE);
     for (const loser of losers) {
       notifications.push(
-        notifyCommitteeLost(
-          loser.characterId,
-          partyId,
-          electionCountryId,
-          loser.characterName,
-          loser.voteCount
+        afterCommit(db, () =>
+          notifyCommitteeLost(
+            loser.characterId,
+            partyId,
+            electionCountryId,
+            loser.characterName,
+            loser.voteCount
+          )
         )
       );
     }

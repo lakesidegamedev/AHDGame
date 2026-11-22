@@ -1,3 +1,11 @@
+vi.mock("./leadershipVoterFilter", () => ({ leadershipVoterFilter: async () => ({}) }));
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -25,15 +33,18 @@ describe("party election country scoping", () => {
     const result = await processCompletedElections(10, effectiveNow, "UK");
 
     expect(result).toBe(0);
-    expect(db.collectionMocks.statePartyElections.find).toHaveBeenCalledWith({
-      $and: [
-        {
-          status: "voting",
-          endTurn: { $lte: 10 },
-        },
-        { countryId: "UK" },
-      ],
-    });
+    expect(db.collectionMocks.statePartyElections.find).toHaveBeenCalledWith(
+      {
+        $and: [
+          {
+            status: "voting",
+            endTurn: { $lte: 10 },
+          },
+          { countryId: "UK" },
+        ],
+      },
+      { projection: { _id: 1 } }
+    );
   });
 
   it("scopes national party resolution queries to the requested country", async () => {
@@ -47,15 +58,18 @@ describe("party election country scoping", () => {
     const result = await processCompletedNationalElections(10, effectiveNow, "DE");
 
     expect(result).toBe(0);
-    expect(db.collectionMocks.nationalPartyElections.find).toHaveBeenCalledWith({
-      $and: [
-        {
-          status: "voting",
-          endTurn: { $lte: 10 },
-        },
-        { countryId: "DE" },
-      ],
-    });
+    expect(db.collectionMocks.nationalPartyElections.find).toHaveBeenCalledWith(
+      {
+        $and: [
+          {
+            status: "voting",
+            endTurn: { $lte: 10 },
+          },
+          { countryId: "DE" },
+        ],
+      },
+      { projection: { _id: 1 } }
+    );
   });
 
   it("does not create state elections from a foreign party with the same sequential id", async () => {
@@ -110,16 +124,19 @@ describe("party election country scoping", () => {
     const result = await processCompletedCommitteeElections(10, effectiveNow, "US");
 
     expect(result).toBe(0);
-    expect(db.collectionMocks.nationalCommitteeElections.find).toHaveBeenCalledWith({
-      $and: [
-        {
-          status: "voting",
-          endTurn: { $lte: 10 },
-        },
-        {
-          $or: [{ countryId: "US" }, { countryId: { $exists: false } }],
-        },
-      ],
-    });
+    expect(db.collectionMocks.nationalCommitteeElections.find).toHaveBeenCalledWith(
+      {
+        $and: [
+          {
+            status: "voting",
+            endTurn: { $lte: 10 },
+          },
+          {
+            $or: [{ countryId: "US" }, { countryId: { $exists: false } }],
+          },
+        ],
+      },
+      { projection: { _id: 1 } }
+    );
   });
 });

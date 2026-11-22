@@ -1,10 +1,11 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * Shared logic for presidential sign/veto on bills.
  * Used by congress bills route and whitehouse bills route.
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import type { Bill, BillWhip, ElectedOfficial, GameState } from "@/lib/db/types";
+
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { applyEnactedBillEffects } from "@/lib/legislature/commands/applyEnactedBillEffects";
 import { createNotification } from "@/lib/notifications";
@@ -37,6 +38,18 @@ export interface PresidentialActionResult {
  * Caller must verify the character is the President.
  */
 export async function executePresidentialBillAction(
+  db: Db,
+  billId: ObjectId,
+  characterId: ObjectId,
+  decision: PresidentialDecision,
+  vetoMessage?: string
+): Promise<PresidentialActionResult> {
+  return withSessionDb(db, (tx) =>
+    executePresidentialBillActionInTransaction(tx, billId, characterId, decision, vetoMessage)
+  );
+}
+
+async function executePresidentialBillActionInTransaction(
   db: Db,
   billId: ObjectId,
   characterId: ObjectId,
@@ -126,13 +139,15 @@ export async function executePresidentialBillAction(
         { projection: { userId: 1 } }
       );
       if (sponsor?.userId) {
-        await createNotification({
-          userId: sponsor.userId,
-          type: "bill_signed",
-          title: "Bill Signed Into Law",
-          message: `"${bill.title}" has been signed into law.`,
-          metadata: { billId: bill._id.toString() },
-        });
+        await afterCommit(db, () =>
+          createNotification({
+            userId: sponsor.userId,
+            type: "bill_signed",
+            title: "Bill Signed Into Law",
+            message: `"${bill.title}" has been signed into law.`,
+            metadata: { billId: bill._id.toString() },
+          })
+        );
       }
     }
     // Generate system news (fire-and-forget). bill.sponsorName is the source
@@ -148,7 +163,7 @@ export async function executePresidentialBillAction(
         bill.sponsorName ??
         "Unknown")
       : (bill.sponsorName ?? "Unknown");
-    generateBillSignedNews(bill.title, sponsorName, "federal").catch((err) =>
+    afterCommit(db, () => generateBillSignedNews(bill.title, sponsorName, "federal")).catch((err) =>
       console.error("[News] Failed to generate bill signed news:", err)
     );
 
@@ -242,13 +257,15 @@ export async function executePresidentialBillAction(
         { projection: { userId: 1 } }
       );
       if (sponsor?.userId) {
-        await createNotification({
-          userId: sponsor.userId,
-          type: "bill_vetoed",
-          title: "Bill Vetoed",
-          message: `"${bill.title}" was vetoed by the President. Congress has 24 hours to attempt an override.`,
-          metadata: { billId: bill._id.toString() },
-        });
+        await afterCommit(db, () =>
+          createNotification({
+            userId: sponsor.userId,
+            type: "bill_vetoed",
+            title: "Bill Vetoed",
+            message: `"${bill.title}" was vetoed by the President. Congress has 24 hours to attempt an override.`,
+            metadata: { billId: bill._id.toString() },
+          })
+        );
       }
     }
     // Notify the bill country's seated House and Senate members that override voting is open
@@ -269,21 +286,23 @@ export async function executePresidentialBillAction(
         .toArray();
       await Promise.all(
         chars.map((c) =>
-          createNotification({
-            userId: c.userId,
-            type: "bill_vote_open",
-            title: "Veto Override Vote Open",
-            message: `The President vetoed "${bill.title}". Vote now to override. Requires 2/3 majority in both chambers.`,
-            metadata: { billId: bill._id.toString() },
-          })
+          afterCommit(db, () =>
+            createNotification({
+              userId: c.userId,
+              type: "bill_vote_open",
+              title: "Veto Override Vote Open",
+              message: `The President vetoed "${bill.title}". Vote now to override. Requires 2/3 majority in both chambers.`,
+              metadata: { billId: bill._id.toString() },
+            })
+          )
         )
       ).catch((err) => console.error("[Notification] Failed to notify override vote:", err));
     }
 
     // Generate system news (fire-and-forget)
-    generateBillVetoedNews(bill.title, "federal", undefined, bill.countryId).catch((err) =>
-      console.error("[News] Failed to generate bill veto news:", err)
-    );
+    afterCommit(db, () =>
+      generateBillVetoedNews(bill.title, "federal", undefined, bill.countryId)
+    ).catch((err) => console.error("[News] Failed to generate bill veto news:", err));
 
     // Announce the veto on the bill country's game-events Discord webhook (fire-and-forget).
     const president = await charactersCollection(db).findOne(
@@ -292,15 +311,17 @@ export async function executePresidentialBillAction(
     );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
     const billUrl = `${baseUrl}/congress/bills/${bill._id.toString()}`;
-    sendCountryGameEvent(
-      bill.countryId ?? "US",
-      buildBillVetoedDiscordEmbed({
-        billTitle: bill.title,
-        presidentName: president?.name,
-        vetoMessage: trimmedVetoMessage,
-        billUrl,
-        voteSplit: billChamberVoteSplits(bill, bill.countryId ?? "US", "national"),
-      })
+    afterCommit(db, () =>
+      sendCountryGameEvent(
+        bill.countryId ?? "US",
+        buildBillVetoedDiscordEmbed({
+          billTitle: bill.title,
+          presidentName: president?.name,
+          vetoMessage: trimmedVetoMessage,
+          billUrl,
+          voteSplit: billChamberVoteSplits(bill, bill.countryId ?? "US", "national"),
+        })
+      )
     ).catch(() => {});
 
     return { success: true, message: `"${bill.title}" has been vetoed.` };

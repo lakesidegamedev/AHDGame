@@ -104,8 +104,7 @@ export async function withSessionDb<T>(
   work: (transactionDb: Db) => Promise<T>
 ): Promise<T> {
   if (scopes.has(db)) return work(db);
-  if (!db.client)
-    throw new Error("Atomic referendum operations require the supplied Mongo client.");
+  if (!db.client) throw new Error("Atomic domain operations require the supplied Mongo client.");
   let effects: Scope["effects"] = [];
   let result: T;
   try {
@@ -123,4 +122,14 @@ export async function withSessionDb<T>(
   }
   for (const effect of effects) await effect();
   return result;
+}
+
+/** Reuse an enclosing atomic domain operation for financial subcommands. */
+export async function runWithDbSession<T>(
+  db: Db,
+  work: (session: ClientSession) => Promise<T>,
+  options: import("./runRequiredTransaction").RequiredTransactionOptions = {}
+): Promise<T> {
+  const session = boundSession(db);
+  return session ? work(session) : runRequiredTransaction(work, { ...options, client: db.client });
 }

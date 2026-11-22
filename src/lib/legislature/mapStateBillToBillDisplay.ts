@@ -101,15 +101,15 @@ export function mapStateBillToBillDisplay(
         : (sb.votingEndsOnTurn ?? null),
     otherChamberVotingEndsAt: null,
     otherChamberVotingEndsOnTurn: null,
-    passedAt: null,
-    enactedAt: sb.status === "enacted" || sb.status === "signed" ? sb.proposedAt : null,
+    passedAt: sb.passedAt ?? null,
+    enactedAt: sb.enactedAt ?? null,
     myVote: sb.myVote ?? null,
     myOtherChamberVote: null,
     canVoteOrigin,
     canVoteOther: false,
     voteShiftPreview: canVoteOrigin ? (sb.voteShiftPreview ?? null) : null,
     requiresExecutiveAction: false,
-    failedAt: sb.status === "failed" || sb.status === "override_failed" ? sb.proposedAt : null,
+    failedAt: sb.failedAt ?? null,
   };
 }
 

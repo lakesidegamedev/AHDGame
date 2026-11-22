@@ -33,11 +33,19 @@ describe("applyEnactedBillEffects", () => {
     expect(onBillEnacted).toHaveBeenCalledWith(db, bill, 12, legislationTypes);
   });
 
-  it("still runs the independent enactment hook when legacy effects fail", async () => {
+  it("rejects a failed first layer so enactment rolls back", async () => {
     applyLegislationEffect.mockRejectedValue(new Error("effect failed"));
+    await expect(
+      applyEnactedBillEffects(db, bill, 12, { effect: "effect", enactment: "enactment" })
+    ).rejects.toThrow("effect failed");
+    expect(onBillEnacted).not.toHaveBeenCalled();
+  });
 
-    await applyEnactedBillEffects(db, bill, 12, { effect: "effect", enactment: "enactment" });
-
-    expect(onBillEnacted).toHaveBeenCalledWith(db, bill, 12);
+  it("rejects a failed enactment hook so the first layer rolls back too", async () => {
+    applyLegislationEffect.mockResolvedValue(new Map());
+    onBillEnacted.mockRejectedValue(new Error("enactment failed"));
+    await expect(
+      applyEnactedBillEffects(db, bill, 12, { effect: "effect", enactment: "enactment" })
+    ).rejects.toThrow("enactment failed");
   });
 });
