@@ -36,14 +36,11 @@ export function FirstDaysPanel({
   const [campaigning, setCampaigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState<string | null>(null);
-  // Count confirmed campaigns locally so a landed click shows at once. The
-  // server refresh can lag several seconds while a turn processes, and a
-  // counter that does not move reads as a lost click (players re-clicked and
-  // paid twice).
-  const [localCampaigns, setLocalCampaigns] = useState(0);
-  const confirmedCampaigns = Math.max(data.campaigns, localCampaigns);
-  const turnStatus = useGameTurnStatus();
-  const turnProcessing = turnStatus?.isProcessing === true;
+  const [confirmedCampaigns, setConfirmedCampaigns] = useState(0);
+  const campaignInFlight = useRef(false);
+  // While a turn processes a click can take seconds to confirm; say so, or a
+  // landed click reads as lost and players click again and pay twice.
+  const turnProcessing = useGameTurnStatus()?.isProcessing === true;
   const viewed = useRef(false);
 
   useEffect(() => {
@@ -57,35 +54,45 @@ export function FirstDaysPanel({
     });
   }, [data]);
 
-  const campaignDone = confirmedCampaigns >= data.campaignGoal;
+  const campaigns = Math.max(data.campaigns, confirmedCampaigns);
+  const campaignDone = campaigns >= data.campaignGoal;
 
   async function campaign() {
-    if (campaigning) return;
+    if (campaignInFlight.current || campaignDone) return;
+    campaignInFlight.current = true;
     setCampaigning(true);
     setError(null);
+    setLastGain(null);
     try {
       const res = await fetch("/api/actions/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ actionType: "campaign" }),
       });
-      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(apiErrorText(body, t("campaignFailed")));
+        const body = await res.json().catch(() => ({}));
+        setError(
+          res.status >= 500 ? t("campaignUnconfirmed") : apiErrorText(body, t("campaignFailed"))
+        );
         return;
       }
-      const done = confirmedCampaigns + 1;
-      setLocalCampaigns(done);
+      const body = await res.json();
+      setConfirmedCampaigns(campaigns + 1);
       setLastGain(
         typeof body.message === "string"
-          ? t("campaignLanded", { done, goal: data.campaignGoal, message: body.message })
-          : t("campaignLandedPlain", { done, goal: data.campaignGoal })
+          ? t("campaignLanded", {
+              done: campaigns + 1,
+              goal: data.campaignGoal,
+              message: body.message,
+            })
+          : t("campaignLandedPlain", { done: campaigns + 1, goal: data.campaignGoal })
       );
-      void captureProductEvent("first_days_campaigned", { campaigns: done });
+      void captureProductEvent("first_days_campaigned", { campaigns: campaigns + 1 });
       router.refresh();
     } catch {
-      setError(t("campaignFailed"));
+      setError(t("campaignUnconfirmed"));
     } finally {
+      campaignInFlight.current = false;
       setCampaigning(false);
     }
   }
@@ -121,10 +128,7 @@ export function FirstDaysPanel({
           {step(campaignDone, 1)}
           <div className="min-w-0 flex-1">
             <p className="text-body-sm font-medium text-foreground">
-              {t("campaignTitle", {
-                done: Math.min(confirmedCampaigns, data.campaignGoal),
-                goal: data.campaignGoal,
-              })}
+              {t("campaignTitle", { done: campaigns, goal: data.campaignGoal })}
             </p>
             <p className="mt-0.5 text-body-xs leading-relaxed text-muted">
               {t("campaignBody", { influence: data.influence.toFixed(1) })}
@@ -133,8 +137,13 @@ export function FirstDaysPanel({
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {campaignCost ? (
                   <>
-                    <Button size="sm" onClick={campaign} isLoading={campaigning}>
-                      {campaigning ? t("campaignWorking") : t("campaignButton")}
+                    <Button
+                      size="sm"
+                      onClick={campaign}
+                      disabled={campaigning}
+                      aria-busy={campaigning}
+                    >
+                      {t(campaigning ? "campaignInProgress" : "campaignButton")}
                     </Button>
                     <span className="text-body-xs text-muted">
                       {t("campaignCost", campaignCost)}
@@ -154,7 +163,7 @@ export function FirstDaysPanel({
               </p>
             )}
             {lastGain && (
-              <p className="mt-1 text-body-xs text-success" role="status">
+              <p role="status" className="mt-1 text-body-xs text-success">
                 {lastGain}
               </p>
             )}

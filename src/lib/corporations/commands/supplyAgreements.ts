@@ -18,7 +18,6 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import {
   isAgreementPremiumLegal,
   SUPPLY_AGREEMENT_PRICE_BAND,
-  CONTRACT_OVERCOMMIT_TOLERANCE,
   contractCancelEffectiveTurn,
   type SupplyAgreementOffer,
   type SupplyAgreement,
@@ -26,7 +25,11 @@ import {
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { recordAudit } from "@/lib/audit/recordAudit";
-import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import {
+  computeSupplierCommodityAchievableUnits,
+  computeSupplierCommodityCapacityUnits,
+  maxContractableUnits,
+} from "@/lib/corporations/supplyAgreementCapacity";
 import {
   isStateScopedCommodity,
   supplyAgreementRequiresState,
@@ -124,6 +127,7 @@ export async function validateCapacity(
             embargoExportExposure: 1,
             countryId: 1,
             stateId: 1,
+            contractAchievableUnits: 1,
           },
         }
       )
@@ -133,7 +137,7 @@ export async function validateCapacity(
       { projection: { commandEconomyEnabled: 1 } }
     ),
   ]);
-  const capacityUnits = computeSupplierCommodityCapacityUnits({
+  const scope = {
     sectors,
     commodity: terms.commodity,
     isNatcorp: !!supplier.countryOwnerId,
@@ -141,8 +145,12 @@ export async function validateCapacity(
     currentYear: world?.currentYear,
     commandEconomyEnabled: config?.commandEconomyEnabled === true,
     stateId: terms.stateId,
-  });
-  const maxCap = capacityUnits * CONTRACT_OVERCOMMIT_TOLERANCE;
+  };
+  const capacityUnits = computeSupplierCommodityCapacityUnits(scope);
+  const maxCap = maxContractableUnits(
+    capacityUnits,
+    computeSupplierCommodityAchievableUnits(scope)
+  );
   if (!(maxCap > 0)) {
     throw new SupplyAgreementCommandError(
       terms.stateId
@@ -152,7 +160,7 @@ export async function validateCapacity(
   }
   if (terms.volumeCap > maxCap) {
     throw new SupplyAgreementCommandError(
-      `volumeCap exceeds what your plants can make. Usable output for ${terms.commodity} at your current production policy is about ${Math.round(capacityUnits)} units per turn, so the most you can contract is ${Math.round(maxCap)}.`
+      `volumeCap exceeds what your plants can make. Usable output for ${terms.commodity} at your current production policy is about ${Math.round(capacityUnits)} units per day, so the most you can contract is ${Math.round(maxCap)}.`
     );
   }
   return { volumeCapValidated: true, currentTurn, currentYear: world?.currentYear };

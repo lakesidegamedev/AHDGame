@@ -13,6 +13,7 @@
  * needed.
  */
 
+import { plantBuildProgress } from "@/lib/corporations/rules/plantBuildProgress";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 import { OWN_TRUCK_HAUL_TITLE, ownTruckHaulLabel } from "@/lib/corporations/ownTruckHaul";
 import { type FillRateBand } from "@/lib/corporations/financialFogOfWar";
@@ -20,6 +21,7 @@ import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } fr
 
 export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
+import { soldShareTitle } from "@/lib/corporations/rules/soldShareReading";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
@@ -144,12 +146,19 @@ function formatPlantCount(plants: number): string {
  */
 function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
   const size = Math.max(1, plantUnits);
-  const ordered = queue.unitsOrdered / size;
-  const remaining = queue.unitsRemaining / size;
+  const whole = plantBuildProgress(
+    queue.orderUnits ?? [
+      {
+        unitsOrdered: queue.unitsOrdered,
+        unitsDelivered: queue.unitsOrdered - queue.unitsRemaining,
+      },
+    ],
+    size
+  );
   return {
-    ordered,
-    remaining,
-    delivered: Math.max(0, ordered - remaining),
+    ordered: whole.ordered,
+    remaining: whole.building,
+    delivered: whole.built,
     perTurn: queue.unitsPerTurn > 0 ? queue.unitsPerTurn / size : null,
   };
 }
@@ -386,7 +395,9 @@ export function RunningSoldReading({
           band == null
             ? "Nothing was made last turn, so nothing could be sold."
             : exactFill
-              ? `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+              ? soldShareTitle(
+                  `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+                )
               : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
         }
       >

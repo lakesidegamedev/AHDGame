@@ -1,5 +1,6 @@
 "use client";
 
+import { plantBuildProgress } from "@/lib/corporations/rules/plantBuildProgress";
 import { useTranslations } from "next-intl";
 import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rules";
 import CapacityRecovery from "../components/CapacityRecovery";
@@ -24,11 +25,7 @@ import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
-import {
-  plantSizeForSector,
-  plantsFromUnitsForSector,
-  sectorPlantCount,
-} from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import {
   estimateSectorFullCapacityOneHopFreightTeu,
   freightLoadStatus,
@@ -108,11 +105,8 @@ export default function PlantPanel({
   });
   // Per order: plants ordered, plants finished (whole ones only, so a plant
   // a third built is not counted as built), and the rest still being built.
-  const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) => {
-    const ordered = plantsFromUnitsForSector(plantSizing, o.unitsOrdered);
-    const built = Math.min(ordered, Math.max(0, o.unitsDelivered) / unitsPerPlant);
-    return { ordered, built, building: ordered - built };
-  };
+  const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) =>
+    plantBuildProgress([o], unitsPerPlant);
   const plantsBeingBuilt = plants.buildQueue.reduce((s, o) => s + orderPlants(o).building, 0);
   const { formatAmount } = useCurrency();
   const vocab = facilityVocabulary(sectorType);

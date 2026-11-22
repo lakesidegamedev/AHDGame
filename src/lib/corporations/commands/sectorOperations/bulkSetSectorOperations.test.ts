@@ -251,11 +251,12 @@ describe("bulk wage controls", () => {
     db.collection("corporateSectors");
   });
   it("previews wages without writing and then applies the setting", async () => {
-    await wire([{ ...energySector("CA"), laborCost: 100, wageLevel: 1 }]);
+    await wire([{ ...energySector("CA"), laborCost: 2400, wageLevel: 1 }]);
     const response = await bulkSetSectorOperations(
       req({ countryId: "US", wageLevel: 1.2, preview: true }),
       { params }
     );
+    // laborCost is stored per financial day (24 turns); the preview is per turn.
     expect((await response.json()).wages.costDeltaPerTurn).toBeCloseTo(20);
     expect(db.collectionMocks.corporateSectors.bulkWrite).not.toHaveBeenCalled();
     await bulkSetSectorOperations(req({ countryId: "US", wageLevel: 1.2 }), { params });

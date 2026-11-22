@@ -58,7 +58,7 @@ it("publishes an offer in an unused slot and exposes failures", async () => {
   );
   await waitFor(() => expect(screen.queryByText("Loading offers...")).toBeNull());
   fireEvent.click(screen.getByText("Post an offer"));
-  fireEvent.change(screen.getByLabelText(/Quantity per turn/), { target: { value: "50" } });
+  fireEvent.change(screen.getByLabelText(/Quantity per day/), { target: { value: "50" } });
   fireEvent.click(screen.getByText("Publish offer"));
   await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Offer rejected"));
   const call = fetcher.mock.calls.find((call) => call[1]?.method === "POST");

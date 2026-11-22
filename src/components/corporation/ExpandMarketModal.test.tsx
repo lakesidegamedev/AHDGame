@@ -168,10 +168,7 @@ describe("ExpandMarketModal plants market finder", () => {
     expect(router.push).toHaveBeenCalledWith("/corporation/corp-1/sector/sector-9?build=1");
   });
 
-  // Ticket #1162: a market quoting room for zero is still open to a build, but
-  // the list said only "0 farms" and the sentence explaining that was buried in
-  // the confirm step, so players read the whole board as closed.
-  it("says in the market list that a zero-headroom market is still buildable", async () => {
+  it("says do not build here for sales on a zero-room market and never calls it best fit", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -196,10 +193,11 @@ describe("ExpandMarketModal plants market finder", () => {
       />
     );
 
-    expect(await screen.findByText(/You can still build here/i)).toBeTruthy();
+    expect(await screen.findByText(/Do not build here for sales/i)).toBeTruthy();
+    expect(screen.queryByText("Best fit")).toBeNull();
   });
 
-  it("does not add the still-buildable note when the market has room", async () => {
+  it("does not add the no-room note when the market has room", async () => {
     vi.stubGlobal("fetch", vi.fn(suggestionReply));
 
     render(
@@ -214,7 +212,7 @@ describe("ExpandMarketModal plants market finder", () => {
     );
 
     await screen.findByText("Best fit");
-    expect(screen.queryByText(/You can still build here/i)).toBeNull();
+    expect(screen.queryByText(/Do not build here for sales/i)).toBeNull();
   });
   it("hides the split action and warning for a fully captured market", async () => {
     vi.stubGlobal(
@@ -436,8 +434,8 @@ describe("ExpandMarketModal plants market finder", () => {
       />
     );
 
-    await screen.findByText("Best fit");
-    expect(screen.getByText(/Room to build: none right now/)).toBeTruthy();
+    await screen.findByText(/Room to build: none right now/);
+    expect(screen.queryByText("Best fit")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
     await screen.findByText(/Review California/);
     expect(screen.queryByText(/legacy revenue/i)).toBeNull();

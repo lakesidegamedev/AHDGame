@@ -11,6 +11,7 @@ import { fundedSaleRecord } from "@/lib/corporations/rules/fundedSaleRecord";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
+import { inputShortageReading } from "@/lib/corporations/rules/inputShortageReading";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { CAPITAL_DEPRECIATION_PER_TURN, impliedOutputUnits } from "@/lib/market/capital";
@@ -111,14 +112,20 @@ export function outputRevenueShares(
  * what actually sold. The legacy figures are sent only for a plant with no
  * funded sale record, labelled as an estimate.
  */
-/** One output's posted asking price against what its market paid last turn, anchor per unit. */
+/**
+ * One output's posted asking price, the average this plant was actually paid
+ * per unit sold, and the price that cleared its lane, anchor per unit.
+ */
 export interface PricingAsk {
   commodity: string;
   askingUnitPrice: number;
+  /** Revenue over units sold outside, null when nothing sold. */
+  paidUnitPrice: number | null;
+  /** The lane's clearing price: a market reading, not this plant's own sales. */
   marketUnitPrice: number | null;
 }
 
-/** Offer-weighted ask per output, beside the price buyers paid in that book. */
+/** Offer-weighted ask per output, beside what this plant was paid and its lane's clearing price. */
 export function pricingAsks(
   products:
     | readonly {
@@ -126,18 +133,34 @@ export function pricingAsks(
         book: string;
         offeredUnits: number;
         askingUnitPrice?: number;
+        soldUnits?: number;
+        revenue?: number;
       }[]
     | undefined,
   laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined
 ): PricingAsk[] {
-  const rows = new Map<string, { offered: number; askValue: number; market: number | null }>();
+  const rows = new Map<
+    string,
+    { offered: number; askValue: number; sold: number; revenue: number; market: number | null }
+  >();
   for (const product of products ?? []) {
     const ask = product.askingUnitPrice;
     if (!(product.offeredUnits > 0) || typeof ask !== "number" || !(ask > 0)) continue;
     const market = laneClearingPrices?.[laneKeyOf(product.commodity, product.book)];
-    const row = rows.get(product.commodity) ?? { offered: 0, askValue: 0, market: null };
+    const row = rows.get(product.commodity) ?? {
+      offered: 0,
+      askValue: 0,
+      sold: 0,
+      revenue: 0,
+      market: null,
+    };
     row.offered += product.offeredUnits;
     row.askValue += ask * product.offeredUnits;
+    if (typeof product.soldUnits === "number" && product.soldUnits > 0) {
+      row.sold += product.soldUnits;
+      row.revenue +=
+        typeof product.revenue === "number" && product.revenue > 0 ? product.revenue : 0;
+    }
     if (row.market == null && typeof market === "number" && market > 0) row.market = market;
     rows.set(product.commodity, row);
   }
@@ -146,6 +169,7 @@ export function pricingAsks(
     .map(([commodity, row]) => ({
       commodity,
       askingUnitPrice: row.askValue / row.offered,
+      paidUnitPrice: row.sold > 0 ? row.revenue / row.sold : null,
       marketUnitPrice: row.market,
     }));
 }
@@ -679,6 +703,13 @@ export async function buildSectorCommoditySections(args: {
       ...(market.throughputEnabled
         ? { inputAvailability: Math.round(inputAvailability(gBal) * 1000) / 1000 }
         : {}),
+      ...(() => {
+        const reading =
+          isCeo && fundedRecord
+            ? inputShortageReading(fundedRecord.inputReceipts, f.commodity, fundedRecord.turn)
+            : null;
+        return reading ? { inputReceipt: reading } : {};
+      })(),
     };
   });
 

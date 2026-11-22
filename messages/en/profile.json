@@ -312,6 +312,8 @@
       "campaignTitle": "Campaign in your home region ({done} of {goal})",
       "campaignBody": "Campaign is the only action that raises Political Influence, and influence multiplies every fundraiser and carries you in races. You have {influence} right now.",
       "campaignButton": "Campaign at home",
+      "campaignInProgress": "Campaign in progress",
+      "campaignUnconfirmed": "We couldn't confirm the result. Refresh and check your progress before trying again.",
       "campaignCost": "{actions, plural, one {# action} other {# actions}} and {funds} in campaign funds",
       "campaignCostUnavailable": "Check Actions for campaign availability.",
       "campaignFailed": "Campaign did not go through. Try again.",
@@ -328,7 +330,6 @@
       "browseRaces": "Browse elections",
       "skippedTour": "You skipped the tour. The <link>two-minute basics</link> are here whenever you want them.",
       "tutorial": "Open the <link>tutorial</link> for more ways to get started.",
-      "campaignWorking": "Campaigning...",
       "campaignLanded": "Campaign {done} of {goal} done. {message}",
       "campaignLandedPlain": "Campaign {done} of {goal} done.",
       "turnProcessing": "A turn is processing, so actions take a few seconds to confirm. Each click spends money once it lands; wait for the confirmation before clicking again."

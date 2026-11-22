@@ -2,7 +2,8 @@ import {
   estimatedFullMixBuildRoom,
   fullMixBuildRoom,
 } from "@/lib/corporations/rules/buildDemandCapacity";
-import { getStrategy } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates, getStrategy } from "@/lib/constants/sectorStrategies";
+import { weightedRecipeMix } from "@/lib/country/rules/plantInputMix";
 import { NextResponse } from "next/server";
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
 import { ObjectId } from "mongodb";
@@ -314,6 +315,31 @@ export async function buildRegionEconomyResponse({
   const countryQueuedByLane = buildRoom
     ? await loadCountryQueuedUnitsByLane(db, state.countryId ?? countryId, buildQueueTurn)
     : new Map<OperatingSectorType, number>();
+  // What the plants here actually run, not the sector type's default recipe.
+  const plantMixes = (
+    rows: typeof sectors,
+    sectorType: (typeof OPERATING_SECTOR_TYPES)[number]
+  ) => {
+    const recipes = rows.map((s) => {
+      const rates = getEffectiveStrategyRates(
+        sectorType,
+        s.strategyId ?? "standard",
+        s.transitionFromStrategyId,
+        s.transitionStartTurn,
+        buildQueueTurn
+      );
+      const weight = sectorRevenueAnchorById.get(s._id.toString()) ?? 0;
+      return { weight, supply: rates.supply ?? {}, demand: rates.demand ?? {} };
+    });
+    return {
+      plantSupplyMix: weightedRecipeMix(
+        recipes.map((r) => ({ weight: r.weight, rates: r.supply }))
+      ),
+      plantDemandMix: weightedRecipeMix(
+        recipes.map((r) => ({ weight: r.weight, rates: r.demand }))
+      ),
+    };
+  };
   const economySectors = OPERATING_SECTOR_TYPES.map((sectorType) => {
     const typeSectors = sectorsByType.get(sectorType) ?? [];
     const ownedRevenue = typeSectors.reduce(
@@ -503,6 +529,7 @@ export async function buildRegionEconomyResponse({
       // "country" when the figure above is shared by every state in the country.
       roomToBuildScope: room?.scope ?? null,
       owners: redactedOwners,
+      ...(plantsMode && typeSectors.length > 0 ? plantMixes(typeSectors, sectorType) : {}),
     };
   });
 

@@ -158,9 +158,31 @@ describe("pricingAsks", () => {
         { "electronics|world": 395 }
       )
     ).toEqual([
-      { commodity: "electronics", askingUnitPrice: 450, marketUnitPrice: 395 },
-      { commodity: "software", askingUnitPrice: 2000, marketUnitPrice: null },
+      { commodity: "electronics", askingUnitPrice: 450, paidUnitPrice: null, marketUnitPrice: 395 },
+      { commodity: "software", askingUnitPrice: 2000, paidUnitPrice: null, marketUnitPrice: null },
     ]);
     expect(pricingAsks(undefined, undefined)).toEqual([]);
+  });
+
+  it("reports what the plant was paid on average beside the lane's clearing price", () => {
+    const [row] = pricingAsks(
+      [
+        {
+          commodity: "energy",
+          book: "world",
+          offeredUnits: 100,
+          askingUnitPrice: 200,
+          soldUnits: 50,
+          revenue: 10_000,
+        },
+      ],
+      { "energy|world": 160 }
+    );
+    expect(row).toEqual({
+      commodity: "energy",
+      askingUnitPrice: 200,
+      paidUnitPrice: 200,
+      marketUnitPrice: 160,
+    });
   });
 });

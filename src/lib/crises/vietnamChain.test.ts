@@ -197,6 +197,10 @@ describe("Vietnam crisis chain", () => {
       const node = vietnam[0][1].interactionDefinition!.decisionTree[0];
       expect(isMultiResponderNode({ scope: "country", countryIds: ["US"] }, node)).toBe(false);
       expect(isMultiResponderNode({ scope: "country", countryIds: [] }, node)).toBe(false);
+      // A role-mapped global response is per-country even with one country.
+      expect(
+        isMultiResponderNode({ scope: "country", countryIds: ["US"], globalResponse: {} }, node)
+      ).toBe(true);
       expect(isMultiResponderNode({ scope: "global", countryIds: [] }, node)).toBe(true);
     });
   });

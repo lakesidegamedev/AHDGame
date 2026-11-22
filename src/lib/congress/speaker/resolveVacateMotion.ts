@@ -1,6 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
 import type { HouseComposition } from "@/lib/congress/houseComposition";
-import type { SpeakerVacateMotion } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   isLeadershipElectionClosed,
@@ -29,6 +29,14 @@ export function vacateThreshold(totalSeats: number): number {
  * can't double-vacate. Returns true if this call resolved the motion.
  */
 export async function resolveSpeakerVacateMotion(
+  db: Db,
+  house: HouseComposition,
+  force = false
+): Promise<boolean> {
+  return withSessionDb(db, (tx) => resolveSpeakerVacateMotionInTransaction(tx, house, force));
+}
+
+async function resolveSpeakerVacateMotionInTransaction(
   db: Db,
   house: HouseComposition,
   force = false

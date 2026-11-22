@@ -9,6 +9,7 @@ import type { FirstDaysData } from "@/lib/onboarding/firstDays";
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@/hooks/useGameEvents", () => ({ useGameTurnStatus: () => null }));
 vi.mock("@/lib/analytics/capture", () => ({ captureProductEvent: vi.fn(async () => {}) }));
 
 import { FirstDaysPanel } from "./FirstDaysPanel";
@@ -86,12 +87,50 @@ describe("FirstDaysPanel", () => {
     expect(router.refresh).not.toHaveBeenCalled();
   });
 
+  it("shows the pending Campaign and closes the step when the third completion is confirmed", async () => {
+    let resolveCampaign!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      resolveCampaign = resolve;
+    });
+    const submit = vi.fn(() => pending);
+    vi.stubGlobal("fetch", submit);
+    renderPanel({ campaigns: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
+    const button = screen.getByRole("button", { name: "Campaign in progress" });
+    expect(button).toHaveProperty("disabled", true);
+    fireEvent.click(button);
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    resolveCampaign(Response.json({ message: "Campaigned: +1.0 influence" }));
+    expect(await screen.findByText("Campaign 3 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /campaign at home/i })).toBeNull();
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+  });
+
   it("lists open races with when they close", () => {
     renderPanel();
     expect(screen.getByRole("link", { name: "State Senate" }).getAttribute("href")).toBe(
       "/campaign-manager?race=r1"
     );
     expect(screen.getByText("closes in 5 hours, 4 candidates")).toBeTruthy();
+  });
+
+  it("asks the player to check progress when a submitted result cannot be confirmed", async () => {
+    const submit = vi.fn(async () => {
+      throw new Error("Connection lost");
+    });
+    vi.stubGlobal("fetch", submit);
+    renderPanel({ campaigns: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
+    expect(await screen.findByText(/refresh and check your progress/i)).toBeTruthy();
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(router.refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Campaign at home" })).toHaveProperty(
+      "disabled",
+      false
+    );
   });
 
   it("explains when no race is open", () => {

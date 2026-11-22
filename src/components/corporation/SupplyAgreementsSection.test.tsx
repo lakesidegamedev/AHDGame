@@ -237,7 +237,7 @@ describe("SupplyAgreementsSection delivery outcome", () => {
     expect(screen.getByText("Offer history (2 revisions)")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Counter-offer" }));
-    fireEvent.change(screen.getByLabelText("Volume cap per turn"), {
+    fireEvent.change(screen.getByLabelText("Volume cap (units per day)"), {
       target: { value: "110" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Send counter-offer" }));

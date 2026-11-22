@@ -30,6 +30,8 @@ export interface BuildQueueSummary {
    * orders it is the not-yet-built remainder, which falls a slice per turn.
    */
   unitsRemaining: number;
+  /** Per order, units ordered and delivered as of the settled turn, for whole-plant counts. */
+  orderUnits?: { unitsOrdered: number; unitsDelivered: number }[];
   /**
    * Capacity units arriving each turn from smooth orders still ramping in
    * (a slice per turn until the order's online turn). 0 when every outstanding
@@ -64,12 +66,16 @@ export interface BuildQueueSummary {
  */
 export function summarizeBuildQueue(
   queue: SectorBuildOrder[] | null | undefined,
-  currentTurn: number
+  currentTurn: number,
+  /** Last turn whose deliveries landed. Delivery counts stop here, as on the sector page. */
+  settledTurn: number = currentTurn
 ): BuildQueueSummary | null {
   if (!Array.isArray(queue) || queue.length === 0) return null;
 
   let unitsOrdered = 0;
   let unitsRemaining = 0;
+  const orderUnits: BuildQueueSummary["orderUnits"] = [];
+  const deliveredAt = Math.min(currentTurn, settledTurn);
   let nextOnlineTurn: number | null = null;
   let lastOnlineTurn: number | null = null;
   let unitsPerTurn = 0;
@@ -78,7 +84,11 @@ export function summarizeBuildQueue(
     const units = Number.isFinite(order?.unitsOrdered) ? order.unitsOrdered : 0;
     if (units > 0) {
       unitsOrdered += units;
-      unitsRemaining += undeliveredUnits(order, currentTurn);
+      unitsRemaining += undeliveredUnits(order, deliveredAt);
+      orderUnits.push({
+        unitsOrdered: units,
+        unitsDelivered: units - undeliveredUnits(order, deliveredAt),
+      });
       unitsPerTurn += steadyUnitsPerTurn(order, currentTurn);
       const arrival = orderNextArrivalTurn(order, currentTurn);
       if (arrival != null && (nextArrivalTurn == null || arrival < nextArrivalTurn))
@@ -97,6 +107,7 @@ export function summarizeBuildQueue(
     orders: queue.length,
     unitsOrdered,
     unitsRemaining,
+    orderUnits,
     unitsPerTurn,
     lastOnlineTurn,
     nextOnlineTurn,

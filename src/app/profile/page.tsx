@@ -872,6 +872,7 @@ export default async function ProfilePage({
             <ConstituencySelector />
             {firstDays ? (
               <FirstDaysPanel
+                key={character._id.toString()}
                 data={firstDays}
                 year={gameYear}
                 campaignCost={campaignCost}
