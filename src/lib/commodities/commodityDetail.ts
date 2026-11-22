@@ -848,7 +848,7 @@ export async function getCommodityDetailData(
         // Whole category map, and alias-resolved below, so this panel reports
         // the same number the turn books. UK/CN/IE spell the category `health`
         // and were silently contributing nothing here too.
-        .find({}, { projection: { "spending.byCategory": 1 } })
+        .find({}, { projection: { countryId: 1, "spending.byCategory": 1 } })
         .toArray();
 
       const govtFx = includeHeavy ? fxByCurrency : await loadFxRatesByCurrency(db);
