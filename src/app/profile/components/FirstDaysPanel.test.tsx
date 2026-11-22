@@ -62,7 +62,17 @@ describe("FirstDaysPanel", () => {
       "/api/actions/execute",
       expect.objectContaining({ body: JSON.stringify({ actionType: "campaign" }) })
     );
-    expect(screen.getByText("Campaigned: +1.0 influence")).toBeTruthy();
+    expect(screen.getByText("Campaign 1 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
+  });
+
+  it("counts a landed Campaign at once, before the page refresh arrives", async () => {
+    renderPanel({ campaigns: 1 });
+    expect(screen.getByText("Campaign in your home region (1 of 3)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Campaign at home" }));
+    await waitFor(() =>
+      expect(screen.getByText("Campaign in your home region (2 of 3)")).toBeTruthy()
+    );
+    expect(screen.getByText("Campaign 2 of 3 done. Campaigned: +1.0 influence")).toBeTruthy();
   });
 
   it("shows why a Campaign failed", async () => {

@@ -39,6 +39,8 @@ const NationalHistoryPanel = dynamic(
  * pulse strip (Phase 2 shell). The sector-mix board, real-economy rows, and
  * markets strip land in Phase 3 beneath the masthead.
  */
+const ECONOMY_FETCH_TIMEOUT_MS = 20_000;
+
 export function EconomyOutlookClient() {
   const { code } = useParams<{ code: string }>();
   const countryParam = (code ?? "us").toUpperCase();
@@ -57,14 +59,24 @@ export function EconomyOutlookClient() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/country/${countryId.toLowerCase()}/economy`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-      .then((d) => {
-        if (!cancelled) setFetchState({ status: "ready", data: d });
+    // A request that stalls (the server is busy while a turn processes) used
+    // to leave the skeleton up forever. Bound each attempt, retry once, then
+    // show the error with a retry button. A refresh after a tick keeps the
+    // figures already on screen if it fails.
+    const load = (attempt: number): Promise<void> =>
+      fetch(`/api/country/${countryId.toLowerCase()}/economy`, {
+        signal: AbortSignal.timeout(ECONOMY_FETCH_TIMEOUT_MS),
       })
-      .catch(() => {
-        if (!cancelled) setFetchState({ status: "error", data: null });
-      });
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
+        .then((d: CountryEconomyOutlook) => {
+          if (!cancelled) setFetchState({ status: "ready", data: d });
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt < 1) return load(attempt + 1);
+          setFetchState((prev) => (prev.data ? prev : { status: "error", data: null }));
+        });
+    void load(0);
     return () => {
       cancelled = true;
     };
@@ -104,7 +116,17 @@ export function EconomyOutlookClient() {
           </div>
         ) : error || !data ? (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
-            Failed to load the economic outlook.
+            <p>The economic outlook did not load. The server may be busy processing a turn.</p>
+            <button
+              type="button"
+              className="mt-3 rounded-md border border-card-border px-3 py-1.5 text-foreground hover:bg-background"
+              onClick={() => {
+                setFetchState({ status: "loading", data: null });
+                setRefreshKey((key) => key + 1);
+              }}
+            >
+              Try again
+            </button>
           </div>
         ) : (
           <>

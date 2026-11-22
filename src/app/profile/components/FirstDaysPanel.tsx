@@ -40,10 +40,8 @@ export function FirstDaysPanel({
   // server refresh can lag several seconds while a turn processes, and a
   // counter that does not move reads as a lost click (players re-clicked and
   // paid twice).
-  const [confirmedCampaigns, setConfirmedCampaigns] = useState(data.campaigns);
-  useEffect(() => {
-    setConfirmedCampaigns((local) => Math.max(local, data.campaigns));
-  }, [data.campaigns]);
+  const [localCampaigns, setLocalCampaigns] = useState(0);
+  const confirmedCampaigns = Math.max(data.campaigns, localCampaigns);
   const turnStatus = useGameTurnStatus();
   const turnProcessing = turnStatus?.isProcessing === true;
   const viewed = useRef(false);
@@ -77,7 +75,7 @@ export function FirstDaysPanel({
         return;
       }
       const done = confirmedCampaigns + 1;
-      setConfirmedCampaigns(done);
+      setLocalCampaigns(done);
       setLastGain(
         typeof body.message === "string"
           ? t("campaignLanded", { done, goal: data.campaignGoal, message: body.message })
