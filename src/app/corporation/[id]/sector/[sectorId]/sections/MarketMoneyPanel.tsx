@@ -19,6 +19,7 @@ import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
+import { SOLD_SHARE_POOL_NOTE } from "@/lib/corporations/rules/soldShareReading";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,
@@ -335,7 +336,7 @@ export default function MarketMoneyPanel({
           chip={
             !settlement && plants.fillRate != null ? `${fmtPct(plants.fillRate)} sold` : undefined
           }
-          help="Units buyers actually took. The share that sells is set by your price against the market and by how much demand is left here."
+          help={`Units buyers actually took. ${SOLD_SHARE_POOL_NOTE}`}
         />
         {settlement && (
           <UnitTile

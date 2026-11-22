@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * SCOTUS Nomination Lifecycle.
  *
@@ -18,7 +19,7 @@ import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBrea
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import { getGameState } from "@/lib/gameState";
 import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
-import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
+import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { loadNomineePersonalPositions } from "@/lib/scotus/nominateJustice";
 import { computeJusticeIdeology } from "@/lib/scotus/ideology";
 import { DIVERGENT_TENURE_FLOOR_TURNS } from "@/lib/scotus/tenure";
@@ -152,6 +153,13 @@ export async function processScotusNominationLifecycle(
   db?: Db
 ): Promise<ScotusNominationLifecycleResult> {
   const database = db ?? (await getDb());
+  return withSessionDb(database, (tx) => processScotusNominationsInTransaction(now, tx));
+}
+
+async function processScotusNominationsInTransaction(
+  now: Date,
+  database: Db
+): Promise<ScotusNominationLifecycleResult> {
   const gameState = await getGameState();
   const currentTurn = gameState?.currentTurn ?? 1;
 
@@ -204,8 +212,12 @@ export async function processScotusNominationLifecycle(
   const nomineeCharacterIds = [
     ...new Map(
       expired
-        .filter((nom) => nom.nomineeMode === "character" && nom.nomineeCharacterId)
-        .map((nom) => [nom.nomineeCharacterId!.toString(), nom.nomineeCharacterId!] as const)
+        .flatMap((nom) => [
+          nom.proposedByPresidentId,
+          nom.nomineeMode === "character" ? nom.nomineeCharacterId : null,
+        ])
+        .filter((id): id is ObjectId => id != null)
+        .map((id) => [id.toString(), id])
     ).values(),
   ];
   const nomineeNppIds = [
@@ -218,7 +230,7 @@ export async function processScotusNominationLifecycle(
   const [characterPortraits, nppPortraits] = await Promise.all([
     nomineeCharacterIds.length
       ? charactersCollection(database)
-          .find({ _id: { $in: nomineeCharacterIds } }, { projection: { avatarUrl: 1 } })
+          .find({ _id: { $in: nomineeCharacterIds } }, { projection: { avatarUrl: 1, userId: 1 } })
           .toArray()
       : Promise.resolve([]),
     nomineeNppIds.length
@@ -232,6 +244,10 @@ export async function processScotusNominationLifecycle(
   );
   const nppAvatarById = new Map(nppPortraits.map((npp) => [npp._id.toString(), npp.avatarUrl]));
 
+  const participants = new Map(
+    characterPortraits.map((character) => [character._id.toString(), character])
+  );
+  const statusWrites: AnyBulkWriteOperation<ScotusNomination>[] = [];
   const notificationInputs: NotificationInput[] = [];
   const confirmationCareerWrites: AnyBulkWriteOperation<Character>[] = [];
   const confirmationAwards: Array<{ userId: ObjectId; characterId: ObjectId }> = [];
@@ -275,26 +291,25 @@ export async function processScotusNominationLifecycle(
 
     if (passed) {
       await seatConfirmedJustice(database, nom, now, currentTurn);
-      const claim = await scotusNominationsCollection(database).updateOne(
-        { _id: nom._id, status: "active" },
-        {
-          $set: {
-            status: "confirmed",
-            confirmedAt: now,
-            updatedAt: now,
-            votesFor: reTally.votesFor,
-            votesAgainst: reTally.votesAgainst,
-            votesAbstain: reTally.votesAbstain,
+      statusWrites.push({
+        updateOne: {
+          filter: { _id: nom._id, status: "active" },
+          update: {
+            $set: {
+              status: "confirmed",
+              confirmedAt: now,
+              updatedAt: now,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+            },
           },
-        }
-      );
-      if (claim.modifiedCount === 0) continue;
-      announceResolution();
+        },
+      });
+      await afterCommit(database, announceResolution);
       confirmed++;
 
-      const presidentChar = await charactersCollection(database).findOne({
-        _id: nom.proposedByPresidentId,
-      });
+      const presidentChar = participants.get(nom.proposedByPresidentId?.toString() ?? "");
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -309,9 +324,7 @@ export async function processScotusNominationLifecycle(
         });
       }
       if (nom.nomineeMode === "character" && nom.nomineeCharacterId) {
-        const nomineeChar = await charactersCollection(database).findOne({
-          _id: nom.nomineeCharacterId,
-        });
+        const nomineeChar = participants.get(nom.nomineeCharacterId.toString());
         if (nomineeChar) {
           // Judicial seats have no OfficeType, so the profile reads this entry.
           confirmationCareerWrites.push({
@@ -348,26 +361,25 @@ export async function processScotusNominationLifecycle(
         }
       }
     } else {
-      const claim = await scotusNominationsCollection(database).updateOne(
-        { _id: nom._id, status: "active" },
-        {
-          $set: {
-            status: "rejected",
-            rejectedAt: now,
-            updatedAt: now,
-            votesFor: reTally.votesFor,
-            votesAgainst: reTally.votesAgainst,
-            votesAbstain: reTally.votesAbstain,
+      statusWrites.push({
+        updateOne: {
+          filter: { _id: nom._id, status: "active" },
+          update: {
+            $set: {
+              status: "rejected",
+              rejectedAt: now,
+              updatedAt: now,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+            },
           },
-        }
-      );
-      if (claim.modifiedCount === 0) continue;
-      announceResolution();
+        },
+      });
+      await afterCommit(database, announceResolution);
       rejected++;
 
-      const presidentChar = await charactersCollection(database).findOne({
-        _id: nom.proposedByPresidentId,
-      });
+      const presidentChar = participants.get(nom.proposedByPresidentId?.toString() ?? "");
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -384,13 +396,20 @@ export async function processScotusNominationLifecycle(
     }
   }
 
+  if (statusWrites.length > 0) {
+    const closed = await scotusNominationsCollection(database).bulkWrite(statusWrites);
+    if (closed.matchedCount !== statusWrites.length)
+      throw new Error("Court nomination changed during resolution");
+  }
   if (confirmationCareerWrites.length > 0) {
     await charactersCollection(database).bulkWrite(confirmationCareerWrites);
   }
   for (const award of confirmationAwards) {
-    await awardAchievement(award.userId, SCOTUS_CONFIRMED_SLUG, award.characterId);
+    await afterCommit(database, () =>
+      awardAchievement(award.userId, SCOTUS_CONFIRMED_SLUG, award.characterId)
+    );
   }
-  await createNotifications(notificationInputs);
+  await afterCommit(database, () => createNotifications(notificationInputs));
 
   return {
     nominationsProcessed: activeNominations.length + expired.length,

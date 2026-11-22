@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db } from "@/lib/mongodb";
 import { markCongressLeadershipHeld } from "@/lib/wiki/markCongressLeadership";
 import {
@@ -8,12 +9,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
-import type {
-  BundestagspraesidentElection,
-  BundestagspraesidentNomination,
-  CongressLeader,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { bundestagspraesidentNominationsCollection } from "@/lib/db/repositories/bundestagspraesidentNominations";
@@ -31,6 +27,16 @@ import { bundestagspraesidentElectionsCollection } from "@/lib/db/repositories/b
  *   not set).
  */
 export async function resolveBundestagspraesidentElection(
+  db: Db,
+  _partyMap: Map<string, PoliticalParty>,
+  force = false
+): Promise<boolean> {
+  return withSessionDb(db, (tx) =>
+    resolveBundestagspraesidentElectionInTransaction(tx, _partyMap, force)
+  );
+}
+
+async function resolveBundestagspraesidentElectionInTransaction(
   db: Db,
   _partyMap: Map<string, PoliticalParty>,
   force = false
@@ -83,8 +89,10 @@ export async function resolveBundestagspraesidentElection(
     },
     { upsert: true }
   );
-  markCongressLeadershipHeld(db, winner.nomineeId.toString(), now).catch((err) =>
-    console.error("[Bundestagspräsident] Failed to mark congress leadership:", err)
+  await afterCommit(db, () =>
+    markCongressLeadershipHeld(unboundDb(db), winner.nomineeId.toString(), now).catch((err) =>
+      console.error("[Bundestagspräsident] Failed to mark congress leadership:", err)
+    )
   );
   // Atomically claim the close so a concurrent resolver cannot also announce.
   const claimed = await claimStatusTransition(
@@ -102,14 +110,16 @@ export async function resolveBundestagspraesidentElection(
         { projection: { avatarUrl: 1 } }
       )
     )?.avatarUrl;
-    sendCountryGameEvent("DE", {
-      title: `Leadership Election Result — ${roleLabel}`,
-      description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
-      color: DISCORD_COLORS.leadership,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-      ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
-    }).catch(() => {});
+    await afterCommit(db, () =>
+      sendCountryGameEvent("DE", {
+        title: `Leadership Election Result: ${roleLabel}`,
+        description: `**${winner.nomineeName}** has been elected as **${roleLabel}**.`,
+        color: DISCORD_COLORS.leadership,
+        footer: { text: "A House Divided" },
+        timestamp: now.toISOString(),
+        ...(nomineeAvatarUrl ? { thumbnail: { url: nomineeAvatarUrl } } : {}),
+      }).catch(() => {})
+    );
   }
 
   return true;

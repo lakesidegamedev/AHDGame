@@ -1,15 +1,6 @@
-import { afterCommit } from "@/lib/db/sessionDb";
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
-import { CABINET_POSITIONS } from "@/lib/constants/cabinet";
-import { UK_CABINET_POSITIONS } from "@/lib/constants/ukCabinet";
-import { JP_CABINET_POSITIONS } from "@/lib/constants/jpCabinet";
-import { DE_CABINET_POSITIONS } from "@/lib/constants/deCabinet";
-import { IE_CABINET_POSITIONS } from "@/lib/constants/ieCabinet";
-import { CN_CABINET_POSITIONS } from "@/lib/constants/cnCabinet";
-import { NG_CABINET_POSITIONS } from "@/lib/constants/ngCabinet";
-import { SCO_CABINET_POSITIONS } from "@/lib/constants/scoCabinet";
 import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
-import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 
@@ -46,10 +37,7 @@ export async function notifyAndRestoreClearedHolders(
     message: "Your cabinet appointment has ended due to a change in government.",
   }
 ): Promise<void> {
-  if (memberIds.length === 0) {
-    await afterCommit(db, () => createNotifications([]));
-    return;
-  }
+  if (memberIds.length === 0) return;
 
   const cabinetType = cabinetOfficeTypeForCountry(countryId);
   const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
@@ -107,7 +95,7 @@ export async function notifyAndRestoreClearedHolders(
       title: notice.title,
       message: notice.message,
     }));
-  await afterCommit(db, () => createNotifications(notifications));
+  if (notifications.length > 0) await afterCommit(db, () => createNotifications(notifications));
 }
 
 /**
@@ -116,40 +104,28 @@ export async function notifyAndRestoreClearedHolders(
  *
  * Restores each cleared holder's `currentOffice` (so they stop drawing the
  * cabinet office bonus) and sends in-app notifications to the player ones.
- * Both are best-effort; failures are non-fatal.
+ * Holder restoration commits with roster cleanup; notifications follow commit.
  *
  * Note: Does NOT clear UK cabinet cooldowns — those persist across government transitions
  * and are only cleared when a new PM is appointed (in ukGovernmentFormation.ts).
  */
 export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Promise<void> {
-  const positionsByCountry: Partial<Record<CountryId, readonly { id: string }[]>> = {
-    US: CABINET_POSITIONS,
-    UK: UK_CABINET_POSITIONS,
-    JP: JP_CABINET_POSITIONS,
-    DE: DE_CABINET_POSITIONS,
-    IE: IE_CABINET_POSITIONS,
-    CN: CN_CABINET_POSITIONS,
-    NG: NG_CABINET_POSITIONS,
-    SCO: SCO_CABINET_POSITIONS,
-    WAL: WAL_CABINET_POSITIONS,
-    QC: getCabinetPositions("QC"),
-    AB: getCabinetPositions("AB"),
-    RTX: getCabinetPositions("RTX"),
-    NEN: getCabinetPositions("NEN"),
-    RCA: getCabinetPositions("RCA"),
-  };
-  const positions = positionsByCountry[countryId];
-  if (!positions) return; // Country has no cabinet positions defined yet
+  await withSessionDb(db, (tx) => clearCabinetInTransaction(tx, countryId));
+}
+
+async function clearCabinetInTransaction(db: Db, countryId: CountryId): Promise<void> {
+  const positions = getCabinetPositions(countryId);
+  if (positions.length === 0) return;
   const positionIds = positions.map((p) => p.id);
 
-  const filter = { positionId: { $in: positionIds } };
+  const filter = { countryId, positionId: { $in: positionIds } };
 
   if (countryId === COUNTRY_CONFIGS.US.id) {
     // Handle US cabinet (confirmation-based)
     const members = await cabinetMembersCollection(db).find(filter).toArray();
     await cabinetMembersCollection(db).deleteMany(filter);
     await cabinetNominationsCollection(db).updateMany(
-      { ...filter, status: { $in: ["proposed", "active"] } },
+      { ...filter, status: { $in: ["proposed", "active", "awaiting_choice"] } },
       { $set: { status: "withdrawn", updatedAt: new Date() } }
     );
 
@@ -173,7 +149,7 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     await cabinetMembersCollection(db).deleteMany({ ...filter, countryId });
 
     await cabinetNominationsCollection(db).updateMany(
-      { ...filter, countryId, status: { $in: ["proposed", "active"] } },
+      { ...filter, countryId, status: { $in: ["proposed", "active", "awaiting_choice"] } },
       { $set: { status: "withdrawn", updatedAt: new Date() } }
     );
 

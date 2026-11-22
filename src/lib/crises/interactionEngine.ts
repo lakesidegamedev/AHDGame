@@ -272,7 +272,7 @@ export async function applyEffectsForCrisis(
  * their own multi-contributor flows and are not treated as multi-responder here.
  */
 export function isMultiResponderNode(
-  crisis: Pick<Crisis, "scope" | "countryIds">,
+  crisis: Pick<Crisis, "scope" | "countryIds"> & { globalResponse?: unknown },
   node: CrisisDecisionNode
 ): boolean {
   if (node.type !== "choice") return false;
@@ -280,6 +280,10 @@ export function isMultiResponderNode(
   // Their crisis spans both countries, but one response advances the sequence.
   if (node.requiredCountryIds?.length === 1) return false;
   if (crisis.scope === "global") return true;
+  // A crisis with a role-mapped global response offers each country its own role
+  // options (optionsByRole), even when only one country is party to it. Those
+  // options live outside node.options, so the per-country path must answer it.
+  if (crisis.globalResponse) return true;
   // A country-scoped crisis addressed to MORE THAN ONE nation is also answered
   // per country: the chained Vietnam rungs put the same question to both
   // superpowers, and neither leader's choice may resolve the other's. Ordinary

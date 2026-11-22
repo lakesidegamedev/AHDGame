@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
+  afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+  boundSession: () => undefined,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -74,7 +81,7 @@ describe("resolveBundestagspraesidentElection", () => {
     expect(resolved).toBe(true);
     expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
     expect(sendCountryGameEvent).toHaveBeenCalledWith("DE", {
-      title: "Leadership Election Result \u2014 Bundestagspräsident",
+      title: "Leadership Election Result: Bundestagspräsident",
       description: "**Winner** has been elected as **Bundestagspräsident**.",
       color: 0,
       footer: { text: "A House Divided" },

@@ -1241,6 +1241,103 @@ describe("submitCrisisDecision — rejection status codes", () => {
 // is fine, their nation simply is not party to the response. Same class of
 // misleading refusal the ticket is about.
 
+describe("submitCrisisDecision — single-country crisis with role-scoped options", () => {
+  function roleTree(): CrisisDecisionNode[] {
+    const tree = structuredClone(GLOBAL_TREE);
+    const [node] = tree;
+    node.optionsByRole = { belligerent: node.options! };
+    node.options = [];
+    return tree;
+  }
+
+  function stubSingleCountryRoleCrisis(interaction: CrisisInteraction) {
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["crises"]!.findOne.mockResolvedValue({
+      ...makeCrisis(),
+      _id: interaction.crisisId,
+      scope: "country",
+      countryIds: ["US"],
+      interactionDefinition: { decisionTree: roleTree(), autoResolveOnExpiry: true },
+      globalResponse: {
+        conflictKey: "berlin",
+        eventKey: "berlin_bloc",
+        roleByCountry: { US: "belligerent" },
+        defaultOptionIdByRole: { belligerent: "reserves" },
+        outcomes: [],
+        defaultOutcomeId: "stalemate",
+      },
+    });
+    db.collection("characters");
+  }
+
+  it("accepts a role option the page offered instead of rejecting it as invalid", async () => {
+    const interaction = makeInteraction({ decisionTree: roleTree(), currentNodeId: "response" });
+    stubSingleCountryRoleCrisis(interaction);
+
+    const result = await submitCrisisDecision(
+      mdb(),
+      interaction._id,
+      "reserves",
+      new ObjectId(),
+      "US",
+      ["headOfState"]
+    );
+
+    expect(result.interaction.leaderResponses).toHaveLength(1);
+    expect(result.interaction.leaderResponses?.[0]).toMatchObject({
+      countryId: "US",
+      optionId: "reserves",
+      responseRole: "belligerent",
+    });
+  });
+
+  it("answers once per country: a second answer is a 409", async () => {
+    const interaction = makeInteraction({
+      decisionTree: roleTree(),
+      currentNodeId: "response",
+      leaderResponses: [
+        {
+          countryId: "US",
+          characterId: new ObjectId(),
+          characterName: "Prior Leader",
+          nodeId: "response",
+          optionId: "subsidies",
+          optionLabel: "Consumer Subsidies",
+          respondedAt: new Date(),
+        },
+      ],
+    });
+    stubSingleCountryRoleCrisis(interaction);
+
+    const err = await submitCrisisDecision(
+      mdb(),
+      interaction._id,
+      "reserves",
+      new ObjectId(),
+      "US",
+      ["headOfState"]
+    ).catch((e: unknown) => e);
+
+    expect((err as ApiError).status).toBe(409);
+  });
+
+  it("still rejects an option outside the country's role", async () => {
+    const interaction = makeInteraction({ decisionTree: roleTree(), currentNodeId: "response" });
+    stubSingleCountryRoleCrisis(interaction);
+
+    const err = await submitCrisisDecision(
+      mdb(),
+      interaction._id,
+      "not_an_option",
+      new ObjectId(),
+      "US",
+      ["headOfState"]
+    ).catch((e: unknown) => e);
+
+    expect((err as ApiError).status).toBe(400);
+  });
+});
+
 describe("submitCrisisDecision — a country with no role in the response", () => {
   function stubResponseCrisis(
     interaction: CrisisInteraction,

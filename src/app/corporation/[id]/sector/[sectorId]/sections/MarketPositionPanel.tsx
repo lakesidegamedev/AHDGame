@@ -17,13 +17,26 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import MarketPie from "../components/MarketPie";
 import { playerSlotColor, NPP_ARC_COLOR } from "../lib/marketColors";
-import type { Market, SectorData, CorporationRef, Financials, Competitor } from "../types";
+import type {
+  Market,
+  SectorData,
+  CorporationRef,
+  Financials,
+  Competitor,
+  CommodityFlow,
+} from "../types";
+import {
+  UNSERVED_DEMAND_TEXT,
+  unservedDemandReason,
+} from "@/lib/corporations/rules/unservedDemandReason";
 
 interface MarketPositionPanelProps {
   market: Market;
   sector: SectorData;
   corporation: CorporationRef;
   financials: Financials | null;
+  /** Supply rows with last turn's settled sales, to say why paid orders stayed unfilled. */
+  supplies?: readonly Pick<CommodityFlow, "commodity" | "settledSales" | "unsold">[];
   /** compact=true for sidebar use: larger chart, no bottom stats grid, 2-row footer */
   compact?: boolean;
   /** Clearing market mode is on — realized revenue depends on how much actually sold. */
@@ -100,6 +113,7 @@ export default function MarketPositionPanel({
   sector,
   corporation,
   financials,
+  supplies = [],
   compact = false,
   clearingEnabled,
   capitalEnabled,
@@ -127,9 +141,9 @@ export default function MarketPositionPanel({
   // sector docs (older than the field's introduction).
   const sectorCurrency = COUNTRY_CURRENCY_MAP[(sector.countryId ?? "US") as CountryId] ?? "USD";
   const corpCurrency = (corporation.liquidCurrencyCode ?? sectorCurrency) as CurrencyCode;
-  const marketCurrencyNote = `Total market is the combined revenue of every producer in this state and industry, per turn. Shares are each producer's revenue divided by that total, so they add up to 100% and never exceed it. Market values are normalized for forex. Local mode shows ${sectorCurrency}, this sector's home currency; other display modes convert from the same underlying value.`;
+  const marketCurrencyNote = `Total market is the combined capacity revenue of every producer in this state and industry, per turn: what their plants earn when everything they make sells at its asking price. It is not what was earned last turn. Shares are each producer's capacity revenue divided by that total, so they add up to 100% and never exceed it. Market values are normalized for forex. Local mode shows ${sectorCurrency}, this sector's home currency; other display modes convert from the same underlying value.`;
   const yourShareNote =
-    "Your revenue in this state and industry divided by the total market. It is capped at 100%. Your revenue shown beside it is what you actually earned, so it can differ slightly from the figure the share uses.";
+    "Your capacity revenue in this state and industry divided by the total market, both on the same capacity basis. It is capped at 100%. What you earned last turn is shown separately below and can be above or below capacity revenue.";
   const fmtMarketChip = (v: number) => formatAmountChip(v, sectorCurrency);
   const fmtCorpSectorMoney = (v: number) =>
     formatAmount(toInternalFrom(v, corpCurrency), corpCurrency);
@@ -161,6 +175,19 @@ export default function MarketPositionPanel({
           ? readoutText("sidebarCapEstimate")
           : readoutText("sidebarNone")
         : null;
+
+  const unservedLines = (room?.buildDemand ?? []).flatMap((row) => {
+    const sale = supplies.find((x) => x.commodity === row.commodity);
+    if (!sale?.settledSales) return [];
+    const reason = unservedDemandReason({
+      unmetUnits: row.unmet,
+      offered: sale.settledSales.offered,
+      soldOutside: sale.settledSales.sold,
+      ownSites: sale.settledSales.ownSites,
+      unsold: sale.unsold,
+    });
+    return reason ? [{ commodity: row.commodity, text: UNSERVED_DEMAND_TEXT[reason] }] : [];
+  });
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
@@ -310,7 +337,11 @@ export default function MarketPositionPanel({
         /* Full mode: stats grid */
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <span className="block text-body-sm font-medium text-muted">Your revenue</span>
+            <Tooltip content="Revenue your plants earn at full sales, per turn. This is the figure behind your share. It is not last turn's earnings.">
+              <span className="block cursor-help text-body-sm font-medium text-muted">
+                Your capacity revenue
+              </span>
+            </Tooltip>
             <span className="text-sm font-bold tabular-nums text-success">
               {financials ? fmtCorpSectorMoney(perTurn(financials.revenue)) : "n/a"}
               <span className="text-[10px] font-normal text-muted">/turn</span>
@@ -331,6 +362,24 @@ export default function MarketPositionPanel({
             <span className="text-sm font-bold text-foreground">{market.competitors.length}</span>
           </div>
         </div>
+      )}
+      {!compact && financials?.realizedRevenue != null && (
+        <p className="mt-3 text-[11px] leading-snug text-muted">
+          Earned last turn: {fmtCorpSectorMoney(perTurn(financials.realizedRevenue))}/turn. Market
+          and share use capacity revenue, so earnings can be above or below the market total.
+        </p>
+      )}
+      {unservedLines.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
+          {unservedLines.map((line) => (
+            <li key={line.commodity}>
+              <span className="font-medium text-foreground">
+                {COMMODITY_LABELS[line.commodity]}:
+              </span>{" "}
+              {line.text}
+            </li>
+          ))}
+        </ul>
       )}
       {market.attackExposure && (
         <p className="mt-3 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">

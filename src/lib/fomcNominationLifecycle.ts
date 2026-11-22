@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * FOMC Nomination Lifecycle
  *
@@ -15,7 +16,7 @@ import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility"
 
 import { requiresCabinetIndependence } from "@/lib/cabinet/rules/officeCompatibility";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { type AnyBulkWriteOperation, ObjectId } from "mongodb";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
@@ -165,6 +166,13 @@ export async function processFomcNominationLifecycle(
   now: Date
 ): Promise<FomcNominationLifecycleResult> {
   const db = await getDb();
+  return withSessionDb(db, (tx) => processFomcNominationsInTransaction(tx, now));
+}
+
+async function processFomcNominationsInTransaction(
+  db: Awaited<ReturnType<typeof getDb>>,
+  now: Date
+): Promise<FomcNominationLifecycleResult> {
   const gameState = await getGameState();
   const currentTurn = gameState?.currentTurn ?? 1;
   const result: FomcNominationLifecycleResult = {
@@ -228,6 +236,7 @@ export async function processFomcNominationLifecycle(
     "bank",
     expired.flatMap((n) => (n.nomineeCharacterId ? [n.nomineeCharacterId] : []))
   );
+  const statusWrites: AnyBulkWriteOperation<FomcNomination>[] = [];
   const notifications: NotificationInput[] = [];
 
   for (const nom of expired) {
@@ -238,10 +247,12 @@ export async function processFomcNominationLifecycle(
     const seatLabel = nom.makeChair ? "Fed Chair" : `FOMC seat ${nom.seatId}`;
 
     if (passed) {
-      await fomcNominationsCollection(db).updateOne(
-        { _id: nom._id },
-        { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } }
-      );
+      statusWrites.push({
+        updateOne: {
+          filter: { _id: nom._id, status: "active" },
+          update: { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } },
+        },
+      });
       result.confirmed++;
       if (nom.occupantType === "player") {
         const userId = await nomineeUserId(db, nom.nomineeCharacterId);
@@ -255,10 +266,12 @@ export async function processFomcNominationLifecycle(
         }
       }
     } else {
-      await fomcNominationsCollection(db).updateOne(
-        { _id: nom._id },
-        { $set: { status: "rejected", rejectedAt: now, updatedAt: now } }
-      );
+      statusWrites.push({
+        updateOne: {
+          filter: { _id: nom._id, status: "active" },
+          update: { $set: { status: "rejected", rejectedAt: now, updatedAt: now } },
+        },
+      });
       result.rejected++;
       const rejectedNomineeUserId =
         nom.occupantType === "player" ? await nomineeUserId(db, nom.nomineeCharacterId) : null;
@@ -288,6 +301,11 @@ export async function processFomcNominationLifecycle(
     }
   }
 
-  if (notifications.length > 0) await createNotifications(notifications);
+  if (statusWrites.length > 0) {
+    const closed = await fomcNominationsCollection(db).bulkWrite(statusWrites);
+    if (closed.matchedCount !== statusWrites.length)
+      throw new Error("FOMC nomination changed during resolution");
+  }
+  if (notifications.length > 0) await afterCommit(db, () => createNotifications(notifications));
   return result;
 }

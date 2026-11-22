@@ -84,6 +84,7 @@ function makeDb(activeBills: Bill[], otherBills: Bill[]) {
             const found = allBills.find((b) => String(b._id) === String(filter._id));
             return Promise.resolve(found ?? null);
           }),
+          bulkWrite: vi.fn().mockResolvedValue({}),
           updateOne: vi.fn().mockImplementation((filter, update) => {
             updates.push({ filter, update });
             return Promise.resolve({});
