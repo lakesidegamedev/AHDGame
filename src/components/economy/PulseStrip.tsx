@@ -29,6 +29,7 @@ export interface PulseData {
     debtToGdpRatio: number | null;
     /** Optional so older payloads and fixtures still type-check. */
     debtTrajectory?: "falling" | "stable" | "rising" | null;
+    primaryBalancePct?: number | null;
     stabilisingPrimaryBalancePct?: number | null;
     /** Ladder rate the flat-balance figure is priced at, in percent. */
     debtPathBasisPct?: number | null;
@@ -43,6 +44,12 @@ interface PulseStripProps {
 function signed(value: number, digits = 1): string {
   const fixed = value.toFixed(digits);
   return value > 0 ? `+${fixed}` : fixed;
+}
+
+function primaryBalanceLabel(value: number): string {
+  const magnitude = Math.abs(value).toFixed(1);
+  if (magnitude === "0.0") return "a balanced primary budget";
+  return `a primary ${value < 0 ? "deficit" : "surplus"} of ${magnitude}% of budget GDP`;
 }
 
 /** Direction glyph from the last two history points; null when flat/unknown. */
@@ -92,18 +99,15 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
   const prime = pulse.primeRate.value;
   const primeDir = historyDirection(pulse.primeRate.history);
   const credit = pulse.credit;
-  // Which way the ratio is going, and for a rising one, what would stop it.
+  const primaryBalance = credit.primaryBalancePct;
+  const stabilisingBalance = credit.stabilisingPrimaryBalancePct;
   const debtNote =
     credit.debtTrajectory === "rising"
-      ? credit.stabilisingPrimaryBalancePct != null
-        ? `debt rising, flat at ${credit.stabilisingPrimaryBalancePct.toFixed(1)}% primary surplus${
-            credit.debtPathBasisPct != null ? " (ladder rate)" : ""
-          }`
-        : "debt rising"
+      ? "Debt-to-GDP is projected to rise."
       : credit.debtTrajectory === "falling"
-        ? "debt falling"
+        ? "Debt-to-GDP is projected to fall."
         : credit.debtTrajectory === "stable"
-          ? "debt stable"
+          ? "Debt-to-GDP is projected to hold steady."
           : null;
 
   return (
@@ -192,6 +196,11 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             </span>
           )}
         </span>
+        {primaryBalance != null && (
+          <span className="text-[11px] text-muted">
+            Current budget shows {primaryBalanceLabel(primaryBalance)}.
+          </span>
+        )}
         {debtNote && (
           <span
             title={
@@ -204,6 +213,9 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             }`}
           >
             {debtNote}
+            {credit.debtTrajectory === "rising" && stabilisingBalance != null && (
+              <> It would hold steady at {primaryBalanceLabel(stabilisingBalance)}.</>
+            )}
           </span>
         )}
         <Link

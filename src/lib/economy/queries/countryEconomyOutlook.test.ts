@@ -141,6 +141,7 @@ describe("buildCountryEconomyOutlook", () => {
     expect(result.pulse.primeRate.neutral).toBe(3);
     expect(result.pulse.credit.rating).toBe("AA");
     expect(result.pulse.credit.debtToGdpRatio).toBe(0.62);
+    expect(result.pulse.credit.primaryBalancePct).toBe(-2.86);
     expect(result.plannedEconomy).toBeNull();
     expect(result.commandEconomyEnabled).toBe(false);
     expect(result.currentYear).toBe(2019);
