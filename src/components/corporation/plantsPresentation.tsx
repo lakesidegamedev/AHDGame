@@ -20,6 +20,7 @@ import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } fr
 
 export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
+import { soldShareTitle } from "@/lib/corporations/rules/soldShareReading";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
@@ -386,7 +387,9 @@ export function RunningSoldReading({
           band == null
             ? "Nothing was made last turn, so nothing could be sold."
             : exactFill
-              ? `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+              ? soldShareTitle(
+                  `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+                )
               : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
         }
       >
