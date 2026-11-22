@@ -69,3 +69,16 @@ describe("account membership dates", () => {
     ).toEqual({ date: accountCreatedAt, isApproximate: false });
   });
 });
+
+describe("additional characters", () => {
+  it("reports the character's own creation date instead of the account's", () => {
+    expect(
+      resolveMemberSince({
+        accountCreatedAt: new Date("2026-02-04T09:00:00Z"),
+        profileCreatedAt,
+        historyStartedAt,
+        additionalCharacter: true,
+      })
+    ).toEqual({ date: profileCreatedAt, isApproximate: false });
+  });
+});

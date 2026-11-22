@@ -46,7 +46,7 @@ The game does not block you from filing at low Political Influence (PI). Your pr
 
 ## 9. First office is the lowest one
 
-Aim for State Senate or the House (or an MP / lower-chamber seat in a parliamentary country). Senate and President wait. Reason: office action bonuses fund the next race, and a lost primary costs a whole cycle.
+Aim for State Senate or the House (or an MP / lower-chamber seat in a parliamentary country) when its race is open. Filing is only open during a race's primary window, so check the Elections page for what is open at home now. If only statewide races are open, build influence and money and join a party until local filing reopens. Senate and President wait. Reason: office action bonuses fund the next race, and a lost primary costs a whole cycle.
 
 ## 10. Party organisation is not optional
 
@@ -78,7 +78,7 @@ Notifications and the turn summary list resolved elections and bills. If a candi
 
 ## What a first day of actions looks like
 
-A new character has 25 actions, ₳250,000 of campaign funds, favorability 50, PI 10 and donor level 1. The costs below are base figures before your state's GDP scaling; the game shows your exact quote.
+A new character has 25 actions, ₳250,000 of campaign funds at 2019 prices (about ₳345,000 in a 2027 world), favorability 50, PI 10 and donor level 1. The costs below are base figures before your state's GDP scaling; the game shows your exact quote.
 
 | Step | Actions | Funds | Result |
 |---|---|---|---|

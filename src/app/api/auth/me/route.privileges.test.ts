@@ -102,7 +102,12 @@ describe("GET /api/auth/me privilege flags", () => {
           };
         }
         if (name === "characters") {
-          return { findOne: vi.fn().mockResolvedValue(null) };
+          return {
+            findOne: vi.fn().mockResolvedValue(null),
+            find: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
+            }),
+          };
         }
         return { countDocuments: vi.fn().mockResolvedValue(0) };
       },

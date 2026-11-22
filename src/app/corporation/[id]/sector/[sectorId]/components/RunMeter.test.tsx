@@ -98,3 +98,26 @@ describe("run meter idle causes", () => {
     expect(meter()).toContain("Kept low after a cash cut");
   });
 });
+
+describe("RunMeter over capacity", () => {
+  it("explains output above capacity from a production push and keeps the bar in its track", () => {
+    const { container, getByTestId } = render(
+      <RunMeter
+        capacityUnits={340}
+        producedUnits={391}
+        soldUnits={391}
+        idleCauses={[]}
+        sectorType="technology"
+        productionPolicyLevel={25}
+      />
+    );
+    expect(getByTestId("run-over-capacity").textContent).toContain(
+      "Made 115% of installed capacity"
+    );
+    expect(getByTestId("run-over-capacity").textContent).toContain("+25%");
+    const widths = Array.from(container.querySelectorAll<HTMLElement>("[style]")).map((el) =>
+      parseFloat(el.style.width)
+    );
+    expect(widths.every((w) => w <= 100.0001)).toBe(true);
+  });
+});

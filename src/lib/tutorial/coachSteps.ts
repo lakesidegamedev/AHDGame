@@ -141,3 +141,15 @@ export function coachCountryContext(
     world,
   };
 }
+
+/**
+ * Index of the saved step in the current list, or 0 when it is gone (a world
+ * or plan change removed it). Resuming by id keeps a returning player on the
+ * step they left rather than wherever an old index now points.
+ */
+export function resolveResumeIndex(steps: ReadonlyArray<{ id: string }>, stepId: string): number {
+  return Math.max(
+    0,
+    steps.findIndex((s) => s.id === stepId)
+  );
+}

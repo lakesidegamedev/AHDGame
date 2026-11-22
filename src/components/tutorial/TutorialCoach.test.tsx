@@ -146,6 +146,34 @@ describe("TutorialCoach step transitions", () => {
     expect(progressWrites).toHaveLength(0);
   });
 
+  it("resumes on the saved step by id, not by a stored index", async () => {
+    window.localStorage.setItem("ahd-tutorial-step-v2", "5");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () =>
+            url === "/api/tutorial/plan" && !init?.method
+              ? { progress: { chapterId: "core", stepId: "read-wire" } }
+              : {},
+        })
+      )
+    );
+    render(
+      <NextIntlClientProvider locale="en" timeZone="UTC" messages={enCatalog}>
+        <TutorialCoach character={CHARACTER} autoStart />
+      </NextIntlClientProvider>
+    );
+    for (let pass = 0; pass < 3; pass++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(600);
+      });
+    }
+    expect(screen.getByText("Read the news every turn")).toBeTruthy();
+  });
+
   it("waits for the world flags before showing the card", () => {
     worldFlags = { loaded: false, preset: "2019-default" };
     startTour();

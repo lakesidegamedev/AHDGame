@@ -22,6 +22,27 @@ export async function sendSystemMail(db: Db, params: SystemMailParams): Promise<
   await playerMailCollection<Omit<PlayerMail, "_id">>(db).insertOne(toMail(params));
 }
 
+/**
+ * Insert a system mail at most once per character and subject. The filter and
+ * the insert are one atomic upsert, so retries, double submits and a second
+ * code path cannot leave duplicates.
+ * @returns true when this call created the mail
+ */
+export async function sendSystemMailOnce(db: Db, params: SystemMailParams): Promise<boolean> {
+  const doc = toMail(params);
+  const result = await playerMailCollection<Omit<PlayerMail, "_id">>(db).updateOne(
+    {
+      toCharacterId: params.toCharacterId,
+      subject: params.subject,
+      fromCharacterName: doc.fromCharacterName,
+      fromCharacterId: { $exists: false },
+    },
+    { $setOnInsert: doc },
+    { upsert: true }
+  );
+  return result.upsertedCount > 0;
+}
+
 function toMail(params: SystemMailParams): Omit<PlayerMail, "_id"> {
   return {
     fromCharacterName: params.senderName ?? "Forex Market",
