@@ -14,3 +14,5 @@ areas: [frontend]
 - "Profit per turn" on the expand sector screen is now "Profit per turn once
   open". The figure was always the forecast after the new plants open, after
   running costs, overhead and tax, not a cost paid while they are being built.
+- Changing a company's supply priority (own sites first or open market first)
+  is now recorded, so support can see when it changed.
