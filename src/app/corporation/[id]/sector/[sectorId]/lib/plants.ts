@@ -15,6 +15,14 @@ export function fmtUnits(n: number | null | undefined, digits = 0): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(n);
 }
 
+/** A TEU estimate that never reads "0" for a real, small need. */
+export function fmtTeuEstimate(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  if (n < 0.1) return "less than 0.1";
+  if (n < 10) return fmtUnits(n, 1);
+  return fmtUnits(n);
+}
+
 /** Format a 0–1 share as a whole percent. */
 export function fmtPct(n: number | null | undefined, digits = 0): string {
   if (n == null || !Number.isFinite(n)) return "n/a";

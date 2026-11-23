@@ -95,7 +95,9 @@ export function supplyReachMessage(
 ): string {
   const who = args.readerIsBuyer ? "Your corporation has" : "The buyer has";
   if (problem.code === "buyerDoesNotUse") {
-    return `${who} no active plant that uses ${args.commodityLabel}, so this contract could never deliver.`;
+    return args.readerIsBuyer
+      ? `You could not receive ${args.commodityLabel} under this contract: none of your active plants use it. A buyer only receives goods its own plants consume, so producing it yourself does not count.`
+      : `The buyer has no active plant that uses ${args.commodityLabel}, so this contract could never deliver.`;
   }
   const where =
     problem.buyerStates.length > 0

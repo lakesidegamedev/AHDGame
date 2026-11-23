@@ -139,6 +139,15 @@ function formatPlantCount(plants: number): string {
   return rounded.toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
+/** Arrival pace in plain words; a slow pace reads "1 every N turns", never "About 0". */
+export function arrivalRateSentence(perTurn: number, singular: string, plural: string): string {
+  if (perTurn < 1) {
+    const every = Math.max(2, Math.round(1 / perTurn));
+    return `About 1 ${singular} arrives every ${every} turns.`;
+  }
+  return `About ${formatPlantCount(perTurn)} ${perTurn === 1 ? singular : plural} arrive each turn.`;
+}
+
 /**
  * Build progress in plants: how many are on order, how many already arrived,
  * and (for smooth orders) how many land each turn. `plantUnits` is the
@@ -173,10 +182,7 @@ export function buildProgressLabel(
   const noun = p.ordered === 1 ? singular : plural;
   const done =
     queue.lastOnlineTurn != null ? ` Last one is done on turn ${queue.lastOnlineTurn}.` : "";
-  const rate =
-    p.perTurn != null
-      ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
-      : "";
+  const rate = p.perTurn != null ? ` ${arrivalRateSentence(p.perTurn, singular, plural)}` : "";
   const arrival =
     p.perTurn != null
       ? " Capacity arrives in a slice every turn, so the capacity figure rises each turn until then."

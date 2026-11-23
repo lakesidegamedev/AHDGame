@@ -1149,6 +1149,8 @@
     },
     "runHold": {
       "heldByInput": "Kept low after {input} ran short",
+      "stoppedByInput": "Stopped: short of {input}",
+      "stoppedByInputHelp": "Your {sites} could not buy enough {input}, so part of the run stopped. Check {input} in the Inputs list below.",
       "heldByCash": "Kept low after a cash cut",
       "heldByInputHelp": "You sold everything you made, but there was not enough {input} to run your {sites} at their plan. They are held below it, not ramping up. Output returns to the plan once {input} arrives.",
       "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
