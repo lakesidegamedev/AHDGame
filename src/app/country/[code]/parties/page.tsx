@@ -111,6 +111,8 @@ export default function PartiesPage() {
   const fetchParties = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // The trend history does not depend on the roster, so both requests start together.
+    const historyRequest = fetch(`${partiesApiUrl(effectiveCountry)}/history`).catch(() => null);
     try {
       const partiesRes = await fetch(`${partiesApiUrl(effectiveCountry)}?includeOrg=1`);
       if (!partiesRes.ok) throw new Error("Failed to load parties");
@@ -124,8 +126,8 @@ export default function PartiesPage() {
     }
 
     try {
-      const historyRes = await fetch(`${partiesApiUrl(effectiveCountry)}/history`);
-      if (historyRes.ok) {
+      const historyRes = await historyRequest;
+      if (historyRes?.ok) {
         const data = await historyRes.json();
         setPartyHistory(data.history || []);
       }
