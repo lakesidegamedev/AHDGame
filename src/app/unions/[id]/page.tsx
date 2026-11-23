@@ -3,6 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState, use as usePromise } from "react";
 import Link from "next/link";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { UNION_STRENGTH_DECAY_PER_TURN } from "@/lib/unions/unionEconomy";
 import {
   ORGANIZE_SECTOR_ACTION_COST,
@@ -75,6 +76,8 @@ export default function UnionDashboardPage({ params }: PageProps) {
 }
 
 function UnionDashboard({ id }: { id: string }) {
+  // Treasury is held in the anchor currency: show it with its symbol.
+  const { formatAmount } = useCurrency();
   const [union, setUnion] = useState<UnionDetail | null>(null);
   const [sectors, setSectors] = useState<SectorRow[]>([]);
   const [workforce, setWorkforce] = useState<WorkforceSummary | null>(null);
@@ -499,7 +502,7 @@ function UnionDashboard({ id }: { id: string }) {
           />
           <StatCell
             label="Treasury"
-            value={Math.round(union.treasury).toLocaleString("en-US")}
+            value={formatAmount(union.treasury)}
             hint="The union's war chest. Dues flow in each turn based on how organized it is; recruitment drives and strikes are paid out of it."
           />
           <StatCell

@@ -26,3 +26,10 @@ areas: [frontend]
 - Party pages: recent activity names categories in plain words, the National Chair is listed first, an empty National Committee says so once, discipline rows always name an office, and the Organization chart lists every party with a whole-number total.
 - The executive cabinet preview says how many more positions the full list holds, and the confidence history no longer repeats itself before there is any history.
 - The elections page says why the Map view is off right next to it.
+- Bill pages keep the timeline, how it becomes law and the whip count in view while you scroll, show zero votes in grey, put /yr on both cost figures, say what the pass threshold is a share of, and read "Whipping No".
+- Union pages show treasury, costs and upkeep with a currency, spell out plurals ("2 locals", "1 offer"), and say how many bargaining campaigns are open and how many are settled or lapsed.
+- Sector pages show the market total once, every share to one decimal, a +0% production effect in grey, "paid" only once on construction lines, and call a staffing gap a shortage only when the state really is short of workers.
+- Your profile shows a dash for stats with no per-turn change, names the hoarding threshold in actions, and marks the donor network ceiling as a maximum.
+- On the Actions page, the two poll cards open "Quick poll" and "Full poll", and the batch-run note says when 10 runs cost more still.
+- Presidential pages label the number of candidates filed, explain the Actions and Levels columns, drop the repeated state and candidate names from map tooltips, and show Previous or Next only when there is somewhere to go.
+- The elections overview stats bar no longer leaves an empty dark band, and the US map hint points to the state search.

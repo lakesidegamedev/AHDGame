@@ -165,7 +165,9 @@ export function VoteSeatingChart({
                 fontWeight: 700,
               }}
             >
-              {displayPct}% {requiredPct != null && requiredPctOfCast ? "of votes cast " : ""}needed
+              {/* Always name the base, so "51% needed" is never a bare figure. */}
+              {displayPct}% of{" "}
+              {requiredPct != null && requiredPctOfCast ? "votes cast" : `${eligible} seats`} needed
               to pass
             </div>
           </>

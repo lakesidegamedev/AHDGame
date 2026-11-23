@@ -64,9 +64,6 @@ interface MarketPositionPanelProps {
  * rounded parts and can land on 94.30000000000001. Round the sum once for
  * display rather than letting the float reach the screen.
  */
-function roundShare(v: number): number {
-  return Math.round(v * 100) / 100;
-}
 
 /** One rival's row. Same shape whether it is a player or an NPP, so the two
  *  groups stay visually comparable and only the colour and weight differ. */
@@ -102,7 +99,7 @@ function CompetitorRow({
       <span
         className={`ml-auto tabular-nums font-medium ${dim ? "text-muted" : "text-foreground"}`}
       >
-        {comp.marketShare}%
+        {Number(comp.marketShare).toFixed(1)}%
       </span>
     </div>
   );
@@ -228,7 +225,7 @@ export default function MarketPositionPanel({
             />
             <span className="truncate font-medium text-primary">{corporation.name}</span>
             <span className="ml-auto tabular-nums font-medium text-foreground">
-              {market.marketShare}%
+              {Number(market.marketShare).toFixed(1)}%
             </span>
           </div>
           {/* Other players first: these are the rivals a player can actually
@@ -271,7 +268,7 @@ export default function MarketPositionPanel({
                   <path d="M4 2l4 4-4 4z" />
                 </svg>
                 <span className="ml-auto tabular-nums font-medium text-foreground">
-                  {roundShare(nppShare)}%
+                  {nppShare.toFixed(1)}%
                 </span>
               </button>
 
@@ -320,21 +317,8 @@ export default function MarketPositionPanel({
         </div>
       </div>
 
-      {/* Compact mode: 1-row footer only */}
-      {compact ? (
-        <div className="space-y-1.5 border-t border-card-border pt-3 text-xs">
-          <div className="flex justify-between">
-            <Tooltip content={marketCurrencyNote}>
-              <span className="cursor-help border-b border-dashed border-card-border/70 text-muted">
-                Total market
-              </span>
-            </Tooltip>
-            <span className="tabular-nums font-medium text-foreground">
-              {fmtMarketChip(perTurn(market.totalMarket))}/turn
-            </span>
-          </div>
-        </div>
-      ) : (
+      {/* Compact mode shows Total market once, above the legend. */}
+      {compact ? null : (
         /* Full mode: stats grid */
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -355,7 +339,7 @@ export default function MarketPositionPanel({
               </span>
             </Tooltip>
             <span className="text-sm font-bold tabular-nums text-primary">
-              {market.marketShare}%
+              {Number(market.marketShare).toFixed(1)}%
             </span>
           </div>
           <div>

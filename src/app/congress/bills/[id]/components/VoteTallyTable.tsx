@@ -38,11 +38,11 @@ export function VoteTallyTable({
             <dl className="mt-2 grid grid-cols-4 gap-1 text-center text-xs tabular-nums">
               <div>
                 <dt className="text-[10px] font-medium text-muted">{forLabel}</dt>
-                <dd className="text-success">{p.for}</dd>
+                <dd className={p.for > 0 ? "text-success" : "text-muted"}>{p.for}</dd>
               </div>
               <div>
                 <dt className="text-[10px] font-medium text-muted">{againstLabel}</dt>
-                <dd className="text-error">{p.against}</dd>
+                <dd className={p.against > 0 ? "text-error" : "text-muted"}>{p.against}</dd>
               </div>
               <div>
                 <dt className="text-[10px] font-medium text-muted">Abstain</dt>
@@ -80,8 +80,14 @@ export function VoteTallyTable({
                     <span className="min-w-0 break-words">{p.partyName}</span>
                   </span>
                 </td>
-                <td className={`${numericCellClass} text-success`}>{p.for}</td>
-                <td className={`${numericCellClass} text-error`}>{p.against}</td>
+                <td className={`${numericCellClass} ${p.for > 0 ? "text-success" : "text-muted"}`}>
+                  {p.for}
+                </td>
+                <td
+                  className={`${numericCellClass} ${p.against > 0 ? "text-error" : "text-muted"}`}
+                >
+                  {p.against}
+                </td>
                 <td className={`${numericCellClass} text-muted`}>{p.abstain}</td>
                 <td className={`${numericCellClass} pl-2 pr-0 font-medium`}>{p.total}</td>
               </tr>
