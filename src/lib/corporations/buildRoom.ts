@@ -14,12 +14,11 @@ import { loadBuildDemandProducers } from "./loadBuildDemandProducers";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
-import type { CommodityPrice, CorporateSector, SectorBuildOrder, State } from "@/lib/db/types";
+import type { CorporateSector, SectorBuildOrder, State } from "@/lib/db/types";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
-import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
+import { commodityDemandGap } from "@/lib/market/commodityMarketScope";
 import { commodityMarketScope } from "@/lib/market/rules/commodityMarketScope";
-import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
 import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
@@ -61,7 +60,6 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
             stateSupply: 1,
             stateDeliveredSupply: 1,
             stateDemand: 1,
-            demandTruncatedUnits: 1,
           },
         }
       )
@@ -104,7 +102,6 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
       });
       stateBalances.set(stateId, byCommodity);
     }
-  const priceDocByCommodity = new Map(priceDocs.map((p) => [p.commodity, p]));
   return {
     funded: funded != null,
     demandRows,
@@ -127,20 +124,11 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
         );
       }
       return sectorDemandGapUnits(supplyMix, (commodity) => {
-        // Restore the cap-hidden demand: state share for local outputs,
-        // country share for reachable ones (demand audit step 1).
-        const doc = priceDocByCommodity.get(commodity);
-        const latentDemandTopUp = doc
-          ? isStateScopedCommodity(commodity)
-            ? latentTopUpForState(doc, stateId)
-            : latentTopUpForCountry(doc, countryId)
-          : 0;
         return commodityDemandGap({
           commodity,
           stateBalance: stateBalances.get(stateId)?.get(commodity),
           reachableBook: bookFor(reachableBooks, countryId, commodity),
           globalBalance: globalBalances.get(commodity),
-          latentDemandTopUp,
         });
       });
     },

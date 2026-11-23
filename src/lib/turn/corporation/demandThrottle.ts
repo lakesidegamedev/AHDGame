@@ -7,7 +7,6 @@ export {
   DEMAND_PROBE_MARGIN,
   DEMAND_THROTTLE_FLOOR,
   demandThrottleFactor,
-  withLatentDemand,
   withForeignDemand,
   FOREIGN_DEMAND_CLAIM_PER_TURN,
   liftedThrottleBalance,

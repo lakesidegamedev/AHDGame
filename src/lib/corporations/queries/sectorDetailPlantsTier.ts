@@ -41,7 +41,6 @@ import { upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { loadReachableBooks, bookFor } from "@/lib/trade/queries/loadReachableBooks";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { isStateScopedCommodity, commodityDemandGap } from "@/lib/market/commodityMarketScope";
-import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemandGap";
 import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import { type CommodityType, eraScaledBasePrices } from "@/lib/constants/commodities";
 import { getSectorStrategies } from "@/lib/constants/sectorStrategies";
@@ -526,10 +525,7 @@ export async function buildSectorDetailPlantsTier({
     const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
     const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
       if (fundedBuild) return fundedGap.get(gapCommodity) ?? 0;
-      return legacyBuildDemandGap({
-        price: priceDocByCommodity.get(gapCommodity),
-        stateId: sector.stateId,
-        countryId: sectorCountryId,
+      return commodityDemandGap({
         commodity: gapCommodity,
         stateBalance: stateBalances.get(gapCommodity),
         reachableBook: bookFor(reachableBooks, sectorCountryId, gapCommodity),
@@ -604,7 +600,6 @@ export async function buildSectorDetailPlantsTier({
                 stateBalance: stateBalances.get(key),
                 reachableBook: bookFor(reachableBooks, sectorCountryId, key),
                 globalBalance: globalBalances.get(key),
-                latentDemandTopUp: 0,
               }),
             };
           }),

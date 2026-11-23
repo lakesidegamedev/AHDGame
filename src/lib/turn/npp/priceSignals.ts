@@ -1,6 +1,5 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import { latentAwareNationalRatio, latentAwareStateRatio } from "@/lib/market/latentShortageSignal";
 import type { CommodityPriceRatioFn } from "./marketSignals";
 import { shortfallAwareStateRatio } from "./rules/stateShortfallSignal";
 
@@ -18,8 +17,7 @@ export function buildNppPriceSignals(priceByCommodity: ReadonlyMap<string, Commo
     const price =
       doc.reachablePrices?.[countryId] ?? doc.nationalPrices?.[countryId] ?? doc.globalPrice;
     if (!price || !Number.isFinite(price)) return null;
-    const stored = price / doc.basePrice;
-    return latentAwareNationalRatio(doc, countryId, stored) ?? stored;
+    return price / doc.basePrice;
   };
 
   const statePriceRatioOf = (commodity: CommodityType, stateId: string): number | null => {
@@ -32,7 +30,7 @@ export function buildNppPriceSignals(priceByCommodity: ReadonlyMap<string, Commo
     // counts even when the blended state price looks calm.
     return shortfallAwareStateRatio({
       commodity,
-      priceRatio: latentAwareStateRatio(doc, stateId, stored) ?? stored,
+      priceRatio: stored,
       supply: doc.stateSupply?.[stateId],
       demand: doc.stateDemand?.[stateId],
     });

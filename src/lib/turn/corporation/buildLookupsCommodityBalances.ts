@@ -3,7 +3,6 @@ import type { CommodityPrice } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { CommodityType } from "@/lib/constants/commodities";
-import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { capInputPriceRatioAtWorld } from "@/lib/corporations/physicalPnl";
 import type { WithId } from "mongodb";
@@ -76,16 +75,8 @@ export function buildCommodityBalanceLookups({
   const priceRatioByCommodity = new Map<CommodityType, number>();
   const initializedLaggedBooks = new Set<CommodityType>();
   const reachablePriceRatioByCountry = new Map<string, Map<CommodityType, number>>();
-  // Demand the ledger cut off at its 1.5x-supply cap, as a multiple of the
-  // capped demand it kept. The price signal already adds this back
-  // (latentShortageSignal); the production throttle's headroom needs it too, or
-  // a sold-out plant ramps only toward the truncated book and supply never
-  // catches a deep shortage.
-  const latentDemandFactorByCommodity = new Map<CommodityType, number>();
   for (const cp of commodityPrices) {
     if (cp.turn > 0) initializedLaggedBooks.add(cp.commodity);
-    const topUp = latentDemandTopUp(cp.globalDemand, cp.globalDemand, cp.demandTruncatedUnits);
-    if (topUp > 0) latentDemandFactorByCommodity.set(cp.commodity, 1 + topUp / cp.globalDemand);
     globalCommodityBalances.set(cp.commodity, {
       supply: cp.globalSupply,
       demand: cp.globalDemand,
@@ -257,7 +248,6 @@ export function buildCommodityBalanceLookups({
     stateDeliveryLimitedRatioByState,
     ownerDeliveryLimitedRatioByCorp,
     priceRatioByCommodity,
-    latentDemandFactorByCommodity,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     exportIntensityByCountry,

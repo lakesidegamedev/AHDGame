@@ -127,11 +127,10 @@ describe("aggregateCountrySectorMix", () => {
     const vehicleMakers = mix.find((s) => s.type === "manufacturing")!;
 
     // Two built vehicle capacity units are $100,000 of plant nameplate.
-    // The vehicle ledger has another 40 visible units plus 10 units that were
-    // capped out of the price pass. On the vehicle capacity basis, those
-    // 50 units are $2.5M of latent demand.
-    expect(vehicleMakers.totalMarketAnchor).toBe(2_600_000);
-    expect(vehicleMakers.ownedPercent).toBeCloseTo(3.8, 1);
+    // The vehicle ledger has 40 unserved units; the 10 cap-removed units are
+    // not buyers and add nothing. Those 40 units are $2M of latent demand.
+    expect(vehicleMakers.totalMarketAnchor).toBe(2_100_000);
+    expect(vehicleMakers.ownedPercent).toBeCloseTo(4.8, 1);
 
     // Plants has no persisted target-growth signal; exposing 0.00% here would
     // claim a measured contraction/expansion that did not occur.
@@ -156,10 +155,8 @@ describe("aggregateCountrySectorMix", () => {
         currentGrowthRate: 0,
       },
     ]);
-    // Globally capped (60 units truncated) but locally clearing: true uncapped
-    // demand is 10 + 60 = 70 against 100 supply, so the market has no latent
-    // leg. Restoring the truncated share outside the max(0, demand - supply)
-    // floor would book 60 phantom vehicle units ($3M) here instead.
+    // Surplus scope (10 demand against 100 supply). The 60 cap-removed units
+    // are not buyers, so no latent leg is booked.
     mockFind("commodityPrices", [
       {
         commodity: "vehicles",
