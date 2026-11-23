@@ -379,7 +379,11 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
             )}
             {crisis.status === "resolved" && wireOnEnd && (
               <div className="rounded-xl border border-card-border bg-card px-5 py-4">
-                <p className="text-body-sm font-medium text-muted mb-1.5">Resolution wire</p>
+                {/* Same label style as the breaking wire, in the resolved colour. */}
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-success mb-1.5">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden />
+                  Resolution wire
+                </p>
                 <p className="text-sm italic text-muted leading-relaxed">
                   &ldquo;{wireOnEnd}&rdquo;
                 </p>

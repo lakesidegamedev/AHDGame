@@ -33,3 +33,6 @@ areas: [frontend]
 - On the Actions page, the two poll cards open "Quick poll" and "Full poll", and the batch-run note says when 10 runs cost more still.
 - Presidential pages label the number of candidates filed, explain the Actions and Levels columns, drop the repeated state and candidate names from map tooltips, and show Previous or Next only when there is somewhere to go.
 - The elections overview stats bar no longer leaves an empty dark band, and the US map hint points to the state search.
+- State and province pages: the regional government buttons carry a label, regional conditions use one decimal throughout and the margin cap names its unit, Organization effects read in plain text with their ranges, legends leave out shares that round to 0.0%, and states without a specialization bonus say so. State party pages show the electorate lean once and name parties in the share dilution list.
+- Party lists keep the Create coalition button on one line and show a Discord button only when a party has an invite; politician lists keep party names on one line and explain the favorability colours.
+- Crisis pages style the resolution wire like the breaking wire, in green.

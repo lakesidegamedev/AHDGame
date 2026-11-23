@@ -467,7 +467,16 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
                   <span className="hidden lg:block">Party</span>
                   <span className="hidden lg:block">Office</span>
                   <span className="hidden sm:block">Influence</span>
-                  <span className="text-right">{showFunds ? "Funds" : "Favorability"}</span>
+                  <span
+                    className="text-right"
+                    title={
+                      showFunds
+                        ? undefined
+                        : "Green at 60% and above, amber from 40%, red below 40%."
+                    }
+                  >
+                    {showFunds ? "Funds" : "Favorability"}
+                  </span>
                 </div>
                 {sortedPoliticians.map((politician, index) => {
                   const leader = isRankedSort && index === 0;
