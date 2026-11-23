@@ -9,6 +9,22 @@ import {
   type CurrentNationalLawProgram,
 } from "./rules/programRoster";
 
+/**
+ * Defence and intelligence money lives in its own ledger (the defence budget and
+ * the intelligence appropriation), never in this department account. Their
+ * account record stays at zero, so the panel names where the money really is and
+ * shows figures only when the record carries one (the defence opening claim),
+ * never a row of zeros that reads as "unfunded".
+ */
+const SPECIALIZED_ACCOUNT_EXPLANATION: Record<string, string> = {
+  intelligence:
+    "Intelligence money is not held in this account. It is set by the country's intelligence funding law, and the yearly appropriation and its balance are shown on the Intelligence tab. A country that has not enacted that law has no intelligence funding.",
+  defense:
+    "Defence money is not held in this account. It is set by defence law and paid through the defence budget. Any yearly figure below is the opening defence claim, shown for reference and not paid twice.",
+};
+const SPECIALIZED_ACCOUNT_FALLBACK =
+  "This institution is funded through its own ledger, not this account.";
+
 const ZERO_BUDGET_OFFICE_EXPLANATION =
   "This office has no associated laws, so its legislative budget is intentionally zero. Staff actions do not require legislative funding.";
 
@@ -65,6 +81,35 @@ export function buildResetDepartmentFinanceReadModel(input: {
             : {}),
         };
       });
+  if (account.externallySettled) {
+    const hasFigures =
+      account.annualAuthority !== 0 ||
+      account.balance !== 0 ||
+      account.encumbered !== 0 ||
+      account.arrears !== 0;
+    return {
+      enabled: true,
+      allocationMode: "demand",
+      departmentId: definition.id,
+      departmentName,
+      kind: definition.kind,
+      accountPolicyId: definition.accountPolicyId,
+      explanation:
+        SPECIALIZED_ACCOUNT_EXPLANATION[definition.accountPolicyId ?? ""] ??
+        SPECIALIZED_ACCOUNT_FALLBACK,
+      ...(hasFigures
+        ? {
+            annualAuthority: account.annualAuthority,
+            balance: account.balance,
+            availableBalance: Math.max(0, account.balance - account.encumbered),
+            encumbered: account.encumbered,
+            arrears: account.arrears,
+          }
+        : {}),
+      lastAllocationChangedTurn: account.lastAllocationChangedTurn,
+      programs,
+    };
+  }
   return {
     enabled: true,
     allocationMode: "demand",
@@ -72,13 +117,12 @@ export function buildResetDepartmentFinanceReadModel(input: {
     departmentName,
     kind: definition.kind,
     accountPolicyId: definition.accountPolicyId,
-    explanation: account.externallySettled
-      ? "This institution keeps its established specialized treasury controls. Its opening claim is shown here for reconciliation, not paid twice."
-      : programs.length === 0 &&
-          account.annualAuthority === 0 &&
-          account.balance === 0 &&
-          account.encumbered === 0 &&
-          account.arrears === 0
+    explanation:
+      programs.length === 0 &&
+      account.annualAuthority === 0 &&
+      account.balance === 0 &&
+      account.encumbered === 0 &&
+      account.arrears === 0
         ? ZERO_BUDGET_OFFICE_EXPLANATION
         : "This is the department's share of existing national spending, net of regional grants. A Cabinet member may request more or less for each service; actual delivery cannot exceed paid funds and capacity.",
     annualAuthority: account.annualAuthority,
@@ -86,8 +130,8 @@ export function buildResetDepartmentFinanceReadModel(input: {
     availableBalance: Math.max(0, account.balance - account.encumbered),
     encumbered: account.encumbered,
     arrears: account.arrears,
-    unpaidAuthority: account.externallySettled ? undefined : (account.unpaidAuthority ?? 0),
-    lastAuthorityPaid: account.externallySettled ? undefined : account.lastAuthorityPaid,
+    unpaidAuthority: account.unpaidAuthority ?? 0,
+    lastAuthorityPaid: account.lastAuthorityPaid,
     lastAllocationChangedTurn: account.lastAllocationChangedTurn,
     programs,
   };
