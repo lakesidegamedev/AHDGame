@@ -176,7 +176,12 @@ export function FiscalStatStrip({
               "between rollovers. For the current growth rate, see the Economy page."
             }
           >
-            {usdNote(gdp, `${pctSign(gdpGrowth)} FY assumption`)}
+            {usdNote(
+              gdp,
+              prev && prev.gdp > 0 && compare
+                ? `${pctSign((gdp / prev.gdp - 1) * 100)} since FY${prev.fy} close · ${pctSign(gdpGrowth)} FY assumption`
+                : `${pctSign(gdpGrowth)} FY assumption`
+            )}
           </span>
         }
         delta={compare ? <Delta now={gdp} prev={prev?.gdp} kind="money" sym={sym} /> : undefined}

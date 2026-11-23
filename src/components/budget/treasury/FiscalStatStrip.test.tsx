@@ -61,3 +61,25 @@ describe("FiscalStatStrip sovereign debt", () => {
     expect(screen.getByText("0.3% of budget GDP")).toBeTruthy();
   });
 });
+
+describe("FiscalStatStrip GDP compare", () => {
+  it("states the change against the prior close in percent so it is not read as the growth assumption", () => {
+    render(
+      <FiscalStatStrip
+        sym="$"
+        revenue={1}
+        spending={1}
+        gdp={38.67e12}
+        gdpGrowth={9.394}
+        debtToGdp={1}
+        debtPrincipal={1}
+        rating="BB"
+        treasuryReserve={0}
+        compare
+        prev={{ fy: 2028, revenue: 1, spending: 1, debtToGdp: 1, gdp: 33.277e12 } as never}
+      />
+    );
+    expect(screen.getByText(/\+16\.2% since FY2028 close/)).toBeTruthy();
+    expect(screen.getByText(/\+9\.4% FY assumption/)).toBeTruthy();
+  });
+});
