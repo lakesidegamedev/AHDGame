@@ -197,6 +197,15 @@ export interface RouteErrorContext {
  */
 export function handleRouteError(error: unknown, context?: RouteErrorContext): NextResponse {
   if (error instanceof PartyTerritoryError) return errorResponse(409, error.message);
+  // A funded treasury paying from cash it does not have is a game state, not a
+  // fault: tell the player instead of returning a server error. Matched by name
+  // so this module does not import the treasury code.
+  if (error instanceof Error && error.name === "InsufficientFundedTreasuryCash") {
+    return errorResponse(
+      409,
+      "The treasury does not have enough cash on hand to pay for this right now."
+    );
+  }
   if (error instanceof ApiError) {
     // Expected 4xx business errors are returned to the client and intentionally
     // NOT sent to Sentry — they are not faults.
