@@ -44,3 +44,28 @@ describe("repairCountryBriefText", () => {
     expect(String(writes[1].set.content)).toMatch(/fixed coupon of 10\.25%.*\(\/country\/ro\)$/);
   });
 });
+
+describe("repairCountryBriefText stories", () => {
+  it("retitles stored upgrade stories and rebuilds outlooks", async () => {
+    const { db, writes } = fakeDb({
+      countryBriefs: [],
+      newsPosts: [
+        {
+          _id: "n1",
+          title: "Romania debt under strain",
+          content:
+            "In Romania, its credit rating moved from AA to AAA. Thin demand can push yields up and bond prices down. (/country/ro)",
+        },
+        {
+          _id: "n2",
+          title: "Italy outlook",
+          content: "Italy: growth 0.3%, inflation 24.2%, debt 169% of GDP, rated B. (/country/it)",
+        },
+      ],
+    });
+    const result = await repairCountryBriefText(db, { dryRun: false });
+    expect(result.newsChanged).toBe(2);
+    expect(writes[0].set.title).toBe("Romania upgraded to AAA");
+    expect(String(writes[1].set.content)).toContain("Italy is barely growing");
+  });
+});

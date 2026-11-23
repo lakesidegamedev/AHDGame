@@ -152,6 +152,55 @@ export function economyRead(obs: BriefObservation): string | null {
   return null;
 }
 
+export interface OutlookFigures {
+  countryName: string;
+  growth: number | null;
+  inflation: number | null;
+  debtToGdp: number | null;
+  creditRating: string | null;
+}
+
+/**
+ * The outlook as short prose. Each sentence is picked from the country's own
+ * figures, so economies in different shape read differently, not as one
+ * template with the names swapped.
+ */
+export function outlookProse(f: OutlookFigures): string {
+  const out: string[] = [];
+  const { growth, inflation, debtToGdp, creditRating } = f;
+  if (growth !== null) {
+    if (growth < 0)
+      out.push(`${f.countryName}'s economy is shrinking, down ${pct(Math.abs(growth))}.`);
+    else if (growth < 1) out.push(`${f.countryName} is barely growing, at ${pct(growth)}.`);
+    else if (growth < 3) out.push(`${f.countryName} is growing at a steady ${pct(growth)}.`);
+    else out.push(`${f.countryName} is growing fast, at ${pct(growth)}.`);
+  }
+  if (inflation !== null) {
+    if (inflation >= 15)
+      out.push(
+        `Inflation of ${pct(inflation)} is eroding wages and savings faster than they can adjust.`
+      );
+    else if (inflation >= 8)
+      out.push(
+        `Inflation at ${pct(inflation)} is well above comfort and squeezes household budgets.`
+      );
+    else if (inflation >= 3)
+      out.push(`Inflation sits at ${pct(inflation)}, higher than ideal but manageable.`);
+    else out.push(`Prices are calm, with inflation at ${pct(inflation)}.`);
+  }
+  if (debtToGdp !== null) {
+    const rated = creditRating ? `, and lenders rate it ${creditRating}` : "";
+    if (debtToGdp >= DEBT_STRESS_RATIO_PERCENT)
+      out.push(`Debt of ${pct(debtToGdp, 0)} of GDP leaves little room for error${rated}.`);
+    else if (debtToGdp >= 60)
+      out.push(`Debt of ${pct(debtToGdp, 0)} of GDP is a drag but still serviceable${rated}.`);
+    else out.push(`Debt is light at ${pct(debtToGdp, 0)} of GDP${rated}.`);
+  } else if (creditRating) {
+    out.push(`Lenders rate it ${creditRating}.`);
+  }
+  return out.length > 0 ? out.join(" ") : `${f.countryName} has no new figures this period.`;
+}
+
 export function briefActions(obs: BriefObservation): BriefAction[] {
   const code = obs.countryId.toLowerCase();
   const actions: BriefAction[] = [
@@ -323,18 +372,7 @@ export function planBriefs(obs: BriefObservation, memory: BriefMemory | null): B
   }
 
   if (briefs.length === 0 && ready(memory, "outlook", obs.turn)) {
-    const bits: string[] = [];
-    if (obs.growth !== null) bits.push(`growth ${pct(obs.growth)}`);
-    if (obs.inflation !== null) bits.push(`inflation ${pct(obs.inflation)}`);
-    if (obs.debtToGdp !== null) bits.push(`debt ${pct(obs.debtToGdp, 0)} of GDP`);
-    if (obs.creditRating) bits.push(`rated ${obs.creditRating}`);
-    emit(
-      "outlook",
-      `${obs.countryName} outlook`,
-      `${obs.countryName}: ${bits.length > 0 ? bits.join(", ") : "no new figures"}.${
-        economyRead(obs) ? ` ${economyRead(obs)}` : ""
-      }${bondLine(obs)}`
-    );
+    emit(`outlook`, `${obs.countryName} outlook`, `${outlookProse(obs)}${bondLine(obs)}`);
   }
 
   return { briefs, memory: next };
