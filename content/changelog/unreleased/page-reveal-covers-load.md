@@ -1,14 +1,24 @@
 ---
 date: 2026-11-23
-title: Experimental page decode now hides the page while it loads
+title: Pages stop jumping while they load
 summary: >-
-  With experimental features on, a page no longer jumps around while its panels
-  load and then blanks out for the decode. It shows a glyph shimmer while the
-  page assembles and decodes once, as soon as the page holds still.
+  The site footer no longer rises into the middle of the screen while a page
+  loads and then drops away. With experimental features on, the page decode now
+  covers the load with a glyph shimmer and plays once, as soon as the page holds
+  still, instead of after the page has already jumped around.
 tags: [interface]
 badges: [patch]
 areas: [frontend]
 ---
+
+## Every player
+
+- The page area keeps at least a screen of height while a page loads, so the
+  footer and ad strip stay below the fold instead of flashing into view and
+  being pushed back down. On the legislature page this removed nearly all of
+  the movement during navigation.
+
+## Experimental page decode
 
 - In-app navigation shows a glyph shimmer in place of the page while its
   skeleton, data and late panels arrive, so none of those swaps are visible.
@@ -17,4 +27,4 @@ areas: [frontend]
 - The decode itself is shorter, about a third of a second.
 - A page that arrives complete on a fresh load is shown straight away instead of
   being hidden and replayed.
-- Only players with experimental features switched on see any of this.
+- Only players with experimental features switched on see the decode.

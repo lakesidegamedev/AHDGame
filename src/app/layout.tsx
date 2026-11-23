@@ -395,12 +395,17 @@ export default async function RootLayout({
                             displaces them by their `top` offset at rest and prevents
                             them from ever sticking to the viewport. clip gives the same
                             horizontal clipping without creating a scroll container. */}
+                          {/* min-h-svh keeps the footer and ad strip below the fold
+                            while a route is loading. Without it the page area
+                            collapsed to its skeleton on every navigation, the
+                            footer rose into view, then was shoved back down when
+                            the content landed. */}
                           <main
                             id="main-content"
                             className={
                               nativeStatusDock
-                                ? "min-w-0 overflow-x-clip pb-4"
-                                : "min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
+                                ? "min-h-svh min-w-0 overflow-x-clip pb-4"
+                                : "min-h-svh min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
                             }
                             tabIndex={-1}
                           >
