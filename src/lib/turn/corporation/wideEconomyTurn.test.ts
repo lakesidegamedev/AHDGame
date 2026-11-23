@@ -52,7 +52,7 @@ const buildWith = (
     turn: 1,
     worldEpoch: "world",
     lookups: lookupsWithIndex(priceIndex),
-    env: { wideEconomyStage: stage },
+    env: stage === undefined ? {} : { wideEconomyStage: stage },
     sectorOps: [],
     carry: null,
     ...extra,
