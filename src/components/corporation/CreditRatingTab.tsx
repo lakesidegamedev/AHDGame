@@ -16,6 +16,7 @@ import {
   calculateCreditScore,
   getBondCouponRate,
   MAX_BOND_ISSUANCE_FRACTION,
+  MIN_BOND_ISSUANCE_PER_ISSUE,
   CORPORATE_CREDIT_MATURITY_HORIZON_TURNS,
 } from "@/lib/constants/bonds";
 import { weightedComponentComposite } from "@/lib/corporations/creditStanding";
@@ -227,7 +228,7 @@ function WhatIfDebtPanel({
       0,
       bondInfo.creditDiagnostics.totalEquity * MAX_BOND_ISSUANCE_FRACTION - bondInfo.totalDebt
     );
-    const perIssuanceCap = bondInfo.maxPerIssuance ?? 100_000_000;
+    const perIssuanceCap = bondInfo.maxPerIssuance ?? MIN_BOND_ISSUANCE_PER_ISSUE;
     return { min: -bondInfo.totalDebt, max: Math.min(perIssuanceCap, maxIssue) };
   }, [bondInfo]);
 
@@ -665,9 +666,9 @@ export default function CreditRatingTab({
                   title="Cash plus the estimated worth of working sectors and builds in progress, less arrears. This is not the balance sheet's book value, which counts assets at cost less debt."
                 />
                 <KVRow
-                  label="Annual operating income (est.)"
+                  label="Annual sector income (est.)"
                   value={formatAmount(cd.annualIncome)}
-                  title="Estimated sector operating income per turn, times turns per year. Before tax and dividends."
+                  title="What your sectors earn per turn after their own running costs, times turns per year. It leaves out company-wide costs, so it is higher than the operating income on the CEO Office. Before tax and dividends."
                 />
                 <KVRow label="Annual coupons" value={formatAmount(cd.annualCouponObligations)} />
                 <KVRow

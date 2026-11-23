@@ -95,6 +95,29 @@ describe("CreditRatingTab", () => {
     expect(scale.querySelector("[data-active=true]")?.getAttribute("data-tier")).toBe("BBB");
   });
 
+  it("labels the credit income as sector income, not operating income", () => {
+    const withDiagnostics = {
+      ...rated,
+      creditDiagnostics: {
+        totalEquity: 1_000,
+        annualIncome: 740,
+        annualCouponObligations: 10,
+        debtToEquityRatio: 0,
+        interestCoverageRatio: null,
+      },
+    } as BondInfo;
+    render(
+      <CreditRatingTab
+        bondInfo={withDiagnostics}
+        bondLoading={false}
+        corporation={corporation}
+        corpId="c"
+      />
+    );
+    expect(screen.getByText("Annual sector income (est.)")).toBeTruthy();
+    expect(screen.queryByText(/Annual operating income/)).toBeNull();
+  });
+
   it("lists this corporation as a You row beside the peer averages", async () => {
     vi.stubGlobal(
       "fetch",
