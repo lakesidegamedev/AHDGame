@@ -91,7 +91,7 @@ describe("resolveNationalMetricValue", () => {
     expect(value).toBe(3);
   });
 
-  it("returns 0 when nothing is available", () => {
+  it("returns undefined when nothing is available", () => {
     const value = resolveNationalMetricValue({
       metric: metric({ metricId: "gdpGrowth" }),
       nationalMetricsDoc: null,
@@ -99,15 +99,30 @@ describe("resolveNationalMetricValue", () => {
       budget,
       bank,
     });
-    expect(value).toBe(0);
+    expect(value).toBeUndefined();
   });
 
-  it("returns 0 for a budget-sourced metric when the budget is missing", () => {
+  it("returns undefined for a budget-sourced metric when the budget is missing", () => {
     const value = resolveNationalMetricValue({
       metric: metric({ metricId: "inflationRate", source: "budget" }),
       nationalMetricsDoc: null,
       stateMetrics: [],
       budget: null,
+      bank,
+    });
+    expect(value).toBeUndefined();
+  });
+
+  it("keeps a stored zero as a real 0", () => {
+    const nationalMetricsDoc = {
+      _id: "cn_national",
+      economic: { gdpGrowth: { value: 0 } },
+    } as unknown as StateMetrics;
+    const value = resolveNationalMetricValue({
+      metric: metric({ metricId: "gdpGrowth" }),
+      nationalMetricsDoc,
+      stateMetrics: [],
+      budget,
       bank,
     });
     expect(value).toBe(0);

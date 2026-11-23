@@ -17,8 +17,8 @@ import type { CentralBank } from "@/lib/db/types/centralBank";
  * and never updated by the turn engine; `interestRate` was never stored there at
  * all. Sourcing from `stateMetrics` for these two yields 0.0% on the page.
  *
- * Always returns a number (0 when nothing is available), matching the prior
- * behaviour of the briefing route.
+ * Returns `undefined` when no value is stored, so the stat strip can show an
+ * empty dash instead of a fake 0.0.
  */
 
 /** metricId → reader for `budget`-sourced metrics. */
@@ -47,18 +47,18 @@ export function resolveNationalMetricValue(params: {
   stateMetrics: StateMetrics[];
   budget: FederalBudget | null;
   bank: CentralBank | null;
-}): number {
+}): number | undefined {
   const { metric, nationalMetricsDoc, stateMetrics, budget, bank } = params;
   const source = metric.source ?? "stateMetrics";
 
   if (source === "budget") {
     const value = budget ? BUDGET_METRIC_READERS[metric.metricId]?.(budget) : undefined;
-    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
   }
 
   if (source === "centralBank") {
     const value = bank ? CENTRAL_BANK_METRIC_READERS[metric.metricId]?.(bank) : undefined;
-    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
   }
 
   // Default: stateMetrics. Prefer the precomputed national doc, else regional average.
@@ -70,5 +70,5 @@ export function resolveNationalMetricValue(params: {
   const values = stateMetrics
     .map((sm) => readStateMetric(sm, metric.category, metric.metricId))
     .filter((v): v is number => v !== undefined);
-  return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+  return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : undefined;
 }
