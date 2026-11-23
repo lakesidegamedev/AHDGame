@@ -209,7 +209,7 @@ const ActionCard = memo(function ActionCard({
           )}
           <dt className="text-muted">Effect</dt>
           <dd className="text-foreground">
-            {card.effect}
+            {projection?.effect ?? card.effect}
             {card.effectNote && (
               <span className="mt-0.5 block text-body-sm text-muted">{card.effectNote}</span>
             )}

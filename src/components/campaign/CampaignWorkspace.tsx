@@ -1,5 +1,7 @@
 "use client";
-import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
@@ -251,10 +253,14 @@ export function CampaignDeskView({
             })}
             style={{ color: BLEND.muted }}
           >
-            &lsaquo; {displayCanadianRegionCode(campaign.electionInfo.state)}{" "}
+            &lsaquo;{" "}
+            {formatRaceRegion(campaign.electionInfo.state, (myCountryId ?? "US") as CountryId)}{" "}
             {campaign.electionInfo.electionType === "president"
               ? "Presidential"
-              : campaign.electionInfo.electionType}{" "}
+              : formatElectionTypeLabel(
+                  campaign.electionInfo.electionType,
+                  (myCountryId ?? "US") as CountryId
+                )}{" "}
             Election{electionYear ? ` ${electionYear}` : ""}
           </Link>
         </div>

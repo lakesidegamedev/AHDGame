@@ -71,6 +71,13 @@ import {
   type BackgroundEconomy,
 } from "@/lib/market/producerMarket/backgroundTradeRules";
 import { statesCollection } from "@/lib/db/repositories/states";
+import {
+  wideEconomyBaseline as buildWideEconomyBaseline,
+  wideEconomyOrders as buildWideEconomyOrders,
+  type WideEconomyBaseline,
+  type WideEconomyMarketRow,
+} from "@/lib/market/producerMarket/wideEconomyRules";
+import { resolvePriceIndex, toRealOutput } from "@/lib/metricEngine/rules/priceLevel";
 
 /**
  * Funded-market demand for one producer turn: every plant prepared from its
@@ -94,6 +101,12 @@ export async function buildProducerTurnDemand(
     publicAccountId?: (countryId: string) => string;
     /** Construction buyer account per country; the shadow uses `investment:<country>`. */
     investmentAccountId?: (countryId: string) => string;
+    /** Wider-economy buyer account per country; the shadow uses `wide:<country>`. */
+    wideEconomyAccountId?: (countryId: string) => string;
+    /** The world's stored wider-economy baseline, when one exists. */
+    wideEconomyBaseline?: WideEconomyBaseline | null;
+    /** Recent settled turns to build the baseline from when none is stored yet. */
+    wideEconomyBaselineTurns?: readonly (readonly WideEconomyMarketRow[])[];
     /** Last turn's unspent public funding kept per budget line, by country (funded turn only). */
     publicCarryIn?: ReadonlyMap<string, LineCarry>;
     /** Optional timing hook, called at the end of each numbered step. */
@@ -112,6 +125,8 @@ export async function buildProducerTurnDemand(
   const publicAccountId = input.publicAccountId ?? ((countryId: string) => `public:${countryId}`);
   const investmentAccountId =
     input.investmentAccountId ?? ((countryId: string) => `investment:${countryId}`);
+  const wideEconomyAccountId =
+    input.wideEconomyAccountId ?? ((countryId: string) => `wide:${countryId}`);
   const preparedSectors: ReturnType<typeof prepareProducerPhysicalSector>["prepared"][] = [];
   // Each plant's staffed headcount at its funded run, for the labour market.
   const headcountBySectorId = new Map<string, { desiredWorkers: number; workers: number }>();
@@ -484,6 +499,45 @@ export async function buildProducerTurnDemand(
     }));
   const investmentFundingTotal = investmentFunding.reduce((s, f) => s + f.fundingLocal, 0);
 
+  // The wider economy (gameConfig.wideEconomyStage): a background buyer in each
+  // plant-country state, sized once from a market baseline and grown with real
+  // GDP. Background countries have their own lines.
+  const backgroundCountries = new Set((input.backgroundEconomies ?? []).map((e) => e.countryId));
+  const wideOn = (input.env.wideEconomyStage ?? 0) >= 1;
+  const priceIndexByCountry = new Map(
+    lookups.federalBudgets.map((b) => [String(b.countryId), resolvePriceIndex(b.priceIndex)])
+  );
+  const wideStates = wideOn
+    ? states.flatMap((s) => {
+        const countryId = s.countryId ?? "";
+        if (!budgetCountries.has(countryId) || backgroundCountries.has(countryId)) return [];
+        if (!stateWeightsByCountry.has(countryId)) return [];
+        return [
+          {
+            stateId: String(s._id),
+            countryId,
+            realGdp: toRealOutput(Math.max(0, s.gdp ?? 0), priceIndexByCountry.get(countryId)),
+          },
+        ];
+      })
+    : [];
+  const wideEconomyBaselineCreated =
+    wideOn && !input.wideEconomyBaseline && (input.wideEconomyBaselineTurns?.length ?? 0) > 0
+      ? buildWideEconomyBaseline({ turns: input.wideEconomyBaselineTurns!, states: wideStates })
+      : null;
+  const wideBaseline = input.wideEconomyBaseline ?? wideEconomyBaselineCreated;
+  const wideEconomyOrders =
+    wideOn && wideBaseline
+      ? buildWideEconomyOrders({
+          baseline: wideBaseline,
+          realGdpNow: new Map(wideStates.map((s) => [s.stateId, s.realGdp])),
+          accountId: wideEconomyAccountId,
+          referencePrice: (c, stateId) => refPrice(c as CommodityType, stateId),
+          isStateScoped: (c) => isStateScopedCommodity(c as CommodityType),
+          mapBook: shadowBook,
+        })
+      : [];
+
   input.stage?.("demand.public");
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
   const roles: ShadowAccountRole[] = [];
@@ -709,6 +763,9 @@ export async function buildProducerTurnDemand(
         restrict(o, listFor(o.commodity, investmentCountry.get(o.accountId) ?? ""));
     for (const o of marketingOrders)
       restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
+    // Unlike a background country, the wider economy buys its own country's output.
+    for (const o of wideEconomyOrders)
+      if (o.book === "world") restrict(o, listFor(o.commodity, o.countryId ?? ""));
   }
 
   // Import tariffs (producerTariffStage): one rate per open route that can
@@ -728,6 +785,7 @@ export async function buildProducerTurnDemand(
         ...walletCountry.values(),
         ...funding.map((f) => f.countryId),
         ...investmentFunding.map((f) => f.countryId),
+        ...wideEconomyOrders.flatMap((o) => (o.countryId ? [o.countryId] : [])),
         ...backgroundOffers.flatMap((o) => (o.countryId ? [o.countryId] : [])),
         ...backgroundOrders.flatMap((o) => (o.countryId ? [o.countryId] : [])),
       ]),
@@ -787,6 +845,8 @@ export async function buildProducerTurnDemand(
     investmentFunding,
     investmentFundingTotal,
     marketingOrders,
+    wideEconomyOrders,
+    wideEconomyBaselineCreated,
     newCompanyCash,
     openingById,
     ownerKindByCompany,

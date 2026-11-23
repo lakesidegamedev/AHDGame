@@ -126,7 +126,7 @@ export default function IndustrialRelationsSection({ corpId }: { corpId: string 
         const next = { ...current };
         for (const campaign of data.campaigns) {
           next[campaign.campaignId] ??= {
-            wageLevel: String(campaign.currentOffer.wageLevel),
+            wageLevel: String(Math.round(campaign.currentOffer.wageLevel * 100) / 100),
             agreementDurationTurns: String(campaign.currentOffer.agreementDurationTurns),
             noStrikeTurns: String(campaign.currentOffer.noStrikeTurns),
             pensionPercent: String(

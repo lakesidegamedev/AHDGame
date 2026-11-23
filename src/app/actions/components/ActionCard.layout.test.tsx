@@ -112,6 +112,19 @@ describe("ActionCard layout", () => {
     expect(screen.getByText("13.0%").className).toContain("text-success");
   });
 
+  it("headlines the quoted gain instead of the base rate", () => {
+    renderCard("campaign", {
+      projection: {
+        label: "Influence",
+        from: "12.4%",
+        to: "13.3%",
+        effect: "+0.9% Political Influence",
+      },
+    });
+    expect(screen.getByText("+0.9% Political Influence")).toBeTruthy();
+    expect(screen.queryByText(/^\+1% Political Influence/)).toBeNull();
+  });
+
   it("keeps the last result on the card as a status line", () => {
     renderCard("poll", { flash: { type: "poll", msg: "Poll commissioned.", ok: true } });
     const status = screen.getByRole("status");

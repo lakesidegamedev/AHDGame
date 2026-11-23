@@ -73,8 +73,8 @@ describe("run report card", () => {
       <RunReport report={{ ...base, ownSiteUnits: 40, ownSiteValueAtAsk: 24_000 }} {...props} />
     );
     const line = withOwn.getByTestId("own-site-line").textContent ?? "";
-    expect(line).toContain("40 units");
-    expect(line).toContain("₳24K");
+    expect(line).toContain("960 units a day");
+    expect(line).toContain("₳576K");
     expect(line).toContain("asking price");
     expect(line).not.toMatch(/[–—]/);
     cleanup();

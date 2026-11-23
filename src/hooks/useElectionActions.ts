@@ -7,6 +7,8 @@ import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { formatRaceInRegion } from "@/lib/utils/raceLocationLabel";
+import type { CountryId } from "@/lib/constants/countries";
 
 interface UseElectionActionsProps {
   character: CharacterBasic | null;
@@ -56,6 +58,7 @@ export function useElectionActions({
         return;
       }
 
+      const countryId = (character.countryId ?? "US") as CountryId;
       if (isInAnyRace()) {
         const currentRace =
           elections.find((e) => e.candidates.some((c) => c.characterId === character._id)) ??
@@ -66,7 +69,7 @@ export function useElectionActions({
               }
             : null);
         const desc = currentRace
-          ? `${currentRace.electionType} race in ${currentRace.state}`
+          ? formatRaceInRegion(currentRace.electionType, currentRace.state, countryId)
           : "another race";
         setMessage(`✗ You are already running in the ${desc}. Withdraw first.`);
         return;
@@ -78,7 +81,7 @@ export function useElectionActions({
         return;
       }
       const raceName = targetRace
-        ? `${targetRace.electionType} race in ${targetRace.state}`
+        ? formatRaceInRegion(targetRace.electionType, targetRace.state, countryId)
         : "this race";
       const confirmed = await confirm({
         title: `Enter the ${raceName}?`,

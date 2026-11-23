@@ -165,7 +165,7 @@ const ActionCardCompact = memo(function ActionCardCompact({
             )}
           </div>
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-body-sm">
-            <span className="text-muted">{card.effect}</span>
+            <span className="text-muted">{projection?.effect ?? card.effect}</span>
             <span className="font-medium tabular-nums text-foreground">
               <span className={cantAffordActions ? "text-error" : ""}>
                 {effectiveActionCost} AP

@@ -4,7 +4,14 @@ import { getOutputMultiplier } from "@/lib/utils/productionPolicy";
 import { useTranslations } from "next-intl";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
-import { idleCauseMeta, IDLE_CAUSE_FILL, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
+import {
+  idleCauseMeta,
+  IDLE_CAUSE_FILL,
+  TONE_FILL,
+  fmtUnits,
+  fmtPct,
+  madeShareOfCapacity,
+} from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 
@@ -114,7 +121,7 @@ export default function RunMeter({
       label: "Made, not sold",
       units: unsold,
       fill: TONE_FILL.unsold,
-      help: "Units you made that nobody bought at your posted price. You paid to make them. Lower your price or build less.",
+      help: "Units you made last turn that nobody bought at your posted price, counted against what was made. The Unsold figure in the sales panel counts against units offered, which includes stock carried in, so the two can differ. You paid to make them. Lower your price or build less.",
     },
     ...idleCauses.map((c) => {
       // A sold-out run cut by an input or by cash names what holds it (ticket 1765).
@@ -146,6 +153,9 @@ export default function RunMeter({
   // stay "of capacity" (so they can pass 100%, and a note says why), while the
   // bar is drawn against whichever is larger so it never overflows its track.
   const overCapacity = capacity > 0 && producedUnits > capacity + 0.5;
+  const madeShare = madeShareOfCapacity(producedUnits, capacity) ?? 0;
+  const pushCap = getOutputMultiplier(productionPolicyLevel);
+  const pastPushCap = madeShare > pushCap + 0.005;
   const barBasis = Math.max(
     capacity,
     segments.reduce((sum, s) => sum + Math.max(0, s.units), 0)
@@ -197,8 +207,8 @@ export default function RunMeter({
       {overCapacity && (
         <p className="mt-2 text-body-xs text-muted" data-testid="run-over-capacity">
           {productionPolicyLevel > 0
-            ? `Made ${fmtPct(producedUnits / capacity)} of installed capacity. Your production push (+${productionPolicyLevel}%) runs ${sites} past capacity, up to ${fmtPct(getOutputMultiplier(productionPolicyLevel))} of it, at extra input cost and wear.`
-            : `Made ${fmtPct(producedUnits / capacity)} of installed capacity.`}
+            ? `Made ${fmtPct(madeShare)} of installed capacity. Your production push (+${productionPolicyLevel}%) runs ${sites} past capacity, up to ${fmtPct(pushCap)} of it, at extra input cost and wear.${pastPushCap ? " Installed capacity is lower now than when last turn ran, so the share reads above that limit." : ""}`
+            : `Made ${fmtPct(madeShare)} of installed capacity.`}
         </p>
       )}
       {GROUP_ORDER.map((group) => {

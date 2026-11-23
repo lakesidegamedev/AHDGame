@@ -322,6 +322,7 @@ it("freezes fresh host facts and never rebuilds demand on a retry", async () => 
     investmentBuyerOrders: [],
     backgroundOrders: [],
     backgroundOffers: [],
+    wideEconomyOrders: [],
     householdTransfers: [],
     households: f.input.demand?.households,
     ownerKindByCompany: new Map([[String(f.corp._id), "player"]]),

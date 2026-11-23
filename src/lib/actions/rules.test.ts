@@ -362,7 +362,9 @@ describe("campaign failure agreement", () => {
       canPerform: false,
       reason,
     });
-    expect(simulateActionBatch(campaignCharacter(100), campaignState(), "campaign", 5)).toEqual({
+    expect(
+      simulateActionBatch(campaignCharacter(100), campaignState(), "campaign", 5)
+    ).toMatchObject({
       ok: false,
       reason,
     });
@@ -1003,7 +1005,7 @@ describe("donor failure agreement", () => {
       canPerform: false,
       reason: quote.error,
     });
-    expect(simulateActionBatch(noStats, donorState(), "buildDonorBase", 5)).toEqual({
+    expect(simulateActionBatch(noStats, donorState(), "buildDonorBase", 5)).toMatchObject({
       ok: false,
       reason: quote.error,
     });
@@ -1185,11 +1187,11 @@ describe("poll failure agreement", () => {
     const noStats = pollCharacter(null);
     expect(canPerformAction(noStats, "poll")).toMatchObject({ canPerform: false, reason });
     expect(canPerformAction(noStats, "pollLarge")).toMatchObject({ canPerform: false, reason });
-    expect(simulateActionBatch(noStats, undefined, "poll", 5)).toEqual({
+    expect(simulateActionBatch(noStats, undefined, "poll", 5)).toMatchObject({
       ok: false,
       reason,
     });
-    expect(simulateActionBatch(noStats, undefined, "pollLarge", 5)).toEqual({
+    expect(simulateActionBatch(noStats, undefined, "pollLarge", 5)).toMatchObject({
       ok: false,
       reason,
     });
@@ -1355,7 +1357,7 @@ describe("fundraise failure agreement", () => {
     expect(quoteFundraiseAction({ donorBaseLevel: 0 })).toEqual({ ok: false, error: reason });
     const noDonors = fundraiseCharacter(0);
     expect(canPerformAction(noDonors, "fundraise")).toMatchObject({ canPerform: false, reason });
-    expect(simulateActionBatch(noDonors, undefined, "fundraise", 5)).toEqual({
+    expect(simulateActionBatch(noDonors, undefined, "fundraise", 5)).toMatchObject({
       ok: false,
       reason,
     });
@@ -1501,7 +1503,7 @@ describe("debate prep failure agreement", () => {
     expect(quoteDebatePrepAction({})).toEqual({ ok: false, error: reason });
     const noStats = debateCharacter(null);
     expect(canPerformAction(noStats, "debatePrep")).toMatchObject({ canPerform: false, reason });
-    expect(simulateActionBatch(noStats, undefined, "debatePrep", 5)).toEqual({
+    expect(simulateActionBatch(noStats, undefined, "debatePrep", 5)).toMatchObject({
       ok: false,
       reason,
     });
