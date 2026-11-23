@@ -19,6 +19,7 @@ import { ManagePrivateShareholdersPanel } from "@/components/corporation/ManageP
 import IndexCommitteePanel from "@/components/corporation/IndexCommitteePanel";
 import { NationalizationStatusCard } from "@/components/corporation/NationalizationStatusCard";
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
+import { SwitchToCeoCharacterNotice } from "@/components/corporation/SwitchToCeoCharacterNotice";
 import { NoticeStrip } from "@/components/corporation/ledger/NoticeStrip";
 
 import BondMaturityNotice from "@/components/corporation/BondMaturityNotice";
@@ -266,6 +267,14 @@ export function renderCorporationDetailPageView(
               corporationName={corporation.name}
             />
           )}
+
+          {!isCeo &&
+            corporation.viewerAccountRunsCorporation &&
+            ceo?.characterId &&
+            !ceo.isNpp &&
+            !ceo.isImperial && (
+              <SwitchToCeoCharacterNotice characterId={ceo.characterId} characterName={ceo.name} />
+            )}
 
           {corporation.isPrivate && !isCeo && (isModerator || isAdmin) && (
             <NoticeStrip

@@ -242,6 +242,11 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     (detail.corporation as Record<string, unknown>).viewerIsShareholder = viewerIsShareholder;
     (detail.corporation as Record<string, unknown>).viewerIsControllingParentCeo =
       viewerIsControllingParentCeo;
+    // Same account only: lets a non-CEO character point at the sibling that runs it.
+    (detail.corporation as Record<string, unknown>).viewerAccountRunsCorporation =
+      !!authUser?.userId &&
+      corporation.ceoVacant !== true &&
+      corporation.userId?.toString() === authUser.userId;
 
     if (redact) {
       // Sensitive financial fields live nested under `corporation`, `financials`,
