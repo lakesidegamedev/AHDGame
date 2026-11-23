@@ -246,7 +246,6 @@ export async function buildProducerTurnDemand(
           }
         }
         preparedSectors.push({ ...prepared, plan });
-        // Last turn's offered and sold units of goods under the oversupply cut, and this plan.
         const settled = openedSector.producerSettlement;
         const openingTurn =
           env.producerOpeningTurnsBySector?.get(sectorId) ??
@@ -1070,12 +1069,9 @@ export function shadowOpeningSector(
 }
 
 /**
- * Trim this turn's planned output of glutted goods under the oversupply cut
- * (oversupplyCutRules, ticket 1884). A plant that makes only that good runs
- * less, so it also buys fewer inputs; a plant that makes it alongside other
- * goods keeps its full run and makes less of that good only. Planned supply
- * counts each company's run as far as its cash covers it. Returns the scale
- * applied per good (1 = none).
+ * Trim planned output of glutted goods (oversupplyCutRules). Single-good plants
+ * run less; joint plants keep their run and make less of that good only.
+ * Returns the scale applied per good (1 = none).
  */
 export function applyOversupplyCut(
   plans: readonly ProductionPlan[],

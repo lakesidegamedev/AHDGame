@@ -513,7 +513,11 @@ async function prepareRunFundedProducerTurn(
   });
   for (const [commodity, scale] of demand.oversupplyScales ?? [])
     if (scale < 1)
-      logger.info("oversupply cut", { turn, commodity, scale: Math.round(scale * 1000) / 1000 });
+      logger.info("producerMarket", "oversupply cut", {
+        turn,
+        commodity,
+        scale: Math.round(scale * 1000) / 1000,
+      });
   // A sector with no physical capacity yet settles as an explicit zero receipt
   // below. Any other preparation failure would leave a plant on legacy revenue
   // beside the funded market, so the turn fails instead.

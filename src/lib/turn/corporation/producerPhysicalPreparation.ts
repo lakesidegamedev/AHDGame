@@ -581,8 +581,7 @@ export function prepareProducerPhysicalSector(input: {
         )
       : summedRunShare;
   // A plant that supplies its own company plans at least that company's demand for the good,
-  // unless its last run lost money and left output unsold (ticket 1884): then the normal
-  // output rules may cut it and its sister sites buy the shortfall.
+  // unless it lost money and left output unsold; then its sister sites buy the shortfall.
   const ownDemandFloor =
     (env.captiveDeliveryStage ?? 0) >= 1 && !lossWithUnsoldOutput(liveLast)
       ? ownDemandRunShare(lastReceipt, planBaseRunShare(lastReceipt, runFloor))

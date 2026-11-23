@@ -1,20 +1,7 @@
 /**
- * Oversupply cut for financial services (ticket 1884, owner decision 2026-11-23).
- *
- * When a whole market is glutted, every producer keeps paying for output that
- * never sells. For financial services the game trims the turn's planned output
- * so world supply lands near what buyers took last turn (times a small margin),
- * and only that good: a plant that also makes software keeps its full software
- * yield.
- *
- * The cut sizes itself every turn and can never cause a shortage:
- * - no cut unless last turn left output unsold, so demand is observed, not capped;
- * - planned supply counts each company's run only as far as its cash covers it,
- *   so a company about to stop for lack of cash does not inflate the estimate;
- * - the target is last turn's sales times OVERSUPPLY_TARGET_RATIO, and the cut
- *   is 1 (none) once planned supply is at or under it.
- *
- * Pure: totals in, a scale in [OVERSUPPLY_MIN_SCALE, 1] out.
+ * Oversupply cut: when a good is glutted, trim planned output so world supply
+ * sits just above what buyers took last turn. Sized afresh each turn; no cut
+ * after a sold-out turn, and cash-starved companies do not count as supply.
  */
 
 import { offtakeUnits, type CaptiveProduct } from "./captiveDeliveryRules";
@@ -53,12 +40,7 @@ export function oversupplyScale(input: OversupplyInput): number {
   return Math.max(OVERSUPPLY_MIN_SCALE, target / planned);
 }
 
-/**
- * Share of a company's planned run its free cash covers, the same way the
- * settlement scales a run (producerRunBudget): fixed bills first, then the
- * variable need. Inputs are priced at the bid ceiling, so this reads low,
- * which only makes the oversupply cut smaller.
- */
+/** Share of a company's run its free cash covers, as the settlement scales it; reads low. */
 export function cashCoverShare(cash: number, fixedBills: number, variableNeed: number): number {
   const free = (Number.isFinite(cash) ? cash : 0) - finite(fixedBills);
   const need = finite(variableNeed);
@@ -67,13 +49,9 @@ export function cashCoverShare(cash: number, fixedBills: number, variableNeed: n
 }
 
 /**
- * Whether a plant's last run lost money while leaving output unsold. Own-site
- * deliveries count at their booked value on both sides (valuationCredit for
- * what it sent its sister sites, valuationCharge for what it took from them).
- * Such a plant is not held at a full run just to supply its own sister sites:
- * the normal output rules may cut it, and the sister sites buy any shortfall.
- * A plant that sold everything (a mine feeding its own steel plant) keeps the
- * own-demand floor, even at a loss.
+ * Whether the last run lost money and left output unsold. Own-site deliveries
+ * count at booked value both ways. Such a plant is not held at a full run to
+ * supply its own sister sites; one that sold or delivered everything is.
  */
 export function lossWithUnsoldOutput(
   receipt:
