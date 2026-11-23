@@ -10,9 +10,23 @@ const PAD = { top: 24, right: 24, bottom: 40, left: 64 };
 interface PriceChartProps {
   history: HistoryPoint[];
   basePrice: number;
+  /** Multiplies stored prices into the currency the page header shows. */
+  priceScale?: number;
+  /** Formats a scaled price; defaults to dollars. */
+  formatValue?: (value: number) => string;
 }
 
-export default function PriceChart({ history, basePrice }: PriceChartProps) {
+const defaultFormat = (value: number) => "$" + value.toLocaleString("en-US");
+
+export default function PriceChart({
+  history: rawHistory,
+  basePrice: rawBasePrice,
+  priceScale = 1,
+  formatValue = defaultFormat,
+}: PriceChartProps) {
+  const basePrice = rawBasePrice * priceScale;
+  const history =
+    priceScale === 1 ? rawHistory : rawHistory.map((h) => ({ ...h, price: h.price * priceScale }));
   const rawId = useId();
   const gradId = `pc-${rawId.replace(/:/g, "")}`;
 
@@ -149,7 +163,7 @@ export default function PriceChart({ history, basePrice }: PriceChartProps) {
           fill="currentColor"
           fillOpacity="0.4"
         >
-          ${Math.round(yv).toLocaleString("en-US")}
+          {formatValue(Math.round(yv))}
         </text>
       ))}
 
@@ -184,7 +198,7 @@ export default function PriceChart({ history, basePrice }: PriceChartProps) {
         fill={lineColor}
         fontWeight="bold"
       >
-        ${currentPrice.toLocaleString("en-US")}
+        {formatValue(currentPrice)}
       </text>
     </svg>
   );

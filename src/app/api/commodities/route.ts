@@ -30,6 +30,8 @@ import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadR
 import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { FUNDED_SCARCITY_MAX } from "@/lib/market/scarcityDrift";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -119,6 +121,18 @@ export async function GET(request: Request) {
         .toArray(),
     ]);
 
+    // The funded price ceiling is a multiple of each good's base price; rows
+    // that sit on it all read the same "vs base", so the page names it.
+    const ceilingConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" } as Record<string, unknown>,
+      { projection: { producerPriceMaxMultiplier: 1 } }
+    );
+    const configuredCeiling = ceilingConfig?.producerPriceMaxMultiplier;
+    const priceCeilingMultiplier =
+      typeof configuredCeiling === "number" && configuredCeiling >= 1
+        ? configuredCeiling
+        : FUNDED_SCARCITY_MAX;
+
     // Filter state data by exchange if specified
     const exchangeCountry = exchange ? getCountryForExchange(exchange) : undefined;
 
@@ -198,6 +212,7 @@ export async function GET(request: Request) {
         colors: COMMODITY_COLORS[commodity],
         unit: COMMODITY_UNITS[commodity],
         basePrice,
+        priceCeiling: Math.round(basePrice * priceCeilingMultiplier * 100) / 100,
         globalPrice: data?.globalPrice ?? basePrice,
         globalSupply: data?.globalSupply ?? 0,
         globalDemand: data?.globalDemand ?? 0,

@@ -944,6 +944,34 @@ describe("stockExchangeSnapshot", () => {
         expect(listing.avgSectorGrowth).toBe(5); // (4 + 6) / 2
       }
     });
+
+    it("reads the sector's current growth rather than the CEO's target", async () => {
+      const corpId = new ObjectId();
+      mockCollection
+        .mockReturnValueOnce(createMockChain([createCorporation({ _id: corpId })]))
+        .mockReturnValueOnce(createMockChain([createCharacter()]))
+        .mockReturnValueOnce(
+          createMockChain([
+            createSector({ corporationId: corpId, targetGrowthRate: 0, currentGrowthRate: 3 }),
+          ])
+        )
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([])) // stateMetrics
+        .mockReturnValueOnce(createMockChain([createState()])) // allStates
+        .mockReturnValueOnce(createMockChain([])) // subsidies
+        .mockReturnValueOnce(createMockChain([])) // bonds
+        .mockReturnValueOnce(createMockChain([])); // HQ states
+
+      vi.mocked(getPublicShareQuote).mockReturnValue(100);
+      vi.mocked(getRoundedPublicMarketCap).mockReturnValue(100000);
+
+      await generateStockExchangeSnapshots(100, mockDb);
+
+      const updateCall = mockUpdateOne.mock.calls.find((c) => c[0]?._id === "global");
+      if (updateCall) {
+        expect(updateCall[1]?.$set?.listings?.[0].avgSectorGrowth).toBe(3);
+      }
+    });
   });
 
   describe("generateWealthListSnapshots", () => {

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
+import { atPriceCap } from "@/lib/market/overviewPreview";
 import { formatCount } from "@/lib/ui/numbers";
 
 function balance(c: CommodityData): { label: string; tone: string; title?: string } {
@@ -39,7 +40,7 @@ export function CommoditiesPanel({
   error: string;
   supplyEnabled: boolean;
 }) {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, inputSymbol } = useCurrency();
   const [filter, setFilter] = useState("");
   const rows = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -67,6 +68,9 @@ export function CommoditiesPanel({
             Regional shortages →
           </Link>
         </div>
+        <p className="text-xs text-muted">
+          Prices are world averages per unit, shown in {inputSymbol}.
+        </p>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
@@ -99,6 +103,14 @@ export function CommoditiesPanel({
                     </td>
                     <td className={`px-3 py-2 text-right tabular-nums ${toneClass(base)}`}>
                       {pctText(base)}
+                      {atPriceCap(c) && (
+                        <span
+                          className="ml-1 text-xs text-muted"
+                          title="The price is at the highest level the market allows, so goods at the cap share the same figure."
+                        >
+                          at price cap
+                        </span>
+                      )}
                     </td>
                     <td
                       className={`px-3 py-2 text-right tabular-nums ${toneClass(c.lastTurnPriceChange)}`}

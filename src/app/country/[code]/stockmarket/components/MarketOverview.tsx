@@ -121,6 +121,8 @@ interface CandlesResponse {
   points: CandleDto[];
   intradayTurns: number;
   totalTurns: number;
+  /** Turns in the requested window, whether or not each has a recorded close. */
+  windowTurns?: number;
   firstIntradayTurn: number | null;
   calendar?: GameDateAnchor | null;
   asOf?: string | null;
@@ -809,7 +811,7 @@ export function MarketOverview({
           )}
           {!loading && candles.length > 0 && (
             <span>
-              {intradayTurns}/{totalTurns} turns with intraday prints
+              {intradayTurns}/{meta?.windowTurns ?? totalTurns} turns with intraday prints
               {intradayTurns === 0 ? " (turn closes only)" : ""}
             </span>
           )}

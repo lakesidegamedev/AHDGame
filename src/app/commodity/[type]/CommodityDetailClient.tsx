@@ -21,6 +21,12 @@ import {
   groupStatesByCountry,
 } from "@/lib/commodity-map/commodityRegionMappings";
 import { countryUrl } from "@/lib/urls";
+import {
+  convertCommodityPrice,
+  formatCommodityPrice,
+  getCommodityDisplayCurrency,
+} from "@/lib/commodity-map/commodityPriceDisplay";
+import { formatCurrencyPrecise } from "@/lib/utils/formatters";
 import { buildCommodityMarketScope } from "./lib/marketScope";
 
 const FreightNetworkPanel = dynamic(() => import("./components/FreightNetworkPanel"), {
@@ -148,6 +154,11 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
     [data, drillDownCountry, drillDownState]
   );
 
+  // Same currency as the header price and base, so the chart's base line equals it.
+  const chartCurrency = marketScope.activeCountry
+    ? getCommodityDisplayCurrency(marketScope.activeCountry)
+    : null;
+
   function handleSelectCountry(countryId: CountryId | null) {
     setDrillDownCountry(countryId);
     setDrillDownState(null);
@@ -224,6 +235,16 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
               history={data.history}
               basePrice={data.basePrice}
               unit={data.unit}
+              priceScale={
+                chartCurrency
+                  ? convertCommodityPrice(1, chartCurrency, forexEnabled, exchangeRates)
+                  : 1
+              }
+              formatValue={(value) =>
+                chartCurrency
+                  ? formatCommodityPrice(value, chartCurrency, false, exchangeRates)
+                  : formatCurrencyPrecise(value)
+              }
               scopeLabel={marketScope.activeCountry ? "Global history" : marketScope.marketLabel}
             />
           </div>
@@ -336,6 +357,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           commodity={data.commodity}
           consumerNote={data.demandDriver?.consumerNote}
           marketSupply={marketScope.supply}
+          marketDemand={marketScope.demand}
           marketLabel={marketScope.marketLabel}
         />
 
