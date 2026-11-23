@@ -84,9 +84,10 @@ export function ExperimentalPageReveal({
     const textLength = () => (host.textContent ?? "").trim().length;
     const isLoading = () => host.querySelector(".animate-pulse") !== null;
 
-    // A server-rendered page that already arrived whole is left alone: it is
-    // readable, and hiding it to replay it is the flash players complained of.
-    if (firstMount && textLength() >= MIN_TEXT_LENGTH && !isLoading()) return;
+    // Server HTML with real text is already on screen. Hiding it to wait on a
+    // late panel's skeleton blanks a readable page and pushes its largest paint
+    // back by the whole wait, so only a pure route skeleton is covered.
+    if (firstMount && textLength() >= MIN_TEXT_LENGTH) return;
 
     const controller = createAsciiReveal(host, {
       preset: "decode",

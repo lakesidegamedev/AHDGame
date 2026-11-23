@@ -3,7 +3,11 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import createNextIntlPlugin from "next-intl/plugin";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
-import { PRIVATE_PAGE_CACHE_CONTROL } from "./src/lib/cacheHeaders";
+import {
+  PRIVATE_PAGE_CACHE_CONTROL,
+  STATIC_PUBLIC_ASSET_CACHE_CONTROL,
+  STATIC_PUBLIC_ASSET_SOURCE,
+} from "./src/lib/cacheHeaders";
 import { retiredChangelogRedirects } from "./src/lib/changelog/retiredSlugs";
 import { guessableUrlRedirects, legacyCountryRootRedirects } from "./src/lib/countryRedirect";
 import {
@@ -162,6 +166,14 @@ const nextConfig: NextConfig = {
             value: PRIVATE_PAGE_CACHE_CONTROL,
           },
         ],
+      },
+      {
+        // Files in public/ (sprites, logos, region outlines, icons) are the
+        // same for every visitor, so the blanket private rule above made every
+        // page load download them again. Names are not content-hashed, so they
+        // revalidate daily instead of caching for a year.
+        source: STATIC_PUBLIC_ASSET_SOURCE,
+        headers: [{ key: "Cache-Control", value: STATIC_PUBLIC_ASSET_CACHE_CONTROL }],
       },
       {
         // A service-worker script must NEVER be HTTP-cached: the browser serves
