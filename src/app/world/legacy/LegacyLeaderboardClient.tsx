@@ -267,7 +267,8 @@ export default function LegacyLeaderboardClient({
             <div className="flex items-center gap-1 text-xs text-muted">
               <CountryFlag country={row.countryId} size="sm" />
               <span>
-                {row.scoringCharacterName} · {row.iterationLabel}
+                {row.scoringIsActive ? "Current life" : "Retired life"}: {row.scoringCharacterName}{" "}
+                · {row.iterationLabel}
               </span>
             </div>
           </div>
@@ -357,6 +358,12 @@ export default function LegacyLeaderboardClient({
                 {isNetWorth
                   ? "Net worth includes all currency balances, shares, bonds and funds, less personal loans, converted to anchor currency."
                   : "Career score balances politics, business, enacted laws, contest results and earned gameplay achievements. Each area contributes up to 1,000 points."}
+              </p>
+              <p className="mt-2 max-w-2xl text-sm text-muted">
+                The name is the life the player chose to show. Office, influence and wealth come
+                from the life named underneath, the one that ranks best. A retired life is frozen as
+                it was when it retired, so it can differ from the player&apos;s current character.
+                Equal scores share a rank.
               </p>
             </div>
           </header>
