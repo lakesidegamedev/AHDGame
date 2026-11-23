@@ -162,6 +162,11 @@
       "helpResources": "Help / Resources",
       "helpInformation": "Help/Information"
     },
+    "characterSwitch": {
+      "message": "You switched character in another tab. This tab still shows the old one.",
+      "messageNamed": "You switched to {name} in another tab. This tab still shows the old character.",
+      "reload": "Reload"
+    },
     "userMenu": {
       "characters": "Characters",
       "newCharacter": "New character",
