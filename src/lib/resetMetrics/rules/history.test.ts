@@ -60,3 +60,15 @@ describe("reset metric history", () => {
     );
   });
 });
+
+it("freezes a positive sample weight and rejects a changed retry", () => {
+  const observations = { "01": observation("01", 5) };
+  const opening = openingMetricHistory(observations, 1);
+  const sampled = appendMetricHistory(opening, observations, 13, { "01": 100 });
+  expect(sampled["01"]!.at(-1)).toEqual({ turn: 13, value: 5, aggregationWeight: 100 });
+  expect(appendMetricHistory(sampled, observations, 13, { "01": 100 })).toEqual(sampled);
+  expect(() => appendMetricHistory(sampled, observations, 13, { "01": 200 })).toThrow(
+    "replay differs"
+  );
+  expect(opening["01"]).toHaveLength(1);
+});

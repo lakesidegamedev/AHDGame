@@ -124,3 +124,38 @@ describe("v2 metric detail read", () => {
     });
   });
 });
+
+it("keeps national samples fixed when current regional weights change", async () => {
+  const db = createMockDb();
+  const boards = buildOpeningMetricSnapshots1991("world-detail", 1);
+  const national = { ...boards.find((b) => b._id === "US:national")!, asOfTurn: 14 };
+  const regional = boards
+    .filter((b) => b.countryId === "US" && b.scope === "regional")
+    .map((b, i) => ({
+      ...b,
+      asOfTurn: 14,
+      observations: { ...b.observations, "35": { ...b.observations["35"]!, value: i + 1 } },
+      history: {
+        ...b.history,
+        "35": [
+          { turn: 1, value: 50 },
+          { turn: 13, value: i + 1, aggregationWeight: 100 },
+        ],
+      },
+    }));
+  const states = states1991.map((s) => ({ ...s, population: 100 }));
+  db.collection("resetMetricSnapshots").find.mockReturnValue({
+    toArray: vi.fn().mockResolvedValue(regional),
+  });
+  db.collection("states").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(states) });
+  const before = await readResetMetricDetail(db as unknown as Db, national, "35");
+  states[0]!.population = 1e12;
+  const after = await readResetMetricDetail(db as unknown as Db, national, "35");
+  expect(after!.history.find((p) => p.turn === 13)).toEqual(
+    before!.history.find((p) => p.turn === 13)
+  );
+  expect(after!.nationalValue).not.toBeCloseTo(before!.nationalValue);
+  expect(after!.history.some((p) => p.turn === 1)).toBe(false);
+  expect(after!.historyNotice).toContain("original aggregation weights");
+  expect(regional[0]!.history["35"][0]).toEqual({ turn: 1, value: 50 });
+});

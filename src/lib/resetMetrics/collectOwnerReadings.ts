@@ -4,13 +4,10 @@
  * scores never stand in for owned healthcare access.
  */
 import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
+import { metricHistoryDue } from "./rules/history";
+import { preferredNationalMetricWeight } from "./rules/nationalAggregation";
 import type { Db } from "mongodb";
-import type { StateBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
-import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import type { State } from "@/lib/db/types/state";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { commodityTradeBalance } from "./rules/tradeOwner";
 import { loadTurnoutReadings } from "./loadTurnoutReadings";
@@ -21,8 +18,6 @@ import {
 } from "./openingSeed1991";
 import { prepareCalibratedHouseholds } from "./rules/calibratedHouseholdCohorts";
 import { prepareCalibratedHousing } from "./rules/calibratedHousing";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { fiscalOwnerReadings } from "./rules/fiscalOwner";
 import { nationalForceReadiness } from "./rules/forceReadiness";
 import { provisionalRealPurchasingPower } from "./rules/realPurchasingPower";
@@ -620,6 +615,24 @@ export async function collectResetMetricOwnerReadings(
       const dueIds = dueResetMetricIds(board, turn, cohortDue, electionDue);
       const due = new Set(dueIds);
       const updates: Record<string, ResetMetricSnapshot["observations"][string]> = {};
+      const state = board.regionId ? stateById.get(board.regionId) : undefined;
+      const historyWeights =
+        board.asOfTurn !== turn &&
+        metricHistoryDue(board.sourceTurn, turn) &&
+        state &&
+        Number.isFinite(state.population) &&
+        state.population > 0
+          ? Object.fromEntries(
+              Object.keys(board.observations).map((id) => [
+                id,
+                preferredNationalMetricWeight(id, {
+                  ...state,
+                  regionId: state._id,
+                  observations: board.observations,
+                }).value,
+              ])
+            )
+          : undefined;
       if (board.asOfTurn === turn)
         return [
           board._id,
@@ -1108,6 +1121,7 @@ export async function collectResetMetricOwnerReadings(
         board._id,
         {
           updates,
+          historyWeights,
           cohortDue,
           electionDue,
           housingState: housingByRegion.get(board._id)?.state,
