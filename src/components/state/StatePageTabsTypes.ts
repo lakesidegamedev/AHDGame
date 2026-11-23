@@ -81,18 +81,17 @@ export interface SerializedOfficial extends Omit<ElectedOfficial, "_id" | "chara
   partyAbbreviation?: string | null;
 }
 
-export interface SerializedPlayer
-  extends Pick<
-    Character,
-    | "sequentialId"
-    | "name"
-    | "avatarUrl"
-    | "countryId"
-    | "homeState"
-    | "currentOffice"
-    | "party"
-    | "politicalInfluence"
-  > {
+export interface SerializedPlayer extends Pick<
+  Character,
+  | "sequentialId"
+  | "name"
+  | "avatarUrl"
+  | "countryId"
+  | "homeState"
+  | "currentOffice"
+  | "party"
+  | "politicalInfluence"
+> {
   _id: string;
   borderKey?: string | null;
   tintColor?: string | null;
