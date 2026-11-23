@@ -90,3 +90,37 @@ describe("country target vocabulary", () => {
     }
   );
 });
+
+it("names the state and leads the preview with the turnout change", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          url.endsWith("/eligibility")
+            ? { ok: true, stateId: "OH", source: "home" }
+            : {
+                stateId: "OH",
+                fundsCost: 134,
+                currency: "USD",
+                targets: [{ dimension: "race", bucket: "white" }],
+                preview: { bucketBoost: 0.519, turnoutBefore: 54.61, turnoutAfter: 54.79 },
+              },
+      })
+    )
+  );
+  const { container } = render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <CanvassingPanel countryId="US" />
+    </NextIntlClientProvider>
+  );
+  await screen.findByRole("combobox");
+  const text = container.textContent ?? "";
+  expect(text).toContain("Canvassing in Ohio.");
+  await waitFor(() =>
+    expect(container.textContent).toContain(
+      "Expected effect: target turnout 54.61% to 54.79% (+0.18 points). Group boost applied: +0.52."
+    )
+  );
+});

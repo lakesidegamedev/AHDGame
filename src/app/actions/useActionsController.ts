@@ -457,11 +457,13 @@ export function useActionsController({
   const projections: Partial<Record<string, ActionProjection>> = {};
   if (character && actionCosts) {
     const pct = (v: number) => `${Math.min(100, Math.max(0, v)).toFixed(1)}%`;
+    const signedPoints = (v: number) => `+${Number(v.toFixed(1))}%`;
     if (actionCosts.campaignInfluenceGain !== null) {
       projections.campaign = {
         label: "Influence",
         from: pct(influence),
         to: pct(influence + actionCosts.campaignInfluenceGain),
+        effect: `${signedPoints(actionCosts.campaignInfluenceGain)} Political Influence`,
       };
     }
     if (actionCosts.advertiseFavorabilityGain !== null) {
@@ -470,6 +472,7 @@ export function useActionsController({
         label: "Favorability",
         from: pct(favorability),
         to: pct(favorability + actionCosts.advertiseFavorabilityGain),
+        effect: `${signedPoints(actionCosts.advertiseFavorabilityGain)} Favorability`,
       };
     }
     const campaignCurrency = getHomeCurrency(character);

@@ -22,6 +22,7 @@ import {
   type CmRace,
   type RaceFilter,
 } from "@/lib/campaignManager/rules";
+import { LoadingBlock } from "../components/LoadingBlock";
 import { typeLabel } from "../raceLabels";
 import { ratingChipStyle } from "../ui";
 import { campaignGeoUnsupportedPreset, loadCampaignGeo, type CampaignGeo } from "./geoSource";
@@ -188,7 +189,7 @@ export function CampaignMap(props: CampaignMapProps) {
   }, [unitData, ground]);
 
   if (geo === undefined) {
-    return <MapFrameBox>{t("map.loading")}</MapFrameBox>;
+    return <LoadingBlock label={t("map.loading")} minHeight={320} />;
   }
   if (geo === null) {
     return (

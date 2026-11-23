@@ -1,5 +1,7 @@
 "use client";
-import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 import { formatNum, appealColor, partyHex } from "../pollHelpers";
 import { EconomicPositionPip, SocialPositionPip } from "./PollCharts";
@@ -35,6 +37,7 @@ export function ElectionComparisonPanel({
   inRaceVoteShare,
   myParty,
   partyColors,
+  countryId = "US",
 }: {
   electionContext: ElectionContext;
   myPotentialVoters: number;
@@ -44,6 +47,7 @@ export function ElectionComparisonPanel({
   myParty: string;
   /** Display hex per party id; unknown parties render neutral gray. */
   partyColors?: Record<string, string>;
+  countryId?: CountryId;
 }) {
   // When the poll was taken during a race, use group-level allocation totals (matches the election engine).
   const useInRaceTotals = inRaceVoteShare && Object.keys(inRaceVoteShare.opponentVotes).length > 0;
@@ -86,8 +90,7 @@ export function ElectionComparisonPanel({
     null
   );
   const lead = topRival ? myVotes - topRival.votes : null;
-  const type =
-    electionContext.electionType.charAt(0).toUpperCase() + electionContext.electionType.slice(1);
+  const type = formatElectionTypeLabel(electionContext.electionType, countryId);
 
   return (
     <section
@@ -98,7 +101,7 @@ export function ElectionComparisonPanel({
         {useInRaceTotals ? "Estimated vote share" : "Vote potential"}
       </h2>
       <p className="mt-1 text-body-sm text-muted">
-        {type} election in {displayCanadianRegionCode(electionContext.state)}.{" "}
+        {type} election in {formatRaceRegion(electionContext.state, countryId)}.{" "}
         {useInRaceTotals
           ? "Group-level allocation, the same as the election engine."
           : "Rival figures come from reachable voters. Commission a poll during the race for an estimated share."}

@@ -38,6 +38,7 @@ import { RaceFinder } from "./components/RaceFinder";
 import { RaceView } from "./components/RaceView";
 import { TargetPanel } from "./components/TargetPanel";
 import { MyMovesPanel } from "./components/MyMovesPanel";
+import { LoadingBlock } from "./components/LoadingBlock";
 import { useActionsController } from "@/app/actions/useActionsController";
 import { raceTitle } from "./raceLabels";
 import { useElementWidth } from "./useElementWidth";
@@ -441,7 +442,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           aria-busy={loading}
         >
           <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
-          {loading ? <p style={{ color: BLEND.muted, margin: 0 }}>{t("loading")}</p> : null}
+          {loading ? <LoadingBlock label={t("loading")} /> : null}
           {!loading && error ? (
             <p role="alert" style={{ color: BLEND.negative, margin: 0 }}>
               {t("loadError")}{" "}
@@ -496,6 +497,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                 : { display: "flex", flexDirection: "column", gap: 18 }
             }
           >
+            {loading && (isDesktop || mobileTab === "races") ? (
+              <LoadingBlock label={t("map.loading")} minHeight={320} />
+            ) : null}
             {!loading && filter && (isDesktop || mobileTab === "races") ? (
               <CampaignMap
                 countryId={props.countryId}

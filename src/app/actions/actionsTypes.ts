@@ -42,6 +42,8 @@ export interface ActionProjection {
   label: string;
   from: string;
   to: string;
+  /** Headline for this use, from the same quote as `to`. Replaces the card's base-rate text. */
+  effect?: string;
 }
 
 export interface ActionCardProps {
