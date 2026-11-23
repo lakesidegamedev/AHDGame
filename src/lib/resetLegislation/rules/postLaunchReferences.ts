@@ -15,6 +15,31 @@ const POST_LAUNCH_TEXT: Readonly<Record<string, { currentLaw: string; legalNote:
     legalNote:
       "Work visas are issued under the general immigration rules; no separate labour migration law.",
   },
+  L53: {
+    currentLaw: "No dedicated intelligence funding law",
+    legalNote:
+      "The intelligence service has no appropriation of its own until a funding law is enacted.",
+  },
+  L54: {
+    currentLaw: "No dedicated foreign service funding law",
+    legalNote:
+      "The foreign ministry has no appropriation of its own until a funding law is enacted.",
+  },
+  L55: {
+    currentLaw: "No dedicated public safety funding law",
+    legalNote:
+      "The national public-safety department has no appropriation of its own until a funding law is enacted.",
+  },
+  L56: {
+    currentLaw: "No dedicated trade promotion law",
+    legalNote:
+      "The trade promotion department has no appropriation of its own until a funding law is enacted.",
+  },
+  L57: {
+    currentLaw: "No dedicated veterans services law",
+    legalNote:
+      "The veterans department has no appropriation of its own until a funding law is enacted.",
+  },
 };
 
 export const POST_LAUNCH_FAMILY_IDS: ReadonlySet<string> = new Set(Object.keys(POST_LAUNCH_TEXT));

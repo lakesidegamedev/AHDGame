@@ -31,6 +31,9 @@ export interface LawFamilyDefinition {
   levels: readonly LawLevelDefinition[];
 }
 
+/** Department-funding families with no Irish or devolved department to fund. */
+const UK_ONLY_FAMILIES: ReadonlySet<string> = new Set(["L53", "L54", "L55", "L56", "L57"]);
+
 export const resetLawFamilies: readonly LawFamilyDefinition[] = (
   catalog as LawFamilyDefinition[]
 ).map((family) => ({
@@ -38,7 +41,9 @@ export const resetLawFamilies: readonly LawFamilyDefinition[] = (
   availability: {
     national: [
       ...family.availability.national,
-      ...(family.availability.national.includes("UK") ? ["IE", "SCO", "WAL"] : []),
+      ...(family.availability.national.includes("UK") && !UK_ONLY_FAMILIES.has(family.id)
+        ? ["IE", "SCO", "WAL"]
+        : []),
       ...(CA_V2_NATIONAL_FAMILIES.includes(family.id) ? ["CA"] : []),
     ],
     regional: [

@@ -55,6 +55,9 @@ const REQUIRED_OPENING_FAMILIES: Readonly<Record<ResetCountry, ReadonlySet<strin
   WAL: new Set(["L02", "L08", "L10", "L16", "L17"]),
 };
 
+/** Defence and intelligence money is paid through their own ledgers, not the account. */
+const EXTERNALLY_SETTLED_FAMILIES: ReadonlySet<string> = new Set(["L48", "L53"]);
+
 export function openingLawFundingControl(input: {
   country: ResetCountry;
   familyId: string;
@@ -63,7 +66,7 @@ export function openingLawFundingControl(input: {
   if (!Number.isSafeInteger(input.annualAllocation) || input.annualAllocation < 0) {
     throw new Error(`Invalid opening allocation for ${input.country}:${input.familyId}`);
   }
-  if (input.familyId === "L48") return "externally_settled";
+  if (EXTERNALLY_SETTLED_FAMILIES.has(input.familyId)) return "externally_settled";
   if (input.annualAllocation === 0) return "no_separate_allocation";
   return REQUIRED_OPENING_FAMILIES[input.country].has(input.familyId) ? "required" : "adjustable";
 }
@@ -76,7 +79,7 @@ export function enactedLawFundingControl(input: {
   if (!Number.isSafeInteger(input.annualAllocation) || input.annualAllocation < 0) {
     throw new Error(`Invalid enacted allocation for ${input.familyId}:${input.choice}`);
   }
-  if (input.familyId === "L48") return "externally_settled";
+  if (EXTERNALLY_SETTLED_FAMILIES.has(input.familyId)) return "externally_settled";
   if (input.choice === "leave_to_states" || input.annualAllocation === 0) {
     return "no_separate_allocation";
   }
