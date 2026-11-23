@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Character } from "@/lib/db/types";
+import type { CountryId } from "@/lib/constants/countries";
 import { ElectionComparisonPanel } from "./ElectionComparisonPanel";
 import type { StoredPoll, PollData } from "../types";
 import { StatCards } from "./pollResults/StatCards";
@@ -30,6 +31,7 @@ export function PollResults({
       {pollData.electionContext && (
         <ElectionComparisonPanel
           electionContext={pollData.electionContext}
+          countryId={(character.countryId ?? "US") as CountryId}
           myPotentialVoters={poll.totalPotentialVoters}
           myAppeal={poll.overallAppeal}
           inRaceVoteShare={poll.inRaceVoteShare}

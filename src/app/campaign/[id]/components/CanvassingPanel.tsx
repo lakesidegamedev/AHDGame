@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
+import type { CountryId } from "@/lib/constants/countries";
+import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
 import { bucketLabel, dimensionLabelFor } from "@/lib/demographics/bucketLabels";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";
 import { blendButtonStyle, BlendLabel, BlendSelect } from "@/components/blend/BlendControls";
@@ -51,6 +53,10 @@ function calculateMaxCanvasses(actions: number, funds: number, cost: number): nu
   const maxByActions = Math.floor(actions / COST_ACTIONS);
   const maxByFunds = Math.floor(funds / cost);
   return Math.min(maxByActions, maxByFunds, 50);
+}
+
+function signedPoints(delta: number): string {
+  return `${delta >= 0 ? "+" : "-"}${Math.abs(delta).toFixed(2)}`;
 }
 
 export function CanvassingPanel({
@@ -229,12 +235,17 @@ export function CanvassingPanel({
                       modifier: data.effect.newModifier,
                       before: data.effect.turnoutBefore.toFixed(2),
                       after: data.effect.turnoutAfter.toFixed(2),
+                      change: signedPoints(data.effect.turnoutAfter - data.effect.turnoutBefore),
                     })
                   : t("canvassInput", {
                       boost: data.effect.boost,
                       modifier: data.effect.newModifier,
                     })
-              }\n${t("canvassLegacy", { boost: data.effect.legacyBoost })}`
+              }${
+                data.effect.legacyBoost !== data.effect.boost
+                  ? `\n${t("canvassLegacy", { boost: data.effect.legacyBoost })}`
+                  : ""
+              }`
           );
         }
         setSelectedGroup("");
@@ -273,6 +284,7 @@ export function CanvassingPanel({
         boost: preview.bucketBoost.toFixed(2),
         before: preview.turnoutBefore.toFixed(2),
         after: preview.turnoutAfter.toFixed(2),
+        change: signedPoints(preview.turnoutAfter - preview.turnoutBefore),
       })}
     </p>
   ) : null;
@@ -323,6 +335,7 @@ export function CanvassingPanel({
   }
 
   const activeStateId = eligibility.stateId;
+  const activeStateName = formatRaceRegion(activeStateId, (countryId ?? "US") as CountryId);
   const description = SOURCE_DESCRIPTION[eligibility.source];
   const costSuffix =
     totalFundsCost !== null && activeQuote
@@ -358,8 +371,8 @@ export function CanvassingPanel({
             color: BLEND.muted,
           }}
         >
-          Canvassing in <span style={{ color: BLEND.ink, fontWeight: 600 }}>{activeStateId}</span>.{" "}
-          {description}
+          Canvassing in <span style={{ color: BLEND.ink, fontWeight: 600 }}>{activeStateName}</span>
+          . {description}
         </p>
 
         {previewCopy}
@@ -492,7 +505,7 @@ export function CanvassingPanel({
             <li>
               Twice as effective during active campaign season, the 4 turns before an election
             </li>
-            <li>Boosts turnout for this demographic in {activeStateId}</li>
+            <li>Boosts turnout for this demographic in {activeStateName}</li>
             <li>{t("canvassRules")}</li>
             <li>
               Diminishing returns apply, so each successive canvass is slightly less effective
@@ -507,7 +520,7 @@ export function CanvassingPanel({
     <div className={shellClass}>
       {heading}
       <p className="text-sm text-muted mb-4">
-        Canvassing in <span className="font-semibold text-foreground">{activeStateId}</span>.{" "}
+        Canvassing in <span className="font-semibold text-foreground">{activeStateName}</span>.{" "}
         {description}
       </p>
 
@@ -616,7 +629,7 @@ export function CanvassingPanel({
         <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted">
           <li>Effectiveness scales with your alignment to the demographic</li>
           <li>2x more effective during active campaign season (4 turns before election)</li>
-          <li>Boosts turnout for this demographic in {activeStateId}</li>
+          <li>Boosts turnout for this demographic in {activeStateName}</li>
           <li>{t("canvassRules")}</li>
           <li>Diminishing returns apply, so each successive canvass is slightly less effective</li>
         </ul>

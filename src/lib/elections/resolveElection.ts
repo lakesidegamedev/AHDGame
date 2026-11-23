@@ -679,7 +679,14 @@ export async function resolveElections(
       };
 
       // In list mode, no prev/next navigation is needed
-      return _enrichElection(election, deps, { view, userId, isAdmin }, gameTime, gameState, db);
+      return _enrichElection(
+        election,
+        deps,
+        { view, userId, isAdmin, activeCharacterId: options.activeCharacterId },
+        gameTime,
+        gameState,
+        db
+      );
     })
   );
 

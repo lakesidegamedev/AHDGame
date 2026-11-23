@@ -223,6 +223,10 @@ async function prepare_enrichElection(
       const myChar = await getCharacterByUserId(db, userId);
       if (myChar) myCharId = myChar._id.toString();
     }
+  } else if (userId && activeCharacterId) {
+    // Summary rows carry no lookup, but the viewer's own candidacy must still
+    // read as theirs, or list screens say the player is not in their race.
+    myCharId = activeCharacterId;
   }
 
   // Re-mark isYou after myCharId is resolved
