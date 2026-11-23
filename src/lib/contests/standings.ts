@@ -29,6 +29,7 @@ import {
   REFERRAL_ALT_LINK_THRESHOLD,
   type KingmakerEndorsement,
   type ResolvedRace,
+  rookieEligible,
 } from "@/lib/contests/rules";
 
 import { loadCharacterNetWorths, loadExternalInflows } from "@/lib/contests/netWorth";
@@ -482,7 +483,19 @@ export async function computeRawStandings(
     return { standings: rankStandings(standings), baselines: updated };
   }
 
-  if (kind === "influence_gain" || kind === "rookie_influence" || kind === "backbench_influence") {
+  if (kind === "rookie_influence") {
+    // Entries stored before the account-age rule are screened again here, so a
+    // round already open at deploy time cannot keep veterans on its board.
+    const entrants = baselines.filter((b) =>
+      rookieEligible(
+        world.players.get(b.characterId)?.accountCreatedAt?.getTime(),
+        round.startedAt.getTime()
+      )
+    );
+    return { standings: characterGainStandings(world, entrants, influenceOf), baselines: entrants };
+  }
+
+  if (kind === "influence_gain" || kind === "backbench_influence") {
     return { standings: characterGainStandings(world, baselines, influenceOf), baselines };
   }
 
