@@ -933,17 +933,24 @@ function projectBatchRequirement(
   forexEnabled: boolean,
   homeFxRate: number | undefined,
   pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita">
-): { actionPoints: number; fundsLocal: number } {
+): { actionPoints: number; fundsLocal: number } | null {
   let c: Character = { ...character };
   let actionPoints = 0;
   const startFunds = c.currencyBalances?.campaign ?? c.funds ?? 0;
   for (let i = 0; i < count; i++) {
     const ap = getActionPointCost(c, actionType);
     actionPoints += ap;
-    c = {
-      ...applyEffectToCharacter(c, actionType, state, forexEnabled, homeFxRate, pricing),
-      actions: (c.actions ?? 0) - ap,
-    };
+    try {
+      c = {
+        ...applyEffectToCharacter(c, actionType, state, forexEnabled, homeFxRate, pricing),
+        actions: (c.actions ?? 0) - ap,
+      };
+    } catch {
+      // A later run has no valid quote (for example Campaign at the influence
+      // cap). The whole batch cannot be priced, so the caller falls back to the
+      // plain reason instead of crashing the preview.
+      return null;
+    }
   }
   const endFunds = c.currencyBalances?.campaign ?? c.funds ?? 0;
   return { actionPoints, fundsLocal: Math.max(0, startFunds - endFunds) };
@@ -996,10 +1003,11 @@ export function getBatchAffordability(
     );
     const haveFunds = character.currencyBalances?.campaign ?? character.funds ?? 0;
     const currency = getHomeCurrency(character);
-    detail =
-      full.code === "not_enough_funds"
-        ? ` All ${count} runs cost ${formatLocalFunds(need.fundsLocal, currency)}; you have ${formatLocalFunds(haveFunds, currency)}.`
-        : ` All ${count} runs cost ${need.actionPoints} action points; you have ${character.actions ?? 0}.`;
+    if (need)
+      detail =
+        full.code === "not_enough_funds"
+          ? ` All ${count} runs cost ${formatLocalFunds(need.fundsLocal, currency)}; you have ${formatLocalFunds(haveFunds, currency)}.`
+          : ` All ${count} runs cost ${need.actionPoints} action points; you have ${character.actions ?? 0}.`;
   }
   const title =
     affordableRuns > 0

@@ -87,6 +87,20 @@ it.each([0.03673, 0.35808, 1.28579])(
 );
 
 describe("getBatchAffordability", () => {
+  it("does not throw when Campaign projection reaches the influence cap", () => {
+    const c = makeCharacter({
+      politicalInfluence: 99.5,
+      actions: 1,
+      funds: 10_000_000,
+      stats: NEUTRAL_STATS,
+    });
+    for (const n of [5, 10]) {
+      const r = getBatchAffordability(c, testState, "campaign", n);
+      expect(r.canRunAll).toBe(false);
+      expect(typeof r.title).toBe("string");
+    }
+  });
+
   it("reports all runs affordable when the batch fits", () => {
     const c = makeCharacter({ donorBaseLevel: 5, actions: 100, funds: 1_000_000 });
     const r = getBatchAffordability(c, undefined, "fundraise", 5);
