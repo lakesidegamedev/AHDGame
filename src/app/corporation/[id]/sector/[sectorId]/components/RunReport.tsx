@@ -272,8 +272,8 @@ export default function RunReport({
 
       {ownSiteUnits > 0 && (
         <p className="text-body-xs text-muted" data-testid="own-site-line">
-          Sent to your own sites last turn: {fmtUnits(ownSiteUnits * TURNS_PER_DAY)} units a day,
-          worth{" "}
+          Sent to your own sites at last turn&apos;s rate: {fmtUnits(ownSiteUnits * TURNS_PER_DAY)}{" "}
+          units a day, worth{" "}
           <span className="font-semibold text-foreground">
             {formatAmount((report.ownSiteValueAtAsk ?? 0) * TURNS_PER_DAY)}
           </span>{" "}
