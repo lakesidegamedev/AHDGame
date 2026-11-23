@@ -31,7 +31,7 @@ describe("BillProvisionCard impacts", () => {
       render(<BillProvisionCard index={0} view={{ ...baseView, fiscal }} />);
       expect(screen.getByText("Budget effect")).toBeTruthy();
       expect(screen.getByText("Budget effect information unavailable")).toBeTruthy();
-      expect(screen.getByText("Metric effect information unavailable")).toBeTruthy();
+      expect(screen.queryByText("Metric effect information unavailable")).toBeNull();
       expect(screen.queryByText(/No direct/)).toBeNull();
     }
   );
@@ -150,6 +150,6 @@ describe("BillProvisionCard impacts", () => {
       />
     );
 
-    expect(screen.getByText("Metric effect information unavailable")).toBeTruthy();
+    expect(screen.queryByText("Metric effect information unavailable")).toBeNull();
   });
 });

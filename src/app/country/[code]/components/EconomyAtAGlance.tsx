@@ -75,6 +75,7 @@ function GlanceCard({
   tone,
   fill,
   target,
+  origin = null,
   history,
 }: {
   label: string;
@@ -85,6 +86,9 @@ function GlanceCard({
   fill: number | null;
   /** Target marker position on the track, 0..1. */
   target: number | null;
+  /** Draw the bar out from this point (0..1) instead of from the left edge, for
+   * a value that reads as a distance from zero, like a deficit. */
+  origin?: number | null;
   history: HistoryPoint[];
 }) {
   const color = TONE_COLOR[tone];
@@ -97,8 +101,12 @@ function GlanceCard({
       {fill !== null && (
         <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-card-muted">
           <div
-            className="h-full rounded-full"
-            style={{ width: `${Math.round(fill * 100)}%`, backgroundColor: color }}
+            className="absolute top-0 h-full rounded-full"
+            style={{
+              left: `${Math.round((origin == null ? 0 : Math.min(origin, fill)) * 100)}%`,
+              width: `${Math.round((origin == null ? fill : Math.abs(fill - origin)) * 100)}%`,
+              backgroundColor: color,
+            }}
           />
           {target !== null && (
             <span
@@ -289,6 +297,7 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
           }
           fill={budgetBalance === null ? null : position(budgetBalance, -15, 5)}
           target={position(0, -15, 5)}
+          origin={position(0, -15, 5)}
           history={[]}
         />
         <GlanceCard

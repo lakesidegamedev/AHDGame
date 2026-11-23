@@ -321,7 +321,7 @@ export function StatementGroup({ children }: { children: ReactNode }) {
  * with the table instead of stretching the document.
  */
 export function TableScroll({ children }: { children: ReactNode }) {
-  return <div className="relative -mx-2 overflow-x-auto px-2">{children}</div>;
+  return <div className="scroll-cue-x relative -mx-2 overflow-x-auto px-2">{children}</div>;
 }
 
 export function SmallButton({

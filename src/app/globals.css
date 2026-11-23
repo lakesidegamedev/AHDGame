@@ -1770,3 +1770,24 @@ html[data-cookie-consent] [data-cookie-consent-banner] {
 [data-theme="light"] {
   --wiki-link: #b91c1c;
 }
+
+/* Horizontal scroll cue: a soft edge shadow appears on whichever side still has
+   hidden columns, and disappears once that edge is reached. Pure CSS, the cover
+   gradients scroll with the content while the shadows stay put. */
+.scroll-cue-x {
+  background:
+    linear-gradient(to right, var(--card) 40%, transparent) left center / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--card) 40%, transparent) right center / 32px 100% no-repeat local,
+    radial-gradient(
+        farthest-side at 0 50%,
+        color-mix(in srgb, var(--foreground) 22%, transparent),
+        transparent
+      )
+      left center / 12px 100% no-repeat scroll,
+    radial-gradient(
+        farthest-side at 100% 50%,
+        color-mix(in srgb, var(--foreground) 22%, transparent),
+        transparent
+      )
+      right center / 12px 100% no-repeat scroll;
+}
