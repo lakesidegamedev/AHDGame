@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getEventInstancesCollection } from "@/lib/db/collections/eventInstances";
@@ -18,7 +19,7 @@ export class EventNotResolvableError extends Error {
   }
 }
 
-export async function resolveEvent(
+async function resolveEventInTransaction(
   db: Db,
   instanceId: ObjectId,
   optionId: string,
@@ -256,11 +257,26 @@ export async function resolveEvent(
   // National Wire Service. Best-effort — never let a feed failure break
   // resolution or the turn sweep.
   try {
-    await emitOutcomeNewsWire(db, update, tier);
+    await afterCommit(db, async () => {
+      try {
+        await emitOutcomeNewsWire(unboundDb(db), update, tier);
+      } catch {
+        /* Feed delivery is optional. */
+      }
+    });
   } catch {
     // swallow: the event is already resolved and that's what matters
   }
 
-  await hooks?.onResolved?.(update, ctx);
+  await afterCommit(db, async () => {
+    await hooks?.onResolved?.(update, { ...ctx, db: unboundDb(db) });
+  });
   return update;
+}
+
+export async function resolveEvent(
+  db: Db,
+  ...args: Parameters<typeof resolveEventInTransaction> extends [Db, ...infer Rest] ? Rest : never
+) {
+  return withSessionDb(db, (tx) => resolveEventInTransaction(tx, ...args));
 }

@@ -1,3 +1,4 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { type Db, ObjectId } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
@@ -158,6 +159,7 @@ async function applyApprovalEffects(
   affectedCountries: string[],
   effects: CrisisEffect[]
 ): Promise<void> {
+  await ensureGovernmentApproval(db, affectedCountries);
   const approvalDelta = effects.reduce((sum, e) => sum + e.value, 0);
 
   if (affectedCountries.length > 0) {

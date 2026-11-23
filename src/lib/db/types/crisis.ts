@@ -524,6 +524,7 @@ export interface CrisisV2Output {
  * consumes a row by stamping `appliedTurn`; rows with a null stamp are pending.
  */
 export interface CrisisLeverUse {
+  attribution?: import("@/lib/crises/v2/types").AccountabilityAttribution;
   _id: ObjectId;
   crisisId: ObjectId;
   leverId: string;

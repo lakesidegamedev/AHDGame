@@ -17,6 +17,7 @@ export const MAX_PARTY_ELECTION_PCT = 3;
 export const ELECTION_SHIFT_TURNS = 48;
 
 export interface HolderVerdict {
+  attribution?: AccountabilityEntry["attribution"];
   role: CrisisRole;
   holderId: string;
   /** Mitigation delivered, weighted by stage and by how severe the crisis was. */
@@ -35,10 +36,18 @@ export interface HolderVerdict {
 export function judgeHolders(ledger: readonly AccountabilityEntry[]): HolderVerdict[] {
   const verdicts = new Map<string, HolderVerdict>();
   for (const entry of ledger) {
-    const key = `${entry.role}:${entry.holderId}`;
+    const key = JSON.stringify([
+      entry.role,
+      entry.holderId,
+      entry.attribution?.countryId,
+      entry.attribution?.stateId?.toUpperCase(),
+      entry.attribution?.partyId,
+      entry.attribution === null,
+    ]);
     const verdict = verdicts.get(key) ?? {
       role: entry.role,
       holderId: entry.holderId,
+      ...(entry.attribution !== undefined ? { attribution: entry.attribution } : {}),
       credit: 0,
       blame: 0,
       approvalDelta: 0,
@@ -52,9 +61,16 @@ export function judgeHolders(ledger: readonly AccountabilityEntry[]): HolderVerd
     }
     verdicts.set(key, verdict);
   }
+  const magnitudes = new Map<string, number>();
   for (const verdict of verdicts.values()) {
     const net = verdict.credit - verdict.blame * BLAME_WEIGHT;
     verdict.approvalDelta = Math.tanh(net / VERDICT_SCALE) * MAX_APPROVAL_POINTS;
+    const holderKey = `${verdict.role}:${verdict.holderId}`;
+    magnitudes.set(holderKey, (magnitudes.get(holderKey) ?? 0) + Math.abs(verdict.approvalDelta));
+  }
+  for (const verdict of verdicts.values()) {
+    const magnitude = magnitudes.get(`${verdict.role}:${verdict.holderId}`)!;
+    if (magnitude > MAX_APPROVAL_POINTS) verdict.approvalDelta *= MAX_APPROVAL_POINTS / magnitude;
   }
   return [...verdicts.values()].filter((verdict) => Math.abs(verdict.approvalDelta) >= 0.05);
 }

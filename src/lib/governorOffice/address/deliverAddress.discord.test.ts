@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 

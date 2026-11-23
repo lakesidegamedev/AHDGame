@@ -16,9 +16,7 @@ import { isStanceLever } from "@/lib/crises/v2/stanceLevers";
 import type { CrisisRole } from "@/lib/crises/v2/types";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { CrisisLeverUse } from "@/lib/db/types/crisis";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { logger } from "@/lib/observability/logger";
 import { officeHolderProvider } from "./holderProviders";
@@ -37,6 +35,7 @@ const DEFAULT_INTERVENTIONISM = 0.5;
 interface Government {
   headNppId: ObjectId;
   interventionism: number;
+  partyId?: string;
 }
 
 async function loadGovernments(
@@ -58,14 +57,19 @@ async function loadGovernments(
   const heads = await (
     await getNppsCollection(db)
   )
-    .find({ _id: { $in: [...headByCountry.values()] } }, { projection: { personality: 1 } })
+    .find(
+      { _id: { $in: [...headByCountry.values()] } },
+      { projection: { personality: 1, party: 1 } }
+    )
     .toArray();
-  const personality = new Map(heads.map((npp) => [npp._id.toString(), npp.personality]));
+  const actors = new Map(heads.map((npp) => [npp._id.toString(), npp]));
   const result = new Map<string, Government>();
   for (const [countryId, headNppId] of headByCountry) {
-    const traits = personality.get(headNppId.toString());
+    const actor = actors.get(headNppId.toString());
+    const traits = actor?.personality;
     result.set(countryId, {
       headNppId,
+      partyId: actor?.party,
       interventionism: traits ? interventionismFromPersonality(traits) : DEFAULT_INTERVENTIONISM,
     });
   }
@@ -260,6 +264,10 @@ export async function runNppCrisisResponse(db: Db, turn: number): Promise<NppRes
             lever: pick.lever,
             holderId: government.headNppId,
             countryId,
+            attribution: {
+              countryId,
+              ...(government.partyId ? { partyId: government.partyId } : {}),
+            },
             intensity: pick.intensity,
             turn,
           });

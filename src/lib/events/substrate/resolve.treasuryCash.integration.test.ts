@@ -1,3 +1,12 @@
+const transactionMode = vi.hoisted(() => ({ legacy: true }));
+vi.mock("@/lib/db/sessionDb", async () => {
+  const atomic = (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock();
+  return {
+    ...atomic,
+    withSessionDb: <T>(db: Db, work: (tx: Db) => Promise<T>) =>
+      transactionMode.legacy ? work(db) : atomic.withSessionDb(db, work),
+  };
+});
 import { ObjectId, type Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -148,8 +157,11 @@ function synchronizeFirstTwoEventReads(db: Db): Db {
   });
 }
 
-describe("funded country event choice ownership", () => {
-  beforeEach(() => _resetEventHandlerRegistryForTests());
+describe("funded country event recovery from legacy partial writes", () => {
+  beforeEach(() => {
+    _resetEventHandlerRegistryForTests();
+    transactionMode.legacy = true;
+  });
 
   it("does not resolve one paid option using another option's Treasury receipt", async () => {
     const { db, event, instanceId } = setup();
@@ -309,4 +321,46 @@ describe("funded country event choice ownership", () => {
     expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
     expect(db.collection("countryModifiers").docs).toHaveLength(1);
   });
+});
+
+it("rolls back funded cash, approval and reservation together before retrying", async () => {
+  transactionMode.legacy = false;
+  _resetEventHandlerRegistryForTests();
+  let crash = true;
+  const { db, instanceId } = setup(async (ctx) => {
+    await applyDeclarativeEffects(ctx, ctx.tier.effects);
+    if (crash) {
+      crash = false;
+      throw new Error("interrupted funded resolution");
+    }
+  });
+  await expect(
+    resolveEvent(
+      db as unknown as Db,
+      instanceId,
+      "small-payment",
+      "player",
+      TURN,
+      undefined,
+      undefined,
+      true
+    )
+  ).rejects.toThrow("interrupted funded resolution");
+  expect(db.collection("federalBudget").docs[0].treasuryCashLocal).toBe(20);
+  expect(db.collection("governmentApprovals").docs[0].approvalRating).toBe(50);
+  expect(db.collection("bankMoneyMoves").docs).toHaveLength(0);
+  expect(db.collection("eventInstances").docs[0].resolutionClaim).toBeUndefined();
+  await resolveEvent(
+    db as unknown as Db,
+    instanceId,
+    "small-payment",
+    "player",
+    TURN,
+    undefined,
+    undefined,
+    true
+  );
+  expect(db.collection("federalBudget").docs[0].treasuryCashLocal).toBe(15);
+  expect(db.collection("governmentApprovals").docs[0].approvalRating).toBe(52);
+  expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
 });

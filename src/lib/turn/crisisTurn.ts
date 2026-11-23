@@ -1,3 +1,4 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { ObjectId, type Db, type Document } from "mongodb";
 import { logWireEvent } from "@/lib/wireEvent";
@@ -608,6 +609,7 @@ async function applyApprovalEffects(
   }
 
   if (affectedCountries.length > 0) {
+    await ensureGovernmentApproval(db, affectedCountries);
     await governmentApprovalsCollection<Document>(db).updateMany(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },

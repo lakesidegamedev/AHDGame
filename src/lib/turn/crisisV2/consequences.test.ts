@@ -1,3 +1,4 @@
+vi.mock("@/lib/approval/ensureGovernmentApproval", () => ({ ensureGovernmentApproval: vi.fn() }));
 import { ObjectId } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
 import { MAX_PARTY_ELECTION_PCT } from "@/lib/crises/v2/blame";
@@ -38,6 +39,7 @@ function makeDb(characters: Record<string, unknown>[]) {
   const modifierWrites = vi.fn(async () => ({}));
   const db = {
     collection(name: string) {
+      if (name === "npps") return { find: () => ({ toArray: async () => [] }) };
       if (name === "characters") return { find: () => ({ toArray: async () => characters }) };
       if (name === "governmentApprovals" || name === "stateApprovalHistory") {
         const sink = name === "governmentApprovals" ? approvalUpdates : stateUpdates;
@@ -236,6 +238,7 @@ describe("settleCrisisConsequences", () => {
       };
       const db = {
         collection(name: string) {
+          if (name === "npps") return { find: () => ({ toArray: async () => [] }) };
           if (name === "characters") return { find: () => ({ toArray: async () => characters }) };
           if (name === "governmentApprovals") return approvals;
           if (name === "stateApprovalHistory") return { bulkWrite: async () => ({}) };
