@@ -542,7 +542,9 @@ describe("sold share beside own-site use", () => {
         exchangeRates={{}}
       />
     );
-    expect(screen.getByText(/70% sold · .*worth about .*1,?234.* to your sites/)).toBeTruthy();
+    expect(
+      screen.getByText(/70% of units offered sold · .*worth about .*1,?234.* to your sites/)
+    ).toBeTruthy();
   });
 });
 
