@@ -49,7 +49,9 @@ const payload = (over: Partial<SectorRevenueTaxPayload> = {}): SectorRevenueTaxP
 
 describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () => {
   it("hands off a young physical history gradually without a measurement cliff", () => {
+    // Owned companies are the whole economy here, so the owned signal is unweighted.
     const inputs = payload({
+      background: [],
       plantsEnabled: true,
       revenueEmaNow: 1100,
       revenueTrendBaseline: { value: 1000, spanTurns: 48 },
@@ -63,6 +65,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
 
   it("does not turn a price-only revenue decline into an output contraction", () => {
     const inputs = payload({
+      background: [],
       plantsEnabled: true,
       revenueEmaNow: 800,
       revenueTrendBaseline: { value: 1000, spanTurns: 48 },
@@ -74,6 +77,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
 
   it("retains an actual output contraction even when nominal revenue is flat", () => {
     const inputs = payload({
+      background: [],
       plantsEnabled: true,
       revenueEmaNow: 1000,
       revenueTrendBaseline: { value: 1000, spanTurns: 48 },
@@ -82,6 +86,20 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
     });
     expect(sectorGrowthNode.compute!(ctx({ providers: { sectorRevenueTax: inputs } }))).toBeCloseTo(
       -5
+    );
+  });
+
+  it("weights owned-company growth by its share of the regional economy", () => {
+    // Owned 1000 of 1500 revenue (2/3) at -5% output growth; background 0.5%.
+    const inputs = payload({
+      plantsEnabled: true,
+      revenueEmaNow: 1000,
+      revenueTrendBaseline: { value: 1000, spanTurns: 48 },
+      outputEmaNow: 950,
+      outputTrendBaseline: { value: 1000, spanTurns: 48 },
+    });
+    expect(sectorGrowthNode.compute!(ctx({ providers: { sectorRevenueTax: inputs } }))).toBeCloseTo(
+      (2 / 3) * -5 + (1 / 3) * 0.5
     );
   });
 
