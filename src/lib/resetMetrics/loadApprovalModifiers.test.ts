@@ -180,7 +180,7 @@ describe("Metrics v2 approval source", () => {
     expect(await loadResetApprovalModifiers(db as unknown as Db, "DE", [], game)).toBeNull();
     expect(db.collection("resetMetricSnapshots").find.mock.calls.length).toBe(count);
   });
-  it("judges a region on its own budget and the treasury's deficit on national approval (ticket 1892)", async () => {
+  it("judges a region on its own budget and the treasury's deficit on national approval", async () => {
     const indebted = boards.map((board) =>
       board.scope === "national"
         ? {

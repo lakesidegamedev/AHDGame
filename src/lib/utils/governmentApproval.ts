@@ -957,7 +957,7 @@ export async function snapshotApprovalHistory(
     ...bankFailureMods,
     ...(unionEnforcementMod ? [unionEnforcementMod] : []),
     // The national treasury's deficit and debt judge the national government,
-    // not each governor (ticket 1892).
+    // not each governor.
     ...(politicalBases?.nationalModifiers ?? []),
   ];
   const allNationalMods = [expectationsMod, ...nationalMods];

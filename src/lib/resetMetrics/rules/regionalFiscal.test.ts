@@ -17,7 +17,7 @@ const reading = (metricId: string, path: string, value: number): OpeningMetricOb
   owner: "ledger",
   note: "",
 });
-// The live federal position from ticket 1892: an 18% deficit and 132% debt.
+// A treasury running an 18% deficit with 132% debt.
 const federal = {
   "09": reading("09", "governance.budgetBalance", -18.4),
   "10": reading("10", "governance.debtToGdp", 131.9),
