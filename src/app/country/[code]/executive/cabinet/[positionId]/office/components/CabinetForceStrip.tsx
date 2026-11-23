@@ -36,7 +36,7 @@ export function CabinetForceStrip({
         label="Combat power"
         value={forceSummary.totalPower.toLocaleString("en-US")}
         tone="gov"
-        sub={`${forceSummary.unitCount} units`}
+        sub={`${forceSummary.unitCount} units: land, sea, air and space`}
       />
       <Tile
         label="Active personnel"
@@ -52,7 +52,7 @@ export function CabinetForceStrip({
         label="Avg readiness"
         value={`${forceSummary.avgReadiness}%`}
         tone={readyTone}
-        sub="force-wide"
+        sub={`mean of all ${forceSummary.unitCount} units`}
       />
       {/*
         The real defence account, and now the only budget on this strip. It used to sit beside
