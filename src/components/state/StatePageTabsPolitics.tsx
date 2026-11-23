@@ -192,8 +192,7 @@ export function PoliticsTab({
       : "Senator";
   const subNationalOffice = config.subNationalChamber
     ? config.officeTypes.find(
-        (o) =>
-          o.chamberKey === config.subNationalChamber?.key && !o.isExecutive && o.isSubNational
+        (o) => o.chamberKey === config.subNationalChamber?.key && !o.isExecutive && o.isSubNational
       )
     : undefined;
   const subNationalMemberTitle = subNationalOffice?.label ?? "State senator";

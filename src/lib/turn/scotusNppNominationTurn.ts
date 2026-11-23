@@ -66,7 +66,9 @@ export async function processScotusNppNominations(
   }
   const nominatableSeats =
     presidency.kind === "player"
-      ? vacantSeats.filter((seat) => playerNominationGraceElapsed(seat.vacantSinceTurn, currentTurn))
+      ? vacantSeats.filter((seat) =>
+          playerNominationGraceElapsed(seat.vacantSinceTurn, currentTurn)
+        )
       : vacantSeats;
   if (nominatableSeats.length === 0 && presidency.kind === "player") {
     return { nominated: 0, skipped: "player-president" };
