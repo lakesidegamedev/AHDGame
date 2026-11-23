@@ -37,11 +37,14 @@ export function QuoteBoard({
   ask,
   poolActive,
   currentTurn,
+  historyLoading = false,
 }: {
   money: CorpMoney;
   price: number;
   series: number[];
   dayChange: { changePct: number; prevClose: number } | null;
+  /** The price history is still loading: hold the sparkline's space. */
+  historyLoading?: boolean;
   bid?: number | null;
   ask?: number | null;
   poolActive: boolean;
@@ -99,6 +102,15 @@ export function QuoteBoard({
         <span className="font-mono text-[40px] font-semibold leading-none tracking-tight tabular-nums text-gold lg:text-[52px]">
           {money.fmtPrice(price)}
         </span>
+        {dayChange == null && historyLoading && (
+          // Same box as the change badge below, so the price row keeps its height.
+          <span
+            aria-hidden
+            className="invisible flex flex-col gap-0.5 font-mono text-[15px] font-semibold"
+          >
+            ▲ 0.00%<small className="text-[11px] font-medium">+0 on prev. turn</small>
+          </span>
+        )}
         {dayChange != null && (
           <span className={`flex flex-col gap-0.5 font-mono text-[15px] font-semibold ${tone}`}>
             {up ? "▲" : "▼"} {Math.abs(change?.changePct ?? 0).toFixed(2)}%
@@ -155,6 +167,16 @@ export function QuoteBoard({
             </span>
           </div>
         </>
+      )}
+
+      {!drawn && historyLoading && (
+        // The sparkline and its range row, at their drawn size.
+        <div aria-hidden>
+          <div className="px-3.5 pt-1">
+            <div className="h-14 w-full animate-pulse rounded bg-card-border/40 lg:h-[84px]" />
+          </div>
+          <div className="px-3.5 pt-1.5 text-[10px] leading-[15px]">&nbsp;</div>
+        </div>
       )}
 
       {hasQuote && (

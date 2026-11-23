@@ -52,6 +52,7 @@ import { buildOfficeSections, defaultOpenSections, summarize } from "./elections
 import { ElectionsHero } from "./components/ElectionsHero";
 import { ElectionsControls } from "./components/ElectionsControls";
 import { ElectionsSkeleton } from "./components/ElectionsSkeleton";
+import { EMBEDDED_RESULTS_PLACEHOLDER_CLASS } from "@/components/elections/liveResults/embeddedResultsPlaceholder";
 import { OfficeSection } from "./components/OfficeSection";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
@@ -83,7 +84,7 @@ const ChamberComposition = dynamic(
 
 // Live results only render on an election night, and the embed's chain reaches
 // the turn engine's seat allocation tables. Its own loading state is the same
-// 10rem placeholder, so the lazy chunk lands in exactly the space it reserves.
+// placeholder, sized to the finished board, so neither step moves the list.
 const EmbeddedParliamentaryResults = dynamic(
   () =>
     import("@/components/elections/liveResults/EmbeddedParliamentaryResults").then(
@@ -91,9 +92,7 @@ const EmbeddedParliamentaryResults = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className="mb-6 h-40 animate-pulse rounded-xl border border-card-border bg-card" />
-    ),
+    loading: () => <div className={EMBEDDED_RESULTS_PLACEHOLDER_CLASS} aria-hidden />,
   }
 );
 

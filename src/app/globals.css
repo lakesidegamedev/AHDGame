@@ -1727,6 +1727,25 @@ html[data-high-contrast="true"] :focus-visible {
   --ascii-accent: var(--primary);
 }
 
+/* While a page assembles under the decode it stays invisible, so its skeleton
+   swaps and late panels never show as jumps. The page keeps its real layout
+   (opacity, not display), and the shimmer has room to play. The animation is
+   a failsafe: if the script never lifts the cover, the page shows anyway. */
+.ascii-reveal-host[data-reveal-waiting] {
+  min-height: 60vh;
+}
+.ascii-reveal-host[data-reveal-waiting] > :not(.ar-overlay) {
+  opacity: 0;
+  pointer-events: none;
+  animation: ascii-reveal-failsafe 0s linear 4s forwards;
+}
+@keyframes ascii-reveal-failsafe {
+  to {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Phone navigation dock (MobileDock): the fixed StatusBar rides directly above
    it. The dock already pads for the home indicator, so the bar drops its own. */
 @media (max-width: 1023.98px) {
