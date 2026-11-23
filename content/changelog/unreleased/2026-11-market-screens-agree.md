@@ -7,7 +7,7 @@ summary: >-
   supply is shared, and two small market labels were corrected.
 tags: [markets, commodities, corporations]
 badges: [patch]
-areas: [ui]
+areas: [fullstack]
 ---
 
 ## What changed
