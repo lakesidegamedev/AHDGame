@@ -2283,7 +2283,9 @@ describe("outside sales by buyer kind", () => {
     const product = run().producers[0].products[0];
     expect(product.soldUnits).toBeGreaterThan(0);
     const soldTo = product.soldTo!;
-    expect(Object.values(soldTo).reduce((n, u) => n + (u ?? 0), 0)).toBeCloseTo(product.soldUnits);
+    expect(Object.values(soldTo).reduce<number>((n, u) => n + (u ?? 0), 0)).toBeCloseTo(
+      product.soldUnits
+    );
     expect(soldTo.households).toBeCloseTo(10);
     expect(soldTo.publicBuyer).toBeCloseTo(20);
     expect(soldTo.companies).toBeCloseTo(5);

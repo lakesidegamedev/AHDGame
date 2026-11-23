@@ -249,6 +249,7 @@ export async function handleClientStatus(request: Request) {
             sharePrice: corp.sharePrice,
             liquidCurrencyCode: corp.liquidCurrencyCode,
             ownedShares: holding?.shares ?? 0,
+            isPrivate: corp.isPrivate === true,
           };
         })
         .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0 && !corp.isPrivate)
@@ -637,6 +638,7 @@ export async function handleClientStatus(request: Request) {
           sharePrice: corp.sharePrice,
           liquidCurrencyCode: corp.liquidCurrencyCode,
           ownedShares: holding?.shares ?? 0,
+          isPrivate: corp.isPrivate === true,
         };
       })
       .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0 && !corp.isPrivate)
