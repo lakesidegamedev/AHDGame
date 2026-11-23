@@ -295,7 +295,7 @@
       "loadError": "The map could not load. Please try again.",
       "retry": "Try again",
       "remaining": "Other seats",
-      "houseNote": "Seated House seats by party. Vacant seats are excluded.",
+      "houseNote": "Seated House seats by party. Vacant seats are excluded. Grey states have a tied delegation or no seated members; hover one to see the split.",
       "senateNote": "Seated Senate seats by party. Vacant seats are excluded.",
       "governorNote": "Seated governors by party.",
       "populationNote": "Population of the current political state roster.",

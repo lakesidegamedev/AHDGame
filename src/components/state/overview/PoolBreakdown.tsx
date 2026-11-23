@@ -178,8 +178,10 @@ export function PoolBreakdown({
                         aria-hidden
                       />
                     )}
+                    {/* Full party names wrap to a second line in the narrow legend
+                        column instead of cutting off mid-word. */}
                     <span
-                      className="min-w-0 flex-1 truncate"
+                      className="line-clamp-2 min-w-0 flex-1 leading-tight"
                       title={s.abbr ? `${s.label} (${s.abbr})` : s.label}
                     >
                       {s.label}

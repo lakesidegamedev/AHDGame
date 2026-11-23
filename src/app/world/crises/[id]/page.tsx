@@ -1,3 +1,5 @@
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countries";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -164,13 +166,6 @@ export async function generateMetadata({
   };
 }
 
-const COUNTRY_NAMES: Record<string, string> = {
-  US: "United States",
-  UK: "United Kingdom",
-  CA: "Canada",
-  DE: "Germany",
-};
-
 export default async function CrisisDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -234,7 +229,11 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
     preIterationActive: gameState?.preIteration?.active,
   };
   const currentTurn = gameState?.currentTurn ?? crisis.startTurn;
-  const targetCountryNames = crisis.countryIds.map((cId) => COUNTRY_NAMES[cId] ?? cId).join(", ");
+  // Full names for every country, from the shared table; the old local map
+  // knew four, so the list mixed names with bare codes.
+  const targetCountryNames = crisis.countryIds
+    .map((cId) => getCountryDisplayName(cId as CountryId))
+    .join(", ");
   // Region display names (e.g. "California"), falling back to the raw id.
   const regionNameById = new Map(affectedStates.map((s) => [s._id, s.name as string]));
   const description = interpolateLocation(crisis.description, locationName);
@@ -319,8 +318,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
                       isActive
-                        ? "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
-                        : "border-white/25 bg-black text-zinc-200"
+                        ? "border-amber-300/40 bg-amber-500/15 text-amber-100"
+                        : "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
                     }`}
                   >
                     {isActive ? "Active" : "Resolved"}
@@ -392,152 +391,158 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
             {/* Interactive decision panel (interactive crises only) */}
             {crisis.interactionDefinition && <CrisisInteractionPanel crisisId={id} />}
 
-            {/* Effects */}
-            <div className="rounded-xl border border-card-border bg-card shadow-card overflow-hidden">
-              <div className="px-5 py-4 border-b border-card-border">
-                <h2 className="text-sm font-semibold text-foreground flex items-center gap-1">
-                  Effects
-                  <Tooltip content={CRISIS_TOOLTIPS.effects} />
-                  <span className="ml-1 text-xs font-normal text-muted">
-                    {crisis.effects.length} {crisis.effects.length === 1 ? "effect" : "effects"}
-                  </span>
-                </h2>
-                <p className="mt-0.5 text-xs text-muted">
-                  Per-turn effects ease off as the crisis subsides; the bar shows relative impact.
-                </p>
-              </div>
-              <ul className="divide-y divide-card-border/60">
-                {crisis.effects.map((effect, i) => {
-                  const display = describeCrisisEffect(effect);
-                  // Colour follows whether the move hurts; the arrow follows the sign.
-                  const negative = display.tone === "bad";
-                  const pointsDown = effect.targetType === "gdpLoss" || effect.value < 0;
-                  const isGdpLoss = effect.targetType === "gdpLoss";
-                  const isTick = effect.effectType === "tick";
-                  const fades = isTick || effect.effectType === "decay";
-                  const strength =
-                    isActive && fades
-                      ? liveStrength(
-                          effect.effectType,
-                          currentTurn,
-                          crisis.startTurn,
-                          crisis.durationTurns
-                        )
-                      : 1;
-                  // Cumulative drag of a per-turn tick over the whole crisis: the
-                  // decay ramp sums to value × (duration+1)/2 (≈6.5× at D=12). Shown
-                  // so a small per-turn number reads comparably to a one-time flat.
-                  const cumulativeTick =
-                    isTick && crisis.durationTurns
-                      ? (effect.value * (crisis.durationTurns + 1)) / 2
+            {/* Effects: only when there are some; "0 effects" over an empty
+                list said nothing. */}
+            {crisis.effects.length > 0 && (
+              <div className="rounded-xl border border-card-border bg-card shadow-card overflow-hidden">
+                <div className="px-5 py-4 border-b border-card-border">
+                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-1">
+                    Effects
+                    <Tooltip content={CRISIS_TOOLTIPS.effects} />
+                    <span className="ml-1 text-xs font-normal text-muted">
+                      {crisis.effects.length} {crisis.effects.length === 1 ? "effect" : "effects"}
+                    </span>
+                  </h2>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Per-turn effects ease off as the crisis subsides; the bar shows relative impact.
+                  </p>
+                </div>
+                <ul className="divide-y divide-card-border/60">
+                  {crisis.effects.map((effect, i) => {
+                    const display = describeCrisisEffect(effect);
+                    // Colour follows whether the move hurts; the arrow follows the sign.
+                    const negative = display.tone === "bad";
+                    const pointsDown = effect.targetType === "gdpLoss" || effect.value < 0;
+                    const isGdpLoss = effect.targetType === "gdpLoss";
+                    const isTick = effect.effectType === "tick";
+                    const fades = isTick || effect.effectType === "decay";
+                    const strength =
+                      isActive && fades
+                        ? liveStrength(
+                            effect.effectType,
+                            currentTurn,
+                            crisis.startTurn,
+                            crisis.durationTurns
+                          )
+                        : 1;
+                    // Cumulative drag of a per-turn tick over the whole crisis: the
+                    // decay ramp sums to value × (duration+1)/2 (≈6.5× at D=12). Shown
+                    // so a small per-turn number reads comparably to a one-time flat.
+                    const cumulativeTick =
+                      isTick && crisis.durationTurns
+                        ? (effect.value * (crisis.durationTurns + 1)) / 2
+                        : null;
+                    const amountAt = (value: number) =>
+                      describeCrisisEffect({ ...effect, value }).amount;
+                    const pct = Math.abs(effect.value) * 100;
+                    const dollars = isGdpLoss
+                      ? formatGdpLossDollars(Math.abs(effect.value), affectedGdpMillions)
                       : null;
-                  const amountAt = (value: number) =>
-                    describeCrisisEffect({ ...effect, value }).amount;
-                  const pct = Math.abs(effect.value) * 100;
-                  const dollars = isGdpLoss
-                    ? formatGdpLossDollars(Math.abs(effect.value), affectedGdpMillions)
-                    : null;
-                  const barPct =
-                    maxEffectImpact > 0
-                      ? Math.max(
-                          4,
-                          Math.min(100, Math.round((effectImpact(effect) / maxEffectImpact) * 100))
-                        )
-                      : 0;
-                  return (
-                    <li key={i} className="px-5 py-3 hover:bg-card-elevated transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
-                            negative
-                              ? "border-error/30 bg-error/5 text-error"
-                              : "border-success/30 bg-success/5 text-success"
-                          }`}
-                        >
-                          <svg
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d={
-                                pointsDown
-                                  ? "M19 14l-7 7m0 0l-7-7m7 7V3"
-                                  : "M5 10l7-7m0 0l7 7m-7-7v18"
-                              }
-                            />
-                          </svg>
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-foreground truncate flex items-center gap-1">
-                            {display.target}
-                            <Tooltip content={tooltipForEffect(effect)} />
-                          </p>
-                          <p className="text-xs text-muted flex items-center gap-1">
-                            {effect.label}
-                            <Tooltip
-                              content={
-                                effect.effectType === "tick"
-                                  ? CRISIS_TOOLTIPS["effect-type"]
-                                  : CRISIS_TOOLTIPS["effect-target"]
-                              }
-                            />
-                            · {effectCadence(effect.effectType)}
-                            {isActive && fades && (
-                              <span className="text-muted/80">
-                                {" "}
-                                · {Math.round(strength * 100)}% strength now
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        {isGdpLoss ? (
-                          <div className="text-right shrink-0">
-                            <span className="block font-mono text-sm font-semibold tabular-nums text-error">
-                              {pct % 1 === 0 ? pct : pct.toFixed(1)}% of GDP
-                            </span>
-                            {dollars && (
-                              <span className="block text-[11px] text-error/80 tabular-nums">
-                                −{dollars} lost
-                              </span>
-                            )}
-                          </div>
-                        ) : (
+                    const barPct =
+                      maxEffectImpact > 0
+                        ? Math.max(
+                            4,
+                            Math.min(
+                              100,
+                              Math.round((effectImpact(effect) / maxEffectImpact) * 100)
+                            )
+                          )
+                        : 0;
+                    return (
+                      <li key={i} className="px-5 py-3 hover:bg-card-elevated transition-colors">
+                        <div className="flex items-center gap-3">
                           <span
-                            className={`font-mono text-sm font-semibold tabular-nums shrink-0 text-right ${
-                              negative ? "text-error" : "text-success"
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                              negative
+                                ? "border-error/30 bg-error/5 text-error"
+                                : "border-success/30 bg-success/5 text-success"
                             }`}
                           >
-                            {display.amount}
-                            {cumulativeTick != null && (
-                              <span className="block text-[11px] font-normal text-muted">
-                                ≈ {amountAt(cumulativeTick)} over {crisis.durationTurns} turns
-                              </span>
-                            )}
-                            {!isTick && isActive && fades && strength < 1 && (
-                              <span className="block text-[11px] font-normal text-muted">
-                                {amountAt(effect.value * strength)} now
-                              </span>
-                            )}
+                            <svg
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d={
+                                  pointsDown
+                                    ? "M19 14l-7 7m0 0l-7-7m7 7V3"
+                                    : "M5 10l7-7m0 0l7 7m-7-7v18"
+                                }
+                              />
+                            </svg>
                           </span>
-                        )}
-                      </div>
-                      {/* Relative-impact strength bar */}
-                      <div className="mt-2 ml-10 h-1 rounded-full bg-card-elevated overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${negative ? "bg-error/70" : "bg-success/70"}`}
-                          style={{ width: `${barPct}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground truncate flex items-center gap-1">
+                              {display.target}
+                              <Tooltip content={tooltipForEffect(effect)} />
+                            </p>
+                            <p className="text-xs text-muted flex items-center gap-1">
+                              {effect.label}
+                              <Tooltip
+                                content={
+                                  effect.effectType === "tick"
+                                    ? CRISIS_TOOLTIPS["effect-type"]
+                                    : CRISIS_TOOLTIPS["effect-target"]
+                                }
+                              />
+                              · {effectCadence(effect.effectType)}
+                              {isActive && fades && (
+                                <span className="text-muted/80">
+                                  {" "}
+                                  · {Math.round(strength * 100)}% strength now
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          {isGdpLoss ? (
+                            <div className="text-right shrink-0">
+                              <span className="block font-mono text-sm font-semibold tabular-nums text-error">
+                                {pct % 1 === 0 ? pct : pct.toFixed(1)}% of GDP
+                              </span>
+                              {dollars && (
+                                <span className="block text-[11px] text-error/80 tabular-nums">
+                                  −{dollars} lost
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span
+                              className={`font-mono text-sm font-semibold tabular-nums shrink-0 text-right ${
+                                negative ? "text-error" : "text-success"
+                              }`}
+                            >
+                              {display.amount}
+                              {cumulativeTick != null && (
+                                <span className="block text-[11px] font-normal text-muted">
+                                  ≈ {amountAt(cumulativeTick)} over {crisis.durationTurns} turns
+                                </span>
+                              )}
+                              {!isTick && isActive && fades && strength < 1 && (
+                                <span className="block text-[11px] font-normal text-muted">
+                                  {amountAt(effect.value * strength)} now
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        {/* Relative-impact strength bar */}
+                        <div className="mt-2 ml-10 h-1 rounded-full bg-card-elevated overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${negative ? "bg-error/70" : "bg-success/70"}`}
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -550,12 +555,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 <Fact label="Status" tooltip={CRISIS_TOOLTIPS.status}>
                   <span
                     className={`inline-flex items-center gap-1.5 ${
-                      isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted"
+                      // An active crisis is a warning; a resolved one is good news.
+                      isActive ? "text-warning" : "text-success"
                     }`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isActive ? "bg-emerald-500" : "bg-muted"
+                        isActive ? "bg-warning" : "bg-success"
                       }`}
                     />
                     {isActive ? "Active" : "Resolved"}

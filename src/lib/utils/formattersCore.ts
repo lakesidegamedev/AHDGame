@@ -704,6 +704,8 @@ export function getTimerUrgencyStyle(urgency: TimeUrgency): string {
     case "ended":
       return "text-gray-400";
     default:
-      return "text-green-400";
+      // A deadline that is not close is plain text; green read as "good news"
+      // on every row whether it closed in 2 turns or 242.
+      return "text-foreground";
   }
 }
