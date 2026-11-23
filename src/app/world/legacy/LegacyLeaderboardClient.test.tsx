@@ -4,7 +4,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import LegacyLeaderboardClient from "./LegacyLeaderboardClient";
-import type { LegacyLeaderboardData, LegacyLeaderboardEntry } from "@/lib/world/legacyLeaderboard";
+import type {
+  LegacyLeaderboardData,
+  LegacyLeaderboardEntry,
+} from "@/lib/world/legacyLeaderboardTypes";
 
 let resolveFetch: (value: LegacyLeaderboardData) => void = () => {};
 vi.mock("@/lib/observability/fetchJson", () => ({

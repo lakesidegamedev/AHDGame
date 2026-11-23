@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InterfaceQuickSettings } from "./QuickSettingsPanels";
 
-const setLocale = vi.fn(async () => {});
+const setLocale = vi.fn(async (_locale: string) => {});
 const refresh = vi.fn();
 
 vi.mock("next-intl", () => ({

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import {
   getAccountAchievements,
   getAchievementRarityMap,
@@ -72,13 +73,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .map((hid) => highlightedItems.find((i) => i.id === hid))
       .filter((x): x is NonNullable<(typeof items)[number]> => Boolean(x));
 
-    const [forexEnabled, campaignRates, gameState] = await Promise.all([
+    const [forexEnabled, campaignRates, preset] = await Promise.all([
       isForexEnabled(),
       loadCampaignCurrencyRates(db),
-      getGameState(),
+      getGameStatePreset(db),
     ]);
     const campaignRate = forexEnabled
-      ? campaignLocalRate(character.countryId ?? "US", campaignRates, gameState?.preset)
+      ? campaignLocalRate(character.countryId ?? "US", campaignRates, preset)
       : 1;
 
     const earnedIds = new Set(earned.map(({ achievement }) => achievement._id.toString()));
