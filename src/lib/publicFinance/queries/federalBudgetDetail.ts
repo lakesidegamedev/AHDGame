@@ -58,6 +58,7 @@ export interface FyHistoryPoint {
   rating: CreditRating;
   /** Inputs for the prior close's rate breakdown, when the record carries them. */
   debtRate?: number;
+  debtInterest?: number;
   debtPrincipal?: number;
   investorConfidence?: number;
   gdpGrowth?: number;
@@ -69,7 +70,7 @@ type FyHistorySnap = {
   fiscalYear: number;
   budget: {
     revenue: { total: number };
-    spending: { total: number };
+    spending: { total: number; debtInterest?: number };
     debtToGdpRatio: number;
     gdp: number;
     creditRating: CreditRating;
@@ -83,7 +84,7 @@ type FyHistorySnap = {
 type FyHistoryLive = {
   fiscalYear: number;
   revenue: { total: number };
-  spending: { total: number };
+  spending: { total: number; debtInterest?: number };
   debtToGdpRatio: number;
   gdp: number;
   creditRating: CreditRating;
@@ -112,6 +113,7 @@ export function buildFyHistory(
       gdp: s.budget.gdp,
       rating: s.budget.creditRating,
       debtRate: s.budget.debt?.interestRate,
+      debtInterest: s.budget.spending.debtInterest,
       debtPrincipal: s.budget.debt?.principal,
       investorConfidence: s.budget.investorConfidence,
       gdpGrowth: s.budget.economicFactors?.gdpGrowth,
@@ -128,6 +130,7 @@ export function buildFyHistory(
       gdp: live.gdp,
       rating: live.creditRating,
       debtRate: live.debt?.interestRate,
+      debtInterest: live.spending.debtInterest,
       debtPrincipal: live.debt?.principal,
       investorConfidence: live.investorConfidence,
       gdpGrowth: live.economicFactors?.gdpGrowth,
@@ -276,6 +279,7 @@ export async function loadFederalBudgetDetail(params: {
           fiscalYear: 1,
           "budget.revenue.total": 1,
           "budget.spending.total": 1,
+          "budget.spending.debtInterest": 1,
           "budget.debtToGdpRatio": 1,
           "budget.gdp": 1,
           "budget.creditRating": 1,

@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import { recomputeSharePricesAfterBondTurn } from "./recomputeSharePrices";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Bond, Corporation, CorporationHistory } from "@/lib/db/types";
 
@@ -58,6 +59,7 @@ describe("recomputeSharePricesAfterBondTurn", () => {
   const histDoc: CorporationHistory = {
     _id: new ObjectId(),
     corporationId: corp._id,
+    currencyCode: "USD",
     turn,
     sharePrice: 100, // placeholder
     totalShares: 1_000_000,
@@ -133,7 +135,6 @@ describe("recomputeSharePricesAfterBondTurn", () => {
   });
 
   it("recomputes price using fresh liquidCapital and writes to both collections", async () => {
-    const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
     const result = await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
 
     expect(result.corpsRepriced).toBe(1);
@@ -165,15 +166,72 @@ describe("recomputeSharePricesAfterBondTurn", () => {
         update: { $set: { sharePrice: number; marketCap: number; liquidCapital: number } };
       };
     }>;
-    expect(histOps).toHaveLength(1);
+    expect(histOps).toHaveLength(2);
     expect(histOps[0].updateOne.filter.turn).toBe(turn);
     expect(histOps[0].updateOne.update.$set.sharePrice).toBe(newPrice);
     expect(histOps[0].updateOne.update.$set.marketCap).toBe(Math.round(newPrice * 1_000_000));
     // Critical: the persisted history liquidCapital must match the live corp
     // value (which already reflects bondTurn coupon flows), not the stale
     // pre-bondTurn snapshot the corp turn first wrote.
-    expect(histOps[0].updateOne.update.$set.liquidCapital).toBe(corp.liquidCapital);
+    expect(histOps[1].updateOne.update.$set.liquidCapital).toBe(corp.liquidCapital);
+    expect(histOps[1].updateOne.filter).toMatchObject({ cashSnapshotAt: { $exists: false } });
   });
+
+  it("does not stamp cash from a different currency into the frozen reporting basis", async () => {
+    db.collectionMocks.corporationHistory.find.mockReturnValue(
+      makeCursor([{ ...histDoc, currencyCode: "CAD" }])
+    );
+    await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+    const ops = db.collectionMocks.corporationHistory.bulkWrite.mock.calls[0][0] as Array<{
+      updateOne: { update: { $set: Record<string, unknown> } };
+    }>;
+    expect(ops).toHaveLength(1);
+    expect(ops[0].updateOne.update.$set).not.toHaveProperty("liquidCapital");
+    expect(ops[0].updateOne.update.$set).not.toHaveProperty("cashSnapshotAt");
+  });
+
+  it.each([false, true])(
+    "keeps the close frozen on retry (interrupted: %s)",
+    async (interrupted) => {
+      const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+      const saved: { cashSnapshotAt?: Date; liquidCapital?: number } = {};
+      let failAfterSnapshot = interrupted;
+      db.collectionMocks.corporationHistory.bulkWrite.mockImplementation(
+        async (
+          ops: Array<{
+            updateOne: {
+              filter: { cashSnapshotAt?: unknown };
+              update: { $set: { cashSnapshotAt?: Date; liquidCapital?: number } };
+            };
+          }>
+        ) => {
+          for (const op of ops)
+            if (op.updateOne.filter.cashSnapshotAt && !saved.cashSnapshotAt)
+              Object.assign(saved, op.updateOne.update.$set);
+          if (failAfterSnapshot) {
+            failAfterSnapshot = false;
+            throw new Error("Interrupted after the cash snapshot");
+          }
+          return { matchedCount: ops.length, modifiedCount: ops.length };
+        }
+      );
+      if (interrupted)
+        await expect(recomputeSharePricesAfterBondTurn(turn, db as unknown as Db)).rejects.toThrow(
+          "Interrupted after the cash snapshot"
+        );
+      else await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+      const first = { ...saved };
+      const original = corp.liquidCapital;
+      try {
+        corp.liquidCapital += 1000;
+        await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+        expect(saved).toEqual(first);
+        expect(saved.cashSnapshotAt).toBeInstanceOf(Date);
+      } finally {
+        corp.liquidCapital = original;
+      }
+    }
+  );
 
   it("reads this turn's snapshot without the shareholder register", async () => {
     // corporationHistory rows carry every shareholder and the SOE backing

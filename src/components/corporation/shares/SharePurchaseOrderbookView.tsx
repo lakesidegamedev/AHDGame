@@ -2,6 +2,7 @@
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { wholeNumberInput } from "@/lib/utils/rules/wholeNumberInput";
 import { useState } from "react";
 import {
   availableHoldingShares,
@@ -46,6 +47,7 @@ export function SharePurchaseOrderbookView({
 }) {
   const { formatAmount, formatPriceOrder, toInternalFrom } = useCurrency();
   const [fillOrderbookAsCorp, setFillOrderbookAsCorp] = useState(false);
+  const [localFillDrafts, setLocalFillDrafts] = useState<Record<string, string>>({});
   const [localFillAmounts, setLocalFillAmounts] = useState<Record<string, number>>({});
   const [fillingId, setFillingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
@@ -91,6 +93,11 @@ export function SharePurchaseOrderbookView({
       setSuccessMsg(
         `${verb} ${data.sharesFilled.toLocaleString("en-US")} shares for ${formatAmount(data.total)}`
       );
+      setLocalFillDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
       setLocalFillAmounts((prev) => {
         const next = { ...prev };
         delete next[orderId];
@@ -186,22 +193,14 @@ export function SharePurchaseOrderbookView({
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={
-                          localFillAmounts[order._id] && localFillAmounts[order._id] > 0
-                            ? String(localFillAmounts[order._id])
-                            : ""
-                        }
+                        value={localFillDrafts[order._id] ?? ""}
                         onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9]/g, "");
-                          const n =
-                            raw === ""
-                              ? 0
-                              : Math.min(
-                                  order.sharesRemaining,
-                                  Math.max(1, Math.floor(Number(raw)))
-                                );
+                          const raw = e.target.value;
+                          setLocalFillDrafts((prev) => ({ ...prev, [order._id]: raw }));
+                          const n = wholeNumberInput(raw, 1, order.sharesRemaining) ?? 0;
                           setLocalFillAmounts((prev) => ({ ...prev, [order._id]: n }));
                         }}
+                        aria-invalid={!!localFillDrafts[order._id] && !localFillAmounts[order._id]}
                         placeholder="Qty"
                         className="w-20 rounded border border-card-border bg-background px-2 py-1 text-xs focus:border-primary/60 focus:outline-none"
                       />
@@ -214,6 +213,11 @@ export function SharePurchaseOrderbookView({
                       >
                         {fillingId === order._id ? "Buying…" : "Buy"}
                       </button>
+                      {localFillDrafts[order._id] && !localFillAmounts[order._id] && (
+                        <span className="text-xs text-error" role="alert">
+                          Enter 1 to {order.sharesRemaining.toLocaleString("en-US")} whole shares.
+                        </span>
+                      )}
                       {(localFillAmounts[order._id] ?? 0) > 0 && (
                         <span className="text-xs text-muted">
                           ={" "}
@@ -266,22 +270,14 @@ export function SharePurchaseOrderbookView({
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={
-                          localFillAmounts[order._id] && localFillAmounts[order._id] > 0
-                            ? String(localFillAmounts[order._id])
-                            : ""
-                        }
+                        value={localFillDrafts[order._id] ?? ""}
                         onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9]/g, "");
-                          const n =
-                            raw === ""
-                              ? 0
-                              : Math.min(
-                                  order.sharesRemaining,
-                                  Math.max(1, Math.floor(Number(raw)))
-                                );
+                          const raw = e.target.value;
+                          setLocalFillDrafts((prev) => ({ ...prev, [order._id]: raw }));
+                          const n = wholeNumberInput(raw, 1, order.sharesRemaining) ?? 0;
                           setLocalFillAmounts((prev) => ({ ...prev, [order._id]: n }));
                         }}
+                        aria-invalid={!!localFillDrafts[order._id] && !localFillAmounts[order._id]}
                         placeholder="Qty"
                         className="w-20 rounded border border-card-border bg-background px-2 py-1 text-xs focus:border-primary/60 focus:outline-none"
                       />
@@ -294,6 +290,11 @@ export function SharePurchaseOrderbookView({
                       >
                         {fillingId === order._id ? "Selling…" : "Sell"}
                       </button>
+                      {localFillDrafts[order._id] && !localFillAmounts[order._id] && (
+                        <span className="text-xs text-error" role="alert">
+                          Enter 1 to {order.sharesRemaining.toLocaleString("en-US")} whole shares.
+                        </span>
+                      )}
                       {(localFillAmounts[order._id] ?? 0) > 0 && (
                         <span className="text-xs text-muted">
                           ={" "}

@@ -12,9 +12,8 @@ export function convertCommodityPrice(
   currencyCode: CurrencyCode,
   forexEnabled: boolean,
   exchangeRates?: Partial<Record<CurrencyCode, number>>
-): number {
+): number | null {
   if (!forexEnabled) return amount;
-  if (!exchangeRates) return amount;
   return convertFromInternal(amount, currencyCode, exchangeRates);
 }
 
@@ -25,5 +24,6 @@ export function formatCommodityPrice(
   exchangeRates?: Partial<Record<CurrencyCode, number>>
 ): string {
   const converted = convertCommodityPrice(amount, currencyCode, forexEnabled, exchangeRates);
+  if (converted == null || !Number.isFinite(converted)) return "Price unavailable";
   return formatCurrencyPrecise(converted, currencyCode);
 }
