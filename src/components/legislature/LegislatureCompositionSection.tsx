@@ -177,6 +177,8 @@ export function LegislatureCompositionSection({
   }, [members, searchQuery, sortBy, filterFn]);
 
   // Pagination
+  const isBlocList = showSeatsColumn && allSortedMembers.some((m) => m.seatsHeld > 1);
+  const blocSeatTotal = allSortedMembers.reduce((sum, m) => sum + m.seatsHeld, 0);
   const totalPages = Math.ceil(allSortedMembers.length / ITEMS_PER_PAGE);
   const validPage = Math.max(1, Math.min(currentPage, totalPages || 1));
   const paginatedMembers = allSortedMembers.slice(
@@ -319,15 +321,19 @@ export function LegislatureCompositionSection({
             <h2 className="text-sm font-semibold">
               Members
               <span className="ml-2 text-xs font-normal text-muted">
-                {allSortedMembers.length} seated
+                {isBlocList
+                  ? `${allSortedMembers.length} ${allSortedMembers.length === 1 ? "party bloc" : "party blocs"} holding ${blocSeatTotal} seats`
+                  : `${allSortedMembers.length} seated`}
                 {totalPages > 1 && ` (page ${validPage} of ${totalPages})`}
                 {vacantCount > 0 && <span className="ml-1 text-muted">· {vacantCount} vacant</span>}
               </span>
             </h2>
-            {showSeatsColumn && allSortedMembers.some((m) => m.seatsHeld > 1) && (
+            {isBlocList && (
               <p className="mt-1 text-xs text-muted">
-                Each row is a party bloc and its leader. The seat count is how many seats the bloc
-                holds.
+                This chamber is modelled as party blocs, not individual legislators. Each row is
+                one bloc and its leader, and the seat count is how many of the chamber&apos;s seats
+                the bloc holds. A party can appear more than once when it holds seats through
+                separate blocs.
               </p>
             )}
           </div>
