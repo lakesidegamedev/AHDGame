@@ -1096,7 +1096,10 @@ async function snapshotApprovalHistoryInSession(
         updatedAt: new Date(),
       },
       $push: {
-        history: { $each: [{ turn, approval, net: approval - (100 - approval) }], $slice: -20 },
+        history: {
+          $each: [{ turn, approval, net: approval - (100 - approval), stateAverage }],
+          $slice: -20,
+        },
       },
     },
     { upsert: true }

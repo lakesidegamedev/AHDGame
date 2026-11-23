@@ -3,6 +3,7 @@ import { applyModifiers, type ActiveModifier } from "@/lib/utils/approvalModifie
 import {
   buildApprovalBreakdown,
   displayEffect,
+  listedRegionAverage,
   NATIONAL_CAP_ADJUSTMENT_ID,
 } from "./approvalBreakdown";
 
@@ -66,5 +67,23 @@ describe("clamped approval breakdown", () => {
     expect(breakdown.nationalAdjustments).toContainEqual(
       expect.objectContaining({ id: "approval_bounds" })
     );
+  });
+});
+
+describe("listedRegionAverage", () => {
+  it("weights the listed ratings by population and reports the gap to the stored average", () => {
+    const result = listedRegionAverage(
+      [
+        { approval: 20, population: 1 },
+        { approval: 40, population: 3 },
+      ],
+      36.6
+    );
+    expect(result).toEqual({ listedAverage: 35, gap: 1.6 });
+  });
+
+  it("skips regions without a population and returns null when nothing can be weighted", () => {
+    expect(listedRegionAverage([{ approval: 10 }], 30)).toBeNull();
+    expect(listedRegionAverage([], 30)).toBeNull();
   });
 });

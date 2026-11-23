@@ -675,14 +675,16 @@ export function pastRealTimestampToLarpDate(
   pastTime?: string | Date | null,
   currentTurn?: number | null,
   lastTurnProcessed?: string | Date | null,
-  startingYear: number = STARTING_YEAR
+  startingYear: number = STARTING_YEAR,
+  /** `currentTurn` is raw; the clock shifts it onto the status bar's calendar. */
+  clock?: CalendarClock
 ): string {
   if (!pastTime || !currentTurn || !lastTurnProcessed) return "";
   const past = new Date(pastTime);
   const ref = new Date(lastTurnProcessed);
   const TURN_MS = 60 * 60 * 1000; // 1 hour per turn
   const turnsAgo = Math.max(0, Math.floor((ref.getTime() - past.getTime()) / TURN_MS));
-  return turnToLarpDate(Math.max(1, currentTurn - turnsAgo), startingYear);
+  return rawTurnToLarpDate(Math.max(1, currentTurn - turnsAgo), startingYear, clock);
 }
 
 /**

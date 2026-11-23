@@ -76,3 +76,26 @@ export function displayEffect(effect: number): number | null {
   const rounded = round1(effect);
   return rounded === 0 ? null : rounded;
 }
+
+/**
+ * Population-weighted mean of the ratings a region list shows, and how far the
+ * stored national average sits from it. The two differ because the national
+ * average leaves out governor-only effects and moves gradually on its own.
+ */
+export function listedRegionAverage(
+  regions: readonly { approval: number; population?: number }[],
+  storedAverage: number
+): { listedAverage: number; gap: number } | null {
+  let weighted = 0;
+  let total = 0;
+  for (const region of regions) {
+    const population = region.population;
+    if (!Number.isFinite(region.approval) || !Number.isFinite(population) || !population) continue;
+    if (population <= 0) continue;
+    weighted += region.approval * population;
+    total += population;
+  }
+  if (total <= 0 || !Number.isFinite(storedAverage)) return null;
+  const listedAverage = round1(weighted / total);
+  return { listedAverage, gap: round1(storedAverage - listedAverage) };
+}
