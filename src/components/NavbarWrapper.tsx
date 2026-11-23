@@ -3,7 +3,7 @@
 import { useReducer, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
+import { SHELL_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname, useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";
@@ -628,7 +628,7 @@ export function NavbarWrapper({
           >
             <div className="flex items-center gap-2">
               <Image
-                src={CDN_LOGO_URL}
+                src={SHELL_LOGO_URL}
                 priority
                 unoptimized
                 alt=""
