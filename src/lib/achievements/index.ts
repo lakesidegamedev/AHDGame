@@ -6,6 +6,7 @@
  * records which character earned the achievement for historical context.
  */
 import { ObjectId } from "mongodb";
+import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Achievement, CharacterAchievement } from "@/lib/db/types";
 import {
@@ -16,10 +17,34 @@ import {
   invalidateRarityCache,
 } from "./cache";
 import { charactersCollection } from "@/lib/db/repositories/characters";
-import { usersCollection } from "@/lib/db/repositories/users";
-import type { Document } from "mongodb";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
+
+/**
+ * Whether a character already shows an achievement, judged by the same rule the
+ * achievements page uses: its own rows, plus untagged legacy rows for the
+ * account's first character. A row earned by a sibling character does not count.
+ * Without a character the account-level row decides.
+ */
+async function rowsCoverCharacter(
+  db: Db,
+  userId: ObjectId,
+  characterId: ObjectId | undefined,
+  rows: Array<{ characterId?: ObjectId | null }>
+): Promise<boolean> {
+  if (rows.length === 0) return false;
+  if (!characterId) return true;
+  if (rows.some((row) => row.characterId?.equals(characterId))) return true;
+  if (!rows.some((row) => !row.characterId)) return false;
+  const character = await charactersCollection<{
+    _id: ObjectId;
+    userId: ObjectId;
+    createdAt: Date;
+  }>(db).findOne({ _id: characterId }, { projection: { _id: 1, userId: 1, createdAt: 1 } });
+  if (!character) return true;
+  return !(await isAdditionalCharacter(db, { ...character, userId }));
+}
 
 async function maybeAwardCompletionist(
   userId: ObjectId,
@@ -34,11 +59,16 @@ async function maybeAwardCompletionist(
       .filter((definition) => definition.slug !== "completionist")
       .map((definition) => definition._id);
     if (requiredIds.length === 0) return;
-    const earnedCount = await characterAchievementsCollection(db).countDocuments({
-      userId,
-      achievementId: { $in: requiredIds },
-    });
-    if (earnedCount === requiredIds.length) {
+    const rows = await characterAchievementsCollection(db)
+      .find({ userId, achievementId: { $in: requiredIds } })
+      .toArray();
+    const held = new Set<string>();
+    for (const row of rows) {
+      if (characterId === undefined || (await rowsCoverCharacter(db, userId, characterId, [row]))) {
+        held.add(row.achievementId.toString());
+      }
+    }
+    if (held.size === requiredIds.length) {
       await awardAchievement(userId, "completionist", characterId);
     }
   } catch (error) {
@@ -107,11 +137,10 @@ export async function awardAchievement(
 
     const db = await getDb();
 
-    const existing = await characterAchievementsCollection(db).findOne({
-      userId,
-      achievementId: achievement._id,
-    });
-    if (existing) return false;
+    const existingRows = await characterAchievementsCollection(db)
+      .find({ userId, achievementId: achievement._id })
+      .toArray();
+    if (await rowsCoverCharacter(db, userId, characterId, existingRows)) return false;
 
     try {
       await characterAchievementsCollection(db).insertOne({
@@ -183,10 +212,18 @@ export async function awardAchievements(
     const existing = await characterAchievementsCollection(db)
       .find(
         { userId, achievementId: { $in: achievementIds } },
-        { projection: { achievementId: 1 } }
+        { projection: { achievementId: 1, characterId: 1 } }
       )
       .toArray();
-    const existingIds = new Set(existing.map((e) => e.achievementId.toString()));
+    const rowsByAchievement = new Map<string, typeof existing>();
+    for (const row of existing) {
+      const key = row.achievementId.toString();
+      rowsByAchievement.set(key, [...(rowsByAchievement.get(key) ?? []), row]);
+    }
+    const existingIds = new Set<string>();
+    for (const [key, rows] of rowsByAchievement) {
+      if (await rowsCoverCharacter(db, userId, characterId, rows)) existingIds.add(key);
+    }
 
     // 3. Insert only new ones in a single batch
     const toInsert: CharacterAchievement[] = achievements
@@ -324,7 +361,7 @@ export async function loadAccountAchievements(
 
 /**
  * Get rarity map: achievementId (string) -> % of accounts with it.
- * Denominator: total accounts with completed setup (players who have characters).
+ * Denominator: accounts that own a character or hold an achievement.
  */
 export async function getAchievementRarityMap(): Promise<Map<string, number>> {
   try {
@@ -332,25 +369,28 @@ export async function getAchievementRarityMap(): Promise<Map<string, number>> {
     if (cached) return cached;
 
     const db = await getDb();
-    // Count accounts with characters rather than character docs
-    const totalAccounts = await usersCollection<Document>(db).countDocuments({
-      hasCompletedSetup: true,
-    });
+    // Rarity counts accounts, and the denominator is every account that plays
+    // (owns a character or holds an achievement), so it can never pass 100%.
+    const [characterUsers, holderUsers, counts] = await Promise.all([
+      charactersCollection<{ userId: ObjectId }>(db).distinct("userId"),
+      characterAchievementsCollection(db).distinct("userId"),
+      characterAchievementsCollection(db)
+        .aggregate<{ _id: ObjectId; count: number }>([
+          { $group: { _id: { a: "$achievementId", u: "$userId" } } },
+          { $group: { _id: "$_id.a", count: { $sum: 1 } } },
+        ])
+        .toArray(),
+    ]);
+    const totalAccounts = new Set([...characterUsers, ...holderUsers].map(String)).size;
     if (totalAccounts === 0) {
       const empty = new Map<string, number>();
       setCachedRarity(empty);
       return empty;
     }
 
-    const counts = await characterAchievementsCollection(db)
-      .aggregate<{ _id: ObjectId; count: number }>([
-        { $group: { _id: "$achievementId", count: { $sum: 1 } } },
-      ])
-      .toArray();
-
     const map = new Map<string, number>();
     for (const c of counts) {
-      map.set(c._id.toString(), (c.count / totalAccounts) * 100);
+      map.set(c._id.toString(), Math.min(100, (c.count / totalAccounts) * 100));
     }
     setCachedRarity(map);
     return map;

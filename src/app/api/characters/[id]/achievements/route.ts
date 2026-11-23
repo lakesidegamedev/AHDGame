@@ -9,6 +9,8 @@ import {
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAchievementProgressMap } from "@/lib/achievements/progress";
 import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { campaignLocalRate, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
@@ -69,11 +71,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .map((hid) => highlightedItems.find((i) => i.id === hid))
       .filter((x): x is NonNullable<(typeof items)[number]> => Boolean(x));
 
+    const [forexEnabled, campaignRates, gameState] = await Promise.all([
+      isForexEnabled(),
+      loadCampaignCurrencyRates(db),
+      getGameState(),
+    ]);
+    const campaignRate = forexEnabled
+      ? campaignLocalRate(character.countryId ?? "US", campaignRates, gameState?.preset)
+      : 1;
+
     const earnedIds = new Set(earned.map(({ achievement }) => achievement._id.toString()));
     const progressMap = await getAchievementProgressMap(
       db,
       character,
-      allAchievements.filter((a) => !earnedIds.has(a._id.toString()))
+      allAchievements.filter((a) => !earnedIds.has(a._id.toString())),
+      { campaignRate }
     );
 
     const allItems = allAchievements.map((a) => {
