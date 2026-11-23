@@ -45,3 +45,19 @@ export const GOVERNMENT_COMMODITY_DEMAND: ReadonlyArray<{
     plannedOnly: true,
   },
 ];
+
+/** True when any government budget line buys this good. */
+export function governmentBuysCommodity(commodity: string): boolean {
+  return GOVERNMENT_COMMODITY_DEMAND.some((line) => line.commodity === commodity);
+}
+
+/**
+ * The goods governments buy, in table order, each with whether only planned
+ * economies buy it. Labels come from the caller so this stays plain data.
+ */
+export function governmentBoughtGoods(): { commodity: CommodityType; plannedOnly: boolean }[] {
+  return GOVERNMENT_COMMODITY_DEMAND.map((line) => ({
+    commodity: line.commodity,
+    plannedOnly: line.plannedOnly === true,
+  }));
+}
