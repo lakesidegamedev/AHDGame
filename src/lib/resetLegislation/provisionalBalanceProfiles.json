@@ -466,5 +466,50 @@
     "primaryResponse": [0.82, 0.72, 0.61, 0.55, 0.31],
     "secondaryResponseFactors": [0.6, 0.67, 0.7, 0.7, 0.5],
     "responseMeaning": "illustrative normalized response, not approved game balance"
+  },
+  {
+    "familyId": "L53",
+    "status": "provisional-design-only",
+    "baseCostFractionOfGdp": 0.0015,
+    "allocationFactors": [0.33, 0.67, 1, 2, 3.33],
+    "primaryResponse": [0.3, 0.42, 0.52, 0.62, 0.7],
+    "secondaryResponseFactors": [0.7, 0.7, 0.7, 0.65, 0.55],
+    "responseMeaning": "funds the intelligence appropriation; violent-crime response is illustrative, not approved game balance"
+  },
+  {
+    "familyId": "L54",
+    "status": "provisional-design-only",
+    "baseCostFractionOfGdp": 0.0025,
+    "allocationFactors": [2, 1.5, 1, 0.7, 0.4],
+    "primaryResponse": [0.7, 0.62, 0.52, 0.45, 0.32],
+    "secondaryResponseFactors": [0.7, 0.7, 0.7, 0.65, 0.55],
+    "responseMeaning": "funds the foreign ministry account; trade-balance response is illustrative, not approved game balance"
+  },
+  {
+    "familyId": "L55",
+    "status": "provisional-design-only",
+    "baseCostFractionOfGdp": 0.0025,
+    "allocationFactors": [0.5, 0.8, 1, 1.5, 2.2],
+    "primaryResponse": [0.55, 0.58, 0.55, 0.6, 0.62],
+    "secondaryResponseFactors": [0.7, 0.7, 0.7, 0.65, 0.55],
+    "responseMeaning": "funds the public-safety account; disaster-resilience response is illustrative, not approved game balance"
+  },
+  {
+    "familyId": "L56",
+    "status": "provisional-design-only",
+    "baseCostFractionOfGdp": 0.0002,
+    "allocationFactors": [0.5, 0.8, 1, 1.5, 2.2],
+    "primaryResponse": [0.35, 0.42, 0.5, 0.6, 0.68],
+    "secondaryResponseFactors": [0.7, 0.7, 0.7, 0.65, 0.55],
+    "responseMeaning": "funds the trade promotion account; output-growth response is illustrative, not approved game balance"
+  },
+  {
+    "familyId": "L57",
+    "status": "provisional-design-only",
+    "baseCostFractionOfGdp": 0.003,
+    "allocationFactors": [1.8, 1.4, 1, 0.8, 0.55],
+    "primaryResponse": [0.72, 0.64, 0.55, 0.48, 0.35],
+    "secondaryResponseFactors": [0.7, 0.7, 0.7, 0.65, 0.55],
+    "responseMeaning": "funds the veterans account; mental-health access response is illustrative, not approved game balance"
   }
 ]

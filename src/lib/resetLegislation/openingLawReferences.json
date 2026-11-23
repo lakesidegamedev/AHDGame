@@ -6503,5 +6503,305 @@
         "treatment": "repriced-inside-regional-service-envelope"
       }
     ]
+  },
+  {
+    "key": "US:national:L53",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L53",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated intelligence funding law",
+    "legalNote": "The intelligence service has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:national:L53",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L53",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated intelligence funding law",
+    "legalNote": "The intelligence service has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:national:L53",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L53",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated intelligence funding law",
+    "legalNote": "The intelligence service has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L53",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L53",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Intelligence funding is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L53",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L53",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Intelligence funding is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L53",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L53",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Intelligence funding is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:national:L54",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L54",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated foreign service funding law",
+    "legalNote": "The foreign ministry has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:national:L54",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L54",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated foreign service funding law",
+    "legalNote": "The foreign ministry has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:national:L54",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L54",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated foreign service funding law",
+    "legalNote": "The foreign ministry has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L54",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L54",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Foreign affairs are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L54",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L54",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Foreign affairs are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L54",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L54",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Foreign affairs are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:national:L55",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L55",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated public safety funding law",
+    "legalNote": "The national public-safety department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:national:L55",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L55",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated public safety funding law",
+    "legalNote": "The national public-safety department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:national:L55",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L55",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated public safety funding law",
+    "legalNote": "The national public-safety department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L55",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L55",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "National public-safety agencies are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L55",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L55",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "National public-safety agencies are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L55",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L55",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "National public-safety agencies are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:national:L56",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L56",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated trade promotion law",
+    "legalNote": "The trade promotion department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:national:L56",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L56",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated trade promotion law",
+    "legalNote": "The trade promotion department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:national:L56",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L56",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated trade promotion law",
+    "legalNote": "The trade promotion department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L56",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L56",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Export promotion is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L56",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L56",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Export promotion is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L56",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L56",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Export promotion is a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:national:L57",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L57",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated veterans services law",
+    "legalNote": "The veterans department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:national:L57",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L57",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated veterans services law",
+    "legalNote": "The veterans department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:national:L57",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L57",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated veterans services law",
+    "legalNote": "The veterans department has no appropriation of its own until a funding law is enacted.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L57",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L57",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Veterans services are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L57",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L57",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Veterans services are a national power.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L57",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L57",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Veterans services are a national power.",
+    "sourceComponents": []
   }
 ]
