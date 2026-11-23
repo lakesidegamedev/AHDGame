@@ -87,6 +87,7 @@ export function openingMetricPrograms(input: {
             effectiveTurn: board.sourceTurn,
             choice: openingChoice1991(reference),
             settlementLawId: source.sourceId,
+            openingAnnualBooked: Math.max(0, source.annualBooked),
             primaryMetricEffects: effects.map((effect) => ({
               ...effect,
               favorableNormalizedPoints: effect.favorableNormalizedPoints * weight,

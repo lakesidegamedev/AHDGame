@@ -16,6 +16,16 @@ export interface ElectionPolling {
   leaderId: string | null;
   leaderName: string | null;
   leaderParty: string | null;
+  /** Each party primary's front-runner. Set during primaries only. */
+  primaryLeaders?: {
+    partyId: string;
+    partyName: string;
+    partyColor: string;
+    candidateId: string;
+    name: string;
+    sharePct: number;
+    fieldSize: number;
+  }[];
   sharesPct: Record<string, number>;
   candidateNames: Record<string, string>;
   candidateParties: Record<string, string>;
@@ -71,7 +81,13 @@ export interface ElectionDisplay {
   polling?: ElectionPolling;
   seatsEstimate?: Record<string, number>;
   /** Current officeholder for single-seat races. Null/absent for multi-seat races. */
-  incumbent?: { name: string; party: string; partyColor?: string } | null;
+  incumbent?: {
+    name: string;
+    party: string;
+    partyColor?: string;
+    running?: boolean;
+    notRunningReason?: string | null;
+  } | null;
   /**
    * Non-presidential primaries: cumulative primary ballots per candidate,
    * accrued turn by turn by the engine. Separate from generalTally so no

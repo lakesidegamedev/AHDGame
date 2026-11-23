@@ -1069,7 +1069,7 @@ async function snapshotApprovalHistoryInSession(
                 ? [
                     {
                       id: "national_performance_smoothing",
-                      label: "Approval adjustment over time",
+                      label: "Gradual movement toward target",
                       effect: nationalSmoothing,
                       marginEffect: 0,
                       source: "metric" as const,
@@ -1100,7 +1100,10 @@ async function snapshotApprovalHistoryInSession(
         updatedAt: new Date(),
       },
       $push: {
-        history: { $each: [{ turn, approval, net: approval - (100 - approval) }], $slice: -20 },
+        history: {
+          $each: [{ turn, approval, net: approval - (100 - approval), stateAverage }],
+          $slice: -20,
+        },
       },
     },
     { upsert: true }

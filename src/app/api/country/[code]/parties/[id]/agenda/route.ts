@@ -8,15 +8,27 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import { setNationalAgenda } from "@/lib/parties/commands/setNationalAgenda";
+import { containsDiscordInvite } from "@/lib/parties/rules/agendaText";
 import { getCurrentAgenda } from "@/lib/parties/queries/currentAgenda";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
 }
 
+const NO_INVITES = "Discord invite links are not allowed in a party agenda";
+
 const agendaSchema = z.object({
-  headline: z.string().min(1).max(120),
-  detail: z.string().max(500).optional().default(""),
+  headline: z
+    .string()
+    .min(1)
+    .max(120)
+    .refine((v) => !containsDiscordInvite(v), NO_INVITES),
+  detail: z
+    .string()
+    .max(500)
+    .refine((v) => !containsDiscordInvite(v), NO_INVITES)
+    .optional()
+    .default(""),
 });
 
 // GET /api/country/[code]/parties/[id]/agenda — return the active agenda for this party.

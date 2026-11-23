@@ -835,7 +835,9 @@ function CalloutChips({
             }
             aria-label={
               s.caption
-                ? `${s.name}, ${s.ev} electoral votes, ${s.caption}`
+                ? s.evLabel !== undefined
+                  ? `${s.name}, ${s.caption}`
+                  : `${s.name}, ${s.ev} electoral votes, ${s.caption}`
                 : `${s.name}, ${s.ev} electoral votes, ${s.leaderName} leads by ${s.margin.toFixed(1)} points`
             }
             aria-pressed={s.id === selected}

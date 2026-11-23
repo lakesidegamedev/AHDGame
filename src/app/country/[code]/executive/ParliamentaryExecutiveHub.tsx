@@ -1,3 +1,4 @@
+import { formedGovernmentLabel } from "@/lib/country/rules/governmentStanding";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import {
@@ -437,12 +438,13 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       : "Awaiting Formation";
   } else if (lostMajority) {
     statusStripText = "Formed (Lost Majority)";
-  } else if (formationType === "coalition") {
-    statusStripText = "Formed via Coalition";
-  } else if (formationType === "minority") {
-    statusStripText = "Formed as a minority government";
-  } else if (formationType === "admin") {
-    statusStripText = "Formed via Admin";
+  } else if (formationType && governmentStatus === "formed") {
+    statusStripText = formedGovernmentLabel({
+      formationType,
+      seatsSupporting: governingSeats,
+      threshold: majorityThreshold,
+      coalitionPartnerCount: govFormation?.coalitionPartyIds?.length,
+    });
   } else if (governmentStatus === "formed") {
     statusStripText = "Formed";
   } else {

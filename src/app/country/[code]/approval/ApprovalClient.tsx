@@ -14,7 +14,11 @@ import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { mergeApprovalModifiers } from "./mergeApprovalModifiers";
-import { displayEffect } from "@/lib/country/rules/approvalBreakdown";
+import {
+  displayEffect,
+  listedRegionAverage,
+  nationalMarginFromRegions,
+} from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
 interface StateApprovalEntry {
@@ -22,6 +26,7 @@ interface StateApprovalEntry {
   stateName: string;
   approval: number;
   baseApproval: number;
+  population?: number;
   modifiers: ActiveModifier[];
 }
 
@@ -36,10 +41,17 @@ interface MetricsApiResponse {
 interface ApprovalApiResponse {
   governmentApprovalBase?: number;
   governmentApproval?: number;
-  history?: { turn: number; approval: number }[];
+  history?: { turn: number; approval: number; stateAverage?: number }[];
   modifiers?: ActiveModifier[];
   stateAverage?: number;
   nationalAdjustments?: ActiveModifier[];
+}
+
+function historyTitle(h: { turn: number; approval: number; stateAverage?: number }) {
+  const base = `Turn ${h.turn}: ${h.approval.toFixed(1)}%`;
+  if (h.stateAverage == null) return base;
+  const adjustments = Math.round((h.approval - h.stateAverage) * 10) / 10;
+  return `${base} (average ${h.stateAverage.toFixed(1)}%, national adjustments ${adjustments > 0 ? "+" : ""}${adjustments.toFixed(1)})`;
 }
 
 function approvalColor(v: number) {
@@ -143,6 +155,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
   const stateAverage = approvalData?.stateAverage;
   const nationalAdjustments = approvalData?.nationalAdjustments;
   const hasBreakdown = stateAverage != null && nationalAdjustments != null;
+  const listed = stateAverage != null ? listedRegionAverage(sortedStates, stateAverage) : null;
   const nationalIds = new Set((nationalAdjustments ?? []).map((m) => m.id));
   const regionalModifiers = hasBreakdown
     ? modifiers.filter((m) => !nationalIds.has(m.id))
@@ -153,7 +166,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
     : governmentApproval != null && base != null
       ? Math.round((governmentApproval - base) * 10) / 10
       : netModifierEffect(modifiers);
-  const netMargin = computeRegionalConditionMargin(modifiers);
+  const netMargin =
+    nationalMarginFromRegions(sortedStates) ?? computeRegionalConditionMargin(modifiers);
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -207,15 +221,38 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                 </p>
                 <p className="text-xs text-muted mt-2">
                   {hasBreakdown
-                    ? `Population-weighted average of ${regionLabel.toLowerCase()} approval, plus the national adjustments below, as of the latest turn.`
-                    : `Population-weighted average of ${regionLabel.toLowerCase()} approval, as of the latest turn.`}
+                    ? `Approval across the whole population, not a sample: a population-weighted average of ${regionLabel.toLowerCase()} approval, plus the national adjustments below, as of the latest turn.`
+                    : `Approval across the whole population, not a sample: a population-weighted average of ${regionLabel.toLowerCase()} approval, as of the latest turn.`}
                 </p>
                 {hasBreakdown && (
                   <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-sm">
                     <div className="flex justify-between gap-4">
-                      <dt className="text-muted">{regionLabel} average (population weighted)</dt>
-                      <dd className="tabular-nums font-medium">{stateAverage.toFixed(1)}%</dd>
+                      <dt className="text-muted">
+                        {listed
+                          ? `Average of the ${regionLabel.toLowerCase()} ratings listed below (population weighted)`
+                          : `${regionLabel} average (population weighted)`}
+                      </dt>
+                      <dd className="tabular-nums font-medium">
+                        {(listed?.listedAverage ?? stateAverage).toFixed(1)}%
+                      </dd>
                     </div>
+                    {listed && Math.abs(listed.gap) >= 0.1 && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted">
+                          Gradual movement, and effects that only judge a single{" "}
+                          {regionLabel.toLowerCase()}
+                        </dt>
+                        <dd
+                          className={
+                            "tabular-nums font-medium " +
+                            (listed.gap > 0 ? "text-emerald-500" : "text-rose-500")
+                          }
+                        >
+                          {listed.gap > 0 ? "+" : ""}
+                          {listed.gap.toFixed(1)}
+                        </dd>
+                      </div>
+                    )}
                     {nationalAdjustments.map((m) => (
                       <div key={m.id} className="flex justify-between gap-4">
                         <dt className="text-muted">{m.label}</dt>
@@ -288,7 +325,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                     return (
                       <div
                         key={i}
-                        title={`Turn ${h.turn}: ${h.approval.toFixed(1)}%`}
+                        title={historyTitle(h)}
                         className={`flex-1 rounded-sm ${color} opacity-80 hover:opacity-100 transition-opacity`}
                         style={{ height: `${pct}%` }}
                       />

@@ -60,3 +60,25 @@ describe("getActiveOrgStatementModifiersByCountry", () => {
     expect(mods).toEqual([]);
   });
 });
+
+describe("joint statement source and expiry", () => {
+  it("carries the source, start and end turn for the chip", async () => {
+    const find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: new ObjectId("507f1f77bcf86cd7994390a2"),
+          organizationId: "NATO",
+          jointStatementStance: "endorse",
+          proposingCountryId: "CA",
+          jointStatementExpiresOnTurn: 168,
+        },
+      ]),
+    });
+    vi.mocked(getOrganizationLegislationCollection).mockResolvedValue({ find } as never);
+    const [mod] = await getActiveOrgStatementModifiersByCountry({} as Db, "CA", 160);
+    expect(mod.expiresTurn).toBe(168);
+    expect(mod.sinceTurn).toBe(144);
+    expect(mod.detail).toContain("NATO joint statement endorsing");
+    expect(mod.detail).toContain("separate from candidate endorsements");
+  });
+});

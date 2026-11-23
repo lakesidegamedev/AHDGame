@@ -166,3 +166,48 @@ describe("national tax policy records", () => {
     expect(records.has(legacyIncomeTax._id)).toBe(false);
   });
 });
+
+describe("national statute level display", () => {
+  const ladder = {
+    _id: "us.governance.integrity.primary",
+    name: "Ethics and Audit Act",
+    policyDomain: "governance",
+    policyOptions: [
+      { id: "l0", name: "No Watchdogs", economic: 0, social: 0 },
+      { id: "l1", name: "Audit Office", economic: 0, social: 0 },
+      { id: "l2", name: "Ethics Enforcement", economic: 0, social: 0 },
+    ],
+  } as unknown as LegislationType;
+
+  it("shows the stored level when every level shares the same lean", () => {
+    const row = buildPolicyResponse(
+      {
+        scope: "national",
+        stateId: "federal",
+        legislationTypeId: ladder._id,
+        policyOptionId: "l2",
+        policyOptionIndex: 2,
+        economic: 0,
+        social: 0,
+        updatedAt: new Date(0),
+      },
+      ladder
+    );
+    expect(row.policyOptionName).toBe("Ethics Enforcement");
+  });
+
+  it("falls back to the lean match when the record has no stored option", () => {
+    const row = buildPolicyResponse(
+      {
+        scope: "national",
+        stateId: "federal",
+        legislationTypeId: ladder._id,
+        economic: 0,
+        social: 0,
+        updatedAt: new Date(0),
+      },
+      ladder
+    );
+    expect(row.policyOptionName).toBe("No Watchdogs");
+  });
+});

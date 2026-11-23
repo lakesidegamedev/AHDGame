@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeRegionalConditionMargin,
+  sumRegionalConditionMargins,
   defaultMarginEffectForApproval,
   marginEffectForModifier,
   REGIONAL_CONDITION_MARGIN_CAP,
@@ -77,6 +78,17 @@ describe("marginEffects", () => {
         source: "war",
       };
       expect(computeRegionalConditionMargin([war])).toBe(0);
+    });
+  });
+
+  describe("sumRegionalConditionMargins", () => {
+    it("is the listed sum before the cap, so the card can explain a capped total", () => {
+      const mods = [
+        { id: "recession", effect: -4, marginEffect: -3 },
+        { id: "high_unemployment", effect: -3, marginEffect: -2 },
+      ] as ActiveModifier[];
+      expect(sumRegionalConditionMargins(mods)).toBe(-5);
+      expect(computeRegionalConditionMargin(mods)).toBe(-REGIONAL_CONDITION_MARGIN_CAP);
     });
   });
 });

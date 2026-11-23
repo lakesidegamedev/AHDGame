@@ -57,6 +57,8 @@ import type {
   State,
 } from "@/lib/db/types";
 import { getPrimaryWinnersForElection, type CountryId } from "@/lib/constants/countries";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 
@@ -914,7 +916,7 @@ export async function fetchDepsForElection(
     "primeMinister",
     "uachtaran",
   ]);
-  let incumbent: { name: string; partyId: string } | null = null;
+  let incumbent: ElectionDeps["incumbent"] = null;
   if (SINGLE_SEAT_TYPES.has(election.electionType)) {
     const isNational =
       election.electionType === "president" ||
@@ -931,11 +933,25 @@ export async function fetchDepsForElection(
       q["currentOffice.senateClass"] = election.senateClass;
     }
     const [incumbentChar, incumbentNPP] = await Promise.all([
-      charactersCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
-      nppsCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
+      charactersCollection(db).findOne(q, {
+        projection: { name: 1, party: 1, careerHistory: 1, executiveTermsServed: 1 },
+      }),
+      nppsCollection(db).findOne(q, {
+        projection: { name: 1, party: 1, careerHistory: 1, executiveTermsServed: 1 },
+      }),
     ]);
     const holder = incumbentChar ?? incumbentNPP;
-    if (holder) incumbent = { name: holder.name, partyId: holder.party };
+    if (holder) {
+      const termLimitedOffice = getCountryClientConfig(countryId).executiveTermLimit?.officeKey;
+      incumbent = {
+        name: holder.name,
+        partyId: holder.party,
+        id: holder._id.toString(),
+        termLimited:
+          termLimitedOffice === election.electionType &&
+          hasReachedExecutiveTermLimit(holder, countryId as CountryId),
+      };
+    }
   }
 
   return {

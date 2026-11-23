@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
+import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
 import {
   getOrganizationFundsCollection,
@@ -8,6 +9,8 @@ import {
 import {
   DEFAULT_ORG_DUES_RATE_ANNUAL,
   GDP_MILLIONS_TO_USD,
+  getOrganizationDef,
+  isBuiltInInternationalOrganizationId,
   orgTributeRateAnnual,
 } from "@/lib/constants/internationalOrganizations";
 import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
@@ -18,9 +21,15 @@ export type OrganizationContributionKind = "dues" | "tribute";
 
 export interface OrganizationContributionLine {
   organizationId: string;
+  /** Display name: built-in short name, or the founders' name for a custom organization. */
+  organizationName?: string;
   kind: OrganizationContributionKind;
   /** Treasury debit per turn in the member country's local currency. */
   perTurn: number;
+  /** Annual rate of GDP charged for this line. */
+  rateAnnual?: number;
+  /** True when no member vote has set a rate, so the shared default applies. */
+  isDefaultRate?: boolean;
 }
 
 export interface OrganizationContributionPosition {
@@ -44,6 +53,26 @@ export function organizationContributionPerTurn(args: {
   const dueUsd = memberDueUsd(args.gdpUsdMillions * GDP_MILLIONS_TO_USD, args.rateAnnual);
   if (!(dueUsd > 0) || !Number.isFinite(dueUsd)) return 0;
   return Math.round(dueUsd / getGdpAnchorRate(args.countryId, args.preset));
+}
+
+async function organizationDisplayNames(
+  db: Db,
+  organizationIds: readonly string[]
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const custom: string[] = [];
+  for (const id of organizationIds) {
+    if (isBuiltInInternationalOrganizationId(id)) {
+      names.set(id, getOrganizationDef(id).shortName);
+    } else custom.push(id);
+  }
+  if (custom.length > 0) {
+    const rows = await customInternationalOrganizationsCollection(db)
+      .find({ id: { $in: custom } }, { projection: { id: 1, name: 1, shortName: 1 } })
+      .toArray();
+    for (const row of rows) names.set(row.id, row.shortName || row.name);
+  }
+  return names;
 }
 
 /**
@@ -86,6 +115,7 @@ export async function loadOrganizationContributions(
     fundRows.map((row) => [row.organizationId, row.duesRateAnnual] as const)
   );
   const lines: OrganizationContributionLine[] = [];
+  const names = await organizationDisplayNames(db, organizationIds);
 
   for (const organizationId of organizationIds) {
     const tributeRateAnnual = orgTributeRateAnnual(organizationId, activePreset);
@@ -94,9 +124,11 @@ export async function loadOrganizationContributions(
     // still pay ordinary dues; that is the post-#1156 partition.
     const paysTribute = !access.enabledForPlayers && tributeRateAnnual > 0;
     const kind: OrganizationContributionKind = paysTribute ? "tribute" : "dues";
+    const votedRate = duesRateByOrganization.get(organizationId);
     const rateAnnual = paysTribute
       ? tributeRateAnnual
-      : (duesRateByOrganization.get(organizationId) ?? DEFAULT_ORG_DUES_RATE_ANNUAL);
+      : (votedRate ?? DEFAULT_ORG_DUES_RATE_ANNUAL);
+    const isDefaultRate = !paysTribute && votedRate == null;
     if (!(rateAnnual > 0)) continue;
 
     const perTurn = organizationContributionPerTurn({
@@ -105,7 +137,17 @@ export async function loadOrganizationContributions(
       rateAnnual,
       preset: activePreset,
     });
-    if (perTurn > 0) lines.push({ organizationId, kind, perTurn });
+    if (perTurn > 0) {
+      const organizationName = names.get(organizationId);
+      lines.push({
+        organizationId,
+        ...(organizationName ? { organizationName } : {}),
+        kind,
+        perTurn,
+        rateAnnual,
+        isDefaultRate,
+      });
+    }
   }
 
   return {

@@ -112,6 +112,18 @@ describe("PartyCard", () => {
     expect(screen.getByText("Default party")).toBeTruthy();
     expect(screen.getByText(/Minor party/)).toBeTruthy();
   });
+  it("marks a party with no members as dormant", () => {
+    render(
+      <PartyCard
+        party={{ ...PARTY, memberCount: 0, playerCount: 0, nppCount: 0 }}
+        effectiveCountry="us"
+        rank={1}
+        totalMembers={200}
+        momentum={null}
+      />
+    );
+    expect(screen.getByText(/Dormant, no members/)).toBeTruthy();
+  });
   it("does not label custom parties as defaults", () => {
     render(
       <PartyCard

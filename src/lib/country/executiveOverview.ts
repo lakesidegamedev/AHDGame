@@ -600,7 +600,9 @@ async function handleParliamentary(countryId: CountryId) {
     headOfState,
     governingPartyId: govFormation?.governingPartyId ?? null,
     formationType: govFormation?.formationType ?? null,
-    isMinority: govFormation?.formationType === "minority",
+    isMinority:
+      (govFormation?.totalSeatsSupporting ?? 0) <
+      (govFormation?.majorityThreshold ?? config.coalitionThreshold),
     totalSeatsSupporting: govFormation?.totalSeatsSupporting ?? 0,
     majorityThreshold: govFormation?.majorityThreshold ?? config.coalitionThreshold,
     isAdmin: authUser?.isAdmin ?? false,

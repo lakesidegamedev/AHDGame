@@ -9,6 +9,7 @@
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states2027 } from "./usStates2027";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
+import { airQualityIndexFromPm25 } from "@/lib/seeds/shared/airQualityIndex";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -604,12 +605,696 @@ const MEDIAN_AGE_2027: Record<string, number> = {
   WY: 38.9,
 };
 
+/**
+ * FBI UCR Summary Reporting System violent crime rate per 100k residents, 2024.
+ * Source: https://cde.ucr.cjis.gov/LATEST/webapp/#/pages/downloads (SRS dataset);
+ * transcribed by state from https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_violent_crime_rate
+ * National rate: 359.1. The FBI publishes no equivalent state property crime table that
+ * could be retrieved, so publicSafety.crimeRate (property) is not sourced from a table.
+ */
+const VIOLENT_CRIME_2027: Record<string, number> = {
+  AK: 724.1,
+  AL: 359.9,
+  AR: 579.4,
+  AZ: 421.9,
+  CA: 486.0,
+  CO: 476.3,
+  CT: 136.0,
+  DC: 1005.5,
+  DE: 360.8,
+  FL: 267.1,
+  GA: 325.7,
+  HI: 217.7,
+  IA: 243.3,
+  ID: 230.6,
+  IL: 289.2,
+  IN: 312.9,
+  KS: 438.7,
+  KY: 213.1,
+  LA: 519.8,
+  MA: 314.7,
+  MD: 420.4,
+  ME: 100.1,
+  MI: 434.3,
+  MN: 256.6,
+  MO: 462.0,
+  MS: 210.5,
+  MT: 423.5,
+  NC: 375.8,
+  ND: 254.3,
+  NE: 220.5,
+  NH: 110.1,
+  NJ: 217.7,
+  NM: 717.1,
+  NV: 402.0,
+  NY: 380.2,
+  OH: 293.7,
+  OK: 422.8,
+  OR: 331.0,
+  PA: 245.6,
+  RI: 153.6,
+  SC: 436.7,
+  SD: 362.3,
+  TN: 592.3,
+  TX: 389.4,
+  UT: 229.6,
+  VA: 217.9,
+  VT: 219.1,
+  WA: 326.1,
+  WI: 278.5,
+  WV: 248.8,
+  WY: 203.4,
+};
+
+/**
+ * BJS sentenced prisoners under state jurisdiction per 100k residents, December 31 2023
+ * (all ages, Table 7). Excludes jail populations. DC has no state prison system (felons are
+ * federal), so it takes the BJS all-state figure (318).
+ * Source: https://bjs.ojp.gov/library/publications/prisoners-2023-statistical-tables
+ * (https://bjs.ojp.gov/document/p23st.zip, file p23stt07.csv)
+ */
+const IMPRISONMENT_2027: Record<string, number> = {
+  AK: 202,
+  AL: 394,
+  AR: 596,
+  AZ: 448,
+  CA: 246,
+  CO: 290,
+  CT: 183,
+  DC: 318,
+  DE: 275,
+  FL: 382,
+  GA: 449,
+  HI: 165,
+  IA: 274,
+  ID: 490,
+  IL: 238,
+  IN: 351,
+  KS: 305,
+  KY: 423,
+  LA: 617,
+  MA: 96,
+  MD: 261,
+  ME: 119,
+  MI: 328,
+  MN: 152,
+  MO: 385,
+  MS: 652,
+  MT: 438,
+  NC: 275,
+  ND: 240,
+  NE: 295,
+  NH: 151,
+  NJ: 125,
+  NM: 259,
+  NV: 327,
+  NY: 167,
+  OH: 394,
+  OK: 545,
+  OR: 291,
+  PA: 300,
+  RI: 122,
+  SC: 299,
+  SD: 405,
+  TN: 341,
+  TX: 477,
+  UT: 186,
+  VA: 314,
+  VT: 124,
+  WA: 181,
+  WI: 346,
+  WV: 328,
+  WY: 378,
+};
+
+/**
+ * Census ACS 1-year 2025, percent without any health insurance, civilian noninstitutionalized
+ * population (100 minus the published percent insured). National: 8.4%.
+ * Source: https://www2.census.gov/programs-surveys/demo/tables/health-insurance/2026/acs-hi/hi05_acs.xlsx
+ */
+const UNINSURED_2027: Record<string, number> = {
+  AK: 13.6,
+  AL: 8.4,
+  AR: 9.1,
+  AZ: 11.8,
+  CA: 6.1,
+  CO: 8.8,
+  CT: 5.2,
+  DC: 4.3,
+  DE: 7.6,
+  FL: 10.5,
+  GA: 11.7,
+  HI: 4.1,
+  IA: 5.7,
+  ID: 9.5,
+  IL: 7.2,
+  IN: 8.1,
+  KS: 9.7,
+  KY: 7.2,
+  LA: 8.1,
+  MA: 2.7,
+  MD: 6.6,
+  ME: 6.8,
+  MI: 5.5,
+  MN: 5.6,
+  MO: 7.9,
+  MS: 10.2,
+  MT: 10.9,
+  NC: 8.4,
+  ND: 8.0,
+  NE: 7.5,
+  NH: 5.3,
+  NJ: 7.7,
+  NM: 10.5,
+  NV: 11.5,
+  NY: 4.7,
+  OH: 7.1,
+  OK: 12.6,
+  OR: 5.4,
+  PA: 6.2,
+  RI: 4.2,
+  SC: 10.2,
+  SD: 8.6,
+  TN: 10.0,
+  TX: 16.5,
+  UT: 8.6,
+  VA: 6.9,
+  VT: 3.8,
+  WA: 7.0,
+  WI: 5.9,
+  WV: 6.9,
+  WY: 9.6,
+};
+
+/**
+ * EIA state energy-related CO2 per capita, 2022, metric tons per person.
+ * Source: https://www.eia.gov/environment/emissions/state/excel/table4.xlsx
+ */
+const CO2_PER_CAPITA_2027: Record<string, number> = {
+  AK: 56.3,
+  AL: 21.5,
+  AR: 20.7,
+  AZ: 11.1,
+  CA: 8.4,
+  CO: 15.2,
+  CT: 10.3,
+  DC: 3.9,
+  DE: 12.4,
+  FL: 10.4,
+  GA: 11.4,
+  HI: 12.6,
+  IA: 22.3,
+  ID: 10.7,
+  IL: 14.6,
+  IN: 23.9,
+  KS: 21.2,
+  KY: 24.3,
+  LA: 41.8,
+  MA: 8.5,
+  MD: 8.2,
+  ME: 10.8,
+  MI: 15.3,
+  MN: 14.8,
+  MO: 18.3,
+  MS: 22.1,
+  MT: 26.3,
+  NC: 10.9,
+  ND: 73.2,
+  NE: 24.4,
+  NH: 9.9,
+  NJ: 10.0,
+  NM: 22.0,
+  NV: 12.7,
+  NY: 8.4,
+  OH: 16.7,
+  OK: 21.7,
+  OR: 8.9,
+  PA: 16.5,
+  RI: 9.3,
+  SC: 12.7,
+  SD: 17.2,
+  TN: 12.9,
+  TX: 22.1,
+  UT: 17.8,
+  VA: 11.1,
+  VT: 8.5,
+  WA: 9.6,
+  WI: 15.4,
+  WV: 44.6,
+  WY: 96.6,
+};
+
+/**
+ * Renewable share of in-state electricity net generation, 2024, percent (hydro, wind,
+ * solar, geothermal, wood and other biomass over total, all producers). National: 22.7%.
+ * Source: https://www.eia.gov/electricity/data/state/generation_monthly.xlsx (sheet 2024_Final)
+ */
+const RENEWABLE_SHARE_2027: Record<string, number> = {
+  AK: 28.2,
+  AL: 9.0,
+  AR: 10.2,
+  AZ: 16.3,
+  CA: 50.8,
+  CO: 41.3,
+  CT: 3.1,
+  DC: 46.8,
+  DE: 4.4,
+  FL: 8.2,
+  GA: 12.5,
+  HI: 21.2,
+  IA: 65.5,
+  ID: 68.3,
+  IL: 15.3,
+  IN: 14.4,
+  KS: 52.0,
+  KY: 7.1,
+  LA: 4.1,
+  MA: 19.6,
+  MD: 10.7,
+  ME: 53.8,
+  MI: 12.0,
+  MN: 32.6,
+  MO: 12.1,
+  MS: 4.3,
+  MT: 57.4,
+  NC: 13.8,
+  ND: 39.5,
+  NE: 35.9,
+  NH: 14.9,
+  NJ: 3.8,
+  NM: 49.4,
+  NV: 40.2,
+  NY: 30.0,
+  OH: 5.3,
+  OK: 42.7,
+  OR: 61.4,
+  PA: 3.5,
+  RI: 10.0,
+  SC: 7.1,
+  SD: 81.6,
+  TN: 13.8,
+  TX: 29.4,
+  UT: 20.9,
+  VA: 11.4,
+  VT: 99.8,
+  WA: 69.5,
+  WI: 12.3,
+  WV: 7.0,
+  WY: 25.6,
+};
+
+/**
+ * Annual mean PM2.5 (ug/m3), 2024, population-weighted across monitored counties.
+ * County means average complete-year monitor sites; weights are 2023 county populations
+ * from countyPopulationHistory.json. Wildfire events included.
+ * Source: https://aqs.epa.gov/aqsweb/airdata/annual_conc_by_monitor_2024.zip (parameter 88101)
+ */
+const PM25_2027: Record<string, number> = {
+  AK: 5.7,
+  AL: 8.02,
+  AR: 9.4,
+  AZ: 8.03,
+  CA: 9.03,
+  CO: 6.01,
+  CT: 5.71,
+  DC: 6.41,
+  DE: 6.43,
+  FL: 6.89,
+  GA: 8.97,
+  HI: 3.7,
+  IA: 6.92,
+  ID: 9.24,
+  IL: 7.52,
+  IN: 7.9,
+  KS: 7.64,
+  KY: 7.22,
+  LA: 8.46,
+  MA: 5.8,
+  MD: 6.02,
+  ME: 5.06,
+  MI: 7.77,
+  MN: 7.14,
+  MO: 7.11,
+  MS: 8.34,
+  MT: 6.54,
+  NC: 7.59,
+  ND: 6.92,
+  NE: 6.96,
+  NH: 4.33,
+  NJ: 6.42,
+  NM: 6.01,
+  NV: 5.48,
+  NY: 6.84,
+  OH: 7.57,
+  OK: 8.29,
+  OR: 5.69,
+  PA: 7.37,
+  RI: 5.34,
+  SC: 7.69,
+  SD: 5.44,
+  TN: 7.82,
+  TX: 10.01,
+  UT: 6.38,
+  VA: 6.72,
+  VT: 4.46,
+  WA: 5.81,
+  WI: 6.41,
+  WV: 6.75,
+  WY: 4.08,
+};
+
+/**
+ * Share of state area (land and water, Census 2022 boundaries) in GAP status 1 and 2
+ * protected areas, percent. Source: USGS PAD-US 4.1 summary statistics
+ * https://www.sciencebase.gov/catalog/item/6759b69fd34edfeb8710a3ea
+ * (PADUS4_1SummaryStatistics_TabularData_CSV, State clip table).
+ */
+const PROTECTED_LAND_2027: Record<string, number> = {
+  AK: 35.3,
+  AL: 1.8,
+  AR: 5.2,
+  AZ: 14.3,
+  CA: 21.9,
+  CO: 10.7,
+  CT: 4.3,
+  DC: 1.0,
+  DE: 4.6,
+  FL: 10.2,
+  GA: 5.4,
+  HI: 19.8,
+  IA: 1.8,
+  ID: 14.5,
+  IL: 2.7,
+  IN: 1.6,
+  KS: 0.8,
+  KY: 2.8,
+  LA: 3.9,
+  MA: 6.5,
+  MD: 2.7,
+  ME: 4.7,
+  MI: 6.0,
+  MN: 7.3,
+  MO: 3.3,
+  MS: 3.1,
+  MT: 9.4,
+  NC: 5.8,
+  ND: 16.3,
+  NE: 1.0,
+  NH: 7.4,
+  NJ: 11.6,
+  NM: 6.1,
+  NV: 15.1,
+  NY: 9.8,
+  OH: 2.1,
+  OK: 2.2,
+  OR: 12.7,
+  PA: 2.5,
+  RI: 10.2,
+  SC: 3.7,
+  SD: 9.6,
+  TN: 6.9,
+  TX: 2.0,
+  UT: 15.2,
+  VA: 3.8,
+  VT: 5.3,
+  WA: 14.7,
+  WI: 9.0,
+  WV: 6.3,
+  WY: 11.2,
+};
+
+/**
+ * USDA ERS household food insecurity prevalence, percent, 3-year average 2022-2024.
+ * National: 13.3%. Source: https://www.ers.usda.gov/media/6988/mapdata.xlsx
+ */
+const FOOD_INSECURITY_2027: Record<string, number> = {
+  AK: 13.0,
+  AL: 12.1,
+  AR: 19.4,
+  AZ: 13.1,
+  CA: 12.5,
+  CO: 10.5,
+  CT: 12.1,
+  DC: 10.3,
+  DE: 10.8,
+  FL: 13.3,
+  GA: 14.6,
+  HI: 10.8,
+  IA: 10.8,
+  ID: 12.6,
+  IL: 13.3,
+  IN: 13.7,
+  KS: 12.5,
+  KY: 18.8,
+  LA: 17.7,
+  MA: 11.7,
+  MD: 11.5,
+  ME: 12.9,
+  MI: 14.7,
+  MN: 9.9,
+  MO: 13.3,
+  MS: 17.3,
+  MT: 11.7,
+  NC: 11.8,
+  ND: 9.0,
+  NE: 12.7,
+  NH: 9.1,
+  NJ: 9.8,
+  NM: 14.5,
+  NV: 15.0,
+  NY: 14.0,
+  OH: 14.2,
+  OK: 16.9,
+  OR: 12.5,
+  PA: 10.9,
+  RI: 10.6,
+  SC: 13.5,
+  SD: 9.5,
+  TN: 13.3,
+  TX: 17.6,
+  UT: 11.5,
+  VA: 12.4,
+  VT: 9.4,
+  WA: 11.0,
+  WI: 12.0,
+  WV: 14.1,
+  WY: 15.6,
+};
+
+/**
+ * Voting-eligible population turnout, 2024 general election, percent of VEP casting a ballot.
+ * National: 64.3%. Source: UF Election Lab (US Elections Project)
+ * https://election.lab.ufl.edu/data-downloads/turnoutdata/Turnout_2024G_v0.4.csv
+ */
+const VOTER_TURNOUT_2027: Record<string, number> = {
+  AK: 63.5,
+  AL: 58.7,
+  AR: 54.1,
+  AZ: 63.9,
+  CA: 62.3,
+  CO: 73.4,
+  CT: 67.0,
+  DC: 64.9,
+  DE: 66.8,
+  FL: 67.4,
+  GA: 68.0,
+  HI: 50.3,
+  IA: 71.0,
+  ID: 64.2,
+  IL: 63.5,
+  IN: 59.0,
+  KS: 63.3,
+  KY: 62.9,
+  LA: 61.1,
+  MA: 68.4,
+  MD: 69.4,
+  ME: 74.5,
+  MI: 74.8,
+  MN: 76.5,
+  MO: 64.6,
+  MS: 57.8,
+  MT: 68.3,
+  NC: 70.7,
+  ND: 63.9,
+  NE: 68.6,
+  NH: 73.7,
+  NJ: 67.5,
+  NM: 59.7,
+  NV: 66.2,
+  NY: 60.5,
+  OH: 65.4,
+  OK: 53.5,
+  OR: 71.9,
+  PA: 71.4,
+  RI: 63.3,
+  SC: 62.3,
+  SD: 64.5,
+  TN: 57.9,
+  TX: 56.8,
+  UT: 64.7,
+  VA: 71.5,
+  VT: 70.8,
+  WA: 70.2,
+  WI: 76.7,
+  WV: 55.6,
+  WY: 61.2,
+};
+
+/**
+ * Share of Interstate, other freeway and other principal arterial miles (rural and urban)
+ * with measured pavement roughness IRI of 170 in/mi or less (FHWA good or acceptable), 2024,
+ * percent of reported miles. National: 90.2%.
+ * Source: https://www.fhwa.dot.gov/policyinformation/statistics/2024/xls/hm64.xlsx (Table HM-64)
+ */
+const ROAD_ACCEPTABLE_2027: Record<string, number> = {
+  AK: 85.6,
+  AL: 97.3,
+  AR: 94.4,
+  AZ: 91.2,
+  CA: 71.4,
+  CO: 89.2,
+  CT: 88.9,
+  DC: 20.4,
+  DE: 93.1,
+  FL: 96.6,
+  GA: 97.6,
+  HI: 77.0,
+  IA: 91.6,
+  ID: 94.6,
+  IL: 87.6,
+  IN: 95.7,
+  KS: 97.6,
+  KY: 97.2,
+  LA: 82.1,
+  MA: 73.7,
+  MD: 84.7,
+  ME: 95.3,
+  MI: 90.2,
+  MN: 97.0,
+  MO: 95.2,
+  MS: 91.5,
+  MT: 96.2,
+  NC: 94.3,
+  ND: 97.6,
+  NE: 93.5,
+  NH: 96.8,
+  NJ: 80.0,
+  NM: 89.8,
+  NV: 97.6,
+  NY: 80.3,
+  OH: 88.7,
+  OK: 91.7,
+  OR: 94.4,
+  PA: 86.7,
+  RI: 68.5,
+  SC: 95.0,
+  SD: 97.4,
+  TN: 95.3,
+  TX: 90.9,
+  UT: 97.0,
+  VA: 92.0,
+  VT: 94.9,
+  WA: 85.0,
+  WI: 85.4,
+  WV: 92.6,
+  WY: 97.9,
+};
+
+/**
+ * NCES 4-year adjusted cohort graduation rate, all students, percent, 2021-22.
+ * New Mexico and Oklahoma were not reported for 2021-22 and carry their 2020-21 values.
+ * Source: https://nces.ed.gov/programs/digest/d23/tables/xls/tabn219.46.xlsx (Table 219.46)
+ */
+const GRADUATION_RATE_2027: Record<string, number> = {
+  AK: 77.8,
+  AL: 88.2,
+  AR: 88.2,
+  AZ: 77.3,
+  CA: 87.0,
+  CO: 82.3,
+  CT: 88.9,
+  DC: 76.4,
+  DE: 87.8,
+  FL: 87.3,
+  GA: 84.1,
+  HI: 86.0,
+  IA: 89.9,
+  ID: 79.9,
+  IL: 87.3,
+  IN: 87.7,
+  KS: 89.1,
+  KY: 90.1,
+  LA: 83.1,
+  MA: 90.1,
+  MD: 86.3,
+  ME: 86.1,
+  MI: 81.0,
+  MN: 83.6,
+  MO: 89.8,
+  MS: 88.9,
+  MT: 85.8,
+  NC: 86.4,
+  ND: 85.1,
+  NE: 87.1,
+  NH: 87.7,
+  NJ: 85.2,
+  NM: 76.6,
+  NV: 81.7,
+  NY: 86.7,
+  OH: 86.2,
+  OK: 80.0,
+  OR: 81.3,
+  PA: 87.0,
+  RI: 83.3,
+  SC: 83.8,
+  SD: 82.1,
+  TN: 90.4,
+  TX: 89.7,
+  UT: 88.2,
+  VA: 89.1,
+  VT: 82.8,
+  WA: 83.6,
+  WI: 90.3,
+  WV: 91.2,
+  WY: 81.8,
+};
+
+/**
+ * Index mappings for the sourced series above. Both anchor the national population-weighted
+ * mean of the real series to the national index value, so state deviations are real and the
+ * country rollup does not shift.
+ *
+ * Air quality: the shared PM2.5 scale (airQualityIndexFromPm25), the same one Canada uses, so
+ * equal air reads equal across countries. The national value is that scale at the
+ * population-weighted mean of PM25_2027 (7.6 ug/m3).
+ *
+ * Road condition: index = 70.5 + (state acceptable share - 88.0), where 88.0 is the
+ * population-weighted mean of ROAD_ACCEPTABLE_2027 and 70.5 is the national index. Floored at 5.
+ */
+const PM25_NATIONAL = 7.6;
+const ROAD_ACCEPTABLE_NATIONAL = 88.0;
+/** BJS all-state prison rate per 100k, 2023 (Table 7). */
+const PRISON_ONLY_NATIONAL = 318;
+const ROAD_INDEX_NATIONAL = 70.5;
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+export function airQualityIndex2027(pm25: number): number {
+  return airQualityIndexFromPm25(pm25);
+}
+
+export function roadConditionIndex2027(acceptableShare: number): number {
+  return round1(
+    Math.max(5, Math.min(100, ROAD_INDEX_NATIONAL + (acceptableShare - ROAD_ACCEPTABLE_NATIONAL)))
+  );
+}
+
 // ---------------------------------------------------------------------------
-// 2023 Soft-index national baseline literals
-// These have no reliable free-standing per-state 2023 sources; they are
-// authored as 2023 constants here, not imported from 2019. Slight lean
-// adjustments are applied per-state in the builder below using state
-// characteristics inferred from income/urbanization tiers.
+// Soft-index national baseline literals
+// Metrics with no per-state source stay at these national values in every
+// state rather than being spread by an income or broadband tier.
 // ---------------------------------------------------------------------------
 
 // National 2023 baselines (documented estimates)
@@ -674,7 +1359,7 @@ const BASELINE_2027 = {
 
   // Environment
   // EPA AQI 2023: national Good/Moderate days ≈ 78%; maps to air quality index 32 (lower = worse)
-  airQuality: 32,
+  airQuality: airQualityIndexFromPm25(PM25_NATIONAL),
   // EIA 2023: renewable share ≈ 22% of electricity gen
   renewableEnergy: 22,
   // EIA 2023: US CO2 ≈ 14.9 metric tons per capita (down from 2019)
@@ -716,9 +1401,20 @@ const BASELINE_2027 = {
   publicHealthPreparedness: 63,
 };
 
+/** Mid-range values held uniform across states where no per-state series exists. */
+const UNIFORM_2027 = {
+  smallBusinessFormation: 4.5,
+  rdIntensity: 1.9,
+  manufacturingCompetitiveness: 60,
+  publicTransitBase: 10,
+  waterQuality: 91,
+  powerGridReliability: 99.7,
+  infrastructureInvestmentGap: 22,
+};
+
 // ---------------------------------------------------------------------------
-// Economic tier assignments (1–5) derived from real 2023 income/poverty data.
-// Tier 3 = national median range; used for soft-index lean adjustments only.
+// Income tier (1-5) from median income. Used only by the property crime rate,
+// which has no retrievable per-state table.
 // ---------------------------------------------------------------------------
 function econTier(stateId: string): 1 | 2 | 3 | 4 | 5 {
   const income = MEDIAN_INCOME_2027[stateId] ?? 72000;
@@ -726,16 +1422,6 @@ function econTier(stateId: string): 1 | 2 | 3 | 4 | 5 {
   if (income >= 76000) return 4;
   if (income >= 65000) return 3;
   if (income >= 55000) return 2;
-  return 1;
-}
-
-function eduTier(stateId: string): 1 | 2 | 3 | 4 | 5 {
-  // Approximate from broadband (proxy for ed access) and income
-  const bb = BROADBAND_2027[stateId] ?? 82;
-  if (bb >= 89) return 5;
-  if (bb >= 85) return 4;
-  if (bb >= 80) return 3;
-  if (bb >= 74) return 2;
   return 1;
 }
 
@@ -761,7 +1447,6 @@ const SECESSION_MOOD_2027: Record<string, number> = {
 
 function build2023Metrics(stateId: string): StateMetrics {
   const et = econTier(stateId) - 1; // 0..4
-  const ed = eduTier(stateId) - 1; // 0..4
   const urban = URBANIZATION_2027[stateId] ?? 70;
   const popGrowth = POP_GROWTH_2027[stateId] ?? 0.5;
   const medAge = MEDIAN_AGE_2027[stateId] ?? 38.5;
@@ -773,12 +1458,8 @@ function build2023Metrics(stateId: string): StateMetrics {
   const broadband = BROADBAND_2027[stateId] ?? 82.6;
   const col = COST_OF_LIVING_2027[stateId] ?? 100;
 
-  // Lean adjustment: lower-income / rural states lean slightly worse on soft indices
+  // Property crime only: no per-state table was retrievable, so it still leans on income tier.
   const leanMod = (et - 2) * 2; // -4 to +4
-
-  // Infrastructure tiers inferred from broadband + income
-  const infraTier = Math.round(1 + (broadband - 69) / 8);
-  const infra = Math.max(0, Math.min(4, infraTier - 1));
 
   return withUniformMetricSet({
     _id: stateId,
@@ -790,88 +1471,99 @@ function build2023Metrics(stateId: string): StateMetrics {
       gdpGrowth: mv(gdpGrowth),
       povertyRate: mv(poverty),
       costOfLiving: mv(col),
-      // Small business formation: 2023 Kauffman index proxy from BLS, by income tier
-      smallBusinessFormation: mv([2.5, 3.5, 4.5, 5.5, 7.0][et]),
+      smallBusinessFormation: mv(UNIFORM_2027.smallBusinessFormation),
       laborParticipation: mv(63),
       matchingFriction: mv(5),
       tradeBalance: mv(0),
       productivityGrowth: mv(Math.round(gdpGrowth * 0.55 * 10) / 10),
-      rdIntensity: mv(1.4 + ed * 0.25),
+      rdIntensity: mv(UNIFORM_2027.rdIntensity),
       exportDependency: mv(35),
-      manufacturingCompetitiveness: mv(Math.max(35, Math.min(90, [40, 50, 60, 70, 80][ed]))),
+      manufacturingCompetitiveness: mv(UNIFORM_2027.manufacturingCompetitiveness),
     },
 
     education: {
-      highSchoolGradRate: mv(BASELINE_2027.highSchoolGradRate + leanMod * 0.5),
-      universityEnrollment: mv(BASELINE_2027.universityEnrollment + leanMod),
-      testPerformance: mv(BASELINE_2027.testPerformance + leanMod * 1.5),
-      educationSpending: mv(BASELINE_2027.educationSpending + leanMod * 500),
-      literacyRate: mv(BASELINE_2027.literacyRate + leanMod * 0.5),
-      workforceSkill: mv(BASELINE_2027.workforceSkill + leanMod * 2),
+      highSchoolGradRate: mv(GRADUATION_RATE_2027[stateId] ?? BASELINE_2027.highSchoolGradRate),
+      universityEnrollment: mv(BASELINE_2027.universityEnrollment),
+      testPerformance: mv(BASELINE_2027.testPerformance),
+      educationSpending: mv(BASELINE_2027.educationSpending),
+      literacyRate: mv(BASELINE_2027.literacyRate),
+      workforceSkill: mv(BASELINE_2027.workforceSkill),
       apprenticeshipRate: mv(BASELINE_2027.apprenticeshipRate),
     },
 
     healthcare: {
-      uninsuredRate: mv(BASELINE_2027.uninsuredRate - leanMod * 0.8),
-      affordabilityIndex: mv(BASELINE_2027.affordabilityIndex + leanMod * 2),
-      physicianRate: mv(BASELINE_2027.physicianRate + leanMod * 0.07),
+      uninsuredRate: mv(UNINSURED_2027[stateId] ?? BASELINE_2027.uninsuredRate),
+      affordabilityIndex: mv(BASELINE_2027.affordabilityIndex),
+      physicianRate: mv(BASELINE_2027.physicianRate),
       lifeExpectancy: mv(lifeExp),
-      preventableMortality: mv(BASELINE_2027.preventableMortality - leanMod * 15),
-      publicHealthPreparedness: mv(BASELINE_2027.publicHealthPreparedness + leanMod * 2),
+      preventableMortality: mv(BASELINE_2027.preventableMortality),
+      publicHealthPreparedness: mv(BASELINE_2027.publicHealthPreparedness),
     },
 
     infrastructure: {
-      roadCondition: mv([52, 63, 72, 81, 89][infra]),
+      roadCondition: mv(
+        ROAD_ACCEPTABLE_2027[stateId] === undefined
+          ? ROAD_INDEX_NATIONAL
+          : roadConditionIndex2027(ROAD_ACCEPTABLE_2027[stateId])
+      ),
       broadbandAccess: mv(broadband),
-      publicTransit: mv(Math.round(urban * 0.5 + infra * 5)),
-      waterQuality: mv([78, 85, 91, 95, 98][infra]),
-      powerGridReliability: mv([99.0, 99.4, 99.7, 99.85, 99.95][infra]),
-      infrastructureInvestmentGap: mv([38, 30, 22, 14, 7][infra]),
+      publicTransit: mv(Math.round(urban * 0.5 + UNIFORM_2027.publicTransitBase)),
+      waterQuality: mv(UNIFORM_2027.waterQuality),
+      powerGridReliability: mv(UNIFORM_2027.powerGridReliability),
+      infrastructureInvestmentGap: mv(UNIFORM_2027.infrastructureInvestmentGap),
     },
 
     publicSafety: {
       crimeRate: mv(BASELINE_2027.crimeRate + (urban - 70) * 8 - leanMod * 40),
-      violentCrimeRate: mv(BASELINE_2027.violentCrimeRate + (urban - 70) * 2 - leanMod * 10),
-      policePerCapita: mv(BASELINE_2027.policePerCapita + urban * 0.005),
-      incarcerationRate: mv(BASELINE_2027.incarcerationRate - leanMod * 15),
-      recidivismRate: mv(BASELINE_2027.recidivismRate - leanMod * 2),
-      publicSafetyConfidence: mv(BASELINE_2027.publicSafetyConfidence + leanMod * 2),
+      violentCrimeRate: mv(VIOLENT_CRIME_2027[stateId] ?? BASELINE_2027.violentCrimeRate),
+      policePerCapita: mv(BASELINE_2027.policePerCapita),
+      // BJS counts state prisons only; scale to the prison-plus-jail national total so the
+      // rate is comparable with Canada's provincial-plus-federal custody figure.
+      incarcerationRate: mv(
+        round1(
+          ((IMPRISONMENT_2027[stateId] ?? PRISON_ONLY_NATIONAL) * BASELINE_2027.incarcerationRate) /
+            PRISON_ONLY_NATIONAL
+        )
+      ),
+      recidivismRate: mv(BASELINE_2027.recidivismRate),
+      publicSafetyConfidence: mv(BASELINE_2027.publicSafetyConfidence),
     },
 
     environment: {
-      // Higher income states tend to have stricter environmental regulation
-      airQuality: mv(Math.max(10, BASELINE_2027.airQuality - leanMod * 2 + urban * 0.05)),
-      // Renewable share varies more by policy than by income; lean = proxy for policy
-      renewableEnergy: mv(BASELINE_2027.renewableEnergy + leanMod * 1.5),
-      carbonEmissions: mv(BASELINE_2027.carbonEmissions - leanMod * 0.5),
-      recyclingRate: mv(BASELINE_2027.recyclingRate + leanMod * 2),
-      climateResilience: mv(BASELINE_2027.climateResilience + leanMod * 2),
-      protectedLand: mv(BASELINE_2027.protectedLand + (100 - urban) * 0.08),
-      energyTransitionProgress: mv(BASELINE_2027.energyTransitionProgress + leanMod * 2),
+      airQuality: mv(
+        PM25_2027[stateId] === undefined
+          ? BASELINE_2027.airQuality
+          : airQualityIndex2027(PM25_2027[stateId])
+      ),
+      renewableEnergy: mv(RENEWABLE_SHARE_2027[stateId] ?? BASELINE_2027.renewableEnergy),
+      carbonEmissions: mv(CO2_PER_CAPITA_2027[stateId] ?? BASELINE_2027.carbonEmissions),
+      recyclingRate: mv(BASELINE_2027.recyclingRate),
+      climateResilience: mv(BASELINE_2027.climateResilience),
+      protectedLand: mv(PROTECTED_LAND_2027[stateId] ?? BASELINE_2027.protectedLand),
+      energyTransitionProgress: mv(BASELINE_2027.energyTransitionProgress),
     },
 
     social: {
-      socialMobility: mv(BASELINE_2027.socialMobility + leanMod * 3),
-      incomeInequality: mv(
-        Math.max(28, Math.min(58, BASELINE_2027.incomeInequality - leanMod * 2))
-      ),
+      socialMobility: mv(BASELINE_2027.socialMobility),
+      incomeInequality: mv(BASELINE_2027.incomeInequality),
       homelessnessRate: mv(
         Math.max(1, BASELINE_2027.homelessnessRate + (col - 100) * 0.06 + urban * 0.04)
       ),
-      foodInsecurity: mv(Math.max(5, BASELINE_2027.foodInsecurity - leanMod * 0.8)),
-      civicParticipation: mv(BASELINE_2027.civicParticipation + leanMod * 2),
-      socialCohesion: mv(Math.max(25, BASELINE_2027.socialCohesion + leanMod * 2 - urban * 0.04)),
+      foodInsecurity: mv(FOOD_INSECURITY_2027[stateId] ?? BASELINE_2027.foodInsecurity),
+      civicParticipation: mv(BASELINE_2027.civicParticipation),
+      socialCohesion: mv(BASELINE_2027.socialCohesion),
       housingSupplyGrowth: mv(BASELINE_2027.housingSupplyGrowth + popGrowth * 0.3),
     },
 
     governance: {
-      governmentTransparency: mv(BASELINE_2027.governmentTransparency + leanMod * 2),
-      budgetBalance: mv(BASELINE_2027.budgetBalance + leanMod * 0.8),
-      debtToGdp: mv(BASELINE_2027.debtToGdp - leanMod * 3),
-      corruptionIndex: mv(Math.max(20, BASELINE_2027.corruptionIndex - leanMod * 2)),
-      voterTurnout: mv(BASELINE_2027.voterTurnout + leanMod),
-      publicTrust: mv(BASELINE_2027.publicTrust + leanMod * 2),
-      coDeterminationQuality: mv(BASELINE_2027.coDeterminationQuality + leanMod),
+      governmentTransparency: mv(BASELINE_2027.governmentTransparency),
+      budgetBalance: mv(BASELINE_2027.budgetBalance),
+      debtToGdp: mv(BASELINE_2027.debtToGdp),
+      // No state-level corruption series with a defensible source was retrievable.
+      corruptionIndex: mv(BASELINE_2027.corruptionIndex),
+      voterTurnout: mv(VOTER_TURNOUT_2027[stateId] ?? BASELINE_2027.voterTurnout),
+      publicTrust: mv(BASELINE_2027.publicTrust),
+      coDeterminationQuality: mv(BASELINE_2027.coDeterminationQuality),
       ...(stateId in SECESSION_MOOD_2027
         ? { independenceDesire: mv(SECESSION_MOOD_2027[stateId]) }
         : {}),
@@ -885,11 +1577,11 @@ function build2023Metrics(stateId: string): StateMetrics {
     },
 
     mediaInformation: {
-      mediaPolarization: mv(Math.min(80, BASELINE_2027.mediaPolarization + Math.abs(leanMod) * 2)),
-      disinformationRisk: mv(Math.min(80, BASELINE_2027.disinformationRisk + Math.abs(leanMod))),
-      pressFreedom: mv(BASELINE_2027.pressFreedom + leanMod),
-      socialMediaSentiment: mv(BASELINE_2027.socialMediaSentiment + leanMod * 2),
-      newsTrust: mv(BASELINE_2027.newsTrust + leanMod),
+      mediaPolarization: mv(BASELINE_2027.mediaPolarization),
+      disinformationRisk: mv(BASELINE_2027.disinformationRisk),
+      pressFreedom: mv(BASELINE_2027.pressFreedom),
+      socialMediaSentiment: mv(BASELINE_2027.socialMediaSentiment),
+      newsTrust: mv(BASELINE_2027.newsTrust),
     },
 
     lastUpdated: new Date(0),

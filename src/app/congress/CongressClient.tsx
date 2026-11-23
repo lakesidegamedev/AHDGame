@@ -323,7 +323,13 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
                   {minorityLeader.characterName}
                 </Link>
               ) : (
-                <span className="text-base font-bold text-muted">Vacant</span>
+                <>
+                  <span className="text-base font-bold text-muted">Vacant</span>
+                  <span className="max-w-[16rem] text-body-sm text-muted">
+                    Filled by election among players of the party not in power. It stays vacant
+                    until one of them stands.
+                  </span>
+                </>
               )}
             </div>
           </div>

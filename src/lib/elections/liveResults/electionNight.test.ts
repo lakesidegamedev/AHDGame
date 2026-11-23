@@ -8,6 +8,7 @@ import {
   electionNightTitle,
   isElectionNightType,
   majorityThreshold,
+  electionNightBoardState,
   pickElectionNightAnchor,
 } from "./electionNight";
 
@@ -219,5 +220,24 @@ describe("buildNationalElectionNight", () => {
       (night?.parties ?? []).map((p) => [p.party, [p.projectedSeats, p.declaredSeats]])
     );
     expect(byParty).toEqual({ A: [9, 3], B: [11, 7] });
+  });
+});
+
+describe("electionNightBoardState", () => {
+  const frame = (status: string, votes: number, reporting: number, declared: number) => ({
+    election: { status },
+    summary: { totalVotes: votes, unitsReporting: reporting },
+    national: { regionsDeclared: declared },
+  });
+
+  it("is idle for an active race with nothing counted", () => {
+    expect(electionNightBoardState(frame("active", 0, 0, 0))).toBe("idle");
+  });
+  it("is live once anything is counted", () => {
+    expect(electionNightBoardState(frame("active", 10, 0, 0))).toBe("live");
+    expect(electionNightBoardState(frame("active", 0, 0, 2))).toBe("live");
+  });
+  it("keeps the last result of a finished race", () => {
+    expect(electionNightBoardState(frame("completed", 0, 0, 0))).toBe("result");
   });
 });

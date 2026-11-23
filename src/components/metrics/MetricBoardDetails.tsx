@@ -18,6 +18,7 @@ import {
   metricQualityExplanation,
   metricQualityLabel,
   metricRefreshLabel,
+  metricDomainId,
   metricFreshnessLabel,
   playerMetricDescription,
 } from "@/lib/resetMetrics/presentation";
@@ -369,6 +370,17 @@ export function StandingLawDetail({
   );
 }
 
+/** The 0-100 condition score each domain average is built from. */
+export function ConditionScoreLabel({ score }: { score: number | null }) {
+  if (score === null || !Number.isFinite(score)) return <>Not scored</>;
+  return (
+    <>
+      Score <span className="font-semibold tabular-nums text-foreground">{Math.round(score)}</span>
+      /100
+    </>
+  );
+}
+
 export function MetricRow({
   countryId,
   metric,
@@ -443,9 +455,13 @@ export function MetricRow({
             {interpretationLabel(metric.interpretation)}
           </div>
           <div className="mt-0.5 text-body-xs text-muted">
+            <ConditionScoreLabel score={metric.conditionScore} />
+          </div>
+          <div className="mt-0.5 text-body-xs text-muted">
             {metricFreshnessLabel(
               metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
-              metric.observation.source.includes("national rollup")
+              metric.observation.source.includes("national rollup"),
+              metric.refresh
             )}
           </div>
         </div>
@@ -668,7 +684,7 @@ export function MetricDetail({
 
   const related = board.metrics.filter(
     (candidate) =>
-      candidate.id !== metric.id && candidate.path.split(".")[0] === metric.path.split(".")[0]
+      candidate.id !== metric.id && metricDomainId(candidate) === metricDomainId(metric)
   );
   const regionalComparison =
     board.scope === "regional" && detail && metric.observation.value !== null
@@ -693,7 +709,7 @@ export function MetricDetail({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
             <div className="font-mono text-body-xs uppercase tracking-widest text-muted">
-              {displayName} · {readableCategory(metric.path.split(".")[0] ?? "conditions")}
+              {displayName} · {readableCategory(metricDomainId(metric))}
             </div>
             <h2 className="mt-1 text-heading-lg font-bold text-foreground">{metric.name}</h2>
             <p className="mt-2 text-body leading-relaxed text-muted">
@@ -792,7 +808,8 @@ export function MetricDetail({
                 <dd className="text-foreground">
                   {metricFreshnessLabel(
                     metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
-                    metric.observation.source.includes("national rollup")
+                    metric.observation.source.includes("national rollup"),
+                    metric.refresh
                   )}
                 </dd>
                 <dt className="text-muted">National figure</dt>

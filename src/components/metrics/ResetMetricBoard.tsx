@@ -26,6 +26,7 @@ import { CategoryIcon } from "@/app/country/[code]/political-metrics/components/
 import { GovernanceStyleCard } from "@/app/country/[code]/political-metrics/components/GovernanceStyleCard";
 
 import { ResetMetricCompare } from "./ResetMetricCompare";
+import { metricDomainId } from "@/lib/resetMetrics/presentation";
 
 const COUNTRY_CHROME: Record<
   ResetMetricCountry,
@@ -212,7 +213,7 @@ function RegistrySummary({
               {categories.length} outcome domains
             </div>
             <div className="text-body-xs text-muted">
-              Across {scores.length} scored metrics, out of 100
+              Mean of all {scores.length} scored metrics, out of 100
             </div>
           </div>
         </div>
@@ -297,9 +298,9 @@ function CategoryOverview({
                     trigger={<span className="cursor-help text-muted">ⓘ</span>}
                     width={300}
                   >
-                    Average of the domain&apos;s game-calibrated metric condition scores. Raw
-                    metrics retain their real units, and context measures use tailored calibration
-                    instead of a blanket higher-is-better rule.
+                    Average of the 0-100 condition scores of the metrics in this domain, shown on
+                    each metric row. Raw metrics retain their real units, and context measures use
+                    tailored calibration instead of a blanket higher-is-better rule.
                   </InfoTooltip>
                 </div>
               </div>
@@ -358,7 +359,7 @@ export function ResetMetricBoard({
   const categories = useMemo(() => {
     const groups = new Map<string, ResetMetricRow[]>();
     for (const row of board.metrics) {
-      const category = row.path.split(".")[0] ?? "other";
+      const category = metricDomainId(row);
       groups.set(category, [...(groups.get(category) ?? []), row]);
     }
     return [...groups.entries()].map(([id, metrics]) => {

@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
 import type { StateTaxRates } from "@/lib/db/types/budget";
-import { computeDomainAxes, computeNationalAxes } from "@/lib/policy/nationalAxes";
+import { computeDomainAxes, computeNationalAxes, isLawRecord } from "@/lib/policy/nationalAxes";
 import { Skeleton } from "@/components/ui";
 import { PolicyMasthead, type PolicyView } from "./PolicyMasthead";
 import { TitlesRail } from "./TitlesRail";
@@ -66,7 +66,7 @@ export function PolicyBook({
       [...byDomain.entries()].map(([domain, domainRecords]) => ({
         domain,
         records: domainRecords,
-        count: domainRecords.length,
+        count: domainRecords.filter(isLawRecord).length,
         axes: domainAxes.get(domain) ?? {
           economic: null,
           social: null,
@@ -78,7 +78,7 @@ export function PolicyBook({
     [byDomain, domainAxes]
   );
 
-  const statuteCount = records.filter((record) => record.recordType !== "tariff").length;
+  const statuteCount = records.filter(isLawRecord).length;
   const lastEnacted = useMemo(() => {
     const stamps = Object.values(recordPayload?.provenance ?? {});
     if (stamps.length === 0) return null;

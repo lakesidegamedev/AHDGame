@@ -107,6 +107,8 @@ const STATE_DESCRIPTORS: Record<string, string> = {
   CA_YT: "The Territory of",
   CA_NT: "The Territory of",
   CA_NU: "The Territory of",
+  // The District is federal, not a state.
+  DC: "The Nation's Capital",
   // Default for others is "The State of"
 };
 

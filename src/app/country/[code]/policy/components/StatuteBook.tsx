@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
-import type { NationalAxes } from "@/lib/policy/nationalAxes";
+import { isLawRecord, type NationalAxes } from "@/lib/policy/nationalAxes";
 import { PositionBadges } from "@/components/PositionBadges";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { formatPartyCountryMoney } from "@/lib/utils/formatters";
@@ -137,7 +137,11 @@ export function StatuteBook({
               </span>
               <span className="shrink-0 font-mono text-[11px]">
                 <span className="text-muted">
-                  {records.length} {records.length === 1 ? "statute" : "statutes"}
+                  {records.filter(isLawRecord).length}{" "}
+                  {records.filter(isLawRecord).length === 1 ? "statute" : "statutes"}
+                  {records.some((r) => !isLawRecord(r))
+                    ? ` + ${records.filter((r) => !isLawRecord(r)).length} tariffs and subsidies`
+                    : ""}
                 </span>
                 {lean ? (
                   <span
@@ -172,7 +176,7 @@ export function StatuteBook({
                       </div>
                       <div className="mt-1 font-mono text-[11px] text-muted">
                         {provenance
-                          ? `enacted ${formatEnactedStamp(provenance.enactedYear, provenance.enactedAt)} · per ${provenance.title}`
+                          ? `enacted ${formatEnactedStamp(provenance.enactedYear, provenance.enactedAt)} · by bill “${provenance.title}”`
                           : row.recordType === "tariff"
                             ? "active tariff"
                             : row.recordType === "subsidy"
