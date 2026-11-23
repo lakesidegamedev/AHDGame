@@ -168,4 +168,11 @@ describe("IndexCommitteePanel", () => {
       contributionAnchor: 2_700_000,
     });
   });
+  it("states the exact fee the box is prefilled with, so the default always meets it", async () => {
+    mockFetch({ ...ceoStanding, suggestedContributionAnchor: 1_688_889 });
+    render(<IndexCommitteePanel corpId="c1" liquidCurrencyCode="GBP" />);
+    const input = (await screen.findByLabelText("Lobbying contribution, GBP")) as HTMLInputElement;
+    const digits = Number(input.value).toLocaleString("en-US");
+    expect(screen.getByText(/gets it approved/).textContent).toContain(digits);
+  });
 });
