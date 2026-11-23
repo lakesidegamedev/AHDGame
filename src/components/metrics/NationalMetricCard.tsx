@@ -11,7 +11,7 @@ import type { MetricCategoryId } from "@/lib/db/types";
 import { formatMetricValue } from "./formatMetricValue";
 import { scoreColor } from "./scoreColor";
 import { ScoreBadge } from "./ScoreBadge";
-import { TrendChip } from "./TrendChip";
+import { TrendChip, trendPercent } from "./TrendChip";
 import { TickChip } from "./TickChip";
 import { HealthRing } from "./HealthRing";
 import { Sparkline } from "./Sparkline";
@@ -100,7 +100,7 @@ export function NationalMetricCard({
   }));
 
   // Deterministic mini-history for the drill-down sparkline (from value + trend).
-  const trend = summary.trend ?? 0;
+  const trend = trendPercent(summary.trend, value) ?? 0;
   const hist: number[] = [];
   let histV = value * (1 - (trend / 100) * 1.1);
   for (let i = 0; i < 12; i++) {
@@ -152,7 +152,7 @@ export function NationalMetricCard({
             </div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="text-2xl font-bold tabular-nums text-foreground">{fmt(value)}</span>
-              <TrendChip trend={summary.trend} isHigherBetter={isHigherBetter} />
+              <TrendChip trend={summary.trend} value={value} isHigherBetter={isHigherBetter} />
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -220,7 +220,7 @@ export function NationalMetricCard({
                 <div>
                   <div className="text-body-sm font-medium text-muted">Recent trend</div>
                   <div className="mt-0.5">
-                    <TrendChip trend={summary.trend} isHigherBetter={isHigherBetter} />
+                    <TrendChip trend={summary.trend} value={value} isHigherBetter={isHigherBetter} />
                   </div>
                 </div>
                 <Sparkline
