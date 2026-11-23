@@ -1,5 +1,6 @@
 "use client";
 
+import StrategyChangeConfirm from "@/components/corporation/StrategyChangeConfirm";
 import { useState } from "react";
 import type { CorporationType } from "@/lib/constants/corporationsClient";
 import {
@@ -662,6 +663,7 @@ function SectorOpsRow({
   const [growth, setGrowth] = useState(sector.targetGrowthRate);
   const [production, setProduction] = useState(sector.productionPolicy);
   const [strategy, setStrategy] = useState(sector.strategyId);
+  const [confirmingRetool, setConfirmingRetool] = useState(false);
   const effects = getPolicyEffectInfo(production);
 
   // Suggestion #91: the production method drives what a sector consumes and
@@ -744,7 +746,10 @@ function SectorOpsRow({
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <select
                 value={strategy}
-                onChange={(e) => setStrategy(e.target.value)}
+                onChange={(e) => {
+                  setStrategy(e.target.value);
+                  setConfirmingRetool(false);
+                }}
                 disabled={disabled}
                 aria-label="Production method"
                 className="flex-1 min-w-[12rem] rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground disabled:opacity-50"
@@ -756,17 +761,32 @@ function SectorOpsRow({
                 ))}
               </select>
               <Button
-                onClick={() =>
+                onClick={() => setConfirmingRetool(true)}
+                disabled={disabled || strategy === sector.strategyId || confirmingRetool}
+              >
+                Retool
+              </Button>
+            </div>
+          )}
+          {!retooling && confirmingRetool && strategy !== sector.strategyId && (
+            <div className="mt-2" data-testid="retool-confirm">
+              <StrategyChangeConfirm
+                sectorType={sector.sectorType as CorporationType}
+                currentStrategyId={sector.strategyId}
+                targetStrategyId={strategy}
+                dailyRevenue={sector.revenue}
+                liquidCurrencyCode={currency}
+                loading={disabled}
+                onConfirm={() => {
+                  setConfirmingRetool(false);
                   onPost(
                     `/api/corporations/${corpId}/sectors/${sector.sectorId}/strategy`,
                     { strategyId: strategy },
                     "Retooling started."
-                  )
-                }
-                disabled={disabled || strategy === sector.strategyId}
-              >
-                Retool
-              </Button>
+                  );
+                }}
+                onCancel={() => setConfirmingRetool(false)}
+              />
             </div>
           )}
           {!retooling && (

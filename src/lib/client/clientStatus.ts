@@ -14,12 +14,11 @@ import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
-import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
-import { finitePriceChange } from "@/lib/stockExchange/listingEligibility";
+import { liveChangeVsPreviousClose } from "@/lib/stockExchange/quoteChange";
 import { normalizeStatusBarLayout } from "@/lib/statusBar/clientStatusRequest";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
@@ -70,7 +69,6 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
-import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -276,12 +274,7 @@ export async function handleClientStatus(request: Request) {
       } | null = null;
 
       if (ceoCorp?.sequentialId != null) {
-        // Which stockExchangeSnapshots document holds this corp listing. Venue-less
-        // countries fall back to "global" (which lists every corp) rather than to
-        // "nyse", where they only ever appeared because of the old exchange bleed.
-        const exchangeKey =
-          (ceoCorp.countryId ? getExchangeApiKey(ceoCorp.countryId) : undefined) ?? "global";
-        const [historyDocs, snapshotListing] = includeCorpMarket
+        const [historyDocs] = includeCorpMarket
           ? await Promise.all([
               corporationHistoryCollection(db)
                 .find({ corporationId: ceoCorp._id })
@@ -302,15 +295,11 @@ export async function handleClientStatus(request: Request) {
                   ...(includeWidgetExtras ? { marketCap: 1 } : {}),
                 })
                 .toArray(),
-              stockExchangeSnapshotsCollection(db).findOne(
-                { _id: exchangeKey, "listings._id": ceoCorp._id },
-                { projection: { "listings.$": 1 } }
-              ),
             ])
-          : [[], null];
+          : [[]];
         historyDocs.reverse();
         const priceChange1h = includeCorpMarket
-          ? finitePriceChange(snapshotListing?.listings?.[0]?.priceChange1h)
+          ? liveChangeVsPreviousClose(ceoCorp.sharePrice, historyDocs)
           : 0;
         corpNav = {
           sequentialId: ceoCorp.sequentialId,
@@ -670,12 +659,7 @@ export async function handleClientStatus(request: Request) {
     } | null = null;
 
     if (ceoCorp?.sequentialId != null) {
-      // Which stockExchangeSnapshots document holds this corp listing. Venue-less
-      // countries fall back to "global" (which lists every corp) rather than to
-      // "nyse", where they only ever appeared because of the old exchange bleed.
-      const exchangeKey =
-        (ceoCorp.countryId ? getExchangeApiKey(ceoCorp.countryId) : undefined) ?? "global";
-      const [historyDocs, snapshotListing] = includeCorpMarket
+      const [historyDocs] = includeCorpMarket
         ? await Promise.all([
             corporationHistoryCollection(db)
               .find({ corporationId: ceoCorp._id })
@@ -696,15 +680,11 @@ export async function handleClientStatus(request: Request) {
                 ...(includeWidgetExtras ? { marketCap: 1 } : {}),
               })
               .toArray(),
-            stockExchangeSnapshotsCollection(db).findOne(
-              { _id: exchangeKey, "listings._id": ceoCorp._id },
-              { projection: { "listings.$": 1 } }
-            ),
           ])
-        : [[], null];
+        : [[]];
       historyDocs.reverse();
       const priceChange1h = includeCorpMarket
-        ? finitePriceChange(snapshotListing?.listings?.[0]?.priceChange1h)
+        ? liveChangeVsPreviousClose(ceoCorp.sharePrice, historyDocs)
         : 0;
       corpNav = {
         sequentialId: ceoCorp.sequentialId,

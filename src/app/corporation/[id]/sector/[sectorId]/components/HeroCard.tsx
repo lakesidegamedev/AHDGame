@@ -184,7 +184,7 @@ export default function HeroCard({
         </div>
         <div className="min-w-[90px] shrink-0 px-4 py-3">
           <span className="block text-body-sm font-medium text-muted">
-            {financials?.siteStatement ? "Net margin" : "Eff. Margin"}
+            {financials?.siteStatement ? "Pre-tax margin, this sector" : "Eff. Margin"}
           </span>
           <span className="text-sm font-bold tabular-nums text-foreground">
             {/* Rounded for display: the margin is a computed float, and the raw

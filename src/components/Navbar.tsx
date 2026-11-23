@@ -66,6 +66,7 @@ import { UK_NATIONS, UK_REGIONS } from "@/lib/constants/uk";
 import { ImperialMark } from "./navbar/ImperialMark";
 import { viewerIsSingleplayerOwner } from "@/components/navbar/staffNavItems";
 import { Wordmark } from "@/components/Wordmark";
+import { announceCharacterSwitch } from "@/lib/characterSwitchSignal";
 
 interface NavbarProps {
   clientShell?: boolean;
@@ -285,6 +286,10 @@ export const Navbar = React.memo(function Navbar({
           body: JSON.stringify({ characterId }),
         });
         if (res.ok) {
+          announceCharacterSwitch({
+            characterId,
+            name: adminCharacters?.find((c) => c.id === characterId)?.name ?? null,
+          });
           window.location.reload();
         } else {
           // Defensive parse of the error body; surfaced via console.error below.

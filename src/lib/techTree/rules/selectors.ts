@@ -317,6 +317,23 @@ export function autoGrantedCorporateNodeIds(currentYear: number): string[] {
   return ids;
 }
 
+/**
+ * Whether an owned node was handed out as free baseline research rather than
+ * bought. Only baseline slots of a passed decade are ever granted, and a node
+ * with a recorded purchase was paid for even if its decade has since passed.
+ */
+export function isBaselineGrant(
+  node: Pick<TechTreeNode, "id" | "slot">,
+  opts: { owned: boolean; isPastDecade: boolean; purchasedNodeIds: ReadonlySet<string> }
+): boolean {
+  return (
+    opts.owned &&
+    opts.isPastDecade &&
+    node.slot <= BASELINE_MAX_SLOT &&
+    !opts.purchasedNodeIds.has(node.id)
+  );
+}
+
 /** Decades that are auto-granted (passed) vs researchable for a world. */
 export function getPassedDecadeIds(currentYear: number): string[] {
   const researchable = new Set(getResearchableDecades(currentYear).map((d) => d.id));

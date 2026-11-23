@@ -4,6 +4,7 @@ import { KVList, KVRow } from "../dense/DenseKit";
 import { LedgerTicket } from "../ledger/LedgerTicket";
 
 import { useCurrency } from "@/contexts/CurrencyContext";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { useTranslations } from "next-intl";
 import {
   availableHoldingShares,
@@ -17,7 +18,9 @@ interface MyHoldingsPanelProps {
   myShares: number;
   myShareValue: number;
   myOwnershipPct: number;
+  /** Personal balance in the character's home currency, face value. */
   myCashOnHand: number;
+  myHomeCurrency?: string;
   myEscrowedTotal: number;
 }
 
@@ -26,11 +29,16 @@ export default function MyHoldingsPanel({
   myShareValue,
   myOwnershipPct,
   myCashOnHand,
+  myHomeCurrency,
   myEscrowedTotal,
   holdingTerms,
   turn = 0,
 }: MyHoldingsPanelProps) {
-  const { formatAmount } = useCurrency();
+  const { formatAmount, toInternalFrom } = useCurrency();
+  // The balance is a face amount in the home currency; formatAmount takes internal units.
+  const myCashInternal = myHomeCurrency
+    ? toInternalFrom(myCashOnHand, myHomeCurrency as CurrencyCode)
+    : myCashOnHand;
   const t = useTranslations("profile.stockHoldings");
 
   // Hidden when the user holds no shares
@@ -56,7 +64,11 @@ export default function MyHoldingsPanel({
           hint={`${myOwnershipPct.toFixed(2)}%`}
         />
         <KVRow label="Market value" value={formatAmount(myShareValue)} />
-        <KVRow label="Cash on hand" value={formatAmount(myCashOnHand)} />
+        <KVRow
+          label="Personal cash"
+          value={formatAmount(myCashInternal)}
+          title="Your own cash, the same figure as the bottom bar. It does not include money reserved in buy orders or company cash."
+        />
         {myEscrowedTotal > 0 && (
           <KVRow
             label="Reserved in buy orders"

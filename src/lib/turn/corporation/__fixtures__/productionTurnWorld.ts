@@ -469,7 +469,6 @@ export function buildProductionTurnWorld(options: ProductionTurnWorldOptions): P
       ["US", new Map(COMMODITY_TYPES.map((c) => [c, 1.01]))],
     ]),
     reachablePriceRatioByCountry: new Map([["US", new Map(COMMODITY_TYPES.map((c) => [c, 1.03]))]]),
-    latentDemandFactorByCommodity: new Map(COMMODITY_TYPES.map((c) => [c, 1.1])),
     unmetForeignDemandByCountry: new Map(),
     stateMetricsByState: new Map(
       STATES.map((s) => [

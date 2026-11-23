@@ -21,10 +21,8 @@ export interface BuildDemandRow {
   unmet: number | null;
   /** New capacity after known idle output and queues, in this candidate's output mix. */
   capacityUnits?: number | null;
-  /** Daily modeled demand hidden by the cap, after existing supply. */
+  /** Marks that the price cap hid modeled demand. Never shown as a number or counted as room. */
   capHiddenUnmet?: number;
-  /** Room after idle and queued capacity, including the modeled cap signal. */
-  estimatedCapacityUnits?: number | null;
 }
 
 /**

@@ -59,7 +59,13 @@ export interface GetAllStateApprovalsOptions {
 export async function getAllStateApprovalsForElection(
   options?: GetAllStateApprovalsOptions
 ): Promise<Map<string, number>> {
-  const db = await getDb();
+  return loadStateApprovalsForElection(await getDb(), options);
+}
+
+export async function loadStateApprovalsForElection(
+  db: import("mongodb").Db,
+  options?: GetAllStateApprovalsOptions
+): Promise<Map<string, number>> {
   const countryIds = options?.countryIds;
   const stateFilter = countryIds && countryIds.length > 0 ? { countryId: { $in: countryIds } } : {};
 

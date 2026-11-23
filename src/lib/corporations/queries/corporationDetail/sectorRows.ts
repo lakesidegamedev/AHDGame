@@ -41,7 +41,7 @@ import {
   computeCorpRealizedGrowthRate,
 } from "@/lib/corporations/realizedGrowth";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
-import { soldShareForList } from "@/lib/corporations/fundedClearingReading";
+import { settledOfferedUnits, soldShareForList } from "@/lib/corporations/fundedClearingReading";
 import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
 import { queueUndeliveredCost, resolveBuildSettledTurn } from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
@@ -244,6 +244,9 @@ export interface PhysicalRollups {
   totalCapacityUnits: number;
   totalProducedUnits: number;
   totalSoldUnits: number;
+  /** Sum of each sector's shown sold share times its offered units, and those units. */
+  soldShareWeighted?: number;
+  soldShareWeight?: number;
   /** Units handed to the company's own sites, summed over sectors. */
   totalOwnSiteUnits: number;
   totalConstructionInProgressAnchor: number;
@@ -317,6 +320,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   let totalCapacityUnits = 0;
   let totalProducedUnits = 0;
   let totalSoldUnits = 0;
+  let soldShareWeighted = 0;
+  let soldShareWeight = 0;
   let totalOwnSiteUnits = 0;
   let totalConstructionInProgressAnchor = 0;
   let mothballedSectorCount = 0;
@@ -826,6 +831,17 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalCapacityUnits += capacityUnits ?? 0;
       totalProducedUnits += producedUnits ?? 0;
       totalSoldUnits += soldUnits ?? 0;
+      if (sectorFillRate != null) {
+        const weight =
+          settledOfferedUnits(
+            fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn),
+            currentTurn
+          ) ?? producedUnits;
+        if (weight != null && weight > 0) {
+          soldShareWeighted += sectorFillRate * weight;
+          soldShareWeight += weight;
+        }
+      }
       totalOwnSiteUnits += (producedUnits ?? 0) * (ownSite?.share ?? 0);
       totalConstructionInProgressAnchor += constructionInProgressAnchor ?? 0;
       if (mothballed) mothballedSectorCount += 1;
@@ -960,6 +976,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalCapacityUnits,
       totalProducedUnits,
       totalSoldUnits,
+      soldShareWeighted,
+      soldShareWeight,
       totalOwnSiteUnits,
       totalConstructionInProgressAnchor,
       mothballedSectorCount,

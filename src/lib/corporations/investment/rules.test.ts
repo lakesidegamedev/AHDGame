@@ -181,6 +181,25 @@ describe("investment cash scenarios", () => {
   });
 });
 
+describe("forecast input guard", () => {
+  it("defaults optional inputs instead of blocking the forecast", () => {
+    const result = forecastSectorInvestment({
+      ...forecastInput,
+      policyCreditDailyAnchor: undefined,
+      inputsCostDailyAnchor: undefined,
+      demandGapUnits: undefined,
+    });
+    expect(result).not.toBeNull();
+    const noBuyers = forecastSectorInvestment({ ...forecastInput, demandGapUnits: 0 })!;
+    expect(result![0].soldUnitsDaily).toBe(noBuyers[0].soldUnitsDaily);
+    expect(forecastSectorInvestment({ ...forecastInput, demandGapUnits: NaN })).not.toBeNull();
+  });
+  it("still blocks on a missing required input", () => {
+    expect(forecastSectorInvestment({ ...forecastInput, soldUnits: NaN })).toBeNull();
+    expect(forecastSectorInvestment({ ...forecastInput, capacityUnits: 0 })).toBeNull();
+  });
+});
+
 describe("cash payback and bond reference", () => {
   it("recovers charged cash rather than depreciated plant value or operating margin", () => {
     const points = forecastSectorInvestment({

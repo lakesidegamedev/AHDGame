@@ -16,6 +16,9 @@ vi.mock("@/components/DeferredShellOverlays", () => ({
   DeferredTutorialCoachMount: () => <i data-c="TutorialCoachMount" />,
   DeferredWealthTierRepickGate: () => <i data-c="WealthTierRepickGate" />,
 }));
+vi.mock("@/components/CharacterSwitchBanner", () => ({
+  CharacterSwitchBanner: () => <i data-c="CharacterSwitchBanner" />,
+}));
 vi.mock("@/components/LiveRefreshBanner", () => ({
   LiveRefreshBanner: () => <i data-c="LiveRefreshBanner" />,
 }));

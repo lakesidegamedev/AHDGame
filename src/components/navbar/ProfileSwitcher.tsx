@@ -1,5 +1,6 @@
 "use client";
 
+import { announceCharacterSwitch } from "@/lib/characterSwitchSignal";
 import Link from "next/link";
 import { CountryFlag } from "@/components/CountryFlag";
 import { ImperialMark } from "@/components/navbar/ImperialMark";
@@ -145,6 +146,7 @@ export function ProfileSwitcher({
         <a
           key={char.id}
           href={characterSwitchHref(char.id)}
+          onClick={() => announceCharacterSwitch({ characterId: char.id, name: char.name })}
           className={`${style.row} ${style.idle}`}
         >
           {inner}

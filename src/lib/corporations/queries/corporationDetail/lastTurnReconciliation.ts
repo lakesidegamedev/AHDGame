@@ -21,6 +21,9 @@ interface HistoryProjection {
   liquidCapital?: number;
   currencyCode?: string;
   fxRateAtWrite?: number;
+  createdAt?: Date;
+  perTurnBondCouponIncome?: number;
+  perTurnBondDragOnNetIncome?: number;
 }
 
 interface TxProjection {
@@ -42,7 +45,37 @@ const HISTORY_PROJECTION = {
   liquidCapital: 1,
   currencyCode: 1,
   fxRateAtWrite: 1,
+  createdAt: 1,
+  perTurnBondCouponIncome: 1,
+  perTurnBondDragOnNetIncome: 1,
 } as const;
+
+/**
+ * Cash is snapshotted mid-turn and re-written a moment later once bond flows
+ * settle, so a row created within this grace of a snapshot belongs to it.
+ */
+export const SNAPSHOT_GRACE_MS = 2 * 60 * 1000;
+
+/**
+ * The ledger filter for one walk. Player actions are stamped with the last
+ * completed turn, so a turn stamp cannot say which snapshot interval an action
+ * fell in; the creation time can. Falls back to the turn stamp when either
+ * snapshot has no creation time.
+ */
+export function cashWalkWindow(
+  latest: { turn: number; createdAt?: Date },
+  previous: { createdAt?: Date } | null
+): { turn: number } | { createdAt: { $gt: Date; $lte: Date } } {
+  if (!(latest.createdAt instanceof Date) || !(previous?.createdAt instanceof Date)) {
+    return { turn: latest.turn };
+  }
+  return {
+    createdAt: {
+      $gt: new Date(previous.createdAt.getTime() + SNAPSHOT_GRACE_MS),
+      $lte: new Date(latest.createdAt.getTime() + SNAPSHOT_GRACE_MS),
+    },
+  };
+}
 
 /** A logged movement in the company's reporting currency; null when it cannot be converted. */
 function toReportingAmount(
@@ -57,13 +90,20 @@ function toReportingAmount(
   return null;
 }
 
+/** Bond figures are stored in anchor money; the row's own rate converts them. */
+function anchorToLocal(anchor: number | undefined, rate: number | undefined): number | null {
+  if (typeof anchor !== "number") return null;
+  return typeof rate === "number" && rate > 0 ? anchor * rate : anchor;
+}
+
 /**
  * The most recently recorded turn for a company, tied to the change in cash
  * since the turn before it. Null for a company with no recorded turn.
  */
 export async function loadLastTurnReconciliation(
   db: Db,
-  corporation: Pick<Corporation, "_id">
+  corporation: Pick<Corporation, "_id"> &
+    Partial<Pick<Corporation, "liquidCapital" | "liquidCurrencyCode">>
 ): Promise<LastTurnReconciliation | null> {
   const history = corporationHistoryCollection<HistoryProjection>(db);
   const latest = await history.findOne(
@@ -80,32 +120,40 @@ export async function loadLastTurnReconciliation(
     return null;
   }
 
-  const [previous, txRows] = await Promise.all([
-    history.findOne(
-      { corporationId: corporation._id, turn: latest.turn - 1 },
+  const previous = await history.findOne(
+    { corporationId: corporation._id, turn: latest.turn - 1 },
+    {
+      projection: {
+        liquidCapital: 1,
+        currencyCode: 1,
+        totalCosts: 1,
+        costBreakdown: 1,
+        headcount: 1,
+        createdAt: 1,
+      },
+    }
+  );
+  const txRows = await financialTxLogCollection<TxProjection>(db)
+    .find(
       {
-        projection: {
-          liquidCapital: 1,
-          currencyCode: 1,
-          totalCosts: 1,
-          costBreakdown: 1,
-          headcount: 1,
-        },
-      }
-    ),
-    financialTxLogCollection<TxProjection>(db)
-      .find(
-        { subjectId: corporation._id, subjectType: "corporation", turn: latest.turn },
-        { projection: { type: 1, amount: 1, currencyCode: 1, anchorAmount: 1 }, limit: 500 }
-      )
-      .toArray(),
-  ]);
+        subjectId: corporation._id,
+        subjectType: "corporation",
+        ...cashWalkWindow(latest, previous),
+      },
+      { projection: { type: 1, amount: 1, currencyCode: 1, anchorAmount: 1 }, limit: 500 }
+    )
+    .toArray();
 
   const sameCurrency = !previous || previous.currencyCode === latest.currencyCode;
   const cashBefore =
     previous && sameCurrency && typeof previous.liquidCapital === "number"
       ? previous.liquidCapital
       : null;
+
+  const sameLiveCurrency =
+    !corporation.liquidCurrencyCode ||
+    !latest.currencyCode ||
+    corporation.liquidCurrencyCode === latest.currencyCode;
 
   const flows: CashFlowInput[] = [];
   for (const tx of txRows) {
@@ -121,7 +169,13 @@ export async function loadLastTurnReconciliation(
       retained: latest.income,
       dividendPaid: Math.max(0, latest.dividendPaidPerTurn ?? 0),
       tax: Math.max(0, latest.corporateTaxPaid ?? 0),
+      bondCouponIncome: anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
+      bondInterestPaid: anchorToLocal(latest.perTurnBondDragOnNetIncome, latest.fxRateAtWrite),
       cashAfter: latest.liquidCapital,
+      cashNow:
+        typeof corporation.liquidCapital === "number" && sameLiveCurrency
+          ? corporation.liquidCapital
+          : null,
       cashBefore,
       previousCosts:
         previous && sameCurrency && typeof previous.totalCosts === "number"

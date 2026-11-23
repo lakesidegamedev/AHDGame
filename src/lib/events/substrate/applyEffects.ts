@@ -1,3 +1,4 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
 import type { AnyBulkWriteOperation } from "mongodb";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -287,8 +288,10 @@ async function applyCountryEffects(
         );
     }
   }
-  if (approvalOps.length)
+  if (approvalOps.length) {
+    await ensureGovernmentApproval(ctx.db, [countryId]);
     await governmentApprovalsCollection<Document>(ctx.db).bulkWrite(approvalOps, { ordered: true });
+  }
 }
 
 /**

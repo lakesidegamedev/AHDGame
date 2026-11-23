@@ -30,6 +30,12 @@ export interface RecordedTurnInput {
   tax: number;
   /** Cash on hand when the turn was recorded. */
   cashAfter: number;
+  /** Bond coupons received this turn, in the company's currency. */
+  bondCouponIncome?: number | null;
+  /** Bond interest paid on the company's own bonds this turn, in the company's currency. */
+  bondInterestPaid?: number | null;
+  /** Cash on hand now, when it should be compared with the recorded figure. */
+  cashNow?: number | null;
   /** Cash on hand when the previous turn was recorded, when known. */
   cashBefore: number | null;
   /** Operating costs of the previous recorded turn, when known. */
@@ -63,14 +69,23 @@ export interface LastTurnReconciliation {
     /** True when costs moved 10% or more but one of the two turns has no recorded categories. */
     costDriversUnrecorded: boolean;
     tax: number;
-    /** Bond interest and coupons, dividends received and other non-operating items, net. */
+    /**
+     * Everything between operating result and retained income that is not tax or
+     * dividends paid: bond interest and coupons and the rest.
+     * Signed: negative reduces retained income.
+     */
     otherNet: number;
+    /** The recorded parts of `otherNet`; `otherNet` minus these is `otherUnitemised`. */
+    otherParts: CashFlowLine[];
+    otherUnitemised: number;
     dividendPaid: number;
     retained: number;
   };
   cash: {
     before: number | null;
     after: number;
+    /** Cash on hand now, when it has moved since the turn was recorded; otherwise null. */
+    now: number | null;
     /** Null when the opening cash is unknown. */
     change: number | null;
     retained: number;
@@ -86,7 +101,6 @@ const IN_INCOME_STATEMENT = new Set<string>([
   "producer_market_transfer",
   "corp_revenue",
   "corp_operating_loss",
-  "corp_dividend",
   "corp_tax_paid",
   "corp_salary",
   "bond_coupon",
@@ -101,6 +115,8 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   corp_sector_purchase: { key: "sector_purchase", label: "Sector purchases" },
   corp_sector_sale: { key: "sector_sale", label: "Sector sales" },
   corp_capital_seed: { key: "capital", label: "Capital added or withdrawn" },
+  corp_capital_injection: { key: "capital", label: "Capital added or withdrawn" },
+  corp_starting_grant: { key: "capital", label: "Capital added or withdrawn" },
   corp_escrow_funding: { key: "escrow", label: "Share buyback escrow" },
   corp_escrow_withdrawal: { key: "escrow", label: "Share buyback escrow" },
   corp_tech_unlock: { key: "tech", label: "Technology unlocks" },
@@ -112,13 +128,19 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   corp_union_busting_cost: { key: "campaign", label: "Sector campaign costs" },
   corp_fine: { key: "fine", label: "Fines" },
   index_listing_lobbying: { key: "lobbying", label: "Listing lobbying" },
+  privatization_ipo_proceeds: { key: "share_issue", label: "Share issue proceeds" },
   stock_self_issue: { key: "share_issue", label: "Share issue proceeds" },
   ipo_proceeds: { key: "share_issue", label: "Share issue proceeds" },
   bond_issuance: { key: "bond_issue", label: "Bond issue proceeds" },
   bond_maturity: { key: "bond_repay", label: "Bond repayments" },
   bond_buyback: { key: "bond_repay", label: "Bond repayments" },
+  bond_default: { key: "bond_repay", label: "Bond repayments" },
+  bond_dissolution_payout: { key: "bond_repay", label: "Bond repayments" },
   stock_trade_buy: { key: "investments", label: "Share and bond trading" },
   stock_trade_sell: { key: "investments", label: "Share and bond trading" },
+  stock_order_escrow: { key: "investments", label: "Share and bond trading" },
+  stock_order_refund: { key: "investments", label: "Share and bond trading" },
+  nationalization_held_equity_credit: { key: "investments", label: "Share and bond trading" },
   bond_purchase: { key: "investments", label: "Share and bond trading" },
   bond_sell: { key: "investments", label: "Share and bond trading" },
   admin_transfer: { key: "adjustment", label: "Staff adjustments" },
@@ -126,6 +148,7 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   corp_dissolution_distribution: { key: "dissolution", label: "Dissolution payout" },
   corp_group_relief: { key: "group_relief", label: "Group tax relief" },
   defence_contract_payment: { key: "defence", label: "Defence contract payments" },
+  corp_dividend: { key: "dividends_received", label: "Dividends received on shares held" },
   corp_supply_agreement: { key: "supply_agreement", label: "Supply agreement settlements" },
 };
 
@@ -143,6 +166,10 @@ export function groupCashFlowLines(flows: readonly CashFlowInput[]): CashFlowLin
   for (const flow of flows) {
     if (!Number.isFinite(flow.amount) || flow.amount === 0) continue;
     if (IN_INCOME_STATEMENT.has(flow.type)) continue;
+    // A corporation's own dividend payout sits in retained income. A credit on
+    // its ledger is a dividend it received on shares it holds, which retained
+    // income does not include.
+    if (flow.type === "corp_dividend" && flow.amount < 0) continue;
     const group = LINE_GROUPS[flow.type] ?? {
       key: "other_logged",
       label: "Other logged movements",
@@ -169,12 +196,24 @@ export function reconcileLastTurn(
 ): LastTurnReconciliation {
   const lines = groupCashFlowLines(flows);
   const otherNet = round2(
-    recorded.revenue -
-      recorded.totalCosts -
-      recorded.tax -
-      recorded.dividendPaid -
-      recorded.retained
+    recorded.retained -
+      (recorded.revenue - recorded.totalCosts - recorded.tax - recorded.dividendPaid)
   );
+  const otherParts: CashFlowLine[] = [
+    {
+      key: "bond_interest",
+      label: "Interest paid on bonds issued",
+      amount: -Math.max(0, recorded.bondInterestPaid ?? 0),
+    },
+    {
+      key: "bond_coupons",
+      label: "Coupons received on bonds held",
+      amount: Math.max(0, recorded.bondCouponIncome ?? 0),
+    },
+  ]
+    .map((l) => ({ ...l, amount: round2(l.amount) }))
+    .filter((l) => l.amount !== 0);
+  const otherUnitemised = round2(otherNet - otherParts.reduce((sum, l) => sum + l.amount, 0));
   const change =
     recorded.cashBefore == null ? null : round2(recorded.cashAfter - recorded.cashBefore);
   const previousCosts = recorded.previousCosts ?? null;
@@ -211,12 +250,18 @@ export function reconcileLastTurn(
       costDriversUnrecorded: bigMove && !(recorded.costBreakdown && recorded.previousCostBreakdown),
       tax: recorded.tax,
       otherNet,
+      otherParts,
+      otherUnitemised,
       dividendPaid: recorded.dividendPaid,
       retained: recorded.retained,
     },
     cash: {
       before: recorded.cashBefore,
       after: recorded.cashAfter,
+      now:
+        recorded.cashNow != null && Math.round(recorded.cashNow) !== Math.round(recorded.cashAfter)
+          ? recorded.cashNow
+          : null,
       change,
       retained: recorded.retained,
       lines,

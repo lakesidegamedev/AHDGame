@@ -1,18 +1,7 @@
 import type { Db } from "mongodb";
-import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import type { State } from "@/lib/db/types";
-import { getEraContext } from "@/lib/era/context";
 import type { CountryId } from "@/lib/constants/countries";
-import {
-  BASE_APPROVAL,
-  calculateStateApproval,
-  loadElectorateGroups,
-  weightingFor,
-} from "@/lib/utils/governmentApproval";
-import {
-  isPoliticalApprovalCountry,
-  loadPoliticalApprovalBases,
-} from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
+import { loadStateApprovalsForElection } from "@/lib/utils/getStateApprovalForElection";
 import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface MapApprovalState {
@@ -43,78 +32,27 @@ export async function computeApprovalMap(
   db: Db,
   countryId: CountryId
 ): Promise<Record<string, MapApprovalState>> {
-  const [allMetrics, allStates, groupsByState, eraContext] = await Promise.all([
-    // SP5: merged two-store view.
-    findMergedRegionMetricsMany(db, { countryId }),
-    statesCollection(db).find({ countryId }).toArray(),
-    loadElectorateGroups(db, { countryId }),
-    getEraContext(db),
+  const [allStates, approvals] = await Promise.all([
+    statesCollection(db)
+      .find({ countryId }, { projection: { _id: 1, name: 1 } })
+      .toArray(),
+    loadStateApprovalsForElection(db, { countryIds: [countryId] }),
   ]);
-  // Era ruleset — matches the stored/displayed approval so the heatmap agrees
-  // with the region hero under non-2019 presets (and under era-aware drift).
-  const { preset, year } = eraContext;
-
-  const stateMap = new Map(allStates.map((s) => [s._id, s]));
-
-  const nationalAverages: Record<string, Record<string, number>> = {};
-  const categories = [
-    "economic",
-    "education",
-    "healthcare",
-    "infrastructure",
-    "publicSafety",
-    "environment",
-    "social",
-    "governance",
-    "population",
-    "mediaInformation",
-  ] as const;
-
-  for (const cat of categories) {
-    nationalAverages[cat] = {};
-    const sample = allMetrics.find((m) => m[cat] != null);
-    if (!sample) continue;
-    for (const key of Object.keys(sample[cat] as object)) {
-      const values = allMetrics
-        .map((m) => (m[cat] as Record<string, { value: number }>)?.[key]?.value)
-        .filter((v): v is number => v != null);
-      if (values.length > 0) {
-        nationalAverages[cat][key] = values.reduce((a, b) => a + b, 0) / values.length;
-      }
-    }
-  }
-
-  // SP4: playable countries color the heatmap from the hybrid political base.
-  const politicalBases = isPoliticalApprovalCountry(countryId, true)
-    ? await loadPoliticalApprovalBases(db, countryId)
-    : null;
-
-  const result: Record<string, MapApprovalState> = {};
-  for (const m of allMetrics) {
-    const stateId = m._id;
-    const state = stateMap.get(stateId);
-    if (!state) continue;
-    const approval = calculateStateApproval(
-      m,
-      nationalAverages,
-      [],
-      weightingFor(groupsByState, countryId, String(stateId)),
-      preset,
-      year,
-      isPoliticalApprovalCountry(countryId, true)
-        ? (politicalBases?.byRegion.get(String(stateId)) ?? BASE_APPROVAL)
-        : undefined,
-      politicalBases?.modifiersByRegion?.get(String(stateId))
-    );
-    result[stateId] = {
-      approval,
-      color: approvalToHeatColor(approval),
-      tooltip: [
-        state?.name ?? stateId,
-        `Government Approval: ${approval.toFixed(1)}%`,
-        "Political performance and regional conditions",
-      ],
-    };
-  }
-  return result;
+  return Object.fromEntries(
+    allStates.map((state) => {
+      const approval = approvals.get(String(state._id).toUpperCase()) ?? BASE_APPROVAL;
+      return [
+        state._id,
+        {
+          approval,
+          color: approvalToHeatColor(approval),
+          tooltip: [
+            state.name ?? String(state._id),
+            `Government Approval: ${approval.toFixed(1)}%`,
+            "Political performance and regional conditions",
+          ],
+        },
+      ];
+    })
+  );
 }

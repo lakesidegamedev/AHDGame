@@ -5,8 +5,8 @@ export interface PhysicalPnlView {
   capacityUnits: number;
   producedUnits: number;
   soldUnits: number;
-  /** Corp-wide fill is Σsold ÷ Σproduced, NOT the mean of the per-sector
-   * ratios: a mean lets one tiny plant running at 5% drag the headline
+  /** Corp-wide sold share: the rows' settled shares weighted by units offered, NOT the
+   * plain mean of the per-sector ratios: a mean lets one tiny plant running at 5% drag the headline
    * for a corporation that is selling everything it makes. */
   fillRate: number | null;
   /** Share of everything produced that went to the company's own sites (0-1); null when none. */
@@ -39,7 +39,15 @@ export function buildPhysicalPnl(
     // Corp-wide fill is Σsold ÷ Σproduced, NOT the mean of the per-sector
     // ratios: a mean lets one tiny plant running at 5% drag the headline
     // for a corporation that is selling everything it makes.
-    fillRate: computeFillRate(rollups.totalProducedUnits, rollups.totalSoldUnits),
+    // Rows read the settled receipt (sold over offered, stock included), so the roll-up
+    // weights those same shares; made-versus-sold is the fallback with no receipts.
+    fillRate:
+      (rollups.soldShareWeight ?? 0) > 0
+        ? Math.max(
+            0,
+            Math.min(1, (rollups.soldShareWeighted ?? 0) / (rollups.soldShareWeight ?? 1))
+          )
+        : computeFillRate(rollups.totalProducedUnits, rollups.totalSoldUnits),
     ownSiteShare:
       rollups.totalProducedUnits > 0 && rollups.totalOwnSiteUnits > 0
         ? Math.min(1, rollups.totalOwnSiteUnits / rollups.totalProducedUnits)

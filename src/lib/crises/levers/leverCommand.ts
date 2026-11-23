@@ -1,3 +1,5 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
+import { withSessionDb, boundSession } from "@/lib/db/sessionDb";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
@@ -113,6 +115,28 @@ export function loadLiveCrises(db: Db, crisisIds: ObjectId[]): Promise<LiveCrisi
     .toArray() as unknown as Promise<LiveCrisis[]>;
 }
 
+class LeverTransactionRefused extends Error {
+  constructor(readonly failure: ReturnType<typeof fail>) {
+    super(failure.message);
+  }
+}
+
+export function abortLeverTransaction(failure: ReturnType<typeof fail>): never {
+  throw new LeverTransactionRefused(failure);
+}
+
+export async function withLeverTransaction<T>(
+  db: Db,
+  work: (tx: Db) => Promise<LeverResult<T>>
+): Promise<LeverResult<T>> {
+  try {
+    return await withSessionDb(db, work);
+  } catch (error) {
+    if (!boundSession(db) && error instanceof LeverTransactionRefused) return error.failure;
+    throw error;
+  }
+}
+
 /** Latest turn the holder pulled this lever, counted by the turn phase or not. */
 export async function lastPulledTurn(
   db: Db,
@@ -144,21 +168,7 @@ async function chargeCost(
   }
 ): Promise<LeverResult<{ applied: Charge[] }>> {
   const applied: Charge[] = [];
-  try {
-    return await chargeCostSteps(db, args, applied);
-  } catch (error) {
-    // A throw after an earlier step (treasury debit, corp debit) would otherwise
-    // leave money taken with nothing for the caller to undo.
-    for (const charge of applied.reverse()) {
-      try {
-        await charge.undo();
-      } catch (undoError) {
-        logger.error(COMPONENT, "lever refund failed", undoError, { receiptKey: args.receiptKey });
-      }
-    }
-    logger.error(COMPONENT, "lever charge threw; refunded", error, { receiptKey: args.receiptKey });
-    return fail("charge_failed", "Could not complete this response");
-  }
+  return chargeCostSteps(db, args, applied);
 }
 
 async function chargeCostSteps(
@@ -252,6 +262,7 @@ async function chargeCostSteps(
       return fail("charge_failed", "No government to charge approval to");
     }
     const points = cost.approval.points;
+    await ensureGovernmentApproval(db, [countryId]);
     const approvals = governmentApprovalsCollection(db);
     await approvals.updateOne({ _id: countryId as CountryId }, approvalDeltaUpdate(-points));
     applied.push({
@@ -269,6 +280,7 @@ function isDuplicateKey(error: unknown): boolean {
 }
 
 export interface CommitLeverArgs {
+  attribution?: import("@/lib/crises/v2/types").AccountabilityAttribution;
   crisis: LiveCrisis;
   lever: CrisisLeverDef;
   holderId: ObjectId;
@@ -286,7 +298,7 @@ export interface CommitLeverArgs {
  * double submit loses at the insert and never reaches the charge. Any failure
  * after the claim refunds what was taken and frees the slot.
  */
-export async function commitLeverUse(
+async function commitLeverUseInTransaction(
   db: Db,
   args: CommitLeverArgs
 ): Promise<LeverResult<LeverUseSummary>> {
@@ -317,6 +329,7 @@ export async function commitLeverUse(
     submittedTurn: turn,
     appliedTurn: null,
     chargeState: "pending",
+    ...(args.attribution ? { attribution: args.attribution } : {}),
     cost,
     ...(args.countryId ? { countryId: args.countryId } : {}),
     ...(args.corporationId ? { corporationId: args.corporationId } : {}),
@@ -328,7 +341,10 @@ export async function commitLeverUse(
   try {
     await uses.insertOne(row);
   } catch (error) {
-    if (isDuplicateKey(error)) return fail("duplicate", "You already pulled this lever this turn");
+    if (isDuplicateKey(error))
+      throw new LeverTransactionRefused(
+        fail("duplicate", "You already pulled this lever this turn")
+      );
     throw error;
   }
 
@@ -343,19 +359,17 @@ export async function commitLeverUse(
       actions: { characterId: holderId, count: actionsSpent },
     });
     if (!charged.ok) {
-      await uses.deleteOne({ _id: row._id });
-      return charged;
+      throw new LeverTransactionRefused(charged);
     }
     applied = charged.applied;
     await uses.updateOne({ _id: row._id }, { $set: { chargeState: "charged" } });
   } catch (error) {
-    for (const charge of applied.reverse()) await charge.undo().catch(() => undefined);
-    await uses.deleteOne({ _id: row._id }).catch(() => undefined);
-    logger.error(COMPONENT, "lever use failed after claim; refunded", error, {
+    if (error instanceof LeverTransactionRefused) throw error;
+    logger.error(COMPONENT, "lever charge aborted", error, {
       crisisId: crisis._id.toString(),
       leverId: lever.id,
     });
-    return fail("charge_failed", "Could not complete this response");
+    throw error;
   }
 
   const undo = async () => {
@@ -399,7 +413,10 @@ export async function checkLeverEligibility(
 
   const actor = await (
     await getCharactersCollection(db)
-  ).findOne({ _id: input.characterId }, { projection: { countryId: 1, currentOffice: 1 } });
+  ).findOne(
+    { _id: input.characterId },
+    { projection: { countryId: 1, currentOffice: 1, party: 1 } }
+  );
   if (!actor) return fail("not_found", "No such character");
 
   const turn = (await getGameState(db))?.currentTurn ?? 0;
@@ -436,7 +453,7 @@ export async function checkLeverEligibility(
  * jurisdiction, stage and cooldown, then claims the slot and charges the cost.
  * Legislature levers go through an emergency bill instead.
  */
-export async function pullLever(
+async function pullLeverInTransaction(
   db: Db,
   input: PullLeverInput
 ): Promise<LeverResult<LeverUseSummary>> {
@@ -469,8 +486,29 @@ export async function pullLever(
     lever,
     holderId: actor._id,
     countryId: actor.countryId,
+    attribution: {
+      countryId: actor.countryId!,
+      ...(actor.party ? { partyId: actor.party } : {}),
+      ...(actor.currentOffice && "state" in actor.currentOffice
+        ? { stateId: actor.currentOffice.state }
+        : {}),
+    },
     corporationId,
     intensity: clamp(input.intensity ?? 1, 0, 1),
     turn,
   });
+}
+
+export async function commitLeverUse(
+  db: Db,
+  ...args: Parameters<typeof commitLeverUseInTransaction> extends [Db, ...infer Rest] ? Rest : never
+) {
+  return withLeverTransaction(db, (tx) => commitLeverUseInTransaction(tx, ...args));
+}
+
+export async function pullLever(
+  db: Db,
+  input: PullLeverInput
+): Promise<LeverResult<LeverUseSummary>> {
+  return withLeverTransaction(db, (tx) => pullLeverInTransaction(tx, input));
 }

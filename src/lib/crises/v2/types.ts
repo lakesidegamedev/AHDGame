@@ -214,7 +214,14 @@ export interface SeveritySample {
 }
 
 /** One row of who held which office and what they did (or failed to do). */
+export interface AccountabilityAttribution {
+  countryId: string;
+  stateId?: string;
+  partyId?: string;
+}
+
 export interface AccountabilityEntry {
+  attribution?: AccountabilityAttribution | null;
   turn: number;
   stage: ActiveCrisisStage;
   role: CrisisRole;
@@ -311,6 +318,7 @@ export interface WithCrisisV2 {
 
 /** A lever use submitted for the turn being evaluated. */
 export interface LeverUse {
+  attribution?: AccountabilityAttribution;
   leverId: string;
   holderId: string;
   /** Share of full effect, 0..1. Defaults to 1. */

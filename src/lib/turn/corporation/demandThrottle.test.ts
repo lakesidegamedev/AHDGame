@@ -8,7 +8,6 @@ import {
   throttleSoldUnits,
   FOREIGN_DEMAND_CLAIM_PER_TURN,
   withForeignDemand,
-  withLatentDemand,
   withRegulationBlockedFill,
   withEditorialAvailabilityRestored,
   liftedThrottleBalance,
@@ -343,31 +342,6 @@ describe("sold-out plants in a short market (ticket 1393)", () => {
   });
 });
 
-describe("withLatentDemand", () => {
-  it("restores truncated demand pro rata so a sold-out plant sees the real gap", () => {
-    // Ledger capped demand at 1.5x supply and parked a further 50% as truncated.
-    const capped = { supply: 100, demand: 150 };
-    expect(withLatentDemand(capped, 1.5)).toEqual({ supply: 100, demand: 225 });
-    const headroom = soldOutMarketHeadroomUnits({
-      soldByCommodity: { food: 1 },
-      supplyRates: { food: 1 },
-      marketShareFor: () => 1,
-      mixWeightFor: () => 1,
-      balanceFor: () => withLatentDemand(capped, 1.5),
-      priceRatioFor: () => 2,
-    });
-    expect(headroom).toBe(125);
-  });
-
-  it("returns the balance unchanged without a lifting factor", () => {
-    const b = { supply: 100, demand: 120 };
-    expect(withLatentDemand(b, undefined)).toBe(b);
-    expect(withLatentDemand(b, 1)).toBe(b);
-    expect(withLatentDemand(b, Number.NaN)).toBe(b);
-    expect(withLatentDemand(null, 2)).toBeNull();
-  });
-});
-
 describe("withRegulationBlockedFill", () => {
   it("adds legally refused units back to the fill, clamped to a full fill", () => {
     expect(
@@ -479,12 +453,12 @@ describe("withForeignDemand", () => {
 describe("liftedThrottleBalance — exporter books carry foreign room", () => {
   it("leaves a balanced book unchanged when no foreign demand is unserved", () => {
     const raw = { supply: 1000, demand: 1000 };
-    expect(liftedThrottleBalance(raw, 1, 0)).toEqual(raw);
+    expect(liftedThrottleBalance(raw, 0)).toEqual(raw);
   });
 
   it("restores a country's gravity share of the deficits nobody is serving", () => {
     const raw = { supply: 1000, demand: 1000 };
-    const lifted = liftedThrottleBalance(raw, 1, 4000)!;
+    const lifted = liftedThrottleBalance(raw, 4000)!;
     expect(lifted.supply).toBe(1000);
     expect(lifted.demand).toBeCloseTo(1000 + 4000 * FOREIGN_DEMAND_CLAIM_PER_TURN, 6);
   });

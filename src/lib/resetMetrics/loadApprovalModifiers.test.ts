@@ -245,3 +245,37 @@ describe("Metrics v2 approval source", () => {
     ]);
   });
 });
+
+it("does not compare converted currency observations with an incompatible index reference", async () => {
+  const converted = boards.map((board) =>
+    board.observations["02"]
+      ? {
+          ...board,
+          observations: {
+            ...board.observations,
+            "02": {
+              ...board.observations["02"],
+              value: 25000,
+              definitionVersion: 2 as const,
+              unit: "GBP per person",
+            },
+          },
+          gameplayReferences: {
+            ...board.gameplayReferences,
+            "02": { value: 1, definitionVersion: 2 as const, unit: "old index" },
+          },
+        }
+      : board
+  );
+  const result = await loadResetApprovalModifiers(
+    db as unknown as Db,
+    "UK",
+    states.map((s) => s._id),
+    game,
+    1,
+    converted,
+    []
+  );
+  expect(result!.nationalModifiers.find((m) => m.id === "national_performance")).toBeUndefined();
+  expect([...result!.basesByRegion.values()]).toEqual(states.map(() => 50));
+});

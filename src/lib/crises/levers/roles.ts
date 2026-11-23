@@ -3,13 +3,13 @@ import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveCharacterRoles } from "@/lib/crises/interactionEngine";
 import type { CrisisRole } from "@/lib/crises/v2/types";
-import type { CongressLeader } from "@/lib/db/types/leadership";
 import { LEGISLATURE_LEADER_ROLES } from "@/lib/turn/crisisV2/holderProviders";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeverActor {
   _id: ObjectId;
   countryId?: string;
+  party?: string;
   currentOffice?: { type?: string; positionId?: string; state?: string } | null;
 }
 
