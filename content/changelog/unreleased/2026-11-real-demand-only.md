@@ -13,4 +13,4 @@ areas: [fullstack]
 
 - Expansion suggestions and region pages count only real demand when they show how much room a market has. Large phantom gaps in goods such as food are gone.
 - Computer-run companies and state companies judge demand and prices by real orders when they decide what to build and how much to produce.
-- The market-dominance charge reads demand as recorded, with no extra demand added back. A company's share is measured against real buyers only.
+- The market-dominance charge on new builds is measured against real buyers, and it now applies only when a company's capacity would exceed what its market buys. A sole provider in a market that is short pays the normal build price; building past demand costs up to 10x at twice demand.
