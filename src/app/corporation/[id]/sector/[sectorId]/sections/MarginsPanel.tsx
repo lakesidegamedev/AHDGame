@@ -303,7 +303,7 @@ export default function MarginsPanel({
                     </details>
                   )}
                   <div className="flex justify-between border-t border-card-border pt-2 font-semibold">
-                    <span>Net margin, this sector</span>
+                    <span>Pre-tax margin, this sector</span>
                     <span>{netMargin == null ? "n/a" : `${netMargin.toFixed(1)}%`}</span>
                   </div>
                 </div>

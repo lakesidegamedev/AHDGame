@@ -17,6 +17,6 @@ areas: [fullstack]
 - When your account runs a corporation through a different character, its page says which character and offers a button to switch to it.
 - Retooling a state-owned sector from the Operations panel now shows the retooling cost and the phase-in time and asks you to confirm first.
 - A rating-only credit view no longer pairs the live rating with an older stored score.
-- Net margin is labelled as whole company on the Overview and as this sector on the sector page, since they measure different things.
+- The Overview shows net margin for the whole company, after tax. The sector page shows pre-tax margin for that sector, since tax is charged company-wide.
 - The Sectors tab says what sets your sprawl threshold: the base of 15 plus a bonus from Logistics and Operations strength.
 - Order and fill figures in the new sector review are marked as national market when the product trades on one national book.
