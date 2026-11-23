@@ -6,7 +6,7 @@ summary: >-
   price range includes the live price, and several raw numbers are rounded.
 tags: [corporations, interface]
 badges: [patch]
-areas: [corporations]
+areas: [frontend]
 ---
 
 ## What changed
