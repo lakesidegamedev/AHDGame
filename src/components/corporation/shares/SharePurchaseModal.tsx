@@ -1,4 +1,5 @@
 "use client";
+import { wholeNumberInput } from "@/lib/utils/rules/wholeNumberInput";
 import { renderSharePurchaseModalView } from "./SharePurchaseModal.view";
 
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -121,7 +122,7 @@ function useSharePurchaseModalContext({
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [ceoVacateConfirm, setCeoVacateConfirm] = useState<{ message: string } | null>(null);
-  /** Raw digits while focused — `type="number"` spinners / wheel nudging corrupt large share counts. */
+  /** Preserve the complete draft so invalid input stays available for correction. */
   const [quantityDraft, setQuantityDraft] = useState<string | null>(null);
   const [selectedPayCurrency, setSelectedPayCurrency] = useState<CurrencyCode>(
     (myHomeCurrency ??
@@ -134,14 +135,8 @@ function useSharePurchaseModalContext({
     setQuantityDraft(null);
   }
 
-  function parseQtyDigits(raw: string, max?: number): number {
-    const digits = raw.replace(/[^0-9]/g, "");
-    const n = digits === "" ? 0 : Math.floor(Number(digits));
-    let q = Math.max(0, n);
-    if (max !== undefined && Number.isFinite(max) && max >= 0) {
-      q = Math.min(q, max);
-    }
-    return q;
+  function parseShareQuantity(raw: string): number {
+    return wholeNumberInput(raw) ?? 0;
   }
 
   // ─── Currency / rates ─────────────────────────────────────────────────────────
@@ -900,7 +895,7 @@ function useSharePurchaseModalContext({
       orderbookAsks,
       orderbookBids,
       orderbookCount,
-      parseQtyDigits,
+      parseShareQuantity,
       personalAfterPurchase,
       personalBudgetLabel,
       personalBudgetValue,

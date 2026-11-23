@@ -129,6 +129,7 @@ export async function recomputeSharePricesAfterBondTurn(
         Pick<
           CorporationHistory,
           | "corporationId"
+          | "currencyCode"
           | "sharePrice"
           | "sectorNPV"
           | "realOutputAnchor"
@@ -137,6 +138,7 @@ export async function recomputeSharePricesAfterBondTurn(
         >
       >({
         corporationId: 1,
+        currencyCode: 1,
         sharePrice: 1,
         sectorNPV: 1,
         realOutputAnchor: 1,
@@ -404,17 +406,23 @@ export async function recomputeSharePricesAfterBondTurn(
           $set: {
             sharePrice: localPrice,
             marketCap: Math.round(localPrice * input.totalShares),
-            // Persist the post-bondTurn liquidCapital so the Cash-on-Hand
-            // chart matches the live corp.liquidCapital. The corp turn writes
-            // its snapshot before bondTurn applies coupon flows, so without
-            // this overwrite the history row stays stale by exactly the per-
-            // turn net bond cash flow (visible as a chart-vs-header divergence
-            // for any corp with a non-trivial bond position).
-            ...(corp ? { liquidCapital: corp.liquidCapital } : {}),
           },
         },
       },
     });
+    if (corp && histByCorpId.get(input.corpId)?.currencyCode === corp.liquidCurrencyCode) {
+      histOps.push({
+        updateOne: {
+          filter: {
+            corporationId: oid,
+            turn,
+            currencyCode: corp.liquidCurrencyCode ?? { $exists: false },
+            cashSnapshotAt: { $exists: false },
+          },
+          update: { $set: { liquidCapital: corp.liquidCapital, cashSnapshotAt: now } },
+        },
+      });
+    }
   }
 
   if (corpOps.length > 0) {

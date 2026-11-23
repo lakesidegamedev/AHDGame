@@ -50,6 +50,8 @@ export interface CorporationHistory {
   publicFloat?: number;
   marketCap: number;
   liquidCapital: number;
+  /** Frozen observation boundary for post-bond cash; absent on older snapshots. */
+  cashSnapshotAt?: Date;
   /**
    * SOE treasury-backing reconciliation this turn, in `currencyCode` (matches
    * other money fields here; `CorpSnapshot.soeBacking` is ₳-denominated).
@@ -91,10 +93,10 @@ export interface CorporationHistory {
    * Net dividend income (local ccy, per-turn) this corp received from holding other corps' shares, after FX spread and the 50% dividend-received-deduction tax. Reporting only: the cash was credited to liquidCapital in the dividend phase, not via `income`. Surfaced as a Financials P&L line. Absent when the corp holds no dividend-paying corp shares.
    */
   dividendIncomeReceived?: number;
-  /** Pre-tax operating income minus overhead, before bond flows (₳/turn). Older snapshots lack this field. */
+  /** Pre-tax operating income minus overhead, before bond flows (currencyCode/turn). */
   incomePreDividends?: number;
   /**
-   * Sum of per-sector NPVs (₳). Persisted so the post-bond-turn share-price
+   * Sum of per-sector NPVs (currencyCode). Persisted so the post-bond-turn share-price
    * recompute can reuse it without re-deriving from sectors.
    * Older snapshots lack this field.
    */
@@ -113,32 +115,32 @@ export interface CorporationHistory {
    */
   bankBranch?: import("@/lib/banking/rules/branchSnapshot").BankBranchSnapshot;
   /**
-   * Coupon income earned as a bond holder this turn (₳/turn). Persisted so
+   * Coupon income earned as a bond holder this turn (currencyCode/turn). Persisted so
    * the post-bond-turn share-price recompute can include it in the income
    * basis. Older snapshots lack this field.
    */
   perTurnBondCouponIncome?: number;
   /**
-   * Gross bond coupon expense on issued bonds this turn (₳/turn), before natcorp
+   * Gross bond coupon expense on issued bonds this turn (currencyCode/turn), before natcorp
    * subsidy. Matches `financials.bondInterestCost / 24`. Older snapshots lack this
    * field — fall back to {@link perTurnBondDragOnNetIncome} for non-natcorps only.
    */
   perTurnBondInterestExpense?: number;
   /**
-   * Bond interest expense this turn — zero for national enterprises (₳/turn).
+   * Bond interest expense this turn, zero for national enterprises (currencyCode/turn).
    * Persisted alongside perTurnBondCouponIncome for the recompute phase.
    * Older snapshots lack this field.
    */
   perTurnBondDragOnNetIncome?: number;
   /** Total corporate tax paid this turn, federal + state/regional combined plus tax on dividends received, in liquidCurrencyCode units. The ledger `corp_tax_paid` row covers operating tax only, so it is lower by the dividend-received tax. */
   corporateTaxPaid?: number;
-  /** Federal corporate tax paid this turn, summed across all countries (₳/turn). */
+  /** Federal corporate tax paid this turn, summed across all countries (currencyCode/turn). */
   federalTaxPaid?: number;
-  /** State/regional corporate tax paid this turn, summed across all states/regions (₳/turn). */
+  /** State/regional corporate tax paid this turn, summed across all states/regions (currencyCode/turn). */
   stateTaxPaid?: number;
-  /** Per-country federal tax paid (₳/turn). Only populated when non-zero. */
+  /** Per-country federal tax paid (currencyCode/turn). Only populated when non-zero. */
   taxPaidByCountry?: Record<string, number>;
-  /** Per-state/region state tax paid (₳/turn). Only populated when non-zero. */
+  /** Per-state/region state tax paid (currencyCode/turn). Only populated when non-zero. */
   taxPaidByState?: Record<string, number>;
   /** Federal tax from corps HQ'd in the same country as the sector (domestic). */
   taxPaidByCountryDomestic?: Record<string, number>;

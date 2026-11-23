@@ -89,7 +89,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
     orderbookAsks,
     orderbookBids,
     orderbookCount,
-    parseQtyDigits,
+    parseShareQuantity,
     personalAfterPurchase,
     personalBudgetLabel,
     personalBudgetValue,
@@ -283,7 +283,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 setQuantityDraft={setQuantityDraft}
                 setSelectedPayCurrency={setSelectedPayCurrency}
                 resetQuantity={resetQuantity}
-                parseQtyDigits={parseQtyDigits}
+                parseShareQuantity={parseShareQuantity}
                 myCorporation={myCorporation}
                 myShares={personalSellShares}
                 totalPersonalShares={myShares}
@@ -335,7 +335,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 setQuantityDraft={setQuantityDraft}
                 setLimitPrice={setLimitPrice}
                 resetQuantity={resetQuantity}
-                parseQtyDigits={parseQtyDigits}
+                parseShareQuantity={parseShareQuantity}
                 onSwitchToOrders={() => switchMode("orders")}
                 onSuccess={onSuccess}
                 myCorporation={myCorporation}

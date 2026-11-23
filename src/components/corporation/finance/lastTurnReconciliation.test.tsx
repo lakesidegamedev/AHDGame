@@ -84,3 +84,47 @@ describe("costChangeNote", () => {
     expect(costChangeNote(100, null)).toBeUndefined();
   });
 });
+
+it("describes incomplete evidence without claiming that no ledger record exists", () => {
+  const data = reconcileLastTurn(
+    {
+      turn: 1,
+      revenue: 100,
+      totalCosts: 0,
+      retained: 100,
+      dividendPaid: 0,
+      tax: 0,
+      cashBefore: 1000,
+      cashAfter: 900,
+    },
+    []
+  );
+  data.cash.evidence = { boundary: "estimated", unconvertedMovements: 2 };
+  render(<LastTurnReconciliation data={data} fmt={fmt} fmtSigned={fmtSigned} />);
+  expect(screen.getByText("Cash change not reconciled by this view")).toBeTruthy();
+  expect(screen.getByText(/Snapshot timing is estimated/)).toBeTruthy();
+  expect(screen.getByText(/2 cash movements could not be converted/)).toBeTruthy();
+  expect(screen.queryByText("Cash change with no ledger record")).toBeNull();
+});
+
+it("keeps a historical receipt in its recorded currency after the live corporation changes currency", () => {
+  const data = reconcileLastTurn(
+    {
+      turn: 1,
+      revenue: 23,
+      totalCosts: 0,
+      retained: 23,
+      dividendPaid: 0,
+      tax: 0,
+      cashBefore: 1000,
+      cashAfter: 1023,
+    },
+    []
+  );
+  data.reportingCurrency = "CAD";
+  const { container } = render(
+    <LastTurnReconciliation data={data} fmt={(n) => `USD ${n}`} fmtSigned={(n) => `USD ${n}`} />
+  );
+  expect(container.textContent).toContain("CA$23");
+  expect(container.textContent).not.toContain("USD");
+});

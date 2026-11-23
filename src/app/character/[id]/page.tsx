@@ -142,16 +142,95 @@ export default async function CharacterPage({ params }: PageProps) {
 
   if (!data) redirect("/map");
 
-  const [financialData, unionContribution, implementedSuggestions] = await Promise.all([
-    getFinancialData(data.character._id),
-    (async () => {
-      const db = await getDb();
-      return unionContributionIncomePerTurn(db, data.character._id);
-    })(),
-    (async () => {
-      const db = await getDb();
-      return countImplementedSuggestions(db, { userId: data.character.userId ?? null });
-    })(),
+  const pageDb = await getDb();
+  const isOwnProfileEarly = userData?.character?._id?.toString() === data.character._id.toString();
+  const needsPartyPool = !!(
+    data.character.party &&
+    data.character.party !== "independent" &&
+    data.party
+  );
+  const earlyCharacter = data.character;
+  const [
+    financialData,
+    unionContribution,
+    implementedSuggestions,
+    campaignRates,
+    campaignPriceLevel,
+    viewerHasBlocked,
+    t,
+    chairBankRow,
+    cabinetSeats,
+    congressLeadershipRows,
+    justiceSeat,
+    poolAgg,
+    electedSeat,
+    nationalGdpPerCapita,
+  ] = await Promise.all([
+    getFinancialData(earlyCharacter._id),
+    unionContributionIncomePerTurn(pageDb, earlyCharacter._id),
+    countImplementedSuggestions(pageDb, { userId: earlyCharacter.userId ?? null }),
+    loadCampaignCurrencyRates(pageDb),
+    loadCampaignPriceLevel(pageDb),
+    // A viewer who blocked this player sees no bio or campaign song from them.
+    userData?.userId && !isOwnProfileEarly && earlyCharacter.userId
+      ? hasBlocked(pageDb, new ObjectId(userData.userId), earlyCharacter.userId)
+      : Promise.resolve(false),
+    getTranslations("profile"),
+    centralBanksCollection(pageDb).findOne(
+      { chairCharacterId: earlyCharacter._id },
+      { projection: { _id: 1 } }
+    ),
+    getCabinetMembersCollection(pageDb)
+      .find(
+        { characterId: earlyCharacter._id },
+        { projection: { countryId: 1, positionId: 1, acting: 1 } }
+      )
+      .toArray(),
+    congressLeadersCollection(pageDb)
+      .find({ characterId: earlyCharacter._id }, { projection: { role: 1 } })
+      .toArray(),
+    supremeCourtSeatsCollection(pageDb).findOne(
+      { justiceCharacterId: earlyCharacter._id },
+      { projection: { _id: 1 } }
+    ),
+    needsPartyPool
+      ? charactersCollection(pageDb)
+          .aggregate<{ totalInfluence: number; memberCount: number }>([
+            {
+              $match: {
+                party: earlyCharacter.party,
+                countryId: earlyCharacter.countryId ?? "US",
+                isBanned: { $ne: true },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                totalInfluence: { $sum: "$partyInfluence" },
+                memberCount: { $sum: 1 },
+              },
+            },
+          ])
+          .toArray()
+      : Promise.resolve([] as { totalInfluence: number; memberCount: number }[]),
+    earlyCharacter.currentOffice && CABINET_OFFICE_TYPES.has(earlyCharacter.currentOffice.type)
+      ? electedOfficialsCollection(pageDb).findOne(
+          { characterId: earlyCharacter._id },
+          {
+            projection: {
+              officeType: 1,
+              state: 1,
+              seatsHeld: 1,
+              senateClass: 1,
+              constituency: 1,
+              constituencyId: 1,
+            },
+          }
+        )
+      : Promise.resolve(null),
+    data.homeState?.gdp === undefined
+      ? Promise.resolve(undefined)
+      : loadNationalGdpPerCapita(pageDb, earlyCharacter.countryId ?? "US"),
   ]);
 
   const {
@@ -193,19 +272,11 @@ export default async function CharacterPage({ params }: PageProps) {
     gamePreset,
   } = data;
 
-  const campaignRates = await loadCampaignCurrencyRates(await getDb());
-  const campaignPriceLevel = await loadCampaignPriceLevel(await getDb());
   const { corporation, bondIncomePerTurn, dividendIncomePerTurn, fxRatesRecord } = financialData;
 
-  const isOwnProfile = userData?.character?._id?.toString() === character._id.toString();
-  // A viewer who blocked this player sees no bio or campaign song from them.
-  const viewerHasBlocked =
-    !!userData?.userId && !isOwnProfile && character.userId
-      ? await hasBlocked(await getDb(), new ObjectId(userData.userId), character.userId)
-      : false;
+  const isOwnProfile = isOwnProfileEarly;
   const canInfluence = userData?.hasCharacter && !isOwnProfile && !isBanned;
 
-  const t = await getTranslations("profile");
   const officeLabel = getOfficeLabel(character.currentOffice, character.countryId);
   const publicPartyName =
     party?.name ?? (character.party === "independent" ? "Independent" : character.party);
@@ -231,69 +302,8 @@ export default async function CharacterPage({ params }: PageProps) {
    * currentOffice with a cabinet key, so the seat is recovered from
    * electedOfficials. Mirrors actionRefresh so the displayed number matches.
    */
-  const apDb = await getDb();
-  // The party-influence pool aggregation (below) is independent of the chair /
-  // cabinet lookups and of everything computed between here and its use, so it
-  // joins this batch instead of adding a trailing round trip (O2). Gated by the
-  // same condition its consumer uses; an empty result when not needed is inert.
-  const needsPartyPool = !!(character.party && character.party !== "independent" && party);
-  const [chairBankRow, cabinetSeats, congressLeadershipRows, justiceSeat, poolAgg] =
-    await Promise.all([
-      centralBanksCollection(apDb).findOne(
-        { chairCharacterId: character._id },
-        { projection: { _id: 1 } }
-      ),
-      getCabinetMembersCollection(apDb)
-        .find(
-          { characterId: character._id },
-          { projection: { countryId: 1, positionId: 1, acting: 1 } }
-        )
-        .toArray(),
-      congressLeadersCollection(apDb)
-        .find({ characterId: character._id }, { projection: { role: 1 } })
-        .toArray(),
-      supremeCourtSeatsCollection(apDb).findOne(
-        { justiceCharacterId: character._id },
-        { projection: { _id: 1 } }
-      ),
-      needsPartyPool
-        ? charactersCollection(apDb)
-            .aggregate<{ totalInfluence: number; memberCount: number }>([
-              {
-                $match: {
-                  party: character.party,
-                  countryId: character.countryId ?? "US",
-                  isBanned: { $ne: true },
-                },
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalInfluence: { $sum: "$partyInfluence" },
-                  memberCount: { $sum: 1 },
-                },
-              },
-            ])
-            .toArray()
-        : Promise.resolve([] as { totalInfluence: number; memberCount: number }[]),
-    ]);
+  const apDb = pageDb;
   const cabinetSeat = cabinetSeats[0] ?? null;
-  const electedSeat =
-    character.currentOffice && CABINET_OFFICE_TYPES.has(character.currentOffice.type)
-      ? await electedOfficialsCollection(apDb).findOne(
-          { characterId: character._id },
-          {
-            projection: {
-              officeType: 1,
-              state: 1,
-              seatsHeld: 1,
-              senateClass: 1,
-              constituency: 1,
-              constituencyId: 1,
-            },
-          }
-        )
-      : null;
   const officeActionBonus = resolveOfficeActionBonus({
     currentOfficeType: character.currentOffice?.type,
     electedSeatOfficeType: electedSeat?.officeType,
@@ -423,9 +433,7 @@ export default async function CharacterPage({ params }: PageProps) {
     character.politicalInfluence ?? 0,
     gamePreset,
     resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gamePreset),
-    homeState?.gdp === undefined
-      ? undefined
-      : await loadNationalGdpPerCapita(await getDb(), character.countryId ?? "US")
+    nationalGdpPerCapita
   );
   const populationTier = getPopulationTier(statePopulation);
 

@@ -35,7 +35,11 @@ export interface BackfillCharacter {
 export function planBackfill(input: {
   characters: BackfillCharacter[];
   achievements: Achievement[];
-  heldRows: Array<{ userId: ObjectId; characterId?: ObjectId | null; achievementId: ObjectId }>;
+  heldRows: Array<{
+    userId?: ObjectId | null;
+    characterId?: ObjectId | null;
+    achievementId: ObjectId;
+  }>;
   progress: (
     character: BackfillCharacter,
     achievement: Achievement
@@ -44,10 +48,16 @@ export function planBackfill(input: {
   const grants: BackfillGrant[] = [];
   for (const character of input.characters) {
     const rows = filterAchievementRowsForCharacter(
-      input.heldRows.filter((row) => row.userId.equals(character.userId)),
+      input.heldRows.filter((row) => String(row.userId) === String(character.userId)),
       { characterId: character._id, includeUntagged: !character.additional }
     );
-    const held = new Set(rows.map((row) => row.achievementId.toString()));
+    // A row on this character counts even when its account id is missing or stale.
+    const held = new Set(
+      [
+        ...rows,
+        ...input.heldRows.filter((row) => String(row.characterId) === String(character._id)),
+      ].map((row) => row.achievementId.toString())
+    );
     for (const achievement of input.achievements) {
       if (achievement.triggerType !== "action_count") continue;
       if (held.has(achievement._id.toString())) continue;

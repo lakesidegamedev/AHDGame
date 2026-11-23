@@ -27,7 +27,7 @@ interface SharePurchaseAtMarketViewProps {
   setQuantityDraft: (v: string | null) => void;
   setSelectedPayCurrency: (v: CurrencyCode) => void;
   resetQuantity: (q: number) => void;
-  parseQtyDigits: (raw: string, max?: number) => number;
+  parseShareQuantity: (raw: string) => number;
   myCorporation: {
     id: string;
     name: string;
@@ -90,7 +90,7 @@ export function SharePurchaseAtMarketView({
   setQuantityDraft,
   setSelectedPayCurrency,
   resetQuantity,
-  parseQtyDigits,
+  parseShareQuantity,
   myCorporation,
   myShares,
   totalPersonalShares = myShares,
@@ -420,12 +420,8 @@ export function SharePurchaseAtMarketView({
               }
               onChange={(e) => {
                 const raw = e.target.value;
-                const entered = raw.trim();
-                const integer = /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(entered)
-                  ? Number(entered.replaceAll(",", ""))
-                  : 0;
                 setQuantityDraft(raw);
-                setQuantity(Number.isSafeInteger(integer) ? integer : 0);
+                setQuantity(parseShareQuantity(raw));
               }}
               aria-invalid={buyQuantityError != null}
               aria-describedby={buyQuantityError ? buyQuantityErrorId : undefined}
@@ -647,21 +643,16 @@ export function SharePurchaseAtMarketView({
               onChange={(e) => {
                 const raw = e.target.value;
                 setQuantityDraft(raw);
-                setQuantity(
-                  parseQtyDigits(
-                    raw,
-                    sellAsInvestmentBank
-                      ? Number.MAX_SAFE_INTEGER
-                      : sellAsCorp
-                        ? myCorporationShares
-                        : myShares
-                  )
-                );
+                setQuantity(parseShareQuantity(raw));
               }}
-              onBlur={() => setQuantityDraft(null)}
               placeholder="Quantity"
               className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
             />
+            {quantityDraft !== null && quantityDraft.trim() !== "" && quantity === 0 && (
+              <p className="mt-1 text-xs text-error" role="alert">
+                Enter a whole number of shares greater than zero.
+              </p>
+            )}
             {sellAtMarketInsufficient && (
               <p className="mt-1 text-xs text-error">
                 {sellAsCorp
@@ -678,7 +669,7 @@ export function SharePurchaseAtMarketView({
             )}
           </div>
 
-          {quantity > 0 && (
+          {quantity > 0 && !sellAtMarketInsufficient && !marketDepthInsufficient && (
             <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted">Price per share</span>

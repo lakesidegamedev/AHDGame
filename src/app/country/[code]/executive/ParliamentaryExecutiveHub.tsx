@@ -85,31 +85,46 @@ function characterHref(character: Character): string {
  */
 export async function ParliamentaryExecutiveHub({ countryId }: { countryId: CountryId }) {
   const surface = getParliamentaryExecutiveSurface(countryId);
-  const user = await getAuthUserWithCharacter();
-  const db = await getDb();
-  const preset = await getGameStatePreset(db);
-  const config = getCountryConfig(countryId, preset);
-  const lowerChamberKey = getLowerChamberOfficeType(countryId, preset);
+  const [user, db, executiveGameTime] = await Promise.all([
+    getAuthUserWithCharacter(),
+    getDb(),
+    getGameTime(),
+  ]);
 
   // Inline-resolve any expired parliamentary votes before reading state, so the
   // page never shows a "Voting ended" panel alongside a PM that should already
   // have been removed. The resolver uses an atomic claim to stay race-safe
   // against the hourly turn processor. Pass game time so the resolver agrees
   // with closesAt anchors written at vote creation.
-  const executiveGameTime = await getGameTime();
-  await processParliamentaryGovernmentVotes(db, countryId, executiveGameTime.effectiveNow);
+  const [preset] = await Promise.all([
+    getGameStatePreset(db),
+    processParliamentaryGovernmentVotes(db, countryId, executiveGameTime.effectiveNow),
+  ]);
+  const config = getCountryConfig(countryId, preset);
+  const lowerChamberKey = getLowerChamberOfficeType(countryId, preset);
+  const isUK = countryHasFeature("ukUi", countryId);
+  const viewerCharacterId = user?.character?._id ?? null;
 
-  // Confidence is stored with each country's canonical government record.
-  const [confidenceGauge, confidenceHistory] = await Promise.all([
+  // Everything below reads state the vote resolution above may have changed,
+  // and none of these reads depends on another, so they run together.
+  const [
+    confidenceGauge,
+    confidenceHistory,
+    nhsState,
+    parlGov,
+    govFormation,
+    imperialPossessive,
+    chamberSeats,
+    apptVotes,
+    allLowerOfficials,
+    memberRecord,
+    liveGameYear,
+  ] = await Promise.all([
+    // Confidence is stored with each country's canonical government record.
     getConfidenceGauge(db, countryId),
     getConfidenceGaugeHistory(db, countryId),
-  ]);
-
-  const isUK = countryHasFeature("ukUi", countryId);
-  const nhsState = isUK ? await getNhsState(db) : null;
-
-  const [parlGov, govFormation, imperialPossessive, chamberSeats] = await Promise.all([
-    // Legacy collection — only UK/JP ever wrote it; null elsewhere.
+    isUK ? getNhsState(db) : Promise.resolve(null),
+    // Legacy collection: only UK/JP ever wrote it; null elsewhere.
     parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
     surface.heroTitleUsesImperialPossessive
@@ -118,79 +133,158 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     // Live chamber size (era overlay + region sum), not the modern-config
     // default. Must use the world preset.
     getLiveLowerChamberSeats(db, countryId),
+    // Confidence motions stay on a formed government; nominations running in
+    // parallel with a confidence vote may also be active while formed.
+    getPMAppointmentVotesCollection(db).find({ countryId, status: "active" }).toArray(),
+    electedOfficialsCollection(db)
+      .find({ officeType: lowerChamberKey, countryId }, { projection: { party: 1, seatsHeld: 1 } })
+      .toArray(),
+    // Only lower-chamber members may cast votes.
+    viewerCharacterId
+      ? electedOfficialsCollection(db).findOne(
+          { characterId: viewerCharacterId, countryId, officeType: lowerChamberKey },
+          { projection: { _id: 1 } }
+        )
+      : Promise.resolve(null),
+    getLiveGameYear(db),
   ]);
+  const viewerIsMember = memberRecord != null;
+
+  // Seat composition from the lower chamber
+  const seatsByParty: Record<string, number> = {};
+  for (const official of allLowerOfficials) {
+    if (!official.party) continue;
+    const seats = official.seatsHeld ?? 1;
+    seatsByParty[official.party] = (seatsByParty[official.party] ?? 0) + seats;
+  }
+  const sortedParties = Object.entries(seatsByParty).sort((a, b) => b[1] - a[1]);
+  const totalSeatsFilled = Object.values(seatsByParty).reduce((sum, n) => sum + n, 0);
+  const partySeqNums = [
+    ...new Set(sortedParties.map(([k]) => Number.parseInt(k, 10)).filter((n) => !Number.isNaN(n))),
+  ];
 
   // governmentFormations is canonical. Only fall back to legacy parliamentaryGovernments
-  // when the canonical document is missing entirely — never when it exists with a null
+  // when the canonical document is missing entirely, never when it exists with a null
   // PM (that state is meaningful: e.g. immediately after a no-confidence vote passes).
   const pmCharId = govFormation ? govFormation.pmCharacterId : (parlGov?.pmCharacterId ?? null);
-  const pmNpp = govFormation?.pmNppId
-    ? await nppsCollection(db).findOne(
-        { _id: govFormation.pmNppId, countryId, retiredAt: null },
-        { projection: { name: 1, party: 1, avatarUrl: 1 } }
-      )
-    : null;
-  let pmCharacter: Character | null = null;
-  if (pmCharId) {
-    pmCharacter = await charactersCollection(db).findOne({ _id: pmCharId });
-  }
 
-  // Optional deputy seat (IE Tánaiste) — seated through the cabinet as
+  const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
+  const needsNoConfidenceCooldown =
+    viewerIsMember &&
+    govFormation?.status === "formed" &&
+    !!(govFormation.pmCharacterId || govFormation.pmNppId) &&
+    !govFormation.activeVoteId;
+
+  const tallyPayload = async (v: (typeof apptVotes)[number]): Promise<AppointmentVotePayload> => {
+    const tally = await computeParliamentaryGovernmentTally(
+      db,
+      countryId,
+      lowerChamberKey,
+      v.votes
+    );
+    return {
+      type: "pmAppointment" as const,
+      _id: v._id.toString(),
+      nomineeName: v.nomineeName,
+      nomineePartyId: v.nomineePartyId,
+      formationType: v.formationType,
+      coalitionId: v.coalitionId,
+      votesFor: tally.votesFor,
+      votesAgainst: tally.votesAgainst,
+      voteByParty: tally.voteByParty,
+      status: v.status,
+      closesAt: v.closesAt.toISOString(),
+      closesOnTurn: v.closesOnTurn ?? null,
+      isConfidenceMotion: v.isConfidenceMotion === true,
+    };
+  };
+
+  const loadNoConfidence = async () => {
+    // One at a time, only when formed.
+    if (govFormation?.status !== "formed" || !govFormation.activeVoteId) return null;
+    const vote = await getNoConfidenceVotesCollection(db).findOne({
+      _id: govFormation.activeVoteId,
+      status: "active",
+    });
+    if (!vote) return null;
+    const tally = await computeParliamentaryGovernmentTally(
+      db,
+      countryId,
+      lowerChamberKey,
+      vote.votes
+    );
+    return { vote, tally };
+  };
+
+  // Optional deputy seat (IE Tanaiste), seated through the cabinet as
   // `{ type: "parliamentaryCabinet", positionId }`, so the unified
   // `cabinetMembers` collection is the source of truth, same as the cabinet
   // page. (There is no `electedOfficials` row for it.)
-  let deputyCharacter: Character | null = null;
-  if (surface.deputyPlaque) {
+  const loadDeputy = async (): Promise<Character | null> => {
+    if (!surface.deputyPlaque) return null;
     const deputyMember = await getCabinetMembersCollection(db).findOne({
       countryId,
       positionId: surface.deputyPlaque.cabinetPositionId,
     });
-    if (deputyMember?.characterId) {
-      deputyCharacter = await charactersCollection(db).findOne({ _id: deputyMember.characterId });
-    }
-  }
+    if (!deputyMember?.characterId) return null;
+    return charactersCollection(db).findOne({ _id: deputyMember.characterId });
+  };
+
+  const loadNoConfidenceCooldown = async (): Promise<number | null> => {
+    if (!needsNoConfidenceCooldown) return null;
+    const [gameState, lastVote] = await Promise.all([
+      gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      ),
+      getNoConfidenceVotesCollection(db)
+        .find({ countryId })
+        .sort({ turnProposed: -1 })
+        .limit(1)
+        .toArray(),
+    ]);
+    const currentTurn = gameState?.currentTurn ?? 0;
+    if (lastVote.length === 0) return null;
+    const turnsElapsed = currentTurn - lastVote[0].turnProposed;
+    return turnsElapsed < NO_CONFIDENCE_COOLDOWN_TURNS
+      ? NO_CONFIDENCE_COOLDOWN_TURNS - turnsElapsed
+      : null;
+  };
+
+  const [
+    pmNpp,
+    pmCharacter,
+    deputyCharacter,
+    activeAppointmentVotes,
+    noConfidence,
+    partyDocs,
+    noConfidenceCooldownTurns,
+  ] = await Promise.all([
+    govFormation?.pmNppId
+      ? nppsCollection(db).findOne(
+          { _id: govFormation.pmNppId, countryId, retiredAt: null },
+          { projection: { name: 1, party: 1, avatarUrl: 1 } }
+        )
+      : Promise.resolve(null),
+    pmCharId ? charactersCollection(db).findOne({ _id: pmCharId }) : Promise.resolve(null),
+    loadDeputy(),
+    Promise.all(apptVotes.map(tallyPayload)),
+    loadNoConfidence(),
+    politicalPartiesCollection(db)
+      .find({ countryId, sequentialId: { $in: partySeqNums } })
+      .toArray(),
+    loadNoConfidenceCooldown(),
+  ]);
 
   // --- Government formation: active votes and viewer permissions ---
 
-  let activeAppointmentVotes: AppointmentVotePayload[] = [];
   let activeNoConfidenceVote: NoConfidenceVotePayload | null = null;
   const viewerVotes: Record<string, "aye" | "nay"> = {};
   const viewerWhippedFrom: Record<string, string> = {};
 
-  // Fetch all active appointment votes. Confidence motions stay on a formed
-  // government (S#17); VONC-parallel nominations may also be active while formed.
-  const apptVotes = await getPMAppointmentVotesCollection(db)
-    .find({ countryId, status: "active" })
-    .toArray();
-  activeAppointmentVotes = await Promise.all(
-    apptVotes.map(async (v) => {
-      const tally = await computeParliamentaryGovernmentTally(
-        db,
-        countryId,
-        lowerChamberKey,
-        v.votes
-      );
-      return {
-        type: "pmAppointment" as const,
-        _id: v._id.toString(),
-        nomineeName: v.nomineeName,
-        nomineePartyId: v.nomineePartyId,
-        formationType: v.formationType,
-        coalitionId: v.coalitionId,
-        votesFor: tally.votesFor,
-        votesAgainst: tally.votesAgainst,
-        voteByParty: tally.voteByParty,
-        status: v.status,
-        closesAt: v.closesAt.toISOString(),
-        closesOnTurn: v.closesOnTurn ?? null,
-        isConfidenceMotion: v.isConfidenceMotion === true,
-      };
-    })
-  );
-
-  if (user?.character) {
+  if (viewerCharacterId) {
+    const key = viewerCharacterId.toString();
     for (const v of apptVotes) {
-      const key = user.character._id.toString();
       const charVote = v.votes[key];
       if (charVote) viewerVotes[v._id.toString()] = charVote;
       const wf = v.whippedFromVote?.[key];
@@ -198,128 +292,37 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     }
   }
 
-  // Fetch active no-confidence vote (one at a time, only when formed)
-  if (govFormation?.status === "formed" && govFormation.activeVoteId) {
-    const noConfVote = await getNoConfidenceVotesCollection(db).findOne({
-      _id: govFormation.activeVoteId,
-      status: "active",
-    });
-    if (noConfVote) {
-      const noConfTally = await computeParliamentaryGovernmentTally(
-        db,
-        countryId,
-        lowerChamberKey,
-        noConfVote.votes
-      );
-      activeNoConfidenceVote = {
-        type: "noConfidence",
-        _id: noConfVote._id.toString(),
-        proposedByName: noConfVote.proposedByName,
-        targetPmName: noConfVote.targetPmName,
-        votesFor: noConfTally.votesFor,
-        votesAgainst: noConfTally.votesAgainst,
-        voteByParty: noConfTally.voteByParty,
-        status: noConfVote.status,
-        closesAt: noConfVote.closesAt.toISOString(),
-        closesOnTurn: noConfVote.closesOnTurn ?? null,
-      };
-      if (user?.character) {
-        const key = user.character._id.toString();
-        const charVote = noConfVote.votes[key];
-        if (charVote) viewerVotes[noConfVote._id.toString()] = charVote;
-        const wf = noConfVote.whippedFromVote?.[key];
-        if (wf) viewerWhippedFrom[noConfVote._id.toString()] = wf;
-      }
+  if (noConfidence) {
+    const { vote: noConfVote, tally: noConfTally } = noConfidence;
+    activeNoConfidenceVote = {
+      type: "noConfidence",
+      _id: noConfVote._id.toString(),
+      proposedByName: noConfVote.proposedByName,
+      targetPmName: noConfVote.targetPmName,
+      votesFor: noConfTally.votesFor,
+      votesAgainst: noConfTally.votesAgainst,
+      voteByParty: noConfTally.voteByParty,
+      status: noConfVote.status,
+      closesAt: noConfVote.closesAt.toISOString(),
+      closesOnTurn: noConfVote.closesOnTurn ?? null,
+    };
+    if (viewerCharacterId) {
+      const key = viewerCharacterId.toString();
+      const charVote = noConfVote.votes[key];
+      if (charVote) viewerVotes[noConfVote._id.toString()] = charVote;
+      const wf = noConfVote.whippedFromVote?.[key];
+      if (wf) viewerWhippedFrom[noConfVote._id.toString()] = wf;
     }
   }
 
-  // Viewer appointment eligibility via shared function. Nominations run while
-  // pending, and in parallel with an active no-confidence vote on a formed
-  // government. This mirrors the proposePmAppointment gate, so an eligible
-  // chair always sees the CTA the server would accept.
-  let viewerMayAppoint = false;
-  if (
-    user?.character &&
-    (govFormation?.status === "pending" ||
-      (govFormation?.status === "formed" && activeNoConfidenceVote != null))
-  ) {
-    const eligibility = await checkAppointmentEligibility(
-      db,
-      countryId,
-      user.character._id,
-      govFormation.majorityThreshold
-    );
-    viewerMayAppoint = eligibility.eligible;
-  }
-
-  // Viewer is a lower-chamber member — only members may cast votes
-  let viewerIsMember = false;
-  if (user?.character) {
-    const memberRecord = await electedOfficialsCollection(db).findOne({
-      characterId: user.character._id,
-      countryId,
-      officeType: lowerChamberKey,
-    });
-    viewerIsMember = memberRecord != null;
-  }
-
-  // No-confidence eligibility and cooldown
-  let viewerMayProposeNoConfidence = false;
-  let noConfidenceCooldownTurns: number | null = null;
-  if (
-    viewerIsMember &&
-    govFormation?.status === "formed" &&
-    (govFormation.pmCharacterId || govFormation.pmNppId) &&
-    !govFormation.activeVoteId
-  ) {
-    const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
-    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
-      _id: "current",
-    });
-    const currentTurn = gameState?.currentTurn ?? 0;
-
-    const lastVote = await getNoConfidenceVotesCollection(db)
-      .find({ countryId })
-      .sort({ turnProposed: -1 })
-      .limit(1)
-      .toArray();
-
-    if (lastVote.length > 0) {
-      const turnsElapsed = currentTurn - lastVote[0].turnProposed;
-      if (turnsElapsed < NO_CONFIDENCE_COOLDOWN_TURNS) {
-        noConfidenceCooldownTurns = NO_CONFIDENCE_COOLDOWN_TURNS - turnsElapsed;
-      }
-    }
-
-    viewerMayProposeNoConfidence = noConfidenceCooldownTurns === null;
-  }
+  const viewerMayProposeNoConfidence =
+    needsNoConfidenceCooldown && noConfidenceCooldownTurns === null;
 
   const governmentStatus =
     govFormation && govFormation.status !== "collapsed"
       ? (govFormation.status as "pending" | "formed")
       : null;
 
-  // Seat composition from the lower chamber
-  const allLowerOfficials = await electedOfficialsCollection(db)
-    .find({ officeType: lowerChamberKey, countryId })
-    .toArray();
-
-  const seatsByParty: Record<string, number> = {};
-  for (const official of allLowerOfficials) {
-    if (!official.party) continue;
-    const seats = official.seatsHeld ?? 1;
-    seatsByParty[official.party] = (seatsByParty[official.party] ?? 0) + seats;
-  }
-
-  const sortedParties = Object.entries(seatsByParty).sort((a, b) => b[1] - a[1]);
-  const totalSeatsFilled = Object.values(seatsByParty).reduce((sum, n) => sum + n, 0);
-
-  const partySeqNums = [
-    ...new Set(sortedParties.map(([k]) => Number.parseInt(k, 10)).filter((n) => !Number.isNaN(n))),
-  ];
-  const partyDocs = await politicalPartiesCollection(db)
-    .find({ countryId, sequentialId: { $in: partySeqNums } })
-    .toArray();
   const partyBySeq = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));
 
   const partyRows: PartyRowMeta[] = sortedParties.map(([seqKey, seats]) => ({
@@ -330,77 +333,95 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
 
   const govPartyId = govFormation?.governingPartyId ?? parlGov?.governingPartyId;
   const governingPartySeq = govPartyId ? Number.parseInt(govPartyId, 10) : Number.NaN;
-  const governingPartyDoc =
-    govPartyId && !Number.isNaN(governingPartySeq)
-      ? (partyBySeq.get(govPartyId) ??
-        (await politicalPartiesCollection(db).findOne({
-          countryId,
-          sequentialId: governingPartySeq,
-        })))
-      : null;
 
-  async function resolveCharacterParty(
-    character: Character | null
-  ): Promise<PoliticalParty | null> {
-    if (!character?.party) return null;
-    const seq = Number.parseInt(character.party, 10);
-    if (Number.isNaN(seq)) return null;
-    return (
-      partyBySeq.get(character.party) ??
-      (await politicalPartiesCollection(db).findOne({
-        countryId,
-        sequentialId: seq,
-      }))
-    );
+  function findPartyBySeq(seqKey: string | undefined): Promise<PoliticalParty | null> {
+    if (!seqKey) return Promise.resolve(null);
+    const seq = Number.parseInt(seqKey, 10);
+    if (Number.isNaN(seq)) return Promise.resolve(null);
+    const known = partyBySeq.get(seqKey);
+    if (known) return Promise.resolve(known);
+    return politicalPartiesCollection(db).findOne({ countryId, sequentialId: seq });
   }
-  const pmPartyDoc =
-    (await resolveCharacterParty(pmCharacter)) ??
-    (pmNpp?.party ? (partyDocs.find((p) => String(p.sequentialId) === pmNpp.party) ?? null) : null);
-  const deputyPartyDoc = await resolveCharacterParty(deputyCharacter);
+
+  // Viewer appointment eligibility via shared function. Nominations run while
+  // pending, and in parallel with an active no-confidence vote on a formed
+  // government. This mirrors the proposePmAppointment gate, so an eligible
+  // chair always sees the CTA the server would accept.
+  const loadViewerMayAppoint = async (): Promise<boolean> => {
+    if (
+      !viewerCharacterId ||
+      !govFormation ||
+      !(
+        govFormation.status === "pending" ||
+        (govFormation.status === "formed" && activeNoConfidenceVote != null)
+      )
+    ) {
+      return false;
+    }
+    const eligibility = await checkAppointmentEligibility(
+      db,
+      countryId,
+      viewerCharacterId,
+      govFormation.majorityThreshold
+    );
+    return eligibility.eligible;
+  };
 
   // Find Opposition Leader: chair of the largest party or coalition NOT in
   // government. Shared with the shadow-cabinet route so appointment authority
   // matches this displayed signal exactly (see @/lib/parliament/oppositionLeader).
-  let oppositionLeaderChar: Character | null = null;
-  let oppositionNpp: NPP | null = null;
-  let oppositionPartyDoc: PoliticalParty | null = null;
-  const oppositionResult = await resolveOppositionLeaderFromState(
-    db,
-    countryId,
-    seatsByParty,
-    partyBySeq,
-    govFormation,
-    parlGov
-  );
-  if (oppositionResult) {
-    oppositionLeaderChar = oppositionResult.chairId
-      ? await charactersCollection(db).findOne({
-          _id: oppositionResult.chairId,
-        })
-      : null;
-    oppositionNpp = oppositionResult.nppId
-      ? await nppsCollection(db).findOne(
-          { _id: oppositionResult.nppId, countryId, retiredAt: null },
-          { projection: { name: 1, party: 1, avatarUrl: 1 } }
-        )
-      : null;
-    oppositionPartyDoc = oppositionResult.partyDoc;
-  }
+  const loadOpposition = async () => {
+    const result = await resolveOppositionLeaderFromState(
+      db,
+      countryId,
+      seatsByParty,
+      partyBySeq,
+      govFormation,
+      parlGov
+    );
+    if (!result) return { leader: null, npp: null, partyDoc: null };
+    const [leader, npp] = await Promise.all([
+      result.chairId
+        ? charactersCollection(db).findOne({ _id: result.chairId })
+        : Promise.resolve(null),
+      result.nppId
+        ? nppsCollection(db).findOne(
+            { _id: result.nppId, countryId, retiredAt: null },
+            { projection: { name: 1, party: 1, avatarUrl: 1 } }
+          )
+        : Promise.resolve(null),
+    ]);
+    return { leader, npp, partyDoc: result.partyDoc };
+  };
+
+  const [governingPartyDoc, pmCharacterParty, deputyPartyDoc, viewerMayAppoint, opposition] =
+    await Promise.all([
+      !Number.isNaN(governingPartySeq) ? findPartyBySeq(govPartyId) : Promise.resolve(null),
+      findPartyBySeq(pmCharacter?.party),
+      findPartyBySeq(deputyCharacter?.party),
+      loadViewerMayAppoint(),
+      loadOpposition(),
+    ]);
+  const pmPartyDoc =
+    pmCharacterParty ??
+    (pmNpp?.party ? (partyDocs.find((p) => String(p.sequentialId) === pmNpp.party) ?? null) : null);
+  const oppositionLeaderChar: Character | null = opposition.leader;
+  const oppositionNpp: NPP | null = opposition.npp;
+  const oppositionPartyDoc: PoliticalParty | null = opposition.partyDoc;
 
   // --- Shadow Cabinet (player suggestion #52): opposition-leader-appointed,
   // display / roleplay only. The shadow roster lives on the opposition party
   // document; the sitting Opposition Leader appoints/clears via the
   // shadow-cabinet route. Reuses the country's cabinet posts as the slots
-  // (minus the head-of-government seat — the Opposition Leader is the shadow
+  // (minus the head-of-government seat; the Opposition Leader is the shadow
   // head). Section renders only when a Leader of the Opposition is resolved.
-  const shadowPositions = resolveCabinetRoster(
-    getCabinetPositions(countryId),
-    await getLiveGameYear(db)
-  ).filter((position) => !position.isHeadOfGovernment);
+  const shadowPositions = resolveCabinetRoster(getCabinetPositions(countryId), liveGameYear).filter(
+    (position) => !position.isHeadOfGovernment
+  );
   const viewerIsOppositionLeader =
-    !!user?.character &&
+    !!viewerCharacterId &&
     !!oppositionLeaderChar &&
-    oppositionLeaderChar._id.equals(user.character._id);
+    oppositionLeaderChar._id.equals(viewerCharacterId);
   const shadowAppointees: Record<string, { characterId: string; characterName: string }> = {};
   for (const [positionId, appointment] of Object.entries(oppositionPartyDoc?.shadowCabinet ?? {})) {
     shadowAppointees[positionId] = {

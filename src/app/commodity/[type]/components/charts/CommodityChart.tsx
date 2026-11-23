@@ -29,7 +29,7 @@ interface CommodityChartProps {
   basePrice: number;
   unit: string;
   scopeLabel?: string;
-  priceScale?: number;
+  priceScale?: number | null;
   formatValue?: (value: number) => string;
 }
 
@@ -111,12 +111,18 @@ export default function CommodityChart({
         </div>
       </div>
       {view === "price" ? (
-        <PriceChart
-          history={filteredHistory}
-          basePrice={basePrice}
-          priceScale={priceScale}
-          formatValue={formatValue}
-        />
+        priceScale === null ? (
+          <p className="py-12 text-center text-sm text-muted">
+            Price history is unavailable until the currency rate is known.
+          </p>
+        ) : (
+          <PriceChart
+            history={filteredHistory}
+            basePrice={basePrice}
+            priceScale={priceScale}
+            formatValue={formatValue}
+          />
+        )
       ) : (
         <SupplyDemandChart history={filteredHistory} unit={unit} />
       )}
