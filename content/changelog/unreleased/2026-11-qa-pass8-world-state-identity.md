@@ -24,3 +24,4 @@ areas: [frontend, backend]
 - Central bank, stock market and accounting unit figures say what they measure.
 - The IMF company shows a player description.
 - The character bar, navigation and Ask now follow the same active character.
+- Canadian violent crime is scored against the same offence categories as the US, so its condition score no longer reads a perfect 100.
