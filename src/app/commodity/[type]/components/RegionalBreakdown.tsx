@@ -66,8 +66,8 @@ export default function RegionalBreakdown({
       total: ids.reduce((sum, id) => sum + volume(id), 0),
     }))
     .sort((a, b) => b.total - a.total);
-  // Economy-only countries trade from a national market with no regions, so
-  // they get one row each from the national totals.
+  // Countries with no regions on the map (economy-only countries, and plant
+  // countries without regional data) get one row each from the national totals.
   const nationalVolume = (c: string) => (nationalSupply[c] ?? 0) + (nationalDemand[c] ?? 0);
   const economyOnly = [...new Set([...Object.keys(nationalSupply), ...Object.keys(nationalDemand)])]
     .filter((c) => !byCountry.has(c) && nationalVolume(c) > 0)
@@ -118,7 +118,7 @@ export default function RegionalBreakdown({
           <h2 className="text-lg font-bold text-foreground">Regional breakdown</h2>
           <span className="text-xs text-muted px-2 py-0.5 rounded-full bg-card-elevated">
             {stateIds.length} regions
-            {economyOnly.length > 0 ? ` + ${economyOnly.length} economy-only countries` : ""}
+            {economyOnly.length > 0 ? ` + ${economyOnly.length} countries` : ""}
           </span>
         </div>
         <svg
@@ -247,9 +247,9 @@ export default function RegionalBreakdown({
                 <tr>
                   <td colSpan={6} className="pb-1 pt-4">
                     <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Economy-only countries
+                      Other countries
                       <span className="font-normal normal-case tracking-normal text-muted">
-                        national market, no regions
+                        national totals, no regional data
                       </span>
                     </span>
                   </td>
