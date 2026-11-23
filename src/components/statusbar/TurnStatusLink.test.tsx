@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   gameState: null as null | Record<string, unknown>,
 }));
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/country/us" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/country/us",
+  useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
+}));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...rest}>
