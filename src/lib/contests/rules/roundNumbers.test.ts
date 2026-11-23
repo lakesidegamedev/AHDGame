@@ -8,7 +8,12 @@ describe("alignRoundNumbers", () => {
     const rows = [
       { id: "kingmaker:6", kind: "kingmaker", roundNumber: 6, startedAtMs: day },
       { id: "influence_gain:7", kind: "influence_gain", roundNumber: 7, startedAtMs: day + 1000 },
-      { id: "referrals_iteration:2", kind: "referrals_iteration", roundNumber: 2, startedAtMs: day },
+      {
+        id: "referrals_iteration:2",
+        kind: "referrals_iteration",
+        roundNumber: 2,
+        startedAtMs: day,
+      },
       { id: "kingmaker:7", kind: "kingmaker", roundNumber: 7, startedAtMs: day + 7 * 86400000 },
     ];
     expect(alignRoundNumbers(rows, ["referrals_iteration"])).toEqual([
