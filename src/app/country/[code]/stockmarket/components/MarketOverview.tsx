@@ -80,6 +80,18 @@ interface CandleDto {
   totalTurns?: number;
 }
 
+/** Gain colour when the range closed above where it opened, loss colour when below, else neutral. */
+export function rangeTagColor(
+  candles: readonly { open: number; close: number }[],
+  up: string,
+  down: string
+): string {
+  const first = candles.find((c) => Number.isFinite(c.open));
+  const last = [...candles].reverse().find((c) => Number.isFinite(c.close));
+  if (!first || !last || last.close === first.open) return "";
+  return last.close > first.open ? up : down;
+}
+
 interface CandlesResponse {
   exchange: string;
   turns: number;
@@ -433,6 +445,10 @@ export function MarketOverview({
         color: c.close >= c.open ? `${up}80` : `${down}80`,
       }))
     );
+    // The last-value tag takes the colour of the latest candle by default, so a
+    // market up over the range shows a red tag after one down turn. Colour it by
+    // the range change instead, the same direction the header shows.
+    candleSeries.applyOptions({ priceLineColor: rangeTagColor(candles, up, down) });
     const key = `${exchangeApi}:${turns}`;
     const dataKey = `${meta?.exchange ?? exchangeApi}:${meta?.turns ?? turns}`;
     if (dataKey === key && fittedRange.current !== key && candles.length > 0) {

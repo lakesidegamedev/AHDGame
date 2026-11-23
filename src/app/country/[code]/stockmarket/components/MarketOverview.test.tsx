@@ -1,17 +1,23 @@
 /** @vitest-environment happy-dom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MarketOverview } from "./MarketOverview";
+import { MarketOverview, rangeTagColor } from "./MarketOverview";
 
-const { createChart, setCandleData, setCompareData, setVolumeData, applyPriceOptions } = vi.hoisted(
-  () => ({
-    createChart: vi.fn(),
-    setCandleData: vi.fn(),
-    setCompareData: vi.fn(),
-    setVolumeData: vi.fn(),
-    applyPriceOptions: vi.fn(),
-  })
-);
+const {
+  createChart,
+  setCandleData,
+  setCompareData,
+  setVolumeData,
+  applyPriceOptions,
+  applyCandleOptions,
+} = vi.hoisted(() => ({
+  createChart: vi.fn(),
+  setCandleData: vi.fn(),
+  setCompareData: vi.fn(),
+  setVolumeData: vi.fn(),
+  applyPriceOptions: vi.fn(),
+  applyCandleOptions: vi.fn(),
+}));
 
 // The chart subscribes to market ticks; tests drive it by hand instead of the
 // shared turn-status poller (which would add its own fetches).
@@ -55,11 +61,13 @@ describe("MarketOverview loading", () => {
     setCompareData.mockReset();
     setVolumeData.mockReset();
     applyPriceOptions.mockReset();
+    applyCandleOptions.mockReset();
     createChart.mockImplementation(() => ({
       addSeries: (kind: string) => ({
         setData:
           kind === "candles" ? setCandleData : kind === "line" ? setCompareData : setVolumeData,
         priceScale: () => ({ applyOptions: applyPriceOptions }),
+        applyOptions: kind === "candles" ? applyCandleOptions : vi.fn(),
       }),
       priceScale: () => ({ applyOptions: vi.fn() }),
       timeScale: () => ({ fitContent: vi.fn() }),
@@ -166,7 +174,11 @@ describe("MarketOverview loading", () => {
   it("fits a newly selected range only after its own data arrives", async () => {
     const fit = vi.fn();
     createChart.mockImplementation(() => ({
-      addSeries: () => ({ setData: vi.fn(), priceScale: () => ({ applyOptions: vi.fn() }) }),
+      addSeries: () => ({
+        setData: vi.fn(),
+        applyOptions: vi.fn(),
+        priceScale: () => ({ applyOptions: vi.fn() }),
+      }),
       timeScale: () => ({ fitContent: fit }),
       subscribeCrosshairMove: vi.fn(),
       applyOptions: vi.fn(),
@@ -348,7 +360,11 @@ describe("world dates and refreshed data", () => {
   it("labels the ending game date of a bucket and reloads without refitting zoom", async () => {
     const fit = vi.fn();
     createChart.mockImplementation(() => ({
-      addSeries: () => ({ setData: vi.fn(), priceScale: () => ({ applyOptions: vi.fn() }) }),
+      addSeries: () => ({
+        setData: vi.fn(),
+        applyOptions: vi.fn(),
+        priceScale: () => ({ applyOptions: vi.fn() }),
+      }),
       timeScale: () => ({ fitContent: fit }),
       subscribeCrosshairMove: vi.fn(),
       applyOptions: vi.fn(),
@@ -380,5 +396,18 @@ describe("world dates and refreshed data", () => {
     rerender(<MarketOverview exchangeFilter="global" currentTurn={1267} />);
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(fit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("rangeTagColor", () => {
+  it("follows the range direction, not the latest candle", () => {
+    const candles = [
+      { open: 100, close: 150 },
+      { open: 250, close: 240 },
+    ];
+    expect(rangeTagColor(candles, "up", "down")).toBe("up");
+    expect(rangeTagColor([{ open: 100, close: 90 }], "up", "down")).toBe("down");
+    expect(rangeTagColor([{ open: 100, close: 100 }], "up", "down")).toBe("");
+    expect(rangeTagColor([], "up", "down")).toBe("");
   });
 });
