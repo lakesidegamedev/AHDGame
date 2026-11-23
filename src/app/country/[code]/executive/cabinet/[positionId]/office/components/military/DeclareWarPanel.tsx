@@ -82,6 +82,8 @@ export function DeclareWarPanel({
   const selectedGoal = WAR_GOALS.find((g) => g.id === goal);
   const trucedUntil = target ? truces[target] : undefined;
   const targetIsAlly = !!target && allies.has(target);
+  const noOpenTarget =
+    targets.length > 0 && targets.every((c) => truces[c] !== undefined || allies.has(c));
   const ready = !!target && !!goal && !busy && trucedUntil === undefined && !targetIsAlly;
 
   async function submit() {
@@ -197,6 +199,13 @@ export function DeclareWarPanel({
               ))}
             </select>
           </div>
+
+          {noOpenTarget && (
+            <p className="mt-2 text-[11px] text-muted">
+              Every other country open to players is greyed out: war can only be declared on a
+              country players can run, and each of those is currently an ally or under a truce.
+            </p>
+          )}
 
           {selectedGoal && <p className="mt-2 text-[11px] text-muted">{selectedGoal.blurb}</p>}
 

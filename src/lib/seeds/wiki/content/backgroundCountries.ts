@@ -6,13 +6,13 @@ Not every country in a 2027 world is played out region by region. Sixteen of the
 
 Open a background country and you see one overview page instead of the full country screens. It shows:
 
-- **Economy.** GDP, growth, inflation, unemployment, debt to GDP, credit rating and population.
+- **Economy.** GDP, growth, inflation, unemployment, debt to GDP, credit rating and population. The credit rating comes from debt to GDP alone, so a low-debt country can be rated AAA while high inflation or a high local interest rate gives its bonds a high coupon.
 - **Country briefs.** Short notices of what changed (see below).
 - **Public finances.** How many years the debt interest has been spiralling against the two that trigger a restructuring, how much programme spending is left after cuts, tax rises so far and the latest austerity package.
-- **Government.** The head of government, ruling parties, approval, a seat chart and the next election date, once national politics are running.
+- **Government.** The head of government, ruling parties, approval, a seat chart and the next election date, once national politics are running. Each party shows its seats, its share of those seats and its share of the votes at the last election; the two shares differ.
 - **Trade with the United States.** Exports and imports, and the tariff each side charges the other.
 - **Currency.** The exchange rate chart, with a link to trade it.
-- **Invest.** The government bonds and the national index fund you can buy.
+- **Invest.** The government bonds and the national index fund you can buy. A bond lists its fixed coupon, set when it was issued, and its current price per 100 of face value. A brief quotes the price on the day it was written.
 - **Alliances and crises** the country is part of.
 
 Links to the legislature, map, parties and similar pages take you back to the overview, because there is nothing behind them. The currency market works for most countries, but not for non-convertible command-economy currencies.
@@ -21,7 +21,8 @@ Links to the legislature, map, parties and similar pages take you back to the ov
 
 A country posts a brief to the wire, the news feed and its page when something changes:
 
-- a credit rating change or a worse debt interest spiral,
+- a credit rating downgrade or a worse debt interest spiral (a debt strain notice),
+- a credit rating upgrade,
 - an election,
 - an austerity package,
 - a currency move of 8% or more over 24 turns,

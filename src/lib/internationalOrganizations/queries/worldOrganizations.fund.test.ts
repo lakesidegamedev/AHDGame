@@ -121,6 +121,14 @@ describe("fund income splits the way the charge does", () => {
     expect(fund.annualDuesLocal).toBeGreaterThan(0);
   });
 
+  it("bills non-voting members dues where no tribute is levied", async () => {
+    // The turn charge bills every member dues when the org levies no tribute, so
+    // the projection must include members that cannot vote.
+    const base = await load("2019-default");
+    const richerClient = await load("2019-default", 20_000_000, 4_000_000);
+    expect(richerClient.annualDuesLocal).toBeGreaterThan(base.annualDuesLocal);
+  });
+
   it("normalizes Ukrainian SSR GDP on the Soviet-ruble basis", async () => {
     vi.mocked(loadOrganizationSummaries).mockResolvedValue([warsawPact(["RU", "UKR"])] as never);
     const view = await loadWorldOrganizationsView(

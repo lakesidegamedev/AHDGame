@@ -14,7 +14,12 @@ import type {
 } from "@/lib/db/types/contestRound";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getContestRoundsCollection } from "./collection";
-import { CONTEST_KINDS, CORP_CONTEST_KINDS, contestPrizeAnchor } from "./rules";
+import {
+  CONTEST_KINDS,
+  CORP_CONTEST_KINDS,
+  contestPrizeAnchor,
+  roundSettlementTurn,
+} from "./rules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -46,6 +51,8 @@ export interface ContestCardData {
   roundNumber: number;
   startedAt: string;
   endsAt: string;
+  /** Turn on which the round settles. */
+  endTurn: number;
   /** When the standings were last recomputed; null before the first refresh. */
   refreshedAt: string | null;
   entrants: number;
@@ -125,6 +132,11 @@ export async function loadContestsPage(
       roundNumber: round.roundNumber,
       startedAt: round.startedAt.toISOString(),
       endsAt: round.endsAt.toISOString(),
+      endTurn: roundSettlementTurn(
+        round.startTurn,
+        round.startedAt.getTime(),
+        round.endsAt.getTime()
+      ),
       refreshedAt: round.refreshedAt ? round.refreshedAt.toISOString() : null,
       entrants: ranked.length,
       leaders: ranked.slice(0, LEADERS_SHOWN),

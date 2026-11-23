@@ -104,6 +104,22 @@ describe("CentralBankMoneySupplyTab", () => {
     expect(screen.getByText(/^qe$/i)).toBeTruthy();
   });
 
+  it("says what lending reserves and net money creation are", () => {
+    render(
+      <CentralBankMoneySupplyTab
+        countryId="US"
+        data={data}
+        canOperate={false}
+        onChanged={() => {}}
+      />
+    );
+
+    expect(screen.getByText(/Lending reserves are what commercial banks hold/)).toBeTruthy();
+    expect(
+      screen.getByText(/Net explicit money creation is money this bank has created/)
+    ).toBeTruthy();
+  });
+
   it("shows all four policy tools to an authorized chair", () => {
     render(
       <CentralBankMoneySupplyTab countryId="US" data={data} canOperate onChanged={() => {}} />

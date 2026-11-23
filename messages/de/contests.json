@@ -1,7 +1,7 @@
 {
   "contests": {
     "title": "Wettbewerbe",
-    "intro": "Wöchentliche Rennen zwischen Spielern. Am Ende jeder Woche teilen sich die ersten drei jedes Wettbewerbs den Geldpreis im Verhältnis 50 / 30 / 20 (bei der Regierungszustimmung erhält der Sieger alles), und eine neue Runde beginnt. Neue Unternehmen und Charaktere steigen zu Beginn der nächsten Runde ein.",
+    "intro": "Wöchentliche Rennen zwischen Spielern. Am Ende jeder Woche teilen sich die ersten drei jedes Wettbewerbs den Geldpreis im Verhältnis 50 / 30 / 20 (bei der Regierungszustimmung erhält der Sieger alles), und eine neue Runde beginnt. Neue Unternehmen und Charaktere steigen zu Beginn der nächsten Runde ein. Nur Einträge mit positivem Wert platzieren sich; ein Preis ohne positiven Eintrag wird nicht ausgezahlt. Gleiche Werte werden nach einer festen internen Eintragsreihenfolge gereiht, nicht danach, wer zuerst dort war. Ein Charakter kann mehrere Wettbewerbe derselben Runde gewinnen; jeder Preis wird einzeln ausgezahlt.",
     "referralIntro": "Lade Spieler mit deinem Link ein. Eine Empfehlung zählt, sobald die eingeladene Person einen Charakter erstellt.",
     "endsAt": "Runde {round} endet",
     "entrants": "{count, plural, =0 {Noch keine Teilnehmer} one {# Teilnahme} other {# Teilnahmen}}",
@@ -29,7 +29,7 @@
       },
       "approval_gain": {
         "title": "Regierungszustimmung",
-        "rules": "Die meisten Zustimmungspunkte für eine von einem Spieler geführte Regierung, gemessen ab dem Amtsantritt ihres aktuellen Regierungschefs."
+        "rules": "Die meisten Zustimmungspunkte für eine von einem Spieler geführte Regierung, gemessen ab dem Amtsantritt ihres aktuellen Regierungschefs, nicht ab Rundenbeginn, und daher ohne wöchentlichen Neustart. Wer mit hoher Zustimmung ins Amt kam und seither gefallen ist, zeigt einen negativen Wert."
       },
       "referrals_weekly": {
         "title": "Empfehlungen der Woche",
@@ -53,7 +53,7 @@
       },
       "rookie_influence": {
         "title": "Neuling der Woche",
-        "rules": "Der größte Zuwachs an nationalem Einfluss bei einem Charakter, der in den zwei Wochen vor Rundenbeginn erstellt wurde."
+        "rules": "Der größte Zuwachs an nationalem Einfluss bei einem Spieler, dessen Konto in den zwei Wochen vor Rundenbeginn erstellt wurde. Durch einen Welt-Reset neu angelegte Charaktere zählen nicht als neu."
       },
       "backbench_influence": {
         "title": "Hinterbänkler der Woche",
@@ -116,6 +116,7 @@
     "countdown": "Runde {round} endet in",
     "timeLeft": "{days} T {hours} Std {minutes} Min",
     "settling": "Wird nach dem nächsten Zug abgerechnet",
+    "settlesTurn": "Abrechnung in Zug {turn}",
     "tiedLead": "gleichauf mit der Spitze",
     "split": {
       "podium": "Top 3 teilen 50 / 30 / 20",

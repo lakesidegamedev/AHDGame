@@ -8,6 +8,7 @@
  */
 
 import { buildCampaignNavItems, isCampaignNavActive } from "./campaignNav";
+import { unreadBadgeLabel } from "@/lib/inbox/badgeLabel";
 import React from "react";
 import { useTranslations } from "next-intl";
 import Link from "@/components/navbar/NavigationLink";
@@ -158,7 +159,7 @@ export function ExperimentalMobileMenu({
       { href: "/profile", label: t("common.profile"), icon: "Profile" },
       {
         href: "/notifications",
-        label: `${t("common.notifications")}${unreadCount ? ` (${unreadCount > 9 ? "9+" : unreadCount})` : ""}`,
+        label: `${t("common.notifications")}${unreadCount ? ` (${unreadBadgeLabel(unreadCount)})` : ""}`,
         icon: "News",
       },
       { href: "/settings", label: t("common.settings"), icon: "Staff" },
@@ -318,7 +319,7 @@ export function ExperimentalMobileMenu({
                     className="text-xs text-muted transition-colors hover:text-foreground"
                   >
                     {t("common.notifications")}
-                    {unreadCount > 0 ? ` (${unreadCount > 9 ? "9+" : unreadCount})` : ""}
+                    {unreadCount > 0 ? ` (${unreadBadgeLabel(unreadCount)})` : ""}
                   </Link>
                   <Link
                     href="/settings"

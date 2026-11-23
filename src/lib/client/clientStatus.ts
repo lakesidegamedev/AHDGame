@@ -378,6 +378,7 @@ export async function handleClientStatus(request: Request) {
         request,
         {
           id: character._id.toString(),
+          characterId: character._id.toString(),
           name: character.name,
           avatarUrl: character.avatarUrl,
           actions: character.actions,
@@ -882,6 +883,7 @@ export async function handleClientStatus(request: Request) {
 
     const statusPayload = {
       id: character._id.toString(),
+      characterId: character._id.toString(),
       name: character.name,
       avatarUrl: character.avatarUrl,
       actions: character.actions,

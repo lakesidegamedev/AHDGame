@@ -19,6 +19,7 @@ export interface ProfileSwitcherCharacter {
   id: string;
   name: string;
   countryId: string;
+  detail?: string;
   isActive: boolean;
 }
 
@@ -104,7 +105,14 @@ export function ProfileSwitcher({
     const inner = (
       <>
         <CountryFlag country={char.countryId} size="sm" />
-        <span className="min-w-0 flex-1 truncate">{char.name}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{char.name}</span>
+          {char.detail && (
+            <span className="block truncate text-[11px] font-normal text-muted/70">
+              {char.detail}
+            </span>
+          )}
+        </span>
         {isActiveChar ? (
           <ActivePill label={activeLabel} />
         ) : (

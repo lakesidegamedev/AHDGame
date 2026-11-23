@@ -766,6 +766,7 @@ export default async function ContestsPage({
                   startedAt={round.startedAt}
                   endsAt={round.endsAt}
                   round={round.roundNumber}
+                  endTurn={round.endTurn}
                   serverNow={data.loadedAt}
                 />
               </div>

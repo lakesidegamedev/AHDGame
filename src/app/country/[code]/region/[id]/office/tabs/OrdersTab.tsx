@@ -210,6 +210,11 @@ export function OrdersTab(props: Props) {
       {props.orderHistory.length > 0 && (
         <section className="pt-2">
           <h3 className="text-sm text-muted mb-2">Recent orders</h3>
+          <p className="text-xs text-muted mb-2">
+            When a party holds this office through a non-player official, its State or National
+            Party Chair or Vice-Chair signs orders in the office&apos;s name. The name shown is the
+            signer, not the office-holder.
+          </p>
           <ul className="space-y-1.5">
             {props.orderHistory.map((o) => (
               <li

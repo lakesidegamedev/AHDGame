@@ -12,7 +12,7 @@ const BASE = {
 describe("buildWelcomeMailBody", () => {
   it("labels anchor amounts with ₳ when no home currency is given (legacy)", () => {
     const body = buildWelcomeMailBody(BASE);
-
+    expect(body).toContain("opening figures");
     expect(body).toContain("₳250,000 in campaign funds");
     expect(body).toContain("pays out ₳50,000");
     expect(body).toContain("every hour");

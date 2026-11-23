@@ -205,7 +205,15 @@ export function CentralBankMoneySupplyTab({
             <Row label="Lending reserves" value={fmt(data.bankReserves)} />
             <Row label="Net explicit money creation" value={fmt(data.netMoneyCreatedLifetime)} />
           </div>
-          <p className="mt-4 text-body-sm text-muted">{t("money.transmission")}</p>
+          <p className="mt-4 text-body-sm text-muted">
+            Lending reserves are what commercial banks hold to back their loans; the FX tab&apos;s
+            reserve balance is the central bank&apos;s own holding, a different figure. Net explicit
+            money creation is money this bank has created minus money it has retired through its own
+            operations: QE and QT, treasury advances, liquidity injections, bond purchases and
+            savings interest. It does not include money the wider economy creates through lending,
+            so it can be tiny beside the monetary stock.
+          </p>
+          <p className="mt-2 text-body-sm text-muted">{t("money.transmission")}</p>
           <p className="mt-2 text-body-sm text-muted">
             {data.lastOperationTurn == null
               ? t("money.noPreviousOperation")

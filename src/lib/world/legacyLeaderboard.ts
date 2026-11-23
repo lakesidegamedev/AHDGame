@@ -517,6 +517,7 @@ export async function getLegacyLeaderboardData(
       displayCharacterId: displayLife.characterId,
       scoringCharacterId: bestLife.characterId,
       scoringCharacterName: bestLife.name,
+      scoringIsActive: bestLife.isActive,
       enactedBills: record.enactedBills,
       contestWins: record.contestWins,
       contestPodiums: record.contestPodiums,
@@ -538,20 +539,7 @@ export async function getLegacyLeaderboardData(
     });
   }
 
-  if (rankBy === "netWorth") {
-    ranked.sort((a, b) => b.netWorth - a.netWorth || a.userId.localeCompare(b.userId));
-  } else {
-    ranked.sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.achievementCount - a.achievementCount ||
-        b.nationalInfluence - a.nationalInfluence ||
-        a.userId.localeCompare(b.userId)
-    );
-  }
-  ranked.forEach((entry, i) => {
-    entry.rank = i + 1;
-  });
+  rankLegacyEntries(ranked, rankBy);
 
   let self: LegacyLeaderboardData["self"] = null;
   if (authUser) {
@@ -584,4 +572,27 @@ export async function getLegacyLeaderboardData(
   }
 
   return { entries: ranked, total: ranked.length, self };
+}
+
+/**
+ * One ordering and one tie rule for both boards: sort by the board's own
+ * metric, break ties on achievements, national influence, then account id, and
+ * give equal metric values the same rank (1, 2, 2, 4).
+ */
+export function rankLegacyEntries(
+  entries: LegacyLeaderboardEntry[],
+  rankBy: "legacy" | "netWorth"
+): void {
+  const metric = (e: LegacyLeaderboardEntry) => (rankBy === "netWorth" ? e.netWorth : e.score);
+  entries.sort(
+    (a, b) =>
+      metric(b) - metric(a) ||
+      b.achievementCount - a.achievementCount ||
+      b.nationalInfluence - a.nationalInfluence ||
+      a.userId.localeCompare(b.userId)
+  );
+  entries.forEach((entry, i) => {
+    const prior = entries[i - 1];
+    entry.rank = prior && metric(prior) === metric(entry) ? prior.rank : i + 1;
+  });
 }

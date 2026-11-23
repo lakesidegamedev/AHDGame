@@ -1,3 +1,4 @@
+import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
@@ -27,6 +28,8 @@ import { legislatureUrl } from "@/lib/urls";
 import type { SearchResult } from "@/lib/search/types";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { dedupeByLabel } from "@/lib/search/dedupeResults";
+import { nearMatches } from "@/lib/search/nearMatch";
+import { annotatePartialWordMatch } from "@/lib/search/partialWordMatch";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -852,7 +855,50 @@ export async function runUniversalSearch({
     if (idx !== -1) return 2 + idx / 100;
     return 5;
   };
-  const rankedResults = [...results].sort((a, b) => scoreResult(a) - scoreResult(b));
+  if (!results.some((r) => r.type === "politician")) {
+    const nameQuery: Record<string, unknown> = {};
+    if (enabledCountries) nameQuery.countryId = { $in: enabledCountries };
+    const nameCandidates = await charactersCollection(db)
+      .find(nameQuery)
+      .project<{
+        _id: ObjectId;
+        userId: ObjectId;
+        name: string;
+        party: string;
+        homeState: string;
+        sequentialId?: number;
+      }>({
+        name: 1,
+        userId: 1,
+        party: 1,
+        homeState: 1,
+        sequentialId: 1,
+      })
+      .limit(5000)
+      .toArray();
+    const close = nearMatches(query, nameCandidates, 5);
+    if (close.length > 0) {
+      const closeUsers = await usersCollection(db)
+        .find({ _id: { $in: close.map((c) => c.userId) }, isBanned: true })
+        .project<User>({ _id: 1 })
+        .toArray();
+      const closeBanned = new Set(closeUsers.map((u) => u._id.toString()));
+      for (const character of close) {
+        if (closeBanned.has(character.userId.toString())) continue;
+        results.push({
+          type: "politician",
+          id: character._id.toString(),
+          title: character.name,
+          subtitle: `Did you mean this? · ${character.party} · ${character.homeState}`,
+          href: `/character/${character.sequentialId ?? character._id.toString()}`,
+        });
+      }
+    }
+  }
+
+  const rankedResults = [...results]
+    .sort((a, b) => scoreResult(a) - scoreResult(b))
+    .map((r) => annotatePartialWordMatch(r, query));
   const limitedResults = rankedResults.slice(0, isResultsPage ? 50 : 10);
 
   return limitedResults;

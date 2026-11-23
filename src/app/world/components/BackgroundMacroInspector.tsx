@@ -43,7 +43,7 @@ export default function BackgroundMacroInspector({
       onTouchEnd={(event) => event.stopPropagation()}
     >
       <label className="block text-sm font-medium">
-        Inspect a background country
+        Inspect a background country ({countries.length} with aggregate data)
         <select
           className="mt-2 w-full rounded-lg border border-card-border bg-background p-2 text-sm"
           value={selected?.entityId ?? ""}

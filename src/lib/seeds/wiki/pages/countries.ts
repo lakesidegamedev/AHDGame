@@ -17,7 +17,7 @@ export const countriesPages: readonly WikiSeedPage[] = [
     slug: "us-overview",
     title: "United States",
     description:
-      "Federal presidential republic with 50 states, a bicameral Congress, and a directly elected President.",
+      "Federal presidential republic with 50 states and the District of Columbia, a bicameral Congress, and a directly elected President.",
     content: usOverviewContent,
     category: "countries",
     extraTags: ["us"],

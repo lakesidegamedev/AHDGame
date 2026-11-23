@@ -175,3 +175,9 @@ export function toggleCompared(
   if (selected.length >= limit) return [...selected];
   return [...selected, countryId];
 }
+
+/** Words for a metric id that has no definition: "realizedMigrationRate" becomes "Realized migration rate". */
+export function humanizeMetricId(id: string): string {
+  const spaced = id.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}

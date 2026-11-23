@@ -153,8 +153,8 @@ export async function POST(request: Request) {
 
       const reporterLabel = user?.username ? `@${user.username}` : "Anonymous";
       const typeLabel = type === "bug" ? "bug report" : "suggestion";
-      const notifTitle = `New ${typeLabel} #${issueNumber}`;
-      const notifMessage = `${reporterLabel} submitted: "${doc.title.slice(0, 100)}"`;
+      const notifTitle = `Admin notice: new ${typeLabel} #${issueNumber}`;
+      const notifMessage = `${reporterLabel} submitted: "${doc.title.slice(0, 100)}". Sent to admins only; bug reports have no public list.`;
 
       await Promise.allSettled(
         admins.map((admin) =>

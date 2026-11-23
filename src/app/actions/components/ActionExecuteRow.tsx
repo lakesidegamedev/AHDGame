@@ -30,6 +30,23 @@ export interface ActionExecuteRowProps {
   forexEnabled?: boolean;
 }
 
+/**
+ * Later runs in a batch can cost more than the first because each run moves the
+ * stat the price is tiered on. Says so, with the first-run price, whenever the
+ * batch total is above count times that price.
+ */
+export function batchEscalationNote(
+  count: number,
+  singleRunNetFunds: number,
+  batchNetFunds: number,
+  format: (amount: number) => string
+): string | null {
+  const single = -singleRunNetFunds;
+  const total = -batchNetFunds;
+  if (single <= 0 || total <= single * count * 1.001) return null;
+  return `Price rises as your stats move, so later runs cost more than the first run (${format(single)} each if nothing changed, ${format(single * count)} for ${count}).`;
+}
+
 export default function ActionExecuteRow({
   actionType,
   actionLabel,
@@ -88,6 +105,30 @@ export default function ActionExecuteRow({
       state,
       actionType as ActionType,
       10,
+      forexEnabled,
+      campaignRate,
+      { preset, priceLevel: campaignPriceLevel, nationalGdpPerCapita: nationalBasis }
+    );
+  }, [
+    batchable,
+    blocked,
+    character,
+    state,
+    actionType,
+    forexEnabled,
+    campaignRate,
+    preset,
+    campaignPriceLevel,
+    nationalBasis,
+  ]);
+
+  const sim1 = useMemo(() => {
+    if (blocked || !batchable) return null;
+    return simulateActionBatch(
+      character,
+      state,
+      actionType as ActionType,
+      1,
       forexEnabled,
       campaignRate,
       { preset, priceLevel: campaignPriceLevel, nationalGdpPerCapita: nationalBasis }
@@ -195,6 +236,17 @@ export default function ActionExecuteRow({
 
   const batchHint = afford5?.title ?? afford10?.title;
 
+  const campaignCurrencyCode = getCampaignCurrency(character.countryId ?? "US", preset);
+  const escalation =
+    confirmCount && pendingConfirm?.ok && sim1?.ok
+      ? batchEscalationNote(
+          confirmCount,
+          sim1.netFundsChange * campaignRate,
+          pendingConfirm.netFundsChange * campaignRate,
+          (amount) => formatCurrencyFaceAmount(amount, campaignCurrencyCode)
+        )
+      : null;
+
   return (
     <>
       <div className={compact ? "w-full" : undefined}>
@@ -281,6 +333,7 @@ export default function ActionExecuteRow({
                 </span>
                 .
               </p>
+              {escalation && <p className="mt-2 text-body-sm text-muted">{escalation}</p>}
               <div className="mt-5 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"

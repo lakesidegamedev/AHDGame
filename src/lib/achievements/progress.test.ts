@@ -65,3 +65,26 @@ describe("getAchievementProgressMap", () => {
     vi.restoreAllMocks();
   });
 });
+
+describe("funds progress", () => {
+  it("reads the live campaign balance, in anchor units", async () => {
+    const { db } = fakeDb();
+    const result = await getAchievementProgress(
+      db,
+      {
+        ...character,
+        funds: 344_620,
+        currencyBalances: { campaign: 600_000, personal: {} },
+      },
+      ach("funds_threshold", { amount: 1_000_000 })
+    );
+    expect(result).toEqual({ current: 600_000, target: 1_000_000 });
+    const converted = await getAchievementProgressMap(
+      db,
+      { ...character, currencyBalances: { campaign: 1_000, personal: {} } },
+      [ach("funds_threshold", { amount: 10 })],
+      { campaignRate: 100 }
+    );
+    expect([...converted.values()][0]).toEqual({ current: 10, target: 10 });
+  });
+});

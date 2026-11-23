@@ -90,7 +90,8 @@ export function DefenseFundingNote({
             {money(funding.upkeepPerTurn)}
           </div>
           <p className="mt-1 text-[11px] leading-snug text-muted">
-            What {funding.unitCount} standing units cost, whether the line covers it or not.
+            What {funding.unitCount} standing units (every land, sea, air and space unit, not just
+            naval and air formations) cost, whether the line covers it or not.
           </p>
         </div>
         <div>

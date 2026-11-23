@@ -48,8 +48,8 @@ function FeedbackBoardInner() {
 
   const [items, setItems] = useState<ListItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-  const [totalAll, setTotalAll] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
+  const [totalAll, setTotalAll] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("recent");
@@ -112,6 +112,12 @@ function FeedbackBoardInner() {
   useEffect(() => {
     void fetchList();
   }, [fetchList]);
+
+  // Counts do not depend on the list, so load them straight away instead of
+  // showing zeros until the first list response lands.
+  useEffect(() => {
+    void fetchTabCounts();
+  }, [fetchTabCounts]);
 
   // Check admin status on mount
   useEffect(() => {
@@ -256,7 +262,8 @@ function FeedbackBoardInner() {
         {/* Status tabs */}
         <div className="flex flex-wrap gap-1.5 border-b border-card-border pb-3">
           {STATUS_TABS.map((t) => {
-            const count = t.key === "" ? totalAll : (statusCounts[t.key] ?? 0);
+            const count: number | null =
+              t.key === "" ? totalAll : statusCounts === null ? null : (statusCounts[t.key] ?? 0);
             const active = statusTab === t.key;
             return (
               <button
@@ -275,7 +282,11 @@ function FeedbackBoardInner() {
                 {t.label}
                 {typeof count === "number" ? (
                   <span className="ml-1.5 tabular-nums text-xs opacity-80">({count})</span>
-                ) : null}
+                ) : (
+                  <span className="ml-1.5 text-xs opacity-60" aria-label="Loading count">
+                    (...)
+                  </span>
+                )}
               </button>
             );
           })}
@@ -420,6 +431,11 @@ function FeedbackBoardInner() {
             </div>
           )}
         </section>
+
+        <p className="text-xs text-muted">
+          Suggestion numbers are never reused. A gap in the numbering means that suggestion was
+          merged into another one or removed by a moderator.
+        </p>
 
         {selectedIds.size > 0 && isAdmin && (
           <SelectionBar

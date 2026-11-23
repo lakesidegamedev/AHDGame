@@ -24,6 +24,8 @@ import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { campaignAnchorToLocal } from "@/lib/campaigns/rules/currency";
+import { adPurchaseCost } from "@/lib/campaignTargeting/rules";
 import { hasGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
 import { getActionImage } from "@/lib/images/actionImages";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -335,6 +337,15 @@ export function useActionsController({
     return map;
   }, [era, countryId]);
 
+  const forexOn = !!character?.currencyBalances;
+  const adPriceLabel = useMemo(() => {
+    const anchor = adPurchaseCost(1) * (worldFlags.campaignPriceLevel ?? 1);
+    const local = forexOn
+      ? campaignAnchorToLocal(anchor, character?.countryId ?? "US", campaignRates)
+      : anchor;
+    return character ? formatCurrencyFaceAmount(local, getHomeCurrency(character)) : "";
+  }, [forexOn, character, campaignRates, worldFlags.campaignPriceLevel]);
+
   const cards = useMemo<ActionCard[]>(
     () =>
       CARDS.map((card) =>
@@ -344,13 +355,13 @@ export function useActionsController({
               label: adText("title"),
               tagline: adText("actionTagline"),
               flavor: adText("actionFlavor"),
-              fundLabel: () => adText("actionCost"),
+              fundLabel: () => adText("actionCost", { price: adPriceLabel }),
               effect: adText("actionEffect"),
               imageAlt: adText("actionImageAlt"),
             }
           : card
       ),
-    [adText]
+    [adText, adPriceLabel]
   );
 
   const influence = character?.politicalInfluence ?? 0;

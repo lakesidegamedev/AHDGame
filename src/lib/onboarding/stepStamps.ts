@@ -34,7 +34,7 @@ export const FOUNDING_WINDOW_TURNS = 48;
 
 export type StampableCharacter = OnboardingCharacter & Pick<Character, "createdAt" | "createdTurn">;
 
-function isWithinOnboardingWindow(
+export function isWithinOnboardingWindow(
   character: Pick<Character, "createdAt">,
   now: number = Date.now()
 ): boolean {
