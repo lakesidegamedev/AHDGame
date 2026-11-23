@@ -57,6 +57,8 @@ export interface SupremeCourtSeat extends IterationStampFields {
   seatedAtTurn: number | null;
   /** First turn the vacancy was seen; cleared when the seat empties and stamped by the nomination phase. */
   vacantSinceTurn?: number | null;
+  /** Player-President vacancy reminders already sent for this vacancy (1 opened, 2 halfway). */
+  vacancyReminderStage?: number | null;
 
   /**
    * False until the Original Roster occupant leaves and a live replacement is

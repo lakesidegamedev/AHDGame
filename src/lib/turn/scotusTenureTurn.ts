@@ -54,6 +54,7 @@ function vacatedOccupantFields(now: Date) {
     seatedAt: null,
     seatedAtTurn: null,
     vacantSinceTurn: null,
+    vacancyReminderStage: null,
     divergentHazardStartsTurn: null,
     updatedAt: now,
   };

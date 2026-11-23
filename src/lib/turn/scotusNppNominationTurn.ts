@@ -17,10 +17,14 @@ import {
   chooseNppNominatingParty,
   isRenominationCoolingDown,
   playerNominationGraceElapsed,
+  SCOTUS_PLAYER_NOMINATION_GRACE_TURNS,
+  vacancyReminderDue,
   type ScotusPresidencySnapshot,
 } from "@/lib/scotus/rules/nppNomination";
 import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { createNotifications, type NotificationInput } from "@/lib/notifications";
 
 export interface ScotusNppNominationResult {
   nominated: number;
@@ -64,6 +68,8 @@ export async function processScotusNppNominations(
     );
     for (const seat of unstamped) seat.vacantSinceTurn = currentTurn;
   }
+  if (presidency.kind === "player" && president?.characterId)
+    await remindPlayerPresident(database, president.characterId, vacantSeats, currentTurn);
   const nominatableSeats =
     presidency.kind === "player"
       ? vacantSeats.filter((seat) =>
@@ -120,4 +126,54 @@ export async function processScotusNppNominations(
     if (result.ok) return { nominated: 1 };
   }
   return { nominated: 0 };
+}
+
+/** Tells a player President about an open seat, and again halfway to the automatic nominee. */
+async function remindPlayerPresident(
+  database: Db,
+  characterId: ObjectId | string,
+  seats: SupremeCourtSeat[],
+  currentTurn: number
+): Promise<void> {
+  const pending = await scotusNominationsCollection(database)
+    .find(
+      {
+        countryId: "US",
+        seatNumber: { $in: seats.map((seat) => seat.seatNumber) },
+        votingEndsOnTurn: { $gte: currentTurn },
+      },
+      { projection: { seatNumber: 1 } }
+    )
+    .toArray();
+  const underVote = new Set(pending.map((nom) => nom.seatNumber));
+  const due = seats.flatMap((seat) => {
+    if (underVote.has(seat.seatNumber)) return [];
+    const stage = vacancyReminderDue(seat.vacantSinceTurn, seat.vacancyReminderStage, currentTurn);
+    return stage ? [{ seat, stage }] : [];
+  });
+  if (due.length === 0) return;
+  const character = await charactersCollection(database).findOne(
+    { _id: new ObjectId(String(characterId)) },
+    { projection: { userId: 1 } }
+  );
+  const notifications: NotificationInput[] = [];
+  for (const { seat, stage } of due) {
+    const deadline = (seat.vacantSinceTurn ?? currentTurn) + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS;
+    if (character?.userId)
+      notifications.push({
+        userId: character.userId as ObjectId,
+        type: "system",
+        title:
+          stage === 1
+            ? `Supreme Court seat ${seat.seatNumber} is vacant`
+            : `Supreme Court seat ${seat.seatNumber} still needs a nominee`,
+        message: `Nominate a justice from the White House page by turn ${deadline}. If the seat is still empty then, the Administration files a nominee from your party and the Senate votes as usual.`,
+        metadata: { recipientCharacterId: String(characterId), seatNumber: seat.seatNumber },
+      });
+    await supremeCourtSeatsCollection(database).updateOne(
+      { _id: seat._id },
+      { $set: { vacancyReminderStage: stage } }
+    );
+  }
+  await createNotifications(notifications);
 }
