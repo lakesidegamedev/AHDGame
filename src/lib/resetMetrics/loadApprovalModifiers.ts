@@ -6,7 +6,6 @@
 import {
   performanceApproval,
   fiscalApprovalModifiers,
-  describePerformanceComponents,
   type PerformanceInput,
 } from "@/lib/approval/rules/performance";
 import { primaryMetrics } from "./catalog";
@@ -188,15 +187,8 @@ export async function loadResetApprovalModifiers(
     ),
     ...fiscalApprovalModifiers(national["10"]?.value ?? 0, national["09"]?.value ?? 0),
   ];
-  const nationalPerformance = score() - 50;
-  if (nationalPerformance !== 0)
-    nationalModifiers.push({
-      id: "national_performance",
-      label: "National performance",
-      effect: nationalPerformance,
-      marginEffect: 0,
-      detail: describePerformanceComponents(performanceInputs()),
-    });
+  // National outcomes already reach approval once, through each region's
+  // performance base. A separate national performance term counted them twice.
   const nationalResponse = cabinetApprovalResponse(
     cabinetEffectsForRegion(
       cabinetEffects.filter((effect) => effect.scope === "Nat"),

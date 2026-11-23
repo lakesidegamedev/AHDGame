@@ -67,8 +67,6 @@ const FISCAL_TITLES: Record<string, string> = {
 };
 
 const ID_TITLES: Record<string, string> = {
-  national_performance:
-    "How national outcome metrics have moved from their opening values, applied to the whole country.",
   national_performance_smoothing:
     "Approval moves toward its target a little each turn, so part of the gap between the target and the shown rating has not been applied yet.",
   approval_smoothing:

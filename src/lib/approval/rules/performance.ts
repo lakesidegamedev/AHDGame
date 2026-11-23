@@ -22,23 +22,6 @@ export function performanceApproval(metrics: readonly PerformanceInput[]): numbe
   return Math.round((50 + parts.reduce((t, p) => t + p.points, 0)) * 10) / 10;
 }
 
-/** Plain-language list of the metrics pulling a performance score furthest from 50. */
-export function describePerformanceComponents(metrics: readonly PerformanceInput[], max = 3) {
-  const parts = performanceComponents(metrics)
-    .filter((p) => Math.abs(p.points) >= 0.05)
-    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points));
-  const fmt = (p: { label: string; points: number }) =>
-    `${p.label} ${p.points > 0 ? "+" : ""}${p.points.toFixed(1)}`;
-  const down = parts.filter((p) => p.points < 0).slice(0, max);
-  const up = parts.filter((p) => p.points > 0).slice(0, max);
-  const lines = [
-    "Average of how far each national outcome metric has moved from its opening value (better is up, worse is down), scaled to approval points.",
-  ];
-  if (down.length) lines.push(`Biggest drags: ${down.map(fmt).join(", ")}.`);
-  if (up.length) lines.push(`Biggest gains: ${up.map(fmt).join(", ")}.`);
-  return lines.join(" ");
-}
-
 export function fiscalApprovalModifiers(debtPct: number, balancePct: number, regional = false) {
   const debt = Number.isFinite(debtPct)
     ? regional
