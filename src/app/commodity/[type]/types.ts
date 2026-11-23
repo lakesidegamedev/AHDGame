@@ -132,6 +132,8 @@ export interface CommodityDetail {
     stockUnits: number | null;
     coverTurns: number | null;
   };
+  /** Stored price drivers in plain terms; null when the price row has no attribution. */
+  scarcityBreakdown?: import("@/lib/market/priceBreakdownRules").ScarcityBreakdown | null;
   turn: number;
   history: HistoryPoint[];
   suppliers: SectorFlow[];

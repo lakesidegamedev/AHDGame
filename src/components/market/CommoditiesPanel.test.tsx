@@ -82,3 +82,25 @@ it("shows a rising last-turn price alongside a negative annualized change", () =
     cells[columns.indexOf(screen.getByRole("columnheader", { name: "Yearly rate" }))]?.textContent
   ).toBe("-31.3%");
 });
+
+describe("premiumTitle", () => {
+  it("names the stored premium and says it eases when supply exceeds demand", async () => {
+    const { premiumTitle } = await import("./CommoditiesPanel");
+    const title = premiumTitle({
+      globalSupply: 100,
+      globalDemand: 87.5,
+      priceAttribution: {
+        appliedPrice: 3.59,
+        realBasePrice: 1,
+        nominalInflation: 0.2,
+        scarcityMemory: 2.052,
+        producerInputCostPassThrough: 0,
+        marketBalance: 0,
+        adjustmentLag: 0,
+        explicitOverride: 0,
+      },
+    } as never);
+    expect(title).toContain("2.71x");
+    expect(title).toContain("eases by up to 6% a turn");
+  });
+});

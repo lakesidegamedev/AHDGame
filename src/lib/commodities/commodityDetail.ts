@@ -77,6 +77,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { buildScarcityBreakdown } from "@/lib/market/priceBreakdownRules";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
@@ -186,6 +187,7 @@ export async function getCommodityDetailData(
       oldestHistory,
       freightStateSupplyDocs,
       latestSourcingNetwork,
+      priceConfigDoc,
     ] = await Promise.all([
       commodityPricesCollection(db).findOne({ commodity }),
       commodityPriceHistoryCollection(db)
@@ -219,6 +221,10 @@ export async function getCommodityDetailData(
             .limit(1)
             .toArray()
         : Promise.resolve([] as SourcingNetworkDoc[]),
+      gameConfigCollection<{ _id: string; producerPriceMaxMove?: number }>(db).findOne(
+        { _id: "default" },
+        { projection: { producerPriceMaxMove: 1 } }
+      ),
     ]);
     // Country views read the funded country book of the price row's turn when
     // there is one: stored nationalDemand misses buyers with no state (public,
@@ -931,6 +937,17 @@ export async function getCommodityDetailData(
       globalSupply: currentPrice?.globalSupply ?? 0,
       globalDemand: currentPrice?.globalDemand ?? 0,
       priceAttribution: currentPrice?.priceAttribution ?? null,
+      scarcityBreakdown: buildScarcityBreakdown({
+        scarcityMult: currentPrice?.scarcityMult,
+        previousScarcityMult: history.find(
+          (h: CommodityPriceHistory) =>
+            h.turn < (currentPrice?.turn ?? 0) && typeof h.scarcityMult === "number"
+        )?.scarcityMult,
+        supply: currentPrice?.globalSupply ?? 0,
+        demand: currentPrice?.globalDemand ?? 0,
+        attribution: currentPrice?.priceAttribution ?? null,
+        configuredMaxMove: priceConfigDoc?.producerPriceMaxMove,
+      }),
       priceChange:
         Math.round((((currentPrice?.globalPrice ?? basePrice) - basePrice) / basePrice) * 10000) /
         100,
