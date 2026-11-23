@@ -7,6 +7,7 @@ import {
   reconcileLastTurn,
   type CashFlowInput,
   type LastTurnReconciliation,
+  retainedWithBondFlows,
 } from "@/lib/corporations/rules/lastTurnReconciliation";
 
 interface HistoryProjection {
@@ -24,6 +25,8 @@ interface HistoryProjection {
   createdAt?: Date;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
+  dividendReceivedTax?: number;
+  sectorFxSpread?: number;
 }
 
 interface TxProjection {
@@ -32,6 +35,8 @@ interface TxProjection {
   currencyCode: string;
   anchorAmount?: number;
 }
+
+const LEDGER_ROW_LIMIT = 500;
 
 const HISTORY_PROJECTION = {
   turn: 1,
@@ -48,6 +53,8 @@ const HISTORY_PROJECTION = {
   createdAt: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
+  dividendReceivedTax: 1,
+  sectorFxSpread: 1,
 } as const;
 
 /**
@@ -140,7 +147,10 @@ export async function loadLastTurnReconciliation(
         subjectType: "corporation",
         ...cashWalkWindow(latest, previous),
       },
-      { projection: { type: 1, amount: 1, currencyCode: 1, anchorAmount: 1 }, limit: 500 }
+      {
+        projection: { type: 1, amount: 1, currencyCode: 1, anchorAmount: 1 },
+        limit: LEDGER_ROW_LIMIT,
+      }
     )
     .toArray();
 
@@ -156,9 +166,11 @@ export async function loadLastTurnReconciliation(
     corporation.liquidCurrencyCode === latest.currencyCode;
 
   const flows: CashFlowInput[] = [];
+  let unconverted = 0;
   for (const tx of txRows) {
     const amount = toReportingAmount(tx, latest.currencyCode, latest.fxRateAtWrite);
     if (amount != null) flows.push({ type: tx.type, amount });
+    else unconverted++;
   }
 
   return reconcileLastTurn(
@@ -166,11 +178,17 @@ export async function loadLastTurnReconciliation(
       turn: latest.turn,
       revenue: latest.revenue,
       totalCosts: latest.totalCosts,
-      retained: latest.income,
+      retained: retainedWithBondFlows(
+        latest.income,
+        anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
+        anchorToLocal(latest.perTurnBondDragOnNetIncome, latest.fxRateAtWrite)
+      ),
       dividendPaid: Math.max(0, latest.dividendPaidPerTurn ?? 0),
       tax: Math.max(0, latest.corporateTaxPaid ?? 0),
       bondCouponIncome: anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
       bondInterestPaid: anchorToLocal(latest.perTurnBondDragOnNetIncome, latest.fxRateAtWrite),
+      dividendReceivedTax: latest.dividendReceivedTax ?? null,
+      sectorFxSpread: latest.sectorFxSpread ?? null,
       cashAfter: latest.liquidCapital,
       cashNow:
         typeof corporation.liquidCapital === "number" && sameLiveCurrency
@@ -186,6 +204,7 @@ export async function loadLastTurnReconciliation(
       previousCostBreakdown: previous && sameCurrency ? (previous.costBreakdown ?? null) : null,
       previousHeadcount: previous && sameCurrency ? (previous.headcount ?? null) : null,
     },
-    flows
+    flows,
+    { unconverted, truncated: txRows.length >= LEDGER_ROW_LIMIT }
   );
 }

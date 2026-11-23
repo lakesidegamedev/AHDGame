@@ -18,6 +18,7 @@ import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { formatMarketingStrength } from "@/lib/utils/formatters";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
+import { QUALITY_PILLAR_WEIGHTS } from "@/lib/market/brandQuality";
 import { CorpEconomicModelBadge } from "@/components/economy/CorpEconomicModelBadge";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -415,6 +416,29 @@ const QUALITY_PILLAR_LABELS = {
   wages: "wages",
   operations: "operations strength",
 } as const;
+
+/** The four pillar scores with their weights, and the mover when two rows recorded them. */
+function qualityPillarsHint(view: CorporationDetail["averageQualityPillars"]) {
+  if (!view) return null;
+  const { pillars, mover, previousTurn } = view;
+  const parts = (Object.keys(QUALITY_PILLAR_WEIGHTS) as (keyof typeof QUALITY_PILLAR_WEIGHTS)[])
+    .map(
+      (key) =>
+        `${QUALITY_PILLAR_LABELS[key]} ${Math.round(pillars[key] * 10) / 10} (weight ${QUALITY_PILLAR_WEIGHTS[key]})`
+    )
+    .join(", ");
+  return (
+    <span
+      className="block"
+      title="Quality blends four pillar scores. A weak pillar pulls the result down more than a strong one lifts it."
+    >
+      {parts}
+      {mover && previousTurn != null
+        ? `. Biggest move since turn ${previousTurn}: ${QUALITY_PILLAR_LABELS[mover.key]} (${mover.delta >= 0 ? "+" : ""}${mover.delta})`
+        : ""}
+    </span>
+  );
+}
 
 /** Where the last visible quality move came from, and what quality is built from. */
 function qualityChangeHint(change: CorporationDetail["averageQualityChange"]) {
@@ -825,10 +849,23 @@ export default function OverviewTab({
                 )}
                 {corporation.averageQuality != null && (
                   <KVRow
-                    label="Average quality"
+                    label={
+                      <Link
+                        href="/wiki/output-quality"
+                        className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                        title="How quality is built from research, inputs, wages and operations"
+                      >
+                        Average quality
+                      </Link>
+                    }
                     mark={<Meter pct={corporation.averageQuality} className="w-10" />}
                     value={`${Math.round(corporation.averageQuality)} / 100`}
-                    hint={qualityChangeHint(corporation.averageQualityChange)}
+                    hint={
+                      <>
+                        {qualityChangeHint(corporation.averageQualityChange)}
+                        {qualityPillarsHint(corporation.averageQualityPillars)}
+                      </>
+                    }
                   />
                 )}
                 {physical && (

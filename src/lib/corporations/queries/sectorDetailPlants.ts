@@ -426,13 +426,16 @@ export function buildSectorPlantsSection(args: {
   const internalSupplyChargeAnchor = nonNeg(money.internalSupplyChargeAnchor ?? 0);
   const fullMaintenance =
     costBasis > 0 ? (money.maintenanceNetAnchor - internalSupplyChargeAnchor) / costBasis : 0;
+  const funded = money.enginePnl ? null : (money.fundedParts ?? null);
   const upkeepAnchor = money.enginePnl
     ? nonNeg(money.enginePnl.upkeep)
-    : nonNeg(
-        mothballed
-          ? money.maintenanceNetAnchor
-          : fullMaintenance * IDLE_UPKEEP_FRACTION * idleShareForBill
-      );
+    : funded
+      ? funded.idleUpkeepAnchor
+      : nonNeg(
+          mothballed
+            ? money.maintenanceNetAnchor
+            : fullMaintenance * IDLE_UPKEEP_FRACTION * idleShareForBill
+        );
   const complianceAnchor = money.enginePnl
     ? nonNeg(money.enginePnl.compliance)
     : money.fundedComplianceAnchor != null
@@ -494,20 +497,43 @@ export function buildSectorPlantsSection(args: {
   // The named parts of `otherOperatingAnchor`, so no credit hides inside a cost
   // line. Only the turn's own lines can be split; the margin-inversion fallback
   // has nothing to name.
-  const otherBreakdown = engine
+  const otherBreakdown = funded
     ? (() => {
-        const overheadAnchor = engine.otherOpex;
-        const inventoryCarryAnchor = engine.inventoryCarry;
-        const eventsAnchor = engine.financialLegs - internalSupplyDiscountAnchor;
+        const siteRunningAnchor = funded.siteRunningAnchor;
+        const minorInputPremiumAnchor = funded.minorInputPremiumAnchor;
+        const inventoryWriteOffAnchor = funded.inventoryWriteOffAnchor;
+        const managementOverheadAnchor = funded.managementOverheadAnchor ?? 0;
         return {
-          overheadAnchor,
-          inventoryCarryAnchor,
-          eventsAnchor,
+          overheadAnchor: 0,
+          inventoryCarryAnchor: 0,
+          eventsAnchor: 0,
+          siteRunningAnchor,
+          minorInputPremiumAnchor,
+          inventoryWriteOffAnchor,
+          managementOverheadAnchor,
+          managementOverheadRecorded: funded.managementOverheadAnchor != null,
           remainderAnchor:
-            otherOperatingAnchor - overheadAnchor - inventoryCarryAnchor - eventsAnchor,
+            otherOperatingAnchor -
+            siteRunningAnchor -
+            minorInputPremiumAnchor -
+            inventoryWriteOffAnchor -
+            managementOverheadAnchor,
         };
       })()
-    : null;
+    : engine
+      ? (() => {
+          const overheadAnchor = engine.otherOpex;
+          const inventoryCarryAnchor = engine.inventoryCarry;
+          const eventsAnchor = engine.financialLegs - internalSupplyDiscountAnchor;
+          return {
+            overheadAnchor,
+            inventoryCarryAnchor,
+            eventsAnchor,
+            remainderAnchor:
+              otherOperatingAnchor - overheadAnchor - inventoryCarryAnchor - eventsAnchor,
+          };
+        })()
+      : null;
   const policyAnchor = engine ? engine.policyCredit : 0;
   const policyPp = engine ? engine.policyPp : 0;
   const financialEventsAnchor = engine

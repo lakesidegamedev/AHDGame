@@ -1,3 +1,4 @@
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { describe, it, expect } from "vitest";
 import { soldShareForList, unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
 import { NET_MARGIN_FLOOR_PCT } from "@/lib/corporations/rules/netMargin";
@@ -86,6 +87,44 @@ describe("buildSectorPlantsSection", () => {
         s.pnl.growthAndBuildAnchor -
         (s.pnl.internalSupplyChargeAnchor ?? 0)
     ).toBeCloseTo(s.pnl.profitAnchor, 8);
+  });
+  it("itemises a funded turn's running costs from the settled record, leaving no plug", () => {
+    // totalCost 1000 = inputs 300 + wages 200 + site bill 180 (60 idle) + premium 20
+    // + write-off 10 + management overhead 150 + growth 90 + compliance 50.
+    const statement = siteStatement({ turn: 5, revenue: 1200, totalCost: 1000 });
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture(),
+      money: {
+        ...BASE_ARGS.money,
+        statement,
+        realizedRevenueAnchor: 1200,
+        maintenanceNetAnchor: 0,
+        inputsAnchor: 300,
+        labourAnchor: 200,
+        growthCostAnchor: 90,
+        profitAnchor: 200,
+        fundedComplianceAnchor: 50,
+        fundedParts: {
+          idleUpkeepAnchor: 60,
+          siteRunningAnchor: 120,
+          minorInputPremiumAnchor: 20,
+          inventoryWriteOffAnchor: 10,
+          managementOverheadAnchor: 150,
+          growthAnchor: 90,
+        },
+      },
+    });
+    expect(s.pnl.upkeepAnchor).toBe(60);
+    expect(s.pnl.otherBreakdown).toMatchObject({
+      siteRunningAnchor: 120,
+      minorInputPremiumAnchor: 20,
+      inventoryWriteOffAnchor: 10,
+      managementOverheadAnchor: 150,
+      managementOverheadRecorded: true,
+    });
+    expect(s.pnl.otherBreakdown?.remainderAnchor).toBeCloseTo(0, 8);
   });
   it("keeps a free supplier estimate separate from its actual loss on legacy payloads", () => {
     // Everything went to own sites for free: no revenue, the whole bill booked.

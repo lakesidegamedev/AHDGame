@@ -214,6 +214,7 @@ export interface CorporationDetail {
   /** Average product quality (0–100) — shown as a number to everyone when present. */
   averageQuality?: number;
   /** The last visible move in average quality, from the turn snapshots. Absent when it has not moved. */
+  averageQualityPillars?: import("@/lib/corporations/rules/qualityChange").QualityPillarsView;
   averageQualityChange?: import("@/lib/corporations/rules/qualityChange").QualityChange;
   logisticsBudget: number;
   logisticsStrength: number;
@@ -875,6 +876,8 @@ export interface SectorDetail {
   buildQueueSummary?: BuildQueueSummary | null;
   /** Capacity paid for but not yet productive, ₳. */
   constructionInProgressAnchor?: number | null;
+  /** Paid for builds ordered on the latest recorded turn, ₳. */
+  constructionOrderedAnchor?: number | null;
 }
 
 export interface HeldBondSummary {

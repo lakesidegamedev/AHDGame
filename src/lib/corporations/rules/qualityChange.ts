@@ -95,3 +95,31 @@ export function lastQualityChangeFromHistory(
     ) ?? undefined
   );
 }
+
+/** The newest recorded pillar scores, and what moved since the last row that also had them. */
+export interface QualityPillarsView {
+  turn: number;
+  pillars: QualityPillars;
+  /** The next older row that recorded pillars, when there is one. */
+  previousTurn?: number;
+  mover?: { key: QualityPillarKey; delta: number };
+}
+
+/**
+ * Pillars of the newest history row, always shown when that row has them. The
+ * mover is named only when an older row also recorded pillars.
+ */
+export function qualityPillarsView(
+  rowsNewestFirst: readonly QualityHistoryRow[]
+): QualityPillarsView | undefined {
+  const newest = rowsNewestFirst[0];
+  if (!newest?.qualityPillars) return undefined;
+  const previous = rowsNewestFirst.slice(1).find((row) => row.qualityPillars);
+  const mover = previous ? biggestPillarMove(previous.qualityPillars, newest.qualityPillars) : null;
+  return {
+    turn: newest.turn,
+    pillars: newest.qualityPillars,
+    ...(previous ? { previousTurn: previous.turn } : {}),
+    ...(mover ? { mover } : {}),
+  };
+}

@@ -39,7 +39,7 @@ export function SupplyChainTable({
           </span>
         </h3>
         <span className="text-xs text-muted">
-          {direction === "suppliers" ? "Purchases" : "Receipts"}: {formatAmount(total)}
+          {direction === "suppliers" ? "Purchases" : "Receipts"} this turn: {formatAmount(total)}
         </span>
       </div>
       {!rows.length ? (
@@ -68,13 +68,13 @@ export function SupplyChainTable({
                     Trade type
                   </th>
                   <th scope="col" className={cell}>
-                    Units
+                    Units this turn
                   </th>
                   <th scope="col" className={cell}>
                     Average price
                   </th>
                   <th scope="col" className={cell}>
-                    Total
+                    Total this turn
                   </th>
                   <th scope="col" className={cell}>
                     Share

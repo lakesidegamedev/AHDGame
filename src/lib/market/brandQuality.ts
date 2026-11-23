@@ -27,6 +27,14 @@ const QUALITY_WEIGHT_INPUTS = 0.2;
 const QUALITY_WEIGHT_WAGES = 0.2;
 const QUALITY_WEIGHT_OPERATIONS = 0.2;
 
+/** Share of the blended score each pillar carries. */
+export const QUALITY_PILLAR_WEIGHTS = {
+  tech: QUALITY_WEIGHT_TECH,
+  inputs: QUALITY_WEIGHT_INPUTS,
+  wages: QUALITY_WEIGHT_WAGES,
+  operations: QUALITY_WEIGHT_OPERATIONS,
+} as const;
+
 /** Sub-score floor — no single pillar can drive quality below this share of its term. */
 const QUALITY_SUBSCORE_FLOOR = 0.1;
 

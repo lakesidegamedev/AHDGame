@@ -97,7 +97,7 @@ describe("corporation income statement", () => {
     view.rerender(<FinancialsTab {...props} financials={financials} />);
     expect(screen.queryByText("Arrears remaining")).toBeNull();
   });
-  it("lists construction paid up front outside the costs, only when something is being built", () => {
+  it("always lists construction ordered and in progress outside the costs", () => {
     const props = {
       corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
       financials,
@@ -108,16 +108,23 @@ describe("corporation income statement", () => {
       onPeriodViewChange: vi.fn(),
     };
     const none = render(<FinancialsTab {...props} sectors={[]} />);
-    expect(screen.queryByText("Construction paid, still to arrive")).toBeNull();
+    expect(screen.getByText("Construction ordered on the latest turn")).toBeTruthy();
+    expect(screen.getByText("Construction in progress (paid, still to arrive)")).toBeTruthy();
+    expect(screen.getAllByText("M0").length).toBeGreaterThanOrEqual(2);
     none.unmount();
     render(
       <FinancialsTab
         {...props}
-        sectors={[{ constructionInProgressAnchor: 11_000 } as unknown as SectorDetail]}
+        sectors={[
+          {
+            constructionInProgressAnchor: 11_000,
+            constructionOrderedAnchor: 4_000,
+          } as unknown as SectorDetail,
+        ]}
       />
     );
-    expect(screen.getByText("Construction paid, still to arrive")).toBeTruthy();
     expect(screen.getByText("M11000")).toBeTruthy();
+    expect(screen.getByText("M4000")).toBeTruthy();
   });
   it("shows the estimate-to-recorded change before a retained loss", () => {
     render(
