@@ -43,8 +43,8 @@ describe("loadOrganizationContributions", () => {
     expect(result).toEqual({
       perTurn: 120,
       lines: [
-        { organizationId: "UN", kind: "dues", perTurn: 60 },
-        { organizationId: "COMECON", kind: "dues", perTurn: 60 },
+        { organizationId: "UN", organizationName: "UN", kind: "dues", perTurn: 60 },
+        { organizationId: "COMECON", organizationName: "COMECON", kind: "dues", perTurn: 60 },
       ],
     });
   });
@@ -61,7 +61,7 @@ describe("loadOrganizationContributions", () => {
     // 48M USD GDP × 0.75% / 48 turns = 7,500 USD for the Warsaw Pact.
     expect(result).toEqual({
       perTurn: 7_500,
-      lines: [{ organizationId: "WARSAW_PACT", kind: "tribute", perTurn: 7_500 }],
+      lines: [{ organizationId: "WARSAW_PACT", organizationName: "Warsaw Pact", kind: "tribute", perTurn: 7_500 }],
     });
   });
 
@@ -76,7 +76,7 @@ describe("loadOrganizationContributions", () => {
 
     expect(result).toEqual({
       perTurn: 60,
-      lines: [{ organizationId: "COMECON", kind: "dues", perTurn: 60 }],
+      lines: [{ organizationId: "COMECON", organizationName: "COMECON", kind: "dues", perTurn: 60 }],
     });
   });
 
@@ -86,5 +86,20 @@ describe("loadOrganizationContributions", () => {
     await expect(
       loadOrganizationContributions(db as unknown as Db, "US", "2019-default")
     ).resolves.toEqual({ perTurn: 0, lines: [] });
+  });
+
+  it("names a player-created organization by its own name, not its slug", async () => {
+    db.collection("customInternationalOrganizations");
+    db.collectionMocks.organizationMemberships!.find.mockReturnValue(
+      createAsyncIterableCursor([{ organizationId: "orc" }])
+    );
+    db.collectionMocks.organizationFunds!.find.mockReturnValue(createAsyncIterableCursor([]));
+    db.collectionMocks.customInternationalOrganizations!.find.mockReturnValue(
+      createAsyncIterableCursor([{ id: "orc", name: "Orcish Concord", shortName: "OC" }])
+    );
+
+    const result = await loadOrganizationContributions(db as unknown as Db, "US", "2019-default");
+
+    expect(result.lines[0]).toMatchObject({ organizationId: "orc", organizationName: "OC" });
   });
 });

@@ -106,11 +106,50 @@ describe("DefenseFundingNote (ticket #1269)", () => {
       />
     );
     expect(screen.getByText("International organization contributions per turn")).toBeTruthy();
-    expect(screen.getByText("M2.0B")).toBeTruthy();
-    expect(screen.getByText("COMECON dues: M1.0B")).toBeTruthy();
-    expect(screen.getByText("WARSAW PACT dues: M1.0B")).toBeTruthy();
+    expect(screen.getByText("M2.00B")).toBeTruthy();
+    expect(screen.getByText("COMECON dues: M1.00B")).toBeTruthy();
+    expect(screen.getByText("WARSAW PACT dues: M1.00B")).toBeTruthy();
     const check = screen.getByText(/Treasury check/);
     expect(check.textContent).toContain("M2.0B international organization contributions");
     expect(check.textContent).toContain("surplus reads high by M2.0B");
+  });
+});
+
+describe("DefenseFundingNote deficit and dues labelling", () => {
+  const funding = {
+    lineAnnual: 480,
+    accrualPerTurn: 10,
+    upkeepPerTurn: 5,
+    shortfallPerTurn: 0,
+    treasuryDrawPerTurn: 0,
+    potChangePerTurn: 5,
+    potBalance: 100,
+    arrearsRatio: 0,
+    unitCount: 3,
+  } as never;
+
+  it("labels the draw as defence only and shows the whole-budget deficit", () => {
+    render(<DefenseFundingNote sym="$" funding={funding} budgetBalancePerTurn={-133.3e9} />);
+    expect(screen.getByText("New defence debt per turn")).toBeTruthy();
+    expect(screen.getByText("Whole-budget deficit per turn")).toBeTruthy();
+    expect(screen.getByText("$133.3B")).toBeTruthy();
+  });
+
+  it("lists dues by display name at two decimals so lines add up to the total", () => {
+    render(
+      <DefenseFundingNote
+        sym="C$"
+        funding={funding}
+        organizationContributions={{
+          perTurn: 9_671_860,
+          lines: [
+            { organizationId: "UN", organizationName: "UN", kind: "dues", perTurn: 4_835_930 },
+            { organizationId: "orc", organizationName: "Orcish Concord", kind: "dues", perTurn: 4_835_930 },
+          ],
+        }}
+      />
+    );
+    expect(screen.getByText(/Orcish Concord dues: C\$4\.84M/)).toBeTruthy();
+    expect(screen.getByText("C$9.67M")).toBeTruthy();
   });
 });

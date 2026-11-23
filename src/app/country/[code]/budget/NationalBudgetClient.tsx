@@ -34,6 +34,7 @@ import { budgetUsdEquivalentFromRate } from "@/lib/currency/budgetUsdEquivalentF
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { budgetApiUrl } from "@/lib/urls";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
@@ -387,10 +388,12 @@ export function NationalBudgetClient() {
   const revenueLinesFinal = soeNet > 0 ? [...revenueLines, soeLine(soeNet)] : revenueLines;
   const organizationContributionPerTurn = Math.round(data.organizationContributions?.perTurn ?? 0);
   const organizationNames = [
-    ...new Set(data.organizationContributions?.lines.map((line) => line.organizationId)),
-  ]
-    .map((organizationId) => organizationId.replaceAll("_", " "))
-    .join(", ");
+    ...new Set(
+      data.organizationContributions?.lines.map(
+        (line) => line.organizationName ?? line.organizationId.replaceAll("_", " ")
+      )
+    ),
+  ].join(", ");
   const organizationKinds = [
     ...new Set(data.organizationContributions?.lines.map((line) => line.kind)),
   ].join(" and ");
@@ -501,6 +504,7 @@ export function NationalBudgetClient() {
             funding={data.defenseFunding}
             soeNetPerTurn={data.stateEnterpriseNet ?? null}
             organizationContributions={data.organizationContributions ?? null}
+            budgetBalancePerTurn={(budget.revenue.total - budget.spending.total) / TURNS_PER_YEAR}
           />
         ) : null}
 
