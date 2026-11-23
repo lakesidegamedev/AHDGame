@@ -150,9 +150,10 @@ export default function WorldClient({
                 <section>
                   <h2 className={MAIN_HEADING}>Nations</h2>
                   <p className="mt-2 max-w-2xl text-body text-muted">
-                    Choose a nation to play. Econ-only nations are open to browse, not to play. Read
-                    their politics, their legislature, and their economy to see what you are
-                    investing in.
+                    {openRows.length} nations are open: choose one to play. Econ-only nations are
+                    open to browse, not to play. Read their politics, their legislature, and their
+                    economy to see what you are investing in. Breakaway states and nations still
+                    being built are counted separately.
                   </p>
                   <div className="mt-4">
                     <NationsTable rows={openRows} />

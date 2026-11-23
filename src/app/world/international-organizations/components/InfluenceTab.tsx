@@ -151,7 +151,7 @@ export function InfluenceTab({
       {view.members.length > 0 && (
         <Panel>
           <h3 className="mb-3 text-body-sm font-semibold text-foreground">
-            Members&rsquo; standing
+            Members&rsquo; standing ({view.members.length} in this bloc)
           </h3>
           <ul className="space-y-2">
             {view.members.map((m) => (
