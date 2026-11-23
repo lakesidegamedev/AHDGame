@@ -55,6 +55,8 @@ export interface SupremeCourtSeat extends IterationStampFields {
   socialLean: number | null;
   seatedAt: Date | null;
   seatedAtTurn: number | null;
+  /** First turn the vacancy was seen; cleared when the seat empties and stamped by the nomination phase. */
+  vacantSinceTurn?: number | null;
 
   /**
    * False until the Original Roster occupant leaves and a live replacement is

@@ -16,6 +16,7 @@ import { createJusticeNomination } from "@/lib/scotus/nominateJustice";
 import {
   chooseNppNominatingParty,
   isRenominationCoolingDown,
+  playerNominationGraceElapsed,
   type ScotusPresidencySnapshot,
 } from "@/lib/scotus/rules/nppNomination";
 import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
@@ -52,7 +53,24 @@ export async function processScotusNppNominations(
     : president?.nppId
       ? { kind: "npp", party: president.party }
       : { kind: "vacant" };
-  if (presidency.kind === "player") return { nominated: 0, skipped: "player-president" };
+
+  // Start each vacancy's clock the first turn it is seen, so a player President
+  // who never nominates cannot leave the Court short forever.
+  const unstamped = vacantSeats.filter((seat) => seat.vacantSinceTurn == null);
+  if (unstamped.length > 0) {
+    await supremeCourtSeatsCollection(database).updateMany(
+      { _id: { $in: unstamped.map((seat) => seat._id) } },
+      { $set: { vacantSinceTurn: currentTurn } }
+    );
+    for (const seat of unstamped) seat.vacantSinceTurn = currentTurn;
+  }
+  const nominatableSeats =
+    presidency.kind === "player"
+      ? vacantSeats.filter((seat) => playerNominationGraceElapsed(seat.vacantSinceTurn, currentTurn))
+      : vacantSeats;
+  if (nominatableSeats.length === 0 && presidency.kind === "player") {
+    return { nominated: 0, skipped: "player-president" };
+  }
 
   const senate =
     presidency.kind === "vacant"
@@ -65,12 +83,15 @@ export async function processScotusNppNominations(
             .toArray()
         ).map((o) => ({ party: o.party, seats: o.seatsHeld ?? 1 }))
       : [];
-  const party = chooseNppNominatingParty(presidency, senate);
+  const party = chooseNppNominatingParty(
+    presidency.kind === "player" ? { kind: "npp", party: presidency.party } : presidency,
+    senate
+  );
   if (!party) return { nominated: 0, skipped: "no-party" };
 
   const recent = await scotusNominationsCollection(database)
     .find(
-      { countryId: "US", seatNumber: { $in: vacantSeats.map((s) => s.seatNumber) } },
+      { countryId: "US", seatNumber: { $in: nominatableSeats.map((s) => s.seatNumber) } },
       { projection: { seatNumber: 1, votingEndsOnTurn: 1, status: 1 } }
     )
     .toArray();
@@ -85,12 +106,12 @@ export async function processScotusNppNominations(
   }
 
   // One nomination per turn keeps a mass vacancy from flooding the Senate.
-  for (const seat of vacantSeats) {
+  for (const seat of nominatableSeats) {
     if (isRenominationCoolingDown(latestEndBySeat.get(seat.seatNumber), currentTurn)) continue;
     const result = await createJusticeNomination(database, {
       countryId: "US",
       seatNumber: seat.seatNumber,
-      proposedByPresidentId: president?.nppId ?? new ObjectId(),
+      proposedByPresidentId: president?.nppId ?? president?.characterId ?? new ObjectId(),
       proposedByPresidentName: president?.characterName ?? VACANT_PRESIDENCY_NAME,
       generateNppLegalScholar: { party },
     });

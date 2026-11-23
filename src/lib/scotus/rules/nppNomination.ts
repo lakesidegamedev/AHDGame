@@ -7,6 +7,21 @@
 /** Turns an unconfirmed or rejected nomination blocks a re-nomination for the same seat. */
 export const SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS = 48;
 
+/**
+ * Turns a vacancy waits for a player President to nominate before the
+ * generated-scholar fallback files one in the President's own party.
+ */
+export const SCOTUS_PLAYER_NOMINATION_GRACE_TURNS = 96;
+
+/** True once a player President has had the whole grace window and nominated no one. */
+export function playerNominationGraceElapsed(
+  vacantSinceTurn: number | null | undefined,
+  currentTurn: number
+): boolean {
+  if (vacantSinceTurn == null) return false;
+  return currentTurn >= vacantSinceTurn + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS;
+}
+
 export type ScotusPresidentKind = "player" | "npp" | "vacant";
 
 export interface ScotusPresidencySnapshot {
