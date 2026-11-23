@@ -58,10 +58,18 @@ export function marketParty(id: string): SupplyChainParty {
   };
 }
 
+type CurrentSector = {
+  _id: ObjectId;
+  sectorType: string;
+  countryId?: string;
+  stateId?: string;
+};
+
 async function readCompany(
   db: Db,
   record: StoredTurn,
-  corporationId: string
+  corporationId: string,
+  current: readonly CurrentSector[]
 ): Promise<SupplyChainData> {
   const stored = await producerEconomyTurnsCollection<StoredTurn>(db).findOne(
     { _id: record._id, digest: record.digest, status: "settled" },
@@ -109,12 +117,6 @@ async function readCompany(
   };
   locate(view.receipt.offers);
   locate(view.receipt.orders);
-  const current = await corporateSectorsCollection(db)
-    .find(
-      { corporationId: new ObjectId(corporationId) },
-      { projection: { _id: 1, sectorType: 1, countryId: 1, stateId: 1 } }
-    )
-    .toArray();
   const sites = new Map<string, SupplyChainSite>(
     current.map((s) => [
       s._id.toString(),
@@ -190,12 +192,23 @@ export async function loadCompanySupplyChain(
     { projection: { _id: 1, worldEpoch: 1, turn: 1, digest: 1 }, sort: { turn: -1 } }
   );
   if (!record) return empty();
-  const key = JSON.stringify([record.worldEpoch, record.digest, corporationId]);
+  // The company's live sector list changes between settlements, so it is part
+  // of the key: a built or abandoned site must show without waiting for a turn.
+  const current: CurrentSector[] = await corporateSectorsCollection(db)
+    .find(
+      { corporationId: new ObjectId(corporationId) },
+      { projection: { _id: 1, sectorType: 1, countryId: 1, stateId: 1 } }
+    )
+    .toArray();
+  const siteFingerprint = current
+    .map((s) => `${s._id.toString()}:${s.sectorType}:${s.countryId ?? ""}:${s.stateId ?? ""}`)
+    .sort();
+  const key = JSON.stringify([record.worldEpoch, record.digest, corporationId, siteFingerprint]);
   const cache = cached.get(db) ?? new Map<string, SupplyChainData>();
   cached.set(db, cache);
   const hit = cache.get(key);
   if (hit) return hit;
-  const data = await readCompany(db, record, corporationId);
+  const data = await readCompany(db, record, corporationId, current);
   if (data.flows.length <= 5000) {
     if (cache.size >= 4) cache.delete(cache.keys().next().value!);
     cache.set(key, data);

@@ -141,13 +141,32 @@ describe("company supply-chain receipt query", () => {
     expect(sectors).toHaveBeenCalledTimes(1);
     expect(sectors.mock.calls[0][0]).toEqual({ corporationId: company });
     expect(await loadCompanySupplyChain(db as never, company.toString())).toBe(result);
-    expect(sectors).toHaveBeenCalledTimes(1);
+    expect(sectors).toHaveBeenCalledTimes(2);
     expect(read).toHaveBeenCalledTimes(3);
     expect(read.mock.calls[0][0]).toEqual({
       worldEpoch: "world",
       status: "settled",
       turn: { $lte: 4 },
     });
+  });
+  it("shows a sector added or removed after the receipt was cached", async () => {
+    const { db } = await setup();
+    const before = await loadCompanySupplyChain(db as never, company.toString());
+    expect(before.sites.some((s) => s.stateId === "CT")).toBe(false);
+    await db.collection("corporateSectors").insertOne({
+      _id: new ObjectId("444444444444444444444444"),
+      corporationId: company,
+      countryId: "US",
+      stateId: "CT",
+      sectorType: "manufacturing",
+    });
+    const after = await loadCompanySupplyChain(db as never, company.toString());
+    expect(after.sites.some((s) => s.stateId === "CT")).toBe(true);
+    await db
+      .collection("corporateSectors")
+      .deleteOne({ _id: new ObjectId("333333333333333333333333") });
+    const removed = await loadCompanySupplyChain(db as never, company.toString());
+    expect(removed.sites.some((s) => s.stateId === "AZ")).toBe(false);
   });
   it("ignores unfinished and future turns and the old world's receipts", async () => {
     const { db, turns } = await setup();
