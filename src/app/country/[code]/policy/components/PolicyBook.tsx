@@ -159,6 +159,7 @@ export function PolicyBook({
               domains={domains}
               record={recordPayload}
               homeStateMetricBase={homeStateMetricBase}
+              openDomain={activeDomain}
             />
           </div>
         </div>

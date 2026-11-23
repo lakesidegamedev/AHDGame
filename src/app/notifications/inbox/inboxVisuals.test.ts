@@ -12,3 +12,17 @@ describe("categoryVisualFor", () => {
     );
   });
 });
+
+describe("previewSentence", () => {
+  it("cuts the preview at the end of the first sentence", async () => {
+    const { previewSentence } = await import("./RailItem");
+    expect(
+      previewSentence("The crisis in Ohio has ended. Approval recovers over the next turns.")
+    ).toBe("The crisis in Ohio has ended.");
+  });
+
+  it("keeps text without a short first sentence", async () => {
+    const { previewSentence } = await import("./RailItem");
+    expect(previewSentence("Vote open")).toBe("Vote open");
+  });
+});

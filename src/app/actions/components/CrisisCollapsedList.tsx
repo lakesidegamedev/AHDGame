@@ -79,6 +79,10 @@ export function CrisisCollapsedList({
   );
   const worst = rows[0];
   const respondable = summary.respondable + alsoRespondable;
+  // When every crisis carries the same severity, one tag in the header says it;
+  // repeating an identical badge on each row tells the rows apart by nothing.
+  const sharedSeverity =
+    rows.length > 1 && rows.every((r) => r.band === worst.band && r.score === worst.score);
 
   return (
     <section
@@ -100,7 +104,11 @@ export function CrisisCollapsedList({
             {respondable > 0 ? ` · ${respondable} you can respond to` : ""}
           </span>
         </span>
-        {summary.high > 0 && <SeverityTag band="high" />}
+        {sharedSeverity ? (
+          <SeverityTag band={worst.band} score={worst.score} />
+        ) : (
+          summary.high > 0 && <SeverityTag band="high" />
+        )}
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-muted transition-transform ${expanded ? "rotate-180" : ""}`}
           aria-hidden
@@ -130,7 +138,7 @@ export function CrisisCollapsedList({
                     No response for you
                   </span>
                 )}
-                <SeverityTag band={row.band} score={row.score} />
+                {!sharedSeverity && <SeverityTag band={row.band} score={row.score} />}
               </Link>
             </li>
           ))}

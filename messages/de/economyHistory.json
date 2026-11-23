@@ -18,6 +18,8 @@
     "empty": "Noch nicht genug erfasste Geschichte. Pro abgeschlossenem Zug wird ein Punkt gespeichert, daher füllt sich dieses Diagramm mit der Zeit.",
     "chartLabel": "{metric} über {turns} erfasste Züge",
     "turn": "Zug {turn}",
-    "turnAxis": "Z{turn}"
+    "turnAxis": "Z{turn}",
+    "span": "Zug {from} bis {to}",
+    "range": "Tief {low} · Hoch {high}"
   }
 }
