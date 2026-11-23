@@ -69,3 +69,12 @@ areas: [backend, frontend]
 - Races say when the sitting officeholder is not running, and why.
 - Primary estimates explain how they are calculated, and the filing deadline is shown.
 - The national party members table shows state party roles such as chair.
+
+### Explanations where numbers looked wrong
+- International dues say they use one default rate until members vote a different one.
+- Debt-to-GDP names the GDP figure it divides by.
+- The credit rating is labelled as the sovereign credit rating, and the metrics page grade is labelled as a governance grade.
+- DC says it has no elected governor or legislature in the game.
+- A vacant cabinet post shows how its last nomination ended, including Senate votes and withdrawals.
+- Non-player primary candidates show that they run at half strength against a player.
+- Metric law rows list the laws in force since the start, with their levels.
