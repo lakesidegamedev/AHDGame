@@ -55,6 +55,13 @@ describe("guessableUrlRedirects", () => {
     expect(bySource["/leaderboard"].destination).toBe("/contests?view=rankings");
     expect(bySource["/achievements"].destination).toBe("/profile");
     expect(bySource["/country/:code/senate"].destination).toBe("/country/:code/legislature");
+    expect(bySource["/country/:code/courts"].destination).toBe(
+      "/country/:code/executive/supreme-court"
+    );
+    expect(bySource["/courts"].destination).toBe("/country/us/executive/supreme-court");
+    expect(
+      existsSync(join(process.cwd(), "src/app/country/[code]/executive/supreme-court/page.tsx"))
+    ).toBe(true);
     expect(existsSync(join(process.cwd(), "src/app/contests/page.tsx"))).toBe(true);
     expect(existsSync(join(process.cwd(), "src/app/profile/page.tsx"))).toBe(true);
   });
