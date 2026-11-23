@@ -1,5 +1,6 @@
 import type { PlantIdleCauseKey } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import { facilityVocabulary } from "@/lib/constants/facilityVocabulary";
 
 /**
@@ -203,3 +204,22 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
  */
 export const PLANTS_CLOCK_NOTE =
   "Totals cover one financial day (24 turns). Per-unit figures are averages across the same day's output. One game year is 48 turns.";
+
+/**
+ * Money on one build order, all in anchor currency from the stored paid amount.
+ * `stillToArrive` is the unfinished share of what was paid and `refund` is what
+ * cancelling returns on it, the same terms the cancel command applies.
+ */
+export function buildOrderMoney(order: { costPaidAnchor: number; progress: number }): {
+  paid: number;
+  stillToArrive: number;
+  refund: number;
+} {
+  const paid = Math.max(0, Number.isFinite(order.costPaidAnchor) ? order.costPaidAnchor : 0);
+  const remaining = Math.min(
+    1,
+    Math.max(0, 1 - (Number.isFinite(order.progress) ? order.progress : 0))
+  );
+  const stillToArrive = paid * remaining;
+  return { paid, stillToArrive, refund: stillToArrive * CAPACITY_BUILD_CANCEL_REFUND };
+}

@@ -187,7 +187,7 @@ export function buildProgressLabel(
     p.perTurn != null
       ? " Capacity arrives in a slice every turn, so the capacity figure rises each turn until then."
       : " Capacity arrives in one piece when it is done, not a slice each turn.";
-  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done}${arrival}`;
+  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} in this order finished, ${formatPlantCount(p.remaining)} still under construction.${rate}${done}${arrival}`;
 }
 
 export function BuildQueueBadge({

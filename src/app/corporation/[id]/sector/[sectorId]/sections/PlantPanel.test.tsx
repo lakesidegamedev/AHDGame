@@ -166,7 +166,7 @@ describe("PlantPanel vehicle recipe", () => {
       )
     ).toBeTruthy();
     expect(screen.getByText("41")).toBeTruthy();
-    expect(screen.getByText(/28 more being built/)).toBeTruthy();
+    expect(screen.getByText(/28 more still being built/)).toBeTruthy();
     expect(screen.queryByText(/units per day/)).toBeNull();
   });
 });

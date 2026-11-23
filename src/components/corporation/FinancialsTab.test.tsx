@@ -108,7 +108,7 @@ describe("corporation income statement", () => {
       onPeriodViewChange: vi.fn(),
     };
     const none = render(<FinancialsTab {...props} sectors={[]} />);
-    expect(screen.queryByText("Construction paid up front")).toBeNull();
+    expect(screen.queryByText("Construction paid, still to arrive")).toBeNull();
     none.unmount();
     render(
       <FinancialsTab
@@ -116,7 +116,7 @@ describe("corporation income statement", () => {
         sectors={[{ constructionInProgressAnchor: 11_000 } as unknown as SectorDetail]}
       />
     );
-    expect(screen.getByText("Construction paid up front")).toBeTruthy();
+    expect(screen.getByText("Construction paid, still to arrive")).toBeTruthy();
     expect(screen.getByText("M11000")).toBeTruthy();
   });
   it("shows the estimate-to-recorded change before a retained loss", () => {

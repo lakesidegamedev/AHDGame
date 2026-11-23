@@ -407,11 +407,11 @@ export default function FinancialsTab({
                   {constructionPaidAnchor > 0 && (
                     <StatementLine
                       indent
-                      label="Construction paid up front"
+                      label="Construction paid, still to arrive"
                       amount={formatAnchor(constructionPaidAnchor)}
                       amountClass="text-muted"
                       note="Not in the costs above"
-                      title="Cash for builds still under construction. It was charged in full when each build was ordered, so it is not part of this period's growth cost or profit."
+                      title="The unfinished share of builds you have already paid for. It was charged in full when each build was ordered, so it is not part of this period's growth cost or profit."
                     />
                   )}
                   <StatementLine
