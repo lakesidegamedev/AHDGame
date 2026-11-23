@@ -636,6 +636,7 @@ export function NationalBudgetClient() {
             ceiling={budget.debt.ceiling}
             ceilingLabel={labels.ceilingLabel}
             debtToGdp={budget.debtToGdpRatio}
+            ratioGdp={resolveRatioGdp(budget)}
             rating={budget.creditRating}
             trend={fyHistory.map((p) => p.debtToGdp * 100)}
             trendRange={

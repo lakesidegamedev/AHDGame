@@ -98,7 +98,7 @@ export function FiscalStatStrip({
   const deficitBasis = ratioGdp && ratioGdp > 0 ? ratioGdp : gdp;
   const deficitToGdp = deficitBasis > 0 ? (surplus / deficitBasis) * 100 : 0;
   const money = (n: number) => formatFundsCompact1dp(n, sym);
-  const budgetGdp = ratioGdp && ratioGdp > 0 ? `Budget GDP ${money(ratioGdp)}` : undefined;
+  const budgetGdp = ratioGdp && ratioGdp > 0 ? `of smoothed budget GDP ${money(ratioGdp)}` : undefined;
   const usdNote = (local: number, existing?: string): string | undefined => {
     if (!toUsd) return existing;
     const usd = toUsd(local);
@@ -163,7 +163,13 @@ export function FiscalStatStrip({
         value={money(debtPrincipal)}
         sub={usdNote(debtPrincipal, "sovereign bonds outstanding")}
       />
-      <StatTile label="Credit rating" value={rating} tone="gold" />
+      <StatTile
+        label="Credit rating"
+        labelTitle="Sovereign credit rating, set from debt-to-GDP and the country's sovereign risk anchor. The bond pages show this same rating."
+        value={rating}
+        sub="Sovereign, from debt-to-GDP"
+        tone="gold"
+      />
       <StatTile
         label="GDP"
         value={money(gdp)}

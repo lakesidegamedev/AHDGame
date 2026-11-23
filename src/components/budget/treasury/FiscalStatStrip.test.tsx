@@ -57,7 +57,7 @@ describe("FiscalStatStrip sovereign debt", () => {
     render(<FiscalStatStrip {...base} gdpGrowth={2} ratioGdp={40_000_000} />);
 
     expect(screen.getByText("₽50.0M")).toBeTruthy();
-    expect(screen.getByText("Budget GDP ₽40.0M")).toBeTruthy();
+    expect(screen.getByText("of smoothed budget GDP ₽40.0M")).toBeTruthy();
     expect(screen.getByText("0.3% of budget GDP")).toBeTruthy();
   });
 });
@@ -81,5 +81,11 @@ describe("FiscalStatStrip GDP compare", () => {
     );
     expect(screen.getByText(/\+16\.2% since FY2028 close/)).toBeTruthy();
     expect(screen.getByText(/\+9\.4% FY assumption/)).toBeTruthy();
+  });
+
+  it("labels the credit rating as the sovereign rating and names its basis", () => {
+    render(<FiscalStatStrip {...base} gdpGrowth={2} />);
+    expect(screen.getByText("Sovereign, from debt-to-GDP")).toBeTruthy();
+    expect(screen.getByText("Credit rating").getAttribute("title")).toContain("bond pages");
   });
 });

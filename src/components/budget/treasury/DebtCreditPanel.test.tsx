@@ -25,4 +25,24 @@ describe("DebtCreditPanel", () => {
     expect(screen.getByText("New borrowing rate")).toBeTruthy();
     expect(screen.getByText("7.00%")).toBeTruthy();
   });
+
+  it("names the smoothed GDP the debt ratio divides by and labels the sovereign rating", () => {
+    render(
+      <DebtCreditPanel
+        sym="$"
+        principal={1000}
+        interestRate={0.07}
+        ceiling={2000}
+        ceilingLabel="Ceiling"
+        debtToGdp={0.676}
+        ratioGdp={1500}
+        rating="BB"
+        trend={[]}
+        trendRange=""
+      />
+    );
+    expect(screen.getByText(/of smoothed budget GDP/)).toBeTruthy();
+    expect(screen.getByText("Debt-to-GDP").getAttribute("title")).toContain("not headline GDP");
+    expect(screen.getByTitle(/Sovereign credit rating/).textContent).toBe("BB");
+  });
 });
