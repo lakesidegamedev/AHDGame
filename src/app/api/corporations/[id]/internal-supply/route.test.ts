@@ -5,7 +5,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
+import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { GET, POST } from "./route";
+vi.mock("@/lib/corporations/economicActionLog", () => ({ logEconomicAction: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({
@@ -61,6 +63,31 @@ it("saves CEO settings with an authority guard and no-store", async () => {
       },
     }
   );
+});
+it("records a supply priority change for the CEO", async () => {
+  const ceoId = new ObjectId();
+  vi.mocked(resolveCorporation).mockResolvedValue({
+    ok: true,
+    corporation: { ...corp, ceoId, internalSupplyPolicy: { priority: "own", discount: 0 } },
+  } as never);
+  expect(
+    (await POST(request("POST", { priority: "market", discount: 0 }), { params })).status
+  ).toBe(200);
+  expect(logEconomicAction).toHaveBeenCalledWith(
+    db,
+    expect.objectContaining({
+      characterId: ceoId,
+      actionType: "setInternalSupplyPolicy",
+      result: expect.objectContaining({
+        message: `${id.toHexString()} supply priority own -> market`,
+      }),
+    })
+  );
+});
+it("records nothing when the save is refused", async () => {
+  db.collectionMocks.corporations.updateOne.mockResolvedValue({ matchedCount: 0 });
+  await POST(request("POST", { priority: "market", discount: 0 }), { params });
+  expect(logEconomicAction).not.toHaveBeenCalled();
 });
 it("rejects unauthorized reads and writes before querying holdings", async () => {
   vi.mocked(requireCeo).mockReturnValue(new Response("Forbidden", { status: 403 }) as never);

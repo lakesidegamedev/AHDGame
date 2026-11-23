@@ -234,7 +234,7 @@
       "details": "Details",
       "firstOpening": "First opening",
       "inTurns": "{turns, plural, one {# turn} other {# turns}}",
-      "profitPerTurn": "Profit per turn",
+      "profitPerTurn": "Profit per turn once open",
       "payback": "Payback",
       "noPayback": "Does not pay back in 192 turns",
       "notAvailable": "n/a",
