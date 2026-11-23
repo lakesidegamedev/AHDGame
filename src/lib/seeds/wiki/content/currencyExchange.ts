@@ -65,7 +65,7 @@ Income from foreign corporations is handled differently by type:
 
 ## What moves a rate
 
-Every currency has a rate against an internal anchor unit. Cross-rates are derived from these (USD/JPY = JPY rate / USD rate). Each turn a rate moves under four forces: a drift toward a target set by the country's economy, pressure from recent trading, small random noise and a 12-turn directional regime. The more a country's rates, inflation, growth and trade stray from neutral, the more its currency drifts.
+Every currency has a rate against the game's shared accounting unit, the anchor unit, written ₳. It is the symbol you see on prices and balances that compare across countries, and it is not pegged to any real currency. Cross-rates are derived from these (USD/JPY = JPY rate / USD rate). Each turn a rate moves under four forces: a drift toward a target set by the country's economy, pressure from recent trading, small random noise and a 12-turn directional regime. The more a country's rates, inflation, growth and trade stray from neutral, the more its currency drifts.
 
 ### The macro target
 
@@ -120,7 +120,7 @@ Many currencies are active in forex trading. The table above shows the main mode
 starts GBP at 0.357, JPY at 360, and NGN at 0.357 per anchor unit. Intermediate
 start years interpolate geometrically between authored anchors.
 
-Rates are measured against an internal "anchor" unit, not directly against each other. Cross-rates are derived: USD/JPY = jpyRate / usdRate.
+Rates are measured against the anchor unit (₳, the shared accounting unit), not directly against each other. Cross-rates are derived: USD/JPY = jpyRate / usdRate.
 
 ## Where forex shows up elsewhere
 

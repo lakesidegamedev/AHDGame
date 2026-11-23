@@ -24,7 +24,7 @@ Non-US offices grant the local equivalent, and ceremonial heads of state get +0 
 
 ### Just spawned
 
-Your profile shows Independent, no office, 25 actions, ₳250,000 Campaign Funds at 2019 prices (scaled to your world's era), personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Your country and starting kit from [Create a Character](/wiki/create-a-character) decide the ladder and the first rung, and the first-week plan in [Getting Started](/wiki/getting-started) puts you on it.
+Your profile shows Independent, no office, 25 actions, Campaign Funds of ₳250,000 at 2019 prices (about ₳345,000 in a 2027 world, less in earlier eras; the Game Guide mail you receive quotes your exact opening figure in your home currency), personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Your country and starting kit from [Create a Character](/wiki/create-a-character) decide the ladder and the first rung, and the first-week plan in [Getting Started](/wiki/getting-started) puts you on it.
 
 ### Building before you file
 

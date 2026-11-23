@@ -2,6 +2,7 @@
  * Live executive + lower-chamber plurality data for the /world nation cards.
  * Kept in lib so the world page can call it from a server component without self-HTTP.
  */
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
@@ -246,6 +247,41 @@ async function snapshotForCountry(
   };
 }
 
+/** Head of government names for background nations, from the same record their country page reads. */
+async function loadBackgroundHeadNames(
+  db: Db,
+  ids: readonly string[]
+): Promise<Map<string, string>> {
+  const docs = await macroCountriesCollection<{
+    entityId: string;
+    nationalPolitics?: { head?: { name?: string } };
+  }>(db)
+    .find(
+      { entityId: { $in: [...ids] } },
+      { projection: { entityId: 1, "nationalPolitics.head.name": 1 } }
+    )
+    .toArray();
+  return new Map(
+    docs.flatMap((doc) =>
+      doc.nationalPolitics?.head?.name
+        ? [[doc.entityId, doc.nationalPolitics.head.name] as const]
+        : []
+    )
+  );
+}
+
+/** Fills a vacant executive from the background head record when one exists. */
+export function withBackgroundHead(
+  snapshot: NationWorldSnapshot,
+  headName: string | undefined
+): NationWorldSnapshot {
+  if (!snapshot.executive.isVacant || !headName) return snapshot;
+  return {
+    ...snapshot,
+    executive: { ...snapshot.executive, name: headName, isVacant: false },
+  };
+}
+
 export async function getNationWorldSnapshots(
   db: Db,
   preset?: string
@@ -267,10 +303,12 @@ export async function getNationWorldSnapshots(
       : Promise.resolve([] as GovernmentFormation[]),
   ]);
   const formationByCountry = new Map(formations.map((f) => [f._id as string, f]));
+  const headNames = await loadBackgroundHeadNames(db, ids);
   const entries = await Promise.all(
     ids.map(async (id) => {
       const gov = parliamentaryIds.includes(id) ? (formationByCountry.get(id) ?? null) : undefined;
-      return [id, await snapshotForCountry(db, id, preset, seatsByCountry[id], gov)] as const;
+      const snapshot = await snapshotForCountry(db, id, preset, seatsByCountry[id], gov);
+      return [id, withBackgroundHead(snapshot, headNames.get(id))] as const;
     })
   );
   return Object.fromEntries(entries) as Record<CountryId, NationWorldSnapshot>;

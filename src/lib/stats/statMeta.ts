@@ -1,15 +1,6 @@
+import { energyActionLimits } from "./statDrift";
 import { statMultiplier } from "./statMultiplier";
-import {
-  ENERGY_BASE_ACTION_CAP,
-  ENERGY_MAX_ACTION_CAP,
-  ENERGY_BASE_HOARD_THRESHOLD,
-  ENERGY_MAX_HOARD_THRESHOLD,
-  EFFICACY_PIVOT,
-  STAT_MIN,
-  STAT_MAX,
-  clampStat,
-  type StatKey,
-} from "./statsConstants";
+import { EFFICACY_PIVOT, type StatKey } from "./statsConstants";
 
 /** Player-facing label and one-line blurb for each stat. */
 export const STAT_META: Record<StatKey, { label: string; blurb: string }> = {
@@ -50,12 +41,6 @@ export const STAT_META: Record<StatKey, { label: string; blurb: string }> = {
   },
 };
 
-/** Linear interpolation across the legal [1, 10] stat band. */
-function lerpByStat(value: number, atMin: number, atMax: number): number {
-  const t = (clampStat(value) - STAT_MIN) / (STAT_MAX - STAT_MIN);
-  return atMin + (atMax - atMin) * t;
-}
-
 /**
  * Short, stat-specific summary of the CURRENT mechanical bonus at a given stat
  * value. Energy reports its concrete action-cap / bank numbers (it doesn't use
@@ -71,10 +56,7 @@ function lerpByStat(value: number, atMin: number, atMax: number): number {
  */
 export function statBonus(key: StatKey, value: number): { label: string; detail: string } {
   if (key === "energy") {
-    const cap = Math.round(lerpByStat(value, ENERGY_BASE_ACTION_CAP, ENERGY_MAX_ACTION_CAP));
-    const bank = Math.round(
-      lerpByStat(value, ENERGY_BASE_HOARD_THRESHOLD, ENERGY_MAX_HOARD_THRESHOLD)
-    );
+    const { cap, threshold: bank } = energyActionLimits(value);
     return { label: `${cap} cap`, detail: `${cap} action stockpile cap · bank up to ${bank}` };
   }
   const mult = statMultiplier(value);

@@ -5,6 +5,8 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
 }));
 
+const rowsOf = (rows: unknown[]) => vi.fn().mockReturnValue({ toArray: async () => rows });
+
 describe("achievements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +37,7 @@ describe("achievements", () => {
           }
           if (name === "characterAchievements") {
             return {
-              findOne: vi.fn().mockResolvedValue({ _id: new ObjectId() }),
+              find: rowsOf([{ _id: new ObjectId() }]),
               insertOne: vi.fn(),
             };
           }
@@ -59,7 +61,7 @@ describe("achievements", () => {
           }
           if (name === "characterAchievements") {
             return {
-              findOne: vi.fn().mockResolvedValue(null),
+              find: rowsOf([]),
               insertOne,
             };
           }
@@ -75,7 +77,7 @@ describe("achievements", () => {
 
     it("awarding completionist itself stops before the completion check recurses", async () => {
       const achievement = { _id: new ObjectId(), slug: "completionist", name: "Completionist" };
-      const findOne = vi.fn().mockResolvedValue(null);
+      const findOne = vi.fn().mockReturnValue({ toArray: async () => [] });
       const insertOne = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue({
@@ -83,7 +85,7 @@ describe("achievements", () => {
           if (name === "achievements") {
             return { findOne: vi.fn().mockResolvedValue(achievement) };
           }
-          if (name === "characterAchievements") return { findOne, insertOne };
+          if (name === "characterAchievements") return { find: findOne, insertOne };
           return {};
         }),
       } as unknown as Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>);

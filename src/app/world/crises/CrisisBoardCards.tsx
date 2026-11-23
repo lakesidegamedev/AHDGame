@@ -25,7 +25,7 @@ import {
 } from "./crisisBoardStyle";
 
 export function stageText(crisis: BoardCrisis): string {
-  if (crisis.status === "resolved") return "Resolved";
+  if (crisis.status === "resolved") return `Resolved, began turn ${crisis.startTurn}`;
   return crisis.v2 ? STAGE_LABEL[crisis.v2.stage] : "Ongoing";
 }
 

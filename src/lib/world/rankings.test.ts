@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_COMPARE_NATIONS,
   compareAcrossMetrics,
+  humanizeMetricId,
   rankNations,
   selectionFigure,
   toggleCompared,
@@ -166,5 +167,12 @@ describe("rankNations with saturated scores", () => {
       { higherIsBetter: false }
     );
     expect(rows.map((r) => r.rank)).toEqual([1, 1]);
+  });
+});
+
+describe("humanizeMetricId", () => {
+  it("turns raw field names into words", () => {
+    expect(humanizeMetricId("realizedMigrationRate")).toBe("Realized migration rate");
+    expect(humanizeMetricId("automationDisplaced")).toBe("Automation displaced");
   });
 });

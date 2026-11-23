@@ -223,7 +223,7 @@ export function AchievementsShowcaseClient({
                           className="mt-3 text-body-xs font-semibold"
                           style={{ color: rarity.borderColor }}
                         >
-                          {item.rarity.toFixed(1)}% of players, {rarity.label}
+                          {item.rarity.toFixed(1)}% of player accounts have this, {rarity.label}
                         </p>
                       </div>
                     </div>

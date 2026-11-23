@@ -179,11 +179,13 @@ function Header({ view }: { view: WorldAlignmentView }) {
   return (
     <header className="space-y-1">
       <p className="text-body-sm font-medium text-muted">
-        {view.year} · {view.poles.length} blocs
+        {view.year} · {view.poles.length} blocs · {view.rows.length} countries tracked
       </p>
       <h1 className="text-display font-semibold">Cold War ledger</h1>
       <p className="max-w-prose text-body text-muted">
-        Each country has 100 points split between the blocs and its uncommitted share.
+        Each country has 100 points split between the blocs and its uncommitted share. This ledger
+        tracks every country the world models, including background nations and breakaway states, so
+        it is a longer list than the playable nations.
       </p>
     </header>
   );

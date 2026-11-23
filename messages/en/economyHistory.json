@@ -17,6 +17,7 @@
     "retry": "Retry",
     "empty": "Not enough recorded history yet. One point is stored per completed turn, so this chart fills in as the world runs.",
     "chartLabel": "{metric} across {turns} recorded turns",
+    "latestNote": "Latest recorded point is turn {turn}. Figures elsewhere on the page are live, so they can be slightly newer.",
     "turn": "Turn {turn}",
     "turnAxis": "T{turn}",
     "span": "Turn {from} to {to}",

@@ -1,6 +1,5 @@
 "use client";
 
-import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from "../actionsConstants";
@@ -10,7 +9,7 @@ export interface DonorSummary {
   /** Already in campaign-treasury local face value; do not re-convert. */
   fundraiseYield: number;
   currency: CurrencyCode;
-  /** Anchor units, formatted through the live currency like the old donor block. */
+  /** Campaign-treasury local face value, the same figure the Build Donor Network card shows. */
   upgradeCost: number;
 }
 
@@ -27,7 +26,6 @@ export default function CategoryHeading({
   count: number;
   donor: DonorSummary | null;
 }) {
-  const { formatAmount } = useCurrency();
   return (
     <div className="flex flex-col gap-4 border-b border-card-border pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
@@ -59,7 +57,7 @@ export default function CategoryHeading({
           <div>
             <dt className="text-body-sm text-muted">Next level costs</dt>
             <dd className="text-body-lg font-semibold tabular-nums text-foreground">
-              {formatAmount(donor.upgradeCost)}
+              {formatCurrencyFaceAmount(donor.upgradeCost, donor.currency)}
             </dd>
           </div>
         </dl>

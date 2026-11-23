@@ -63,7 +63,7 @@ describe("NationalIdeologyBand", () => {
     expect(screen.getByText("National ideology")).toBeTruthy();
     expect(screen.getByText("Economic axis")).toBeTruthy();
     expect(screen.getByText("Social axis")).toBeTruthy();
-    expect(screen.getByText(/23 implemented national laws/)).toBeTruthy();
+    expect(screen.getByText(/23 national policy positions/)).toBeTruthy();
     expect(screen.getByText("Recently moved the needle")).toBeTruthy();
     expect(screen.getByText("Public Health Insurance Expansion")).toBeTruthy();
     expect(screen.getByText(/Average -1\.1 → -1\.2/)).toBeTruthy();

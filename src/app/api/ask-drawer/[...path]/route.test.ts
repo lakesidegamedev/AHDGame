@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
+import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { GET, POST } from "./route";
+
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/lib/db/characterLookup", () => ({ getCharacterByUserId: vi.fn() }));
 
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
@@ -46,6 +50,20 @@ describe("/api/ask-drawer/[...path]", () => {
       Authorization: "Bearer drawer-secret",
       "X-Ask-User-Id": USER_ID,
     });
+  });
+
+  it("names the active character on character-scoped routes only", async () => {
+    vi.mocked(getCharacterByUserId).mockResolvedValue({
+      _id: { toString: () => "clara-id" },
+    } as never);
+    fetchMock.mockImplementation(async () => new Response("{}", { status: 200 }));
+    await GET(new NextRequest("http://localhost/api/ask-drawer/me"), ctx(["me"]));
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ "X-Ask-Character-Id": "clara-id" });
+    await GET(
+      new NextRequest("http://localhost/api/ask-drawer/conversations"),
+      ctx(["conversations"])
+    );
+    expect(fetchMock.mock.calls[1][1].headers).not.toHaveProperty("X-Ask-Character-Id");
   });
 
   it("streams answers through unbuffered", async () => {

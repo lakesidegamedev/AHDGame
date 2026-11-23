@@ -116,9 +116,10 @@ export function NationalIdeologyBand({
         <p className="mt-1 text-body-sm text-muted">
           Average of{" "}
           <span className="font-medium text-foreground">
-            {axes.lawCount} implemented national {axes.lawCount === 1 ? "law" : "laws"}
+            {axes.lawCount} national policy {axes.lawCount === 1 ? "position" : "positions"}
           </span>
-          , equal weight.
+          , equal weight. Every nation holds a position in each policy area of the shared catalogue,
+          so nations can show the same count.
         </p>
       )}
 

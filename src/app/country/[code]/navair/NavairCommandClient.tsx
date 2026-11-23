@@ -197,6 +197,12 @@ export function NavairCommandClient({
         </p>
       )}
 
+      <p className="text-xs text-neutral-500">
+        This page lists the {rows.length} naval and air formations only. The defence office counts
+        every unit, including land, marine and space units, so its unit total and average readiness
+        are wider than this list.
+      </p>
+
       {/* What this force is achieving, before any of the detail. A list of objects with
           dropdowns does not tell a commander what problem they are solving; this does. */}
       <section className="rounded border border-neutral-800 p-4">

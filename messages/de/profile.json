@@ -31,8 +31,8 @@
       "influenceTooltip": "Politischer Rückhalt im Heimatstaat. Gib Aktionen aus, um ihn auszubauen; er nimmt jeden Zug ab. Höherer Einfluss verbessert deine Chancen bei Staatswahlen und schaltet lokale Macht frei.",
       "nationalInfluence": "Nationaler Einfluss",
       "nationalTooltip": "Ansehen auf nationaler Bühne. Sinkt jeden Zug um 1 % und wächst dann durch deinen Staatseinfluss und dein höchstes Amt. Der Hinweis zeigt deinen Rang im Land und den Wert des Spitzenreiters.",
-      "nationalRankTop": "Platz {rank} landesweit, Spitze bei {top}",
-      "nationalTop": "Spitze bei {top}",
+      "nationalRankTop": "Platz {rank} in deinem Land, Spitze des Landes bei {top}",
+      "nationalTop": "Spitze des Landes bei {top}",
       "favorability": "Beliebtheit",
       "favorabilityTooltip": "Öffentliche Zustimmung. Stabil bei 60% oder darunter, sofern Angriffe, Verruf oder andere feindliche Effekte sie nicht drücken. Über 60% kühlt sie von selbst wieder auf diesen Wert ab.",
       "favorabilityCooling": "Über 60%, kühlt jeden Zug ab",
@@ -304,7 +304,8 @@
       "noneEarned": "Noch keine Erfolge errungen.",
       "viewAll": "Alle Erfolge ansehen",
       "quickPeek": "Kurzer Blick",
-      "showLess": "Weniger anzeigen"
+      "showLess": "Weniger anzeigen",
+      "scopeNote": "von diesem Charakter errungen; {account} über alle Charaktere dieses Spielers, das zählt die Bestenliste"
     },
     "lightbox": {
       "viewPicture": "Profilbild ansehen",

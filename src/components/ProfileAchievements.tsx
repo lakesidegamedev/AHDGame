@@ -115,6 +115,7 @@ export function ProfileAchievements({
   const [allAchievements, setAllAchievements] = useState<AchievementItem[]>([]);
   const [totalEarned, setTotalEarned] = useState(0);
   const [totalAchievements, setTotalAchievements] = useState(0);
+  const [accountTotalEarned, setAccountTotalEarned] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -124,6 +125,7 @@ export function ProfileAchievements({
       allAchievements?: AchievementItem[];
       totalEarned?: number;
       totalAchievements?: number;
+      accountTotalEarned?: number;
     } | null>(`/api/characters/${characterId}/achievements`, {
       feature: "profile-achievements",
     })
@@ -140,6 +142,7 @@ export function ProfileAchievements({
           setAllAchievements(data.allAchievements ?? []);
           setTotalEarned(data.totalEarned ?? 0);
           setTotalAchievements(data.totalAchievements ?? 0);
+          setAccountTotalEarned(data.accountTotalEarned ?? 0);
         }
       })
       .catch(() => {})
@@ -239,6 +242,11 @@ export function ProfileAchievements({
               <span className="shrink-0 text-body-sm tabular-nums text-muted">
                 {earnedShown}/{totalAchievements}
               </span>
+              {accountTotalEarned > earnedShown && (
+                <span className="text-body-xs text-muted">
+                  {t("scopeNote", { account: accountTotalEarned })}
+                </span>
+              )}
             </div>
             <div className="flex gap-4">
               <Link

@@ -162,3 +162,28 @@ describe("briefActions", () => {
     expect(actions.map((a) => a.href)).toEqual(["/market?tab=bonds", "/world/trade"]);
   });
 });
+
+describe("rating moves and wording", () => {
+  it("reports an upgrade as an upgrade, never as debt strain", () => {
+    const plan = planBriefs(obs({ creditRating: "AAA", debtToGdp: 40 }), memory({ rating: "AA" }));
+    expect(plan.briefs).toHaveLength(1);
+    const [brief] = plan.briefs;
+    expect(brief.kind).toBe("rating_upgrade");
+    expect(brief.headline).toBe("France upgraded to AAA");
+    expect(brief.headline).not.toMatch(/strain/);
+    expect(brief.body).toContain("rose from AA to AAA");
+  });
+
+  it("dates the bond price to when the brief was written", () => {
+    const plan = planBriefs(obs({ creditRating: "A" }), memory());
+    expect(plan.briefs[0].body).toContain("traded at 98.0 when this brief was written");
+  });
+
+  it("gives elections in different economies different text", () => {
+    const election = { turn: 299, year: 2027, snap: true, governmentChanged: true };
+    const calm = planBriefs(obs({ election, inflation: 2, growth: 1 }), memory()).briefs[0];
+    const hot = planBriefs(obs({ election, inflation: 23.2 }), memory()).briefs[0];
+    expect(hot.body).toContain("inflation at 23.2%");
+    expect(hot.body).not.toBe(calm.body);
+  });
+});

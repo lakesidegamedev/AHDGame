@@ -61,12 +61,18 @@ export function notificationToInboxItem(n: SerializedNotification, now: number):
       : n.turn;
   const unread = !n.read;
   const action = isActionRequired({ kind: "notif", unread, type: n.type });
+  // An alert with no recipient character belongs to the account, so every
+  // character's inbox lists the same one; say so instead of looking duplicated.
+  const recipient = n.metadata?.recipientCharacterId;
+  const accountWide = recipient === undefined || recipient === null || recipient === "";
   return {
     id: n._id,
     kind: "notif",
     category: categoryOf(n.type),
     type: n.type,
-    label: notificationLabel(n.type),
+    label: accountWide
+      ? `${notificationLabel(n.type)} · Shared by all your characters`
+      : notificationLabel(n.type),
     urgency: notificationUrgency(n.type, action),
     unread,
     action,

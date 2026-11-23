@@ -28,11 +28,11 @@ import {
   type SpreadLink,
   type ViewerExposureContext,
 } from "@/lib/crises/rules/boardView";
-import { crisisSeverity, type CrisisSeverity } from "@/lib/crises/severity";
+import type { CrisisSeverity } from "@/lib/crises/severity";
 import {
   compareCrisisRows,
   crisisSection,
-  crisisSeverityScore,
+  crisisScoreFor,
   severityBandFromScore,
   type CrisisSection,
 } from "@/lib/crises/rules/crisisRow";
@@ -251,10 +251,7 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       crisis.status === "active" &&
       (viewerCanActOnCrisis(crisis, interaction, viewer) || (v2?.levers.length ?? 0) > 0);
     const exposure = context ? exposureReasons(crisis, context, viewerCanAct) : [];
-    const severityScore = crisisSeverityScore({
-      v2Severity: v2?.severity,
-      legacyBand: crisisSeverity(crisis),
-    });
+    const severityScore = crisisScoreFor(crisis, v2?.severity);
     return {
       id: crisis._id.toString(),
       name: crisis.name,

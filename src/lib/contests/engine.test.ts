@@ -296,6 +296,45 @@ describe("runContests: opening rounds", () => {
     ]);
   });
 
+  it("numbers a late-joining contest with the shared weekly round number", async () => {
+    const seed = world(10, { small: 400_000, mid: 2e6, big: 3e7 }, { alice: 5, bob: 9, carol: 1 });
+    const { db, data } = fakeDb({
+      ...seed,
+      contestRounds: [
+        ...CONTEST_KINDS.filter((k) => k !== "kingmaker").map((kind) => ({
+          _id: `${kind}:7`,
+          kind,
+          roundNumber: 7,
+          status: "settled",
+          startedAt: new Date(now.getTime() - CONTEST_ROUND_MS),
+          endsAt: now,
+          baselines: [],
+          standings: [],
+          winners: [],
+        })),
+        {
+          _id: "kingmaker:6",
+          kind: "kingmaker",
+          roundNumber: 6,
+          status: "settled",
+          startedAt: new Date(now.getTime() - CONTEST_ROUND_MS),
+          endsAt: now,
+          baselines: [],
+          standings: [],
+          winners: [],
+        },
+      ],
+    });
+
+    await runContests(db, 10, now);
+
+    const opened = rounds(data).filter(
+      (r) => r.status === "active" && CONTEST_KINDS.includes(r.kind as never)
+    );
+    expect(opened.length).toBe(CONTEST_KINDS.length);
+    expect(new Set(opened.map((r) => r.roundNumber))).toEqual(new Set([8]));
+  });
+
   it("fills an empty corporation field on the first turn that has history (#5374)", async () => {
     const seed = world(
       10,
@@ -866,8 +905,17 @@ describe("runContests: rookie, backbench, image, statehouse, kingmaker and comeb
       { createdAt: later(-60 * day), favorability: 70 },
       { createdAt: later(-20 * day), favorability: 55 },
     ];
-    const characters: Doc[] = base.characters.map((c, i) => ({ ...c, ...profile[i] }));
-    return { ...base, characters };
+    // Every character was recreated yesterday by a world reset; only account age differs.
+    const accountAge = [-3 * day, -60 * day, -20 * day];
+    const characters: Doc[] = base.characters.map((c, i) => ({
+      ...c,
+      ...profile[i],
+      ...(i < 3 ? { createdAt: later(-day) } : {}),
+    }));
+    const users: Doc[] = base.users.map((u, i) =>
+      i < 3 ? { ...u, createdAt: later(accountAge[i]) } : u
+    );
+    return { ...base, characters, users };
   }
 
   it("enters rookies by age and the backbench by opening influence, and scores favorability gains", async () => {
@@ -878,7 +926,8 @@ describe("runContests: rookie, backbench, image, statehouse, kingmaker and comeb
         .find((r) => r.kind === kind)!
         .baselines.map((b) => b.subjectId)
         .sort();
-    // Alice is three days old; Bob and Carol are older than two weeks.
+    // Alice's account is three days old; Bob and Carol's are older than two weeks.
+    // Their characters are all one day old, so character age must not decide it.
     expect(opened("rookie_influence")).toEqual([alice.toString()]);
     // Median influence is 30: only Bob opened below it.
     expect(opened("backbench_influence")).toEqual([bob.toString()]);

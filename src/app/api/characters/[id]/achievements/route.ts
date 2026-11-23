@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import {
   getAccountAchievements,
   getAchievementRarityMap,
@@ -9,6 +10,8 @@ import {
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAchievementProgressMap } from "@/lib/achievements/progress";
 import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { campaignLocalRate, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
@@ -39,11 +42,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const additional = await isAdditionalCharacter(db, character);
 
-    const [earned, rarityMap, allAchievements] = await Promise.all([
+    const [earned, accountEarned, rarityMap, allAchievements] = await Promise.all([
       getAccountAchievements(character.userId, {
         characterId: character._id,
         includeUntagged: !additional,
       }),
+      getAccountAchievements(character.userId),
       getAchievementRarityMap(),
       getAllAchievements(),
     ]);
@@ -69,11 +73,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .map((hid) => highlightedItems.find((i) => i.id === hid))
       .filter((x): x is NonNullable<(typeof items)[number]> => Boolean(x));
 
+    const [forexEnabled, campaignRates, preset] = await Promise.all([
+      isForexEnabled(),
+      loadCampaignCurrencyRates(db),
+      getGameStatePreset(db),
+    ]);
+    const campaignRate = forexEnabled
+      ? campaignLocalRate(character.countryId ?? "US", campaignRates, preset)
+      : 1;
+
     const earnedIds = new Set(earned.map(({ achievement }) => achievement._id.toString()));
     const progressMap = await getAchievementProgressMap(
       db,
       character,
-      allAchievements.filter((a) => !earnedIds.has(a._id.toString()))
+      allAchievements.filter((a) => !earnedIds.has(a._id.toString())),
+      { campaignRate }
     );
 
     const allItems = allAchievements.map((a) => {
@@ -102,6 +116,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       highlighted: sortedHighlights,
       allAchievements: allItems,
       totalEarned: items.length,
+      accountTotalEarned: new Set(
+        accountEarned.map(({ achievement }) => achievement._id.toString())
+      ).size,
       totalAchievements: allAchievements.length,
     });
   } catch (error) {

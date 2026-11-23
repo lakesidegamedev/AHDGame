@@ -1,3 +1,5 @@
+import { characterSwitcherDetail } from "@/components/navbar/characterSwitcherDetail";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { loadActiveCharacterScope } from "@/lib/notifications/activeScope";
 import { characterScopeClause, mailCharacterMatch } from "@/lib/notifications/characterScope";
 import { electionNavLabel } from "@/lib/elections/electionNavLabel";
@@ -599,7 +601,15 @@ export async function GET() {
       const [allChars, imperialChar] = await Promise.all([
         charactersCollection(db)
           .find({ userId: userOid })
-          .project({ _id: 1, name: 1, countryId: 1, party: 1 })
+          .project({
+            _id: 1,
+            name: 1,
+            countryId: 1,
+            party: 1,
+            currentOffice: 1,
+            nationalInfluence: 1,
+            actions: 1,
+          })
           .toArray(),
         user.activeImperialCharacterId
           ? imperialCharactersCollection(db).findOne(
@@ -647,6 +657,11 @@ export async function GET() {
           name: c.name,
           countryId: c.countryId,
           party: c.party,
+          detail: characterSwitcherDetail({
+            officeLabel: getOfficeLabel(c.currentOffice ?? null, c.countryId),
+            nationalInfluence: c.nationalInfluence,
+            actions: c.actions,
+          }),
           isActive: !isImperialMode && character ? c._id.equals(character._id) : false,
         }));
       }

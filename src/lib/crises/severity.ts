@@ -48,3 +48,23 @@ export function crisisSeverity(crisis: Pick<Crisis, "effects">): CrisisSeverity 
   if (total >= SEVERITY_MEDIUM_THRESHOLD) return "medium";
   return "low";
 }
+
+/**
+ * A 0..100 score from the summed effect impact, on the same scale as the bands:
+ * 40 at the Elevated line, 70 at the Severe line, 100 at twice the Severe line.
+ */
+export function effectSeverityScore(effects: Crisis["effects"]): number {
+  const total = effects.reduce((sum, e) => sum + effectImpact(e), 0);
+  if (total >= SEVERITY_HIGH_THRESHOLD) {
+    return Math.min(100, 70 + ((total - SEVERITY_HIGH_THRESHOLD) / SEVERITY_HIGH_THRESHOLD) * 30);
+  }
+  if (total >= SEVERITY_MEDIUM_THRESHOLD) {
+    return (
+      40 +
+      ((total - SEVERITY_MEDIUM_THRESHOLD) /
+        (SEVERITY_HIGH_THRESHOLD - SEVERITY_MEDIUM_THRESHOLD)) *
+        30
+    );
+  }
+  return total * 40;
+}

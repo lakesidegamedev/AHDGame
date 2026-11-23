@@ -107,6 +107,16 @@ When a war ends, the effort and alliance lines vanish that turn; exhaustion heal
 
 Active crises can add direct approval effects each turn, on top of the metric score. A major crisis can swing approval by several points a turn. See [Crises](/wiki/crisis-interaction). Favorability changes from [Player Random Events](/wiki/player-events) feed public standing, and most responses to [World Events](/wiki/world-events) move approval up or down.
 
+## Reading the condition badges
+
+On the Approval page, each active condition is a badge that carries up to two numbers.
+
+- **"+1.5 approval"** (or a minus) is how many approval points the condition adds to or takes off the rating. Click a badge to see what it measures, when it started and when it ends.
+- **"+1.1pp"** (percentage points) is the same condition's effect on profit margins for businesses in that region. Conditions about politics or society, such as press freedom or voter turnout, show 0pp because they change approval only. By default a condition's margin effect is 75% of its approval effect, with some conditions weighted higher or lower.
+- **The margin cap.** All of a region's conditions together can move sector margins by at most 3 points either way, so the sum of the pp values on a region can exceed what businesses actually feel. A region's margin total reads between -3pp and +3pp.
+
+Some lines are bookkeeping, not causes, and show no pp value: **Cap on combined positive effects** (positive effects stack only to +8), **Gradual movement toward target** (also called regional smoothing: approval moves at most 2 points a turn toward its target, so this line is the part not yet applied and it shrinks each turn) and **Approval floor or ceiling** (the rating stays between 0 and 100). These make the badges add up to the number shown.
+
 ## What the head of government can do
 
 Rank your levers by size:

@@ -50,6 +50,8 @@ export interface LegacyLeaderboardEntry {
   displayName: string;
   scoringCharacterId: string;
   scoringCharacterName: string;
+  /** False when the stats on this row come from a retired life, frozen at retirement. */
+  scoringIsActive: boolean;
   displayCharacterId: string;
   enactedBills: number;
   contestWins: number;

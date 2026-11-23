@@ -131,6 +131,18 @@ describe("DeclareWarPanel", () => {
     );
   });
 
+  it("explains an all-greyed picker", async () => {
+    barsSpy.mockResolvedValue({
+      truces: [],
+      alliance: "North Atlantic Treaty Organization",
+      allies: ["UK", "CN"],
+    });
+    render(<DeclareWarPanel {...props} />);
+    expect(
+      await screen.findByText(/Every other country open to players is greyed out/)
+    ).toBeTruthy();
+  });
+
   it("will not file a declaration against an ally", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);

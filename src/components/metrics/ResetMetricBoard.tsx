@@ -223,8 +223,16 @@ function RegistrySummary({
           value={board.asOfTurn.toLocaleString("en-US")}
           sub="current world"
         />
-        <SummaryTile label="Recorded / derived" value={String(sourced)} sub="observed or derived" />
-        <SummaryTile label="Provisional" value={String(provisional)} sub="game-calibrated" />
+        <SummaryTile
+          label="Recorded / derived"
+          value={String(sourced)}
+          sub="observed, or worked out from game systems"
+        />
+        <SummaryTile
+          label="Provisional"
+          value={String(provisional)}
+          sub="game-calibrated stand-in, no observed figure"
+        />
         <SummaryTile label="Active pressure" value={String(influenced)} sub="law or Cabinet" />
       </div>
     </div>
@@ -340,7 +348,11 @@ function CategoryOverview({
       <div className="flex flex-wrap gap-4 font-mono text-body-xs uppercase tracking-wider text-muted">
         <span>Values retain their real units</span>
         <span>Direction explains how to read each measure</span>
-        <span>Provisional values are clearly identified</span>
+        <span>Provisional means a game-calibrated stand-in where no observed figure exists</span>
+        <span>
+          A domain score is the mean of the 0-100 condition scores of its metrics, not of the values
+          shown
+        </span>
       </div>
     </section>
   );

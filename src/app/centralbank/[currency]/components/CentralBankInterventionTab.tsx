@@ -395,10 +395,14 @@ export function CentralBankInterventionTab({
             </dd>
           </dl>
           <p className="mt-3 max-w-3xl text-body-sm text-muted">
-            Supporting the currency spends foreign-currency reserves. Weakening it spends
-            home-currency spread reserves first, then forex revenue, then the reserve balance.
-            Intervention exchanges assets rather than destroying their full value. Spending the
-            reserve balance also reduces the backing for lines of credit.
+            Forex revenue pool is what the bank has earned from currency trading. Reserve balance is
+            its own home-currency holding, separate from the money supply (M2), which is the whole
+            economy. Usable to support the currency is larger than either because it adds the
+            foreign-currency reserves from spread fees, valued in the home currency. Supporting the
+            currency spends foreign-currency reserves. Weakening it spends home-currency spread
+            reserves first, then forex revenue, then the reserve balance. Intervention exchanges
+            assets rather than destroying their full value. Spending the reserve balance also
+            reduces the backing for lines of credit.
           </p>
         </CentralBankSection>
       )}

@@ -204,10 +204,19 @@ describe("buildCountryDirectory", () => {
     const byLabel = new Map(
       groups.flatMap((g) => g.rows).map((r) => [r.label, r.figure ?? null] as const)
     );
-    expect(byLabel.get("National policy")).toBe("2 laws");
+    expect(byLabel.get("National policy")).toBe("2 policy areas");
     expect(byLabel.get("Parties")).toBe("6 active");
-    expect(byLabel.get("Approval")).toBe("47%");
+    expect(byLabel.get("Approval")).toBe("47.4%");
     expect(byLabel.get("Unions")).toBe("12 unions");
+  });
+
+  it("counts the District of Columbia separately on the US map row", () => {
+    const groups = buildCountryDirectory({
+      countryId: "US",
+      counts: { ...EMPTY, regions: 51 },
+    });
+    const map = groups.flatMap((g) => g.rows).find((r) => r.label === "Map");
+    expect(map?.figure).toBe("50 states and DC");
   });
 });
 

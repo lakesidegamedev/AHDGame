@@ -11,6 +11,7 @@
  * gated surface (SCOTUS, Command Economy, Conflicts) drops out of the list
  * entirely rather than linking to a redirect.
  */
+import { regionCountLabel } from "@/lib/countries/us/rules/districtGovernment";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   COUNTRY_CLIENT_CONFIGS,
@@ -46,7 +47,7 @@ export interface DirectoryInput {
   /** Era preset, so an era that renames or removes an office is respected. */
   preset?: string | null;
   counts: OverviewCounts | null;
-  /** National law count from the ideology band, reused as the Policy figure. */
+  /** National policy positions from the ideology band, reused as the Policy figure. */
   lawCount?: number | null;
   /** Government approval, already loaded for the hero, reused as the Approval figure. */
   approval?: number | null;
@@ -143,7 +144,7 @@ function politicsRows(input: DirectoryInput): DirectoryRow[] {
       label: "Approval",
       href: approvalUrl(countryId),
       available: true,
-      figure: input.approval != null ? `${Math.round(input.approval)}%` : null,
+      figure: input.approval != null ? `${input.approval.toFixed(1)}%` : null,
     },
     // Referendums only exist for countries that have run one. Everyone else
     // would get a link to an empty hub.
@@ -195,7 +196,7 @@ function governmentRows(input: DirectoryInput, config: CountryClientConfig): Dir
       label: "National policy",
       href: policyUrl(countryId),
       available: true,
-      figure: countFigure(input.lawCount, "law"),
+      figure: countFigure(input.lawCount, "policy area"),
     },
     // SCOTUS is a US-only mechanic (#3581).
     ...(isUS ? [{ label: "Supreme Court", href: scotusUrl(countryId), available: true }] : []),
@@ -266,7 +267,7 @@ function nationRows(input: DirectoryInput, config: CountryClientConfig): Directo
       href: config.mapPath,
       available: true,
       figure: counts?.regions
-        ? `${counts.regions} ${config.regionLabelPlural.toLowerCase()}`
+        ? regionCountLabel(countryId, counts.regions, config.regionLabelPlural)
         : null,
     },
     // SP6: playables have one metrics product; non-playables keep the legacy
