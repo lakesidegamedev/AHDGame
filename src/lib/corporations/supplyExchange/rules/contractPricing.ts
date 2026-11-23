@@ -59,3 +59,40 @@ export function contractMoney(args: {
     valueOverTerm: term === null ? null : valuePerTurn * term,
   };
 }
+
+export interface ContractSides {
+  /** Per unit, what a buyer pays on the open market: the billed input price. */
+  buyerMarketUnitPrice: number;
+  /** Per unit, what a buyer pays under the contract: the billed price plus the premium. */
+  buyerContractUnitPrice: number;
+  /** Per unit, what a seller realises selling on the open market. */
+  sellerMarketUnitPrice: number;
+  /** Per unit, what a seller ends up with: the market sale plus the premium side payment. */
+  sellerContractUnitPrice: number;
+}
+
+/**
+ * Both sides of one contract against the open market. The contract does not
+ * replace the market sale: the supplier's units still clear at the market
+ * price, and the buyer's input bill is still the billed input price. Only the
+ * premium, a percentage of the billed input price, moves between the two.
+ */
+export function contractSides(args: {
+  referenceUnitPrice: number;
+  marketUnitPrice?: number | null;
+  pricePremium: number;
+}): ContractSides {
+  const premiumPerUnit = args.referenceUnitPrice * args.pricePremium;
+  const sellerMarket =
+    typeof args.marketUnitPrice === "number" &&
+    Number.isFinite(args.marketUnitPrice) &&
+    args.marketUnitPrice > 0
+      ? args.marketUnitPrice
+      : args.referenceUnitPrice;
+  return {
+    buyerMarketUnitPrice: args.referenceUnitPrice,
+    buyerContractUnitPrice: args.referenceUnitPrice + premiumPerUnit,
+    sellerMarketUnitPrice: sellerMarket,
+    sellerContractUnitPrice: sellerMarket + premiumPerUnit,
+  };
+}

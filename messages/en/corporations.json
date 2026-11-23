@@ -88,6 +88,8 @@
         "moneyMarket": "Market price on the commodities table: {price} per {unit}. The billed input price follows it but is damped and bounded, so the two differ.",
         "moneyRange": "Slider range: {low} to {high} per {unit}",
         "moneyUnitPrice": "Contract price: {price} per {unit}",
+        "moneyBuyerSide": "As buyer you pay about {market} per {unit} on the market. This contract costs {contract}.",
+        "moneySellerSide": "As seller you receive about {market} per {unit} selling on the market. This contract pays about {contract}: that market sale plus the premium.",
         "moneyPerDay": "Per day at the full cap: {units} {unit}, worth {value}. Each hourly turn settles one twenty-fourth.",
         "moneyOverTerm": "Over the {turns}-turn term at the full cap: {value}",
         "moneyNoReference": "No reference price is available for this commodity yet.",
