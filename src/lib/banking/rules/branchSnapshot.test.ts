@@ -13,27 +13,23 @@ const charter = (overrides: Partial<BankCharter>): BankCharter =>
   }) as BankCharter;
 
 describe("bankBranchSnapshot", () => {
-  it("records deposits, ceiling, fill and the capacity branches took", () => {
+  it("records deposits, ceiling and fill", () => {
     expect(bankBranchSnapshot(charter({}))).toEqual({
       totalDeposits: 9_930_540,
       depositCeiling: 32_213_300,
       branchCapacityShare: 0.5,
       depositFill: 0.3083,
-      takenShare: 0.1541,
     });
   });
 
-  it("takes the whole share once deposits fill the ceiling", () => {
-    // The turn-137 case: a full ceiling halves a universal bank's financial output.
+  it("caps the fill at a full ceiling", () => {
     const s = bankBranchSnapshot(charter({ totalDeposits: 40_000_000 }));
     expect(s?.depositFill).toBe(1);
-    expect(s?.takenShare).toBe(0.5);
   });
 
-  it("records a zero take when deposits or the ceiling are missing", () => {
+  it("records a zero fill when deposits or the ceiling are missing", () => {
     const s = bankBranchSnapshot(charter({ depositCeiling: undefined }));
     expect(s?.depositFill).toBe(0);
-    expect(s?.takenShare).toBe(0);
     expect(s?.depositCeiling).toBe(0);
   });
 

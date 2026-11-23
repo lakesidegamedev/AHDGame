@@ -1,21 +1,13 @@
 /**
  * Per-turn record of a bank's branch network: deposits, the deposit ceiling,
- * the CEO's branch share and the share of financial capacity branches took.
- *
- * Branches take `branchCapacityShare x min(1, deposits / ceiling)` of a
- * deposit-taking bank's financial capacity, and that share comes straight off
- * its financial-services output. Only the charter's current values are stored,
- * so a one-turn swing in output could not be explained afterwards. The
- * corporation history row now carries this snapshot each turn.
+ * the CEO's branch share and how full the ceiling is. The charter keeps only
+ * current values, so this is the per-turn history of the deposit ceiling.
  *
  * Pure: charter in, snapshot out.
  */
 import type { BankCharter } from "@/lib/db/types/bank";
 import { charterMay } from "@/lib/banking/rules/capabilities";
-import {
-  getBranchCapacityShare,
-  getEffectiveBranchCapacityShare,
-} from "@/lib/banking/rules/capacity";
+import { getBranchCapacityShare } from "@/lib/banking/rules/capacity";
 
 export interface BankBranchSnapshot {
   /** Home-currency face deposits on the charter this turn. */
@@ -26,8 +18,6 @@ export interface BankBranchSnapshot {
   branchCapacityShare: number;
   /** Deposits over the ceiling, capped at 1; 0 when either is missing. */
   depositFill: number;
-  /** Share of financial capacity branches took: branchCapacityShare x depositFill. */
-  takenShare: number;
 }
 
 const finite = (x: unknown): number =>
@@ -40,8 +30,8 @@ const round = (x: number, places: number) => {
 
 /**
  * Snapshot for an active charter that runs a branch network, else undefined.
- * Investment-only and inactive charters give no capacity to branches, so they
- * record nothing.
+ * Investment-only and inactive charters hold no deposits, so they record
+ * nothing.
  */
 export function bankBranchSnapshot(
   charter: BankCharter | null | undefined
@@ -57,6 +47,5 @@ export function bankBranchSnapshot(
     depositCeiling: Math.round(depositCeiling),
     branchCapacityShare: round(getBranchCapacityShare(charter), 4),
     depositFill: round(depositFill, 4),
-    takenShare: round(getEffectiveBranchCapacityShare(charter), 4),
   };
 }
