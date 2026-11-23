@@ -112,7 +112,7 @@ describe("Metrics v2 approval source", () => {
     for (const [id, base] of before!.byRegion)
       expect(after!.byRegion.get(id)).toBeGreaterThan(base);
     // Performance reaches approval once, through the regional bases only.
-    expect(after!.nationalModifiers.map((modifier) => modifier.id)).not.toContain(
+    expect((after!.nationalModifiers ?? []).map((modifier) => modifier.id)).not.toContain(
       "national_performance"
     );
   });
