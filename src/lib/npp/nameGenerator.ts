@@ -12,6 +12,7 @@
  * no pool of its own throws rather than borrowing another country's pool.
  */
 
+import { isRealPoliticianName } from "./realPoliticianNames";
 import { namesForYear } from "./nameEra";
 import { CA_SURNAMES, CA_FIRST_NAMES_MALE, CA_FIRST_NAMES_FEMALE } from "./nameListsCa";
 import {
@@ -1026,6 +1027,8 @@ export function generateUniqueNPPNameAndGender(
     // Only the US generator takes a year today; the others ignore the extra
     // argument harmlessly, so this needs no per-country branching.
     const result = generator(year);
+    // A random first name and surname can land on a real politician ("David Duke"); draw again.
+    if (isRealPoliticianName(result.name)) continue;
     if (isNameUnique(result.name, existingNames)) {
       return result;
     }
