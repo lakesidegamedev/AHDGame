@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { buildFyHistory, projectSovereign } from "./federalBudgetDetail";
+import { sovereignInputsFromFiscalClose } from "@/lib/budget/rules/sovereignInputs";
 
 // Revenue recompute is independent of the fiscal-year derivation under test.
 vi.mock("@/lib/budget/revenue", () => ({
@@ -11,6 +12,27 @@ vi.mock("@/lib/budget/revenue", () => ({
 }));
 
 describe("buildFyHistory", () => {
+  it("carries booked interest into prior-close comparisons without repricing debt", () => {
+    const budget = {
+      fiscalYear: 2026,
+      revenue: { total: 105 },
+      spending: { total: 100, debtInterest: 30 },
+      debtToGdpRatio: 0.85,
+      gdp: 1_000,
+      creditRating: "A" as const,
+      debt: { principal: 850, interestRate: 0.05 },
+      economicFactors: { gdpGrowth: 2, inflationRate: 3 },
+    };
+    const frozen = buildFyHistory([{ fiscalYear: 2025, budget }], null)[0];
+    const live = buildFyHistory([], { ...budget, spending: { total: 100, debtInterest: 0 } })[0];
+    expect(frozen.debtInterest).toBe(30);
+    expect(sovereignInputsFromFiscalClose(frozen)?.primaryBalanceToGdp).toBe(0.035);
+    expect(live.debtInterest).toBe(0);
+    expect(sovereignInputsFromFiscalClose(live)?.primaryBalanceToGdp).toBe(0.005);
+    const legacy = buildFyHistory([], { ...budget, spending: { total: 100 } })[0];
+    expect(sovereignInputsFromFiscalClose(legacy)).toBeNull();
+  });
+
   it("assembles ascending fyHistory with the live year appended last", () => {
     const snaps = [
       {

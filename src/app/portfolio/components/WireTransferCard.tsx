@@ -1,4 +1,5 @@
 "use client";
+import { wholeNumberInput } from "@/lib/utils/rules/wholeNumberInput";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -79,9 +80,9 @@ export function WireTransferCard({
 
   async function handleSend() {
     setError(null);
-    const amt = parseInt(amount.replace(/[^0-9]/g, ""), 10);
+    const amt = wholeNumberInput(amount);
     if (!selected) return setError("Choose a recipient.");
-    if (!amt || amt <= 0) return setError("Enter a valid amount.");
+    if (!amt || amt <= 0) return setError("Enter a whole-number amount greater than zero.");
     if (amt > activeBalance)
       return setError(
         activeCurrency ? `Insufficient ${activeCurrency} balance.` : "Insufficient cash on hand."
@@ -212,7 +213,7 @@ export function WireTransferCard({
               type="text"
               inputMode="numeric"
               value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
               className="w-full rounded-lg border border-card-border bg-background pl-7 pr-3 py-2 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
             />

@@ -21,16 +21,17 @@ export type DisplayCurrencyPreference = "local" | "home" | "internal" | Currency
 /**
  * Convert an amount from internal units to a target currency.
  * Rates map: CurrencyCode → (local currency per 1 internal unit).
- * Returns the original amount if the rate is missing (graceful fallback).
+ * A missing or invalid rate cannot produce a local-currency amount.
  */
 export function convertFromInternal(
   amount: number,
   toCurrencyCode: CurrencyCode,
-  rates: Partial<Record<CurrencyCode, number>>
-): number {
-  const rate = rates[toCurrencyCode];
-  if (!rate) return amount;
-  return amount * rate;
+  rates: Partial<Record<CurrencyCode, number>> | undefined
+): number | null {
+  const rate = rates?.[toCurrencyCode];
+  if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
+  const converted = amount * rate;
+  return Number.isFinite(converted) ? converted : null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

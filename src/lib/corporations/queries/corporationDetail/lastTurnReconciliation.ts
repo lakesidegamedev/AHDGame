@@ -5,9 +5,15 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import type { CostBreakdown } from "@/lib/corporations/rules/costBreakdown";
 import {
   reconcileLastTurn,
-  type CashFlowInput,
   type LastTurnReconciliation,
 } from "@/lib/corporations/rules/lastTurnReconciliation";
+
+import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
+import {
+  cashWalkEvidence,
+  reportingCashFlows,
+  type CashMovementGroup,
+} from "@/lib/corporations/rules/cashWalkEvidence";
 
 interface HistoryProjection {
   turn: number;
@@ -22,6 +28,8 @@ interface HistoryProjection {
   currencyCode?: string;
   fxRateAtWrite?: number;
   createdAt?: Date;
+  cashSnapshotAt?: Date;
+  dividendIncomeReceived?: number;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
 }
@@ -46,55 +54,11 @@ const HISTORY_PROJECTION = {
   currencyCode: 1,
   fxRateAtWrite: 1,
   createdAt: 1,
+  cashSnapshotAt: 1,
+  dividendIncomeReceived: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
 } as const;
-
-/**
- * Cash is snapshotted mid-turn and re-written a moment later once bond flows
- * settle, so a row created within this grace of a snapshot belongs to it.
- */
-export const SNAPSHOT_GRACE_MS = 2 * 60 * 1000;
-
-/**
- * The ledger filter for one walk. Player actions are stamped with the last
- * completed turn, so a turn stamp cannot say which snapshot interval an action
- * fell in; the creation time can. Falls back to the turn stamp when either
- * snapshot has no creation time.
- */
-export function cashWalkWindow(
-  latest: { turn: number; createdAt?: Date },
-  previous: { createdAt?: Date } | null
-): { turn: number } | { createdAt: { $gt: Date; $lte: Date } } {
-  if (!(latest.createdAt instanceof Date) || !(previous?.createdAt instanceof Date)) {
-    return { turn: latest.turn };
-  }
-  return {
-    createdAt: {
-      $gt: new Date(previous.createdAt.getTime() + SNAPSHOT_GRACE_MS),
-      $lte: new Date(latest.createdAt.getTime() + SNAPSHOT_GRACE_MS),
-    },
-  };
-}
-
-/** A logged movement in the company's reporting currency; null when it cannot be converted. */
-function toReportingAmount(
-  tx: TxProjection,
-  reportingCurrency: string | undefined,
-  fxRateAtWrite: number | undefined
-): number | null {
-  if (!reportingCurrency || tx.currencyCode === reportingCurrency) return tx.amount;
-  if (typeof tx.anchorAmount === "number" && typeof fxRateAtWrite === "number") {
-    return tx.anchorAmount * fxRateAtWrite;
-  }
-  return null;
-}
-
-/** Bond figures are stored in anchor money; the row's own rate converts them. */
-function anchorToLocal(anchor: number | undefined, rate: number | undefined): number | null {
-  if (typeof anchor !== "number") return null;
-  return typeof rate === "number" && rate > 0 ? anchor * rate : anchor;
-}
 
 /**
  * The most recently recorded turn for a company, tied to the change in cash
@@ -130,17 +94,30 @@ export async function loadLastTurnReconciliation(
         costBreakdown: 1,
         headcount: 1,
         createdAt: 1,
+        cashSnapshotAt: 1,
       },
     }
   );
-  const txRows = await financialTxLogCollection<TxProjection>(db)
-    .find(
-      {
-        subjectId: corporation._id,
-        subjectType: "corporation",
-        ...cashWalkWindow(latest, previous),
-      },
-      { projection: { type: 1, amount: 1, currencyCode: 1, anchorAmount: 1 }, limit: 500 }
+  const evidence = cashWalkEvidence(latest, previous);
+  const groups = await financialTxLogCollection<TxProjection>(db)
+    .aggregate<CashMovementGroup>(
+      [
+        { $match: { subjectId: corporation._id, subjectType: "corporation", ...evidence.filter } },
+        {
+          $group: {
+            _id: {
+              type: "$type",
+              currencyCode: "$currencyCode",
+              hasAnchorAmount: { $isNumber: "$anchorAmount" },
+            },
+            amount: { $sum: "$amount" },
+            anchorAmount: { $sum: "$anchorAmount" },
+            count: { $sum: 1 },
+            missingAnchor: { $sum: { $cond: [{ $isNumber: "$anchorAmount" }, 0, 1] } },
+          },
+        },
+      ],
+      { maxTimeMS: 6000 }
     )
     .toArray();
 
@@ -150,27 +127,24 @@ export async function loadLastTurnReconciliation(
       ? previous.liquidCapital
       : null;
 
-  const sameLiveCurrency =
-    !corporation.liquidCurrencyCode ||
-    !latest.currencyCode ||
-    corporation.liquidCurrencyCode === latest.currencyCode;
+  const sameLiveCurrency = corporation.liquidCurrencyCode === latest.currencyCode;
 
-  const flows: CashFlowInput[] = [];
-  for (const tx of txRows) {
-    const amount = toReportingAmount(tx, latest.currencyCode, latest.fxRateAtWrite);
-    if (amount != null) flows.push({ type: tx.type, amount });
-  }
-
-  return reconcileLastTurn(
+  const { flows, unconvertedMovements } = reportingCashFlows(
+    groups,
+    latest.currencyCode,
+    latest.fxRateAtWrite
+  );
+  const result = reconcileLastTurn(
     {
       turn: latest.turn,
       revenue: latest.revenue,
       totalCosts: latest.totalCosts,
-      retained: latest.income,
+      retained: realizedNetIncomePerTurn({ ...latest, income: latest.income }),
       dividendPaid: Math.max(0, latest.dividendPaidPerTurn ?? 0),
       tax: Math.max(0, latest.corporateTaxPaid ?? 0),
-      bondCouponIncome: anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
-      bondInterestPaid: anchorToLocal(latest.perTurnBondDragOnNetIncome, latest.fxRateAtWrite),
+      bondCouponIncome: latest.perTurnBondCouponIncome,
+      bondInterestPaid: latest.perTurnBondDragOnNetIncome,
+      dividendIncomeReceived: latest.dividendIncomeReceived,
       cashAfter: latest.liquidCapital,
       cashNow:
         typeof corporation.liquidCapital === "number" && sameLiveCurrency
@@ -188,4 +162,7 @@ export async function loadLastTurnReconciliation(
     },
     flows
   );
+  result.cash.evidence = { boundary: evidence.boundary, unconvertedMovements };
+  result.reportingCurrency = latest.currencyCode ?? null;
+  return result;
 }

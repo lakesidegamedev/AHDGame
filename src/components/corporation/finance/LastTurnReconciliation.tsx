@@ -2,6 +2,7 @@
 
 import type { LastTurnReconciliation as Reconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
 import { describeCostDriver } from "@/lib/corporations/rules/costBreakdown";
+import { formatCurrency } from "@/lib/utils/formattersCore";
 import {
   DenseSection,
   StatementGroup,
@@ -30,8 +31,22 @@ export function costChangeNote(costs: number, previous: number | null): string |
  * change in cash on hand. Fixed to a single turn, so it ignores the period
  * selector and every figure is per turn in the company's own currency.
  */
-export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
+export function LastTurnReconciliation({
+  data,
+  fmt: fallbackFormat,
+  fmtSigned: fallbackSigned,
+}: Props) {
   const { statement, cash } = data;
+  const fmt = (amount: number) =>
+    data.reportingCurrency === undefined
+      ? fallbackFormat(amount)
+      : data.reportingCurrency === null
+        ? `₳${Math.round(amount).toLocaleString("en-US")}`
+        : formatCurrency(amount, data.reportingCurrency);
+  const fmtSigned = (amount: number) =>
+    data.reportingCurrency === undefined
+      ? fallbackSigned(amount)
+      : `${amount < 0 ? "-" : "+"}${fmt(Math.abs(amount))}`;
   const round = (n: number) => Math.round(n);
   const cost = (n: number) => `(${fmt(round(n))})`;
   return (
@@ -98,9 +113,24 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
         />
 
         <StatementGroup>Cash, as recorded</StatementGroup>
+        {cash.evidence &&
+          (cash.evidence.boundary !== "recorded" ||
+            cash.evidence.unconvertedMovements > 0 ||
+            cash.before == null) && (
+            <StatementGroup>
+              <span className="text-xs text-warning">
+                {cash.evidence.boundary !== "recorded" &&
+                  "Snapshot timing is estimated for this comparison. "}
+                {cash.evidence.unconvertedMovements > 0 &&
+                  `${cash.evidence.unconvertedMovements} cash movements could not be converted using the recorded currency basis. `}
+                {cash.before == null && "No comparable opening cash snapshot is available. "}
+                Remaining differences are unreconciled, not proof of missing money.
+              </span>
+            </StatementGroup>
+          )}
         {cash.before != null && (
           <StatementLine
-            label="Cash at the end of the turn before"
+            label="Cash at the previous recorded close"
             amount={fmt(round(cash.before))}
           />
         )}
@@ -123,21 +153,21 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
         {cash.unitemised != null && round(cash.unitemised) !== 0 && (
           <StatementLine
             indent
-            label="Cash change with no ledger record"
+            label="Cash change not reconciled by this view"
             amount={fmtSigned(round(cash.unitemised))}
             amountClass={signTone(cash.unitemised)}
-            title="Cash change left after retained income and the lines above. Nothing in the ledger explains it."
+            title="Difference remaining after the recorded earnings and cash movements shown here. Inventory, accruals or incomplete evidence can also cause a difference."
           />
         )}
         <StatementLine
           strong
-          label="Cash at the end of this turn"
+          label="Cash at this recorded close"
           amount={fmt(round(cash.after))}
           note={cash.change != null ? `${fmtSigned(round(cash.change))} on the turn` : undefined}
         />
         {cash.now != null && (
           <StatementLine
-            label="Cash now, after actions since"
+            label="Cash now, after later movements"
             amount={fmt(round(cash.now))}
             title="Spending or income since the turn was recorded, such as a research unlock bought after it, appears in the next turn's walk."
           />

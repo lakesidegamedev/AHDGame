@@ -166,10 +166,13 @@ describe("holding bucket sale selection", () => {
     expect(screen.getByText(/Bought on turn 190.*38 turns/)).toBeTruthy();
     expect(screen.getByText(/subject to Income Tax/)).toBeTruthy();
     expect(screen.getByText(/5 available in selected holding/)).toBeTruthy();
-    expect(enterQuantity(9)).toBe("5");
+    expect(enterQuantity(9)).toBe("9");
+    expect(
+      screen.getByText(/selected holding contains only 5|selected holding contains 5/i)
+    ).toBeTruthy();
     expect(screen.queryByText(/Selling all.*remaining/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Long Term Holdings/ }));
-    expect(enterQuantity(9)).toBe("7");
+    expect(enterQuantity(9)).toBe("9");
     fireEvent.click(screen.getByRole("button", { name: "Limit Order" }));
     fireEvent.click(screen.getByRole("button", { name: "Sell order" }));
     expect(screen.getByRole("button", { name: /Personally\s+12 shares/ })).toBeTruthy();
@@ -311,3 +314,17 @@ describe("at-market buy limit notices", () => {
     expect(screen.queryByText(ceoFull)).toBeNull();
   });
 });
+
+it.each(["-5", "1.5", "1e6", "9007199254740992"])(
+  "retains and rejects invalid limit quantity %s",
+  (raw) => {
+    setup({ isCeo: false });
+    fireEvent.click(screen.getByRole("button", { name: "Limit Order" }));
+    const input = screen.getByPlaceholderText("Quantity");
+    fireEvent.change(input, { target: { value: raw } });
+    fireEvent.blur(input);
+    expect(input).toHaveProperty("value", raw);
+    expect(screen.getByText("Enter a whole number of shares greater than zero.")).toBeTruthy();
+    expect(screen.queryByText(/Fills immediately:/)).toBeNull();
+  }
+);
