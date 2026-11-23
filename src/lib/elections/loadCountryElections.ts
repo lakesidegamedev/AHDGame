@@ -2,7 +2,7 @@ import { getDb } from "@/lib/mongodb";
 import type { Election, ElectionDisplay } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveElections } from "@/lib/elections/resolveElection";
-import { toElectionDisplay } from "./electionDisplay";
+import { toElectionListDisplay } from "./electionDisplay";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface ElectionsViewerContext {
@@ -39,5 +39,5 @@ export async function loadCountryElections(
     isAdmin: viewer.isAdmin,
     activeCharacterId: viewer.activeCharacterId,
   });
-  return resolved.map(toElectionDisplay);
+  return resolved.map(toElectionListDisplay);
 }

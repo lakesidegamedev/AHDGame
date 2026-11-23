@@ -51,7 +51,7 @@
   "src/app/congress/bills/[id]/components/DeadlineCountdown.tsx",
   "src/app/congress/bills/[id]/components/TimelineStepper.tsx",
   "src/app/congress/bills/[id]/components/VoteBar.tsx",
-  "src/app/congress/bills/[id]/page.tsx",
+  "src/app/congress/bills/[id]/BillDetailClient.tsx",
   "src/app/congress/components/LeadershipByPartyGrid.tsx",
   "src/app/congress/components/LeadershipRoleSection.tsx",
   "src/app/congress/components/LeadershipShared.tsx",
