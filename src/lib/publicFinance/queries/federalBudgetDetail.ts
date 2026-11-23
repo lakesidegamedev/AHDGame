@@ -44,6 +44,7 @@ import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { sovereignMaturityLadder } from "@/lib/budget/rules/maturityLadder";
+import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
@@ -561,12 +562,24 @@ export async function loadFederalBudgetDetail(params: {
         matured: { $ne: true },
         defaulted: { $ne: true },
       },
-      { projection: { totalIssued: 1, couponRate: 1, maturityTurn: 1 } }
+      {
+        projection: {
+          issuerType: 1,
+          matured: 1,
+          defaulted: 1,
+          totalIssued: 1,
+          restructureHaircutPercent: 1,
+          couponRate: 1,
+          maturityTurn: 1,
+        },
+      }
     )
     .toArray();
+  // Same outstanding face the coupon book charges interest on, so the ladder
+  // adds up to the interest line instead of drifting by restructure haircuts.
   const maturityLadder = sovereignMaturityLadder(
     sovereignBonds.map((bond) => ({
-      principal: bond.totalIssued,
+      principal: sovereignBondOutstanding(bond),
       couponRatePct: bond.couponRate,
       maturityTurn: bond.maturityTurn,
     })),

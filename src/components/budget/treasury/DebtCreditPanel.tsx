@@ -45,10 +45,12 @@ function KV({ label, value, delta }: { label: string; value: string; delta?: Rea
 interface DebtCreditPanelProps {
   sym: string;
   principal: number;
-  /** The rate the "Why this rate" table composes from today's inputs. */
+  /** The rate new borrowing would pay today, from the "Why this rate" table. */
   interestRate: number;
-  /** Rate stored at the last rollover; shown only when it differs. */
+  /** New-borrowing rate stored at the last rollover; shown only when it differs. */
   bookedRate?: number;
+  /** Annual interest the budget charges. Its ratio to principal is the rate actually paid. */
+  debtInterest?: number;
   ceiling: number;
   ceilingLabel: string;
   debtToGdp: number;
@@ -67,6 +69,7 @@ export function DebtCreditPanel({
   principal,
   interestRate,
   bookedRate,
+  debtInterest,
   ceiling,
   ceilingLabel,
   debtToGdp,
@@ -111,12 +114,27 @@ export function DebtCreditPanel({
             ) : undefined
           }
         />
-        <KV label="Effective rate" value={`${(interestRate * 100).toFixed(2)}%`} />
+        {debtInterest != null && principal > 0 && (
+          <KV
+            label="Average rate paid"
+            value={`${((debtInterest / principal) * 100).toFixed(2)}%`}
+          />
+        )}
+        <KV label="New borrowing rate" value={`${(interestRate * 100).toFixed(2)}%`} />
         {bookedRate != null && Math.abs(bookedRate - interestRate) > 0.00005 && (
-          <KV label="Booked at last rollover" value={`${(bookedRate * 100).toFixed(2)}%`} />
+          <KV
+            label="New borrowing rate at last rollover"
+            value={`${(bookedRate * 100).toFixed(2)}%`}
+          />
         )}
         <KV label={ceilingLabel} value={money(ceiling)} />
       </div>
+
+      <p className="mt-2 text-[11px] text-muted">
+        Interest is charged at the coupons the existing bonds were issued at, so the average rate
+        paid sits between old and new rates. The new borrowing rate is what bonds issued or rolled
+        over today would pay.
+      </p>
 
       {/* Debt-to-GDP scale */}
       <div className="mt-4">

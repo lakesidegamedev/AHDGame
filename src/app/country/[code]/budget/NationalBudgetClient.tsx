@@ -587,6 +587,7 @@ export function NationalBudgetClient() {
             principal={budget.debt.principal}
             interestRate={sovereignRate.effectiveRate}
             bookedRate={budget.debt.interestRate}
+            debtInterest={budget.spending.debtInterest}
             ceiling={budget.debt.ceiling}
             ceilingLabel={labels.ceilingLabel}
             debtToGdp={budget.debtToGdpRatio}
