@@ -144,6 +144,6 @@ export async function recomputePoliticalNationalApproval(
       modifiers: bases?.modifiersByRegion?.get(String(metrics._id)),
     })),
     { countryId, preset: inputs.preset, year: inputs.year },
-    [expectations]
+    [expectations, ...(bases?.nationalModifiers ?? [])]
   );
 }
