@@ -31,13 +31,19 @@ function fmtUnits(value: number): string {
   return value.toFixed(1);
 }
 
-function formatPrice(value: number): string {
+function formatPrice(value: number | null): string {
+  if (value == null) return "Unavailable";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
     Math.round(value * 100) / 100
   );
 }
 
-function getPriceToneClass(value: number, basePrice: number, isDemand: boolean): string {
+function getPriceToneClass(
+  value: number | null,
+  basePrice: number | null,
+  isDemand: boolean
+): string {
+  if (value == null || basePrice == null) return "text-muted";
   if (value === basePrice) return "text-muted";
   const isHigh = value > basePrice;
   if (isDemand) {

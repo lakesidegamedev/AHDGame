@@ -19,6 +19,7 @@ export interface SovereignBudgetFields extends SurplusInputs {
   gdp?: number;
   gdpSmoothed?: number;
   debt?: { principal?: number; interestRate?: number } | null;
+  spending?: { total?: number; debtInterest?: number } | null;
   /** Ratio the debt panel shows; falls back to the stock over GDP. */
   debtToGdpRatio?: number;
   economicFactors?: { gdpGrowth?: number; inflationRate?: number } | null;
@@ -35,6 +36,7 @@ export interface SovereignFiscalClose {
   debtToGdp: number;
   debtPrincipal?: number;
   debtRate?: number;
+  debtInterest?: number;
   gdpGrowth?: number;
   inflationRate?: number;
   investorConfidence?: number | null;
@@ -52,7 +54,12 @@ const finite = (value: number | null | undefined): number =>
 export function sovereignInputsFromBudget(budget: SovereignBudgetFields): SovereignRateInputs {
   const gdp = resolveRatioGdp(budget);
   const principal = Math.max(0, finite(budget.debt?.principal));
-  const primaryBalance = federalSurplus(budget) + principal * finite(budget.debt?.interestRate);
+  const interest = budget.spending?.debtInterest;
+  const stockService =
+    typeof interest === "number" && Number.isFinite(interest)
+      ? Math.max(0, interest)
+      : principal * Math.max(0, finite(budget.debt?.interestRate));
+  const primaryBalance = federalSurplus(budget) + stockService;
   const storedRatio = budget.debtToGdpRatio;
   const storedUsable =
     typeof storedRatio === "number" && Number.isFinite(storedRatio) && storedRatio >= 0;
@@ -77,16 +84,17 @@ export function sovereignInputsFromFiscalClose(
   if (
     !close ||
     !(close.gdp > 0) ||
-    close.debtRate == null ||
+    close.debtInterest == null ||
+    !Number.isFinite(close.debtInterest) ||
     close.gdpGrowth == null ||
     close.inflationRate == null
   ) {
     return null;
   }
-  const principal = Math.max(0, finite(close.debtPrincipal));
   return {
     debtToGdpRatio: close.debtToGdp,
-    primaryBalanceToGdp: (close.revenue - close.spending + principal * close.debtRate) / close.gdp,
+    primaryBalanceToGdp:
+      (close.revenue - close.spending + Math.max(0, close.debtInterest)) / close.gdp,
     realGrowthPct: close.gdpGrowth,
     inflationPct: close.inflationRate,
     investorConfidence: close.investorConfidence,

@@ -13,7 +13,6 @@ import { nominalTaxBaseGrowthPct } from "./rules/nominalGrowth";
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type {
-  EnactedLaw,
   FederalBudget,
   StateBudget,
   FederalTaxRates,
@@ -46,7 +45,6 @@ import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 import { BACKGROUND_NATION_PRESET } from "@/lib/world/macro/rules/backgroundConstitution";
 import { backgroundBudgetRefresh, loadBackgroundBudgetSources } from "./backgroundBudget";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import {
   NON_LAW_CALIBRATION_VERSION,
   calibrateNonLawSpendingShare,
@@ -333,7 +331,7 @@ export async function calculateFederalRevenue(
     bases = federalBudget.taxBases;
   } else {
     // Fallback: derive bases from GDP
-    const nationalGDP = await calculateNationalGDP(db);
+    const nationalGDP = await calculateNationalGDP(db, budgetId);
     bases = {
       taxableIncome: nationalGDP * GDP_INCOME_TAX_FACTOR,
       domesticCorporateProfits: nationalGDP * GDP_DOMESTIC_CORPORATE_FACTOR,
