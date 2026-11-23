@@ -402,7 +402,9 @@ export function NavbarWrapper({
     if (useLightweightNav || isExcludedPath) return;
     if (authBootstrapLoading) return;
     if (!navData) {
-      dispatch({ type: "SET_LOADING", isLoading: false });
+      // A failed bootstrap for a visitor who carries a session is not a sign-out:
+      // keep the neutral skeleton rather than offering Sign in / Register.
+      if (!hasSession) dispatch({ type: "SET_LOADING", isLoading: false });
       return;
     }
 
@@ -467,6 +469,7 @@ export function NavbarWrapper({
     dispatch({ type: "SET_LOADING", isLoading: false });
   }, [
     authBootstrapLoading,
+    hasSession,
     isExcludedPath,
     navData,
     setCharacterStats,

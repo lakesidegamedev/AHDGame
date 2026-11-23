@@ -7,6 +7,7 @@ import {
   buildCorpNavTabs,
   corpNavLocation,
   corpTabIdFor,
+  isCeoOfficeBlocked,
 } from "./CorporationTabGroups";
 import { CORP_TABS, CEO_TAB, DEALS_TAB, STRUCTURE_TAB } from "./CorporationPageConstants";
 import type { CorpTabId } from "./CorporationPageTypes";
@@ -188,5 +189,17 @@ describe("corporation tab grouping", () => {
         CORP_TABS.map((tab) => tab.id)
       );
     });
+  });
+});
+
+describe("isCeoOfficeBlocked", () => {
+  it("flags a CEO Office link opened by someone who is not the CEO", () => {
+    expect(isCeoOfficeBlocked("ceo", false)).toBe(true);
+    expect(isCeoOfficeBlocked("settings", false)).toBe(true);
+  });
+  it("stays quiet for the CEO and for other tabs", () => {
+    expect(isCeoOfficeBlocked("ceo", true)).toBe(false);
+    expect(isCeoOfficeBlocked("shares", false)).toBe(false);
+    expect(isCeoOfficeBlocked(null, false)).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { compareHoldersByShares } from "@/lib/corporations/rules/holderOrder";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -69,7 +70,7 @@ export default function OwnershipHistoryPanel({
   );
   const topHolderKey = corporation.shareholders
     .slice()
-    .sort((a, b) => b.shares - a.shares)
+    .sort(compareHoldersByShares)
     .map(currentOwnerKey)
     .find((key) => names.has(key));
   const key = names.has(selectedKey)

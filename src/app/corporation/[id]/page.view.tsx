@@ -27,7 +27,11 @@ import PrivateNotListedNotice from "@/components/corporation/PrivateNotListedNot
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 
 import { SuperTabNav } from "@/components/nav/SuperTabNav";
-import { CORP_LEGACY_TAB_MAP, corpTabIdFor } from "@/components/corporation/CorporationTabGroups";
+import {
+  CORP_LEGACY_TAB_MAP,
+  corpTabIdFor,
+  isCeoOfficeBlocked,
+} from "@/components/corporation/CorporationTabGroups";
 
 import { AutopilotCard } from "@/components/corporation/AutopilotCard";
 import {
@@ -449,6 +453,14 @@ export function renderCorporationDetailPageView(
               </span>{" "}
               <span className="text-muted">
                 Shareholders voted you their first choice. You can hold one CEO seat at a time.
+              </span>
+            </NoticeStrip>
+          )}
+
+          {!!myCharacterId && isCeoOfficeBlocked(searchParams.get("tab"), isCeo) && (
+            <NoticeStrip tone="warning" tag="CEO Office">
+              <span className="text-muted">
+                The CEO Office is only open to this corporation&apos;s CEO.
               </span>
             </NoticeStrip>
           )}

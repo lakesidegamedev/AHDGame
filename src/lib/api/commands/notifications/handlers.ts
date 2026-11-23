@@ -26,6 +26,7 @@ import {
   resolveActiveCharacterScope,
 } from "@/lib/notifications/characterScope";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { withOwnedCorporations } from "@/lib/notifications/activeScope";
 
 const notificationsDeleteSchema = z.object({
   id: z.string().optional(),
@@ -122,9 +123,12 @@ export const GET = withNoStore(async (request: Request) => {
       profileParam === null
         ? characterScopeClause(
             userId,
-            resolveActiveCharacterScope(
-              profileScopeCharacters.filter((c) => c.userId.equals(userId)),
-              ctx.activeCharacterId
+            await withOwnedCorporations(
+              db,
+              resolveActiveCharacterScope(
+                profileScopeCharacters.filter((c) => c.userId.equals(userId)),
+                ctx.activeCharacterId
+              )
             )
           )
         : null;

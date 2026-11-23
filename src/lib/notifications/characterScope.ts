@@ -9,6 +9,8 @@ export interface ActiveCharacterScope {
   characterId: string;
   /** Set for a character added after the account's first; older untagged alerts are not its own. */
   since: Date | null;
+  /** Corporations this character runs; untagged corporation alerts for any other corporation are not its own. */
+  corporationIds?: string[];
 }
 
 /**
@@ -44,6 +46,7 @@ export function characterScopeClause(
   const untagged: Record<string, unknown> = {
     "metadata.recipientCharacterId": { $in: [null, ""] },
   };
+  untagged["metadata.corporationId"] = { $in: [null, "", ...(scope.corporationIds ?? [])] };
   if (scope.since) untagged.createdAt = { $gte: scope.since };
   return {
     $or: [
