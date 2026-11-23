@@ -17,3 +17,4 @@ areas: [frontend]
 - Moving the face value slider clears an old error message.
 - The Credit tab line formerly called "Annual operating income" is now "Annual sector income", with a note that it leaves out company-wide costs and so is higher than the operating income on the CEO Office.
 - If a company's bond and credit figures cannot be fetched, the Leverage line on the Overview says so and offers a retry, instead of showing Loading forever.
+- Small companies whose borrowing room is under the usual minimum issue size can now issue a bond down to the lower minimum the game offers them.
