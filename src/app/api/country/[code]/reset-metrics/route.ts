@@ -19,6 +19,8 @@ import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
 import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/catalog";
 import { withPostLaunchReferences } from "@/lib/resetLegislation/rules/postLaunchReferences";
+import { openingLawTitle } from "@/lib/resetLegislation/rules/openingLawTitle";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { resetCabinetActions } from "@/lib/resetCabinet/catalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import {
@@ -217,12 +219,39 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           },
         ])
     );
+    const openingReferences = openingLawBoard ? withPostLaunchReferences(openingLawBoard) : {};
+    const componentIds = [
+      ...new Set(
+        Object.values(openingReferences).flatMap((reference) =>
+          reference.sourceComponents.map((component) => component.sourceId)
+        )
+      ),
+    ];
+    const lawTypes = componentIds.length
+      ? await legislationTypesCollection(db)
+          .find({ _id: { $in: componentIds } }, { projection: { name: 1, policyOptions: 1 } })
+          .toArray()
+      : [];
+    const lawTypeById = new Map(lawTypes.map((type) => [String(type._id), type]));
+    const readableReferences = Object.fromEntries(
+      Object.entries(openingReferences).map(([familyId, reference]) => [
+        familyId,
+        {
+          ...reference,
+          currentLaw: openingLawTitle(reference, (sourceId, optionIndex) => {
+            const type = lawTypeById.get(sourceId);
+            const level = type?.policyOptions?.[optionIndex]?.name;
+            return type?.name && level ? { lawName: type.name, levelName: level } : null;
+          }),
+        },
+      ])
+    );
     const standingLaws = openingLawBoard
       ? buildMetricLawStatuses({
           country: countryId,
           scope: board.board.scope,
           families: resetLawFamilies,
-          references: withPostLaunchReferences(openingLawBoard),
+          references: readableReferences,
           programs,
           delivery,
           netByFamily,
