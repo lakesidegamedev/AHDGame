@@ -24,9 +24,11 @@ describe("bondIssueRefusalText", () => {
 });
 
 describe("bondIssueMinimum", () => {
-  it("never goes below the schema minimum", () => {
+  it("uses the server minimum when reported, else the flat minimum", () => {
     expect(bondIssueMinimum(undefined)).toBe(MIN_BOND_ISSUANCE);
-    expect(bondIssueMinimum(40_000)).toBe(MIN_BOND_ISSUANCE);
+    // A small corporation's lowered minimum is honoured.
+    expect(bondIssueMinimum(40_000)).toBe(40_000);
+    expect(bondIssueMinimum(0)).toBe(MIN_BOND_ISSUANCE);
     expect(bondIssueMinimum(250_000)).toBe(250_000);
   });
 
@@ -34,7 +36,8 @@ describe("bondIssueMinimum", () => {
     const ok = (faceValue: number) =>
       issueBondSchema.safeParse({ faceValue, maturityTurns: 96 }).success;
     expect(ok(bondIssueMinimum(undefined))).toBe(true);
-    expect(ok(bondIssueMinimum(undefined) - 1)).toBe(false);
+    expect(ok(bondIssueMinimum(40_000))).toBe(true);
+    expect(ok(0)).toBe(false);
   });
 });
 

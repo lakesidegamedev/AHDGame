@@ -4,12 +4,11 @@ import { parseErrorBody } from "@/lib/errors/catalog";
 export type BondIssueInputProblem = "belowMinimum" | "aboveMaximum" | "unavailable";
 
 /**
- * The smallest issue the server accepts. The server clamps its own minimum to a
- * small corporation's ceiling, but the request schema still enforces the flat
- * minimum, so a smaller figure can never be submitted.
+ * The smallest issue the server accepts. The server lowers its minimum to a
+ * small corporation's borrowing room, so its figure wins when it is reported.
  */
 export function bondIssueMinimum(serverMinimum: number | undefined): number {
-  return Math.max(MIN_BOND_ISSUANCE, serverMinimum ?? MIN_BOND_ISSUANCE);
+  return serverMinimum != null && serverMinimum > 0 ? serverMinimum : MIN_BOND_ISSUANCE;
 }
 
 /** Why a face value cannot be submitted, or null when it can. */

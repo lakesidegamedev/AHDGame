@@ -80,11 +80,11 @@ describe("BondsTab issuance", () => {
     expect(all).toContain(`A${MIN_BOND_ISSUANCE_PER_ISSUE}`);
   });
 
-  it("does not offer an issue below the 100,000 minimum", () => {
+  it("offers the server minimum, lowered for a small corporation", () => {
     renderTab();
     const button = screen.getByRole("button", { name: "Issue bonds" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
-    expect(screen.getByText(/Minimum/).textContent).toContain("A100000");
+    expect(screen.getByText(/Minimum/).textContent).toContain("A40000");
   });
 
   it("enables the issue button at a valid amount and clears a stale refusal", async () => {
