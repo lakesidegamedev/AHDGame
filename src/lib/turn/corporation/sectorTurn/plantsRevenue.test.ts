@@ -64,7 +64,6 @@ function input(over: Partial<PlantsRevenueInput> = {}): PlantsRevenueInput {
     currentTurn: CURRENT_TURN,
     governorCap: GOVERNOR_CAP,
     governorRampTurns: GOVERNOR_RAMP_TURNS,
-    privateBankingEnabled: false,
     marketPlantsEnabled: false,
     contractProductionTargetBySectorId: undefined,
     ...over,
