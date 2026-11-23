@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeDomainAxes, computeNationalAxes, type AxisInputRecord } from "./nationalAxes";
+import {
+  computeDomainAxes,
+  computeNationalAxes,
+  isLawRecord,
+  type AxisInputRecord,
+} from "./nationalAxes";
 
 function policy(partial: Partial<AxisInputRecord>): AxisInputRecord {
   return {
@@ -67,9 +72,10 @@ describe("computeNationalAxes", () => {
     expect(result.economic).toBe(-5);
   });
 
-  it("excludes policy records that carry no axis at all from lawCount", () => {
+  it("counts a policy record with no axis as a law, but not toward either average", () => {
     const result = computeNationalAxes([policy({})]);
-    expect(result.lawCount).toBe(0);
+    expect(result.lawCount).toBe(1);
+    expect(result.economicCount).toBe(0);
   });
 
   it("treats records without a recordType as policy records (API marks it optional)", () => {
@@ -114,6 +120,24 @@ describe("computeDomainAxes", () => {
     expect(trade).toBeDefined();
     expect(trade?.economic).toBeNull();
     expect(trade?.social).toBeNull();
-    expect(trade?.lawCount).toBe(0);
+    expect(trade?.lawCount).toBe(1);
+    expect(trade?.economicCount).toBe(0);
+  });
+});
+
+describe("law counting", () => {
+  it("counts every policy-type record, with or without an axis, and no tariffs or subsidies", () => {
+    const result = computeNationalAxes([
+      policy({ economic: -3, hasEconomic: true }),
+      policy({}),
+      { ...policy({}), recordType: "tariff" },
+      { ...policy({}), recordType: "subsidy" },
+    ]);
+    expect(result.lawCount).toBe(2);
+    expect(result.economicCount).toBe(1);
+  });
+  it("isLawRecord treats a missing recordType as a policy", () => {
+    expect(isLawRecord({})).toBe(true);
+    expect(isLawRecord({ recordType: "tariff" })).toBe(false);
   });
 });

@@ -26,7 +26,7 @@ export interface NationalAxes {
   /** Equal-weight mean of laws carrying the axis, clamped to ±5; null when none. */
   economic: number | null;
   social: number | null;
-  /** Policy records contributing to at least one axis. */
+  /** Law count: policy-type records (tariffs and subsidies excluded), whether or not they carry an axis. */
   lawCount: number;
   economicCount: number;
   socialCount: number;
@@ -43,8 +43,8 @@ export function computeNationalAxes(records: readonly AxisInputRecord[]): Nation
   let lawCount = 0;
   for (const record of records) {
     if ((record.recordType ?? "policy") !== "policy") continue;
-    if (!record.hasEconomic && !record.hasSocial) continue;
     lawCount += 1;
+    if (!record.hasEconomic && !record.hasSocial) continue;
     if (record.hasEconomic) {
       econSum += record.economic;
       econCount += 1;
@@ -85,4 +85,9 @@ export function computeDomainAxes(records: readonly AxisInputRecord[]): Map<stri
     out.set(domain, computeNationalAxes(list));
   }
   return out;
+}
+
+/** A "law" everywhere in the policy UI: a policy-type record. Tariffs and subsidies are listed beside laws, not counted as them. */
+export function isLawRecord(record: { recordType?: "policy" | "tariff" | "subsidy" }): boolean {
+  return (record.recordType ?? "policy") === "policy";
 }
