@@ -33,6 +33,7 @@ import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
+  resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { applyListingStandards, isMateriallyInsolvent } from "../listingStandards";
@@ -370,10 +371,27 @@ export async function fileListingPetition(opts: {
 /** Market cap in ₳: share price and shares are in the corp's home currency. */
 export async function marketCapInAnchor(
   db: Db,
-  corp: Pick<Corporation, "sharePrice" | "totalShares" | "liquidCurrencyCode" | "countryId">
+  corp: Pick<Corporation, "sharePrice" | "totalShares" | "liquidCurrencyCode" | "countryId">,
+  rates?: Map<string, Promise<number>>
 ): Promise<number> {
   const local = (corp.sharePrice ?? 0) * (corp.totalShares ?? 0);
-  return corpLiquidCapitalToAnchor(local, corp, await getCorpFxRate(db, corp));
+  return corpLiquidCapitalToAnchor(local, corp, await cachedCorpFxRate(db, corp, rates));
+}
+
+/** One rate read per currency when a caller values a whole pool. */
+function cachedCorpFxRate(
+  db: Db,
+  corp: Pick<Corporation, "liquidCurrencyCode" | "countryId">,
+  rates?: Map<string, Promise<number>>
+): Promise<number> {
+  if (!rates) return getCorpFxRate(db, corp);
+  const key = resolveCorpLiquidCurrencyCode(corp) ?? "";
+  let rate = rates.get(key);
+  if (!rate) {
+    rate = getCorpFxRate(db, corp);
+    rates.set(key, rate);
+  }
+  return rate;
 }
 
 export async function measurePetitioner(
@@ -416,7 +434,8 @@ export async function measurePetitioner(
     })
   );
 
-  const poolCapsAnchor = await Promise.all(pool.map((c) => marketCapInAnchor(db, c)));
+  const rates = new Map<string, Promise<number>>();
+  const poolCapsAnchor = await Promise.all(pool.map((c) => marketCapInAnchor(db, c, rates)));
   const verdicts = applyListingStandards(
     pool.map((c, i) => ({
       corporationId: c._id.toString(),
@@ -435,7 +454,7 @@ export async function measurePetitioner(
   if (!verdict || !corp) return null;
 
   return {
-    marketCapAnchor: await marketCapInAnchor(db, corp),
+    marketCapAnchor: await marketCapInAnchor(db, corp, rates),
     worstShortfallRatio: verdict.worstShortfallRatio,
     hasUnwaivableFailure: verdict.failures.includes("insolvent"),
   };

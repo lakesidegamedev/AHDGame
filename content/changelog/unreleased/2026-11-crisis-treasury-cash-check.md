@@ -14,3 +14,4 @@ areas: [fullstack]
 
 - A crisis response or contribution is checked against the treasury's spendable cash, the money it actually pays from, instead of its overall balance. If the cash is short you get a clear message and nothing is recorded.
 - Any other action the treasury cannot pay for now says so instead of showing an unexpected error.
+- The index listing petition panel on a company page loads faster: it reads each currency's exchange rate once instead of once per company in the index.
