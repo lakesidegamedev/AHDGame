@@ -625,7 +625,7 @@ export function UnionBargainingPanel({
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <NumberField
                         label="Counter wage"
-                        value={String(counter.wageLevel)}
+                        value={String(Math.round(counter.wageLevel * 100) / 100)}
                         step="0.01"
                         min="0.8"
                         max="1.5"

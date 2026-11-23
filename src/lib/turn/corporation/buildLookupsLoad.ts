@@ -209,6 +209,8 @@ export async function loadCorporationLookupInputs({
             // be projected here or those builders silently see every budget
             // as absent/neutral.
             minimumWageKaitzRatio: 1,
+            // Wider-economy buyer: deflates state GDP to real GDP.
+            priceIndex: 1,
             unionLawBias: 1,
             unionsBanned: 1,
             // Producer market shadow: public buyers are funded from the budget

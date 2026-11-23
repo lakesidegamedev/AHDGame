@@ -81,3 +81,17 @@ it("adds no campaign reads for a list of legacy or unadvertised races", async ()
   expect(loadRegionalCampaignCells).not.toHaveBeenCalled();
   expect(vi.mocked(_enrichElection).mock.calls[0][1].campaignCells).toBeNull();
 });
+
+it("passes the viewer's active character to summary rows so their own candidacy reads as theirs", async () => {
+  const db = createMockDb();
+  await resolveElections(db as unknown as Db, [makeElection()], {
+    view: "summary",
+    userId: "u1",
+    activeCharacterId: "c1",
+  });
+  expect(vi.mocked(_enrichElection).mock.calls[0][2]).toMatchObject({
+    view: "summary",
+    userId: "u1",
+    activeCharacterId: "c1",
+  });
+});

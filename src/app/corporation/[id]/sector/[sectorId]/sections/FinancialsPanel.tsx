@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPercent } from "@/lib/ui/numbers";
 import {
   MAX_GROWTH_RATE,
   MIN_GROWTH_RATE,
@@ -132,8 +133,8 @@ export default function FinancialsPanel({
           indent
           tooltip={
             financials.laborCost > 0
-              ? `Non-labour operating costs (upkeep, inputs, overhead). Labour is broken out as Wages below. Effective margin is ${margins.effective}%.`
-              : `Operating costs: revenue × (1 - effective margin). Effective margin is ${margins.effective}%.`
+              ? `Non-labour operating costs (upkeep, inputs, overhead). Labour is broken out as Wages below. Effective margin is ${formatPercent(margins.effective)}.`
+              : `Operating costs: revenue × (1 - effective margin). Effective margin is ${formatPercent(margins.effective)}.`
           }
         />
         {financials.laborCost > 0 && (

@@ -17,6 +17,8 @@ export interface ProducerEconomyAccount {
     | "operatingPayee"
     /** A background country's macro economy trading in the funded market. */
     | "backgroundEconomy"
+    /** The rest of a plant country's economy buying spare output (wideEconomyStage). */
+    | "wideEconomy"
     /** Import tariffs collected for one country this turn, swept to its treasury (producerTariffStage). */
     | "tariffCollector";
   countryId: string;

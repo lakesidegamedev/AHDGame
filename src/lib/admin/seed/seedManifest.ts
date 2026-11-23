@@ -220,6 +220,12 @@ const REFERENCE: CollectionEntry[] = [
       "One document per world: each country's plant-economy share at its first funded turn, read every turn to hold household transfers steady. Wiped on reset.",
   },
   {
+    name: "producerWideEconomyBaseline",
+    category: "runtime",
+    notes:
+      "One document per world: the wider-economy buyer's per-good units and each state's real GDP at the turn it was switched on, read every turn it runs. Wiped on reset.",
+  },
+  {
     name: "producerPublicCarry",
     category: "runtime",
     notes:

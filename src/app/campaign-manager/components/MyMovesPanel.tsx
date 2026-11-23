@@ -10,6 +10,7 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { myRaceSummary, partyLines, type CmRace } from "@/lib/campaignManager/rules";
 import { EYEBROW } from "../ui";
+import { LoadingBlock } from "./LoadingBlock";
 
 const CATEGORY_ORDER = ["influence", "money", "research"] as const;
 
@@ -33,7 +34,7 @@ export function MyMovesPanel({
   const character = controller.character;
 
   if (!controller.ready || !character) {
-    return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("loading")}</p>;
+    return <LoadingBlock label={t("loading")} />;
   }
 
   const infamy = character.infamy ?? 0;

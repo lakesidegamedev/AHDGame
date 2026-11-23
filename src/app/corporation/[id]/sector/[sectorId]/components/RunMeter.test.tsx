@@ -121,3 +121,22 @@ describe("RunMeter over capacity", () => {
     expect(widths.every((w) => w <= 100.0001)).toBe(true);
   });
 });
+
+describe("RunMeter past the production push limit", () => {
+  it("says capacity changed when made output exceeds the push limit", () => {
+    const { getByTestId } = render(
+      <RunMeter
+        capacityUnits={340}
+        producedUnits={401}
+        soldUnits={401}
+        idleCauses={[]}
+        sectorType="technology"
+        productionPolicyLevel={25}
+      />
+    );
+    const text = getByTestId("run-over-capacity").textContent ?? "";
+    expect(text).toContain("Made 118% of installed capacity");
+    expect(text).toContain("up to 115%");
+    expect(text).toContain("Installed capacity is lower now");
+  });
+});

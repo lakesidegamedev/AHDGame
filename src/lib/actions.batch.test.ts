@@ -109,4 +109,34 @@ describe("getBatchAffordability", () => {
     expect(r.affordableRuns).toBe(0);
     expect(r.title).toMatch(/^Cannot run this action/);
   });
+
+  it("states whole-batch action point totals, not the failing run's cost", () => {
+    const base = makeCharacter({ donorBaseLevel: 5, actions: 100, funds: 1_000_000 });
+    const cost = getActionPointCost(base, "fundraise");
+    const c = { ...base, actions: cost * 3 + 1 };
+    const r = getBatchAffordability(c, undefined, "fundraise", 5);
+    expect(r.title).toContain(`you have ${cost * 3 + 1}`);
+    expect(r.title).toMatch(/All 5 runs cost \d+ action points/);
+    expect(r.title).not.toContain("Required:");
+  });
+
+  it("states whole-batch fund totals against the starting balance", () => {
+    const c = makeCharacter({
+      donorBaseLevel: 5,
+      actions: 100,
+      funds: 1_000_000,
+      stats: NEUTRAL_STATS,
+      favorability: 50,
+    });
+    const one = simulateActionBatch(c, testState, "advertise", 1);
+    expect(one.ok).toBe(true);
+    if (!one.ok) return;
+    const perRun = -one.netFundsChange;
+    const poor = { ...c, funds: Math.round(perRun * 2.5) };
+    const r = getBatchAffordability(poor, testState, "advertise", 5);
+    expect(r.canRunAll).toBe(false);
+    expect(r.title).toMatch(/All 5 runs cost/);
+    expect(r.title).toContain("you have");
+    expect(r.title).not.toContain("Available:");
+  });
 });

@@ -864,7 +864,7 @@ function applyEffectToCharacter(
 
 export type SimulateActionBatchResult =
   | { ok: true; totalActionPoints: number; netFundsChange: number; finalCharacter: Character }
-  | { ok: false; reason?: string };
+  | { ok: false; reason?: string; code?: string };
 
 /**
  * Simulate running the same action N times in sequence (client preview / batch UX).
@@ -894,7 +894,7 @@ export function simulateActionBatch(
       ...pricing,
     });
     if (!validation.canPerform) {
-      return { ok: false, reason: validation.reason };
+      return { ok: false, reason: validation.reason, code: validation.code };
     }
     const ap = getActionPointCost(c, actionType);
     totalActionPoints += ap;
@@ -918,6 +918,35 @@ export interface BatchAffordability {
   reason?: string;
   /** Short player-facing explanation for a disabled batch control. */
   title?: string;
+}
+
+/**
+ * Whole-batch requirement: the action points and campaign funds (home
+ * currency) the full sequence needs, priced run by run without stopping at the
+ * first run the character cannot pay for.
+ */
+function projectBatchRequirement(
+  character: Character,
+  state: ActionStateEconomics | undefined,
+  actionType: ActionType,
+  count: number,
+  forexEnabled: boolean,
+  homeFxRate: number | undefined,
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita">
+): { actionPoints: number; fundsLocal: number } {
+  let c: Character = { ...character };
+  let actionPoints = 0;
+  const startFunds = c.currencyBalances?.campaign ?? c.funds ?? 0;
+  for (let i = 0; i < count; i++) {
+    const ap = getActionPointCost(c, actionType);
+    actionPoints += ap;
+    c = {
+      ...applyEffectToCharacter(c, actionType, state, forexEnabled, homeFxRate, pricing),
+      actions: (c.actions ?? 0) - ap,
+    };
+  }
+  const endFunds = c.currencyBalances?.campaign ?? c.funds ?? 0;
+  return { actionPoints, fundsLocal: Math.max(0, startFunds - endFunds) };
 }
 
 /**
@@ -954,7 +983,24 @@ export function getBatchAffordability(
       break;
     }
   }
-  const detail = full.reason ? ` ${full.reason}` : "";
+  let detail = full.reason ? ` ${full.reason}` : "";
+  if (full.code === "not_enough_funds" || full.code === "not_enough_action_points") {
+    const need = projectBatchRequirement(
+      character,
+      state,
+      actionType,
+      count,
+      forexEnabled,
+      homeFxRate,
+      pricing
+    );
+    const haveFunds = character.currencyBalances?.campaign ?? character.funds ?? 0;
+    const currency = getHomeCurrency(character);
+    detail =
+      full.code === "not_enough_funds"
+        ? ` All ${count} runs cost ${formatLocalFunds(need.fundsLocal, currency)}; you have ${formatLocalFunds(haveFunds, currency)}.`
+        : ` All ${count} runs cost ${need.actionPoints} action points; you have ${character.actions ?? 0}.`;
+  }
   const title =
     affordableRuns > 0
       ? `Not enough for ${count} runs (you can afford ${affordableRuns}).${detail}`
