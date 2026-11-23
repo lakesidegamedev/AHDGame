@@ -118,6 +118,12 @@ import { producerHouseholdSourceCollection } from "@/lib/db/repositories/produce
 import { producerPublicCarryCollection } from "@/lib/db/repositories/producerPublicCarry";
 import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
+import { producerWideEconomyBaselineCollection } from "@/lib/db/repositories/producerWideEconomyBaseline";
+import {
+  WIDE_ECONOMY_BASELINE_TURNS,
+  type WideEconomyBaseline,
+  type WideEconomyMarketRow,
+} from "@/lib/market/producerMarket/wideEconomyRules";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -322,6 +328,14 @@ async function prepareRunFundedProducerTurn(
   const investmentWallet = (countryId: string) =>
     producerWalletId(worldEpoch, investmentScope(countryId));
 
+  // Wider-economy buyer wallet per country, same currency as its public buyer.
+  const wideEconomyScope = (countryId: string): ProducerWalletScope => ({
+    ...publicScope(countryId),
+    kind: "wideEconomy",
+  });
+  const wideEconomyWallet = (countryId: string) =>
+    producerWalletId(worldEpoch, wideEconomyScope(countryId));
+
   // Background countries trade their macro economy in this market (#5702).
   // Empty, after one tier read, on every world without background countries.
   const background = await loadBackgroundTraders(db, {
@@ -425,6 +439,49 @@ async function prepareRunFundedProducerTurn(
       : {}),
     ...(lastPressure ? { pressureByBook: new Map(Object.entries(lastPressure)) } : {}),
   };
+  // The wider economy is sized once per world from a market baseline: the stored
+  // one, or, on its first turn, the last few settled turns to build it from.
+  let wideEconomyBaseline: WideEconomyBaseline | null = null;
+  let wideEconomyBaselineTurns: WideEconomyMarketRow[][] | undefined;
+  if ((input.env.wideEconomyStage ?? 0) >= 1) {
+    const stored = await producerWideEconomyBaselineCollection<
+      { _id: string } & WideEconomyBaseline
+    >(db).findOne({ _id: worldEpoch }, { projection: { units: 1, realGdp: 1, countryOfState: 1 } });
+    if (stored) {
+      wideEconomyBaseline = {
+        units: stored.units ?? {},
+        realGdp: stored.realGdp ?? {},
+        countryOfState: stored.countryOfState ?? {},
+      };
+    } else {
+      const recent = await producerMarketOutcomesCollection<{
+        _id: string;
+        rows?: { commodity: string; supply: number; demand: number }[];
+      }>(db)
+        .find(
+          {
+            _id: {
+              $in: Array.from(
+                { length: WIDE_ECONOMY_BASELINE_TURNS },
+                (_, i) => `${worldEpoch}:${openingTurn - i}`
+              ),
+            },
+          },
+          { projection: { rows: 1 } }
+        )
+        .toArray();
+      // Stored rows are on the price phase's per-day basis; the buyer orders per turn.
+      wideEconomyBaselineTurns = recent
+        .map((doc) =>
+          (doc.rows ?? []).map((r) => ({
+            commodity: r.commodity,
+            supply: r.supply / TURNS_PER_DAY,
+            demand: r.demand / TURNS_PER_DAY,
+          }))
+        )
+        .filter((rows) => rows.length > 0);
+    }
+  }
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
@@ -440,6 +497,9 @@ async function prepareRunFundedProducerTurn(
     carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
+    wideEconomyAccountId: wideEconomyWallet,
+    wideEconomyBaseline,
+    ...(wideEconomyBaselineTurns ? { wideEconomyBaselineTurns } : {}),
     ...(traders.length > 0
       ? {
           backgroundEconomies: traders.map((t) => ({
@@ -463,6 +523,25 @@ async function prepareRunFundedProducerTurn(
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
+  // First turn on: keep the baseline so the buyer never re-fits to later demand.
+  if (demand.wideEconomyBaselineCreated)
+    await producerWideEconomyBaselineCollection<{ _id: string }>(db).updateOne(
+      { _id: worldEpoch },
+      {
+        $setOnInsert: {
+          _id: worldEpoch,
+          worldEpoch,
+          turn,
+          ...demand.wideEconomyBaselineCreated,
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+  const wideEconomyFunding = backgroundFundingByAccount(demand.wideEconomyOrders);
+  const wideEconomyScopes = [
+    ...new Set(demand.wideEconomyOrders.map((o) => o.countryId ?? "")),
+  ].map(wideEconomyScope);
   // One collection account per importing or levying country; none when both are off.
   const levyByPlant = plantLevies(demand.planSector, lookups, turn);
   const tariffScopes = tariffCollectorScopes(
@@ -477,6 +556,7 @@ async function prepareRunFundedProducerTurn(
     ...demand.walletScopes,
     ...publicScopes,
     ...investmentScopes,
+    ...wideEconomyScopes,
     ...traders.map((t) => t.scope),
     ...tariffScopes,
   ];
@@ -572,6 +652,34 @@ async function prepareRunFundedProducerTurn(
               walletId: t.accountId,
               amountLocal: anchor * rate,
               currencyCode: t.currency,
+              localPerAnchor: rate,
+            },
+          ];
+        })
+      )
+    )
+  );
+
+  // The wider economy's budget: its orders' spend limits, minted like a
+  // background country's and returned empty at close.
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      backgroundFundingMoves(
+        worldEpoch,
+        turn,
+        wideEconomyScopes.flatMap((s) => {
+          const walletId = wideEconomyWallet(s.countryId);
+          const anchor = wideEconomyFunding.get(walletId) ?? 0;
+          if (!(anchor > 0)) return [];
+          const rate = rateOf(s.currency);
+          return [
+            {
+              countryId: s.countryId,
+              walletId,
+              amountLocal: anchor * rate,
+              currencyCode: s.currency,
               localPerAnchor: rate,
             },
           ];

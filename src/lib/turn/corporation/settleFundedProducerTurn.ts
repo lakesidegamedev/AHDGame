@@ -98,6 +98,7 @@ export async function settleFundedProducerTurn(
         ...context.demand.publicBuyerOrders,
         ...context.demand.investmentBuyerOrders,
         ...context.demand.backgroundOrders,
+        ...context.demand.wideEconomyOrders,
       ],
       ...(context.demand.backgroundOffers.length > 0
         ? { externalOffers: context.demand.backgroundOffers }
@@ -647,6 +648,7 @@ export async function publishFundedProducerTurn(
       id: (0, context.investmentWallet)(f.countryId),
     })),
   ];
+  const wideEconomyWallets = [...context.scopeById].filter(([, s]) => s.kind === "wideEconomy");
   const heldLocal = new Map(
     (
       await producerEconomyAccountsCollection<{ _id: string; cash: number }>(context.db)
@@ -656,6 +658,7 @@ export async function publishFundedProducerTurn(
               $in: [
                 ...returnWallets.map((w) => w.id),
                 ...context.traders.map((t) => t.accountId),
+                ...wideEconomyWallets.map(([id]) => id),
                 ...context.tariffCollector.values(),
               ],
             },
@@ -800,7 +803,8 @@ export async function publishFundedProducerTurn(
   await recordLevyReceipts(context.db, tariffSweep);
 
   // A background wallet ends the turn empty: its unspent budget and its export
-  // receipts leave the world economy, as its budget came in.
+  // receipts leave the world economy, as its budget came in. The wider
+  // economy's wallet closes the same way (it only buys, so only budget is left).
   await (0, context.apply)(
     batchProducerMoves(
       context.worldEpoch,
@@ -808,7 +812,18 @@ export async function publishFundedProducerTurn(
       backgroundReturnMoves(
         context.worldEpoch,
         context.turn,
-        context.traders.flatMap((t) => {
+        [
+          ...context.traders.map((t) => ({
+            countryId: t.countryId,
+            accountId: t.accountId,
+            currency: t.currency,
+          })),
+          ...wideEconomyWallets.map(([accountId, scope]) => ({
+            countryId: scope.countryId,
+            accountId,
+            currency: scope.currency,
+          })),
+        ].flatMap((t) => {
           const held = heldLocal.get(t.accountId) ?? 0;
           if (!(Number.isFinite(held) && held > 0)) return [];
           return [

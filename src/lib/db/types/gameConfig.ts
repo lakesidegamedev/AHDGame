@@ -273,6 +273,13 @@ export interface GameConfig extends ProducerGameConfig {
   wholePlantsStage?: number;
 
   /**
+   * Wider economy: >= 1 gives every plant-country state a background buyer of
+   * spare output, sized once from a market baseline and grown with real GDP, at
+   * the reference price at most. 0 or absent = off.
+   */
+  wideEconomyStage?: number;
+
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

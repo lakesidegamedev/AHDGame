@@ -12,7 +12,7 @@
 
 /** Buyer kinds a funded order can come from, other than a company plant. */
 export type FundedBuyerKind =
-  "households" | "publicBuyer" | "investmentBuyer" | "backgroundEconomy" | "other";
+  "households" | "publicBuyer" | "investmentBuyer" | "backgroundEconomy" | "wideEconomy" | "other";
 
 export interface FundedBuyerDemandRow {
   commodity: string;
@@ -28,6 +28,7 @@ const WALLET_KINDS = new Set<FundedBuyerKind>([
   "publicBuyer",
   "investmentBuyer",
   "backgroundEconomy",
+  "wideEconomy",
 ]);
 
 /**
@@ -96,6 +97,11 @@ export const FUNDED_BUYER_LABELS: Record<FundedBuyerKind, { name: string; descri
     name: "Economy-only countries",
     description:
       "What economy-only countries, which trade from their national economy instead of company plants, ordered from this market last turn. Ordered units the market could not supply were not received.",
+  },
+  wideEconomy: {
+    name: "Wider economy",
+    description:
+      "The rest of each state's economy buying spare output of goods that had more supply than demand, never above the normal price. Its size was set when it started and grows with real economic growth. It only counts what it bought.",
   },
   other: {
     name: "Other buyers",

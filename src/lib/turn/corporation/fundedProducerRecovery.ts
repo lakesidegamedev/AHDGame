@@ -153,7 +153,7 @@ async function legacySnapshot(db: Db, input: Input, resumed: Resumed): Promise<S
     budgetIds.set(String(b.countryId), String(b._id));
   }
   for (const scope of scopes.values())
-    if (["publicBuyer", "investmentBuyer"].includes(scope.kind))
+    if (["publicBuyer", "investmentBuyer", "wideEconomy"].includes(scope.kind))
       countryCurrency.set(scope.countryId, scope.currency);
   const stateIds = input.lookups.corporations
     .filter((c) => c.countryOwnerId)
