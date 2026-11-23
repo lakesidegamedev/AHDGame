@@ -54,6 +54,7 @@
       "availableFrom": "Verfügbar ab {decade}",
       "unlockPrerequisite": "Zuerst {technology} freischalten",
       "available": "Verfügbar",
+      "noRemainingBenefit": "Diese Technologie senkt nur den Einsatz der Anlagen, und dein Einsatz liegt bereits an der Obergrenze, sie würde also nichts bringen.",
       "unlock": "Freischalten",
       "qualityEstimate": "Geschätzte Qualität nach dieser Freischaltung: {after} (jetzt {before}). Das Ausgeben von F&E-Punkten senkt den Technik-Anteil der Qualität. Dies ist eine Schätzung, bei der die übrigen Faktoren gleich bleiben.",
       "needsRd": "{amount} weitere F&E-Punkte",

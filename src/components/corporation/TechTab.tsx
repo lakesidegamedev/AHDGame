@@ -43,6 +43,8 @@ interface TechNode {
   valuePerTurn?: number | null;
   /** Turns the cash price takes to earn back; null if the node has no running value. */
   paybackTurns?: number | null;
+  /** Every effect is an input reduction and the input cap is already reached. */
+  noRemainingBenefit?: boolean;
   effects: TechEffectView[];
   inputEfficiencyContributionPct?: number | null;
   unlocksStrategy: string | null;
@@ -86,6 +88,7 @@ interface TechResponse {
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
     minimumCashCost?: number;
+    valuedMinimumCashCost?: number;
   } | null;
   plantOutputPct?: number | null;
   plantOutputCapPct?: number | null;
@@ -325,10 +328,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                 <span className="font-medium text-foreground">How cash prices work</span>{" "}
                 <span>
                   When a technology has an estimated running benefit, its price targets one game
-                  year of savings or extra operating profit, subject to a minimum. Other
-                  technologies start at {Math.round(data.cashPricing.defaultRevenueFraction * 100)}%
-                  of the corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)}{" "}
-                  daily gross operating scale
+                  year of savings or extra operating profit, subject to a minimum
+                  {data.cashPricing.valuedMinimumCashCost != null
+                    ? ` of ${fmtCash(data.cashPricing.valuedMinimumCashCost)}`
+                    : ""}
+                  . Other technologies start at{" "}
+                  {Math.round(data.cashPricing.defaultRevenueFraction * 100)}% of the
+                  corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)} daily
+                  gross operating scale
                   {data.cashPricing.minimumCashCost != null
                     ? `, with a minimum of ${fmtCash(data.cashPricing.minimumCashCost)}`
                     : ", subject to a minimum"}
@@ -775,6 +782,16 @@ function LaneTree({
         </span>
       );
     }
+    if (node.noRemainingBenefit) {
+      return (
+        <span className="flex flex-col items-center gap-1">
+          <SmallButton tone="primary" disabled onClick={() => undefined}>
+            {t("unlock")}
+          </SmallButton>
+          <span className="text-warning">{t("noRemainingBenefit")}</span>
+        </span>
+      );
+    }
     if (!viewerIsCeo) return <span className="text-muted">{t("available")}</span>;
     if (node.affordable) {
       return (
@@ -1011,7 +1028,9 @@ function TechNodeCard({
         <p className="mt-1.5 text-[10px] font-medium text-warning">
           {remainingInputEfficiency === 0
             ? `This input reduction adds nothing because the ${inputEfficiencyCapPct}% cap is reached.`
-            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap.`}
+            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap. Only ${
+                Math.round((remainingInputEfficiency ?? 0) * 10) / 10
+              } points of it still apply.`}
         </p>
       )}
       {node.effects.length > 0 && (

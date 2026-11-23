@@ -539,6 +539,7 @@
       "availableFrom": "Available from {decade}",
       "unlockPrerequisite": "Unlock {technology} first",
       "available": "Available",
+      "noRemainingBenefit": "This technology only reduces plant inputs, and your inputs are already at the cap, so it would add nothing.",
       "unlock": "Unlock",
       "qualityEstimate": "Estimated quality after this unlock: {after} (now {before}). Spending R&D points lowers the tech part of quality. This is an estimate that holds your other inputs fixed.",
       "needsRd": "{amount} more R&D",
