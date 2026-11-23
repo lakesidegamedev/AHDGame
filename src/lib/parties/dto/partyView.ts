@@ -19,6 +19,8 @@ export interface PartyMember {
   currentOffice: { type: string; state?: string; seatsHeld?: number } | null;
   isNPP?: boolean;
   partyInfluence?: number;
+  /** State party offices this person holds. */
+  stateRoles?: { stateId: string; role: "chair" | "viceChair" | "treasurer" }[];
 }
 
 export interface PartyJoinRequestView {

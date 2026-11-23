@@ -61,3 +61,11 @@ areas: [backend, frontend]
 - State budget cash reads the same ledger as state debt.
 - When a Supreme Court seat opens under a player President, they are notified at once and again after 48 turns. If the seat is still empty after 96 turns, the Administration files a nominee from the President's party and the Senate votes as usual.
 - The Supreme Court page exists only for countries that have one in the game.
+
+### Elections
+- Each race lists every party primary's front-runner, labelled by party, instead of one primary's leader as the race standing.
+- Single-candidate primaries and races are marked uncontested.
+- The election night board appears only once counting starts.
+- Races say when the sitting officeholder is not running, and why.
+- Primary estimates explain how they are calculated, and the filing deadline is shown.
+- The national party members table shows state party roles such as chair.

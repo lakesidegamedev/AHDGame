@@ -9,6 +9,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { partyMemberOfficeLabels } from "./partyMemberRole";
+import { stateRoleLabel } from "@/lib/parties/rules/stateRoles";
 
 function memberRoleLabel(
   party: PartyData,
@@ -18,6 +19,10 @@ function memberRoleLabel(
   if (m.isNPP) return null;
   const labels = partyMemberOfficeLabels(party, m.id);
   if (labels.length) return labels.join(", ");
+  if (m.stateRoles?.length)
+    return m.stateRoles
+      .map((r) => stateRoleLabel(r, displayCanadianRegionCode(r.stateId)))
+      .join(", ");
   return isCampaigner ? "Campaigner" : null;
 }
 
