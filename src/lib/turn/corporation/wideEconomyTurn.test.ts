@@ -52,7 +52,9 @@ const buildWith = (
     turn: 1,
     worldEpoch: "world",
     lookups: lookupsWithIndex(priceIndex),
-    env: stage === undefined ? {} : { wideEconomyStage: stage },
+    env: (stage === undefined ? {} : { wideEconomyStage: stage }) as unknown as Parameters<
+      typeof buildProducerTurnDemand
+    >[1]["env"],
     sectorOps: [],
     carry: null,
     ...extra,
