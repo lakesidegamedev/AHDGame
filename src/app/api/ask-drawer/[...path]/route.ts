@@ -2,10 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
+import { getCharacterByUserId } from "@/lib/db/characterLookup";
+import { getDb } from "@/lib/mongodb";
 import { withNoStore } from "@/lib/api/withNoStore";
 import {
   askDrawerBodyLimit,
   askDrawerRoute,
+  askIdentityHeaders,
+  askRouteNeedsCharacter,
   askServiceConfig,
   askUpstreamPath,
 } from "@/lib/askDrawer/askService";
@@ -40,6 +44,12 @@ async function forward(request: NextRequest, ctx: Ctx): Promise<Response> {
       if (body.length > askDrawerBodyLimit(route)) return errorResponse(413, "Request too large.");
     }
 
+    // Ask only sees the user id, so it cannot tell which of a multi-character
+    // account's characters is active. The game names it from its own source.
+    const characterId = askRouteNeedsCharacter(route)
+      ? ((await getCharacterByUserId(await getDb(), auth.user.userId))?._id.toString() ?? null)
+      : null;
+
     let upstream: Response;
     try {
       upstream = await fetch(
@@ -48,7 +58,7 @@ async function forward(request: NextRequest, ctx: Ctx): Promise<Response> {
           method: request.method,
           headers: {
             Authorization: `Bearer ${config.secret}`,
-            "X-Ask-User-Id": auth.user.userId,
+            ...askIdentityHeaders(auth.user.userId, characterId),
             ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
           },
           body,

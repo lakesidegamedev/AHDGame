@@ -225,6 +225,14 @@ export function TargetedAdsPanel({
               {!target.available && <p>{t("atCap")}</p>}
             </div>
           )}
+          {!target && quote.targets[0] && (
+            <p className="text-sm">
+              {t("unitCost", {
+                funds: formatFull(quote.targets[0].cost),
+                actions: quote.actionCost,
+              })}
+            </p>
+          )}
           <p className="text-sm text-muted">{t("decay")}</p>
           <button
             type="button"

@@ -153,6 +153,17 @@ describe("ProductStudio", () => {
     expect(screen.getByText(/Name your product to start/)).toBeTruthy();
   });
 
+  it("shows the line target, what it is measured on, and spend as a share of it", async () => {
+    stub(studio());
+    render(<ProductStudio corporationId="c1" />);
+    const note = await screen.findByTestId("studio-line-target");
+    expect(note.textContent).toMatch(/Target for this line: \S*5(\.4K|,400)/);
+    expect(note.textContent).toMatch(/1\.5 turns of the revenue/);
+    expect(note.textContent).toMatch(/same quality curve/);
+    expect(screen.getByRole("columnheader", { name: "Of target" })).toBeTruthy();
+    expect(screen.getByText("200%")).toBeTruthy();
+  });
+
   it("hides locked lines and their reasons", async () => {
     stub(studio());
     render(<ProductStudio corporationId="c1" />);

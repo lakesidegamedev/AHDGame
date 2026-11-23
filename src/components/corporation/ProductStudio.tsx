@@ -166,6 +166,8 @@ interface TierRow {
   perTurn: number;
   hitChance?: number;
   boostFraction?: number;
+  /** Total spend over development as a share of the line's target. */
+  shareOfTarget?: number;
 }
 
 /** One table for both starting and re-funding: level, money per turn, total, odds. */
@@ -189,6 +191,7 @@ function FundingTable({
   money: Money;
 }) {
   const withOdds = rows.some((row) => row.hitChance !== undefined);
+  const withTarget = rows.some((row) => row.shareOfTarget !== undefined);
   return (
     <TableScroll>
       <table className="w-full text-sm" aria-label="Spend per turn">
@@ -200,6 +203,7 @@ function FundingTable({
             <Th>Spend level</Th>
             <Th align="right">Per turn</Th>
             <Th align="right">Over {turnsToDays(turns)}</Th>
+            {withTarget && <Th align="right">Of target</Th>}
             {withOdds && <Th align="right">Chance of a hit</Th>}
             {withOdds && baseline !== undefined && <Th align="right">Revenue lift if it hits</Th>}
           </tr>
@@ -221,6 +225,7 @@ function FundingTable({
               <Td numeric={false}>{row.label}</Td>
               <Td align="right">{money(row.perTurn)}</Td>
               <Td align="right">{money(row.perTurn * turns)}</Td>
+              {withTarget && <Td align="right">{pct(row.shareOfTarget ?? 0)}</Td>}
               {withOdds && <Td align="right">{pct(row.hitChance ?? 0)}</Td>}
               {withOdds && baseline !== undefined && (
                 <Td align="right">
@@ -350,6 +355,7 @@ function DomainPanel({
                   perTurn: entry.fundingPerTurnAnchor,
                   hitChance: entry.hitChance,
                   boostFraction: entry.boostFraction,
+                  shareOfTarget: entry.multiple,
                 }))}
                 selected={tier}
                 onSelect={setTier}
@@ -357,6 +363,13 @@ function DomainPanel({
                 baseline={selected.baselineRevenueAnchor}
                 money={money}
               />
+              <p className="text-xs text-muted" data-testid="studio-line-target">
+                Target for this line: {money(selected.targetAnchor)}, set at 1.5 turns of the
+                revenue of the {selected.liftedSectorCount === 1 ? copy.liftedOne : copy.lifted} it
+                lifts ({money(selected.baselineRevenueAnchor)} per turn, with a floor of{" "}
+                {money(1000)}). Every line uses the same quality curve against its own target, so
+                lines that lift the same {copy.lifted} show the same figures.
+              </p>
               <p className="text-xs text-muted">
                 {selected.liftedSectorCount === 0
                   ? `No ${copy.lifted} would be lifted by this line yet.`

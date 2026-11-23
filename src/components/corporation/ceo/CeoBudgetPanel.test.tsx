@@ -241,6 +241,25 @@ describe("CeoBudgetPanel: autopilot note", () => {
     expect(screen.getByTestId("budget-autopilot-note").textContent).toMatch(/reset on the next/);
   });
 
+  it("states the rule and the last budget change autopilot made", () => {
+    renderBudget({
+      corporation: {
+        autopilot: {
+          enabledTurn: 1,
+          advisories: [],
+          budgetChanges: { rd: { turn: 162, from: 100, to: 800, pctOfRevenue: 0.008 } },
+        },
+      },
+    });
+    expect(screen.getByTestId("budget-autopilot-rule").textContent).toMatch(
+      /From 10% to 25%: marketing 2.4%, logistics 2%, R&D 0.8%/
+    );
+    expect(screen.getByTestId("budget-autopilot-change-rd").textContent).toMatch(
+      /Autopilot set R&D to .* \(0\.8% of revenue\) on turn 162\./
+    );
+    expect(screen.queryByTestId("budget-autopilot-change-marketing")).toBeNull();
+  });
+
   it("shows no note when autopilot is off", () => {
     renderBudget();
     expect(screen.queryByTestId("budget-autopilot-note")).toBeNull();

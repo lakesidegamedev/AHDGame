@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { assertSubsidiaryWithinCap } from "@/lib/mechanicalLaws/guards";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
@@ -63,6 +64,8 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 export interface SpinOffInput {
   parent: Corporation;
   callerUserId: ObjectId;
+  /** The character the caller is playing as; a sibling character is not the parent CEO. */
+  callerCharacterId?: string | null;
   /** Operating lane carved out (the vehicles lane moves only vehicle plants). */
   sectorType: OperatingSectorType;
   name: string;
@@ -97,7 +100,12 @@ export async function spinOff(
   } = input;
 
   // Authorize: caller is parent CEO.
-  if (parent.ceoVacant === true || !parent.userId || !parent.userId.equals(callerUserId)) {
+  if (
+    !isCeoActor(parent, {
+      userId: callerUserId.toString(),
+      activeCharacterId: input.callerCharacterId,
+    })
+  ) {
     return fail("You must be the CEO of the parent corporation.", 403);
   }
   // Parent eligible (not national, not itself a subsidiary — no chaining).

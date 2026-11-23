@@ -843,3 +843,29 @@ describe("career scoring regressions", () => {
     expect(data.entries[0].score).toBe(data.entries[1].score);
   });
 });
+
+describe("rankLegacyEntries", () => {
+  const entry = (userId: string, score: number, netWorth: number) =>
+    ({
+      userId,
+      score,
+      netWorth,
+      achievementCount: 0,
+      nationalInfluence: 0,
+      rank: 0,
+    }) as unknown as import("./legacyLeaderboardTypes").LegacyLeaderboardEntry;
+
+  it("shares a rank between equal values on both boards", async () => {
+    const { rankLegacyEntries } = await import("./legacyLeaderboard");
+    for (const rankBy of ["legacy", "netWorth"] as const) {
+      const rows = [entry("c", 5, 5), entry("a", 9, 9), entry("b", 5, 5), entry("d", 1, 1)];
+      rankLegacyEntries(rows, rankBy);
+      expect(rows.map((r) => [r.userId, r.rank])).toEqual([
+        ["a", 1],
+        ["b", 2],
+        ["c", 2],
+        ["d", 4],
+      ]);
+    }
+  });
+});

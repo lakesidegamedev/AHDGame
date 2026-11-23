@@ -149,7 +149,9 @@ describe("PoliticalStanding table", () => {
       <PoliticalStanding {...baseProps} nationalInfluence={12.6} maxNPI={45.2} nationalRank={3} />
     );
     expect(
-      within(rowFor("National influence")).getAllByText("#3 nationally, leader at 45.2").length
+      within(rowFor("National influence")).getAllByText(
+        "#3 in your country, country leader at 45.2"
+      ).length
     ).toBeGreaterThan(0);
     expect(container.innerHTML).not.toContain("shadow-[0_0");
   });

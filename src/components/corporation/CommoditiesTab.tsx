@@ -45,29 +45,35 @@ export default function CommoditiesTab({
   modViewEnabled?: boolean;
 }) {
   const { formatAmount } = useCurrency();
-  const [data, setData] = useState<CommoditiesResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const requestKey = `${corpId}|${modViewEnabled ? "mod" : "player"}`;
+  // Data carries the key it was fetched for, so a key change shows the loading
+  // state instead of the previous corporation's figures.
+  const [loaded, setLoaded] = useState<{ key: string; data: CommoditiesResponse | null } | null>(
+    null
+  );
+  const loading = loaded?.key !== requestKey;
+  const data = loaded?.key === requestKey ? loaded.data : null;
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      let next: CommoditiesResponse | null = null;
       try {
         const url = modViewEnabled
           ? `/api/corporations/${corpId}/commodities?modView=1`
           : `/api/corporations/${corpId}/commodities`;
         const res = await fetch(url);
-        if (res.ok && !cancelled) setData(await res.json());
+        if (res.ok) next = await res.json();
       } catch {
         // ignore — render empty state below
-      } finally {
-        if (!cancelled) setLoading(false);
       }
+      if (!cancelled) setLoaded({ key: requestKey, data: next });
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [corpId, modViewEnabled]);
+  }, [corpId, modViewEnabled, requestKey]);
 
   if (loading) {
     return (

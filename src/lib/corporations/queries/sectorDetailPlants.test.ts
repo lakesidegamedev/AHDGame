@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { soldShareForList, unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
 import { NET_MARGIN_FLOOR_PCT } from "@/lib/corporations/rules/netMargin";
 import { ObjectId } from "mongodb";
 import { buildSectorPlantsSection } from "./sectorDetailSections";
@@ -282,13 +283,14 @@ describe("buildSectorPlantsSection", () => {
       expect(s.truth.lowFillTurns).toBeNull();
     });
 
-    it("never falls back to the legacy figures when a settlement exists", () => {
+    it("reads the settlement, not the legacy figures, when a settlement exists", () => {
       const s = build({
         producerSettlement: settlement(108, 20),
         producedUnits: undefined,
         soldUnits: undefined,
+        soldFraction: 0.4,
       });
-      expect(s.truth.soldFraction).toBeNull();
+      expect(s.truth.soldFraction).toBe(1);
     });
 
     it("keeps the legacy figures, as an estimate, where there is no funded record", () => {
@@ -711,6 +713,35 @@ describe("buildSectorPlantsSection", () => {
       expect(s.truth.costPerUnitAnchor).toBeCloseTo(800 / 150, 6);
       // Net margin: profit 150 over realized revenue 1000.
       expect(s.truth.fillAdjustedMarginPct).toBeCloseTo((150 / 1000) * 100, 6);
+    });
+
+    it("one receipt gives one sold share on the list row, sector headline and money panel", () => {
+      const receipt = {
+        turn: 99,
+        offeredUnits: 1852,
+        soldUnits: 1385,
+        revenue: 1000,
+        products: [
+          { commodity: "software", offeredUnits: 1000, soldUnits: 750, askingUnitPrice: 1 },
+          { commodity: "electronics", offeredUnits: 852, soldUnits: 635, askingUnitPrice: 1 },
+        ],
+      };
+      const s = buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          producedUnits: 1750,
+          soldUnits: 1385,
+          producerSettlement: receipt as unknown as CorporateSector["producerSettlement"],
+        }),
+      });
+      const expected = 1385 / 1852;
+      const list = soldShareForList(receipt, 100, 0.5);
+      const money = unitsSoldShare(s.settledOffer?.offered, s.settledOffer?.sold);
+      expect(list).toBeCloseTo(expected, 6);
+      expect(s.truth.soldFraction).toBeCloseTo(expected, 6);
+      expect(s.fillRate).toBeCloseTo(expected, 6);
+      expect(money).toBeCloseTo(expected, 6);
     });
 
     it("ticket 1773: stored 100% beside 139 sold of 195 made reads 71%, not 100%", () => {

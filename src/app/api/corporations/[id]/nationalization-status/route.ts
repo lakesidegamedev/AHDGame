@@ -2,6 +2,7 @@
 // Status card data for a private corp page: pending taking countdown + ownership
 // flags (spun-out / golden share / open auction). Public read.
 // Errors: 404 (corp not found)
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { NextResponse } from "next/server";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -30,7 +31,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const auth = status.hasStatus ? await getAuthUserWithCharacter() : null;
     const actor = auth?.hasCharacter ? auth.character : undefined;
     const corporation = resolved.corporation;
-    let hasExposure = !!auth && corporation.userId?.toString() === auth.userId;
+    let hasExposure = !!auth && isCeoActor(corporation, auth);
     if (actor && !hasExposure) {
       hasExposure =
         corporation.shareholders?.some(

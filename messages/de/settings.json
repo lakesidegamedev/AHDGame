@@ -199,7 +199,8 @@
         "highContrast": "Hoher Kontrast",
         "highContrastHint": "Ränder, Sekundärtext und Tastaturfokus verstärken.",
         "language": "Sprache",
-        "languageHint": "A House Divided erscheint derzeit auf Englisch.",
+        "languageHint": "Menüs, Einstellungen und Tutorial. Spielinhalte wie Nachrichten, Post und Gesetzgebung bleiben auf Englisch.",
+        "currencyNote": "Es gibt keine Einstellung für die Anzeigewährung. Preise erscheinen in der Währung des Landes oder Marktes, den du ansiehst. Das Symbol ₳ ist die gemeinsame Recheneinheit, mit der Beträge über Länder hinweg vergleichbar werden.",
         "english": "Englisch"
       },
       "audio": {
@@ -299,6 +300,7 @@
     "security": {
       "introChange": "Aktualisiere dein Kontopasswort. Verwende ein starkes, einzigartiges Passwort.",
       "introSet": "Lege ein Passwort fest, um dich zusätzlich zum Social-Login mit Benutzername/E-Mail anzumelden.",
+      "notAvailable": "Diese Seite ändert nur dein Passwort. Es gibt keine Zwei-Faktor-Anmeldung, keine Liste angemeldeter Geräte und keinen Datenschutzschalter. Deine Bestände und privaten Finanzen sind auf jedem Profil nur für dich sichtbar, der Rest deines öffentlichen Profils folgt festen Regeln statt einer Einstellung.",
       "currentPassword": "Aktuelles Passwort",
       "newPassword": "Neues Passwort",
       "password": "Passwort",
@@ -363,7 +365,7 @@
     "experimental": {
       "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg. Derzeit schaltet das den ASCII-Seitenaufbau ein: Jede Seite setzt sich aus einem Zeichenraster zusammen.",
       "toggleLabel": "Experimentelle Funktionen einschalten",
-      "toggleHint": "Standardmäßig aus. Ändert nur etwas für dich.",
+      "toggleHint": "Aus, bis du es einschaltest. Ändert nur etwas für dich.",
       "saveError": "Speichern fehlgeschlagen. Versuche es erneut.",
       "desktopNavigation": {
         "title": "Desktop-Navigation",

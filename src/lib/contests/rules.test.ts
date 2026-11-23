@@ -9,6 +9,7 @@ import {
   countKingmakerCalls,
   lowerHalfIds,
   rookieEligible,
+  roundSettlementTurn,
   contestPrizeAnchor,
   CONTEST_PRIZES_MODERN,
   corpGrowthScore,
@@ -245,7 +246,7 @@ describe("referralGrantDecision", () => {
 describe("narrowed contest fields", () => {
   const day = 24 * 60 * 60 * 1000;
 
-  it("counts a character as a rookie for two weeks", () => {
+  it("counts a player as a rookie for two weeks after their account is created", () => {
     expect(rookieEligible(0, 13 * day)).toBe(true);
     expect(rookieEligible(0, 14 * day)).toBe(false);
     expect(rookieEligible(undefined, 0)).toBe(false);
@@ -316,5 +317,13 @@ describe("countKingmakerCalls", () => {
       new Set(["a"])
     );
     expect(calls.get("a")).toBe(1);
+  });
+});
+
+describe("roundSettlementTurn", () => {
+  const hour = 60 * 60 * 1000;
+  it("settles on the first turn at or after the end time", () => {
+    expect(roundSettlementTurn(100, 0, 168 * hour)).toBe(268);
+    expect(roundSettlementTurn(100, 0, 168 * hour + 6 * 60 * 1000)).toBe(269);
   });
 });

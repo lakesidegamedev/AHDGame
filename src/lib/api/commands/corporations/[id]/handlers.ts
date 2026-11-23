@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
 import { viewerHoldsShares } from "@/lib/corporations/viewerShareholding";
@@ -98,7 +99,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     const { corporation } = resolved;
     const canManageCorporation =
       !!authUser &&
-      !requireCeo(corporation, authUser.userId) &&
+      !requireCeo(corporation, authUser) &&
       !(await requireCorporationActionsEnabled(db));
     const canManageAcquisitions = canManageCorporation;
     const mediaEditorialEnabled = config?.mediaEditorialEnabled === true;
@@ -119,6 +120,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       corporation,
       currentTurn,
       viewerUserId: authUser?.userId ?? null,
+      viewerCharacterId: authUser?.activeCharacterId ?? null,
     })) as Record<string, unknown>;
     const hasMediaSector =
       corporation.type === "media" ||
@@ -213,7 +215,8 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       corporation,
       authUser?.userId ?? undefined,
       authUser?.isAdmin === true,
-      modViewEnabled
+      modViewEnabled,
+      authUser?.activeCharacterId ?? null
     );
 
     let viewerIsControllingParentCeo = false;
@@ -222,12 +225,9 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     if (authUser?.userId && parentInfo?._id && ObjectId.isValid(parentInfo._id)) {
       const parentCorp = await corporationsCollection(db).findOne(
         { _id: new ObjectId(parentInfo._id) },
-        { projection: { userId: 1, ceoVacant: 1 } }
+        { projection: { userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 } }
       );
-      viewerIsControllingParentCeo =
-        parentCorp != null &&
-        !parentCorp.ceoVacant &&
-        parentCorp.userId?.toString() === authUser.userId;
+      viewerIsControllingParentCeo = parentCorp != null && isCeoActor(parentCorp, authUser);
     }
 
     if (redact && viewerIsControllingParentCeo) {
@@ -300,7 +300,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     if (isPublicCorp) {
       const isInsider =
         authUser?.isAdmin === true ||
-        (authUser?.userId != null && corporation.userId?.toString() === authUser.userId) ||
+        (authUser != null && isCeoActor(corporation, authUser)) ||
         viewerIsControllingParentCeo;
 
       // A leaked corporation's books are OUT: the fog is skipped for everyone

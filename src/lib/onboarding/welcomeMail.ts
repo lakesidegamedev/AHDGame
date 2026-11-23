@@ -63,7 +63,7 @@ export function buildWelcomeMailBody(params: WelcomeMailParams): string {
   const reward = `${symbol}${(currencyCode && localRewardAmount !== undefined ? localRewardAmount : rewardAmount).toLocaleString()}`;
 
   return (
-    `You have a character, a home ${region}, ${funds} in campaign funds, and ${startingActions} bonus actions. That is more than most politicians start with.\n\n` +
+    `You started with a character, a home ${region}, ${funds} in campaign funds, and ${startingActions} bonus actions. Those are your opening figures from the day you created this character, not your current balance. That is more than most politicians start with.\n\n` +
     `The fastest way to learn is to be shown. The tutorial asks what you want to do, whether that is investing, running a company, running a union, running for office, or running the country, then walks you through it on the real pages. Your checklist on the profile page tracks the same steps and pays out ${reward} when you finish them.\n\n` +
     `Turns run ${turnCadence(turnLengthMinutes)}. Anything you queue now resolves on the next turn. If you get stuck, open the tutorial page or the Getting Started guide in the wiki.`
   );

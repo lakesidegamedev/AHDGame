@@ -3,9 +3,13 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import createNextIntlPlugin from "next-intl/plugin";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
-import { PRIVATE_PAGE_CACHE_CONTROL } from "./src/lib/cacheHeaders";
+import {
+  PRIVATE_PAGE_CACHE_CONTROL,
+  STATIC_PUBLIC_ASSET_CACHE_CONTROL,
+  STATIC_PUBLIC_ASSET_SOURCE,
+} from "./src/lib/cacheHeaders";
 import { retiredChangelogRedirects } from "./src/lib/changelog/retiredSlugs";
-import { legacyCountryRootRedirects } from "./src/lib/countryRedirect";
+import { guessableUrlRedirects, legacyCountryRootRedirects } from "./src/lib/countryRedirect";
 import {
   resolvePublicSentryDsn,
   SENTRY_DEFAULT_ORG,
@@ -164,6 +168,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Files in public/ (sprites, logos, region outlines, icons) are the
+        // same for every visitor, so the blanket private rule above made every
+        // page load download them again. Names are not content-hashed, so they
+        // revalidate daily instead of caching for a year.
+        source: STATIC_PUBLIC_ASSET_SOURCE,
+        headers: [{ key: "Cache-Control", value: STATIC_PUBLIC_ASSET_CACHE_CONTROL }],
+      },
+      {
         // A service-worker script must NEVER be HTTP-cached: the browser serves
         // the stale cached copy on its update check, so a changed sw.js (the
         // self-unregistering kill-switch that neutralises the old Monetag ad
@@ -288,6 +300,8 @@ const nextConfig: NextConfig = {
       ...retiredChangelogRedirects(),
       // Legacy root pages that moved under /country/<code>/.
       ...legacyCountryRootRedirects(),
+      // Natural addresses (/help, /leaderboard, /achievements, /country/<code>/senate).
+      ...guessableUrlRedirects(),
       {
         // The in-app API reference page was retired in favor of the canonical
         // docs site (docs.lakesidegames.net, source: lakesidegamedev/ahd-docs). Keeping

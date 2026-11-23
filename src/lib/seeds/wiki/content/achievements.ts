@@ -4,7 +4,7 @@ Win an election, pass a law, place in a weekly contest, and the game quietly pin
 
 ## What earns a badge
 
-Achievements belong to your account, not to one character. Retiring a character or starting a new one never removes them. Each one records which of your characters earned it, and an achievement is only ever awarded once.
+Each character earns its own achievements, and a character's profile shows what that character earned (for example 2 of 67). Retiring a character or starting a new one never removes what an earlier character earned. The all time leaderboard counts the different achievements earned by any of your characters, so its Achievements column can be higher than the total on a single character's profile. Profiles show both numbers.
 
 They are awarded automatically when a game event matches, such as winning an [election](/wiki/elections-player-guide) or an enacted bill (see [Bills and Legislation](/wiki/bills-legislation)), and posting or replying in [News](/wiki/news) can unlock some too. You do not claim them.
 
@@ -49,7 +49,7 @@ The all time leaderboard (offices, influence and net worth come from [Player Pro
 | Business | 1,000 | Net worth: all cash and savings in every currency, shares, bonds and funds, less personal loans |
 | Legislation | 1,000 | Laws you got enacted |
 | Contests | 1,000 | 3 credits per contest win, plus 1 credit per awarded placing (so a win is worth 4) |
-| Achievements | 1,000 | Number of earned account achievements, counted once |
+| Achievements | 1,000 | Number of different achievements earned by any of your characters, counted once |
 | Infamy | -500 at most | 5 points per infamy point |
 
 The total cannot go below zero. Influence, legislation, contests and achievements have diminishing returns: each reaches half its maximum at a set amount (1,000 national influence, 500 party influence, 20 enacted laws, 20 contest credits, 20 achievements) and flattens after that. Business rises by the logarithm of net worth: about 260 points at 100,000, 500 at 1 million, 750 at 10 million, and the 1,000 cap at 100 million.

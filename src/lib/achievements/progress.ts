@@ -11,7 +11,12 @@ export interface AchievementProgress {
   target: number;
 }
 
-type ProgressCharacter = Pick<Character, "_id" | "userId" | "funds">;
+type ProgressCharacter = Pick<Character, "_id" | "userId" | "funds" | "currencyBalances">;
+
+export interface ProgressOptions {
+  /** Local campaign currency per anchor unit, the rate the funds trigger awards at. */
+  campaignRate?: number;
+}
 
 /**
  * Progress for many achievements with at most one query per source collection,
@@ -20,7 +25,8 @@ type ProgressCharacter = Pick<Character, "_id" | "userId" | "funds">;
 export async function getAchievementProgressMap(
   db: Db,
   character: ProgressCharacter,
-  achievements: Achievement[]
+  achievements: Achievement[],
+  options: ProgressOptions = {}
 ): Promise<Map<string, AchievementProgress | null>> {
   const memo = new Map<string, Promise<number>>();
   const once = (key: string, load: () => Promise<number>): Promise<number> => {
@@ -107,8 +113,11 @@ export async function getAchievementProgressMap(
         );
         return { current, target };
       }
-      case "funds_threshold":
-        return { current: character.funds ?? 0, target: Number(config.amount) };
+      case "funds_threshold": {
+        const local = character.currencyBalances?.campaign ?? character.funds ?? 0;
+        const rate = options.campaignRate && options.campaignRate > 0 ? options.campaignRate : 1;
+        return { current: Math.floor(local / rate), target: Number(config.amount) };
+      }
       case "news_reply": {
         const current = await once("replies", () =>
           newsPostsCollection<Document>(db).countDocuments({

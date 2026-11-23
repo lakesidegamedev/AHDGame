@@ -50,7 +50,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
     const resolved = await resolveCorporation(db, takerCorpId);
     if (!resolved.ok) return resolved.response;
     const taker = resolved.corporation;
-    const ceoCheck = requireCeo(taker, auth.user.userId);
+    const ceoCheck = requireCeo(taker, auth.user);
     if (ceoCheck) return ceoCheck;
     const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
     if (gate) return gate;

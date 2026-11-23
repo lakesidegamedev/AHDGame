@@ -77,13 +77,20 @@ export function VoteRoster({ votes: rawVotes, expectedVoters }: Props) {
         </ul>
       )}
       {pendingVoters.length > 0 && (
+        <p className="pt-1 text-xs text-muted">
+          A member votes through its foreign minister. A member with no foreign minister (a vacant
+          seat) cannot vote until the seat is filled. Members run by the game vote by their
+          alignment with the proposer and the subject, so close allies often vote alike.
+        </p>
+      )}
+      {pendingVoters.length > 0 && (
         <ul className="flex flex-wrap gap-1.5 pt-1">
           {pendingVoters.map((c) => {
             return (
               <li
                 key={c}
                 className="flex items-center gap-1.5 rounded-md border border-dashed border-card-border bg-card px-2 py-1 text-xs text-muted"
-                title={`${entityName(c)} has not voted yet`}
+                title={`${entityName(c)} has not voted yet: its foreign minister seat is empty or has not acted`}
               >
                 <CountryFlag country={c} size="sm" />
                 <span>{entityName(c)}</span>

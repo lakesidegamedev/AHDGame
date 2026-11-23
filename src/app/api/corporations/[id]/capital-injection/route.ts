@@ -71,7 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     // CEO check
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     // Private corps only

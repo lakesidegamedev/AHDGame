@@ -152,6 +152,8 @@ export interface CorporationHistory {
   taxPaidByStateForeign?: Record<string, number>;
   marketingStrength: number;
   logisticsStrength: number;
+  /** R&D score after this turn; absent on older rows. */
+  rdScore?: number;
   dividendRate: number;
   /** Brand loyalty 0–100 (brandLoyaltyEnabled); for the charts-tab time series. */
   brandLoyalty?: number;

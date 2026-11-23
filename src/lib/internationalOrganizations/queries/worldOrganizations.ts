@@ -177,14 +177,14 @@ export async function loadWorldOrganizationsView(db: Db) {
                   fundRate
               );
         const votes = (id: string) => access[id as CountryId]?.enabledForPlayers === true;
+        // Mirror the turn charge: where the organisation levies tribute, only
+        // voting members pay dues; where it does not, every member pays dues.
+        const tributeRateAnnual = orgTributeRateAnnual(s.id, preset);
+        const leviesTribute = tributeRateAnnual > 0;
         const annualDuesLocal = annualOf(
-          memberGdp.filter((m) => votes(m.countryId)),
+          leviesTribute ? memberGdp.filter((m) => votes(m.countryId)) : memberGdp,
           duesRateAnnual
         );
-        // Era- and org-scoped: only the two armed blocs levy it, and only in a
-        // 1953 world, so every other organisation reports zero rather than a
-        // figure nobody is ever charged.
-        const tributeRateAnnual = orgTributeRateAnnual(s.id, preset);
         const annualTributeLocal = annualOf(
           memberGdp.filter((m) => !votes(m.countryId)),
           tributeRateAnnual

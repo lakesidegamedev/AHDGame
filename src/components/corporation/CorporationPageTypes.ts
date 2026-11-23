@@ -225,6 +225,13 @@ export interface CorporationDetail {
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   rdScoreNetChange?: number;
+  /** What marketing, logistics and R&D moved last turn, from settled snapshots. */
+  lastTurnStrengthChange?: {
+    turn: number;
+    marketing: number | null;
+    logistics: number | null;
+    rd: number | null;
+  };
   /** Active product projects paid from part of the R&D budget. */
   rdDevelopmentProjects?: {
     id: string;
@@ -289,6 +296,7 @@ export interface CorporationDetail {
   /** Autopilot state, sent to the owner only; null when off or not the owner. */
   autopilot?: {
     enabledTurn: number;
+    budgetChanges?: import("@/lib/corporations/rules/autopilotBudgetRule").AutopilotBudgetChanges;
     advisories: Array<{ kind: CorpAutopilotAdvisoryKind; sinceTurn: number; subject?: string }>;
   } | null;
   /** Turns left on the post-reclaim cooldown before a new caretaker may be installed (0 = none). */

@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { unreadBadgeLabel } from "@/lib/inbox/badgeLabel";
 import type { ExperimentalNavbarViewContext } from "./ExperimentalNavbar";
 
 import { createPortal } from "react-dom";
@@ -7,7 +8,7 @@ import { createPortal } from "react-dom";
 import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { SHELL_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { SingleplayerEndTurnButton } from "@/components/singleplayer/SingleplayerEndTurnButton";
 import { UniversalSearch } from "./UniversalSearch";
@@ -155,7 +156,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
             >
               <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white p-0.5 ring-1 ring-white/10">
                 <Image
-                  src={CDN_LOGO_URL}
+                  src={SHELL_LOGO_URL}
                   priority
                   unoptimized
                   alt=""
@@ -534,7 +535,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
             <Link href="/profile" className="flex min-w-0 items-center gap-2.5">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5">
                 <Image
-                  src={CDN_LOGO_URL}
+                  src={SHELL_LOGO_URL}
                   priority
                   unoptimized
                   alt="A House Divided"
@@ -575,7 +576,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                   <PixelNavIcon name="bell" className="h-4 w-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                      {unreadBadgeLabel(unreadCount)}
                     </span>
                   )}
                 </Link>

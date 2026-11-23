@@ -1,4 +1,5 @@
 import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
+import { buildSaleTaxBreakdown } from "@/lib/corporations/rules/saleTaxBreakdown";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -82,6 +83,7 @@ export async function quoteSaleTax(
       ) / 100;
     if (!Number.isFinite(gross) || gross < 0) return errorResponse(400, "Invalid sale amount");
     let deductions = stockSaleDeductions(gross, 0);
+    let breakdown: ReturnType<typeof buildSaleTaxBreakdown> = null;
     if (body.data.shares > 0 && context) {
       const holder = corp.shareholders?.find((row) =>
         imperial ? row.imperialCharacterId?.equals(actor._id) : row.characterId?.equals(actor._id)
@@ -108,10 +110,12 @@ export async function quoteSaleTax(
         context
       );
       deductions = stockSaleDeductions(gross, receipt.amount, receipt);
+      breakdown = buildSaleTaxBreakdown(receipt, context, deductions.withheldTax);
     }
     return NextResponse.json({
       grossProceeds: gross,
       ...deductions,
+      taxBreakdown: breakdown,
       outstandingArrears: statement.unpaidTaxAnchor,
       turn,
     });

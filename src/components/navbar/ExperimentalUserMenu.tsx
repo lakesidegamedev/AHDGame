@@ -8,6 +8,7 @@
  */
 
 import React, { type RefObject } from "react";
+import { unreadBadgeLabel } from "@/lib/inbox/badgeLabel";
 import { useTranslations } from "next-intl";
 import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
@@ -129,7 +130,7 @@ export function ExperimentalUserMenu({
         {showProfile && (
           <MenuRow href="/notifications" onNavigate={closeAll}>
             {t("common.notifications")}
-            {unreadCount > 0 ? ` (${unreadCount > 9 ? "9+" : unreadCount})` : ""}
+            {unreadCount > 0 ? ` (${unreadBadgeLabel(unreadCount)})` : ""}
           </MenuRow>
         )}
         {showProfile && !isImperialMode && (

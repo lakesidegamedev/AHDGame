@@ -206,3 +206,12 @@ it.each(["-5", "1.5", "1e2", "9999"])(
     expect(onRequest).not.toHaveBeenCalled();
   }
 );
+it("shows a forecast reason per sector when the sector has no result to project from", async () => {
+  const { rowForecast } = await import("./BulkBuildCapacityDialog");
+  expect(rowForecast(null, 100)).toEqual({ kind: "none", reason: "Forecast unavailable" });
+  const idle = { capacityUnits: 0, mothballed: false } as never;
+  expect(rowForecast(idle, 100)).toEqual({
+    kind: "none",
+    reason: "No forecast yet: no plants running here",
+  });
+});

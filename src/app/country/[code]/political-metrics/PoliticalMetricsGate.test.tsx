@@ -50,7 +50,7 @@ describe("PoliticalMetricsGate", () => {
       render(<PoliticalMetricsGate code="us" />);
       expect(screen.getByRole("alert")).toHaveProperty(
         "textContent",
-        expect.stringContaining("Legacy metrics were not loaded")
+        expect.stringContaining("has no detailed metrics board in this world")
       );
       expect(screen.queryByText(/legacy metrics/)).toBeNull();
     } finally {

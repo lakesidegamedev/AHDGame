@@ -55,7 +55,10 @@ export type PlayerCharacter = Pick<
   Character,
   "_id" | "userId" | "name" | "countryId" | "nationalInfluence" | "sequentialId" | "favorability"
 > &
-  Partial<Pick<Character, "createdAt">>;
+  Partial<Pick<Character, "createdAt">> & {
+    /** When the player's account was created; the rookie contest ages from here. */
+    accountCreatedAt?: Date;
+  };
 
 export interface ContestWorld {
   turn: number;

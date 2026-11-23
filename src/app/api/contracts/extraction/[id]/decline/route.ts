@@ -47,7 +47,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     const resolved = await resolveCorporation(db, contract.corporationId.toString());
     if (!resolved.ok) return resolved.response;
-    const ceoErr = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoErr = requireCeo(resolved.corporation, auth.user);
     if (ceoErr) return ceoErr;
 
     const turn = await getCurrentTurn(db);

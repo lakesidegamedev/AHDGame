@@ -38,7 +38,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoCheck = requireCeo(resolved.corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const quote = await quoteWindowForCorp(db, resolved.corporation);
@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoCheck = requireCeo(resolved.corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const parsed = await parseJsonBody(request, schema);

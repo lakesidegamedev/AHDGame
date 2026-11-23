@@ -18,12 +18,13 @@ vi.mock("@/lib/currency/corporationCapital", async (original) => ({
   ...(await original<typeof import("@/lib/currency/corporationCapital")>()),
   getCorpFxRate: async () => 1,
 }));
-let memory: ReturnType<typeof createInMemoryDb>, id: ObjectId;
+let memory: ReturnType<typeof createInMemoryDb>, id: ObjectId, user: ObjectId, ceo: ObjectId;
 beforeEach(() => {
   vi.clearAllMocks();
   memory = createInMemoryDb();
   id = new ObjectId();
-  const user = new ObjectId();
+  user = new ObjectId();
+  ceo = new ObjectId();
   memory.seed("corporations", [
     {
       _id: id,
@@ -31,6 +32,7 @@ beforeEach(() => {
       countryId: "US",
       headquartersState: "TX",
       userId: user,
+      ceoId: ceo,
       liquidCurrencyCode: "USD",
       liquidCapital: 2 * CORPORATION_RENAME_COST,
       marketingStrength: 100,
@@ -42,7 +44,7 @@ beforeEach(() => {
   vi.mocked(getDb).mockResolvedValue(memory as unknown as Db);
   vi.mocked(requireBasicAuth).mockResolvedValue({
     ok: true,
-    user: { userId: user.toHexString() },
+    user: { userId: user.toHexString(), activeCharacterId: ceo.toHexString() },
   } as never);
 });
 const request = () =>
@@ -54,6 +56,26 @@ const request = () =>
     }),
     { params: Promise.resolve({ id: id.toHexString() }) }
   );
+describe("rename is limited to the CEO character", () => {
+  it("refuses a sibling character on the CEO account", async () => {
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: user.toHexString(), activeCharacterId: new ObjectId().toHexString() },
+    } as never);
+    expect((await request()).status).toBe(403);
+    expect(await memory.collection("corporations").findOne({ _id: id })).toMatchObject({
+      name: "Original company",
+    });
+  });
+  it("lets a legacy corporation without a CEO character pass by account", async () => {
+    await memory.collection("corporations").updateOne({ _id: id }, { $unset: { ceoId: "" } });
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: user.toHexString(), activeCharacterId: new ObjectId().toHexString() },
+    } as never);
+    expect((await request()).status).toBe(200);
+  });
+});
 describe("rename cash and obligation guard", () => {
   it("charges and renames an eligible corporation once", async () => {
     expect((await request()).status).toBe(200);

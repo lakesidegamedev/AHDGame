@@ -1,4 +1,6 @@
+import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
@@ -48,6 +50,10 @@ import {
   lastQualityChangeFromHistory,
   type QualityHistoryRow,
 } from "@/lib/corporations/rules/qualityChange";
+import {
+  lastTurnStrengthChange,
+  type StrengthHistoryRow,
+} from "@/lib/corporations/rules/strengthRealizedChange";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { loadLastTurnReconciliation } from "./corporationDetail/lastTurnReconciliation";
 import { loadArrearsView } from "./corporationDetail/arrears";
@@ -76,8 +82,9 @@ export async function loadCorporationDetailView(args: {
   corporation: Corporation;
   currentTurn: number;
   viewerUserId?: string | null;
+  viewerCharacterId?: string | null;
 }) {
-  const { db, corporation, currentTurn, viewerUserId } = args;
+  const { db, corporation, currentTurn, viewerUserId, viewerCharacterId } = args;
 
   const refDataPromise = getTurnReferenceData(db, currentTurn);
   // Funded-market transition window, for the sector rows' transition panel.
@@ -103,7 +110,17 @@ export async function loadCorporationDetailView(args: {
           )
           .toArray()
       : Promise.resolve([]);
-  const viewerOwnsCorporation = !!viewerUserId && corporation.userId?.toString() === viewerUserId;
+  const strengthHistoryPromise = corporationHistoryCollection<StrengthHistoryRow>(db)
+    .find(
+      { corporationId: corporation._id },
+      {
+        sort: { turn: -1 },
+        limit: 2,
+        projection: { turn: 1, marketingStrength: 1, logisticsStrength: 1, rdScore: 1 },
+      }
+    )
+    .toArray();
+  const viewerOwnsCorporation = viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId);
   const bankingPolicyPromise =
     corporation.bankCharter || viewerOwnsCorporation
       ? loadBankingPolicy(db)
@@ -135,7 +152,8 @@ export async function loadCorporationDetailView(args: {
     corporation,
     viewerUserId,
     isImperialCeo,
-    currentTurn
+    currentTurn,
+    viewerCharacterId
   );
 
   const { refData, sectors, blendPresenceKeys, ftaCoverage } = await loadReferenceSectors(
@@ -215,10 +233,7 @@ export async function loadCorporationDetailView(args: {
       stateCtx,
       marketCtx,
       // Same test the CEO-only routes apply (requireCeo).
-      viewerIsCeo:
-        !!viewerUserId &&
-        corporation.ceoVacant !== true &&
-        corporation.userId?.toString() === viewerUserId,
+      viewerIsCeo: viewerOwnsCorporation,
     });
 
   const portfolio = await loadPortfolioHoldings(db, corporation, currentTurn, fxByCurrency);
@@ -244,7 +259,8 @@ export async function loadCorporationDetailView(args: {
     corporationForControl,
     corporation,
     viewerUserId,
-    currentTurn
+    currentTurn,
+    viewerCharacterId
   );
 
   const financials = buildFinancials({
@@ -276,7 +292,7 @@ export async function loadCorporationDetailView(args: {
   // norm are owner-only intel. Everyone else gets the hidden 5-label scale, never
   // the number. Absent ⇒ feature disabled for this corp; omit entirely so the UI
   // hides the indicator rather than showing a misleading 0.
-  const brandLoyaltyFields = buildBrandLoyaltyFields(corporation, viewerUserId);
+  const brandLoyaltyFields = buildBrandLoyaltyFields(corporation, viewerUserId, viewerCharacterId);
 
   // Corp-level physical P&L rollup (plants only). One object rather than eight
   // loose keys so a client can test `physical != null` as its plants switch and
@@ -308,7 +324,9 @@ export async function loadCorporationDetailView(args: {
       sequentialId: corporation.sequentialId,
       name: corporation.name,
       tickerSymbol: corporation.tickerSymbol ?? undefined,
-      description: corporation.description,
+      description: corporation.imfInstitution
+        ? IMF_INSTITUTION_PLAYER_DESCRIPTION
+        : corporation.description,
       type: corporation.type,
       countryId: corporation.countryId,
       secondaryType: corporation.secondaryType ?? null,
@@ -354,6 +372,7 @@ export async function loadCorporationDetailView(args: {
       rdBudget: corporation.rdBudget ?? 0,
       rdScore: Math.round(income.currentRdScore * 1000) / 1000,
       rdScoreNetChange: Math.round(income.rdScoreNetChange * 1000) / 1000,
+      lastTurnStrengthChange: lastTurnStrengthChange(await strengthHistoryPromise) ?? undefined,
       rdDevelopmentProjects: income.rdDevelopmentProjects,
       marketCapitalization: Math.round(income.marketCapitalization),
       logoUrl: corporation.logoUrl,
@@ -436,6 +455,7 @@ export async function loadCorporationDetailView(args: {
         viewerOwnsCorporation && corporation.autopilot
           ? {
               enabledTurn: corporation.autopilot.enabledTurn,
+              budgetChanges: corporation.autopilot.budgetChanges ?? {},
               advisories: withoutOwnedTechAdvisory(
                 corporation.autopilot.advisories ?? [],
                 ownedTechNames(corporation)
@@ -520,6 +540,7 @@ export async function loadCorporationDetailView(args: {
               db,
               corporation,
               viewerUserId,
+              viewerCharacterId,
               rates: fxByCurrency,
               turn: portfolio.latestCorpIncomeRow?.turn ?? currentTurn,
             }),

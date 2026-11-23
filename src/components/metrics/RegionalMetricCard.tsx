@@ -11,7 +11,7 @@ import type { MetricCategoryId } from "@/lib/db/types";
 import { formatMetricValue } from "./formatMetricValue";
 import { scoreColor } from "./scoreColor";
 import { ScoreBadge } from "./ScoreBadge";
-import { TrendChip } from "./TrendChip";
+import { TrendChip, trendPercent } from "./TrendChip";
 import { TickChip } from "./TickChip";
 import { HealthRing } from "./HealthRing";
 import { Sparkline } from "./Sparkline";
@@ -98,7 +98,7 @@ export function RegionalMetricCard({
   const myRankIndex = ranked.findIndex((r) => r.regionId === regionId);
 
   // Deterministic mini-history for the sparkline (from value + trend).
-  const t = trend ?? 0;
+  const t = trendPercent(trend, value) ?? 0;
   const hist: number[] = [];
   let histV = value * (1 - (t / 100) * 1.1);
   for (let i = 0; i < 12; i++) {
@@ -135,7 +135,7 @@ export function RegionalMetricCard({
             </div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="text-2xl font-bold tabular-nums text-foreground">{fmt(value)}</span>
-              <TrendChip trend={trend} isHigherBetter={isHigherBetter} />
+              <TrendChip trend={trend} value={value} isHigherBetter={isHigherBetter} />
               {diffPct != null && Math.abs(diffPct) >= 0.05 && (
                 <span
                   className={`whitespace-nowrap text-[11px] font-medium tabular-nums ${
@@ -209,7 +209,7 @@ export function RegionalMetricCard({
                 <div>
                   <div className="text-body-sm font-medium text-muted">Recent trend</div>
                   <div className="mt-0.5">
-                    <TrendChip trend={trend} isHigherBetter={isHigherBetter} />
+                    <TrendChip trend={trend} value={value} isHigherBetter={isHigherBetter} />
                   </div>
                 </div>
                 <Sparkline

@@ -18,6 +18,7 @@ import { PriorityLane } from "./PriorityLane";
 import type { InboxItem } from "@/lib/inbox";
 import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
 import { bulkMarkRead } from "./bulkMarkRead";
+import { defaultInboxSegment } from "@/lib/inbox/badgeLabel";
 import { Skeleton, ListRowSkeleton } from "@/components/ui";
 
 // ---------------------------------------------------------------------------
@@ -172,6 +173,17 @@ export function InboxClient() {
       action: activeItems.filter((item) => item.action && unread(item)).length,
     };
   }, [items, state.archivedIds, state.snoozedIds, state.readIds]);
+
+  // Open on the unread items when nothing needs action, so a full inbox never
+  // greets the player with "all caught up".
+  const defaultSegSettled = useRef(false);
+  useEffect(() => {
+    if (loading || defaultSegSettled.current) return;
+    defaultSegSettled.current = true;
+    if (mailLink || deepLinkId || state.seg !== "action") return;
+    const seg = defaultInboxSegment(counts);
+    if (seg !== "action") dispatch({ type: "SET_SEG", seg });
+  }, [loading, counts, mailLink, deepLinkId, state.seg]);
 
   // The open item keeps its original rank in the focused list (it is ranked
   // before it turns read), then is shown as read.

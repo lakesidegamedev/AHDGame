@@ -17,6 +17,8 @@ export interface AdminCharacter {
   name: string;
   countryId: string;
   party: string | null;
+  /** Office, national influence and actions, to tell characters apart. */
+  detail?: string;
   isActive: boolean;
 }
 

@@ -1,7 +1,7 @@
 {
   "contests": {
     "title": "Contests",
-    "intro": "Weekly races between players. When a week ends, the top three in each contest split its cash prize 50 / 30 / 20 (government approval is winner takes all) and a new round starts. New corporations and characters join at the start of the next round.",
+    "intro": "Weekly races between players. When a week ends, the top three in each contest split its cash prize 50 / 30 / 20 (government approval is winner takes all) and a new round starts. New corporations and characters join at the start of the next round. Only entries with a positive score place, so a prize with no positive entry behind it is not paid. Equal scores are ranked by a fixed internal entry order, not by who got there first. One character can win several contests in the same round, and each prize is paid separately.",
     "referralIntro": "Invite players with your link. A referral counts when the player you invite creates a character.",
     "endsAt": "Round {round} ends",
     "entrants": "{count, plural, =0 {No entries yet} one {# entry} other {# entries}}",
@@ -29,7 +29,7 @@
       },
       "approval_gain": {
         "title": "Government approval",
-        "rules": "Most approval points gained by a government led by a player, measured from when its current leader took office."
+        "rules": "Most approval points gained by a government led by a player, measured from the day its current leader took office, not from the start of the round, so it does not reset each week. A leader who took office on a high and has slipped since shows a negative figure."
       },
       "referrals_weekly": {
         "title": "Weekly referrals",
@@ -53,7 +53,7 @@
       },
       "rookie_influence": {
         "title": "Rookie of the week",
-        "rules": "Most National Influence gained by a character created in the two weeks before the round opened."
+        "rules": "Most National Influence gained by a player whose account was created in the two weeks before the round opened. Characters recreated by a world reset do not count as new."
       },
       "backbench_influence": {
         "title": "Backbencher of the week",
@@ -116,6 +116,7 @@
     "countdown": "Round {round} ends in",
     "timeLeft": "{days}d {hours}h {minutes}m",
     "settling": "Settling after the next turn",
+    "settlesTurn": "Settles on turn {turn}",
     "tiedLead": "tied with the leader",
     "split": {
       "podium": "Top 3 split 50 / 30 / 20",

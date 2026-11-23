@@ -15,11 +15,18 @@ import type { CommodityFlow } from "../types";
 export default function InputOffersHint({
   flow,
   variant = "costliest",
+  stateId,
+  stateName,
 }: {
   flow: CommodityFlow;
   variant?: "costliest" | "short";
+  /** The sector's region, so a short input can say when nobody offers it there. */
+  stateId?: string;
+  stateName?: string;
 }) {
   const [sellers, setSellers] = useState(0);
+  const [inRegion, setInRegion] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,15 +36,36 @@ export default function InputOffersHint({
     )
       .then((data) => {
         if (controller.signal.aborted || !data.enabled) return;
-        setSellers((data.offers ?? []).filter((o) => o.side === "sell" && !o.own).length);
+        const sells = (data.offers ?? []).filter((o) => o.side === "sell" && !o.own);
+        setSellers(sells.length);
+        setInRegion(sells.filter((o) => !o.stateId || !stateId || o.stateId === stateId).length);
+        setLoaded(true);
       })
       .catch(() => {
         // A discovery hint must never break the panel; a failed load just hides it.
         if (!controller.signal.aborted) setSellers(0);
       });
     return () => controller.abort();
-  }, [flow.commodity]);
+  }, [flow.commodity, stateId]);
 
+  if (variant === "short" && loaded && stateName && inRegion === 0) {
+    return (
+      <span data-no-input-offers={flow.commodity} className="text-body-xs text-muted">
+        No offers for {flow.label} in {stateName}
+        {sellers > 0 && (
+          <>
+            {", "}
+            <Link
+              href={`/commodity/${flow.commodity}/offers`}
+              className="text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+            >
+              {sellers} elsewhere on the market
+            </Link>
+          </>
+        )}
+      </span>
+    );
+  }
   if (sellers === 0) return null;
   const link = (
     <Link

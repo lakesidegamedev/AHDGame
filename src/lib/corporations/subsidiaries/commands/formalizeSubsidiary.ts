@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import {
   assertForeignControlAllowed,
   assertSubsidiaryWithinCap,
@@ -22,6 +23,8 @@ export interface FormalizeSubsidiaryInput {
   parent: Corporation;
   target: Corporation;
   callerUserId: ObjectId;
+  /** The character the caller is playing as; a sibling character is not the parent CEO. */
+  callerCharacterId?: string | null;
   turn: number;
   now: Date;
 }
@@ -37,7 +40,12 @@ export async function formalizeSubsidiary(
   const { parent, target, callerUserId, turn, now } = input;
 
   // Caller must be the sitting CEO/owner of the parent.
-  if (parent.ceoVacant === true || !parent.userId || !parent.userId.equals(callerUserId)) {
+  if (
+    !isCeoActor(parent, {
+      userId: callerUserId.toString(),
+      activeCharacterId: input.callerCharacterId,
+    })
+  ) {
     return fail("You must be the CEO of the parent corporation.", 403);
   }
 

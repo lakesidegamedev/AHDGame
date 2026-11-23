@@ -5,8 +5,8 @@
  * Auth: requireBasicAuth, then the corporation's CEO or owner, or the
  * controlling parent's CEO for a managed subsidiary. Errors: 401, 403, 400, 409.
  */
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -34,11 +34,8 @@ async function load(params: RouteParams["params"]) {
   const resolved = await resolveCorporation(db, (await params).id);
   if (!resolved.ok) return { response: resolved.response } as const;
   const { corporation } = resolved;
-  const isOwner = corporation.userId?.toString() === auth.user.userId;
-  if (
-    !isOwner &&
-    !(await canActOnCorporationAsParent(db, new ObjectId(auth.user.userId), corporation))
-  ) {
+  const isOwner = isCeoActor(corporation, auth.user);
+  if (!isOwner && !(await canActOnCorporationAsParent(db, auth.user, corporation))) {
     return {
       response: errorResponse(403, "Only the owner or the parent corporation's CEO can do this"),
     } as const;

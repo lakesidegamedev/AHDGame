@@ -1,6 +1,5 @@
 "use client";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
-
 import Image from "next/image";
 import Link from "next/link";
 import { STATE_FLAGS } from "@/lib/constants/flags";
@@ -9,6 +8,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { getTypeColor } from "../lib/helpers";
+import { settledSectorRevenuePerTurn } from "../settledRevenue";
 import type {
   SectorData,
   CorporationRef,
@@ -153,13 +153,7 @@ export default function HeroCard({
           <span className="text-sm font-bold tabular-nums text-success">
             {financials ? (
               <>
-                {fmtMoney(
-                  Math.round(
-                    (financials.siteStatement?.revenue ??
-                      financials.realizedRevenue ??
-                      financials.revenue) / 24
-                  )
-                )}
+                {fmtMoney(settledSectorRevenuePerTurn(financials))}
                 <span className="text-[10px] font-normal text-muted">/turn</span>
               </>
             ) : (

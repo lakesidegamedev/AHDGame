@@ -30,3 +30,33 @@ describe("getNationWorldSnapshots", () => {
     expect(snaps.DE?.executive.isVacant).toBe(true);
   });
 });
+
+describe("withBackgroundHead", () => {
+  const vacant = {
+    executive: {
+      name: "Vacant",
+      avatarUrl: null,
+      borderKey: null,
+      tintColor: null,
+      isNpp: false,
+      sequentialId: null,
+      nppSequentialId: null,
+      isVacant: true,
+    },
+    legislatureParty: null,
+  };
+
+  it("fills a vacant executive from the background head record", async () => {
+    const { withBackgroundHead } = await import("./nationWorldSnapshots");
+    const filled = withBackgroundHead(vacant, "Monique Boyer");
+    expect(filled.executive.name).toBe("Monique Boyer");
+    expect(filled.executive.isVacant).toBe(false);
+  });
+
+  it("leaves a seated executive and a missing head alone", async () => {
+    const { withBackgroundHead } = await import("./nationWorldSnapshots");
+    expect(withBackgroundHead(vacant, undefined)).toBe(vacant);
+    const seated = { ...vacant, executive: { ...vacant.executive, name: "A", isVacant: false } };
+    expect(withBackgroundHead(seated, "B")).toBe(seated);
+  });
+});

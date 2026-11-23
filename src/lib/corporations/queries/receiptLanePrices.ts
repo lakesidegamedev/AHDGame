@@ -7,6 +7,7 @@
  * receipt, no epoch, or the receipt is older than last turn.
  */
 import type { Db } from "mongodb";
+import type { FundedBuyerDemandRow } from "@/lib/market/producerMarket/fundedBuyerDemandRules";
 import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export async function loadReceiptLanePrices(
@@ -16,16 +17,23 @@ export async function loadReceiptLanePrices(
     receiptTurn: number | null | undefined;
     currentTurn: number;
   }
-): Promise<{ laneClearingPrices?: Readonly<Record<string, number | undefined>> }> {
+): Promise<{
+  laneClearingPrices?: Readonly<Record<string, number | undefined>>;
+  buyerDemand?: readonly FundedBuyerDemandRow[];
+}> {
   const { worldEpochId, receiptTurn, currentTurn } = args;
   if (!worldEpochId || typeof receiptTurn !== "number" || !(receiptTurn >= currentTurn - 1))
     return {};
   const doc = await producerMarketOutcomesCollection<{
     _id: string;
     laneClearingPrices?: Record<string, number>;
+    buyerDemand?: FundedBuyerDemandRow[];
   }>(db).findOne(
     { _id: `${worldEpochId}:${receiptTurn}` },
-    { projection: { laneClearingPrices: 1 } }
+    { projection: { laneClearingPrices: 1, buyerDemand: 1 } }
   );
-  return doc?.laneClearingPrices ? { laneClearingPrices: doc.laneClearingPrices } : {};
+  return {
+    ...(doc?.laneClearingPrices ? { laneClearingPrices: doc.laneClearingPrices } : {}),
+    ...(doc?.buyerDemand ? { buyerDemand: doc.buyerDemand } : {}),
+  };
 }

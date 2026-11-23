@@ -26,6 +26,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export interface CapitalInjectionInput {
   sub: Corporation;
   callerUserId: ObjectId;
+  /** The character the caller is playing as; a sibling character is not the parent CEO. */
+  callerCharacterId?: string | null;
   /** Amount in the PARENT's local (liquidCurrencyCode) units. */
   amount: number;
   turn: number;
@@ -43,7 +45,13 @@ export async function capitalInjection(
 ): Promise<SubsidiaryCommandResult<{ debitedParent: number; creditedSubsidiary: number }>> {
   const { sub, callerUserId, amount, turn, now } = input;
 
-  if (!(await canActOnCorporationAsParent(db, callerUserId, sub))) {
+  if (
+    !(await canActOnCorporationAsParent(
+      db,
+      { userId: callerUserId.toString(), activeCharacterId: input.callerCharacterId },
+      sub
+    ))
+  ) {
     return fail("You are not authorized to manage this subsidiary.", 403);
   }
 

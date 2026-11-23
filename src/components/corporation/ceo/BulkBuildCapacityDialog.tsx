@@ -1,7 +1,7 @@
 "use client";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Modal, Button } from "@/components/ui";
 import {
@@ -16,6 +16,14 @@ import {
 } from "@/lib/corporations/rules/bulkBuildCapacity";
 import { runAfterBuildMessage } from "@/lib/corporations/rules/operatingReserve";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "../plantsPresentation";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import type { PlantsData } from "@/app/corporation/[id]/sector/[sectorId]/types";
+import {
+  buildReturnSummary,
+  forecastBlocker,
+  type BuildReturnSummary,
+  type ForecastBlocker,
+} from "@/app/corporation/[id]/sector/[sectorId]/lib/investment";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 
 /** "+3 plants" for a bulk order: orders are always whole plants. */
@@ -79,7 +87,34 @@ export type BulkBuildRequestFn = (body: {
   overrideOperatingReserve?: boolean;
 }) => Promise<{ ok: true; data: BulkBuildResponse } | { ok: false; error: string }>;
 
+/** Forecast for one row: the same projection as the single build dialog, or why there is none. */
+export type BulkRowForecast =
+  | { kind: "loading" }
+  | { kind: "ok"; summary: BuildReturnSummary }
+  | { kind: "none"; reason: string };
+
+const FORECAST_REASON: Record<ForecastBlocker | "unavailable", string> = {
+  noCapacity: "No forecast yet: no plants running here",
+  notRun: "No forecast yet: nothing produced last turn",
+  mothballed: "No forecast while mothballed",
+  ramping: "No forecast yet: still in its market support ramp",
+  other: "No forecast yet: last turn's results are incomplete",
+  unavailable: "Forecast unavailable",
+};
+
+const FORECAST_CONCURRENCY = 4;
+
+/** Profit and payback for a build, or the named reason there is none. Pure. */
+export function rowForecast(plants: PlantsData | null | undefined, units: number): BulkRowForecast {
+  if (!plants) return { kind: "none", reason: FORECAST_REASON.unavailable };
+  const summary = buildReturnSummary(plants, units);
+  if (summary) return { kind: "ok", summary };
+  return { kind: "none", reason: FORECAST_REASON[forecastBlocker(plants)] };
+}
+
 interface BulkBuildCapacityDialogProps {
+  /** Corporation id; when given, each previewed sector gets a profit and payback forecast. */
+  corpId?: string;
   open: boolean;
   onClose: () => void;
   sectors: BulkBuildSectorOption[];
@@ -122,6 +157,7 @@ const selectClass =
  * command as its own Build button.
  */
 export default function BulkBuildCapacityDialog({
+  corpId,
   open,
   onClose,
   sectors,
@@ -143,6 +179,36 @@ export default function BulkBuildCapacityDialog({
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState<BulkBuildResponse | null>(null);
   const [overrideReserve, setOverrideReserve] = useState(false);
+
+  const { formatAmount } = useCurrency();
+  const [forecasts, setForecasts] = useState<Record<string, BulkRowForecast>>({});
+
+  useEffect(() => {
+    if (!corpId || !preview) return;
+    const targets = preview.rows.filter((r) => r.units > 0 && r.status !== "blocked");
+    let cancelled = false;
+    let next = 0;
+    async function worker() {
+      while (!cancelled && next < targets.length) {
+        const row = targets[next++];
+        let value: BulkRowForecast;
+        try {
+          const res = await fetch(`/api/corporations/${corpId}/sectors/${row.sectorId}`);
+          const data = (await res.json()) as { plants?: PlantsData | null };
+          value = res.ok
+            ? rowForecast(data.plants, row.units)
+            : { kind: "none", reason: FORECAST_REASON.unavailable };
+        } catch {
+          value = { kind: "none", reason: FORECAST_REASON.unavailable };
+        }
+        if (!cancelled) setForecasts((prev) => ({ ...prev, [row.sectorId]: value }));
+      }
+    }
+    void Promise.all(Array.from({ length: FORECAST_CONCURRENCY }, () => worker()));
+    return () => {
+      cancelled = true;
+    };
+  }, [corpId, preview]);
 
   const stateNames = useMemo(() => new Map(sectors.map((s) => [s._id, s.stateName])), [sectors]);
   const countries = useMemo(() => {
@@ -391,6 +457,14 @@ export default function BulkBuildCapacityDialog({
                   <th className="px-3 py-2 text-right font-medium">Plants now</th>
                   <th className="px-3 py-2 text-right font-medium">Build</th>
                   <th className="px-3 py-2 text-right font-medium">Cost</th>
+                  {corpId && preview && !result && (
+                    <th
+                      className="px-3 py-2 text-right font-medium"
+                      title="Estimate from last turn's results, the same as the build dialog on the sector page"
+                    >
+                      Profit per turn, payback
+                    </th>
+                  )}
                   <th className="px-3 py-2 text-left font-medium">Status</th>
                 </tr>
               </thead>
@@ -431,6 +505,18 @@ export default function BulkBuildCapacityDialog({
                     <td className="px-3 py-2 text-right tabular-nums text-foreground">
                       {row.costLocal > 0 ? fmt(row.costLocal) : "n/a"}
                     </td>
+                    {corpId && preview && !result && (
+                      <td
+                        className="px-3 py-2 text-right text-body-xs tabular-nums text-muted"
+                        data-testid={`bulk-forecast-${row.sectorId}`}
+                      >
+                        <ForecastCell
+                          forecast={forecasts[row.sectorId]}
+                          applicable={row.units > 0 && row.status !== "blocked"}
+                          fmtAnchor={formatAmount}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <span className={`font-medium ${STATUS_TONE[row.status]}`}>
                         {STATUS_LABEL[row.status]}
@@ -567,6 +653,31 @@ export default function BulkBuildCapacityDialog({
         </div>
       </div>
     </Modal>
+  );
+}
+
+function ForecastCell({
+  forecast,
+  applicable,
+  fmtAnchor,
+}: {
+  forecast: BulkRowForecast | undefined;
+  applicable: boolean;
+  fmtAnchor: (anchor: number) => string;
+}) {
+  if (!applicable) return <>n/a</>;
+  if (!forecast || forecast.kind === "loading") return <>Estimating</>;
+  if (forecast.kind === "none") return <>{forecast.reason}</>;
+  const { profitPerTurn, paybackTurn } = forecast.summary;
+  return (
+    <>
+      <span className={profitPerTurn <= 0 ? "text-warning" : "text-foreground"}>
+        {fmtAnchor(profitPerTurn)}
+      </span>
+      <span className="block">
+        {paybackTurn != null ? `payback in ${paybackTurn} turns` : "no payback in the forecast"}
+      </span>
+    </>
   );
 }
 

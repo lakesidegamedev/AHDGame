@@ -254,7 +254,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       playerDepositsAreLiabilities: savingsReadsAuthoritative(policy, currency),
     };
 
-    const isCeo = requireCeo(corporation, auth.user.userId) === null;
+    const isCeo = requireCeo(corporation, auth.user) === null;
     const isAdmin = auth.user.isAdmin === true;
     let isChair = false;
     if (auth.user.character && hasActiveCharter && charter) {

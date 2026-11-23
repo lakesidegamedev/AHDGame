@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (parsed.data.quoteOnly) {
@@ -110,7 +110,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const result = await closePosition(db, corporation._id, parsed.data);

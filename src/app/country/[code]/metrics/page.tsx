@@ -33,6 +33,7 @@ import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { ResetMetricsPage } from "./ResetMetricsPage";
+import { NoMetricsBoardNotice } from "../political-metrics/PoliticalMetricsGate";
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 
 /**
@@ -393,7 +394,7 @@ export default function MetricsPage() {
     return <p role="alert">World settings are unavailable. Refresh to try again.</p>;
   }
   if (v2MetadataMismatch) {
-    return <p role="alert">The metrics version for this country could not be verified.</p>;
+    return <NoMetricsBoardNotice countryId={country} />;
   }
   if (isResetV2 && resetCountry)
     return <ResetMetricsPage key={resetCountry} country={resetCountry} />;

@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CROSS_COUNTRY_RELOCATION_MULTIPLIER,
-  MIN_CORPORATION_DISSOLUTION_AGE_TURNS,
   RELOCATION_COST_FRACTION,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { LEGAL_STRUCTURES, type LegalStructureId } from "@/lib/constants/legalStructures";
 import { legalStructureTaxLabel } from "@/lib/corporations/rules/passThroughTax";
@@ -269,6 +268,18 @@ export default function CeoGovernancePanel({
       dispatch({ type: "SET_RESIGN_LOADING", value: false });
     }
   }
+
+  const dissolveBlockReason: string | null = (() => {
+    if (!dissolvePreview) {
+      if (dissolvePreviewLoading) return "Loading the payout preview.";
+      return corporation.isPrivate ? "The payout preview could not be loaded." : null;
+    }
+    if (dissolvePreview.dissolutionAgeTurnsRemaining > 0)
+      return `Too new to dissolve: ${dissolvePreview.dissolutionAgeTurnsRemaining} turns to go.`;
+    if (corporation.isPrivate && dissolvePreview.outstandingBonds > 0)
+      return `Blocked while ${dissolvePreview.outstandingBonds} bond${dissolvePreview.outstandingBonds === 1 ? " is" : "s are"} outstanding. Settle them through the bond default flow first.`;
+    return null;
+  })();
 
   async function handleDissolve() {
     dispatch({ type: "SET_DISSOLVING", value: true });
@@ -678,7 +689,7 @@ export default function CeoGovernancePanel({
         >
           <div className="space-y-2">
             <p className="text-xs text-muted">
-              Sectors are wound down, held bonds are redeemed at face value and holdings in other
+              Sectors are wound down, held bonds are sold to the bond market and holdings in other
               corporations are sold at market. The proceeds go to every shareholder by share count:
               corporate holders to their treasury, the public float to the central bank reserve,
               your share to your personal funds.
@@ -699,6 +710,7 @@ export default function CeoGovernancePanel({
                 {dissolvePreview && !dissolvePreviewLoading && (
                   <DissolvePreview
                     preview={dissolvePreview}
+                    isPrivate={!!corporation.isPrivate}
                     corpCode={corpCode}
                     formatFull={(amount, code) => formatFull(toInternalFrom(amount, code), code)}
                   />
@@ -712,15 +724,8 @@ export default function CeoGovernancePanel({
                   <SmallButton
                     tone="danger"
                     onClick={handleDissolve}
-                    disabled={
-                      dissolving ||
-                      (corporation.isPrivate
-                        ? dissolvePreviewLoading ||
-                          !!dissolvePreviewError ||
-                          !dissolvePreview ||
-                          !dissolvePreview.canQuickDissolve
-                        : (dissolvePreview?.dissolutionAgeTurnsRemaining ?? 0) > 0)
-                    }
+                    disabled={dissolving || !!dissolveBlockReason}
+                    title={dissolveBlockReason ?? undefined}
                   >
                     {dissolving
                       ? "Working"
@@ -734,6 +739,7 @@ export default function CeoGovernancePanel({
                     Cancel
                   </SmallButton>
                 </div>
+                {dissolveBlockReason && <p className="text-xs text-error">{dissolveBlockReason}</p>}
               </div>
             )}
             <InlineStatus message={actionError} tone="error" />
@@ -760,28 +766,60 @@ export default function CeoGovernancePanel({
 
 function DissolvePreview({
   preview,
+  isPrivate,
   corpCode,
   formatFull,
 }: {
   preview: DissolvePreviewData;
+  isPrivate: boolean;
   corpCode: CurrencyCode;
   formatFull: (amount: number, code: CurrencyCode) => string;
 }) {
   const showBreakdown =
-    preview.corporateRows.length > 0 || preview.publicFloatRow || preview.characterRows.length > 1;
+    preview.corporateRows.length > 0 ||
+    preview.publicFloatRow ||
+    preview.characterRows.length > 1 ||
+    (preview.fundRows ?? []).length > 0 ||
+    (preview.nppRows ?? []).length > 0;
+  // Table rows are stored in anchor units; show them in the pool's currency so
+  // they add up to the pool.
+  const rowAmount = (anchor: number) =>
+    formatFull(Math.round(anchor * (preview.corpPerAnchor ?? 1)), corpCode);
+  const homeDiffers = preview.homeCurrency !== corpCode;
+  const parts = preview.poolParts;
   return (
     <div className="space-y-2">
       <dl className="max-w-md">
         <KVRow
           label="You receive"
           value={formatFull(preview.ceoShareHome, preview.homeCurrency as CurrencyCode)}
+          hint={homeDiffers ? `in ${preview.homeCurrency}, your home currency` : undefined}
         />
         <KVRow
           label="Liquidation pool"
           value={formatFull(preview.returnedCapitalCorp, corpCode)}
           hint={preview.ceoIsSoleShareholder ? "sole shareholder" : undefined}
         />
+        {preview.totalShares > 0 && (
+          <KVRow
+            label="Paid per share"
+            value={formatFull(preview.perShareCorp, corpCode)}
+            hint="every share is paid the same"
+          />
+        )}
       </dl>
+      {parts && (
+        <p className="max-w-md text-xs text-muted">
+          The pool is not the book value. It is cash ({formatFull(parts.cash, corpCode)}), held
+          bonds sold to the bond market ({formatFull(parts.heldBonds, corpCode)}) and{" "}
+          {Math.round(preview.sectorSalvageFraction * 100)}% of the sectors&apos; book value (
+          {formatFull(parts.sectorSalvage, corpCode)}), because the sectors are handed on rather
+          than sold at full value.
+          {parts.buybackEscrow !== 0
+            ? ` Share buyback escrow adds ${formatFull(parts.buybackEscrow, corpCode)}.`
+            : ""}
+        </p>
+      )}
       {showBreakdown && (
         <div className="max-h-48 max-w-md overflow-y-auto">
           <table className="w-full border-collapse">
@@ -789,7 +827,7 @@ function DissolvePreview({
               <tr>
                 <Th>Recipient</Th>
                 <Th align="right">Shares</Th>
-                <Th align="right">Payout</Th>
+                <Th align="right">Payout ({corpCode})</Th>
               </tr>
             </thead>
             <tbody>
@@ -800,42 +838,48 @@ function DissolvePreview({
                     {row.isImperial ? " (imperial)" : ""}
                   </Td>
                   <Td align="right">{row.shares.toLocaleString("en-US")}</Td>
-                  <Td align="right">{Math.round(row.payout).toLocaleString("en-US")}</Td>
+                  <Td align="right">{rowAmount(row.payout)}</Td>
                 </tr>
               ))}
               {preview.corporateRows.map((row) => (
                 <tr key={`x-${row.corporationId}`}>
                   <Td>{row.name} (corp)</Td>
                   <Td align="right">{row.shares.toLocaleString("en-US")}</Td>
-                  <Td align="right">{Math.round(row.payout).toLocaleString("en-US")}</Td>
+                  <Td align="right">{rowAmount(row.payout)}</Td>
+                </tr>
+              ))}
+              {(preview.fundRows ?? []).map((row) => (
+                <tr key={`f-${row.fundId}`}>
+                  <Td>{row.name} (fund)</Td>
+                  <Td align="right">{row.shares.toLocaleString("en-US")}</Td>
+                  <Td align="right">{rowAmount(row.payout)}</Td>
+                </tr>
+              ))}
+              {(preview.nppRows ?? []).map((row) => (
+                <tr key={`n-${row.nppId}`}>
+                  <Td>{row.name} (party)</Td>
+                  <Td align="right">{row.shares.toLocaleString("en-US")}</Td>
+                  <Td align="right">{rowAmount(row.payout)}</Td>
                 </tr>
               ))}
               {preview.publicFloatRow && (
                 <tr>
                   <Td>Public float, to the central bank</Td>
                   <Td align="right">{preview.publicFloatRow.shares.toLocaleString("en-US")}</Td>
-                  <Td align="right">
-                    {Math.round(preview.publicFloatRow.payout).toLocaleString("en-US")}
-                  </Td>
+                  <Td align="right">{rowAmount(preview.publicFloatRow.payout)}</Td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       )}
-      {!preview.canQuickDissolve &&
-        (preview.dissolutionAgeTurnsRemaining > 0 ? (
-          <p className="text-xs text-error">
-            Too new to dissolve: corporations must be {MIN_CORPORATION_DISSOLUTION_AGE_TURNS} turns
-            old ({preview.dissolutionAgeTurnsRemaining} to go).
-          </p>
-        ) : (
-          <p className="text-xs text-error">
-            Blocked while {preview.outstandingBonds} bond
-            {preview.outstandingBonds === 1 ? " is" : "s are"} outstanding. Settle them through the
-            bond default flow first.
-          </p>
-        ))}
+      {!isPrivate && preview.outstandingBonds > 0 && preview.dissolutionAgeTurnsRemaining <= 0 && (
+        <p className="text-xs text-warning">
+          {preview.outstandingBonds} bond{preview.outstandingBonds === 1 ? " is" : "s are"}{" "}
+          outstanding. A passed vote settles them first, so shareholders receive less than the
+          figures above.
+        </p>
+      )}
       <div>
         <p className="text-xs text-muted">
           Commodity prices if supply and demand cleared at once (the next turn also applies drift,

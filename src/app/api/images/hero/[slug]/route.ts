@@ -71,8 +71,11 @@ const HERO_URLS: Record<string, string> = {
     "https://commons.wikimedia.org/wiki/Special:FilePath/Valtioneuvoston_linna.jpg?width=1280",
   "federal-reserve":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Federal_Reserve.jpg/960px-Federal_Reserve.jpg",
+  // A wide view from Highway 244 (National Park Service, public domain): the
+  // overview banner is about 8:1, and a close-up of the faces could only ever
+  // show them sliced through the eyes. Focus point in HERO_OBJECT_POSITION.
   "us-overview-mount-rushmore":
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/HDR_Mount_Rushmore.jpg/1280px-HDR_Mount_Rushmore.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Mount_Rushmore_from_Highway_244_%28fa5fad5a-1dd8-b71b-0b01-bc9070a06fb7%29.JPG/1280px-Mount_Rushmore_from_Highway_244_%28fa5fad5a-1dd8-b71b-0b01-bc9070a06fb7%29.JPG",
   changelog:
     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/DEC_VT100_terminal.jpg/1280px-DEC_VT100_terminal.jpg",
   "national-diet":

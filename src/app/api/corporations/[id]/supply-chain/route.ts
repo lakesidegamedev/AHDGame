@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -20,11 +21,16 @@ export const GET = withNoStore(
       const staff =
         viewer.isAdmin === true ||
         (viewer.isModerator === true && new URL(request.url).searchParams.get("modView") === "1");
-      const owner = !!viewer.userId && company.userId?.toString() === viewer.userId;
+      const owner = isCeoActor(company, viewer);
       if (
         !staff &&
         !owner &&
-        !(await isSittingCeoOfControllingParent(db, company, viewer.userId))
+        !(await isSittingCeoOfControllingParent(
+          db,
+          company,
+          viewer.userId,
+          viewer.activeCharacterId
+        ))
       ) {
         return errorResponse(
           403,

@@ -132,7 +132,7 @@ export function ExecutiveTabsClient({
         )}
         {canSeePrivateTabs && (
           <TabButton active={active === "endorsements"} onClick={() => setActive("endorsements")}>
-            Endorsements
+            Candidate endorsements
           </TabButton>
         )}
         {canSeeDevolution && (

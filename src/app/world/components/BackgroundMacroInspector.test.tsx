@@ -41,7 +41,7 @@ describe("background macro inspection", () => {
       );
     }
     render(<Harness />);
-    const picker = screen.getByRole("combobox", { name: "Inspect a background country" });
+    const picker = screen.getByRole("combobox", { name: /Inspect a background country/ });
     fireEvent.change(picker, { target: { value: "CA" } });
     const panel = screen.getByRole("complementary", { name: "Canada macro summary" });
     expect(panel.textContent).toContain("Background macro simulation");

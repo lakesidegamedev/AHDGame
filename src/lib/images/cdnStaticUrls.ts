@@ -8,3 +8,6 @@ export const CDN_STATIC_BASE = "https://cdn.ahousedividedgame.com/static";
 
 export const CDN_LOGO_URL = `${CDN_STATIC_BASE}/ahd-logo.png`;
 export const CDN_HERO_LINCOLN_URL = `${CDN_STATIC_BASE}/lincoln-memorial.webp`;
+
+/** The shell logo at twice its largest navbar size, served from this origin. */
+export const SHELL_LOGO_URL = "/ahd-logo-80.webp";

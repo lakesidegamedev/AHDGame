@@ -46,6 +46,16 @@ export interface DissolvePreviewData {
   corporateRows: DissolveCorporateShareholderRow[];
   /** publicFloat allocation (anchor; routed to country central bank reserve). */
   publicFloatRow: DissolvePublicFloatRow | null;
+  /** Index-fund and national-party holders (anchor units). */
+  fundRows: Array<{ fundId: string; name: string; shares: number; payout: number }>;
+  nppRows: Array<{ nppId: string; name: string; shares: number; payout: number }>;
+  totalShares: number;
+  /** Corp currency paid per share, the one rate behind every row and the headline. */
+  perShareCorp: number;
+  /** Corp currency per anchor unit; converts the anchor-denominated rows. */
+  corpPerAnchor: number;
+  poolParts: { cash: number; heldBonds: number; sectorSalvage: number; buybackEscrow: number };
+  sectorSalvageFraction: number;
   commodityGlobalDeltas: Array<{
     commodity: CommodityType;
     label: string;

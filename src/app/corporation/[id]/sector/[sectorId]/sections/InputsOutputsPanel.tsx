@@ -35,6 +35,8 @@ interface InputsOutputsPanelProps {
   isExtraction: boolean;
   forexEnabled: boolean;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
+  stateId?: string;
+  stateName?: string;
 }
 
 function fmtPrice(v: number | null): string {
@@ -68,6 +70,8 @@ export default function InputsOutputsPanel({
   isExtraction,
   forexEnabled,
   exchangeRates,
+  stateId,
+  stateName,
 }: InputsOutputsPanelProps) {
   const costliest = costliestInput(commodities.demands);
   const currencyCode = getCommodityDisplayCurrency(countryId);
@@ -232,7 +236,12 @@ export default function InputsOutputsPanel({
                   }
                   offers={
                     shortInputs.has(f.commodity) ? (
-                      <InputOffersHint flow={f} variant="short" />
+                      <InputOffersHint
+                        flow={f}
+                        variant="short"
+                        stateId={stateId}
+                        stateName={stateName}
+                      />
                     ) : null
                   }
                   right={
@@ -370,6 +379,13 @@ export default function InputsOutputsPanel({
                           </p>
                           <p>{fmtUnits(settled.ownSites, 2)} sent to your sites</p>
                           <p>{fmtUnits(settled.unsold, 2)} unsold</p>
+                          {f.outsideBuyers && (
+                            <OutsideBuyers
+                              reading={f.outsideBuyers}
+                              label={f.label}
+                              flowPrice={flowPrice}
+                            />
+                          )}
                         </InfoTooltip>
                       );
                     }
@@ -391,7 +407,9 @@ export default function InputsOutputsPanel({
                               share < 0.9 ? "text-warning" : "text-muted"
                             }`}
                           >
-                            {fmtPct(share)} sold
+                            {perOutput
+                              ? `${f.label}: ${fmtPct(share)} of units offered sold`
+                              : `${fmtPct(share)} sold`}
                             {f.soldFractionBasis === "estimate" ? " (market estimate)" : ""}
                             {ownSite
                               ? ` · ${ownSiteLabel(ownSite.share)} (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`
@@ -625,6 +643,67 @@ function ShortageDetail({
       {fmtUnits(reading.arrivedPerDay, 1)}, missing {fmtUnits(reading.missingPerDay, 1)} {unit}.
       {reading.blocker ? ` ${inputBlockerText(reading.blocker)}` : ""}
     </p>
+  );
+}
+
+const BELOW_REGIONAL_TEXT: Record<
+  NonNullable<NonNullable<NonNullable<CommodityFlow["outsideBuyers"]>["price"]>["belowRegional"]>,
+  string
+> = {
+  ask_below_regional: "Your ask was under the regional price, so sales settled near your ask.",
+  book_below_regional:
+    "Buyers in your market paid less than the regional price, and sales settled at what they paid.",
+  mixed_lanes:
+    "Part of your sales went through markets priced under the regional price, which pulls the average down.",
+};
+
+function OutsideBuyers({
+  reading,
+  label,
+  flowPrice,
+}: {
+  reading: NonNullable<CommodityFlow["outsideBuyers"]>;
+  label: string;
+  flowPrice: (v: number) => string;
+}) {
+  const { buyers, price } = reading;
+  return (
+    <div data-outside-buyers className="mt-2 border-t border-card-border pt-2">
+      {price && (
+        <>
+          <p className="font-semibold text-foreground">Price paid</p>
+          <p className="text-muted">
+            Buyers paid {flowPrice(price.paidUnitPrice)} on average. Your ask was{" "}
+            {flowPrice(price.askUnitPrice)}
+            {price.bookUnitPrice != null && (
+              <>, your market cleared at {flowPrice(price.bookUnitPrice)}</>
+            )}
+            , and the regional price is {flowPrice(price.regionalUnitPrice)} (
+            {price.gapShare >= 0 ? "+" : ""}
+            {fmtPct(price.gapShare, 1)} against it).
+          </p>
+          {price.belowRegional && (
+            <p className="text-muted">{BELOW_REGIONAL_TEXT[price.belowRegional]}</p>
+          )}
+        </>
+      )}
+      <p className="mt-1 font-semibold text-foreground">Who bought {label}</p>
+      {buyers.length === 0 ? (
+        <p className="text-muted">No buyer breakdown was recorded for last turn.</p>
+      ) : (
+        <>
+          {buyers.map((b) => (
+            <p key={b.kind}>
+              {b.name}: {fmtUnits(b.delivered, 1)} a day
+            </p>
+          ))}
+          <p className="text-muted">
+            Market-wide, from last turn&apos;s settlement, not only your plant. Companies are not in
+            this split. Your own customers are not tracked one by one.
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 

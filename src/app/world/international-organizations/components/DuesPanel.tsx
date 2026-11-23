@@ -81,10 +81,13 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
           <p className="text-xs text-muted">
             Members are assessed <span className="font-semibold text-foreground">{ratePct}</span> of
             GDP / year (about{" "}
-            <span className="font-semibold text-foreground">{annualDuesDisplay}/yr</span> across its
-            VOTING members — the rest pay tribute at a fixed rate they do not set) into the pooled
-            fund (currently <span className="font-semibold text-foreground">{fundDisplay}</span>).
-            Changing the rate needs a majority of the members that hold a vote.
+            <span className="font-semibold text-foreground">{annualDuesDisplay}/yr</span> across{" "}
+            {(org.fund.tributeRateAnnual ?? 0) > 0
+              ? "its voting members; the rest pay tribute at a fixed rate they do not set"
+              : "all its members, whether or not they hold a vote"}
+            ) into the pooled fund (currently{" "}
+            <span className="font-semibold text-foreground">{fundDisplay}</span>). Changing the rate
+            needs a majority of the members that hold a vote.
           </p>
         </div>
         {proposerIsMember && proposer && (

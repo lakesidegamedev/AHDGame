@@ -68,9 +68,11 @@ export const CA_CORE5_NORMALS: Record<string, NormalAnchor[]> = {
     { year: 2019, value: 82.3 },
     { year: 2040, value: 84 },
   ],
+  // FBI-comparable categories (StatCan 35-10-0177-01: homicide, attempted murder,
+  // sexual assault, assault levels 2-3, robbery), matching the seed and the US band.
   violentCrimeRate: [
-    { year: 2019, value: 1250 },
-    { year: 2040, value: 1100 },
+    { year: 2019, value: 318 },
+    { year: 2040, value: 280 },
   ],
   povertyRate: [
     { year: 2019, value: 11 },

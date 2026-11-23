@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   formatCurrencyCompactChip,
@@ -12,10 +12,13 @@ import {
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useRefetchNav, useHasSession } from "@/contexts/AuthDataContext";
+import { noteServerCharacter } from "@/lib/activeCharacterGuard";
 import { CHARACTER_STATS_UPDATED, CHARACTER_STATS_REFETCH } from "@/lib/characterStatsSync";
 import {
   useCharacterStats,
   buildStatusPatch,
+  buildStatusStats,
+  statusIsForOtherCharacter,
   type CorpHistoryPoint,
 } from "@/contexts/CharacterStatsContext";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
@@ -65,7 +68,12 @@ export function StatusBar({
 }) {
   const pathname = usePathname();
   const isExcludedPath = EXCLUDED_PATHS.includes(pathname) || isLightweightLayoutPath(pathname);
-  const { stats, patchStats } = useCharacterStats();
+  const { stats, setStats, patchStats } = useCharacterStats();
+  const statsRef = useRef(stats);
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+  const router = useRouter();
   const {
     displayCurrencyPreference,
     formatListingPrice,
@@ -215,13 +223,28 @@ export function StatusBar({
     const data = result.data;
     if (!data) return;
     if (data.status === "no-character") return;
+    noteServerCharacter(
+      typeof data.id === "string" ? data.id : null,
+      typeof data.name === "string" ? data.name : null
+    );
+    // Another session switched the active character. Replace the held figures
+    // whole (never merge numbers into the other character's), and bring the
+    // nav and server-rendered page back in step.
+    if (statusIsForOtherCharacter(statsRef.current, data)) {
+      setStats(buildStatusStats(data));
+      prevCashRef.current = typeof data.cashOnHand === "number" ? data.cashOnHand : null;
+      setCashDelta(0);
+      refetchNav();
+      router.refresh();
+      return;
+    }
     if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
       const delta = data.cashOnHand - prevCashRef.current;
       if (delta !== 0) setCashDelta(delta);
       prevCashRef.current = data.cashOnHand;
     }
     patchStats(buildStatusPatch(data));
-  }, [hasSession, layout, patchStats]);
+  }, [hasSession, layout, patchStats, setStats, refetchNav, router]);
 
   // Trade flows (bonds/shares/forex/savings/transfers) that mutate wallet state
   // but don't echo the new character dispatch CHARACTER_STATS_REFETCH.
