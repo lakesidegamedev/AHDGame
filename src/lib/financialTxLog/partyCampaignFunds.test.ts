@@ -8,7 +8,7 @@ vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn(async () => ({})) })
 const base = {
   characterId: new ObjectId(),
   characterName: "Member",
-  currencyCode: "USD",
+  currencyCode: "USD" as const,
   turn: 12,
   partyId: "p1",
   partyName: "Party",

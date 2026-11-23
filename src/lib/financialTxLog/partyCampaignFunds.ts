@@ -1,4 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
+import * as Sentry from "@sentry/nextjs";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { emitTx } from "@/lib/financialTxLog/emit";
 
 export interface PartyCampaignFundsInput {
@@ -6,7 +8,7 @@ export interface PartyCampaignFundsInput {
   characterName: string;
   /** Positive when the character receives party money, negative when they give it. */
   amount: number;
-  currencyCode: string;
+  currencyCode: CurrencyCode;
   turn: number;
   partyId: string;
   partyName: string;
@@ -46,6 +48,6 @@ export async function emitPartyCampaignFunds(
       },
     });
   } catch (err) {
-    console.error("[emitPartyCampaignFunds] Failed:", err);
+    Sentry.captureException(err, { tags: { operation: "emit_party_campaign_funds" } });
   }
 }
