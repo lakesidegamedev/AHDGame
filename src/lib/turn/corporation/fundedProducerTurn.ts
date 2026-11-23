@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { logger } from "@/lib/observability/logger";
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
@@ -510,6 +511,13 @@ async function prepareRunFundedProducerTurn(
         }
       : {}),
   });
+  for (const [commodity, scale] of demand.oversupplyScales ?? [])
+    if (scale < 1)
+      logger.info("producerMarket", "oversupply cut", {
+        turn,
+        commodity,
+        scale: Math.round(scale * 1000) / 1000,
+      });
   // A sector with no physical capacity yet settles as an explicit zero receipt
   // below. Any other preparation failure would leave a plant on legacy revenue
   // beside the funded market, so the turn fails instead.
