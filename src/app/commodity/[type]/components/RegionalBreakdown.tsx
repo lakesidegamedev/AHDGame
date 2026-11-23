@@ -25,6 +25,10 @@ interface RegionalBreakdownProps {
   forexEnabled: boolean;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   unit: string;
+  /** National totals; countries with no regions on the map are listed from these. */
+  nationalSupply?: Record<string, number>;
+  nationalDemand?: Record<string, number>;
+  nationalPrices?: Record<string, number>;
 }
 
 export default function RegionalBreakdown({
@@ -36,6 +40,9 @@ export default function RegionalBreakdown({
   forexEnabled,
   exchangeRates,
   unit,
+  nationalSupply = {},
+  nationalDemand = {},
+  nationalPrices = {},
 }: RegionalBreakdownProps) {
   const resolveCountryName = useCountryDisplayName();
   const [isOpen, setIsOpen] = useState(true);
@@ -59,6 +66,47 @@ export default function RegionalBreakdown({
       total: ids.reduce((sum, id) => sum + volume(id), 0),
     }))
     .sort((a, b) => b.total - a.total);
+  // Economy-only countries trade from a national market with no regions, so
+  // they get one row each from the national totals.
+  const nationalVolume = (c: string) => (nationalSupply[c] ?? 0) + (nationalDemand[c] ?? 0);
+  const economyOnly = [...new Set([...Object.keys(nationalSupply), ...Object.keys(nationalDemand)])]
+    .filter((c) => !byCountry.has(c) && nationalVolume(c) > 0)
+    .sort((a, b) => nationalVolume(b) - nationalVolume(a));
+  const economyOnlyExpanded = expanded["__economyOnly"] ?? false;
+  const economyOnlyVisible = economyOnlyExpanded
+    ? economyOnly
+    : economyOnly.slice(0, REGION_PREVIEW_ROWS);
+
+  const balanceCells = (supply: number, demand: number) => {
+    const balance = supply - demand;
+    const total = supply + demand;
+    const supplyPct = total > 0 ? (supply / total) * 100 : 50;
+    return (
+      <>
+        <td className="py-1.5 text-right tabular-nums text-success">{formatUnits(supply, unit)}</td>
+        <td className="py-1.5 text-right tabular-nums text-error">{formatUnits(demand, unit)}</td>
+        <td
+          className={`py-1.5 text-right tabular-nums font-medium ${
+            balance > 0 ? "text-success" : balance < 0 ? "text-error" : "text-muted"
+          }`}
+        >
+          {balance > 0 ? "+" : ""}
+          {formatUnits(balance, unit)}
+        </td>
+        <td className="py-1.5 pl-4">
+          {total > 0 && (
+            <div
+              className="flex h-1.5 w-full overflow-hidden rounded-full bg-card-elevated"
+              title={`${Math.round(supplyPct)}% of local volume is supply`}
+            >
+              <div className="h-full bg-success/60" style={{ width: `${supplyPct}%` }} />
+              <div className="h-full flex-1 bg-error/60" />
+            </div>
+          )}
+        </td>
+      </>
+    );
+  };
 
   return (
     <div className="rounded-xl border border-card-border bg-card mb-6 overflow-hidden">
@@ -70,6 +118,7 @@ export default function RegionalBreakdown({
           <h2 className="text-lg font-bold text-foreground">Regional breakdown</h2>
           <span className="text-xs text-muted px-2 py-0.5 rounded-full bg-card-elevated">
             {stateIds.length} regions
+            {economyOnly.length > 0 ? ` + ${economyOnly.length} economy-only countries` : ""}
           </span>
         </div>
         <svg
@@ -193,6 +242,56 @@ export default function RegionalBreakdown({
                 </tbody>
               );
             })}
+            {economyOnly.length > 0 && (
+              <tbody>
+                <tr>
+                  <td colSpan={6} className="pb-1 pt-4">
+                    <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Economy-only countries
+                      <span className="font-normal normal-case tracking-normal text-muted">
+                        national market, no regions
+                      </span>
+                    </span>
+                  </td>
+                </tr>
+                {economyOnlyVisible.map((country) => (
+                  <tr key={country} className="border-b border-card-border/30">
+                    <td className="max-w-[12rem] truncate py-1.5 pr-3 font-medium text-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <CountryFlag country={country as CountryId} size="sm" />
+                        {resolveCountryName(country as CountryId)}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-right font-mono tabular-nums text-foreground">
+                      {formatCommodityPrice(
+                        nationalPrices[country] ?? globalPrice,
+                        getCommodityDisplayCurrency(country as CountryId),
+                        forexEnabled,
+                        exchangeRates
+                      )}
+                    </td>
+                    {balanceCells(nationalSupply[country] ?? 0, nationalDemand[country] ?? 0)}
+                  </tr>
+                ))}
+                {economyOnly.length > REGION_PREVIEW_ROWS && (
+                  <tr>
+                    <td colSpan={6} className="pt-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpanded((prev) => ({ ...prev, __economyOnly: !economyOnlyExpanded }))
+                        }
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        {economyOnlyExpanded
+                          ? "Show fewer"
+                          : `Show all ${economyOnly.length} countries`}
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            )}
           </table>
         </div>
       )}
