@@ -202,7 +202,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   peace_indemnity: "Peace Indemnity",
   fund_credit: "Fund Credit (legacy)",
   fund_debit: "Fund Debit (legacy)",
-  office_income: "Office Income",
+  office_income: "Campaign Fund Income",
   fundraise_credit: "Fundraise",
   wire_transfer_in: "Wire In",
   wire_transfer_out: "Wire Out",

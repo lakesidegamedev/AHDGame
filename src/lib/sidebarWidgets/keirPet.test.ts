@@ -91,7 +91,7 @@ describe("loadKeirPet", () => {
       why: "W",
       link: null,
       tone: "idea",
-      generatedAt: new Date(NOW.getTime() - ADVICE_TTL_MS + 60_000).toISOString(),
+      generatedAt: new Date(NOW.getTime() - 30 * 60_000).toISOString(),
     };
     const { db, users } = fakeUsers({ bond: 5, streak: 2, lastVisitDay: "2026-10-30", advice });
     const load = vi.fn();
@@ -99,6 +99,46 @@ describe("loadKeirPet", () => {
     expect(pet?.advice.id).toBe("x");
     expect(load).not.toHaveBeenCalled();
     expect(users.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("re-reads a live tip after an hour so its figures match the Suggestions page", async () => {
+    const advice = {
+      id: "influence-low-c1",
+      title: "Old",
+      why: "Your influence is 13.76%.",
+      link: "/old",
+      tone: "idea",
+      generatedAt: new Date(NOW.getTime() - 3 * 60 * 60_000).toISOString(),
+    };
+    const { db } = fakeUsers({ bond: 5, streak: 2, lastVisitDay: "2026-10-30", advice });
+    const fresh = { ...rec("influence-low-c1", "medium"), why: "Your influence is 12.4%." };
+    const pet = await loadKeirPet(
+      db,
+      new ObjectId().toString(),
+      vi.fn().mockResolvedValue({ recommendations: [fresh] }),
+      NOW
+    );
+    expect(pet?.advice).toMatchObject({ id: "influence-low-c1", why: "Your influence is 12.4%." });
+    expect(pet?.advice.generatedAt).toBe(advice.generatedAt);
+  });
+
+  it("keeps the cached tip when the refresh lookup fails", async () => {
+    const advice = {
+      id: "influence-low-c1",
+      title: "Old",
+      why: "Your influence is 13.76%.",
+      link: null,
+      tone: "idea",
+      generatedAt: new Date(NOW.getTime() - 3 * 60 * 60_000).toISOString(),
+    };
+    const { db } = fakeUsers({ bond: 5, streak: 2, lastVisitDay: "2026-10-30", advice });
+    const pet = await loadKeirPet(
+      db,
+      new ObjectId().toString(),
+      vi.fn().mockRejectedValue(new Error("down")),
+      NOW
+    );
+    expect(pet?.advice.id).toBe("influence-low-c1");
   });
 
   it("regenerates once the tip is 12 hours old, and survives a failed lookup", async () => {

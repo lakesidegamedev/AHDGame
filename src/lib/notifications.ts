@@ -1,7 +1,9 @@
+import * as Sentry from "@sentry/nextjs";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { NotificationType, Notification } from "@/lib/db/types";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface NotificationInput {
   userId: ObjectId;
@@ -47,11 +49,63 @@ function toDoc(input: NotificationInput): Omit<Notification, "_id"> {
   };
 }
 
+/**
+ * A corporation alert belongs to the character who runs the corporation, not
+ * to every character on the account. Stamps the recipient character from the
+ * corporation's CEO when the alert is addressed to the owning account and the
+ * producer did not already name a character. Lookup failures leave the alert
+ * account-wide rather than losing it.
+ */
+async function stampCorporationOwners(
+  db: Awaited<ReturnType<typeof getDb>>,
+  inputs: NotificationInput[]
+): Promise<NotificationInput[]> {
+  const corpIds = new Set<string>();
+  for (const input of inputs) {
+    const id = input.metadata?.corporationId;
+    if (typeof id === "string" && ObjectId.isValid(id) && !input.metadata?.recipientCharacterId) {
+      corpIds.add(id);
+    }
+  }
+  if (corpIds.size === 0) return inputs;
+  try {
+    const corps = await corporationsCollection(db)
+      .find(
+        { _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } },
+        { projection: { _id: 1, userId: 1, ceoId: 1, ceoType: 1, ceoVacant: 1 } }
+      )
+      .toArray();
+    const owners = new Map<string, { userId: string; characterId: string }>();
+    for (const corp of corps) {
+      if (corp.ceoVacant || !corp.ceoId || !corp.userId) continue;
+      if (corp.ceoType && corp.ceoType !== "character") continue;
+      owners.set(corp._id.toString(), {
+        userId: corp.userId.toString(),
+        characterId: corp.ceoId.toString(),
+      });
+    }
+    return inputs.map((input) => {
+      const id = input.metadata?.corporationId;
+      if (typeof id !== "string" || input.metadata?.recipientCharacterId) return input;
+      const owner = owners.get(id);
+      if (!owner || owner.userId !== input.userId.toString()) return input;
+      return {
+        ...input,
+        metadata: { ...input.metadata, recipientCharacterId: owner.characterId },
+      };
+    });
+  } catch (err) {
+    Sentry.captureException(err, { tags: { operation: "stamp_corporation_owners" } });
+    return inputs;
+  }
+}
+
 export async function createNotification(opts: NotificationInput): Promise<void> {
   if (!hasRecipient(opts)) return;
   try {
     const db = await getDb();
-    await notificationsCollection<Omit<Notification, "_id">>(db).insertOne(toDoc(opts));
+    const [stamped] = await stampCorporationOwners(db, [opts]);
+    await notificationsCollection<Omit<Notification, "_id">>(db).insertOne(toDoc(stamped!));
   } catch (err) {
     // Non-fatal — log but don't crash the caller
     console.error("[createNotification] Failed:", err);
@@ -71,7 +125,8 @@ export async function createNotifications(inputs: NotificationInput[]): Promise<
   if (deliverable.length === 0) return;
   try {
     const db = await getDb();
-    await notificationsCollection<Omit<Notification, "_id">>(db).insertMany(deliverable.map(toDoc));
+    const stamped = await stampCorporationOwners(db, deliverable);
+    await notificationsCollection<Omit<Notification, "_id">>(db).insertMany(stamped.map(toDoc));
   } catch (err) {
     console.error("[createNotifications] Failed:", err);
   }
