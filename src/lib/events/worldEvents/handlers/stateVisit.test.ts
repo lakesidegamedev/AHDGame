@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -56,9 +57,9 @@ describe("worldEvents.stateVisit — Phase 2 executive decision event", () => {
 
     await resolveEvent(db as never, offered._id, "lavish", "player", 100);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 4 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(4) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
@@ -90,9 +91,9 @@ describe("worldEvents.stateVisit — Phase 2 executive decision event", () => {
 
     await resolveEvent(db as never, offered._id, "standard", "player", 100);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 1 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(1) } }],
+      { ordered: true }
     );
     // deltaAnchor: 0 is a no-op short-circuit — no treasury/ledger writes at all.
     expect(db.collectionMocks.federalBudget!.updateOne).not.toHaveBeenCalled();
@@ -120,9 +121,9 @@ describe("worldEvents.stateVisit — Phase 2 executive decision event", () => {
 
     await resolveEvent(db as never, offered._id, "decline", "player", 100);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: -2 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(-2) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.federalBudget!.updateOne).not.toHaveBeenCalled();
   });

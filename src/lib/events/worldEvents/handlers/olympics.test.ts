@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { getEventHandler } from "@/lib/events/substrate/registry";
@@ -52,9 +53,9 @@ describe("worldEvents.olympics — simple host flavor event (Phase 3, rewritten)
 
     await resolveEvent(db as never, offered._id, "acknowledge", "player", 100);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 6 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(6) } }],
+      { ordered: true }
     );
 
     const modifierDocs = db.collectionMocks.countryModifiers!.insertOne.mock.calls.map(

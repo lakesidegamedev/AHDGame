@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { ObjectId, type Db, type Document } from "mongodb";
 import { logWireEvent } from "@/lib/wireEvent";
 import { createNotifications } from "@/lib/notifications";
@@ -611,7 +612,7 @@ async function applyApprovalEffects(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },
       },
-      { $inc: { approvalRating: approvalDelta } }
+      approvalDeltaUpdate(approvalDelta)
     );
   }
 }

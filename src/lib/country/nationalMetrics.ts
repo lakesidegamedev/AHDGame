@@ -1,7 +1,10 @@
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { getActiveAddressModifiersByState } from "@/lib/utils/governmentApproval";
+import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessApproval";
 import { loadNationalApproval } from "./nationalApproval";
 import { getDb } from "@/lib/mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import type { State, MetricCategoryId, GameState } from "@/lib/db/types";
+import type { MetricCategoryId } from "@/lib/db/types";
 import {
   calculateStateApproval,
   computeStateApprovalBase,
@@ -14,7 +17,10 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
-import { evaluateModifiers, type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import {
+  evaluateRegionalApprovalModifiers as evaluateModifiers,
+  type ActiveModifier,
+} from "@/lib/utils/approvalModifiers";
 import { resolveGameYear } from "@/lib/era/era";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -274,10 +280,26 @@ export async function loadNationalMetrics(
   const politicalBases = isPoliticalApprovalCountry(countryId, true)
     ? await loadPoliticalApprovalBases(db, countryId)
     : null;
+  const storedApprovals = await stateApprovalHistoryCollection(db).find({ countryId }).toArray();
+  const storedById = new Map(
+    storedApprovals.filter((doc) => doc.lastSnapshotTurn != null).map((doc) => [doc._id, doc])
+  );
+  const addresses = await getActiveAddressModifiersByState(
+    db,
+    countryId,
+    gameStateDoc?.currentTurn ?? 0
+  );
+  const fairness = await getActiveFairnessGapModifiers(db, countryId);
   for (const metrics of allMetrics) {
     const state = stateMap.get(metrics._id);
     if (!state) continue;
     const flat = buildFlatMetrics(metrics);
+    const stored = storedById.get(metrics._id);
+    const extras = [
+      ...(addresses.get(metrics._id) ?? []),
+      ...(fairness.get(metrics._id) ?? []),
+      ...(politicalBases?.regionalModifiersByRegion?.get(metrics._id) ?? []),
+    ];
     const weighting = weightingFor(groupsByState, countryId, String(metrics._id));
     const baseOverride = isPoliticalApprovalCountry(countryId, true)
       ? (politicalBases?.byRegion.get(metrics._id) ?? BASE_APPROVAL)
@@ -286,21 +308,26 @@ export async function loadNationalMetrics(
       stateId: metrics._id,
       stateName: state.name,
       baseApproval:
+        stored?.baseApproval ??
         baseOverride ??
         computeStateApprovalBase(metrics, nationalAverages, weighting, preset ?? undefined, year),
-      approval: calculateStateApproval(
-        metrics,
-        nationalAverages,
-        [],
-        weighting,
-        preset,
-        year,
-        baseOverride,
-        politicalBases?.modifiersByRegion?.get(metrics._id)
-      ),
-      modifiers:
-        politicalBases?.modifiersByRegion?.get(metrics._id) ??
-        evaluateModifiers(flat, { preset, countryId, year }),
+      approval:
+        stored?.approvalRating ??
+        calculateStateApproval(
+          metrics,
+          nationalAverages,
+          extras,
+          weighting,
+          preset,
+          year,
+          baseOverride,
+          politicalBases?.modifiersByRegion?.get(metrics._id)
+        ),
+      modifiers: stored?.activeModifiers ?? [
+        ...(politicalBases?.modifiersByRegion?.get(metrics._id) ??
+          evaluateModifiers(flat, { preset, countryId, year })),
+        ...extras,
+      ],
       population: state.population,
     });
   }

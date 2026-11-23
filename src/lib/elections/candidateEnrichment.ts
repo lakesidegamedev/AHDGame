@@ -67,6 +67,8 @@ export interface EnrichedCandidate {
   runningMateId?: string | null;
   runningMateCharacterId?: string | null;
   runningMateName?: string | null;
+  pendingRunningMateCharacterId?: string | null;
+  pendingRunningMateName?: string | null;
   campaignId?: string | null;
   campaignFunds?: number | null;
   campaignColor?: string | null;
@@ -323,6 +325,11 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       ? nppMap.get(c.russianRunningMateNppId.toString())
       : null;
     const runningMateName = runningMateChar?.name ?? runningMateNpp?.name ?? null;
+    // Invited but not yet accepted: shown to the nominee and the invitee.
+    const pendingRunningMateCharacterId = c.pendingRunningMateId?.toString() ?? null;
+    const pendingRunningMateName = c.pendingRunningMateId
+      ? (charMap.get(c.pendingRunningMateId.toString())?.name ?? null)
+      : null;
 
     const campaignInfo = campaignByCandidate.get(c.characterId?.toString() ?? "");
 
@@ -364,6 +371,8 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       runningMateId,
       runningMateCharacterId,
       runningMateName,
+      pendingRunningMateCharacterId,
+      pendingRunningMateName,
       campaignId: campaignInfo?.id ?? null,
       campaignFunds: campaignInfo?.funds ?? null,
       campaignColor: campaignInfo?.color ?? null,

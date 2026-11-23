@@ -278,8 +278,13 @@ describe("Presidential running mate integration tests", () => {
     const json = await res.json();
     expect(res.status, JSON.stringify(json)).toBe(200);
     expect(json.success).toBe(true);
+    expect(json.pending).toBe(true);
     expect(json.message).toContain("Across The Aisle");
+    // naming a player sends an invitation; it never seats them.
     expect(updateOne).toHaveBeenCalledTimes(1);
+    const [, update] = updateOne.mock.calls[0];
+    expect(update.$set.pendingRunningMateId).toEqual(runningMateId);
+    expect(update.$set.runningMateId).toBeUndefined();
   });
 
   it("rejects a banned character even if a crafted POST targets them directly", async () => {

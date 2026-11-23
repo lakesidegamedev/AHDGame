@@ -23,6 +23,8 @@ const UpcomingElectionView = dynamic(
   () => import("./UpcomingElectionView").then((m) => m.UpcomingElectionView),
   { loading: PhaseFallback }
 );
+import { RunningMateInvitationPanel } from "./RunningMateInvitationPanel";
+
 const GeneralPhaseView = dynamic(
   () => import("./GeneralPhaseView").then((m) => m.GeneralPhaseView),
   { loading: PhaseFallback }
@@ -436,7 +438,11 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
 
   // The reader's own action on the race sits in a strip under the masthead,
   // above the map, so it is not buried under the map on a phone.
-  const stageActions =
+  // A pending running-mate invitation for the reader.
+  const invitationPanel = (
+    <RunningMateInvitationPanel election={election} electionId={id} onAnswered={fetchElection} />
+  );
+  const entryActions =
     election.myCharId && !localIsEnded && (canEnter || canWithdraw) ? (
       <div className="flex gap-2">
         {canEnter && (
@@ -466,6 +472,17 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
         {closedFilingLine(election.primaryEndTurn)} Open races in your home region are listed under
         your country&apos;s elections.
       </p>
+    ) : null;
+  const hasInvitation =
+    !!election.myCharId &&
+    !localIsEnded &&
+    election.allCandidates.some((c) => c.pendingRunningMateCharacterId === election.myCharId);
+  const stageActions =
+    hasInvitation || entryActions ? (
+      <>
+        {hasInvitation ? invitationPanel : null}
+        {entryActions}
+      </>
     ) : null;
 
   // Below the stage only what the stage does not already show: the race
@@ -689,6 +706,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
           </aside>
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            {invitationPanel}
             <PrimaryPhaseNote
               election={election}
               localInPrimary={localInPrimary}

@@ -24,6 +24,7 @@ const TYPE_LABELS: Partial<Record<NotificationType, string>> = {
   primary_win: "Primary result",
   primary_loss: "Primary result",
   general_win: "Election result",
+  running_mate_invite: "Running mate invitation",
   general_loss: "Election result",
   election_opened: "Election open",
   leadership_election_opened: "Leadership election",

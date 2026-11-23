@@ -1,26 +1,17 @@
+import { getRegionalApprovalData } from "@/lib/states/approval/getRegionalApprovalData";
 import { NextResponse } from "next/server";
 import { findMergedRegionMetrics, findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import type { State, StateApprovalHistory, GameState } from "@/lib/db/types";
+
 import { resolveGameYear } from "@/lib/era/era";
-import { getActiveAddressApprovalModifiers } from "@/lib/governorOffice/address/activeAddressModifiers";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+
 import {
   BASE_APPROVAL,
-  calculateStateApproval,
-  computeStateApprovalBase,
-  computeNationalAveragesFromMetrics,
   buildFlatMetrics,
-  loadElectorateGroups,
-  weightingFor,
+  computeNationalAveragesFromMetrics,
 } from "@/lib/utils/governmentApproval";
-import {
-  isPoliticalApprovalCountry,
-  loadPoliticalApprovalBases,
-} from "@/lib/politicalLegislation/politicalApprovalProvider";
-import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
 import { computeStateTickRates } from "@/lib/api/stateTickRates";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import {
@@ -110,11 +101,9 @@ export async function GET(
       ? buildFlatMetrics(nationalDoc)
       : approvalAverages;
 
-    const flat = buildFlatMetrics(metrics);
     // Include active State-of-the-State address approval modifiers so this matches
     // the region page hero's approval (and the per-turn snapshot), which both
     // factor them in. Without this the metrics tab showed a slightly different %.
-    const currentTurn = gameStateDoc?.currentTurn ?? 0;
     const preset = gameStateDoc?.preset ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
     const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
@@ -129,65 +118,22 @@ export async function GET(
           year,
         })
       : null;
-    const addressModifiers = isNational
-      ? []
-      : await getActiveAddressApprovalModifiers(db, resolvedCountryId, stateId, currentTurn);
-    // P6d: this region's demographic groups, so the displayed approval matches
-    // the electorate-weighted value the per-turn snapshot stores.
-    const groupsByState = isNational
+    const regionalApproval = isNational
       ? null
-      : await loadElectorateGroups(db, { _id: stateId, countryId: resolvedCountryId });
-    const weighting = groupsByState
-      ? weightingFor(groupsByState, resolvedCountryId, stateId)
-      : undefined;
-    // SP4: playable countries score from the hybrid political base.
-    let metricModifiers;
-    let baseOverride: number | undefined;
-    if (!isNational && isPoliticalApprovalCountry(resolvedCountryId, true)) {
-      const bases = await loadPoliticalApprovalBases(db, resolvedCountryId);
-      baseOverride = bases?.byRegion.get(stateId) ?? BASE_APPROVAL;
-      metricModifiers = bases?.modifiersByRegion?.get(stateId);
-    }
+      : await getRegionalApprovalData(db, resolvedCountryId, stateId);
     const governmentApprovalBase =
-      nationalApproval?.governmentApprovalBase ??
-      baseOverride ??
-      computeStateApprovalBase(metrics, approvalAverages, weighting, preset ?? undefined);
+      nationalApproval?.governmentApprovalBase ?? regionalApproval?.baseApproval ?? BASE_APPROVAL;
     const governmentApproval =
-      nationalApproval?.governmentApproval ??
-      calculateStateApproval(
-        metrics,
-        approvalAverages,
-        addressModifiers,
-        weighting,
-        preset,
-        year,
-        baseOverride,
-        metricModifiers
-      );
-    const governmentApprovalModifiers = nationalApproval
-      ? nationalApproval.modifiers.map((m) => ({
-          ...m,
-          marginEffect:
-            m.marginEffect ??
-            (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
-        }))
-      : [
-          ...(
-            metricModifiers ??
-            evaluateModifiers(flat, { preset, countryId: resolvedCountryId, year })
-          ).map((m) => ({
-            ...m,
-            marginEffect:
-              m.marginEffect ??
-              (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
-          })),
-          ...addressModifiers.map((m) => ({
-            ...m,
-            marginEffect:
-              m.marginEffect ??
-              (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
-          })),
-        ];
+      nationalApproval?.governmentApproval ?? regionalApproval?.approval ?? BASE_APPROVAL;
+    const governmentApprovalModifiers = (
+      nationalApproval?.modifiers ??
+      regionalApproval?.modifiers ??
+      []
+    ).map((m) => ({
+      ...m,
+      marginEffect:
+        m.marginEffect ?? (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
+    }));
 
     // Shape regional budget data for parliamentary countries. Keep the shared
     // UK keys for legacy consumers, but surface JP/DE revenue fields too so

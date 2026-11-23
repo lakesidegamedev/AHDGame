@@ -139,11 +139,11 @@ describe("loadPoliticalApprovalBases", () => {
       ]);
     const bases = await loadPoliticalApprovalBases(db as unknown as Db, "US");
     expect(bases).not.toBeNull();
-    const up = BASE_APPROVAL + 10 * APPROVAL_POINTS_PER_SCORE;
-    const down = BASE_APPROVAL - 10 * APPROVAL_POINTS_PER_SCORE;
+    const up = 54.9;
+    const down = 45.1;
     expect(bases!.byRegion.get("MI")).toBeCloseTo(up, 6);
     expect(bases!.byRegion.get("AL")).toBeCloseTo(down, 6);
-    expect(bases!.national).toBeCloseTo((up * 3 + down) / 4, 1);
+    expect(bases!.national).toBe(52.5);
   });
 
   it("uses each region's cached leans for the affinity term", async () => {

@@ -149,13 +149,16 @@ describe("Cabinet gameplay integration", () => {
       1,
       boards
     );
-    expect(result!.modifiersByRegion.get("SCO")).toContainEqual(
+    expect(result!.nationalModifiers).toContainEqual(
       expect.objectContaining({
         id: "cabinet_service_response",
         effect: 0.1,
         marginEffect: 0,
         source: "cabinet",
       })
+    );
+    expect(result!.modifiersByRegion.get("SCO")!.some((entry) => entry.source === "cabinet")).toBe(
+      false
     );
     expect(JSON.stringify(boards)).toBe(source);
     const expired = await loadResetApprovalModifiers(
@@ -167,9 +170,7 @@ describe("Cabinet gameplay integration", () => {
       boards,
       []
     );
-    expect(expired!.modifiersByRegion.get("SCO")!.some((entry) => entry.source === "cabinet")).toBe(
-      false
-    );
+    expect(expired!.nationalModifiers.some((entry) => entry.source === "cabinet")).toBe(false);
   });
   it("boosts only formed-government party whips and never invents a directive", async () => {
     const row = openingCabinetActionStates("effects", 1).find((entry) => entry.countryId === "UK")!;

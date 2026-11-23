@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { ObjectId, type Db } from "mongodb";
@@ -13,7 +14,7 @@ import {
   type CrisisLeverDef,
   type LeverCost,
 } from "@/lib/crises/v2/types";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+
 import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
 import {
   atomicallyDebitCorpLiquidCapital,
@@ -252,16 +253,10 @@ async function chargeCostSteps(
     }
     const points = cost.approval.points;
     const approvals = governmentApprovalsCollection(db);
-    await approvals.updateOne(
-      { _id: countryId as CountryId },
-      { $inc: { approvalRating: -points } }
-    );
+    await approvals.updateOne({ _id: countryId as CountryId }, approvalDeltaUpdate(-points));
     applied.push({
       undo: async () => {
-        await approvals.updateOne(
-          { _id: countryId as CountryId },
-          { $inc: { approvalRating: points } }
-        );
+        await approvals.updateOne({ _id: countryId as CountryId }, approvalDeltaUpdate(points));
       },
     });
   }

@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -57,9 +58,9 @@ describe("worldEvents.scientificBreakthrough — Phase 2 executive decision even
 
     await resolveEvent(db as never, offered._id, "fund", "player", 100);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 2 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(2) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
@@ -98,7 +99,7 @@ describe("worldEvents.scientificBreakthrough — Phase 2 executive decision even
 
     expect(db.collectionMocks.federalBudget!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.financialTxLog!.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.governmentApprovals!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).not.toHaveBeenCalled();
     expect(db.collectionMocks.countryModifiers!.insertOne).not.toHaveBeenCalled();
   });
 

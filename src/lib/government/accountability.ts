@@ -1,3 +1,4 @@
+import { subNationalChamberSeats } from "@/lib/states/rules/seatSelectors";
 /** Batched government responsibility and continuous party-tenure observation. */
 import type { Db, ObjectId } from "mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
@@ -5,12 +6,7 @@ import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
 } from "@/lib/legislature/chamberOfficeType";
-import type {
-  ElectedOfficial,
-  GovernmentFormation,
-  StateApprovalHistory,
-  State,
-} from "@/lib/db/types";
+
 import type { GovernmentAccountability } from "@/lib/db/types/governmentAccountability";
 import {
   responsibilityShares,
@@ -274,9 +270,14 @@ export async function observeGovernmentAccountability(
       if (
         o.party &&
         o.party !== "independent" &&
-        ["stateSenate", "regionalCouncil", "landtag", "peoplesCongress", "stateAssembly"].includes(
-          o.officeType
-        )
+        [
+          "stateSenate",
+          "regionalCouncil",
+          "landtag",
+          "peoplesCongress",
+          "stateAssembly",
+          "provincialLegislature",
+        ].includes(o.officeType)
       )
         seats[o.party] = (seats[o.party] ?? 0) + (o.seatsHeld ?? 1);
     observe(
@@ -293,8 +294,16 @@ export async function observeGovernmentAccountability(
         ),
         seatsByParty: seats,
         chamberSize:
-          states.find((state) => state.countryId === a.countryId && state._id === stateId)
-            ?.stateSenateSeats || Object.values(seats).reduce((sum, value) => sum + value, 0),
+          subNationalChamberSeats(
+            a.countryId,
+            {
+              _id: stateId,
+              stateSenateSeats: states.find(
+                (state) => state.countryId === a.countryId && state._id === stateId
+              )?.stateSenateSeats,
+            },
+            game?.preset
+          ) || Object.values(seats).reduce((sum, value) => sum + value, 0),
       }),
       a.approvalRating
     );

@@ -266,6 +266,7 @@ export function GeneralPhaseView({
                 electionId={electionId}
                 currentRunningMateCharacterId={myCandidate.runningMateCharacterId ?? null}
                 currentRunningMateName={myCandidate.runningMateName ?? null}
+                pendingRunningMateName={myCandidate.pendingRunningMateName ?? null}
                 onSuccess={onSuccess}
               />
             </div>

@@ -17,6 +17,14 @@ export interface StateApprovalHistory {
   countryId: CountryId;
   /** 0–100: this region's approval at the latest snapshot */
   approvalRating: number;
+  /** Unclamped score keeps compensating decisions reversible at 0 and 100. */
+  approvalRawRating?: number;
+  baseApproval?: number;
+  activeModifiers?: import("@/lib/approval/activeModifier").ActiveModifier[];
+  /** Durable additive decisions, kept separate from recomputed performance. */
+  approvalAdjustment?: number;
+  /** Atomic country snapshot receipt; repeat runs do not advance smoothing. */
+  lastSnapshotTurn?: number;
   /** Crisis approval writes already applied here, so a repeated write is a no-op. */
   appliedCrisisEffects?: string[];
   /** Turn-by-turn history (most recent last, capped at 20 entries) */

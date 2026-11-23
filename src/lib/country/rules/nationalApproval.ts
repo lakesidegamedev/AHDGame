@@ -1,7 +1,7 @@
 import { regionalModifierBreakdown } from "./regionalModifierBreakdown";
 import {
   applyModifiers,
-  evaluateModifiers,
+  evaluateRegionalApprovalModifiers as evaluateModifiers,
   type ActiveModifier,
   type EvaluateModifiersOptions,
 } from "@/lib/utils/approvalModifiers";

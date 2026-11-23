@@ -44,7 +44,6 @@ describe("approval metric direction (P6d-pre)", () => {
   it.each([
     ["social", "childPoverty", 25, 5],
     ["healthcare", "nhsWaitingTime", 30, 6],
-    ["governance", "debtToGdp", 120, 40],
     ["publicSafety", "knifeCrimeRate", 80, 10],
     ["social", "housingAffordability", 70, 20],
   ])("a worse %s.%s scores lower approval", (cat, metric, worse, better) => {
@@ -60,4 +59,9 @@ describe("approval metric direction (P6d-pre)", () => {
       computeStateApprovalBase(b, averages)
     );
   });
+});
+
+it("does not charge national debt to regional metric approval", () => {
+  const result = worseScoresLower("governance", "debtToGdp", 120, 40);
+  expect(result.worseApproval).toBe(result.betterApproval);
 });

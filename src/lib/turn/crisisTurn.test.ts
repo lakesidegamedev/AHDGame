@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
@@ -685,7 +686,7 @@ describe("processCrisisTurn", () => {
     // Should hit US exactly once (CA and TX both map to US, deduplicated)
     expect(db.collectionMocks.governmentApprovals.updateMany).toHaveBeenCalledWith(
       { _id: { $in: ["US"] } },
-      expect.objectContaining({ $inc: { approvalRating: -3 } })
+      approvalDeltaUpdate(-3)
     );
     expect(db.collectionMocks.governmentApprovals.updateMany).toHaveBeenCalledTimes(1);
   });
