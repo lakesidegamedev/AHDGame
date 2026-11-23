@@ -123,7 +123,6 @@ export const CORP_GROUPS: CorpGroupDef[] = [
     tooltip: "CEO-only controls: strategy, dividends, salaries, and corporate actions",
     icon: ICONS.ceo,
     tabIds: ["ceo"],
-    accent: "warning",
   },
 ];
 

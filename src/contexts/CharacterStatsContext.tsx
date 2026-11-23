@@ -12,6 +12,7 @@ export interface CorpHistoryPoint {
 export interface CorpStats {
   sequentialId: number;
   name: string;
+  tickerSymbol?: string;
   sharePrice: number;
   priceChange1h: number;
   liquidCapital: number;

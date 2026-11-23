@@ -160,7 +160,18 @@ export function QuoteBoard({
             </svg>
           </div>
           <div className="flex justify-between px-3.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
-            <span>{series.length} turns</span>
+            <span>
+              {series.length} turns
+              {spanChangePct != null && spanChangePct !== 0 && (
+                // The line is coloured by this span, so the span's own change is
+                // printed beside it; a red line under a green badge then reads
+                // as two different windows, not a contradiction.
+                <span className={spanChangePct > 0 ? "text-success" : "text-error"}>
+                  {" "}
+                  {spanChangePct > 0 ? "▲" : "▼"} {Math.abs(spanChangePct).toFixed(1)}%
+                </span>
+              )}
+            </span>
             <span>
               Low {money.fmtPrice(Math.min(...rangeValues))} · High{" "}
               {money.fmtPrice(Math.max(...rangeValues))}
