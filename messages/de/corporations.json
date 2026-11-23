@@ -22,6 +22,14 @@
       }
     },
     "supplyBoard": {
+      "cannotUse": "Angebote, die du nicht nutzen kannst ({count})",
+      "cannotUseHint": "Keines davon kann an deine Anlagen liefern. Sie bleiben gelistet, damit du den Grund siehst.",
+      "sizeNote": "Etwa das {ratio}-Fache deines täglichen Verbrauchs dieses Einsatzguts",
+      "confirmTitle": "Verbindliche Vereinbarung bestätigen",
+      "confirmBuy": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag von {company} zu kaufen. Laufzeit: {term}.",
+      "confirmSell": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag an {company} zu verkaufen. Laufzeit: {term}.",
+      "confirm": "Vereinbarung bestätigen",
+      "cancel": "Abbrechen",
       "npp": "NPP"
     },
     "techTree": {

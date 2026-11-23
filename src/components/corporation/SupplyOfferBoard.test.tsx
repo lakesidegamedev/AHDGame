@@ -95,6 +95,9 @@ it("takes a listed offer for a chosen quantity", async () => {
   await waitFor(() => expect(screen.getByText("US · rating AA")).toBeTruthy());
   fireEvent.change(screen.getByLabelText("Quantity to take"), { target: { value: "40" } });
   fireEvent.click(screen.getByText("Take offer"));
+  expect(fetcher.mock.calls.some((c) => c[1]?.method === "POST")).toBe(false);
+  expect(screen.getByText(/binding agreement to buy 40 MWh per day from Other Co/)).toBeTruthy();
+  fireEvent.click(screen.getByText("Confirm agreement"));
   await waitFor(() =>
     expect(screen.getByText("Agreement started. It is active now.")).toBeTruthy()
   );
@@ -134,4 +137,50 @@ it("explains an offer this corporation could never receive and hides its take co
   await waitFor(() => expect(screen.getByText(reason)).toBeTruthy());
   expect(screen.queryByText("Take offer")).toBeNull();
   expect(screen.queryByText("Negotiate")).toBeNull();
+});
+
+it("lists usable offers first, groups unusable ones in a collapsed section and sizes oversize buys", async () => {
+  const base = { corporationId: "other", slot: 0, own: false, side: "sell", pricePremium: 0 };
+  const unusable = {
+    ...base,
+    id: "a:0",
+    corporationName: "Unusable Co",
+    commodity: "software_it_services",
+    volumeCap: 10,
+    expiresAtTurn: 200,
+    unreachableReason:
+      "You could not receive Software & IT Services, none of your active plants use it.",
+  };
+  const big = {
+    ...base,
+    id: "b:0",
+    corporationName: "Big Co",
+    commodity: "energy",
+    volumeCap: 405,
+    expiresAtTurn: 200,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        String(url).endsWith("/commodities")
+          ? { commodities: [{ commodity: "energy", consumptionUnits: 84 }] }
+          : { listings: [unusable, big], ownListings: [], hasMore: false },
+    }))
+  );
+  const { container } = render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <SupplyOfferBoard corpId="self" onRespond={vi.fn()} />
+    </NextIntlClientProvider>
+  );
+  await waitFor(() => expect(screen.getByText(/About 4.8x your daily use/)).toBeTruthy());
+  const group = container.querySelector("details")!;
+  expect(group.open).toBe(false);
+  expect(group.textContent).toContain("Offers you cannot use (1)");
+  expect(group.textContent).toContain("none of your active plants use it");
+  expect(group.textContent).not.toContain("Big Co");
+  expect(container.textContent!.indexOf("Big Co")).toBeLessThan(
+    container.textContent!.indexOf("Unusable Co")
+  );
 });
