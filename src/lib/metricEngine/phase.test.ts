@@ -932,7 +932,8 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
   });
 
   it("uses the annualized region realized-revenue delta under plants", async () => {
-    // 1000 → 1010 over 4 turns = +1% × 12 = 12%/yr; currentGrowthRate 3 ignored.
+    // 1000 → 1010 over 4 turns = +1% × 12 = 12%/yr for the owned companies,
+    // weighted by their share (1010 of 1510) against the 0.5 background rate.
     seedWorld({
       mode: "plants",
       revenue: 1010,
@@ -942,7 +943,10 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
     });
     const { metricOps } = captureOps();
     await runMetricEngine(db as unknown as Db, 10);
-    expect(metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"]).toBeCloseTo(12, 6);
+    expect(metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"]).toBeCloseTo(
+      (12 * 1010 + 0.5 * 500) / 1510,
+      3
+    );
   });
 
   it("ignores the realized baseline when plants is off (byte-identical legacy)", async () => {
@@ -1043,7 +1047,12 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
     });
     const { metricOps } = captureOps();
     await runMetricEngine(db as unknown as Db, 49);
-    expect(metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"]).toBe(0);
+    // Flat owned output contributes nothing; only the background rate's share
+    // (500 of 1500 revenue at 0.5%) remains.
+    expect(metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"]).toBeCloseTo(
+      (0.5 * 500) / 1500,
+      3
+    );
   });
 
   it("cold-starts volume separately from the old money trend", async () => {
@@ -1140,7 +1149,11 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
     });
     const { metricOps, stateOps } = captureOps();
     await runMetricEngine(db as unknown as Db, 10);
-    expect(metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"]).toBe(0);
+    // No owned growth from the restatement: only the background rate's share
+    // remains, nowhere near the ~28pp FX contraction.
+    const value = metricOps[0].updateOne.update.$set["economic.sectorGrowth.value"];
+    expect(value).toBeGreaterThanOrEqual(0);
+    expect(value).toBeLessThan(0.5);
     expect(stateOps[0].updateOne.update.$set.sectorRealizedRevenue).toBe(1000);
     expect(stateOps[0].updateOne.update.$set.sectorRealizedRevenueUnit).toBe("host");
   });

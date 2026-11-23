@@ -1,4 +1,5 @@
 import { blendOutputGrowthSignal } from "../rules/outputVolume";
+import { shareWeightedGrowth } from "../rules/shareWeightedGrowth";
 import {
   computeConsumptionTaxAdjustedGrowthRate,
   computeRealizedRevenueGrowthRate,
@@ -168,11 +169,24 @@ export const sectorGrowthNode: RegistryNode = {
             inflation
           )
         : null);
-    const sector = blendOutputGrowthSignal(
+    const blended = blendOutputGrowthSignal(
       plantsSignal ?? legacySector,
       outputSignal,
       p.outputHistorySpanTurns ?? p.outputTrendBaseline?.spanTurns ?? 0
     );
+    // Plants: owned companies are a slice of the region, so their growth moves
+    // regional output only in proportion to their share; the rest of the
+    // economy grows at the background rate. The legacy average already weighs
+    // owned and background revenue.
+    const sector =
+      p.plantsEnabled && plantsSignal !== null
+        ? shareWeightedGrowth({
+            ownedSignal: blended,
+            backgroundRate: DEFAULT_BACKGROUND_GROWTH_RATE,
+            ownedRevenue: p.owned.reduce((sum, row) => sum + row.revenue, 0),
+            backgroundRevenue: p.background.reduce((sum, row) => sum + row.revenue, 0),
+          })
+        : blended;
     const taxAdjusted = computeConsumptionTaxAdjustedGrowthRate(
       sector,
       p.federalSalesTax,

@@ -283,8 +283,9 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
     turn: 10,
     seed: (db) => {
       // prev Σ realized 1000 @ turn 6 → now 1010 over 4 turns:
-      // (1010/1000 − 1) × 100 × (48/4) = 12. currentGrowthRate 3 and the background
-      // 0.5 pin are both ignored.
+      // Owned signal (1010/1000 − 1) × 100 × (48/4) = 12, weighted by the owned
+      // share of the region (1010 of 1510) against the 0.5 background rate:
+      // 12 × 1010/1510 + 0.5 × 500/1510 = 8.192. currentGrowthRate 3 is ignored.
       setupCollection(db, "states", [
         { ...state("s6"), sectorRealizedRevenue: 1000, sectorRealizedRevenueTurn: 6 },
       ]);
@@ -312,7 +313,7 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
       setupCollection(db, "stateBudgets", [{ _id: "s6", taxRates: { salesTax: 6 } }]);
       setupGameConfig(db, "plants");
     },
-    expected: [{ _id: "s6", gdpGrowth: 12, sectorBaseline: 12, integratedGdp: 12 }],
+    expected: [{ _id: "s6", gdpGrowth: 8.192, sectorBaseline: 8.192, integratedGdp: 8.192 }],
   },
   {
     name: "plants: flip turn with no realized baseline falls back to the legacy signal",
