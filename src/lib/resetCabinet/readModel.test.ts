@@ -74,6 +74,21 @@ describe("v2 Cabinet finance read model", () => {
     expect(model.annualAuthority).toBeUndefined();
   });
 
+  it("names Canada's intelligence law and the category to file it under", () => {
+    const model = buildResetDepartmentFinanceReadModel({
+      definition: {
+        ...definition,
+        countryId: "CA",
+        kind: "security_agency",
+        accountPolicyId: "intelligence",
+      },
+      departmentName: "Security Intelligence Service",
+      account: { ...account, externallySettled: true, annualAuthority: 0, balance: 0 },
+    });
+    expect(model.explanation).toContain("National Security Intelligence Fund Act");
+    expect(model.explanation).toContain("Defense category");
+  });
+
   it("keeps the defence opening claim visible with a plain explanation", () => {
     const model = buildResetDepartmentFinanceReadModel({
       definition: { ...definition, accountPolicyId: "defense" },

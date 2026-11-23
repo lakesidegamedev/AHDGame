@@ -3,6 +3,7 @@ import type { DepartmentDefinition } from "@/lib/governmentFinance/departmentCat
 import type { DepartmentFinanceReadModel } from "@/lib/governmentFinance/readModel";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { resetLawFamilyById } from "@/lib/resetLegislation/catalog";
+import { getCatalog } from "@/lib/politicalLegislation/catalog";
 import {
   activeDepartmentProgramFamilyIds,
   activeDepartmentProgramFundingControl,
@@ -22,6 +23,23 @@ const SPECIALIZED_ACCOUNT_EXPLANATION: Record<string, string> = {
   defense:
     "Defence money is not held in this account. It is set by defence law and paid through the defence budget. Any yearly figure below is the opening defence claim, shown for reference and not paid twice.",
 };
+/** Names the law that funds intelligence and where a player files it. */
+function intelligenceLawPointer(countryId: string): string {
+  let law;
+  try {
+    law = getCatalog(countryId).find((l) => l.budgetKeyOverride === "intelligence");
+  } catch {
+    return "";
+  }
+  if (!law) return "";
+  const category = law.category
+    ? law.category.charAt(0).toUpperCase() + law.category.slice(1)
+    : undefined;
+  return category
+    ? ` To fund it, propose the ${law.title} as a national bill. It is listed under the ${category} category.`
+    : ` To fund it, propose the ${law.title} as a national bill.`;
+}
+
 const SPECIALIZED_ACCOUNT_FALLBACK =
   "This institution is funded through its own ledger, not this account.";
 
@@ -95,8 +113,11 @@ export function buildResetDepartmentFinanceReadModel(input: {
       kind: definition.kind,
       accountPolicyId: definition.accountPolicyId,
       explanation:
-        SPECIALIZED_ACCOUNT_EXPLANATION[definition.accountPolicyId ?? ""] ??
-        SPECIALIZED_ACCOUNT_FALLBACK,
+        (SPECIALIZED_ACCOUNT_EXPLANATION[definition.accountPolicyId ?? ""] ??
+          SPECIALIZED_ACCOUNT_FALLBACK) +
+        (definition.accountPolicyId === "intelligence"
+          ? intelligenceLawPointer(definition.countryId)
+          : ""),
       ...(hasFigures
         ? {
             annualAuthority: account.annualAuthority,
