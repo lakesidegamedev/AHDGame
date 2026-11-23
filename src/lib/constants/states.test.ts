@@ -206,7 +206,14 @@ describe("1990-census apportionment bundles", () => {
       expect(subNationalChamberSeats("CN", { _id: "ZZ", stateSenateSeats: 99 })).toBe(99);
     });
 
-    it("uses stateSenateSeats for non-CN countries", () => {
+    it("sizes CA's chamber off the provincial legislature, not the Senate seats (#7219)", () => {
+      // Alberta: 87-seat legislature vs 6 appointed federal Senate seats.
+      expect(subNationalChamberSeats("CA", { _id: "CA_AB", stateSenateSeats: 6 })).toBe(87);
+      expect(subNationalChamberSeats("CA", { _id: "CA_ON", stateSenateSeats: 24 })).toBe(124);
+      expect(subNationalChamberSeats("CA", { _id: "CA_YT", stateSenateSeats: 1 })).toBe(19);
+    });
+
+    it("uses stateSenateSeats for other countries", () => {
       expect(subNationalChamberSeats("US", { _id: "CA", stateSenateSeats: 40 })).toBe(40);
     });
 
