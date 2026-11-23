@@ -10,6 +10,7 @@ import {
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { plantPressure, shortageGrowth } from "@/lib/market/producerMarket/shortageGrowthRules";
 import { jointRunShare, lineSlices } from "@/lib/market/producerMarket/jointRunRules";
+import { lossWithUnsoldOutput } from "@/lib/market/producerMarket/oversupplyCutRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -579,9 +580,11 @@ export function prepareProducerPhysicalSector(input: {
           jointMarginal
         )
       : summedRunShare;
-  // A plant that supplies its own company plans at least that company's demand for the good.
+  // A plant that supplies its own company plans at least that company's demand for the good,
+  // unless its last run lost money and left output unsold (ticket 1884): then the normal
+  // output rules may cut it and its sister sites buy the shortfall.
   const ownDemandFloor =
-    (env.captiveDeliveryStage ?? 0) >= 1
+    (env.captiveDeliveryStage ?? 0) >= 1 && !lossWithUnsoldOutput(liveLast)
       ? ownDemandRunShare(lastReceipt, planBaseRunShare(lastReceipt, runFloor))
       : 0;
   const plannedRunShare = Math.max(unpacedRunShare, ownDemandFloor);
