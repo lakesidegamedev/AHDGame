@@ -6,7 +6,7 @@ summary: >-
   recommended count or why there is none, and warns about freight and staffing.
 tags: [corporations, build]
 badges: [patch]
-areas: [ui]
+areas: [frontend]
 ---
 
 ## What changed

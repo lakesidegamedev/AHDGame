@@ -7,7 +7,7 @@ summary: >-
   quality labels say what they measure.
 tags: [corporations, finance]
 badges: [patch]
-areas: [ui]
+areas: [fullstack]
 ---
 
 ## What changed
