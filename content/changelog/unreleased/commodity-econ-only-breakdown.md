@@ -1,9 +1,9 @@
 ---
 date: 2026-11-23
-title: "Regional breakdown lists economy-only countries"
+title: "Regional breakdown lists every country"
 summary: >-
   The commodity page's Regional breakdown now shows supply, demand and price
-  for economy-only countries, one row per country.
+  for countries that have no regions on the map, one row per country.
 tags: [commodities, display]
 badges: [patch]
 areas: [frontend]
@@ -11,4 +11,4 @@ areas: [frontend]
 
 ## What changed
 
-- Economy-only countries trade from a national market with no regions, so they never appeared in the Regional breakdown. Each one now gets a row with its national supply, demand, balance and price, listed after the countries that have regions.
+- Countries with no regions on the map, economy-only countries and countries whose plants have no regional data, never appeared in the Regional breakdown. Each one now gets a row under "Other countries" with its national supply, demand, balance and price, after the countries that have regions.

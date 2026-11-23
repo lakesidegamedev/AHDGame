@@ -24,7 +24,7 @@ const base = {
 };
 
 describe("RegionalBreakdown", () => {
-  it("lists economy-only countries from national totals, without repeating regional ones", () => {
+  it("lists countries without regions from national totals, without repeating regional ones", () => {
     render(
       <RegionalBreakdown
         {...base}
@@ -32,15 +32,15 @@ describe("RegionalBreakdown", () => {
         nationalDemand={{ US: 12, DE: 30, JP: 0 }}
       />
     );
-    expect(screen.getByText("Economy-only countries")).toBeTruthy();
+    expect(screen.getByText("Other countries")).toBeTruthy();
     expect(screen.getByText("Germany")).toBeTruthy();
     expect(screen.getByText("Japan")).toBeTruthy();
-    expect(screen.getByText(/\+ 2 economy-only countries/)).toBeTruthy();
+    expect(screen.getByText(/\+ 2 countries/)).toBeTruthy();
     expect(screen.queryAllByText("United States")).toHaveLength(1);
   });
 
-  it("shows no economy-only section without national totals", () => {
+  it("shows no other-countries section without national totals", () => {
     render(<RegionalBreakdown {...base} />);
-    expect(screen.queryByText("Economy-only countries")).toBeNull();
+    expect(screen.queryByText("Other countries")).toBeNull();
   });
 });
