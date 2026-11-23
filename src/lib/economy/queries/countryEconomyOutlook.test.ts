@@ -5,6 +5,10 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/budget/revenue", () => ({
+  calculateFederalRevenue: vi.fn(async () => ({ total: 4_200_000_000_000 })),
+  loadLatestSourcedImportAggregates: vi.fn(),
+}));
 
 vi.mock("@/lib/resetMetrics/readBoard", () => ({ readResetMetricBoard: vi.fn() }));
 vi.mock("@/lib/resetMetrics/readNationalRollup", () => ({ readNationalMetricRollup: vi.fn() }));
@@ -72,7 +76,12 @@ beforeEach(async () => {
     // stored `surplus` cache (see lib/budget/federalSurplus). `surplus` is left
     // deliberately wrong here so the test fails if anything reads it again.
     revenue: { total: 4_200_000_000_000 },
-    spending: { total: 5_000_000_000_000 },
+    spending: {
+      total: 5_000_000_000_000,
+      byCategory: { defense: 5_000_000_000_000 },
+      debtInterest: 0,
+      stateGrants: 0,
+    },
     surplus: 999_999,
     debtToGdpRatio: 0.62,
     creditRating: "AA",
@@ -175,6 +184,28 @@ describe("buildCountryEconomyOutlook", () => {
     expect(result.markets.chairName).toBe("J. Whitmore");
     expect(result.markets.surplus).toBe(-800_000_000_000);
     expect(result.sectorMix.length).toBeGreaterThan(0);
+  });
+
+  it("uses Budget page revenue and booked interest for the displayed primary balance", async () => {
+    const budget = await db.collectionMocks.federalBudget.findOne();
+    db.collectionMocks.federalBudget.findOne.mockResolvedValue({
+      ...budget,
+      spending: {
+        total: 5_000_000_000_000,
+        debtInterest: 200_000_000_000,
+        byCategory: { defense: 4_800_000_000_000 },
+        stateGrants: 0,
+      },
+      debt: { principal: 17_360_000_000_000, interestRate: 0.04 },
+    });
+    const { calculateFederalRevenue } = await import("@/lib/budget/revenue");
+    vi.mocked(calculateFederalRevenue).mockResolvedValueOnce({
+      total: 4_300_000_000_000,
+    } as Awaited<ReturnType<typeof calculateFederalRevenue>>);
+    const { buildCountryEconomyOutlook } = await import("./countryEconomyOutlook");
+    const result = await buildCountryEconomyOutlook(db as unknown as Db, "US");
+
+    expect(result.pulse.credit.primaryBalancePct).toBe(-1.79);
   });
 
   it("shows the live budget growth figure, which moves between turns, over the hourly history", async () => {

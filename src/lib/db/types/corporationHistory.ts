@@ -106,6 +106,14 @@ export interface CorporationHistory {
    */
   realOutputAnchor?: number;
   /**
+   * Deposit-taking banks only: deposits, deposit ceiling, branch share, fill
+   * and the share of financial capacity branches took this turn
+   * (banking/rules/branchSnapshot.ts). The charter keeps only current values,
+   * so this row is the only per-turn record of why financial output moved
+   * with no cash or input cut. Absent for other companies and older rows.
+   */
+  bankBranch?: import("@/lib/banking/rules/branchSnapshot").BankBranchSnapshot;
+  /**
    * Coupon income earned as a bond holder this turn (₳/turn). Persisted so
    * the post-bond-turn share-price recompute can include it in the income
    * basis. Older snapshots lack this field.

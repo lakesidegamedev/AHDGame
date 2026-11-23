@@ -603,7 +603,7 @@ function useSharePurchaseModalContext({
     quantity > 0 &&
     !(atMarketSide === "buy" && ratesNeededButMissing) &&
     (atMarketSide === "buy"
-      ? !floatInsufficient && !floatFundsShort
+      ? quantity <= maxBuyableShares && !floatInsufficient && !floatFundsShort
       : !sellAtMarketInsufficient && !marketDepthInsufficient);
 
   const canSubmitLimit =

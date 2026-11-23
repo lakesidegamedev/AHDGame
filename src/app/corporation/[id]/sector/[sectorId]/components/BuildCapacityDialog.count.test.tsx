@@ -458,17 +458,21 @@ describe("BuildCapacityDialog count control", () => {
     expect(onSubmit.mock.calls[0][0]).toBeGreaterThan(0);
   });
 
-  it("ignores non-digits rather than going NaN", () => {
+  it("preserves invalid input so the player can correct it", () => {
     const { input } = renderDialog();
     fireEvent.change(input, { target: { value: "12abc3" } });
-    expect(input.value).toBe("123");
+    expect(input.value).toBe("12abc3");
+    expect(screen.getByRole("button", { name: /^Build 0 /i })).toHaveProperty("disabled", true);
   });
 
-  it("falls back to 1 when the field is left empty", () => {
+  it.each(["", "0", "-5", "1000001"])("does not replace an invalid count %j on blur", (value) => {
     const { input } = renderDialog();
-    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.change(input, { target: { value } });
     fireEvent.blur(input);
-    expect(input.value).toBe("1");
+    expect(input.value).toBe(value);
+    expect(screen.getByRole("button", { name: /^Build 0 /i })).toHaveProperty("disabled", true);
+    expect(screen.getByText("Build total").nextElementSibling?.textContent).toBe("n/a");
+    expect(screen.queryByTestId("build-cash-after")).toBeNull();
   });
 
   it("cannot submit while the field is empty", () => {
