@@ -13,8 +13,6 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { regionalGrantAmount } from "@/lib/budget/regionalGrantField";
 import type { GameConfig, GameState } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
-import { calculateFederalRevenue, loadLatestSourcedImportAggregates } from "@/lib/budget/revenue";
-import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { FISCAL_YEAR_START_TURN_IN_YEAR, calculateFiscalYear } from "@/lib/budget/fiscalYear";
 import { calculateFederalLawAnnualCosts, normalizeFederalSpending } from "@/lib/budget/spending";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
@@ -32,6 +30,7 @@ import {
   type FiscalConsolidationSummary,
 } from "@/lib/budget/rules/fiscalStabilizer";
 import { loadDefenseFunding } from "./defenseFunding";
+import { loadBudgetDisplayAccounts } from "./budgetDisplayAccounts";
 import { loadOrganizationContributions } from "./organizationContributions";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
@@ -424,36 +423,18 @@ export async function loadFederalBudgetDetail(params: {
       surplus: federalSurplus({ revenue: storedNationalBudget.revenue, spending }),
     };
   } else {
-    // Money wiring (interstate-logistics plan step 5, phase B): mirror the
-    // persisted-budget netting here too, so a page load between turns shows
-    // the same tariff figure `refreshNationalBudgetRevenue` last wrote,
-    // instead of silently reverting to the un-netted GDP proxy on every read.
-    let sourcedImports: { tariffPaidAnchor: number; importValueAnchor: number } | undefined;
-    if (gameConfig?.interstateMoneyWiringEnabled === true) {
-      const sourcedByCountry = await loadLatestSourcedImportAggregates(db, currentTurn);
-      const agg = sourcedByCountry.get(countryId);
-      if (agg) {
-        sourcedImports = { tariffPaidAnchor: agg.tariffPaid, importValueAnchor: agg.importValue };
-      }
-    }
-    const fxByCurrency = sourcedImports ? await loadFxRatesByCurrency(db) : undefined;
-    const recalculatedRevenue = await calculateFederalRevenue(
+    const accounts = await loadBudgetDisplayAccounts(
       db,
-      storedNationalBudget.taxRates,
-      budgetId,
-      undefined,
-      undefined,
-      undefined,
-      fxByCurrency,
-      sourcedImports
+      storedNationalBudget,
+      countryId,
+      currentTurn,
+      gameConfig?.interstateMoneyWiringEnabled === true
     );
-    const spending = normalizeFederalSpending(storedNationalBudget.spending);
     resolvedNationalBudget = {
       ...storedNationalBudget,
       fiscalYear: liveFiscalYear,
-      revenue: recalculatedRevenue,
-      spending,
-      surplus: federalSurplus({ revenue: recalculatedRevenue, spending }),
+      ...accounts,
+      surplus: federalSurplus(accounts),
     };
   }
 
