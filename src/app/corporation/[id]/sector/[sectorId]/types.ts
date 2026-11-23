@@ -828,6 +828,11 @@ export interface PlantsData {
       inventoryCarryAnchor: number;
       eventsAnchor: number;
       remainderAnchor: number;
+      siteRunningAnchor?: number;
+      minorInputPremiumAnchor?: number;
+      inventoryWriteOffAnchor?: number;
+      managementOverheadAnchor?: number;
+      managementOverheadRecorded?: boolean;
     };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;

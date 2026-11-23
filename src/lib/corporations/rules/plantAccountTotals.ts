@@ -23,6 +23,19 @@ export type PlantAccountInput = {
    */
   fundedComplianceAnchor?: number | null;
   /**
+   * The legs of a funded turn's cost that the settled record names exactly, in
+   * ₳ per day. `managementOverheadAnchor` and `growthAnchor` are null on a turn
+   * recorded before those legs were stored.
+   */
+  fundedParts?: {
+    idleUpkeepAnchor: number;
+    siteRunningAnchor: number;
+    minorInputPremiumAnchor: number;
+    inventoryWriteOffAnchor: number;
+    managementOverheadAnchor: number | null;
+    growthAnchor: number | null;
+  } | null;
+  /**
    * The lines the turn ACTUALLY booked, in ₳. When present, all money figures
    * below are read off them; nothing is reconstructed. Absent on a sector that
    * has not run a plants turn since the field shipped, which falls back to the
