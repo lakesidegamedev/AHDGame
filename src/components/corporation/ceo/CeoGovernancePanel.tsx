@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   CROSS_COUNTRY_RELOCATION_MULTIPLIER,
   RELOCATION_COST_FRACTION,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { LEGAL_STRUCTURES, type LegalStructureId } from "@/lib/constants/legalStructures";
 import { legalStructureTaxLabel } from "@/lib/corporations/rules/passThroughTax";

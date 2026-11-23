@@ -280,6 +280,7 @@ describe("OverviewTab", () => {
         periodView="turn"
         financialFogOfWar={null}
         isCeo={false}
+        myCharacterId={null}
         onTabChange={vi.fn()}
         onPeriodViewChange={vi.fn()}
         onTrade={vi.fn()}

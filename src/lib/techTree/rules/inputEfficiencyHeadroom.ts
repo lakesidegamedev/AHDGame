@@ -22,15 +22,16 @@ export interface InputEfficiencyHeadroom {
  * and whose room is zero has no remaining benefit.
  */
 export function inputEfficiencyHeadroom(
-  effects: readonly Pick<TechEffect, "kind" | "pct">[],
+  effects: readonly TechEffect[],
   lane: "generic" | "sector",
   researchedBonus: number
 ): InputEfficiencyHeadroom {
   const scale = lane === "generic" ? CORP_LANE_EFFECT_SCALE : 1;
   const contribution =
-    effects
-      .filter((effect) => effect.kind === "inputEfficiency")
-      .reduce((sum, effect) => sum + effect.pct, 0) * scale;
+    effects.reduce(
+      (sum, effect) => (effect.kind === "inputEfficiency" ? sum + effect.pct : sum),
+      0
+    ) * scale;
   const remaining = Math.max(0, TECH_INPUT_EFFICIENCY_CAP - researchedBonus);
   const applied = Math.min(contribution, remaining);
   const onlyInputReduction = effects.every((effect) => effect.kind === "inputEfficiency");

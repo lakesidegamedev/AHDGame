@@ -31,7 +31,9 @@ export async function parentCeoVisibleCorporationIds(
   const ids = [...new Map(parents.map((row) => [row.parentId.toString(), row.parentId])).values()];
   const parentRows = await corporationsCollection(db)
     .find({ _id: { $in: ids } })
-    .project({ userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 })
+    .project<
+      Pick<Corporation, "_id" | "userId" | "ceoId" | "ceoType" | "caretakerCeo" | "ceoVacant">
+    >({ userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 })
     .toArray();
   const controlled = new Set(
     parentRows

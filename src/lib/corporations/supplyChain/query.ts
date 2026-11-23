@@ -123,7 +123,7 @@ async function readCompany(
       {
         id: s._id.toString(),
         countryId: s.countryId ?? "",
-        stateId: s.stateId,
+        stateId: s.stateId ?? "",
         sectorType: s.sectorType,
       },
     ])
