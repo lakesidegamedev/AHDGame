@@ -15,6 +15,8 @@ export interface KeirAdvice {
   link: string | null;
   tone: AdviceTone;
   generatedAt: string;
+  /** When the wording and figures were last re-read from the live tip. */
+  refreshedAt?: string;
 }
 
 export interface KeirPetWidgetData {

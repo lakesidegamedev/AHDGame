@@ -156,14 +156,15 @@ export async function foundCorporation({
   // HQ defaults to character's home state
   const headquartersState = character.homeState;
 
-  // Keep the one-active-corporation limit account-wide, even when a player
-  // switches characters. The cooldown begins only once that corporation ends.
+  // One active corporation per character. Other characters on the same
+  // account are unaffected. The cooldown begins only once that corporation ends.
   const existing = await corporationsCollection(db).findOne({
-    userId: new ObjectId(userId),
+    ceoId: character._id,
+    ceoType: { $ne: "imperial" },
     ceoVacant: { $ne: true },
   });
   if (existing) {
-    return fail(400, "You already own a corporation. Each player can own one corporation.");
+    return fail(400, "This character already owns a corporation.");
   }
 
   // Per-user refounding cooldown, anchored when the previous corporation ends.
