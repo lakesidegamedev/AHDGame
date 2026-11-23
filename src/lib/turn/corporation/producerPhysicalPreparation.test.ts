@@ -457,6 +457,56 @@ describe("physical producer preparation", () => {
     expect(off.plannedRunShare).toBeCloseTo(0.18, 12);
   });
 
+  it("does not hold a money-losing plant with unsold output at a full run for its own sites (ticket 1884)", () => {
+    const { input, env, sector } = fixture();
+    sector.strategyId = "fintech";
+    env.demandPlanStage = 1;
+    env.runPlanStage = 1;
+    env.captiveDeliveryStage = 1;
+    // A fintech branch whose software all went to its own sites while half
+    // its financial services went unsold in a glutted market.
+    const receipt = (revenue: number) => ({
+      worldEpoch: "world",
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      plannedRunShare: 1,
+      plannedUnits: 100,
+      producedUnits: 100,
+      offeredUnits: 100,
+      soldUnits: 30,
+      revenue,
+      inputsConsumed: 80000,
+      labourPaid: 20000,
+      valuationCredit: 76000,
+      valuationCharge: 76000,
+      products: [
+        {
+          commodity: "financial_services",
+          producedUnits: 60,
+          offeredUnits: 60,
+          soldUnits: 30,
+          revenue,
+          askingUnitPrice: 2000,
+        },
+        {
+          commodity: "software",
+          producedUnits: 40,
+          offeredUnits: 40,
+          soldUnits: 0,
+          internalDeliveredUnits: 40,
+          ownSiteDemandUnits: 40,
+          askingUnitPrice: 1900,
+        },
+      ],
+    });
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = receipt(150000);
+    // Profitable: its own sites' demand holds it at a full run.
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(1);
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = receipt(60000);
+    // Losing money with output unsold: the output rules cut it.
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeLessThan(1);
+  });
+
   it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
     const { input, env, sector } = fixture();
     Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
