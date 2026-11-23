@@ -13,6 +13,7 @@ areas: [frontend, backend]
 ---
 
 ## What changed
+
 - Product development shows the target each spend level is measured against, what revenue it is based on, and each level's spend as a share of the target. The form now says that every line uses the same quality curve, so lines that lift the same plants show the same numbers.
 - The supply agreement form names the billed input price that contracts settle against, shows the market price from the commodities table next to it, and shows the slider range in money. The two prices differ because the billed price follows the market in a damped, bounded way.
 - Supply agreement volumes and commitments are shown per day everywhere, and the damage ceiling is explained in plain words.
