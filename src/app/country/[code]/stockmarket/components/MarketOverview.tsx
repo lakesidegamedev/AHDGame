@@ -80,6 +80,25 @@ interface CandleDto {
   totalTurns?: number;
 }
 
+function hasFinitePrices(candle: CandleDto): boolean {
+  return [candle.open, candle.high, candle.low, candle.close].every(Number.isFinite);
+}
+
+function chartCandles(points: CandleDto[]): CandleDto[] {
+  // The chart requires unique, increasing timestamps across fallback and quarter candles.
+  const byTime = new Map<number, CandleDto>();
+  for (const point of points) {
+    const existing = byTime.get(point.time);
+    if (
+      Number.isFinite(point.time) &&
+      (!existing || hasFinitePrices(point) || !hasFinitePrices(existing))
+    ) {
+      byTime.set(point.time, point);
+    }
+  }
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
 interface CandlesResponse {
   exchange: string;
   turns: number;
@@ -371,7 +390,7 @@ export function MarketOverview({
         calendarRef.current = json.calendar ?? null;
         quarterRef.current = json.resolution === "15m";
         setMeta(json);
-        setCandles(json.points ?? []);
+        setCandles(chartCandles(json.points ?? []));
         setBucketTurns(json.bucketTurns ?? 1);
         setTotalTurns(json.totalTurns ?? json.points.length);
         setFirstIntradayTurn(
@@ -415,7 +434,7 @@ export function MarketOverview({
     // the exchange did not trade) renders as a gap instead.
     candleSeries.setData(
       candles.map((c): CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp> =>
-        [c.open, c.high, c.low, c.close].every(Number.isFinite)
+        hasFinitePrices(c)
           ? {
               time: c.time as UTCTimestamp,
               open: c.open,
@@ -577,7 +596,7 @@ export function MarketOverview({
         setCompareCoverage(
           `${json.intradayTurns ?? 0}/${json.totalTurns ?? json.points.length} turns with live prints; older comparison levels use recorded closes`
         );
-        const points = (json.points ?? []).filter((p) => p.time >= base);
+        const points = chartCandles(json.points ?? []).filter((p) => p.time >= base);
         const opening = points[0]?.open;
         applyLine(
           opening > 0
@@ -601,9 +620,7 @@ export function MarketOverview({
     };
   }, [candles, chartReady, compare, exchangeApi, turns]);
 
-  const hasPlottable = candles.some(
-    (c) => [c.open, c.high, c.low, c.close].every(Number.isFinite) && c.high > 0
-  );
+  const hasPlottable = candles.some((c) => hasFinitePrices(c) && c.high > 0);
   const noChart = failed || !hasPlottable;
   const last = candles[candles.length - 1];
   const first = candles[0];

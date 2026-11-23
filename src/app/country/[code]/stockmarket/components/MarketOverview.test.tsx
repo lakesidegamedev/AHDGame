@@ -101,6 +101,37 @@ describe("MarketOverview loading", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("sends strictly ordered, aligned market candles and volume to the chart", async () => {
+    const quarter = { ...candle, time: 1000, turn: 11, close: 104, volume: 15 };
+    const fallback = { ...candle, time: 1001, intraday: false };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          points: [
+            fallback,
+            { ...quarter, close: 102, volume: 10 },
+            quarter,
+            { ...quarter, close: null, volume: 0 },
+          ],
+          resolution: "15m",
+        }),
+      }))
+    );
+    render(<MarketOverview exchangeFilter="global" />);
+    await waitFor(() =>
+      expect(setCandleData).toHaveBeenLastCalledWith([
+        { time: 1000, open: 100, high: 110, low: 95, close: 104 },
+        { time: 1001, open: 100, high: 110, low: 95, close: 105 },
+      ])
+    );
+    expect(setVolumeData.mock.calls.at(-1)?.[0]).toMatchObject([
+      { time: 1000, value: 15 },
+      { time: 1001, value: 20 },
+    ]);
+  });
+
   it("reloads on each market tick and labels 15-minute candles with their clock time", async () => {
     vi.stubGlobal(
       "fetch",
