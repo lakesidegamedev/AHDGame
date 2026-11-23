@@ -16,7 +16,6 @@ export const SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
   ledgerBalanceSnapshot: "ledger snapshot, no balances change",
   ledgerReconcile: "reports drift, no balances change",
   metricHistory: "history rows only",
-  approvalSnapshot: "history rows only",
   interestRateSnapshot: "history rows only",
   partyHistorySnapshot: "history rows only",
   careerPostSync: "career history rows only; the next turn catches up",
@@ -54,6 +53,8 @@ export function rerunSafeAt(stage: number | undefined): boolean {
 }
 
 export const RERUN_SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
+  approvalSnapshot:
+    "country snapshots commit atomically with per-turn receipts; retries do not repeat damping or exhaustion",
   treasuryTurn:
     "accrual is one guarded claim per budget and turn, coupon payouts replay by receipt; killed at every write and rerun it matches an uninterrupted turn",
   savingsInterestTurn:

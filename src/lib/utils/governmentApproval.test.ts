@@ -229,7 +229,7 @@ describe("budget-sync approval bound (P6d gate)", () => {
     governance: { debtToGdp: 60, budgetBalance: -2 },
   };
 
-  it("a deep-deficit / high-debt swing lowers approval, base stays bounded in [45,55]", () => {
+  it("national debt and deficit do not alter a regional metric base", () => {
     const healthy = computeStateApprovalBase(
       makeStateMetrics("DE", {
         governance: { debtToGdp: { value: 60 }, budgetBalance: { value: -2 } },
@@ -248,9 +248,8 @@ describe("budget-sync approval bound (P6d gate)", () => {
     expect(healthy).toBeLessThanOrEqual(55);
     expect(stressed).toBeGreaterThanOrEqual(45);
     expect(stressed).toBeLessThanOrEqual(55);
-    // Correct sign: a worse fiscal position is not better for approval (debtToGdp
-    // isHigherBetter=false, budgetBalance isHigherBetter=true).
-    expect(stressed).toBeLessThan(healthy);
+    // Fiscal accountability comes from the matching government budget.
+    expect(stressed).toBe(healthy);
   });
 });
 
@@ -291,5 +290,17 @@ describe("getApprovalExcludedMetrics 1999-default (audit P2)", () => {
     const excluded = getApprovalExcludedMetrics("1999-default", null);
     expect(excluded.has("broadbandAccess")).toBe(true);
     expect(excluded.has("recyclingRate")).toBe(true);
+  });
+});
+
+describe("heterogeneous metric averaging", () => {
+  it("includes a field that exists only after the first region", () => {
+    const result = computeNationalAveragesFromMetrics([
+      makeStateMetrics("TX", { economic: { gdpGrowth: { value: 2 } } }),
+      makeStateMetrics("CT", {
+        economic: { gdpGrowth: { value: 4 }, unemploymentRate: { value: 12 } },
+      }),
+    ]);
+    expect(result.economic).toMatchObject({ gdpGrowth: 3, unemploymentRate: 12 });
   });
 });

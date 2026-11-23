@@ -1,3 +1,4 @@
+import { applyModifiers } from "@/lib/utils/approvalModifiers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -5,6 +6,11 @@ import { buildOpeningMetricSnapshots1991 } from "./seedOpening1991";
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+  afterCommit: async (_db: unknown, effect: () => Promise<unknown>) => effect(),
+  unboundDb: (db: unknown) => db,
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/stateTickRates", () => ({
   computeStateTickRates: vi.fn().mockResolvedValue({}),
@@ -128,6 +134,8 @@ describe("Metrics v2 approval surface parity", () => {
       (sum: number, modifier: { effect: number }) => sum + modifier.effect,
       0
     );
-    expect(stored.approvalBase + summed - 5).toBeCloseTo(stored.approvalRating, 1);
+    expect(
+      applyModifiers(stored.approvalBase + summed, stored.activeNationalModifiers)
+    ).toBeCloseTo(stored.approvalRating, 1);
   });
 });

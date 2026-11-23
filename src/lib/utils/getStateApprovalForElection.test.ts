@@ -54,7 +54,7 @@ describe("getAllStateApprovalsForElection", () => {
     });
   });
 
-  it("uses unrestricted queries when countryIds is omitted", async () => {
+  it("uses unrestricted state queries and skips metrics for an empty world", async () => {
     const stateFind = vi.fn().mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
@@ -79,7 +79,7 @@ describe("getAllStateApprovalsForElection", () => {
     await getAllStateApprovalsForElection();
 
     expect(stateFind).toHaveBeenCalledWith({}, { projection: { _id: 1, countryId: 1 } });
-    expect(metricsFind).toHaveBeenCalledWith({});
+    expect(metricsFind).not.toHaveBeenCalled();
   });
 
   // P6d "full payoff" gate: the electorate weighting must REACH elections.
@@ -180,7 +180,53 @@ describe("getAllStateApprovalsForElection", () => {
     const { getAllStateApprovalsForElection } = await import("./getStateApprovalForElection");
     const result = await getAllStateApprovalsForElection({ countryIds: ["US"] });
     expect(result.get("GOOD")!).toBeGreaterThan(result.get("BAD")!);
-    expect(result.get("GOOD")!).toBeCloseTo(55, 1);
-    expect(result.get("BAD")!).toBeCloseTo(45, 1);
+    expect(result.get("GOOD")!).toBeCloseTo(54.9, 1);
+    expect(result.get("BAD")!).toBeCloseTo(45.1, 1);
   });
+});
+
+it("shares recorded ratings with the regional page without requiring live metric boards", async () => {
+  const records = [
+    {
+      _id: "TX",
+      stateId: "TX",
+      countryId: "US",
+      lastSnapshotTurn: 50,
+      approvalRating: 12,
+      baseApproval: 50,
+      activeModifiers: [],
+    },
+    {
+      _id: "CT",
+      stateId: "CT",
+      countryId: "US",
+      lastSnapshotTurn: 50,
+      approvalRating: 84,
+      baseApproval: 60,
+      activeModifiers: [],
+    },
+  ];
+  const db = {
+    collection: (name: string) => {
+      if (name === "states")
+        return {
+          find: () => ({
+            toArray: async () => records.map((row) => ({ _id: row._id, countryId: row.countryId })),
+          }),
+        };
+      if (name === "stateApprovalHistory")
+        return { find: () => ({ toArray: async () => records }), findOne: async () => records[0] };
+      throw new Error(`Unexpected owner read: ${name}`);
+    },
+  };
+  const { getDb } = await import("@/lib/mongodb");
+  vi.mocked(getDb).mockResolvedValue(db as never);
+  const { getAllStateApprovalsForElection } = await import("./getStateApprovalForElection");
+  const { getRegionalApprovalData } = await import("@/lib/states/approval/getRegionalApprovalData");
+  const ratings = await getAllStateApprovalsForElection({ countryIds: ["US"] });
+  expect(ratings.get("TX")).toBe(12);
+  expect(ratings.get("CT")).toBe(84);
+  expect((await getRegionalApprovalData(db as never, "US", "TX"))?.approval).toBe(
+    ratings.get("TX")
+  );
 });

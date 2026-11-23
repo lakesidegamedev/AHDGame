@@ -80,6 +80,7 @@ export function validateLockedResume(
     locked.processingPhaseStatuses,
     locked.processingPhaseResults
   );
+  phaseState.interrupted.delete("approvalSnapshot");
   for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
   if (holdOnMoneyMoving) {
     // A step proven rerun-safe is run again, not skipped and not held; below the rerun

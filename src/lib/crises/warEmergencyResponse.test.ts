@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -65,7 +66,7 @@ describe("war emergency crisis responses", () => {
     );
     expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
       { _id: "US" },
-      { $inc: { approvalRating: -6 } }
+      approvalDeltaUpdate(-6)
     );
   });
 

@@ -1,3 +1,4 @@
+import type { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { ObjectId } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
@@ -94,9 +95,15 @@ function makeDb(store: Store) {
         return {
           updateOne: async (
             filter: { _id: string },
-            update: { $inc: { approvalRating: number } }
+            update: ReturnType<typeof approvalDeltaUpdate>
           ) => {
-            store.approvals.push({ id: filter._id, delta: update.$inc.approvalRating });
+            const change = update[0].$set;
+            if (!("approvalAdjustment" in change) || !change.approvalAdjustment)
+              throw new Error("Missing durable adjustment");
+            store.approvals.push({
+              id: filter._id,
+              delta: change.approvalAdjustment.$add[1] as number,
+            });
           },
         };
       }

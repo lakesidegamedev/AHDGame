@@ -91,6 +91,44 @@ describe("government accountability observation", () => {
     expect(mock.collectionMocks.governmentAccountability.bulkWrite).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    [21, 0.1125],
+    [63, 0.15],
+  ])(
+    "uses the provincial chamber size for Canada with %s held seats",
+    async (seatsHeld, expectedDrain) => {
+      const mock = createMockDb();
+      mock
+        .collection("gameState")
+        .findOne.mockResolvedValue({ currentTurn: 10, preset: "2027-default" });
+      const rows = (name: string, docs: unknown[]) =>
+        mock.collection(name).find.mockReturnValue({ toArray: async () => docs });
+      rows("electedOfficials", [
+        {
+          countryId: "CA",
+          state: "CA_ON",
+          officeType: "governor",
+          nppId: new ObjectId(),
+          party: "LIB",
+        },
+        {
+          countryId: "CA",
+          state: "CA_ON",
+          officeType: "provincialLegislature",
+          nppId: new ObjectId(),
+          party: "LIB",
+          seatsHeld,
+        },
+      ]);
+      rows("stateApprovalHistory", [
+        { _id: "CA_ON", stateId: "CA_ON", countryId: "CA", approvalRating: 20 },
+      ]);
+      rows("states", [{ _id: "CA_ON", countryId: "CA", stateSenateSeats: 24 }]);
+      const result = await observeGovernmentAccountability(mock as unknown as Db);
+      expect(result.get("CA:CA_ON:LIB")).toBeCloseTo(expectedDrain);
+    }
+  );
+
   it("charges an unaffiliated executive without blaming unrelated independents or doubling regional costs", () => {
     const drains = new Map([
       ["US:national:@npp:leader", 0.1],

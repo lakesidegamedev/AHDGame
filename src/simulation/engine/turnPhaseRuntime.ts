@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import * as Sentry from "@sentry/nextjs";
 import type {
-  GameState,
   TurnPhaseExecutionStatus,
   TurnPhaseSkipReason,
   TurnPhaseTelemetry,
@@ -77,7 +76,6 @@ const READ_ONLY_PHASES = new Set<string>([
   "ledgerBalanceSnapshot",
   "ledgerReconcile",
   "metricHistory",
-  "approvalSnapshot",
   "interestRateSnapshot",
   "partyHistorySnapshot",
   "researchTelemetry",

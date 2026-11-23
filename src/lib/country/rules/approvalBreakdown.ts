@@ -26,7 +26,8 @@ export const NATIONAL_CAP_ADJUSTMENT_ID = "national_positive_cap";
  */
 export function buildApprovalBreakdown(
   approval: number,
-  nationalModifiers: ActiveModifier[]
+  nationalModifiers: ActiveModifier[],
+  storedStateAverage?: number
 ): ApprovalBreakdown {
   let positive = 0;
   let negative = 0;
@@ -50,7 +51,22 @@ export function buildApprovalBreakdown(
     });
   }
 
-  return { stateAverage: round1(approval - nationalNet), nationalAdjustments: lines, nationalNet };
+  const stateAverage = Number.isFinite(storedStateAverage)
+    ? storedStateAverage!
+    : Math.max(0, Math.min(100, approval - nationalNet));
+  const clamp = round1(approval - (stateAverage + nationalNet));
+  if (clamp !== 0)
+    lines.push({
+      id: "approval_bounds",
+      label: "Approval floor or ceiling",
+      effect: clamp,
+      marginEffect: 0,
+    });
+  return {
+    stateAverage: round1(stateAverage),
+    nationalAdjustments: lines,
+    nationalNet: round1(nationalNet + clamp),
+  };
 }
 
 /** Display rounding for a modifier effect: one decimal, and null when it rounds to nothing. */

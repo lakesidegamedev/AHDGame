@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { type Db, ObjectId } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
@@ -164,7 +165,7 @@ async function applyApprovalEffects(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },
       },
-      { $inc: { approvalRating: approvalDelta } }
+      approvalDeltaUpdate(approvalDelta)
     );
   }
 }

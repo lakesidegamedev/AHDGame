@@ -548,3 +548,41 @@ it("evaluates $type and $not in $expr like the server", async () => {
   });
   expect(invalid).toBe(1);
 });
+
+describe("inMemoryDb set union expressions", () => {
+  it("deduplicates stored receipt keys and remains unchanged on replay", async () => {
+    const db = createInMemoryDb();
+    db.seed("receipts", [{ _id: "event", keys: ["old", "old"] }]);
+    const update = [{ $set: { keys: { $setUnion: ["$keys", ["new", "new"]] } } }];
+    await db.collection("receipts").updateOne({ _id: "event" }, update);
+    expect(db.collection("receipts").docs[0].keys).toEqual(["old", "new"]);
+    await db.collection("receipts").updateOne({ _id: "event" }, update);
+    expect(db.collection("receipts").docs[0].keys).toEqual(["old", "new"]);
+  });
+  it("compares nested arrays and documents by value without flattening them", async () => {
+    const db = createInMemoryDb();
+    db.seed("sets", [{ _id: "nested" }]);
+    await db.collection("sets").updateOne({ _id: "nested" }, [
+      {
+        $set: {
+          values: {
+            $setUnion: [
+              [[1, 2], { key: "x" }],
+              [[1, 2], { key: "x" }, 3],
+            ],
+          },
+        },
+      },
+    ]);
+    expect(db.collection("sets").docs[0].values).toEqual([[1, 2], { key: "x" }, 3]);
+  });
+  it("rejects non-array inputs", async () => {
+    const db = createInMemoryDb();
+    db.seed("sets", [{ _id: "invalid" }]);
+    await expect(
+      db
+        .collection("sets")
+        .updateOne({ _id: "invalid" }, [{ $set: { values: { $setUnion: [[1], "invalid"] } } }])
+    ).rejects.toThrow("expected arrays for $setUnion");
+  });
+});
