@@ -13,6 +13,10 @@ function formatMoney2dp(amount: number, sym: string): string {
   return `${sym}${abs.toFixed(0)}`;
 }
 
+function formatDuesRate(rateAnnual: number): string {
+  return `${parseFloat((rateAnnual * 100).toFixed(4))}%`;
+}
+
 export interface DefenseFundingNoteProps {
   sym: string;
   funding: DefenseFundingPosition;
@@ -157,6 +161,11 @@ export function DefenseFundingNote({
                   <li key={`${line.organizationId}:${line.kind}`}>
                     {line.organizationName ?? line.organizationId.replaceAll("_", " ")} {line.kind}:{" "}
                     {money2(line.perTurn)}
+                    {line.rateAnnual != null
+                      ? ` (${formatDuesRate(line.rateAnnual)} of GDP a year${
+                          line.isDefaultRate ? ", the default rate until members vote a different one" : ""
+                        })`
+                      : null}
                   </li>
                 ))}
               </ul>

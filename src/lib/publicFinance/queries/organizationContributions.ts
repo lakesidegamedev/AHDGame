@@ -26,6 +26,10 @@ export interface OrganizationContributionLine {
   kind: OrganizationContributionKind;
   /** Treasury debit per turn in the member country's local currency. */
   perTurn: number;
+  /** Annual rate of GDP charged for this line. */
+  rateAnnual?: number;
+  /** True when no member vote has set a rate, so the shared default applies. */
+  isDefaultRate?: boolean;
 }
 
 export interface OrganizationContributionPosition {
@@ -120,9 +124,11 @@ export async function loadOrganizationContributions(
     // still pay ordinary dues; that is the post-#1156 partition.
     const paysTribute = !access.enabledForPlayers && tributeRateAnnual > 0;
     const kind: OrganizationContributionKind = paysTribute ? "tribute" : "dues";
+    const votedRate = duesRateByOrganization.get(organizationId);
     const rateAnnual = paysTribute
       ? tributeRateAnnual
-      : (duesRateByOrganization.get(organizationId) ?? DEFAULT_ORG_DUES_RATE_ANNUAL);
+      : (votedRate ?? DEFAULT_ORG_DUES_RATE_ANNUAL);
+    const isDefaultRate = !paysTribute && votedRate == null;
     if (!(rateAnnual > 0)) continue;
 
     const perTurn = organizationContributionPerTurn({
@@ -133,7 +139,14 @@ export async function loadOrganizationContributions(
     });
     if (perTurn > 0) {
       const organizationName = names.get(organizationId);
-      lines.push({ organizationId, ...(organizationName ? { organizationName } : {}), kind, perTurn });
+      lines.push({
+        organizationId,
+        ...(organizationName ? { organizationName } : {}),
+        kind,
+        perTurn,
+        rateAnnual,
+        isDefaultRate,
+      });
     }
   }
 

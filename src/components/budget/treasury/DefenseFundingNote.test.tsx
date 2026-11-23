@@ -152,4 +152,22 @@ describe("DefenseFundingNote deficit and dues labelling", () => {
     expect(screen.getByText(/Orcish Concord dues: C\$4\.84M/)).toBeTruthy();
     expect(screen.getByText("C$9.67M")).toBeTruthy();
   });
+
+  it("explains that every organization charges the same default dues rate", () => {
+    render(
+      <DefenseFundingNote
+        sym="$"
+        funding={funding}
+        organizationContributions={{
+          perTurn: 2_000_000,
+          lines: [
+            { organizationId: "NATO", kind: "dues", perTurn: 1_000_000, rateAnnual: 0.00006, isDefaultRate: true },
+            { organizationId: "UN", kind: "dues", perTurn: 1_000_000, rateAnnual: 0.00006, isDefaultRate: true },
+          ],
+        }}
+      />
+    );
+    expect(screen.getByText(/NATO dues: \$1\.00M \(0\.006% of GDP a year, the default rate until members vote/)).toBeTruthy();
+    expect(screen.getByText(/UN dues: \$1\.00M \(0\.006% of GDP a year, the default rate/)).toBeTruthy();
+  });
 });
