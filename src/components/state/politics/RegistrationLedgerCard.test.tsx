@@ -26,5 +26,7 @@ describe("RegistrationLedgerCard", () => {
     );
     expect(screen.getByText("DEM")).toBeTruthy();
     expect(screen.getByText(/49\.0%/)).toBeTruthy();
+    expect(screen.getByText(/Registration is the share of voters signed up/)).toBeTruthy();
+    expect(screen.getByText(/Organization is the share of the ground game/)).toBeTruthy();
   });
 });
