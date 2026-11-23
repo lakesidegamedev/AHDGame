@@ -234,9 +234,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
     : null;
   // Largest single-effect impact, to scale the per-effect strength bars.
   const maxEffectImpact = crisis.effects.reduce((m, e) => Math.max(m, effectImpact(e)), 0);
-  const severity = severityBandFromScore(
-    crisisScoreFor(crisis, v2Detail?.severity)
-  );
+  const severity = severityBandFromScore(crisisScoreFor(crisis, v2Detail?.severity));
   const heroSrc = crisisImageUrl(
     { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
     1600

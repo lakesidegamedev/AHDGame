@@ -361,9 +361,7 @@ export default function WorldRankingsClient() {
                   <tbody>
                     {compareRows.map((row) => (
                       <tr key={row.metric} className="transition-colors hover:bg-card-elevated/40">
-                        <td className={`${TD} text-muted`}>
-                          {metricLabel(row.metric)}
-                        </td>
+                        <td className={`${TD} text-muted`}>{metricLabel(row.metric)}</td>
                         {row.cells.map((cell) => (
                           <td
                             key={cell.countryId}

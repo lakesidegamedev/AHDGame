@@ -272,9 +272,7 @@ export default function CrisisActionCard() {
           optionAvailability,
           v2,
         } = data;
-        const severity = severityBandFromScore(
-          crisisScoreFor(crisis, v2?.severity)
-        );
+        const severity = severityBandFromScore(crisisScoreFor(crisis, v2?.severity));
         const styles = SEVERITY_STYLES[severity];
         const crisisId = crisis._id.toString();
         const needsDecision = canInteract && !!currentNode;

@@ -220,7 +220,11 @@ export function NationalMetricCard({
                 <div>
                   <div className="text-body-sm font-medium text-muted">Recent trend</div>
                   <div className="mt-0.5">
-                    <TrendChip trend={summary.trend} value={value} isHigherBetter={isHigherBetter} />
+                    <TrendChip
+                      trend={summary.trend}
+                      value={value}
+                      isHigherBetter={isHigherBetter}
+                    />
                   </div>
                 </div>
                 <Sparkline

@@ -25,10 +25,10 @@ export function ForeignAffairsTab({
   return (
     <div className="space-y-6">
       <p className="text-[12px] text-muted">
-        This tab covers the two things a head of government does alone in foreign affairs:
-        declaring war and making peace. Everything else is done through international
-        organisations (alliances, sanctions, aid, trade deals and joint statements). The game has
-        no separate relations score, embassies or bilateral treaties.
+        This tab covers the two things a head of government does alone in foreign affairs: declaring
+        war and making peace. Everything else is done through international organisations
+        (alliances, sanctions, aid, trade deals and joint statements). The game has no separate
+        relations score, embassies or bilateral treaties.
       </p>
       <DeclareWarPanel countryCode={countryCode} countryId={countryId} canAct={canAct} />
       <PeacePanel countryCode={countryCode} countryId={countryId} canAct={canAct} />

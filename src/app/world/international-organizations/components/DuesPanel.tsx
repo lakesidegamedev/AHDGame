@@ -85,9 +85,9 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
             {(org.fund.tributeRateAnnual ?? 0) > 0
               ? "its voting members; the rest pay tribute at a fixed rate they do not set"
               : "all its members, whether or not they hold a vote"}
-            ) into the pooled
-            fund (currently <span className="font-semibold text-foreground">{fundDisplay}</span>).
-            Changing the rate needs a majority of the members that hold a vote.
+            ) into the pooled fund (currently{" "}
+            <span className="font-semibold text-foreground">{fundDisplay}</span>). Changing the rate
+            needs a majority of the members that hold a vote.
           </p>
         </div>
         {proposerIsMember && proposer && (

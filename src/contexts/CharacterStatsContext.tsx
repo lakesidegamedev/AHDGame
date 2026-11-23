@@ -157,12 +157,17 @@ export function buildStatusPatch(data: Record<string, unknown>): Partial<Charact
   return patch;
 }
 
+/** The `/api/client-status` fields buildStatusStats reads; every one may be absent. */
+export type ClientStatusPayload = Partial<Omit<CharacterStats, "corp" | "characterId">> & {
+  characterId?: unknown;
+  corpNav?: CorpStats | null;
+};
+
 /** Whole-object mapping of a `/api/client-status` response, defaults for absent fields. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildStatusStats(data: Record<string, any>): CharacterStats {
+export function buildStatusStats(data: ClientStatusPayload): CharacterStats {
   return {
     characterId: typeof data.characterId === "string" ? data.characterId : undefined,
-    name: data.name,
+    name: data.name ?? "",
     actions: data.actions ?? 0,
     actionCap: data.actionCap ?? ACTION_CAP,
     hoardThreshold: data.hoardThreshold ?? ACTION_HOARDING_THRESHOLD,

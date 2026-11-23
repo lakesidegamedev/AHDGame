@@ -2,6 +2,7 @@
  * Live executive + lower-chamber plurality data for the /world nation cards.
  * Kept in lib so the world page can call it from a server component without self-HTTP.
  */
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
@@ -18,7 +19,6 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
-import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
 
 export type NationExecutiveSnapshot = {
   name: string;
@@ -252,10 +252,10 @@ async function loadBackgroundHeadNames(
   db: Db,
   ids: readonly string[]
 ): Promise<Map<string, string>> {
-  const docs = await db
-    .collection<{ entityId: string; nationalPolitics?: { head?: { name?: string } } }>(
-      MACRO_COUNTRIES_COLLECTION
-    )
+  const docs = await macroCountriesCollection<{
+    entityId: string;
+    nationalPolitics?: { head?: { name?: string } };
+  }>(db)
     .find(
       { entityId: { $in: [...ids] } },
       { projection: { entityId: 1, "nationalPolitics.head.name": 1 } }

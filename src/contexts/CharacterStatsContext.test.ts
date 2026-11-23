@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildStatusPatch, buildStatusStats, statusIsForOtherCharacter } from "./CharacterStatsContext";
+import {
+  buildStatusPatch,
+  buildStatusStats,
+  statusIsForOtherCharacter,
+} from "./CharacterStatsContext";
 
 describe("buildStatusPatch", () => {
   it("maps present fields, including actions and campaign funds", () => {
@@ -32,7 +36,9 @@ describe("buildStatusPatch", () => {
 
 describe("active character identity", () => {
   it("carries the character id into the whole stats object", () => {
-    expect(buildStatusStats({ characterId: "c1", name: "Clara", actions: 4 }).characterId).toBe("c1");
+    expect(buildStatusStats({ characterId: "c1", name: "Clara", actions: 4 }).characterId).toBe(
+      "c1"
+    );
   });
 
   it("flags a status response for a different character than the held stats", () => {
