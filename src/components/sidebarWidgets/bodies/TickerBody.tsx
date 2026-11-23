@@ -26,11 +26,20 @@ export function TickerBody({
             <Link
               href={`/corporation/${row.sequentialId}`}
               onClick={onNavigate}
-              className="flex items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+              // The side tray is about 215px inside its card. In compact mode every
+              // fixed part is trimmed so a long price ("CA$86.71") and the change
+              // still fit, instead of the change spilling past the card edge.
+              className={`flex items-center rounded px-1 py-1 text-xs hover:bg-white/5 ${
+                compact ? "gap-1.5" : "gap-2"
+              }`}
             >
-              <span className="w-12 shrink-0 truncate font-semibold text-foreground">{name}</span>
+              <span
+                className={`shrink-0 truncate font-semibold text-foreground ${compact ? "w-10" : "w-12"}`}
+              >
+                {name}
+              </span>
               {compact ? (
-                <span className="flex-1" />
+                <span className="min-w-0 flex-1" />
               ) : (
                 <span className="min-w-0 flex-1 truncate text-muted">
                   {row.ticker ? row.name : ""}
@@ -40,7 +49,7 @@ export function TickerBody({
                 <TrendSparkline
                   values={row.series}
                   label={t("trendLabel", { name, count: row.series.length })}
-                  width={compact ? 36 : 48}
+                  width={compact ? 28 : 48}
                   height={16}
                   endTone={toneOfChange(row.change)}
                 />
@@ -48,7 +57,9 @@ export function TickerBody({
               <span className="shrink-0 tabular-nums text-foreground">
                 {price(row.sharePrice, row.currencyCode)}
               </span>
-              <span className="w-14 shrink-0 text-right">
+              <span
+                className={`shrink-0 whitespace-nowrap text-right ${compact ? "w-12" : "w-14"}`}
+              >
                 <Change value={row.change} />
               </span>
             </Link>
