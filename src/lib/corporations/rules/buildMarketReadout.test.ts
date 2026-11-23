@@ -109,4 +109,21 @@ describe("buildMarketReadout", () => {
     );
     expect(r.summary).toBe("unknown");
   });
+
+  it("carries the order book scope so the screen can say when figures are national", () => {
+    const r = buildMarketReadout(
+      [
+        {
+          commodity: "electronics",
+          scope: "national",
+          funded: 100,
+          delivered: 50,
+          unmet: 50,
+          capacityUnits: 50,
+        },
+      ],
+      10
+    );
+    expect(r.products[0].scope).toBe("national");
+  });
 });

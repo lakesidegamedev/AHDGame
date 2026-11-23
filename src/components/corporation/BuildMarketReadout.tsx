@@ -158,6 +158,7 @@ function ProductRow({
         {product.ordered != null && product.filled != null && (
           <span className="tabular-nums">
             {t("orderedFilled", { ordered: units(product.ordered), filled: units(product.filled) })}
+            {product.scope === "national" ? ` ${t("nationalMarket")}` : ""}
             {" · "}
           </span>
         )}

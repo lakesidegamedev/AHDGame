@@ -281,6 +281,7 @@
         "chipNoOrders": "No orders",
         "chipUnknown": "No data yet",
         "orderedFilled": "{ordered} ordered, {filled} filled a day",
+        "nationalMarket": "(national market, not state figures)",
         "barLabel": "{filled} of {ordered} daily orders filled",
         "detailWaiting": "{unmet} unfilled, enough for about {count, plural, one {# {facility}} other {# {facilities}}}",
         "detailIdle": "{unmet} unfilled, but spare and queued capacity can already make that",

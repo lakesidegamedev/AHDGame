@@ -16,6 +16,8 @@ export type ProductVerdict =
 
 export interface ProductReadout {
   commodity: CommodityType;
+  /** Whether the order book is this state's or the whole country's. */
+  scope: BuildDemandRow["scope"];
   ordered: number | null;
   filled: number | null;
   unmet: number | null;
@@ -57,6 +59,7 @@ export function buildMarketReadout(
       row.capacityUnits == null ? null : Math.max(0, Math.floor(row.capacityUnits / perFacility));
     return {
       commodity: row.commodity,
+      scope: row.scope,
       ordered: row.funded,
       filled: row.delivered,
       unmet: row.unmet,

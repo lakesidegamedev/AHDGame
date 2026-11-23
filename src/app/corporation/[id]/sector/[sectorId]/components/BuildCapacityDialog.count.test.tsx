@@ -168,6 +168,9 @@ it("distinguishes paid orders from cap estimates in mixed-output advice", () => 
     "Prices here are at the cap. Demand above paid orders is not counted."
   );
   expect(screen.getByTestId("build-market-readout").textContent).not.toMatch(/model estimate/i);
+  expect(screen.getByTestId("build-market-row-electronics").textContent).toContain(
+    "national market"
+  );
   expect(screen.getByText("Match demand uses paid orders only.")).toBeTruthy();
 });
 

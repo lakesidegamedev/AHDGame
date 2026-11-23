@@ -454,7 +454,8 @@ export default function SectorsTab({
             ) : totalSectors >= SPRAWL_SECTOR_THRESHOLD ? (
               <span className="text-success">Offset by Logistics &amp; Operations. </span>
             ) : null}
-            The penalty begins at sector {SPRAWL_SECTOR_THRESHOLD + 1}. Every 2 sectors over the
+            The penalty begins at sector{" "}
+            {(lsKnown ? effectiveThreshold : SPRAWL_SECTOR_THRESHOLD) + 1}. Every 2 sectors over the
             threshold reduce every non-logistics sector margin by{" "}
             {Math.abs(SPRAWL_PENALTY_PER_PAIR * (hasSecondaryType ? 2 : 1)).toFixed(1)}%
             {hasSecondaryType ? " (doubled because you have a secondary type)" : ""}. Logistics
@@ -464,9 +465,13 @@ export default function SectorsTab({
               <>
                 {" "}
                 This corporation&apos;s threshold is now{" "}
-                <span className={`${cellNum} text-foreground`}>{effectiveThreshold}</span>, with{" "}
-                <span className={`${cellNum} text-foreground`}>{totalSectors}</span> owned, and the
-                rate is{" "}
+                <span className={`${cellNum} text-foreground`}>{effectiveThreshold}</span> (the base
+                of {SPRAWL_SECTOR_THRESHOLD}
+                {effectiveThreshold > SPRAWL_SECTOR_THRESHOLD
+                  ? `, plus ${effectiveThreshold - SPRAWL_SECTOR_THRESHOLD} from your Logistics & Operations strength`
+                  : ", with no bonus from Logistics & Operations strength"}
+                ), with <span className={`${cellNum} text-foreground`}>{totalSectors}</span> owned,
+                and the rate is{" "}
                 <span className={`${cellNum} text-foreground`}>
                   {Math.abs(effectivePenaltyPerPair).toFixed(2)}%
                 </span>{" "}
