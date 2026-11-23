@@ -565,9 +565,8 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
             plaques={leftPlaques}
           />
 
-          {/* The opposition leader sits with the government's leaders, which also
-              balances the two columns: the right one used to run two screens
-              past the left. */}
+          {/* The opposition leader sits with the government's leaders, which keeps
+              the two columns even. */}
           <OfficePlaques
             countryId={countryId}
             identity={getExecutiveIdentity(countryId)}

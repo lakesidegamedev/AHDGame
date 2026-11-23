@@ -99,7 +99,7 @@ function CompetitorRow({
       <span
         className={`ml-auto tabular-nums font-medium ${dim ? "text-muted" : "text-foreground"}`}
       >
-        {Number(comp.marketShare).toFixed(1)}%
+        {formatPercent(Number(comp.marketShare))}
       </span>
     </div>
   );
@@ -225,7 +225,7 @@ export default function MarketPositionPanel({
             />
             <span className="truncate font-medium text-primary">{corporation.name}</span>
             <span className="ml-auto tabular-nums font-medium text-foreground">
-              {Number(market.marketShare).toFixed(1)}%
+              {formatPercent(Number(market.marketShare))}
             </span>
           </div>
           {/* Other players first: these are the rivals a player can actually
@@ -268,7 +268,7 @@ export default function MarketPositionPanel({
                   <path d="M4 2l4 4-4 4z" />
                 </svg>
                 <span className="ml-auto tabular-nums font-medium text-foreground">
-                  {nppShare.toFixed(1)}%
+                  {formatPercent(nppShare)}
                 </span>
               </button>
 
@@ -339,7 +339,7 @@ export default function MarketPositionPanel({
               </span>
             </Tooltip>
             <span className="text-sm font-bold tabular-nums text-primary">
-              {Number(market.marketShare).toFixed(1)}%
+              {formatPercent(Number(market.marketShare))}
             </span>
           </div>
           <div>
