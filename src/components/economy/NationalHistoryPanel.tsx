@@ -79,9 +79,12 @@ function signedPercent(value: number): string {
 export function NationalHistoryPanel({
   countryId,
   compact = false,
+  liveGdpMillions = null,
 }: {
   countryId: CountryId;
   compact?: boolean;
+  /** Current GDP shown elsewhere on the page; the headline matches it instead of lagging a turn. */
+  liveGdpMillions?: number | null;
 }) {
   const t = useTranslations("economyHistory");
   const [metric, setMetric] = useState<MetricId>("gdp");
@@ -143,8 +146,16 @@ export function NationalHistoryPanel({
       });
   }, [data, metric]);
 
-  const change = seriesChangePercent(plotted.map((entry) => entry.value));
+  const liveValue =
+    metric === "gdp" && liveGdpMillions != null && Number.isFinite(liveGdpMillions)
+      ? liveGdpMillions * 1_000_000
+      : null;
+  const headlineValues = plotted.map((entry) => entry.value);
+  if (liveValue !== null && headlineValues.length > 0)
+    headlineValues[headlineValues.length - 1] = liveValue;
+  const change = seriesChangePercent(headlineValues);
   const latest = plotted.at(-1) ?? null;
+  const headlineValue = latest ? (liveValue ?? latest.value) : null;
 
   return (
     <section
@@ -170,7 +181,7 @@ export function NationalHistoryPanel({
                 compact ? "text-base" : "text-lg"
               }`}
             >
-              {formatMetricValue(latest.value, metric, prefix, t("unit.people"))}
+              {formatMetricValue(headlineValue ?? latest.value, metric, prefix, t("unit.people"))}
             </span>
             {change !== null && (
               <span

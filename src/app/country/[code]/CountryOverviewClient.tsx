@@ -573,7 +573,11 @@ export default function CountryOverviewClient({
 
         {/* National history: the compact sparkline form of the economy page's
             chart, for every country including economy-only ones. */}
-        <NationalHistoryPanel countryId={countryId} compact />
+        <NationalHistoryPanel
+          countryId={countryId}
+          compact
+          liveGdpMillions={counts?.gdpMillions ?? null}
+        />
 
         {/* The figures a player checks before opening anything, each with its
             recent direction. Same payload as the economy page. */}
