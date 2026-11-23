@@ -83,13 +83,7 @@ export default function BuildMarketReadout({
           <ProductRow key={product.commodity} product={product} site={site} sites={sites} />
         ))}
       </ul>
-      {capSignal && (
-        <p className="mt-3 text-body-xs text-muted">
-          {readout.estimatedFullMixFacilities != null && readout.estimatedFullMixFacilities > 0
-            ? t("capRoom", { count: readout.estimatedFullMixFacilities, site, sites })
-            : t("capEstimate")}
-        </p>
-      )}
+      {capSignal && <p className="mt-3 text-body-xs text-muted">{t("capNote")}</p>}
       <p className="mt-3 text-body-xs text-muted">{t("notALimit")}</p>
     </section>
   );
@@ -164,16 +158,12 @@ function ProductRow({
         {product.ordered != null && product.filled != null && (
           <span className="tabular-nums">
             {t("orderedFilled", { ordered: units(product.ordered), filled: units(product.filled) })}
+            {product.scope === "national" ? ` ${t("nationalMarket")}` : ""}
             {" · "}
           </span>
         )}
         {detail}
       </p>
-      {product.capHiddenUnmet != null && (
-        <p className="mt-1 text-body-xs text-muted">
-          {t("capProduct", { units: units(product.capHiddenUnmet) })}
-        </p>
-      )}
     </li>
   );
 }

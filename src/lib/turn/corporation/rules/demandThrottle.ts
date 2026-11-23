@@ -242,21 +242,6 @@ export function demandThrottleFactor(
 }
 
 /**
- * A lagged book balance with the ledger's truncated demand restored pro rata.
- * `factor` is (capped + truncated) / capped for the commodity worldwide; a
- * missing or non-lifting factor returns the balance unchanged.
- */
-export function withLatentDemand(
-  balance: { supply: number; demand: number } | null | undefined,
-  factor: number | null | undefined
-): { supply: number; demand: number } | null | undefined {
-  if (!balance || !(typeof factor === "number" && Number.isFinite(factor) && factor > 1)) {
-    return balance;
-  }
-  return { supply: balance.supply, demand: balance.demand * factor };
-}
-
-/**
  * Book balance plus foreign buyers nobody serves.
  *
  * An exporter's clearing book pins demand to supply (its surplus is cleared
@@ -293,8 +278,8 @@ export function withForeignDemand(
 export const FOREIGN_DEMAND_CLAIM_PER_TURN = 0.25;
 
 /**
- * The throttle balance for one output, with the lagged book's truncated demand
- * and an exporter's unserved foreign deficit restored.
+ * The throttle balance for one output, read as recorded with an exporter's
+ * unserved foreign deficit restored.
  *
  * Both balance legs read this: the sold-out leg (`balanceFor`) and the wider leg
  * a partially sold extraction plant reads (`wideBalanceFor`). For a
@@ -305,10 +290,9 @@ export const FOREIGN_DEMAND_CLAIM_PER_TURN = 0.25;
  */
 export function liftedThrottleBalance(
   balance: { supply: number; demand: number } | null | undefined,
-  latentFactor: number | null | undefined,
   unmetForeignDemand: number | null | undefined
 ): { supply: number; demand: number } | null | undefined {
-  return withForeignDemand(withLatentDemand(balance, latentFactor), unmetForeignDemand);
+  return withForeignDemand(balance, unmetForeignDemand);
 }
 
 /**

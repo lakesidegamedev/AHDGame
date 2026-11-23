@@ -189,6 +189,34 @@ describe("signed cost lines (ticket 1122)", () => {
   });
 });
 
+describe("running costs split into named lines", () => {
+  it("names the overhead credit instead of hiding it in other running costs", () => {
+    const split = {
+      ...(plants as unknown as { pnl: object }).pnl,
+      otherOperatingAnchor: -22_000,
+      otherBreakdown: {
+        overheadAnchor: -30_000,
+        inventoryCarryAnchor: 5_000,
+        eventsAnchor: 3_000,
+        remainderAnchor: 0,
+      },
+    };
+    render(
+      <MarketMoneyPanel
+        plants={{ ...plants, pnl: split } as unknown as PlantsData}
+        sectorType="manufacturing"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Test Company" }}
+      />
+    );
+    expect(screen.getByText("Overhead credit")).toBeTruthy();
+    expect(screen.getByText("+ M30000")).toBeTruthy();
+    expect(screen.getByText("Stock carrying cost")).toBeTruthy();
+    expect(screen.getByText("Crisis and disaster losses")).toBeTruthy();
+    expect(screen.queryByText("Other running costs, not itemised")).toBeNull();
+  });
+});
+
 describe("freight class explanation (ticket 1159)", () => {
   it("names the limiting class and explains shared freight capacity", () => {
     const specialLimited = {

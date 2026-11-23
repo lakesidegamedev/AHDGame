@@ -45,6 +45,7 @@ export {
   autoGrantedCorporateNodeIds,
   getPassedDecadeIds,
   isNodeOpenForResearch,
+  isBaselineGrant,
   decadeLabel,
   getActiveTechDecadeIds,
   isTechNodeEffectExpired,

@@ -17,6 +17,8 @@ import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
 import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import { useToast } from "@/contexts/ToastContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";
 import FinancialVisibilityNotice from "./components/FinancialVisibilityNotice";
@@ -371,6 +373,21 @@ export default function SectorDetailPage() {
     }
   };
 
+  const { formatAmount, toInternalFrom } = useCurrency();
+  const liquidCode = (corporation?.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
+  // Wage bill per turn: plants carry it in anchor money, the older panel in the
+  // company's own currency. Both are stored per financial day.
+  const wageBillPerTurn =
+    plants?.pnl?.labourAnchor != null
+      ? plants.pnl.labourAnchor / TURNS_PER_DAY
+      : financials?.laborCost != null
+        ? financials.laborCost / TURNS_PER_DAY
+        : null;
+  const formatWageBill = (perTurn: number) =>
+    plants?.pnl?.labourAnchor != null
+      ? formatAmount(perTurn)
+      : formatAmount(liquidCode ? toInternalFrom(perTurn, liquidCode) : perTurn, liquidCode);
+
   const handleSaveWage = async () => {
     dispatch({ type: "SET_WAGE_SAVING", value: true });
     dispatch({ type: "SET_WAGE_MESSAGE", value: "" });
@@ -713,12 +730,16 @@ export default function SectorDetailPage() {
             <ArrowLeft className="h-4 w-4 text-primary" />
             All {corporation.name} sectors
           </Link>
-          <Link
-            href={`/stockmarket/${exchange}?tab=stocks`}
-            className="text-xs font-medium text-muted transition-colors hover:text-foreground"
-          >
-            Listed on {exchangeLabel}
-          </Link>
+          {corporation.isPrivate ? (
+            <span className="text-xs font-medium text-muted">Private, not listed</span>
+          ) : (
+            <Link
+              href={`/stockmarket/${exchange}?tab=stocks`}
+              className="text-xs font-medium text-muted transition-colors hover:text-foreground"
+            >
+              Listed on {exchangeLabel}
+            </Link>
+          )}
         </nav>
 
         {/* Hero card */}
@@ -1079,6 +1100,8 @@ export default function SectorDetailPage() {
                 wageError={wageError}
                 onWageChange={(v) => dispatch({ type: "SET_WAGE_DRAFT", value: v })}
                 onSave={handleSaveWage}
+                labourCostPerTurn={wageBillPerTurn}
+                formatCost={formatWageBill}
               />
             )}
             {labourFullEnabled && sector.undergroundUnrest && (
@@ -1181,6 +1204,7 @@ export default function SectorDetailPage() {
             plants={plants}
             stateLabourMarket={sector.stateLabourMarket}
             stateName={sector.stateName}
+            freightState={commodities?.freightState}
             sectorType={sector.sectorType}
             sectorLabel={sector.displayName || sector.sectorLabel}
             strategy={strategy}

@@ -71,7 +71,7 @@ const COLUMNS: Column[] = [
   {
     key: "wage",
     label: "Wage",
-    help: "What this shop pays, as a multiple of the regional median wage.",
+    help: "What this shop pays, as a multiple of its industry's baseline wage.",
     sortKey: "wage",
     align: "right",
   },

@@ -1,7 +1,4 @@
-import {
-  estimatedFullMixBuildRoom,
-  fullMixBuildRoom,
-} from "@/lib/corporations/rules/buildDemandCapacity";
+import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
 import { getEffectiveStrategyRates, getStrategy } from "@/lib/constants/sectorStrategies";
 import { weightedRecipeMix } from "@/lib/country/rules/plantInputMix";
 import { NextResponse } from "next/server";
@@ -493,7 +490,6 @@ export async function buildRegionEconomyResponse({
     // less capacity already under construction.
     let room: {
       units: number | null;
-      estimatedUnits: number | null;
       scope: "state" | "country";
     } | null = null;
     if (buildRoom) {
@@ -501,7 +497,6 @@ export async function buildRegionEconomyResponse({
       const countryShared = supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
       const scopedRows = buildRoom.demandRows?.(supplyMix, stateId, state.countryId ?? countryId);
       room = {
-        estimatedUnits: scopedRows ? estimatedFullMixBuildRoom(scopedRows) : null,
         units: scopedRows
           ? fullMixBuildRoom(scopedRows)
           : buildRoomUnits(
@@ -525,7 +520,6 @@ export async function buildRegionEconomyResponse({
       // Room to build: buyers here not being served, less capacity already
       // under construction.
       roomToBuildUnits: room?.units ?? null,
-      estimatedRoomToBuildUnits: room?.estimatedUnits ?? null,
       // "country" when the figure above is shared by every state in the country.
       roomToBuildScope: room?.scope ?? null,
       owners: redactedOwners,

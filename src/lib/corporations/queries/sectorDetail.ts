@@ -685,6 +685,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         name: corporation.name,
         brandColor: corporation.brandColor,
         logoUrl: corporation.logoUrl ?? null,
+        isPrivate: corporation.isPrivate === true,
         // Sector money fields (revenue, growthCost, profit, tax approximations)
         // are denominated in the corp's home currency. UI uses this code with
         // formatAmount so wallet preference still governs final rendering.

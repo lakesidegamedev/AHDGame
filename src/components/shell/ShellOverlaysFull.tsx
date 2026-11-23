@@ -10,6 +10,7 @@ import {
   DeferredTutorialCoachMount,
   DeferredWealthTierRepickGate,
 } from "@/components/DeferredShellOverlays";
+import { CharacterSwitchBanner } from "@/components/CharacterSwitchBanner";
 import { LiveRefreshBanner } from "@/components/LiveRefreshBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StatusBar } from "@/components/StatusBar";
@@ -66,6 +67,7 @@ export function Bottom({
       {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
       {!isWikiSubdomain && <DeferredTutorialCoachMount />}
       {!isWikiSubdomain && <LiveRefreshBanner />}
+      {!isWikiSubdomain && <CharacterSwitchBanner />}
     </>
   );
 }

@@ -86,6 +86,8 @@ export interface CorporationRef {
   countryId?: string;
   brandColor?: string;
   logoUrl?: string | null;
+  /** Private corporations are not on any exchange. */
+  isPrivate?: boolean;
   /** Currency code for sector.revenue / maintenance / growthCost / tax (v0.2.6). */
   liquidCurrencyCode?: string;
   /** True when the owning corp is a National Corporation, market actions (attack) are blocked. */
@@ -813,6 +815,18 @@ export interface PlantsData {
     /** The same stack in percentage points of revenue. */
     policyPp?: number;
     otherOperatingAnchor: number;
+    /**
+     * `otherOperatingAnchor` split into named parts: overheads (signed, a
+     * negative value is a credit), stock carrying cost, disaster and crisis
+     * losses, and what none of them explain. They sum to `otherOperatingAnchor`.
+     * Absent on the fallback path.
+     */
+    otherBreakdown?: {
+      overheadAnchor: number;
+      inventoryCarryAnchor: number;
+      eventsAnchor: number;
+      remainderAnchor: number;
+    };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;

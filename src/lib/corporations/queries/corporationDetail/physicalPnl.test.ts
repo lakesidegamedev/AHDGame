@@ -28,6 +28,17 @@ describe("buildPhysicalPnl (#587)", () => {
     expect(physical?.fillRate).toBeCloseTo(600 / 800, 10);
   });
 
+  it("reads the settled sold share the rows show, weighted by units offered", () => {
+    // 100 offered at 60% sold and 300 offered at 100% sold. Made-versus-sold would
+    // say 600/800; the rows' own shares give (60 + 300) / 400.
+    const physical = buildPhysicalPnl(
+      true,
+      rollups({ soldShareWeighted: 100 * 0.6 + 300 * 1, soldShareWeight: 400 }),
+      2
+    );
+    expect(physical?.fillRate).toBeCloseTo(0.9, 10);
+  });
+
   it("rounds without converting: output equals the already corp-currency inputs", () => {
     const physical = buildPhysicalPnl(
       true,

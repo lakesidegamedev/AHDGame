@@ -138,7 +138,8 @@ export interface InvestmentForecastInput {
   activeFraction: number;
   producedUnits: number;
   soldUnits: number;
-  demandGapUnits: number;
+  /** Buyers for extra output. Missing or non-finite means none measured, so no extra sales. */
+  demandGapUnits?: number;
   revenueDailyAnchor: number;
   operatingCostDailyAnchor: number;
   /** Price-sensitive physical inputs, within operatingCostDailyAnchor. */
@@ -175,8 +176,25 @@ export function forecastSectorInvestment(
   input: InvestmentForecastInput,
   horizonTurns: readonly number[] = [48, 96, 192]
 ): InvestmentHorizon[] | null {
+  const required = [
+    input.units,
+    input.constructionPerUnitAnchor,
+    input.chargedPerUnitAnchor,
+    input.buildTurns,
+    input.depreciationPerTurn,
+    input.turnsPerDay,
+    input.capacityUnits,
+    input.activeFraction,
+    input.producedUnits,
+    input.soldUnits,
+    input.revenueDailyAnchor,
+    input.operatingCostDailyAnchor,
+    input.overheadDailyAnchor,
+    input.upkeepDailyAnchor,
+    input.taxRatePercent,
+  ];
   if (
-    !Object.values(input).every(Number.isFinite) ||
+    !required.every(Number.isFinite) ||
     input.units <= 0 ||
     input.chargedPerUnitAnchor <= 0 ||
     input.buildTurns < 1 ||
@@ -188,6 +206,9 @@ export function forecastSectorInvestment(
     return null;
 
   const cost = input.units * input.chargedPerUnitAnchor;
+  const demandGapUnits = Number.isFinite(input.demandGapUnits)
+    ? (input.demandGapUnits as number)
+    : 0;
   const utilization = input.producedUnits / input.capacityUnits;
   const upkeepPerCapacityUnit = Math.max(0, input.upkeepDailyAnchor) / input.capacityUnits;
   const fill = Math.max(0, Math.min(1, input.soldUnits / input.producedUnits));
@@ -212,7 +233,7 @@ export function forecastSectorInvestment(
     // Keep the observed production pace and bill all of it, including unsold
     // output. Extra buyers cap receipts, never make unwanted output free.
     const produced = capacity * utilization;
-    const sold = Math.min(produced * fill, Math.max(0, input.demandGapUnits));
+    const sold = Math.min(produced * fill, Math.max(0, demandGapUnits));
     const operating =
       (sold * (receiptPerSold + policyPerSold) -
         produced * operatingPerProduced -

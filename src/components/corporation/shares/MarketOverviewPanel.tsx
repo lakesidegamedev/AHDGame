@@ -264,14 +264,16 @@ export default function MarketOverviewPanel({
             )}
           </KVList>
           <KVList>
-            {corporation.equityMarketPoolActive && corporation.marketDepthShares != null && (
-              <KVRow
-                label="Bid depth"
-                value={corporation.marketDepthShares.toLocaleString("en-US")}
-                hint="shares"
-                title="How many shares the market pool will buy at the bid this turn. It buys at most 5% of the company's value per turn across all sellers."
-              />
-            )}
+            {corporation.equityMarketPoolActive &&
+              !corporation.isPrivate &&
+              corporation.marketDepthShares != null && (
+                <KVRow
+                  label="Bid depth"
+                  value={corporation.marketDepthShares.toLocaleString("en-US")}
+                  hint="shares"
+                  title="How many shares the market pool will buy at the bid this turn. It buys at most 5% of the company's value per turn across all sellers."
+                />
+              )}
             {dualClass && (
               <KVRow
                 mono={false}

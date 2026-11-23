@@ -75,3 +75,16 @@ export function soldShareForList(
 ): number | null {
   return fundedClearingReading(receipt, currentTurn)?.soldFraction ?? legacyFill;
 }
+
+/**
+ * Units a settled receipt says were offered, when the list reads that receipt.
+ * Weights a sector in the corporation-wide sold share so the roll-up and the
+ * rows are one reading.
+ */
+export function settledOfferedUnits(
+  receipt: ClearingReceipt | null | undefined,
+  currentTurn: number
+): number | null {
+  if (!fundedClearingReading(receipt, currentTurn)) return null;
+  return positive(receipt?.offeredUnits);
+}

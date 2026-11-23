@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  sizeBuildDemand,
-  estimatedFullMixBuildRoom,
-  fullMixBuildRoom,
-} from "./buildDemandCapacity";
+import { sizeBuildDemand, fullMixBuildRoom } from "./buildDemandCapacity";
 import type { BuildDemandRow } from "./fundedBuildDemand";
 import { commodityMixWeight, COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 
@@ -104,7 +100,7 @@ describe("shared funded build sizing", () => {
       ],
     });
     expect(fullMixBuildRoom(rows)).toBe(0);
-    expect(estimatedFullMixBuildRoom(rows)).toBe(20);
+    expect(rows[0]).not.toHaveProperty("estimatedCapacityUnits");
   });
   it("uses the physical output mix, not the recipe coefficient, and keeps missing capacity unknown", () => {
     const supply = { software: 4, network_services: 2 };

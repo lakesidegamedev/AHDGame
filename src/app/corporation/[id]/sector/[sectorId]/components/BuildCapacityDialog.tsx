@@ -6,7 +6,7 @@ import {
 } from "@/lib/corporations/rules/commodityDominanceRamp";
 import { useTranslations } from "next-intl";
 import InvestmentForecast from "./InvestmentForecast";
-import { buildReturnSummary, investmentForecastInput } from "../lib/investment";
+import { buildReturnSummary, forecastBlocker, investmentForecastInput } from "../lib/investment";
 import {
   OPERATING_RESERVE_TURNS,
   runAfterBuild,
@@ -38,6 +38,7 @@ import {
 import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import { poolOversubscribed } from "./StateLabourPool";
+import { freightLoadStatus } from "@/lib/logistics/freightVisibility";
 
 import StrategySiteBuildDialog, { type StrategySiteActions } from "./StrategySiteBuildDialog";
 
@@ -48,6 +49,8 @@ interface BuildCapacityDialogProps {
   /** The state's shared labour pool, for the unfilled-jobs warning. */
   stateLabourMarket?: StateLabourPoolView | null;
   stateName?: string;
+  /** The target state's freight load and capacity, for the out-of-state shipping warning. */
+  freightState?: { observedLoad: number; capacity: number; turn: number | null } | null;
   /** Drives the facility noun throughout the dialog. */
   sectorType: OperatingSectorType;
   sectorLabel: string;
@@ -105,6 +108,7 @@ export default function BuildCapacityDialog({
   plants,
   stateLabourMarket,
   stateName,
+  freightState,
   sectorType,
   sectorLabel,
   strategy,
@@ -279,6 +283,8 @@ export default function BuildCapacityDialog({
       : sizing.reason
         ? t(`sizingReasons.${sizing.reason}`)
         : t("sizingReserve", { amount: money(sizing.reserveAnchor ?? 0) });
+  const matchDemandOff =
+    resourceSizingUnavailable || automaticSizingBlocked || sizing.demandFacilities < 1;
   const canSubmit =
     !q.financing?.pendingRequest &&
     !submitting &&
@@ -319,6 +325,10 @@ export default function BuildCapacityDialog({
     (afterBuild.cutPercent > 0 ||
       afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0));
   const loanPending = financingChoice !== null && !financingChoice.request;
+  const freightStatus = freightState
+    ? freightLoadStatus(freightState.observedLoad, freightState.capacity)
+    : null;
+  const freightShort = freightStatus !== null && freightStatus.status !== "normal";
 
   if (open && selectedSite && strategySiteActions) {
     return (
@@ -436,9 +446,7 @@ export default function BuildCapacityDialog({
             <button
               type="button"
               onClick={() => commitCount(sizing.demandFacilities)}
-              disabled={
-                resourceSizingUnavailable || automaticSizingBlocked || sizing.demandFacilities < 1
-              }
+              disabled={matchDemandOff}
               title={sizingNote}
               aria-describedby={hasCapEstimate ? "build-match-demand-basis" : undefined}
               className="mt-2 rounded-lg border border-card-border px-3 py-1.5 text-body-xs font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
@@ -449,6 +457,17 @@ export default function BuildCapacityDialog({
                   : Math.min(MAX_FACILITIES, sizing.demandFacilities),
               })}
             </button>
+          )}
+          {sectorType !== "logistics" && (
+            <p className="mt-1 text-body-xs text-muted" data-testid="build-match-demand-line">
+              {matchDemandOff
+                ? sizingNote
+                : t("roomRecommended", {
+                    count: Math.min(MAX_FACILITIES, sizing.demandFacilities),
+                    facility: site,
+                    facilities: sites,
+                  })}
+            </p>
           )}
           {hasCapEstimate && (
             <p id="build-match-demand-basis" className="mt-1 text-body-xs text-muted">
@@ -498,8 +517,17 @@ export default function BuildCapacityDialog({
               {money(Math.abs(cashAfter))}
             </span>
             {!returns && (
-              <span className="ml-2 text-body-xs text-muted">{t("forecastUnavailable")}</span>
+              <span className="ml-2 text-body-xs text-muted" data-testid="build-forecast-reason">
+                {t(`forecastUnavailableReasons.${forecastBlocker(plants)}`, {
+                  turns: plants.governor?.turnsRemaining ?? 0,
+                })}
+              </span>
             )}
+          </p>
+        )}
+        {returns?.noExtraBuyers && returns.profitPerTurn <= 0 && preview.safeCount > 0 && (
+          <p className="text-body-xs text-muted" data-testid="build-no-extra-buyers">
+            {t("noExtraBuyersNote")}
           </p>
         )}
 
@@ -571,6 +599,14 @@ export default function BuildCapacityDialog({
           </dl>
         )}
 
+        {freightShort && (
+          <Warning testId="build-freight-warning">
+            {t("warnFreight", {
+              state: stateName ?? "This state",
+              share: Math.round((freightStatus?.share ?? 0) * 100),
+            })}
+          </Warning>
+        )}
         {staffShort && (
           <Warning>
             {poolShort
@@ -732,7 +768,9 @@ export default function BuildCapacityDialog({
               {" · "}
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
             </p>
-            <p className="text-body-xs text-muted">{sizingNote}</p>
+            {(sectorType === "logistics" || !matchDemandOff) && (
+              <p className="text-body-xs text-muted">{sizingNote}</p>
+            )}
             {arrivals && (
               <p className="text-body-xs text-muted" data-testid="build-arrival">
                 {t("arrivalLinear", { turns: arrivals.lastInTurns })}

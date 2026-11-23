@@ -316,7 +316,7 @@ export function KeyStatistics({
           )}
           {netMargin != null && (
             <KVRow
-              label="Net margin"
+              label="Net margin, whole company"
               mark={<DivergingBar value={netMargin} />}
               value={<span className={signTone(netMargin)}>{netMargin.toFixed(1)}%</span>}
             />

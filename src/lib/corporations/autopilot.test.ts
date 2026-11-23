@@ -9,6 +9,7 @@ import {
   distressAdvisoryActive,
   isAutopilotRun,
   validateAutopilotToggle,
+  withoutOwnedTechAdvisory,
 } from "./autopilot";
 import { CEO_ARCHETYPE_MODIFIERS } from "@/lib/npp/ceoArchetype";
 
@@ -164,5 +165,16 @@ describe("distressAdvisoryActive", () => {
 
   it("is never active without the distress flag", () => {
     expect(distressAdvisoryActive({ ...base, flagged: false, liquidCapital: -5 })).toBe(false);
+  });
+});
+
+describe("withoutOwnedTechAdvisory", () => {
+  it("drops the afford-it advisory once that technology is owned", () => {
+    const advisories = [
+      { kind: "tech" as const, sinceTurn: 50, subject: "Robotics" },
+      { kind: "debt" as const, sinceTurn: 40 },
+    ];
+    expect(withoutOwnedTechAdvisory(advisories, new Set(["Robotics"]))).toEqual([advisories[1]]);
+    expect(withoutOwnedTechAdvisory(advisories, new Set(["Other"]))).toEqual(advisories);
   });
 });

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { IDLE_CAUSE_FILL, fmtTeuEstimate, idleCauseMeta, TONE_FILL } from "./plants";
+import {
+  IDLE_CAUSE_FILL,
+  buildOrderMoney,
+  fmtTeuEstimate,
+  idleCauseMeta,
+  TONE_FILL,
+} from "./plants";
 
 describe("bank charter", () => {
   it("never shows financial capacity as reserved for a bank network", () => {
@@ -63,5 +69,21 @@ describe("fmtTeuEstimate", () => {
     expect(fmtTeuEstimate(2.26)).toBe("2.3");
     expect(fmtTeuEstimate(80.4)).toBe("80");
     expect(fmtTeuEstimate(0)).toBe("0");
+  });
+});
+
+describe("buildOrderMoney", () => {
+  it("reads the stored paid amount once and refunds 75% of the unfinished share", () => {
+    const m = buildOrderMoney({ costPaidAnchor: 20_000, progress: 0.25 });
+    expect(m.paid).toBe(20_000);
+    expect(m.stillToArrive).toBe(15_000);
+    expect(m.refund).toBe(11_250);
+  });
+  it("clamps bad input", () => {
+    expect(buildOrderMoney({ costPaidAnchor: -5, progress: 2 })).toEqual({
+      paid: 0,
+      stillToArrive: 0,
+      refund: 0,
+    });
   });
 });
