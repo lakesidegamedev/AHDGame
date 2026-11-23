@@ -4,6 +4,7 @@ import type { ResetMetricCountry, ResetMetricRow } from "./ResetMetricBoard";
 
 export type ResetMetricDetailResponse = Readonly<{
   history: Array<{ turn: number; value: number }>;
+  historyNotice?: string;
   nationalValue: number;
   regions: Array<{ regionId: string; name: string; value: number }>;
 }>;
@@ -41,10 +42,10 @@ export function ResetMetricHistoryChart({
   metric: ResetMetricRow;
   history: Array<{ turn: number; value: number }>;
 }) {
-  if (history.length < 2) {
+  if (history.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-card-border bg-card-muted text-body-sm italic text-muted">
-        Series begins this campaign. More history will appear as turns advance.
+        More comparable history will appear as turns advance.
       </div>
     );
   }
@@ -140,6 +141,25 @@ export function ResetMetricHistoryChart({
           </g>
         ))}
       </svg>
+      <details className="mt-2 text-body-xs">
+        <summary className="cursor-pointer text-muted">View sampled turn values</summary>
+        <table className="mt-2 w-full text-left tabular-nums">
+          <thead>
+            <tr>
+              <th scope="col">Turn</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((point) => (
+              <tr key={point.turn}>
+                <td>{point.turn}</td>
+                <td>{historyValueLabel(metric, countryId, point.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
       <div className="flex justify-between gap-4 text-body-xs text-muted">
         <span>
           Turn {first.turn}: {historyValueLabel(metric, countryId, first.value)}

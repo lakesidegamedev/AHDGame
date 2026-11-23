@@ -141,7 +141,7 @@ describe("MarketOverview loading", () => {
     ]);
   });
 
-  it("reloads on each market tick and labels 15-minute candles with their clock time", async () => {
+  it("reloads on each market tick and labels 15-minute candles in game time with the clock in the crosshair", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
@@ -152,13 +152,13 @@ describe("MarketOverview loading", () => {
     render(<MarketOverview exchangeFilter="global" />);
     await waitFor(() => expect(setCandleData).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledTimes(1);
-    // Quarter-hour candles: the axis shows the clock, the crosshair turn plus clock.
+    // Quarter-hour candles: the axis stays in game time, the crosshair adds the clock.
     const expectedClock = new Date(1000 * 1000).toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
-    expect(createChart.mock.calls[0][1].timeScale.tickMarkFormatter(1000)).toBe(expectedClock);
+    expect(createChart.mock.calls[0][1].timeScale.tickMarkFormatter(1000)).toBe("T10");
     expect(createChart.mock.calls[0][1].localization.timeFormatter(1000)).toBe(
       `T10 ${expectedClock}`
     );

@@ -267,11 +267,14 @@ export function MarketOverview({
       const down = cssVar("--error", "#ef4444");
       const muted = cssVar("--muted", "#8f8f9d");
       const border = cssVar("--card-border", "#2a2a3d");
-      const turnLabel = (time: number): string => {
+      const gameDate = (time: number): string => {
         const candle = candlesRef.current.find((row) => row.time === time);
         if (!candle) return "";
-        const label = marketTurnLabel(candle.endTurn ?? candle.turn, calendarRef.current);
-        return quarterRef.current ? `${label} ${quarterClock(time)}` : label;
+        return marketTurnLabel(candle.endTurn ?? candle.turn, calendarRef.current);
+      };
+      const turnLabel = (time: number): string => {
+        const label = gameDate(time);
+        return label && quarterRef.current ? `${label} ${quarterClock(time)}` : label;
       };
 
       chart = createChart(container, {
@@ -295,8 +298,9 @@ export function MarketOverview({
           borderColor: border,
           timeVisible: true,
           secondsVisible: false,
-          tickMarkFormatter: (time: Time) =>
-            quarterRef.current ? quarterClock(Number(time)) : turnLabel(Number(time)),
+          // The axis is in game time, like the rest of the game. A 15-minute
+          // candle's real clock time is still in the crosshair label.
+          tickMarkFormatter: (time: Time) => gameDate(Number(time)),
         },
       });
       chartRef.current = chart;

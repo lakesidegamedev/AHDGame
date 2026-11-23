@@ -13,8 +13,18 @@ export interface CompassMarker {
   economic: number;
   social: number;
   label: string;
+  /** Which reference this is. Drives the one-letter badge and the legend, so a
+   * translated label still reads as P or R. */
+  kind?: "party" | "state";
   /** Hex color for the marker dot and line. Falls back to a muted gray. */
   color?: string;
+}
+
+function markerKind(m: CompassMarker): "party" | "state" | null {
+  if (m.kind) return m.kind;
+  if (m.label === "Party") return "party";
+  if (m.label === "State") return "state";
+  return null;
 }
 
 interface CompassGroup {
@@ -34,13 +44,16 @@ function groupCompassMarkers(
   playerX: number,
   playerY: number
 ): CompassGroup[] {
-  const MERGE_DIST = 5; // viewBox units — merge if closer than this
-  const PLAYER_MIN_DIST = 7; // nudge away from player dot if closer than this
+  // Viewbox units. A marker is r=5 and the player dot about r=3.5, so two
+  // markers closer than their diameters merge into one pill, and a group is
+  // pushed clear of the player dot instead of sitting on it.
+  const MERGE_DIST = 9;
+  const PLAYER_MIN_DIST = 11;
 
   const items = markers.map((m) => ({
     mx: Math.max(2, Math.min(98, ((m.economic + range) / (range * 2)) * 100)),
     my: Math.max(2, Math.min(98, ((range - m.social) / (range * 2)) * 100)),
-    label: m.label === "Party" ? "P" : m.label === "State" ? "R" : m.label.charAt(0),
+    label: markerKind(m) === "party" ? "P" : markerKind(m) === "state" ? "R" : m.label.charAt(0),
     color: m.color ?? "rgba(160,160,160,0.9)",
   }));
 
@@ -113,8 +126,8 @@ export function PoliticalCompass({
 
   const groups = markers ? groupCompassMarkers(markers, range, xPercent, yPercent) : [];
 
-  const partyMarker = markers?.find((m) => m.label === "Party");
-  const stateMarker = markers?.find((m) => m.label === "State");
+  const partyMarker = markers?.find((m) => markerKind(m) === "party");
+  const stateMarker = markers?.find((m) => markerKind(m) === "state");
   const hasMarkers = markers && markers.length > 0;
 
   const plot = (

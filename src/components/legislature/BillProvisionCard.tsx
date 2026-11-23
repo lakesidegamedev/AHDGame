@@ -85,23 +85,18 @@ export function BillProvisionCard({
           </div>
         </div>
       )}
-      {view.metricEffects && view.metricEffects.length === 0 && (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md bg-background/60 px-2.5 py-1.5 text-xs">
-          <span className="text-body-sm font-medium text-muted">Metric effect</span>
-          <span className="text-muted">Metric effect information unavailable</span>
-        </div>
-      )}
-      {(!view.effects || view.effects.length === 0) && !view.metricEffects && (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md bg-background/60 px-2.5 py-1.5 text-xs">
-          <span className="text-body-sm font-medium text-muted">Metric effect</span>
-          <span className="text-muted">
-            {view.currentPolicyIndex !== undefined &&
-            view.currentPolicyIndex === view.proposedPolicyIndex
-              ? "No modeled change from current law"
-              : "Metric effect information unavailable"}
-          </span>
-        </div>
-      )}
+      {/* A provision with no modelled metric effect shows nothing here rather
+          than repeating a placeholder under every provision. Restating current
+          law is still worth saying. */}
+      {(!view.effects || view.effects.length === 0) &&
+        (!view.metricEffects || view.metricEffects.length === 0) &&
+        view.currentPolicyIndex !== undefined &&
+        view.currentPolicyIndex === view.proposedPolicyIndex && (
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md bg-background/60 px-2.5 py-1.5 text-xs">
+            <span className="text-body-sm font-medium text-muted">Metric effect</span>
+            <span className="text-muted">No modeled change from current law</span>
+          </div>
+        )}
       {view.effects && view.effects.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span

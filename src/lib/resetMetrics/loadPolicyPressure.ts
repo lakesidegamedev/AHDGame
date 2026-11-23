@@ -6,16 +6,10 @@ import {
   mergeApplicableActionEffects,
 } from "@/lib/resetCabinet/rules/actions";
 import { loadMetricLawDelivery } from "./loadLawDelivery";
-import {
-  metricLawApplies,
-  netMetricLawPressure,
-  netMetricLawPressureByFamily,
-} from "./rules/lawDelivery";
+import { metricPolicyPressure } from "./rules/policyPressure";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
-
-const MAX_COMBINED_POLICY_PRESSURE = 1.2;
 
 export function cabinetActionApplies(
   scope: string,
@@ -61,35 +55,17 @@ export async function loadResetPolicyPressure(
   const activeByCountry = new Map(actions.map((a) => [String(a._id), a.active ?? []]));
   return new Map(
     boards.map((board) => {
-      const applies = (p: { country: string; scope: string; regionId?: string }) =>
-        (p.scope === "national" || p.scope === "regional") &&
-        metricLawApplies({ ...p, scope: p.scope }, board);
-      // The opening already embodies its statutes at full delivery, so only change
-      // from that reference counts; defunding an opening law still costs its effect.
-      const points = netMetricLawPressure(
-        netMetricLawPressureByFamily(
-          laws.programs.filter(applies),
-          laws.opening.filter(applies),
-          laws.settlements,
-          turn
-        )
-      );
       const temporary = mergeApplicableActionEffects(
         combineActiveActionEffects(activeByCountry.get(board.countryId) ?? [], turn)
           .filter((e) => cabinetActionApplies(e.scope, board.scope, board.regionId))
           .filter((e) => /^M\d{2}$/.test(e.target))
       );
-      for (const effect of temporary) {
-        const id = effect.target.slice(1);
-        points[id] = (points[id] ?? 0) + effect.favorableNormalizedPoints;
-      }
-      for (const id of Object.keys(points)) {
-        points[id] = Math.max(
-          -MAX_COMBINED_POLICY_PRESSURE,
-          Math.min(MAX_COMBINED_POLICY_PRESSURE, Number(points[id]!.toFixed(4)))
-        );
-        if (points[id] === 0) delete points[id];
-      }
+      const breakdown = metricPolicyPressure({ board, ...laws, turn, temporary });
+      const points = Object.fromEntries(
+        Object.entries(breakdown)
+          .filter(([, p]) => p.combined !== 0)
+          .map(([id, p]) => [id, p.combined])
+      );
       return [board._id, points];
     })
   );

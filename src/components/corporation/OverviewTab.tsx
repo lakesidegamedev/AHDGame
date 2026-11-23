@@ -229,7 +229,7 @@ function SectorTable({
                     align="right"
                     onClick={() => sortBy("workers")}
                     sorted={sortState("workers")}
-                    className="hidden sm:table-cell"
+                    className="hidden 2xl:table-cell"
                   >
                     Workers
                   </Th>
@@ -325,7 +325,7 @@ function SectorTable({
                         : "n/a"}
                     </Td>
                     {hasMoney && (
-                      <Td align="right" className="hidden text-muted sm:table-cell">
+                      <Td align="right" className="hidden text-muted 2xl:table-cell">
                         {typeof s.workers === "number" ? s.workers.toLocaleString("en-US") : "n/a"}
                       </Td>
                     )}
@@ -381,7 +381,7 @@ function SectorTable({
                     {est(fmtSigned(scale(totals.profit)))}
                   </Td>
                   <Td />
-                  <Td align="right" className="hidden sm:table-cell">
+                  <Td align="right" className="hidden 2xl:table-cell">
                     {totals.workers.toLocaleString("en-US")}
                   </Td>
                   {plantsMode ? (
@@ -799,7 +799,7 @@ export default function OverviewTab({
                   <KVRow
                     label="Management overhead"
                     value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
-                    hint="grows with every plant the whole group runs, subsidiaries included"
+                    title="Grows with every plant the whole group runs, subsidiaries included."
                   />
                 )}
                 {corporation.averageQuality != null && (

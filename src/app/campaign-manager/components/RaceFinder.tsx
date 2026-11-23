@@ -1,7 +1,7 @@
 "use client";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { BlendInput, BlendSelect } from "@/components/blend/BlendControls";
@@ -108,6 +108,18 @@ export function RaceFinder({
   }, [ofType, filter.stage, filter.year, regionNames]);
 
   const list = sortRaces(filterRaces(races, filter), watched);
+  // Unopposed races all read the same ("X is unopposed, Safe"), and dozens of
+  // them buried the contested ones. They fold into one line under the list;
+  // your own, watched and selected races always stay in view.
+  const [showUnopposed, setShowUnopposed] = useState(false);
+  const isQuiet = (race: CmRace) =>
+    race.candidates.length === 1 &&
+    !race.isMine &&
+    !watched.has(race.key) &&
+    race.key !== selectedKey;
+  const quietCount = list.filter(isQuiet).length;
+  const foldQuiet = quietCount > 3 && quietCount < list.length;
+  const shown = foldQuiet && !showUnopposed ? list.filter((r) => !isQuiet(r)) : list;
   const allRegions = filter.regionId === "ALL";
   const regionName = regionNames[filter.regionId] ?? displayCanadianRegionCode(filter.regionId);
 
@@ -274,7 +286,7 @@ export function RaceFinder({
             gap: 6,
           }}
         >
-          {list.map((race) => (
+          {shown.map((race) => (
             <RaceRow
               key={race.key}
               race={race}
@@ -286,6 +298,27 @@ export function RaceFinder({
               onToggleWatch={() => onToggleWatch(race.key)}
             />
           ))}
+          {foldQuiet && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setShowUnopposed((v) => !v)}
+                aria-expanded={showUnopposed}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  padding: "4px 2px",
+                  fontSize: 12.5,
+                  color: BLEND.accent,
+                  cursor: "pointer",
+                }}
+              >
+                {showUnopposed
+                  ? t("finder.hideUnopposed")
+                  : t("finder.showUnopposed", { count: quietCount })}
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </aside>

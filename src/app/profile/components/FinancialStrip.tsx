@@ -454,9 +454,14 @@ export function FinancialStrip({
       <span className="ml-1 text-body font-normal text-muted">/ {maxDonorLevel}</span>
     </span>
   );
+  // Same compact style as personal cash beside it; the exact amount is on hover.
+  const campaignSymbol = CURRENCY_SYMBOLS[currencyCode] ?? currencyCode;
   const campaignValue = (
-    <span className="text-heading font-semibold tabular-nums text-foreground">
-      {formatCurrencyFaceAmount(campaignFunds, currencyCode)}
+    <span
+      className="text-heading font-semibold tabular-nums text-foreground"
+      title={formatCurrencyFaceAmount(campaignFunds, currencyCode)}
+    >
+      {`${campaignSymbol}${formatCompactNumber(campaignFunds)}`}
     </span>
   );
   const personalValue = (

@@ -163,7 +163,7 @@ export function metricDataBasis(status: ObservationStatus, nationalRollup: boole
   if (nationalRollup) return "Current regional observations combined into a national figure";
   switch (status) {
     case "observed":
-      return "Era-adjusted historical observation";
+      return "Recorded observation; see the data note for its origin";
     case "derived":
       return "Calculated from related game records";
     case "proxy":
@@ -176,7 +176,7 @@ export function metricDataBasis(status: ObservationStatus, nationalRollup: boole
 export function metricQualityLabel(status: ObservationStatus): string {
   switch (status) {
     case "observed":
-      return "Sourced baseline";
+      return "Recorded observation";
     case "derived":
       return "Derived from owned data";
     case "proxy":
@@ -189,7 +189,7 @@ export function metricQualityLabel(status: ObservationStatus): string {
 export function metricQualityExplanation(status: ObservationStatus): string {
   switch (status) {
     case "observed":
-      return "This opening value comes from era-adjusted historical game data. Its responsible system updates it during play.";
+      return "This value is recorded by its responsible system. The data note identifies its source and whether it is an opening reference or a gameplay measurement.";
     case "derived":
       return "This value is calculated from underlying game systems rather than written directly by a law or action.";
     case "proxy":
@@ -201,3 +201,21 @@ export function metricQualityExplanation(status: ObservationStatus): string {
 
 /** Test seam ensuring every frozen v2 primary has authored player copy. */
 export const playerMetricDescriptionIds = Object.freeze(Object.keys(PLAYER_DESCRIPTIONS));
+
+export function metricDisplayUnit(unit: string): string {
+  if (unit === "treatment-delay index, later median days") return "treatment-delay index";
+  if (unit === "1991 country housing-burden index") return "country-relative housing-burden index";
+  return unit;
+}
+
+export function metricHasPolicyPressure(metric: {
+  policyPressure?: { combined: number } | null;
+  temporaryActionEffect?: { favorableNormalizedPoints: number } | null;
+  legislativeEffect?: { favorableNormalizedPoints: number } | null;
+}): boolean {
+  return (
+    (metric.policyPressure?.combined ??
+      (metric.temporaryActionEffect?.favorableNormalizedPoints ?? 0) +
+        (metric.legislativeEffect?.favorableNormalizedPoints ?? 0)) !== 0
+  );
+}

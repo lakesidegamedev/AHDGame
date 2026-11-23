@@ -1037,9 +1037,9 @@ export function StatusBar({
               <StatusChip
                 wrapperClassName="hidden sm:inline-flex"
                 colorClasses={
-                  (stats.corp.priceChange1h ?? 0) >= 0
-                    ? "bg-teal-500/10 text-teal-400 hover:bg-teal-500/20"
-                    : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  Number((stats.corp.priceChange1h ?? 0).toFixed(1)) < 0
+                    ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                    : "bg-teal-500/10 text-teal-400 hover:bg-teal-500/20"
                 }
                 icon={
                   <svg
@@ -1058,18 +1058,12 @@ export function StatusBar({
                 }
                 value={
                   <>
-                    <span className="text-muted/70 font-semibold">
-                      {stats.corp.name.length > 10
-                        ? stats.corp.name.slice(0, 10) + "…"
-                        : stats.corp.name}
+                    <span className="text-muted/70 font-semibold" title={stats.corp.name}>
+                      {stats.corp.tickerSymbol || stats.corp.name}
                     </span>
                     <span>{formatListingPrice(stats.corp.sharePrice, ceoCorpCurrency)}</span>
-                    <span
-                      className={
-                        (stats.corp.priceChange1h ?? 0) >= 0 ? "text-green-400" : "text-red-400"
-                      }
-                    >
-                      {(stats.corp.priceChange1h ?? 0) >= 0 ? "+" : ""}
+                    <span className={signedChangeTone(stats.corp.priceChange1h ?? 0)}>
+                      {(stats.corp.priceChange1h ?? 0) > 0 ? "+" : ""}
                       {(stats.corp.priceChange1h ?? 0).toFixed(1)}%
                     </span>
                   </>
@@ -1193,4 +1187,12 @@ export function StatusBar({
       </div>
     </div>
   );
+}
+
+/** Green for a rise, red for a fall, muted when the rounded change is zero. */
+function signedChangeTone(pct: number): string {
+  const shown = Number(pct.toFixed(1));
+  if (shown > 0) return "text-green-400";
+  if (shown < 0) return "text-red-400";
+  return "text-muted";
 }

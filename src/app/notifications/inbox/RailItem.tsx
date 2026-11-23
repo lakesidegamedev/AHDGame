@@ -9,7 +9,7 @@
 import type { InboxItem } from "@/lib/inbox/inboxItem";
 import { Avatar } from "./Avatar";
 import { CatChip } from "./CatChip";
-import { CATEGORY_VISUALS, URGENCY_VISUALS } from "./inboxVisuals";
+import { categoryVisualFor, URGENCY_VISUALS } from "./inboxVisuals";
 
 interface RailItemProps {
   item: InboxItem;
@@ -19,7 +19,7 @@ interface RailItemProps {
 }
 
 export function RailItem({ item, selected, compact, onSelect }: RailItemProps) {
-  const category = CATEGORY_VISUALS[item.category];
+  const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
   const eyebrow = item.label;
 
@@ -92,7 +92,9 @@ export function RailItem({ item, selected, compact, onSelect }: RailItemProps) {
           {/* Preview and signal */}
           {!compact && (
             <div className="mt-2 space-y-2">
-              <p className="line-clamp-2 text-xs leading-relaxed text-muted">{item.body}</p>
+              <p className="line-clamp-2 text-xs leading-relaxed text-muted">
+                {previewSentence(item.body)}
+              </p>
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${item.action ? URGENCY_VISUALS[item.urgency].wash : urgency.wash} ${item.action ? URGENCY_VISUALS[item.urgency].border : urgency.border} ${item.action ? URGENCY_VISUALS[item.urgency].text : urgency.text}`}
@@ -112,4 +114,15 @@ export function RailItem({ item, selected, compact, onSelect }: RailItemProps) {
       </div>
     </button>
   );
+}
+
+/**
+ * The list preview ends on a whole thought: the first sentence when it fits two
+ * lines (about 150 characters), else the clamp falls back to the raw text.
+ */
+export function previewSentence(body: string | null | undefined): string {
+  const text = (body ?? "").trim();
+  const match = text.match(/^.+?[.!?](?=\s|$)/);
+  if (match && match[0].length >= 20 && match[0].length <= 150) return match[0];
+  return text;
 }

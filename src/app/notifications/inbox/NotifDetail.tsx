@@ -7,7 +7,7 @@ import { formatGameMonth } from "@/lib/utils/gameDate";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { Button } from "@/components/ui/Button";
 import { CatChip } from "./CatChip";
-import { CATEGORY_VISUALS, URGENCY_VISUALS } from "./inboxVisuals";
+import { categoryVisualFor, URGENCY_VISUALS } from "./inboxVisuals";
 
 interface NotifDetailProps {
   item: InboxItem;
@@ -27,12 +27,15 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
           preIterationTurns: turnStatus.preIterationTurns,
         })
       : null;
-  const category = CATEGORY_VISUALS[item.category];
+  const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+      {/* Content takes only the room it needs, so Snooze and Archive sit right
+          under a short message instead of at the far bottom of the pane. A long
+          message still scrolls with the actions pinned below it. */}
+      <div className="min-h-0 overflow-y-auto p-5 sm:p-7">
         {/* Header row */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -126,7 +129,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-card-border bg-card-elevated/25 px-5 py-3 sm:px-7">
+      <div className="flex shrink-0 items-center justify-start gap-1.5 border-t border-card-border bg-card-elevated/25 px-5 py-3 sm:px-7">
         <Button variant="ghost" size="sm" onClick={onSnooze} aria-label="Snooze">
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path

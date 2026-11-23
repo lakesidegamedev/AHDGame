@@ -19,6 +19,8 @@
     "chartLabel": "{metric} über {turns} erfasste Züge",
     "latestNote": "Der letzte erfasste Punkt ist Zug {turn}. Andere Zahlen auf der Seite sind live und können etwas neuer sein.",
     "turn": "Zug {turn}",
-    "turnAxis": "Z{turn}"
+    "turnAxis": "Z{turn}",
+    "span": "Zug {from} bis {to}",
+    "range": "Tief {low} · Hoch {high}"
   }
 }

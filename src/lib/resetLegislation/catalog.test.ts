@@ -47,3 +47,11 @@ describe("reset legislative catalog", () => {
     expect(resetLawFamilyById("L18")?.levels).toHaveLength(5);
   });
 });
+
+describe("Canada department funding laws", () => {
+  it("offers the intelligence funding law nationally and not to provinces (#7294)", () => {
+    const intelligence = resetLawFamilyById("L53");
+    expect(intelligence?.availability.national).toContain("CA");
+    expect(intelligence?.availability.regional).not.toContain("CA");
+  });
+});

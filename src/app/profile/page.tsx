@@ -555,6 +555,7 @@ export default async function ProfilePage({
       economic: party.economicPosition,
       social: party.socialPosition,
       label: t("positions.markerParty"),
+      kind: "party",
       color: COMPASS_PARTY_MARKER,
     });
   }
@@ -563,6 +564,7 @@ export default async function ProfilePage({
       economic: homeState.cachedEconomicLean,
       social: homeState.cachedSocialLean,
       label: t("positions.markerState"),
+      kind: "state",
       color: COMPASS_STATE_MARKER,
     });
   }

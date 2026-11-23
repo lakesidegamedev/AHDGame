@@ -72,7 +72,7 @@ export function MoneyHistoryPanel() {
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="text-body-sm underline"
+          className="rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated"
         >
           {open ? t("hide") : t("show")}
         </button>

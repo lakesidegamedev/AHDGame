@@ -167,6 +167,46 @@ describe("national tax policy records", () => {
   });
 });
 
+describe("saved national policy choices", () => {
+  const type = {
+    _id: "us.governance.integrity.primary",
+    name: "Ethics",
+    policyOptions: [
+      { id: "l0", name: "No Watchdogs", economic: 0, social: 0 },
+      {
+        id: "l2",
+        name: "Ethics Enforcement",
+        economic: 0,
+        social: 0,
+        metricEffects: [{ category: "governance", metricId: "corruption", ratePerTurn: -0.2 }],
+      },
+    ],
+  } as LegislationType;
+  const record = {
+    scope: "national" as const,
+    legislationTypeId: type._id,
+    economic: 0,
+    social: 0,
+    updatedAt: new Date(0),
+  };
+  it("honors the option id when ideological coordinates collide", () => {
+    const row = buildPolicyResponse(
+      { ...record, policyOptionId: "l2", policyOptionIndex: 0 },
+      type
+    );
+    expect(row.policyOptionName).toBe("Ethics Enforcement");
+    expect(row.metricEffects).toHaveLength(1);
+  });
+  it("uses a valid saved index before coordinate fallback", () => {
+    expect(buildPolicyResponse({ ...record, policyOptionIndex: 1 }, type).policyOptionName).toBe(
+      "Ethics Enforcement"
+    );
+    expect(buildPolicyResponse({ ...record, policyOptionIndex: -1 }, type).policyOptionName).toBe(
+      "No Watchdogs"
+    );
+  });
+});
+
 describe("national statute level display", () => {
   const ladder = {
     _id: "us.governance.integrity.primary",

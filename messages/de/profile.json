@@ -94,7 +94,7 @@
       "moneyHistory": {
         "title": "Geld rein und raus",
         "subtitle": "Dein eigenes Privat- und Wahlkampfgeld der letzten 30 Tage. Nur du siehst das.",
-        "show": "Verlauf anzeigen",
+        "show": "Letzte 30 Tage anzeigen",
         "hide": "Verlauf ausblenden",
         "all": "Alle",
         "personal": "Privat",

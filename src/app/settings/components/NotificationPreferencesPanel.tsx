@@ -32,6 +32,16 @@ export function NotificationPreferencesPanel() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saving" | "saved" | "saveError" | null>(null);
   const [search, setSearch] = useState("");
+  // About a hundred alert types: groups start folded so the page stays short,
+  // and a search opens every group that has a match.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (group: string) =>
+    setOpenGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -141,7 +151,7 @@ export function NotificationPreferencesPanel() {
             onChange={(event) => setSearch(event.target.value)}
             className="my-3 w-full rounded-lg border border-card-border bg-card p-3 text-sm"
           />
-          <div className="max-h-[28rem] overflow-y-auto pr-1">
+          <div>
             {(() => {
               const query = search.trim().toLowerCase();
               // Keep this legacy type readable in the inbox API and saved preferences.
@@ -158,57 +168,73 @@ export function NotificationPreferencesPanel() {
               return GROUP_ORDER.map((group) => {
                 const rows = visible.filter((type) => categoryOf(type) === group);
                 if (rows.length === 0) return null;
+                const open = query.length > 0 || openGroups.has(group);
+                const onCount = rows.filter(
+                  (type) => !preferences.mutedTypes.includes(type)
+                ).length;
                 return (
                   <section key={group} aria-labelledby={`notification-group-${group}`}>
-                    <h4
-                      id={`notification-group-${group}`}
-                      className="sticky top-0 z-10 bg-background/95 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
-                    >
-                      {t(`groups.${group}`)}
+                    <h4 id={`notification-group-${group}`} className="border-b border-card-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(group)}
+                        aria-expanded={open}
+                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm font-semibold text-foreground"
+                      >
+                        <span>{t(`groups.${group}`)}</span>
+                        <span className="flex items-center gap-2 text-xs font-normal text-muted">
+                          {t("groupOnCount", { on: onCount, total: rows.length })}
+                          <span aria-hidden>{open ? "▾" : "▸"}</span>
+                        </span>
+                      </button>
                     </h4>
-                    <div className="grid gap-x-6 md:grid-cols-2">
-                      {rows.map((type) => {
-                        const snooze = preferences.snoozedTypes.find(
-                          (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
-                        );
-                        return (
-                          <div
-                            key={type}
-                            className="flex items-center justify-between gap-3 border-b border-card-border py-2"
-                          >
-                            <div>
-                              <p className="text-sm">{t(`types.${type}`)}</p>
-                              {deliveryOf(type) === "push" && (
-                                <p className="text-xs text-primary">{t("pushTag")}</p>
-                              )}
-                              {snooze && (
-                                <>
-                                  <p className="text-xs text-muted">
-                                    {t.rich("snoozed", {
-                                      time: () => <LocalTime value={snooze.until} />,
-                                    })}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    disabled={saving}
-                                    className="text-xs text-primary"
-                                    onClick={() => void update(type, "unsnooze")}
-                                  >
-                                    {t("resume", { name: t(`types.${type}`) })}
-                                  </button>
-                                </>
-                              )}
+                    {open && (
+                      <div className="grid gap-x-6 md:grid-cols-2">
+                        {rows.map((type) => {
+                          const snooze = preferences.snoozedTypes.find(
+                            (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
+                          );
+                          return (
+                            <div
+                              key={type}
+                              className="flex items-center justify-between gap-3 border-b border-card-border py-2"
+                            >
+                              <div>
+                                <p className="text-sm">{t(`types.${type}`)}</p>
+                                {deliveryOf(type) === "push" && (
+                                  <p className="text-xs text-primary">{t("pushTag")}</p>
+                                )}
+                                {snooze && (
+                                  <>
+                                    <p className="text-xs text-muted">
+                                      {t.rich("snoozed", {
+                                        time: () => <LocalTime value={snooze.until} />,
+                                      })}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      disabled={saving}
+                                      className="text-xs text-primary"
+                                      onClick={() => void update(type, "unsnooze")}
+                                    >
+                                      {t("resume", { name: t(`types.${type}`) })}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                              <SettingsSwitch
+                                label={t(`types.${type}`)}
+                                checked={!preferences.mutedTypes.includes(type)}
+                                disabled={saving}
+                                onChange={(enabled) =>
+                                  void update(type, enabled ? "unmute" : "mute")
+                                }
+                              />
                             </div>
-                            <SettingsSwitch
-                              label={t(`types.${type}`)}
-                              checked={!preferences.mutedTypes.includes(type)}
-                              disabled={saving}
-                              onChange={(enabled) => void update(type, enabled ? "unmute" : "mute")}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </section>
                 );
               });

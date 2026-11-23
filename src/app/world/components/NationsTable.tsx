@@ -175,14 +175,21 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                 </td>
                 <td className={`${TD} hidden md:table-cell`}>
                   <div className="flex items-center gap-2">
-                    <Avatar
-                      url={executive.isVacant ? undefined : executive.avatarUrl}
-                      name={executiveName}
-                      size="h-7 w-7"
-                      borderKey={executive.borderKey}
-                      tintColor={executive.tintColor}
-                      className={executive.isVacant ? "opacity-60" : ""}
-                    />
+                    {executive.isVacant ? (
+                      // An empty seat, not a person whose name starts with V.
+                      <span
+                        aria-hidden
+                        className="h-7 w-7 shrink-0 rounded-full border border-dashed border-card-border"
+                      />
+                    ) : (
+                      <Avatar
+                        url={executive.avatarUrl}
+                        name={executiveName}
+                        size="h-7 w-7"
+                        borderKey={executive.borderKey}
+                        tintColor={executive.tintColor}
+                      />
+                    )}
                     <div className="min-w-0">
                       <p
                         className={`truncate font-medium ${

@@ -280,7 +280,7 @@
     "path": "social.housingCostBurden",
     "name": "Housing cost burden",
     "description": "Rent-to-income, mortgage-to-income, housingAffordability, rentalPressureIndex, income, price and interest data. Show renters/owners separately.",
-    "unit": "country housing-burden index",
+    "unit": "country-relative housing-burden index",
     "interpretation": "lower",
     "refresh": "48",
     "aggregation": "recompute",

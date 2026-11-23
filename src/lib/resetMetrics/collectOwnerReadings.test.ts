@@ -682,3 +682,31 @@ const FAIL_CLOSED_TEST_IDS = new Set([
   "56",
   "57",
 ]);
+
+it("captures the existing state read's weights only on history sample turns", async () => {
+  const db = createMockDb();
+  mockOwnerSources(db);
+  const board = boards.find((b) => b._id === "US:CT")!;
+  db.collection("states").find.mockReturnValue({
+    toArray: vi.fn().mockResolvedValue([
+      {
+        _id: "CT",
+        countryId: "US",
+        population: 100,
+        workingAgePopulation: 60,
+        votingEligiblePopulation: 80,
+        gdp: 1000,
+      },
+    ]),
+  });
+  const sampled = await collectResetMetricOwnerReadings(db as unknown as Db, [board], 13);
+  expect(sampled[board._id]!.historyWeights).toMatchObject({
+    "01": 60,
+    "05": 1000,
+    "35": 100,
+    "51": 80,
+  });
+  const ordinary = await collectResetMetricOwnerReadings(db as unknown as Db, [board], 14);
+  expect(ordinary[board._id]!.historyWeights).toBeUndefined();
+  expect(db.collection("states").find).toHaveBeenCalledTimes(2);
+});

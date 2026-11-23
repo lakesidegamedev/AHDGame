@@ -286,6 +286,7 @@ export default function PlantPanel({
                 idleCauses={plants.idleCauses}
                 sectorType={sectorType}
                 mothballed={mothballed}
+                productionPolicyLevel={productionPolicyLevel}
               />
             )}
             <RunMeter

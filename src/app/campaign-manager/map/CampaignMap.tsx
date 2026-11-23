@@ -254,7 +254,7 @@ export function CampaignMap(props: CampaignMapProps) {
     left: `${((x * view.k + view.x) / geo.w) * 100}%`,
     top: `${((y * view.k + view.y) / geo.h) * 100}%`,
   });
-  const labelled = sel
+  const candidates = sel
     ? visible
     : Object.keys(geo.regions).filter((id) => {
         const [x0, y0, x1, y1] = geo.regions[id].bb;
@@ -263,6 +263,16 @@ export function CampaignMap(props: CampaignMapProps) {
           ((x1 - x0) * view.k > geo.labelMin[0] && (y1 - y0) * view.k > geo.labelMin[1])
         );
       });
+  const labelText = (id: string) => (sel ? regionLabel(id) : displayCanadianRegionCode(id));
+  const labelFont = sel ? 12 : 10.5;
+  const labelled = placeLabels(candidates, {
+    first: sel,
+    pxPerUnit: (frameWidth || geo.w) / geo.w,
+    view,
+    bbox: (id) => geo.regions[id].bb,
+    text: labelText,
+    fontSize: labelFont,
+  });
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -527,12 +537,12 @@ export function CampaignMap(props: CampaignMapProps) {
                 whiteSpace: "nowrap",
                 fontFamily: FONT.sans,
                 fontWeight: 600,
-                fontSize: sel ? 12 : 10.5,
+                fontSize: labelFont,
                 color: sel && id !== sel ? BLEND.muted : BLEND.ink,
                 textShadow: "0 1px 3px #000, 0 0 2px #000",
               }}
             >
-              {sel ? regionLabel(id) : displayCanadianRegionCode(id)}
+              {labelText(id)}
             </span>
           );
         })}
@@ -701,6 +711,7 @@ function MapLegend({
           {l.partyAbbr}
         </li>
       ))}
+      <li style={{ fontSize: 11, color: BLEND.muted }}>{t("legendScale")}</li>
     </ul>
   );
 }
@@ -814,4 +825,46 @@ function CountyCard({
       ) : null}
     </div>
   );
+}
+
+/**
+ * Drops region labels that would overlap one already placed, so zoomed-in
+ * neighbours never print over each other. The selected region goes first, then
+ * larger regions; a small neighbour whose name does not fit loses its label
+ * (its name is still on hover and in the list).
+ */
+export function placeLabels(
+  ids: string[],
+  opts: {
+    first: string | null;
+    pxPerUnit: number;
+    view: { k: number; x: number; y: number };
+    bbox: (id: string) => readonly [number, number, number, number];
+    text: (id: string) => string;
+    fontSize: number;
+  }
+): string[] {
+  const area = (id: string) => {
+    const [x0, y0, x1, y1] = opts.bbox(id);
+    return (x1 - x0) * (y1 - y0);
+  };
+  const ordered = [...ids].sort((a, b) =>
+    a === opts.first ? -1 : b === opts.first ? 1 : area(b) - area(a)
+  );
+  const placed: { l: number; r: number; t: number; b: number }[] = [];
+  const kept: string[] = [];
+  for (const id of ordered) {
+    const [x0, y0, x1, y1] = opts.bbox(id);
+    const cx = (((x0 + x1) / 2) * opts.view.k + opts.view.x) * opts.pxPerUnit;
+    const cy = (((y0 + y1) / 2) * opts.view.k + opts.view.y) * opts.pxPerUnit;
+    // Average glyph width for a semibold sans at this size, plus a little air.
+    const halfW = (opts.text(id).length * opts.fontSize * 0.58) / 2 + 3;
+    const halfH = opts.fontSize / 2 + 2;
+    const box = { l: cx - halfW, r: cx + halfW, t: cy - halfH, b: cy + halfH };
+    const hit = placed.some((p) => box.l < p.r && box.r > p.l && box.t < p.b && box.b > p.t);
+    if (hit) continue;
+    placed.push(box);
+    kept.push(id);
+  }
+  return kept;
 }

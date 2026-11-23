@@ -172,7 +172,9 @@ export function CorporationMasthead({
       title: note,
       value: (
         <span className={signTone(revenueGrowth.pct)}>
-          {revenueGrowth.pct >= 0 ? "▲" : "▼"} {Math.abs(revenueGrowth.pct).toFixed(1)}%
+          {/* Arrow and printed sign both, so direction never rests on colour alone. */}
+          {revenueGrowth.pct > 0 ? "▲ +" : revenueGrowth.pct < 0 ? "▼ −" : ""}
+          {Math.abs(revenueGrowth.pct).toFixed(1)}%
           <span className="ml-1 font-sans text-[11px] font-medium text-muted">
             {revenueGrowth.realized ? "/yr" : "/turn"}
           </span>
@@ -319,7 +321,7 @@ export function CorporationMasthead({
         onClick={handleCreateWikiPage}
         disabled={creatingWikiPage}
         title={wikiCreateError || "No published page yet. Create this corporation's wiki page."}
-        className="hover:underline disabled:opacity-50"
+        className="text-primary hover:underline disabled:opacity-50"
       >
         {creatingWikiPage ? "Creating..." : "Create wiki page"}
       </button>
