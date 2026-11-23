@@ -132,8 +132,8 @@ export function SenateSection({
         </CollapsibleRows>
       ) : (
         <EmptyChamber>
-          <p>No {label.toLowerCase()} seats initialized yet.</p>
-          <p className="mt-1 text-body-sm">Admin needs to initialize elected officials.</p>
+          <p>No {label.toLowerCase()} members are seated for this region.</p>
+          <p className="mt-1 text-body-sm">Seats fill when the next election is held.</p>
         </EmptyChamber>
       )}
     </Chamber>
@@ -247,10 +247,12 @@ export function StateSenateSection({
   state,
   stateSenators,
   label = "State Senate",
+  memberTitle = "State senator",
 }: {
   state: State;
   stateSenators: SerializedOfficial[];
   label?: string;
+  memberTitle?: string;
 }) {
   return (
     <Chamber
@@ -266,7 +268,7 @@ export function StateSenateSection({
                 <OfficialRow
                   key={senator._id}
                   official={senator}
-                  title="State senator"
+                  title={memberTitle}
                   subtitle={seatCountLabel(senator.seatsHeld ?? 1)}
                   isVacant={!senator.characterId && !senator.nppId}
                   countryId={state.countryId}

@@ -187,6 +187,13 @@ export function PoliticsTab({
     : upperIsProportional
       ? (upperOffice?.label ?? "Senator")
       : "Senator";
+  const subNationalOffice = config.subNationalChamber
+    ? config.officeTypes.find(
+        (o) =>
+          o.chamberKey === config.subNationalChamber?.key && !o.isExecutive && o.isSubNational
+      )
+    : undefined;
+  const subNationalMemberTitle = subNationalOffice?.label ?? "State senator";
   const lowerMemberTitle =
     config.legislature?.lowerChamber?.key === "shugiin"
       ? `${lowerChamberName} Member`
@@ -410,6 +417,7 @@ export function PoliticsTab({
             state={state}
             stateSenators={officials.stateSenators}
             label={subNationalName}
+            memberTitle={subNationalMemberTitle}
           />
         </div>
       </div>

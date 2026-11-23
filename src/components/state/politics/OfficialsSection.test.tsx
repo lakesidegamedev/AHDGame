@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { State } from "@/lib/db/types";
 import type { SerializedOfficial } from "../StatePageTabsTypes";
-import { SenateSection } from "./OfficialsSection";
+import { SenateSection, StateSenateSection } from "./OfficialsSection";
 
 describe("SenateSection", () => {
   it("explains an unelected national council instead of asking admins to seed two senators", () => {
@@ -43,5 +43,29 @@ describe("SenateSection", () => {
     expect(screen.getByText("2 seats")).toBeTruthy();
     expect(screen.queryByText("100 seats")).toBeNull();
     expect(screen.getByText("Senator, Class 1")).toBeTruthy();
+  });
+});
+
+describe("empty and country-specific chambers", () => {
+  it("tells players an empty chamber has no seated members, not that an admin must act", () => {
+    render(<SenateSection state={{ countryId: "US" } as State} senators={[]} />);
+    expect(screen.queryByText(/Admin needs to initialize/)).toBeNull();
+    expect(screen.getByText(/No senate members are seated/)).toBeTruthy();
+  });
+
+  it("labels provincial legislators with the country's own office title", () => {
+    const members = [
+      { _id: "m1", characterName: "Jo Park", nppId: "n1", isNPP: true },
+    ] as unknown as SerializedOfficial[];
+    render(
+      <StateSenateSection
+        state={{ countryId: "CA" } as State}
+        stateSenators={members}
+        label="Provincial Legislature"
+        memberTitle="Member of the Provincial Legislature"
+      />
+    );
+    expect(screen.queryByText(/State senator/)).toBeNull();
+    expect(screen.getByText(/Member of the Provincial Legislature/)).toBeTruthy();
   });
 });
