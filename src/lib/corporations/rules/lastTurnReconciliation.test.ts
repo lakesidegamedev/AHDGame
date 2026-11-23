@@ -94,6 +94,36 @@ describe("reconcileLastTurn", () => {
     expect(r.cash.unitemised).toBeNull();
   });
 
+  it("itemises dividend tax and the conversion fee, leaving only rounding", () => {
+    const r = reconcileLastTurn(
+      {
+        ...recorded,
+        retained: 8_241 + 737 - 120 + 1,
+        dividendReceivedTax: 737,
+        sectorFxSpread: 120,
+      },
+      []
+    );
+    expect(r.statement.otherParts.map((p) => p.amount)).toEqual([737, -120]);
+    expect(r.statement.otherUnitemised).toBe(1);
+    expect(r.statement.otherUnitemisedLabel).toBe("Rounding of recorded figures");
+  });
+
+  it("names what the unexplained cash and statement remainders can hold", () => {
+    const legacy = reconcileLastTurn({ ...recorded, retained: 9_000 }, [], {
+      unconverted: 2,
+      truncated: true,
+    });
+    expect(legacy.statement.otherUnitemisedLabel).toBe(
+      "Tax on dividends received, currency conversion and rounding"
+    );
+    expect(legacy.cash.unitemisedLabel).toBe("Ledger rows not shown, and rounding");
+    expect(legacy.cash.unitemisedNote).toContain("2 logged movements in another currency");
+    expect(legacy.cash.unitemisedNote).toContain("beyond the first 500");
+    const plain = reconcileLastTurn(recorded, []);
+    expect(plain.cash.unitemisedLabel).toBe("Rounding and currency conversion");
+  });
+
   it("signs the gap between operating result and retained income as it moves retained income", () => {
     const r = reconcileLastTurn(
       { ...recorded, retained: 7_041, bondInterestPaid: 900, bondCouponIncome: 100 },

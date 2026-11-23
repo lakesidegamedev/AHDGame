@@ -77,14 +77,10 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
         {round(statement.otherUnitemised) !== 0 && (
           <StatementLine
             indent
-            label={
-              statement.otherParts.length > 0
-                ? "Other items, not itemised"
-                : "Interest, investments and other"
-            }
+            label={statement.otherUnitemisedLabel}
             amount={fmtSigned(round(statement.otherUnitemised))}
             amountClass={signTone(statement.otherUnitemised)}
-            title="The gap between the operating result after tax and the retained income the turn recorded. Revenue less costs, tax and dividends, plus this line, equals retained income."
+            title="What is left between the operating result after tax and the retained income the turn recorded, after the lines above. Revenue less costs, tax and dividends, plus the lines above and this one, equals retained income."
           />
         )}
         {statement.dividendPaid > 0 && (
@@ -123,10 +119,10 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
         {cash.unitemised != null && round(cash.unitemised) !== 0 && (
           <StatementLine
             indent
-            label="Cash change with no ledger record"
+            label={cash.unitemisedLabel}
             amount={fmtSigned(round(cash.unitemised))}
             amountClass={signTone(cash.unitemised)}
-            title="Cash change left after retained income and the lines above. Nothing in the ledger explains it."
+            title={cash.unitemisedNote}
           />
         )}
         <StatementLine
