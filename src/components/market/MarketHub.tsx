@@ -31,12 +31,21 @@ const PanelFallback = () => (
   <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
 );
 
+// Sized to the chart card's own loading state (header, range buttons, plot,
+// footnote) so the tabs below do not jump when the chart code arrives.
+const ChartFallback = () => (
+  <div
+    className="h-[572px] animate-pulse rounded-xl border border-card-border bg-card sm:h-[506px]"
+    aria-hidden="true"
+  />
+);
+
 const StockMarketChart = dynamic(
   () =>
     import("@/app/country/[code]/stockmarket/components/MarketOverview").then(
       (m) => m.StockMarketChart
     ),
-  { ssr: false, loading: PanelFallback }
+  { ssr: false, loading: ChartFallback }
 );
 
 const StocksPanel = dynamic(() => import("./MarketPanels").then((m) => m.StocksPanel), {
@@ -89,7 +98,9 @@ const MarketCorporationAction = dynamic(
 
 /** Chart visibility, remembered per browser; expanded until the player hides it. */
 function useChartOpen(): [boolean, (open: boolean) => void] {
-  const [open, setOpen] = useState(false);
+  // Open by default, matching the stored default, so the server render already
+  // holds the chart's space. Only a player who closed it sees it collapse.
+  const [open, setOpen] = useState(true);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       try {
