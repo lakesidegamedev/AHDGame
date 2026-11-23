@@ -130,6 +130,8 @@ export type ProducerPhysicalEnv = Pick<
   publicCarryShare?: number;
   /** gameConfig.producerPublicCarryReleaseStage >= 1: release carry over several turns. */
   publicCarryRelease?: boolean;
+  /** gameConfig.wideEconomyStage >= 1: every plant-country state gets a wider-economy buyer. */
+  wideEconomyStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
   fiscalScaleStage?: number;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */

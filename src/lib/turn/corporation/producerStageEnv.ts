@@ -84,6 +84,7 @@ export function producerStageEnv(
         producerWageShareTarget?: number;
         producerWageShareSurplusCap?: number;
         wholePlantsStage?: number;
+        wideEconomyStage?: number;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -122,6 +123,7 @@ export function producerStageEnv(
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),
     fiscalScaleStage: config?.fiscalScaleStage,
+    wideEconomyStage: config?.wideEconomyStage,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
