@@ -226,7 +226,13 @@ describe("v2 live Cabinet period settlement", () => {
 
   it("refuses unpaid, excessive, and specialized-authority claims", () => {
     const ordinary = accounts.find((entry) => !entry.externallySettled)!;
-    const specialist = accounts.find((entry) => entry.externallySettled)!;
+    // The defence account: it carries scheduled demand. An unfunded intelligence account is
+    // also externally settled but schedules nothing, so it refuses for a different reason.
+    const specialist = accounts.find(
+      (entry) =>
+        entry.externallySettled &&
+        Object.values(entry.familyAnnualDemand).reduce((sum, amount) => sum + amount, 0) > 0
+    )!;
     const due = Object.values(ordinary.familyAnnualDemand).reduce(
       (sum, amount) => sum + includedAuthorityPerTurn(amount, 2),
       0
