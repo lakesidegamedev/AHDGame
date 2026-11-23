@@ -55,6 +55,36 @@ describe("v2 Cabinet finance read model", () => {
     expect(model.unpaidAuthority).toBeUndefined();
   });
 
+  it("points an unfunded intelligence account at its funding law instead of a row of zeros", () => {
+    const model = buildResetDepartmentFinanceReadModel({
+      definition: { ...definition, kind: "security_agency", accountPolicyId: "intelligence" },
+      departmentName: "Security Intelligence Service",
+      account: {
+        ...account,
+        externallySettled: true,
+        annualAuthority: 0,
+        balance: 0,
+        encumbered: 0,
+        arrears: 0,
+      },
+    });
+    expect(model.explanation).toContain("intelligence funding law");
+    expect(model.explanation).toContain("Intelligence tab");
+    expect(model.balance).toBeUndefined();
+    expect(model.annualAuthority).toBeUndefined();
+  });
+
+  it("keeps the defence opening claim visible with a plain explanation", () => {
+    const model = buildResetDepartmentFinanceReadModel({
+      definition: { ...definition, accountPolicyId: "defense" },
+      departmentName: "National Defence",
+      account: { ...account, externallySettled: true, annualAuthority: 500, balance: 0 },
+    });
+    expect(model.explanation).toContain("defence budget");
+    expect(model.annualAuthority).toBe(500);
+    expect(model.balance).toBe(0);
+  });
+
   it("shows opening families that have legal programs but no separate appropriation", () => {
     const model = buildResetDepartmentFinanceReadModel({
       definition,
