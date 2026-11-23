@@ -50,6 +50,12 @@ import type { ProfitOwnerKind } from "@/lib/market/producerMarket/profitDistribu
 import { type MarketAccount } from "@/lib/market/producerMarket/rules";
 import type { ProductionPlan } from "@/lib/market/producerMarket/production";
 import { fundedFreightDispatchMultiplier } from "@/lib/market/producerMarket/fundedFreightDispatchRules";
+import {
+  OVERSUPPLY_CUT_COMMODITIES,
+  cashCoverShare,
+  oversupplyScale,
+} from "@/lib/market/producerMarket/oversupplyCutRules";
+import { producerRunBudget } from "@/lib/market/producerMarket/productionPlan";
 import { gdpToAnchor } from "@/lib/currency/gdpAnchorRate";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -188,11 +194,19 @@ export async function buildProducerTurnDemand(
   const legacyRevenueByCountry = new Map<string, number>();
   const ownerKindByCompany = new Map<string, ProfitOwnerKind>();
   const skipReasons: Record<string, number> = {};
+  const oversupplyLast = new Map<string, { offered: number; sold: number }>();
+  const oversupplyPlans: ProductionPlan[] = [];
   const skippedSectors: { sectorId: string; reason: string }[] = [];
   for (const corp of lookups.corporations) {
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
       try {
         const sectorId = sector._id.toString();
+        const openedSector = shadowOpeningSector(
+          sector,
+          worldEpoch,
+          input.turn,
+          carry?.plants[sectorId]
+        );
         const {
           prepared,
           walletScopes: scopes,
@@ -202,7 +216,7 @@ export async function buildProducerTurnDemand(
           env,
           corporation: corp,
           internalSupplyPolicy: pricingPolicies?.get(corp._id.toString())?.policy,
-          sector: shadowOpeningSector(sector, worldEpoch, input.turn, carry?.plants[sectorId]),
+          sector: openedSector,
           inputPriceHeadroom: PRICE_HEADROOM,
           basePrices: base,
         });
@@ -232,6 +246,25 @@ export async function buildProducerTurnDemand(
           }
         }
         preparedSectors.push({ ...prepared, plan });
+        const settled = openedSector.producerSettlement;
+        const openingTurn =
+          env.producerOpeningTurnsBySector?.get(sectorId) ??
+          env.producerOpeningTurn ??
+          input.turn - 1;
+        if (settled && settled.worldEpoch === worldEpoch && settled.turn === openingTurn)
+          for (const line of settled.products ?? [])
+            if (OVERSUPPLY_CUT_COMMODITIES.has(line.commodity)) {
+              const t = oversupplyLast.get(line.commodity) ?? { offered: 0, sold: 0 };
+              t.offered += Math.max(0, line.offeredUnits ?? 0);
+              t.sold += Math.max(0, line.soldUnits ?? 0);
+              oversupplyLast.set(line.commodity, t);
+            }
+        if (
+          plan.outputs.some(
+            (o) => OVERSUPPLY_CUT_COMMODITIES.has(o.commodity) && o.unitsPerOutput > 0
+          )
+        )
+          oversupplyPlans.push(plan);
         headcountBySectorId.set(sectorId, {
           desiredWorkers: headcount.desiredWorkers,
           workers: headcount.workers,
@@ -303,6 +336,7 @@ export async function buildProducerTurnDemand(
     const planned = plannedFreightByCountry.get(countryId) ?? 0;
     plan.outputMultiplier *= fundedFreightDispatchMultiplier(gap, planned);
   }
+  const oversupplyScales = applyOversupplyCut(oversupplyPlans, oversupplyLast, cashByCorp);
   input.stage?.("demand.plants");
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
@@ -815,6 +849,8 @@ export async function buildProducerTurnDemand(
     walletScopes,
     accounts,
     cashByCorp,
+    /** Scale the oversupply cut applied per good this turn (1 = none). */
+    oversupplyScales,
     eligibleOffersByOrder,
     importTariffs,
     firstWalletByCorp,
@@ -1030,4 +1066,63 @@ export function shadowOpeningSector(
     producerCapacity: opening.producerCapacity,
     producerInventory: { ...opening.producerInventory, outputStock },
   });
+}
+
+/**
+ * Trim planned output of glutted goods (oversupplyCutRules). Single-good plants
+ * run less; joint plants keep their run and make less of that good only.
+ * Returns the scale applied per good (1 = none).
+ */
+export function applyOversupplyCut(
+  plans: readonly ProductionPlan[],
+  last: ReadonlyMap<string, { offered: number; sold: number }>,
+  cashByAccount: ReadonlyMap<string, number>
+): Map<string, number> {
+  const scales = new Map<string, number>();
+  if (plans.length === 0) return scales;
+  const { fixedBills, variableNeed } = producerRunBudget(plans);
+  const cover = new Map<string, number>();
+  const coverOf = (accountId: string) => {
+    let c = cover.get(accountId);
+    if (c == null) {
+      c = cashCoverShare(
+        cashByAccount.get(accountId) ?? 0,
+        fixedBills.get(accountId) ?? 0,
+        variableNeed.get(accountId) ?? 0
+      );
+      cover.set(accountId, c);
+    }
+    return c;
+  };
+  for (const commodity of OVERSUPPLY_CUT_COMMODITIES) {
+    const seen = last.get(commodity);
+    if (!seen) continue;
+    let planned = 0;
+    for (const p of plans)
+      for (const o of p.outputs)
+        if (o.commodity === commodity)
+          planned +=
+            p.capacityUnits *
+            p.activeFraction *
+            p.outputMultiplier *
+            o.unitsPerOutput *
+            coverOf(p.accountId);
+    const scale = oversupplyScale({
+      lastOffered: seen.offered,
+      lastSold: seen.sold,
+      plannedSupply: planned,
+    });
+    scales.set(commodity, scale);
+    if (!(scale < 1)) continue;
+    for (const p of plans) {
+      if (!p.outputs.some((o) => o.commodity === commodity && o.unitsPerOutput > 0)) continue;
+      const only = p.outputs.every((o) => o.commodity === commodity || !(o.unitsPerOutput > 0));
+      if (only) p.outputMultiplier *= scale;
+      else
+        p.outputs = p.outputs.map((o) =>
+          o.commodity === commodity ? { ...o, unitsPerOutput: o.unitsPerOutput * scale } : o
+        );
+    }
+  }
+  return scales;
 }
