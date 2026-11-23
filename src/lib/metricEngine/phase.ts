@@ -39,7 +39,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import {
   governmentApprovalProvider,
   sectorRevenueTaxProvider,
-  fiscalRatiosProvider,
+  regionalFiscalRatiosProvider,
   fiscalTradeInputsProvider,
   warDamageProvider,
 } from "./providers";
@@ -308,7 +308,7 @@ async function prepareRunMetricEngine(db: Db, turn: number) {
     centralBanks,
     spendingRollup,
     approvalByCountry,
-    fiscalRatiosByCountry,
+    regionalFiscalRatiosByState,
     fiscalTradeInputsByCountry,
     labourConfig,
     politicalInputs,
@@ -329,7 +329,7 @@ async function prepareRunMetricEngine(db: Db, turn: number) {
     // writes AFTER the engine — the lag that keeps the trust loop damped).
     governmentApprovalProvider(db),
     // 📊 budget-sync: per-country real fiscal ratios for the exact-mirror metrics.
-    fiscalRatiosProvider(db),
+    regionalFiscalRatiosProvider(db),
     // Dynamic fiscal-growth: per-country trade inputs (tariff/foreign-tax/forex/
     // FTA/bloc) + lagged inflation, consumed by the wageGrowth/tradeGrowth nodes.
     fiscalTradeInputsProvider(db),
@@ -713,7 +713,7 @@ async function prepareRunMetricEngine(db: Db, turn: number) {
       eraGameState,
       eraYear,
       finite,
-      fiscalRatiosByCountry,
+      regionalFiscalRatiosByState,
       fiscalTradeInputsByCountry,
       fxByCurrency,
       GENERIC_LAGGED_IDS,

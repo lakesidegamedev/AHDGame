@@ -639,14 +639,14 @@ export async function settleMetricStates(context: RunMetricEngineStageContext): 
       setFields[`${n.id}.trend`] = r.value - prevVal;
     }
 
-    // 📊 budget-sync (exact mirror): fiscal-readout metrics equal the real ratio
-    // this turn, scoped by the persist gate — only where the region already stores
-    // them (keeps schuldenbremse to 2019-era presets, ratios to budgeted
-    // countries). No simBaseline: these are not coexistence nodes.
+    // 📊 budget-sync (exact mirror): a region's fiscal readouts equal its OWN
+    // budget ratios this turn, never the national treasury's. Only where the
+    // region already stores them and has a budget. No simBaseline: these are
+    // not coexistence nodes.
     Object.assign(
       setFields,
       fiscalMirrorFields(
-        context.fiscalRatiosByCountry.get(countryId),
+        context.regionalFiscalRatiosByState.get(state._id),
         (id) => (0, context.readMetricPath)(prevDoc, id, "value") !== undefined
       )
     );
