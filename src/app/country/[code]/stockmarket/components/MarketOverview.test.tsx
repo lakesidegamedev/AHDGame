@@ -107,6 +107,7 @@ describe("MarketOverview loading", () => {
     expect(createChart.mock.calls[0][1].timeScale.tickMarkFormatter(1000)).toBe("T10");
     expect(createChart.mock.calls[0][1].localization.timeFormatter(1000)).toBe("T10");
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/not comparable to GDP/)).toBeTruthy();
   });
 
   it("sends strictly ordered, aligned market candles and volume to the chart", async () => {
