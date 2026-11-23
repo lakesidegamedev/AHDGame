@@ -196,6 +196,7 @@
       "demandEstimate": "This is shared market room after allowing for known unused capacity and queued builds, not demand reserved for your company. Unknown capacity makes automatic sizing unavailable.",
       "freightDemand": "Check freight demand before expanding",
       "cancelBuild": "Cancel",
+      "invalidBuildCount": "Enter a whole number between 1 and {max, number}.",
       "reviewLoan": "Complete the loan details and pledge consent to continue.",
       "paymentTitle": "How to pay",
       "cashPayment": "Pay from company cash",
