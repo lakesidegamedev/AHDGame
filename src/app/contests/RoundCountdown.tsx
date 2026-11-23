@@ -7,6 +7,8 @@ interface RoundCountdownProps {
   startedAt: string;
   endsAt: string;
   round: number;
+  /** Turn on which the round settles. */
+  endTurn: number;
   /** Server clock at render, so the first client render matches the HTML. */
   serverNow: number;
 }
@@ -14,7 +16,13 @@ interface RoundCountdownProps {
 const MINUTE = 60_000;
 
 /** Time left in the weekly round, with how much of the week has gone. Ticks every 30 seconds. */
-export function RoundCountdown({ startedAt, endsAt, round, serverNow }: RoundCountdownProps) {
+export function RoundCountdown({
+  startedAt,
+  endsAt,
+  round,
+  endTurn,
+  serverNow,
+}: RoundCountdownProps) {
   const t = useTranslations("contests");
   const [now, setNow] = useState(serverNow);
   useEffect(() => {
@@ -38,8 +46,11 @@ export function RoundCountdown({ startedAt, endsAt, round, serverNow }: RoundCou
           {left > 0 ? t("timeLeft", { days, hours, minutes }) : t("settling")}
         </span>
       </div>
+      <div className="mt-1 text-right text-xs text-muted">
+        {t("settlesTurn", { turn: endTurn })}
+      </div>
       <div
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-card-border"
+        className="mt-1 h-1.5 overflow-hidden rounded-full bg-card-border"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}

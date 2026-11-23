@@ -81,14 +81,19 @@ async function loadPlayers(db: Db): Promise<Map<string, PlayerCharacter>> {
     )
     .toArray();
   const userIds = characters.map((c) => c.userId).filter(Boolean);
-  const banned = await usersCollection(db)
-    .find({ _id: { $in: userIds }, isBanned: true }, { projection: { _id: 1 } })
+  const users = await usersCollection(db)
+    .find({ _id: { $in: userIds } }, { projection: { _id: 1, isBanned: 1, createdAt: 1 } })
     .toArray();
-  const bannedIds = new Set(banned.map((u) => u._id.toString()));
+  const bannedIds = new Set(users.filter((u) => u.isBanned).map((u) => u._id.toString()));
+  const accountCreatedAt = new Map(users.map((u) => [u._id.toString(), u.createdAt]));
   const players = new Map<string, PlayerCharacter>();
   for (const c of characters) {
     if (!c.userId || bannedIds.has(c.userId.toString())) continue;
-    players.set(c._id.toString(), c as PlayerCharacter);
+    const created = accountCreatedAt.get(c.userId.toString());
+    players.set(c._id.toString(), {
+      ...(c as PlayerCharacter),
+      ...(created ? { accountCreatedAt: new Date(created) } : {}),
+    });
   }
   return players;
 }
@@ -191,7 +196,7 @@ async function openingBaselines(
   if (kinds.includes("rookie_influence")) {
     out.set("rookie_influence", {
       baselines: players
-        .filter((c) => rookieEligible(c.createdAt?.getTime(), world.now.getTime()))
+        .filter((c) => rookieEligible(c.accountCreatedAt?.getTime(), world.now.getTime()))
         .map((c) => characterBaseline(c, influenceOf(c))),
     });
   }
@@ -326,18 +331,18 @@ async function fillLateBaselines(
 
 async function openRounds(db: Db, world: ContestWorld, kinds: ContestKind[]): Promise<number> {
   if (kinds.length === 0) return 0;
+  // One shared weekly counter, so every contest opened in the same week carries
+  // the same round number even when a contest joined later than the others.
   const last = await contestRounds(db)
-    .find({ kind: { $in: kinds } }, { projection: { kind: 1, roundNumber: 1 } })
-    .sort({ roundNumber: -1 })
+    .find({ kind: { $in: CONTEST_KINDS } }, { projection: { kind: 1, roundNumber: 1 } })
     .toArray();
-  const lastNumber = new Map<string, number>();
-  for (const r of last) if (!lastNumber.has(r.kind)) lastNumber.set(r.kind, r.roundNumber);
+  const lastRoundNumber = Math.max(0, ...last.map((r) => r.roundNumber));
 
   const baselines = await openingBaselines(db, world, kinds);
   const endsAt = await sharedWeekEnd(db, world, kinds);
   let opened = 0;
   for (const kind of kinds) {
-    const roundNumber = (lastNumber.get(kind) ?? 0) + 1;
+    const roundNumber = lastRoundNumber + 1;
     const opening = baselines.get(kind) ?? { baselines: [] };
     const round: ContestRound = {
       _id: contestRoundId(kind, roundNumber),

@@ -171,6 +171,11 @@ export function approvalEntryEligible(
   return currentHeadCharacterId !== null && currentHeadCharacterId === entryCharacterId;
 }
 
+/**
+ * A player is a rookie while their account is young. The character is no
+ * measure: a world reset recreates every character, so character age would
+ * admit veterans.
+ */
 export function rookieEligible(createdAtMs: number | undefined, nowMs: number): boolean {
   return (
     createdAtMs !== undefined &&
@@ -272,6 +277,20 @@ export function pickPlacings(
 export function placePrizeAnchor(kind: ContestKind, place: number, preset?: string): number {
   const share = prizeShares(kind)[place - 1] ?? 0;
   return Math.round(contestPrizeAnchor(kind, preset) * share);
+}
+
+const TURN_MS = 60 * 60 * 1000;
+
+/**
+ * Turn on which a round settles: the first turn at or after its end time.
+ * Turns run hourly, so the end time is shown as this turn, not as a clock time.
+ */
+export function roundSettlementTurn(
+  startTurn: number,
+  startedAtMs: number,
+  endsAtMs: number
+): number {
+  return startTurn + Math.max(0, Math.ceil((endsAtMs - startedAtMs) / TURN_MS));
 }
 
 export function roundIsDue(endsAtMs: number, nowMs: number): boolean {
