@@ -1,3 +1,4 @@
+import { isPremierLabel, PREMIER_ELECTION_NOTE } from "@/lib/states/premierElectionNote";
 import Image from "next/image";
 import Link from "next/link";
 import { RegionalHeroActions } from "./RegionalHeroActions";
@@ -349,6 +350,9 @@ export function RegionHeader(props: RegionHeaderProps) {
             </span>
           )}
         </Fact>
+        {isPremierLabel(executiveLabel) && executive && (
+          <p className="col-span-2 text-body-sm text-muted">{PREMIER_ELECTION_NOTE}</p>
+        )}
         {comprising && comprising.length > 0 && (
           <div className="col-span-2 min-w-0">
             <dt className="text-body-sm text-muted">Comprising</dt>

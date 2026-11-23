@@ -18,6 +18,7 @@ import {
   displayEffect,
   listedRegionAverage,
   nationalMarginFromRegions,
+  regionWeightedConditionMargins,
 } from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
@@ -168,6 +169,25 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
       : netModifierEffect(modifiers);
   const netMargin =
     nationalMarginFromRegions(sortedStates) ?? computeRegionalConditionMargin(modifiers);
+  // Chips show each condition's average margin across the regions, so they add up
+  // to the regional total before the per-region cap.
+  const weightedMargins = regionWeightedConditionMargins(sortedStates);
+  const chipModifiers =
+    weightedMargins.size > 0
+      ? regionalModifiers.map((m) =>
+          m.source === "address" ? m : { ...m, marginEffect: weightedMargins.get(m.id) ?? 0 }
+        )
+      : regionalModifiers;
+  const chipMarginSum =
+    weightedMargins.size > 0
+      ? Math.round(
+          chipModifiers.reduce(
+            (sum, m) => sum + (m.source === "address" ? 0 : (m.marginEffect ?? 0)),
+            0
+          ) * 10
+        ) / 10
+      : null;
+  const capGap = chipMarginSum == null ? 0 : Math.round((netMargin - chipMarginSum) * 10) / 10;
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -300,7 +320,17 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                   />
                 )}
               </div>
-              <ModifierList modifiers={regionalModifiers} emptyText="No active effects." />
+              <ModifierList modifiers={chipModifiers} emptyText="No active effects." />
+              {chipMarginSum != null && (
+                <p className="mt-3 text-xs text-muted">
+                  Margin shown on each condition is its average across the{" "}
+                  {regionLabel.toLowerCase()}. They add up to {chipMarginSum > 0 ? "+" : ""}
+                  {chipMarginSum}pp
+                  {capGap !== 0
+                    ? `; the 3pp limit on stacked conditions in each ${regionLabel.toLowerCase()} and rounding bring the net margin to ${netMargin > 0 ? "+" : ""}${netMargin}pp.`
+                    : ", the net margin."}
+                </p>
+              )}
               {hasBreakdown && nationalAdjustments.length > 0 && (
                 <div className="mt-5 border-t border-card-border/40 pt-4">
                   <h3 className="text-sm font-semibold text-muted">National adjustments</h3>

@@ -16,6 +16,7 @@ import { buildElectionHref } from "@/app/elections/electionsHelpers";
 import { resolveEntryAction } from "@/lib/elections/entryEligibility";
 import type { OfficeSection as OfficeSectionModel } from "../electionsSelectors";
 import { DeadlineCell, FieldCell, PhaseCell, RaceActions, RegionCell } from "./ElectionRowCells";
+import { isPremierLabel, PREMIER_ELECTION_NOTE } from "@/lib/states/premierElectionNote";
 import { PRIMARY_ESTIMATE_NOTE } from "@/lib/elections/rules/primaryEstimateNote";
 import { CLOSE_RACE_RULE_TEXT } from "@/lib/elections/rules/closeRace";
 
@@ -164,6 +165,10 @@ export function OfficeSection({
           </span>
         )}
       </button>
+
+      {isPremierLabel(section.label) && (
+        <p className="px-1 text-xs text-muted">{PREMIER_ELECTION_NOTE}</p>
+      )}
 
       {expanded && (
         <div id={panelId} className="space-y-4">
