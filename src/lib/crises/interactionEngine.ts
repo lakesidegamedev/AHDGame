@@ -33,6 +33,7 @@ import { logWireEvent } from "@/lib/wireEvent";
 import { applyCrisisEffects } from "./applyEffects";
 import { runCrisisOptionAction, type CrisisActionResult } from "./optionActions";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
+import { resolveTreasuryCashOptions } from "@/lib/nationalization/treasuryLedger";
 import { AID_MAX_PCT_GDP, AID_DEFAULT_PCT_GDP } from "@/lib/constants/crises";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -59,10 +60,21 @@ import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisIntera
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
+/**
+ * What the treasury can pay right now. A funded world pays from spendable cash
+ * (`treasuryCashLocal`), not the signed fiscal position, so checking
+ * `treasuryBalance` there let a response through that the payment then refused
+ * with a server error.
+ */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
   const budget = await federalBudgetCollection(db).findOne({
     countryId: countryId as FederalBudget["countryId"],
   });
+  const { context } = await resolveTreasuryCashOptions(db);
+  if (context?.treasuryCashLedgerEnabled === true) {
+    const cash = budget?.treasuryCashLocal;
+    return typeof cash === "number" && Number.isFinite(cash) ? cash : 0;
+  }
   return budget?.treasuryBalance ?? 0;
 }
 

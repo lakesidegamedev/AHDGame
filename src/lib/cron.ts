@@ -56,7 +56,10 @@ const TURN_CRON_MINUTE = resolveTurnCronMinute();
 const TURN_CRON_MONITOR_CONFIG = {
   schedule: { type: "crontab" as const, value: turnCronSchedule(TURN_CRON_MINUTE) },
   checkinMargin: 5,
-  maxRuntime: 5,
+  // A 2027 world turn takes 5 to 7.5 minutes (median 5.2 on 2026-11-23), so a
+  // 5 minute limit marked most healthy turns as failed and buried the real
+  // alert. 15 minutes still catches a hung turn well before the next one.
+  maxRuntime: 15,
   timezone: "UTC",
 };
 
