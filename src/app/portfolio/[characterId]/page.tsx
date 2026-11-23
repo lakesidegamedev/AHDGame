@@ -9,6 +9,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { PortfolioChart } from "@/components/charts/PortfolioChart";
+import { toneForDelta, toneText } from "@/lib/ui/tone";
 import { PortfolioBreakdownChart } from "@/components/charts/PortfolioBreakdownChart";
 import { SovereignBondHoldingsPanel } from "@/components/portfolio/SovereignBondHoldingsPanel";
 import {
@@ -198,8 +199,11 @@ export default function CharacterPortfolioPage() {
               </div>
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">Bond income</span>
-                <span className="block text-xl font-bold text-success tabular-nums">
-                  +{formatAmount(totalBondIncomePerTurn)}/turn
+                <span
+                  className={`block text-xl font-bold tabular-nums ${toneText(toneForDelta(totalBondIncomePerTurn))}`}
+                >
+                  {totalBondIncomePerTurn > 0 ? "+" : ""}
+                  {formatAmount(totalBondIncomePerTurn)}/turn
                 </span>
               </div>
             </div>

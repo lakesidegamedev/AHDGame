@@ -13,7 +13,9 @@ interface TreasuryOverviewProps {
   revenue: number;
   gotvPct: number;
   supPct: number;
+  regPct: number;
   psPct: number;
+  psSpend: number;
   netPct: number;
 }
 
@@ -27,7 +29,9 @@ export function TreasuryOverview({
   revenue,
   gotvPct,
   supPct,
+  regPct,
   psPct,
+  psSpend,
   netPct,
 }: TreasuryOverviewProps) {
   const gotvTargetLabel =
@@ -138,6 +142,13 @@ export function TreasuryOverview({
                 title={`Suppression: ${supPct.toFixed(0)}%`}
               />
             )}
+            {regPct > 0 && (
+              <div
+                className="bg-info transition-all hover:bg-info/90"
+                style={{ width: `${regPct}%` }}
+                title={`Registration: ${regPct.toFixed(0)}%`}
+              />
+            )}
             {psPct > 0 && (
               <div
                 className="bg-warning transition-all hover:bg-warning/90"
@@ -163,6 +174,12 @@ export function TreasuryOverview({
               <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-error/10 text-error border border-error/20">
                 <span className="h-2 w-2 rounded-full bg-error" />
                 Suppression {supPct.toFixed(0)}%
+              </span>
+            )}
+            {regPct > 0 && (
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-info/10 text-info border border-info/20">
+                <span className="h-2 w-2 rounded-full bg-info" />
+                Registration {regPct.toFixed(0)}%
               </span>
             )}
             {psPct > 0 && (
@@ -254,16 +271,25 @@ export function TreasuryOverview({
           </div>
         )}
 
+        {party.registrationBudgetPercent > 0 && (
+          <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+            <span className="text-foreground font-medium flex items-center gap-2">
+              Voter registration spending / hr
+              <Tooltip text="Amount automatically spent each turn on voter registration drives." />
+            </span>
+            <span className="tabular-nums font-medium text-error">
+              <div className="flex items-center gap-2">
+                <span>-{fmt(party.registrationEstimatedSpend, party.countryId)}</span>
+                <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
+                  {party.registrationBudgetPercent}%
+                </span>
+              </div>
+            </span>
+          </div>
+        )}
+
         {party.psInvestmentBudget > 0 &&
           (() => {
-            // Realized PS spend, back-derived from net income
-            // (revenue − GOTV − suppression − PS = netIncome). $0 when the party is
-            // at its PS cap: no headroom, so treasury goes unspent that turn even
-            // though it's still allocated. Surface that so "-$0" doesn't read as a bug.
-            const psSpend = Math.max(
-              0,
-              revenue - party.gotvEstimatedSpend - party.suppressionEstimatedSpend - netIncome
-            );
             const atPsCap =
               party.politicalStrength + NATIONAL_PASSIVE_PS_PER_TURN >= party.effectivePsCap;
             return (
@@ -292,7 +318,7 @@ export function TreasuryOverview({
         <div className="px-6 py-4 flex items-center justify-between text-sm font-bold bg-card-muted/20">
           <span className="flex items-center gap-2">
             Net income / hr
-            <Tooltip text="Revenue minus get-out-the-vote, suppression, and Political Strength spending. The actual amount added to the treasury each turn." />
+            <Tooltip text="Revenue minus get-out-the-vote, suppression, voter registration, and Political Strength spending. The actual amount added to the treasury each turn." />
           </span>
           {isInParty || isAdmin ? (
             <span className={`tabular-nums ${netIncome >= 0 ? "text-success" : "text-error"}`}>

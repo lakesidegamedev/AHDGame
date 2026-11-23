@@ -116,6 +116,7 @@ const CAMPAIGN_TYPES: ReadonlySet<FinancialTxType> = new Set([
   "fundraise_credit",
   "campaign_donation",
   "union_contribution",
+  "caucus_tax_debit",
 ]);
 
 /** Counterparties whose names are already public in the game. */
@@ -129,17 +130,25 @@ export function moneyHistoryKind(type: FinancialTxType): MoneyHistoryKind {
   return KIND_BY_TYPE[type] ?? "other";
 }
 
-export function moneyHistoryWallet(type: FinancialTxType): MoneyHistoryWallet {
+/** A row may name its wallet explicitly (for example a split endowment); that wins over the type. */
+export function moneyHistoryWallet(
+  type: FinancialTxType,
+  meta?: Record<string, unknown>
+): MoneyHistoryWallet {
+  if (meta?.wallet === "campaign" || meta?.wallet === "personal") return meta.wallet;
   return CAMPAIGN_TYPES.has(type) ? "campaign" : "personal";
 }
 
-/** Every type that maps to a wallet filter, for the database query. */
-export function typesForWallet(wallet: MoneyHistoryWallet): {
-  $in?: FinancialTxType[];
-  $nin?: FinancialTxType[];
-} {
+/** Mongo filter fragment selecting one wallet, mirroring `moneyHistoryWallet`. */
+export function walletFilter(wallet: MoneyHistoryWallet): Record<string, unknown> {
   const campaign = [...CAMPAIGN_TYPES];
-  return wallet === "campaign" ? { $in: campaign } : { $nin: campaign };
+  if (wallet === "campaign") {
+    return { $or: [{ "meta.wallet": "campaign" }, { type: { $in: campaign } }] };
+  }
+  return {
+    "meta.wallet": { $ne: "campaign" },
+    $or: [{ "meta.wallet": "personal" }, { type: { $nin: campaign } }],
+  };
 }
 
 export interface MoneyHistorySourceRow {
@@ -152,6 +161,7 @@ export interface MoneyHistorySourceRow {
   counterpartyType?: FinancialCounterpartyType;
   counterpartyName?: string;
   counterpartyDeletedAt?: Date;
+  meta?: Record<string, unknown>;
 }
 
 export interface MoneyHistoryRow {
@@ -177,7 +187,7 @@ export function toMoneyHistoryRow(row: MoneyHistorySourceRow): MoneyHistoryRow {
     turn: row.turn,
     at: row.createdAt.toISOString(),
     kind: moneyHistoryKind(row.type),
-    wallet: moneyHistoryWallet(row.type),
+    wallet: moneyHistoryWallet(row.type, row.meta),
     amount: row.amount,
     currencyCode: row.currencyCode,
     balanceAfter: typeof row.balanceAfter === "number" ? row.balanceAfter : null,
