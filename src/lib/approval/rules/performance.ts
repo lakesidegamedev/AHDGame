@@ -1,14 +1,25 @@
-/** Frozen opening references let all regions improve without moving their own goalposts. */
-export function performanceApproval(
-  metrics: readonly { value: number; reference: number; higherBetter: boolean }[]
-): number {
+export interface PerformanceInput {
+  value: number;
+  reference: number;
+  higherBetter: boolean;
+  label?: string;
+}
+
+/** Each metric's signed contribution, in approval points, to the performance score. */
+export function performanceComponents(metrics: readonly PerformanceInput[]) {
   const valid = metrics.filter((m) => Number.isFinite(m.value) && Number.isFinite(m.reference));
-  if (!valid.length) return 50;
-  const sum = valid.reduce((total, metric) => {
+  return valid.map((metric) => {
     const deviation = (metric.value - metric.reference) / Math.max(1, Math.abs(metric.reference));
-    return total + Math.max(-2, Math.min(2, deviation * (metric.higherBetter ? 15 : -15)));
-  }, 0);
-  return Math.round((50 + (sum / valid.length) * 10) * 10) / 10;
+    const score = Math.max(-2, Math.min(2, deviation * (metric.higherBetter ? 15 : -15)));
+    return { label: metric.label ?? "Metric", points: (score / valid.length) * 10 };
+  });
+}
+
+/** Frozen opening references let all regions improve without moving their own goalposts. */
+export function performanceApproval(metrics: readonly PerformanceInput[]): number {
+  const parts = performanceComponents(metrics);
+  if (!parts.length) return 50;
+  return Math.round((50 + parts.reduce((t, p) => t + p.points, 0)) * 10) / 10;
 }
 
 export function fiscalApprovalModifiers(debtPct: number, balancePct: number, regional = false) {

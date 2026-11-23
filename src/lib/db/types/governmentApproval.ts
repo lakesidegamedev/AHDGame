@@ -60,6 +60,8 @@ export interface GovernmentApproval {
     turn: number;
     approval: number;
     net: number;
+    /** Regional average that turn, so the rest of the move is national adjustments. */
+    stateAverage?: number;
   }>;
   /**
    * The war block's applied total as of the last snapshot: the sum of the war

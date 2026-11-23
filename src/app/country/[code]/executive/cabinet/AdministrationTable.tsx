@@ -131,7 +131,11 @@ export function AdministrationTable({
         ),
       };
     }
-    return { label: "Vacant", tone: "default" };
+    return {
+      label: "Vacant",
+      tone: "default",
+      note: position.lastNominationNote ?? undefined,
+    };
   }
 
   function seatActions(position: Position): ReactNode {

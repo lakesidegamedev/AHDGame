@@ -6,7 +6,11 @@ import {
   mergeApplicableActionEffects,
 } from "@/lib/resetCabinet/rules/actions";
 import { loadMetricLawDelivery } from "./loadLawDelivery";
-import { deliveredMetricEffects, metricLawApplies } from "./rules/lawDelivery";
+import {
+  metricLawApplies,
+  netMetricLawPressure,
+  netMetricLawPressureByFamily,
+} from "./rules/lawDelivery";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
@@ -60,14 +64,16 @@ export async function loadResetPolicyPressure(
       const applies = (p: { country: string; scope: string; regionId?: string }) =>
         (p.scope === "national" || p.scope === "regional") &&
         metricLawApplies({ ...p, scope: p.scope }, board);
-      const points = deliveredMetricEffects(laws.programs.filter(applies), laws.settlements, turn);
-      // The historical opening already embodies its statutes at full delivery.
-      // Subtract that reference once; defunding existing laws must not leave a free opening benefit.
-      for (const program of laws.opening.filter(applies))
-        for (const effect of program.primaryMetricEffects) {
-          points[effect.metricId] =
-            (points[effect.metricId] ?? 0) - effect.favorableNormalizedPoints;
-        }
+      // The opening already embodies its statutes at full delivery, so only change
+      // from that reference counts; defunding an opening law still costs its effect.
+      const points = netMetricLawPressure(
+        netMetricLawPressureByFamily(
+          laws.programs.filter(applies),
+          laws.opening.filter(applies),
+          laws.settlements,
+          turn
+        )
+      );
       const temporary = mergeApplicableActionEffects(
         combineActiveActionEffects(activeByCountry.get(board.countryId) ?? [], turn)
           .filter((e) => cabinetActionApplies(e.scope, board.scope, board.regionId))

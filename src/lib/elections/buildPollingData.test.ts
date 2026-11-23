@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
 import type { ElectionCandidate, PoliticalParty, PrimarySnapshot } from "@/lib/db/types";
-import { buildPollingData, computeSeatEstimates } from "./buildPollingData";
+import { buildPollingData, computeSeatEstimates, primaryLeadersByParty } from "./buildPollingData";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 
 // Minimal fixtures — buildPollingData only reads the fields set here.
@@ -511,5 +511,31 @@ describe("computeSeatEstimates — parity with allocateSeats (ticket #1032)", ()
     expect(projection).toEqual(resolution);
     const total = Object.values(projection).reduce((s, v) => s + v, 0);
     expect(total).toBe(10);
+  });
+});
+
+describe("primaryLeadersByParty", () => {
+  const group = (partyId: string, partyName: string, cands: [string, string, number][]) =>
+    ({
+      partyId,
+      partyName,
+      partyColor: "#000",
+      candidates: cands.map(([id, characterName, sharePct]) => ({ id, characterName, sharePct })),
+    }) as never;
+
+  it("is the same whichever order the party groups arrive in", () => {
+    const a = group("1", "Liberal", [["a", "Rachel Paquette", 100]]);
+    const b = group("2", "Conservative", [["b", "Benjamin Nasser", 100]]);
+    expect(primaryLeadersByParty([a, b])).toEqual(primaryLeadersByParty([b, a]));
+  });
+
+  it("breaks ties on candidate id and reports field size", () => {
+    const g = group("1", "Liberal", [
+      ["z", "Zed", 50],
+      ["a", "Abe", 50],
+    ]);
+    const [l] = primaryLeadersByParty([g]);
+    expect(l.name).toBe("Abe");
+    expect(l.fieldSize).toBe(2);
   });
 });

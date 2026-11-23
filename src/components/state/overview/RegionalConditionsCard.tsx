@@ -10,7 +10,12 @@ import {
   type ActiveModifier,
 } from "@/lib/approval/activeModifier";
 import { regionApprovalUrl } from "@/lib/urls";
-import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import { buildModifierExplanation, chipMargin } from "@/components/approval/modifierTitle";
+import {
+  computeRegionalConditionMargin,
+  sumRegionalConditionMargins,
+  REGIONAL_CONDITION_MARGIN_CAP,
+} from "@/lib/states/conditions/marginEffects";
 
 /** Overview shows the highest-impact drivers; the rest live on the full page. */
 const OVERVIEW_HEADLINE_MAX = 6;
@@ -35,18 +40,6 @@ function toneClass(n: number, kind: "text" | "bg" | "fill"): string {
     return "bg-error/80";
   }
   return kind === "text" ? "text-muted" : "bg-muted";
-}
-
-function marginForModifier(modifier: ActiveModifier): number | null {
-  if (
-    modifier.source === "address" ||
-    modifier.source === "war" ||
-    modifier.source === "banking" ||
-    modifier.source === "market"
-  )
-    return null;
-  if (modifier.marginEffect === 0) return null;
-  return modifier.marginEffect ?? null;
 }
 
 /**
@@ -153,9 +146,8 @@ function ApprovalMeter({
 
 function DriverRow({ modifier }: { modifier: ActiveModifier }) {
   const positive = modifier.effect > 0;
-  const margin = marginForModifier(modifier);
+  const margin = chipMargin(modifier);
   const isAddress = modifier.source === "address";
-  const isWar = modifier.source === "war";
 
   return (
     <li
@@ -164,13 +156,7 @@ function DriverRow({ modifier }: { modifier: ActiveModifier }) {
         (positive ? "border-success/25 bg-success/5" : "border-error/25 bg-error/5") +
         (isAddress ? " border-dashed" : "")
       }
-      title={
-        isAddress
-          ? "Temporary boost from an active State of the State address (approval only)"
-          : isWar
-            ? "How the war is going: the front line, whether allies are contributing, and how long the public has carried it. Fades gradually once the fighting ends. Affects approval only."
-            : "Derived from regional metric thresholds; affects approval and sector profit margins"
-      }
+      title={buildModifierExplanation(modifier).join("\n")}
     >
       <span
         className={
@@ -192,11 +178,11 @@ function DriverRow({ modifier }: { modifier: ActiveModifier }) {
         >
           {signed(modifier.effect)} appr.
         </span>
-        {margin != null && margin !== 0 && (
+        {margin != null && (
           <span
             className={
               "text-body-sm font-medium tabular-nums " +
-              (margin > 0 ? "text-success" : "text-error")
+              (margin > 0 ? "text-success" : margin < 0 ? "text-error" : "text-muted")
             }
           >
             {signed(margin)}pp margin
@@ -221,15 +207,21 @@ export function RegionalConditionsCard({
   baseApproval?: number | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const panelId = useId();
   const netApproval =
     approval != null && baseApproval != null
       ? Math.round((approval - baseApproval) * 10) / 10
       : netModifierEffect(modifiers);
   const netMargin = computeRegionalConditionMargin(modifiers);
+  const rawMargin = sumRegionalConditionMargins(modifiers);
+  const marginCapped = rawMargin !== netMargin;
   const href = regionApprovalUrl(countryId, stateId);
   const showScore = approval != null;
-  const { headline, remainder } = prioritizeModifiers(modifiers, { max: OVERVIEW_HEADLINE_MAX });
+  const { headline: topDrivers, remainder } = prioritizeModifiers(modifiers, {
+    max: OVERVIEW_HEADLINE_MAX,
+  });
+  const headline = showAll ? [...topDrivers, ...remainder] : topDrivers;
   const forces = splitConditionForces(modifiers);
   const hasForces = modifiers.length > 0;
 
@@ -283,6 +275,11 @@ export function RegionalConditionsCard({
               <div className={`mt-0.5 font-semibold tabular-nums ${toneClass(netMargin, "text")}`}>
                 {signed(netMargin, "pp")}
               </div>
+              {marginCapped && (
+                <div className="text-body-sm text-muted">
+                  from {signed(rawMargin, "pp")}, capped at {REGIONAL_CONDITION_MARGIN_CAP}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -312,7 +309,8 @@ export function RegionalConditionsCard({
                   Top drivers
                   {remainder.length > 0 && (
                     <span>
-                      , showing {headline.length} of {modifiers.length}
+                      , showing {headline.length} of {modifiers.length}, largest approval effect
+                      first
                     </span>
                   )}
                 </div>
@@ -321,6 +319,15 @@ export function RegionalConditionsCard({
                     <DriverRow key={m.id} modifier={m} />
                   ))}
                 </ul>
+                {remainder.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAll((v) => !v)}
+                    className="mt-2 text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4"
+                  >
+                    {showAll ? "Show top drivers only" : `Show all ${modifiers.length} drivers`}
+                  </button>
+                )}
               </div>
             </div>
           ) : (

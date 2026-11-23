@@ -368,3 +368,21 @@ describe("approvalModifiers", () => {
     });
   });
 });
+
+describe("prioritizeModifiers ranking", () => {
+  it("ranks approval-only effects by size so large debt costs are not hidden", async () => {
+    const { prioritizeModifiers } = await import("./approvalModifiers");
+    const mods = [
+      { id: "a", label: "A", effect: -1, marginEffect: -3 },
+      { id: "b", label: "B", effect: -1, marginEffect: -2 },
+      {
+        id: "regionalDebt",
+        label: "Debt",
+        effect: -25,
+        marginEffect: 0,
+        source: "fiscal" as const,
+      },
+    ];
+    expect(prioritizeModifiers(mods, { max: 1 }).headline[0].id).toBe("regionalDebt");
+  });
+});

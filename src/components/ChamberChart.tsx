@@ -450,11 +450,10 @@ export function MajorityBanner({
     .filter((p) => p.party !== "__vacant__")
     .sort((a, b) => b.seats - a.seats);
   const leader = sorted[0];
-  // Chamber votes count sitting members, not empty seats (S#362), so the
-  // majority line is half the filled seats plus one.
+  // A majority is half the full chamber plus one, so vacant seats raise no one's share.
   const filled = sorted.reduce((sum, p) => sum + p.seats, 0);
   const vacant = Math.max(0, total - filled);
-  const majority = Math.floor(filled / 2) + 1;
+  const majority = Math.floor(Math.max(total, filled) / 2) + 1;
   const vacantNote = vacant > 0 ? ` · ${vacant} vacant` : "";
 
   if (!leader || filled === 0) return null;

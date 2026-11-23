@@ -494,6 +494,9 @@ export function BudgetDisplay({
           <div>
             <p className="text-xs text-muted mb-0.5">Debt-to-GDP</p>
             <p className="font-semibold">{(debtToGdp * 100).toFixed(1)}%</p>
+            {ratioGdp > 0 ? (
+              <p className="text-[11px] text-muted">of smoothed budget GDP {f(ratioGdp)}</p>
+            ) : null}
           </div>
           <div>
             <p className="text-xs text-muted mb-0.5">Credit rating</p>

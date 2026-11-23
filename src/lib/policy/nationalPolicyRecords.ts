@@ -284,8 +284,16 @@ export function buildPolicyResponse(
     effectOptionId !== record.policyOptionId
       ? legislationType.policyOptions?.find((option) => option.id === effectOptionId)
       : undefined;
+  // The stored option id is the enacted level. Many ladders give every level the
+  // same economic/social lean, so matching by lean alone always lands on the first
+  // level (e.g. "No Watchdogs" for an Ethics Enforcement statute).
+  const storedOption = record.policyOptionId
+    ? legislationType.policyOptions?.find((option) => option.id === record.policyOptionId)
+    : undefined;
   const matchedOption =
-    retainedOption ?? findMatchedOption(legislationType.policyOptions, economic, social);
+    retainedOption ??
+    storedOption ??
+    findMatchedOption(legislationType.policyOptions, economic, social);
   const encodedSliderRate =
     legislationType.taxSlider || legislationType.taxRateChange
       ? readTaxPolicyRate(record.policyOptionId)

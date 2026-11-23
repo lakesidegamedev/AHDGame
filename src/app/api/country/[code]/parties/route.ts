@@ -16,6 +16,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import {
+  countDisplayedPartyPlayers,
+  type PartyPlayerUser,
+} from "@/lib/parties/rules/displayedPlayers";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { loadPartyOrganizationByRegion } from "@/lib/registration/partyOrganization";
 
@@ -72,7 +76,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .toArray()
       : Promise.resolve([]);
 
-    const [leaders, bannedUsers, nppAgg, orgAgg, partyMembers, orgByRegion] = await Promise.all([
+    const [leaders, nppAgg, orgAgg, partyMembers, orgByRegion] = await Promise.all([
       charactersCollection(db)
         .find(
           { _id: { $in: leaderIds } },
@@ -87,10 +91,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             },
           }
         )
-        .toArray(),
-      // fetch banned user IDs so we can exclude their characters
-      usersCollection<Document>(db)
-        .find({ isBanned: true }, { projection: { _id: 1 } })
         .toArray(),
       nppsCollection<Document>(db)
         .aggregate<{ _id: string; count: number }>([
@@ -117,14 +117,26 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         : Promise.resolve(new Map<string, Record<string, number>>()),
     ]);
 
-    // Build banned character set
-    const bannedUserIds = new Set(bannedUsers.map((u: { _id: ObjectId }) => u._id.toString()));
-    // Build accurate player counts excluding banned users
-    const playerCountMap = new Map<string, number>();
-    for (const char of partyMembers) {
-      if (bannedUserIds.has(char.userId.toString())) continue;
-      playerCountMap.set(char.party, (playerCountMap.get(char.party) ?? 0) + 1);
-    }
+    // Same rule as the party HQ roster: unbanned and active players only.
+    const memberUsers = partyMembers.length
+      ? await usersCollection<Document>(db)
+          .find(
+            {
+              _id: {
+                $in: [...new Set(partyMembers.map((c) => c.userId.toString()))].map(
+                  (id) => new ObjectId(id)
+                ),
+              },
+            },
+            { projection: { _id: 1, isBanned: 1, lastActivity: 1, createdAt: 1 } }
+          )
+          .toArray()
+      : [];
+    const playerCountMap = countDisplayedPartyPlayers(
+      partyMembers,
+      new Map(memberUsers.map((u) => [u._id.toString(), u as PartyPlayerUser])),
+      new Date()
+    );
 
     const nppCountMap = new Map(nppAgg.map((r) => [r._id, r.count]));
 

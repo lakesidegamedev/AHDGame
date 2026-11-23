@@ -111,6 +111,10 @@ describe("Metrics v2 approval source", () => {
     const after = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
     for (const [id, base] of before!.byRegion)
       expect(after!.byRegion.get(id)).toBeGreaterThan(base);
+    // Performance reaches approval once, through the regional bases only.
+    expect((after!.nationalModifiers ?? []).map((modifier) => modifier.id)).not.toContain(
+      "national_performance"
+    );
   });
   it("rejects a missing, mismatched, incomplete or stale owner board", async () => {
     for (const rows of [

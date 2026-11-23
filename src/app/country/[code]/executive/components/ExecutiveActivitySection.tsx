@@ -87,6 +87,7 @@ export function ExecutiveActivitySection({
   const [roster, setRoster] = useState<{ rows: RosterRow[]; filled: number; total: number } | null>(
     null
   );
+  const [rosterState, setRosterState] = useState<"loading" | "ready" | "unavailable">("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +111,11 @@ export function ExecutiveActivitySection({
       feature: "executive-cabinet",
     })
       .then((json) => {
-        if (cancelled || !Array.isArray(json?.positions)) return;
+        if (cancelled) return;
+        if (!Array.isArray(json?.positions)) {
+          setRosterState("unavailable");
+          return;
+        }
         const positions = json.positions as CabinetPositionLike[];
         setRoster({
           rows: positions.map((position) => ({
@@ -127,8 +132,11 @@ export function ExecutiveActivitySection({
           filled: positions.filter((position) => position.member).length,
           total: positions.length,
         });
+        setRosterState("ready");
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setRosterState("unavailable");
+      });
     return () => {
       cancelled = true;
     };
@@ -204,6 +212,13 @@ export function ExecutiveActivitySection({
             rows={(roster?.rows ?? []).slice(0, 8)}
             filled={roster?.filled}
             total={roster?.total}
+            emptyText={
+              rosterState === "loading"
+                ? "Loading positions."
+                : rosterState === "unavailable"
+                  ? "Positions could not be loaded. Try again shortly."
+                  : "No positions configured."
+            }
             footer={{
               href: `${executiveUrl(countryId)}/cabinet`,
               label: "All positions",

@@ -42,7 +42,8 @@ export async function GET(request: Request) {
             electedAt,
             gameTime.currentTurn,
             gameTime.lastTurnProcessed,
-            gameTime.startingYear
+            gameTime.startingYear,
+            { preIterationTurns: gameTime.preIterationTurns }
           ) || null
         : null;
 

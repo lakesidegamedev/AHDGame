@@ -15,8 +15,8 @@ const party = (party: string, seats: number): PartySeatsDisplay => ({
 
 afterEach(cleanup);
 
-describe("MajorityBanner (S#362)", () => {
-  it("measures the majority against filled seats, not the full chamber", () => {
+describe("MajorityBanner", () => {
+  it("measures the majority against the full chamber, vacancies included", () => {
     const { container } = render(
       <MajorityBanner
         seats={[party("5", 17), party("10", 15), party("__vacant__", 68)]}
@@ -24,8 +24,9 @@ describe("MajorityBanner (S#362)", () => {
         chamberLabel="Senate"
       />
     );
-    expect(container.textContent).toContain("holds Senate majority");
-    expect(container.textContent).toContain("17 needed · 68 vacant");
+    expect(container.textContent).not.toContain("holds Senate majority");
+    expect(container.textContent).toContain("51 needed for majority");
+    expect(container.textContent).toContain("68 vacant");
   });
 
   it("omits the vacancy note for a full chamber", () => {
@@ -34,5 +35,16 @@ describe("MajorityBanner (S#362)", () => {
     );
     expect(container.textContent).toContain("51 needed)");
     expect(container.textContent).not.toContain("vacant");
+  });
+
+  it("uses 218 of 435 for the US House even with seats vacant", () => {
+    const { container } = render(
+      <MajorityBanner
+        seats={[party("5", 215), party("10", 217), party("__vacant__", 3)]}
+        total={435}
+        chamberLabel="House"
+      />
+    );
+    expect(container.textContent).toContain("218 needed");
   });
 });

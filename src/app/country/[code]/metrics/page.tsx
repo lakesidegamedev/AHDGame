@@ -378,9 +378,9 @@ export default function MetricsPage() {
     if (!isPoliticalPipelineCountry) {
       const govRollup = categoryRollup(data.categories.governance ?? {}, country, preset, eraYear);
       tiles.push({
-        label: "Statistics rating",
+        label: "Governance grade",
         tone: "accent",
-        sub: "governance composite",
+        sub: "governance statistics composite, not a credit rating",
         value: ratingFromGovernance(govRollup.avgScore),
       });
     }

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { State } from "@/lib/db/types";
 import type { SerializedOfficial } from "../StatePageTabsTypes";
-import { SenateSection } from "./OfficialsSection";
+import { GovernorSection, SenateSection, StateSenateSection } from "./OfficialsSection";
 
 describe("SenateSection", () => {
   it("explains an unelected national council instead of asking admins to seed two senators", () => {
@@ -43,5 +43,59 @@ describe("SenateSection", () => {
     expect(screen.getByText("2 seats")).toBeTruthy();
     expect(screen.queryByText("100 seats")).toBeNull();
     expect(screen.getByText("Senator, Class 1")).toBeTruthy();
+  });
+});
+
+describe("empty and country-specific chambers", () => {
+  it("tells players an empty chamber has no seated members, not that an admin must act", () => {
+    render(<SenateSection state={{ countryId: "US" } as State} senators={[]} />);
+    expect(screen.queryByText(/Admin needs to initialize/)).toBeNull();
+    expect(screen.getByText(/No senate members are seated/)).toBeTruthy();
+  });
+
+  it("labels provincial legislators with the country's own office title", () => {
+    const members = [
+      { _id: "m1", characterName: "Jo Park", nppId: "n1", isNPP: true },
+    ] as unknown as SerializedOfficial[];
+    render(
+      <StateSenateSection
+        state={{ countryId: "CA" } as State}
+        stateSenators={members}
+        label="Provincial Legislature"
+        memberTitle="Member of the Provincial Legislature"
+      />
+    );
+    expect(screen.queryByText(/State senator/)).toBeNull();
+    expect(screen.getByText(/Member of the Provincial Legislature/)).toBeTruthy();
+  });
+
+  it("explains on the premier card that premiers are elected apart from the legislature", () => {
+    render(
+      <GovernorSection
+        state={{ countryId: "CA", _id: "CA_SK" } as State}
+        governor={null}
+        label="Premier"
+        note="The premier is elected in a separate vote from the legislature."
+      />
+    );
+    expect(screen.getByText(/elected in a separate vote/)).toBeTruthy();
+  });
+});
+
+describe("District of Columbia", () => {
+  it("says DC has no elected governor or legislature instead of showing Vacant", () => {
+    render(
+      <>
+        <GovernorSection state={{ _id: "DC", countryId: "US" } as State} governor={null} />
+        <StateSenateSection state={{ _id: "DC", countryId: "US" } as State} stateSenators={[]} />
+      </>
+    );
+    expect(screen.getAllByText(/no elected governor or state legislature/)).toHaveLength(2);
+    expect(screen.queryByText("Vacant")).toBeNull();
+  });
+
+  it("still shows Vacant for an ordinary state with no governor", () => {
+    render(<GovernorSection state={{ _id: "OH", countryId: "US" } as State} governor={null} />);
+    expect(screen.queryByText(/no elected governor/)).toBeNull();
   });
 });

@@ -50,11 +50,19 @@ export async function getActiveOrgStatementModifiersByCountry(
       jointStatementExpiresOnTurn: { $gt: currentTurn },
     })
     .toArray();
-  return active.map((s) => ({
-    id: `org_statement:${s._id.toString()}`,
-    label: `${s.organizationId} ${s.jointStatementStance === "endorse" ? "endorsement" : "condemnation"}`,
-    effect: jointStatementApprovalEffect(
-      (s.jointStatementStance ?? "endorse") as JointStatementStance
-    ),
-  }));
+  return active.map((s) => {
+    const endorse = s.jointStatementStance !== "condemn";
+    const expiresTurn = s.jointStatementExpiresOnTurn;
+    return {
+      id: `org_statement:${s._id.toString()}`,
+      label: `${s.organizationId} ${endorse ? "endorsement" : "condemnation"}`,
+      effect: jointStatementApprovalEffect(
+        (s.jointStatementStance ?? "endorse") as JointStatementStance
+      ),
+      detail: `${s.organizationId} joint statement ${endorse ? "endorsing" : "condemning"} this country, passed by a member vote${s.proposingCountryId ? ` proposed by ${s.proposingCountryId}` : ""}. This is separate from candidate endorsements.`,
+      ...(typeof expiresTurn === "number"
+        ? { expiresTurn, sinceTurn: expiresTurn - JOINT_STATEMENT_DURATION_TURNS }
+        : {}),
+    };
+  });
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import SupremeCourtClient from "./SupremeCourtClient";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SupremeCourtPage({ params }: PageProps) {
   const { code } = await params;
   const countryId = code.toUpperCase() as CountryId;
-  if (!COUNTRY_CONFIGS[countryId]) notFound();
+  // Only the United States has a modeled court; other countries have no page.
+  if (!COUNTRY_CONFIGS[countryId] || !countryHasFeature("supremeCourtDocket", countryId))
+    notFound();
   return <SupremeCourtClient countryId={countryId} />;
 }

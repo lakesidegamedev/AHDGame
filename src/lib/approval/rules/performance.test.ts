@@ -41,3 +41,15 @@ describe("scoped government performance", () => {
     );
   });
 });
+
+describe("performance components", () => {
+  it("sums each metric's points into the performance score", async () => {
+    const { performanceApproval, performanceComponents } = await import("./performance");
+    const metrics = [
+      { value: 80, reference: 100, higherBetter: true, label: "Output" },
+      { value: 110, reference: 100, higherBetter: true, label: "Jobs" },
+    ];
+    expect(performanceComponents(metrics).map((part) => part.label)).toEqual(["Output", "Jobs"]);
+    expect(performanceApproval(metrics)).toBe(47.5);
+  });
+});

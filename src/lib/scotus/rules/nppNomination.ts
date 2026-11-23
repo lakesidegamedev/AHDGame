@@ -7,6 +7,42 @@
 /** Turns an unconfirmed or rejected nomination blocks a re-nomination for the same seat. */
 export const SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS = 48;
 
+/**
+ * Turns a vacancy waits for a player President to nominate before the
+ * generated-scholar fallback files one in the President's own party.
+ */
+export const SCOTUS_PLAYER_NOMINATION_GRACE_TURNS = 96;
+
+/** True once a player President has had the whole grace window and nominated no one. */
+export function playerNominationGraceElapsed(
+  vacantSinceTurn: number | null | undefined,
+  currentTurn: number
+): boolean {
+  if (vacantSinceTurn == null) return false;
+  return currentTurn >= vacantSinceTurn + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS;
+}
+
+/** Turns into a vacancy when a player President gets the second reminder. */
+export const SCOTUS_PLAYER_NOMINATION_REMINDER_TURNS = 48;
+
+/**
+ * Which reminder a player President is due for this vacancy: 1 when the seat
+ * opens, 2 halfway through the grace window, null when nothing is due. Each
+ * stage is sent once; the stored stage records what has gone out.
+ */
+export function vacancyReminderDue(
+  vacantSinceTurn: number | null | undefined,
+  sentStage: number | null | undefined,
+  currentTurn: number
+): 1 | 2 | null {
+  if (vacantSinceTurn == null) return null;
+  const sent = sentStage ?? 0;
+  if (currentTurn >= vacantSinceTurn + SCOTUS_PLAYER_NOMINATION_REMINDER_TURNS && sent < 2)
+    return 2;
+  if (sent < 1) return 1;
+  return null;
+}
+
 export type ScotusPresidentKind = "player" | "npp" | "vacant";
 
 export interface ScotusPresidencySnapshot {

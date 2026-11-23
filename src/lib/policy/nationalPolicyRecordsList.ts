@@ -1,5 +1,7 @@
+import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { loadResetLawPolicyRecords } from "./resetLawPolicyRecords";
+import { loadResetLawProgramRows } from "./resetLawPolicyRecords";
+import { buildResetLawRecord, dropSupersededLegacyRecords } from "./rules/resetLawRecords";
 import type { Tariff, Subsidy } from "@/lib/db/types";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { assembleNationalPolicyRecords } from "@/lib/policy/nationalPolicyRecords";
@@ -106,6 +108,23 @@ export function buildSubsidyResponse(subsidy: Subsidy): PolicyRecordResponse {
 // Auth: public
 // Errors: 400
 /**
+ * Every national law in force: standing statutes minus the ones a reset law
+ * replaced, plus the reset laws themselves. The one source for the policy page
+ * and the country page's law count and ideology average.
+ */
+export async function assembleNationalLawRecords(db: Db, countryId: CountryId) {
+  const assembly = await assembleNationalPolicyRecords(db, countryId);
+  const rows = await loadResetLawProgramRows(db, countryId, "national");
+  return {
+    ...assembly,
+    records: [
+      ...dropSupersededLegacyRecords(assembly.records, rows),
+      ...rows.map(buildResetLawRecord),
+    ],
+  };
+}
+
+/**
  * Assemble the national policy record list (statutes + tariffs + subsidies) for
  * a country. Shared by the GET route (scope=national) and server components (the
  * policy page) so the page can seed its initial data with a direct DB call
@@ -116,7 +135,7 @@ export async function loadNationalPolicyRecords(
 ): Promise<PolicyRecordResponse[]> {
   const db = await getDb();
   await reconcileSignedTariffBills(db, countryId);
-  const { records: out } = await assembleNationalPolicyRecords(db, countryId);
+  const { records: out } = await assembleNationalLawRecords(db, countryId);
   const tariffs = await tariffsCollection(db)
     .find({ countryId })
     .sort({ updatedAt: -1, createdAt: -1 })
@@ -143,6 +162,5 @@ export async function loadNationalPolicyRecords(
     buildTariffResponse(tariff, corporationNameById, hasSpecificTariffs)
   );
   const subsidyOut = subsidies.map((subsidy) => buildSubsidyResponse(subsidy));
-  const resetLawOut = await loadResetLawPolicyRecords(db, countryId, "national");
-  return [...out, ...resetLawOut, ...tariffOut, ...subsidyOut];
+  return [...out, ...tariffOut, ...subsidyOut];
 }

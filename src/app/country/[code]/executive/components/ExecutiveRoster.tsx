@@ -21,12 +21,15 @@ export function ExecutiveRoster({
   filled,
   total,
   footer,
+  emptyText = "No positions configured.",
 }: {
   title: string;
   rows: RosterRow[];
   filled?: number;
   total?: number;
   footer?: { href: string; label: string };
+  /** Shown when there are no rows; callers say loading or unavailable rather than "none". */
+  emptyText?: string;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-card-border bg-card">
@@ -39,7 +42,7 @@ export function ExecutiveRoster({
         )}
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm italic text-muted">No positions configured.</p>
+        <p className="px-4 py-6 text-center text-sm italic text-muted">{emptyText}</p>
       ) : (
         rows.map((row) => (
           <div

@@ -118,18 +118,73 @@ export function DeadlineCell({ election }: { election: ElectionDisplay }) {
   );
 }
 
-/** Candidate count, or the leader when polling exists. */
+/** How many party leaders the list shows before collapsing the rest. */
+const MAX_PRIMARY_LEADERS_SHOWN = 3;
+
+/**
+ * Candidate count, or who is ahead.
+ *
+ * Each party primary sums to 100 on its own, so a primary race has no single
+ * leader. It shows each party's front-runner, labelled by party. A single
+ * candidate with nobody against them is marked uncontested.
+ */
 export function FieldCell({ election }: { election: ElectionDisplay }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <FieldCellBody election={election} />
+      <IncumbentNote election={election} />
+    </div>
+  );
+}
+
+/** Says so when the sitting officeholder is not defending their seat. */
+function IncumbentNote({ election }: { election: ElectionDisplay }) {
+  const inc = election.incumbent;
+  if (!inc || inc.running !== false || election.status === "completed") return null;
+  return (
+    <span className="truncate text-xs text-muted">
+      Incumbent {inc.name} not running{inc.notRunningReason ? `: ${inc.notRunningReason}` : ""}
+    </span>
+  );
+}
+
+function FieldCellBody({ election }: { election: ElectionDisplay }) {
   const count = election.candidates.length;
-  const leaderId = election.polling?.leaderId ?? null;
+  const polling = election.polling;
+  const primaryLeaders = polling?.source === "primary" ? (polling.primaryLeaders ?? []) : [];
 
   if (count === 0) {
     return <span className="text-sm text-muted">Nobody yet</span>;
   }
 
+  if (primaryLeaders.length > 0) {
+    const shown = primaryLeaders.slice(0, MAX_PRIMARY_LEADERS_SHOWN);
+    const hidden = primaryLeaders.length - shown.length;
+    return (
+      <div className="flex min-w-0 flex-col gap-0.5">
+        {shown.map((l) => (
+          <div key={l.partyId} className="flex min-w-0 items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: l.partyColor }}
+              aria-hidden
+            />
+            <span className="truncate text-sm text-foreground">{l.name}</span>
+            <span className="shrink-0 text-xs text-muted">
+              {l.fieldSize === 1 ? "Uncontested" : `${l.sharePct.toFixed(0)}%`} in {l.partyName}{" "}
+              primary
+            </span>
+          </div>
+        ))}
+        {hidden > 0 && <span className="text-xs text-muted">+{hidden} more parties</span>}
+      </div>
+    );
+  }
+
+  const leaderId = polling?.leaderId ?? null;
   if (leaderId) {
-    const share = election.polling?.sharesPct?.[leaderId];
-    const color = election.polling?.candidatePartyColors?.[leaderId] ?? "var(--muted)";
+    const share = polling?.sharesPct?.[leaderId];
+    const color = polling?.candidatePartyColors?.[leaderId] ?? "var(--muted)";
     return (
       <div className="flex min-w-0 items-center gap-2">
         <span
@@ -137,11 +192,13 @@ export function FieldCell({ election }: { election: ElectionDisplay }) {
           style={{ backgroundColor: color }}
           aria-hidden
         />
-        <span className="truncate text-sm text-foreground">
-          {election.polling?.leaderName ?? "Leading"}
-        </span>
-        {typeof share === "number" && (
-          <span className="shrink-0 text-xs tabular-nums text-muted">{share.toFixed(0)}%</span>
+        <span className="truncate text-sm text-foreground">{polling?.leaderName ?? "Leading"}</span>
+        {count === 1 ? (
+          <span className="shrink-0 text-xs text-muted">Uncontested</span>
+        ) : (
+          typeof share === "number" && (
+            <span className="shrink-0 text-xs tabular-nums text-muted">{share.toFixed(0)}%</span>
+          )
         )}
         {isCompetitiveElection(election) && (
           <span className="shrink-0 text-xs text-warning" title={CLOSE_RACE_RULE_TEXT}>
@@ -154,7 +211,7 @@ export function FieldCell({ election }: { election: ElectionDisplay }) {
 
   return (
     <span className="text-sm text-foreground">
-      {count} candidate{count === 1 ? "" : "s"}
+      {count === 1 ? "1 candidate, uncontested" : `${count} candidates`}
     </span>
   );
 }

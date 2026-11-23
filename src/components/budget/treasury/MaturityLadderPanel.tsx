@@ -12,7 +12,8 @@ interface MaturityLadderPanelProps {
   sym: string;
 }
 
-const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+const pct = (value: number) =>
+  value > 0 && value < 0.001 ? "<0.1%" : `${(value * 100).toFixed(1)}%`;
 
 const yearLabel = (year: MaturityLadderYear) =>
   year.fyOffset === 0 ? "This fiscal year" : `FY+${year.fyOffset}`;
@@ -80,7 +81,7 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
                   {year.averageCouponPct.toFixed(2)}% average
                 </span>
                 <span className={gapBp > 0 ? "text-warning" : "text-muted"}>
-                  {ladder.todayRatePct.toFixed(2)}% today ({gapBp > 0 ? "+" : ""}
+                  {ladder.todayRatePct.toFixed(2)}% new borrowing ({gapBp > 0 ? "+" : ""}
                   {gapBp} bp)
                 </span>
               </div>
@@ -98,8 +99,20 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
         )}
       </div>
 
+      <div className="mt-2 flex items-baseline justify-between gap-2 border-t border-card-border/60 pt-1.5 text-body-sm">
+        <span className="text-muted">Coupons on the whole stock</span>
+        <span className="tabular-nums text-foreground">
+          {formatFundsCompact(ladder.totalCouponCost, sym)}/yr{" "}
+          <span className="text-muted">({ladder.averageCouponPct.toFixed(2)}% average)</span>
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-muted">
+        These coupons, rows above plus later maturities, are the debt interest the budget charges. A
+        thin row is simply a bond that happens to mature that year, not a gap in the data.
+      </p>
+
       <p className="mt-2 text-[11px] text-muted">
-        Maturing face moves to today&apos;s effective rate at rollover; the trajectory premium lands
+        Maturing face moves to the new borrowing rate at rollover; the trajectory premium lands
         through these coupons, not on the whole stock at once.
       </p>
     </div>

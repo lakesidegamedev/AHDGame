@@ -82,6 +82,8 @@ export interface ResetLawProgramRow {
   billTitle: string | null;
   enactedAt: Date | null;
   enactedYear: number | null;
+  /** Legacy statute ids this program replaced; those rows must leave the book. */
+  supersededSourceIds?: readonly string[];
 }
 
 export function recordIdForResetLaw(familyId: string): string {
@@ -126,4 +128,18 @@ export function buildResetLawProvenance(
     };
   }
   return out;
+}
+
+/**
+ * Drop standing statutes that an enacted reset law replaced. The legacy row keeps
+ * its old stored level, so leaving it listed shows two contradictory laws on the
+ * same subject.
+ */
+export function dropSupersededLegacyRecords<T extends { legislationTypeId: string }>(
+  records: readonly T[],
+  rows: readonly Pick<ResetLawProgramRow, "supersededSourceIds">[]
+): T[] {
+  const superseded = new Set(rows.flatMap((row) => row.supersededSourceIds ?? []));
+  if (superseded.size === 0) return [...records];
+  return records.filter((record) => !superseded.has(record.legislationTypeId));
 }

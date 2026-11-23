@@ -21,7 +21,11 @@ export function ElectionDatesLine({ election }: { election: ElectionDetail }) {
 
   const rows: { label: string; left: string }[] = [];
   const primaryLeft = turnsLeft(election.primaryEndTurn, currentTurn);
-  if (election.inPrimary && primaryLeft) rows.push({ label: "Primary ends", left: primaryLeft });
+  if (election.inPrimary && primaryLeft) {
+    // Filing is open for exactly as long as the primary runs.
+    rows.push({ label: "Filing closes", left: primaryLeft });
+    rows.push({ label: "Primary ends", left: primaryLeft });
+  }
   const generalLeft = turnsLeft(election.endTurn, currentTurn);
   if (generalLeft) {
     rows.push({

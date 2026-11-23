@@ -432,6 +432,17 @@ describe("pastRealTimestampToLarpDate", () => {
     ).toBe(turnToLarpDate(100, 1991));
   });
 
+  it("shifts a raw turn onto the display calendar when the world burned founding turns", () => {
+    // Raw turn 160 is calendar turn 112 once 48 founding turns are removed.
+    const sixteenHoursAgo = new Date("2026-06-11T20:00:00Z");
+    expect(
+      pastRealTimestampToLarpDate(sixteenHoursAgo, 160, lastTurnProcessed, 2027, {
+        preIterationTurns: 48,
+      })
+    ).toBe(turnToLarpDate(96, 2027));
+    expect(turnToLarpDate(96, 2027)).toBe("December, Week 4, 2028");
+  });
+
   it("never maps before turn 1", () => {
     const longAgo = new Date("2020-01-01T00:00:00Z");
     expect(pastRealTimestampToLarpDate(longAgo, 5, lastTurnProcessed, 1991)).toBe(

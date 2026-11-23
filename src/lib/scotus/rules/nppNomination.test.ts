@@ -3,6 +3,7 @@ import {
   SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS,
   chooseNppNominatingParty,
   isRenominationCoolingDown,
+  vacancyReminderDue,
 } from "./nppNomination";
 
 describe("chooseNppNominatingParty", () => {
@@ -42,5 +43,15 @@ describe("isRenominationCoolingDown", () => {
     expect(isRenominationCoolingDown(ends, ends + SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS)).toBe(
       false
     );
+  });
+});
+
+describe("vacancy reminders for a player President", () => {
+  it("sends the opening notice, then the halfway reminder, each once", () => {
+    expect(vacancyReminderDue(100, null, 100)).toBe(1);
+    expect(vacancyReminderDue(100, 1, 147)).toBeNull();
+    expect(vacancyReminderDue(100, 1, 148)).toBe(2);
+    expect(vacancyReminderDue(100, 2, 190)).toBeNull();
+    expect(vacancyReminderDue(null, null, 100)).toBeNull();
   });
 });

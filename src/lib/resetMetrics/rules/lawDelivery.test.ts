@@ -4,6 +4,8 @@ import {
   hasCurrentLawSettlement,
   metricLawApplies,
   metricLawOutlaysAtTurn,
+  netMetricLawPressure,
+  netMetricLawPressureByFamily,
   type MetricLawProgram,
   type MetricLawSettlement,
 } from "./lawDelivery";
@@ -103,4 +105,74 @@ describe("actual funding evidence for outcome owners", () => {
       ).toBe(true);
     }
   );
+});
+
+describe("net statutory pressure relative to the opening law", () => {
+  const nationalOpening: MetricLawProgram = {
+    _id: "w:US:national:L31",
+    country: "US",
+    scope: "national",
+    familyId: "L31",
+    fundingAccountId: "account",
+    effectiveTurn: 1,
+    primaryMetricEffects: [{ metricId: "35", favorableNormalizedPoints: 0.63 }],
+  };
+  const regionalOpening: MetricLawProgram = {
+    _id: "w:US:TX:L31:us.environment.urbanAir.primary",
+    country: "US",
+    scope: "regional",
+    regionId: "TX",
+    familyId: "L31",
+    fundingAccountId: "regional_budget",
+    effectiveTurn: 1,
+    settlementLawId: "us.environment.urbanAir.primary",
+    openingAnnualBooked: 0,
+    primaryMetricEffects: [{ metricId: "35", favorableNormalizedPoints: 0.63 }],
+  };
+  const settled = new Map<string, MetricLawSettlement>([
+    [nationalOpening._id, { implementationFactor: 1, lastSettledTurn: 159 }],
+  ]);
+
+  it("keeps unchanged opening law at equilibrium, including unbooked regional statutes", () => {
+    const opening = [nationalOpening, regionalOpening];
+    expect(netMetricLawPressureByFamily(opening, opening, settled, 159)).toEqual({});
+  });
+
+  it("still charges a defunded opening law against the opening", () => {
+    const opening = [nationalOpening, regionalOpening];
+    const half = new Map<string, MetricLawSettlement>([
+      [nationalOpening._id, { implementationFactor: 0.5, lastSettledTurn: 159 }],
+    ]);
+    expect(netMetricLawPressure(netMetricLawPressureByFamily(opening, opening, half, 159))).toEqual(
+      { "35": -0.315 }
+    );
+  });
+
+  it("treats a booked regional statute without settlement evidence as unfunded", () => {
+    const booked = { ...regionalOpening, openingAnnualBooked: 1000 };
+    const opening = [nationalOpening, booked];
+    expect(netMetricLawPressureByFamily(opening, opening, settled, 159)).toEqual({
+      L31: { "35": -0.63 },
+    });
+  });
+
+  it("reports a replacement only by its change from the law it replaced", () => {
+    const replacement: MetricLawProgram = {
+      ...nationalOpening,
+      _id: "replacement",
+      effectiveTurn: 120,
+      primaryMetricEffects: [{ metricId: "35", favorableNormalizedPoints: 0.9 }],
+    };
+    const settlements = new Map<string, MetricLawSettlement>([
+      [replacement._id, { implementationFactor: 1, lastSettledTurn: 159 }],
+    ]);
+    expect(
+      netMetricLawPressureByFamily(
+        [replacement, regionalOpening],
+        [nationalOpening, regionalOpening],
+        settlements,
+        159
+      )
+    ).toEqual({ L31: { "35": 0.27 } });
+  });
 });

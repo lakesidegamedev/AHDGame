@@ -25,6 +25,13 @@ function historyValueLabel(
   return `${formatted}${metric.unit.startsWith("%") ? "" : " "}${metric.unit}`;
 }
 
+function axisLabel(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: Math.abs(value) < 10 ? 2 : 1,
+    notation: Math.abs(value) >= 100000 ? "compact" : "standard",
+  }).format(value);
+}
+
 export function ResetMetricHistoryChart({
   countryId,
   metric,
@@ -43,49 +50,101 @@ export function ResetMetricHistoryChart({
   }
   const width = 720;
   const height = 220;
-  const pad = 28;
+  const padX = 64;
+  const padY = 24;
   const values = history.map((point) => point.value);
   const low = Math.min(...values);
   const high = Math.max(...values);
   const flatPadding = high === low ? Math.max(Math.abs(high) * 0.02, 1) : 0;
   const chartLow = low - flatPadding / 2;
   const range = Math.max(high - low, flatPadding);
-  const points = history
-    .map((point, index) => {
-      const x = pad + (index / (history.length - 1)) * (width - pad * 2);
-      const y = height - pad - ((point.value - chartLow) / range) * (height - pad * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
   const first = history[0]!;
   const last = history.at(-1)!;
+  const turnSpan = Math.max(1, last.turn - first.turn);
+  // Position by turn, not by sample index, so uneven sampling does not misdate a change.
+  const xOf = (turn: number) => padX + ((turn - first.turn) / turnSpan) * (width - padX * 2);
+  const yOf = (value: number) => height - padY - ((value - chartLow) / range) * (height - padY * 2);
+  const points = history
+    .map((point) => `${xOf(point.turn).toFixed(1)},${yOf(point.value).toFixed(1)}`)
+    .join(" ");
+  const tickTurns = [
+    ...new Set([0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(first.turn + f * turnSpan))),
+  ];
+  const hitWidth = Math.max(8, (width - padX * 2) / Math.max(1, history.length - 1));
   return (
     <div>
       <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-56 w-full"
+        viewBox={`0 0 ${width} ${height + 18}`}
+        className="h-60 w-full"
         role="img"
-        aria-label={`${metric.name} history`}
+        aria-label={`${metric.name} history from turn ${first.turn} to turn ${last.turn}`}
       >
         <line
-          x1={pad}
-          y1={height - pad}
-          x2={width - pad}
-          y2={height - pad}
+          x1={padX}
+          y1={height - padY}
+          x2={width - padX}
+          y2={height - padY}
           className="stroke-card-border"
         />
+        <text x={padX - 6} y={yOf(high) + 4} textAnchor="end" className="fill-muted text-[11px]">
+          {axisLabel(high)}
+        </text>
+        {high !== low && (
+          <text x={padX - 6} y={yOf(low) + 4} textAnchor="end" className="fill-muted text-[11px]">
+            {axisLabel(low)}
+          </text>
+        )}
+        {tickTurns.map((turn) => (
+          <g key={turn}>
+            <line
+              x1={xOf(turn)}
+              y1={height - padY}
+              x2={xOf(turn)}
+              y2={height - padY + 4}
+              className="stroke-card-border"
+            />
+            <text
+              x={xOf(turn)}
+              y={height - padY + 16}
+              textAnchor="middle"
+              className="fill-muted text-[11px]"
+            >
+              T{turn}
+            </text>
+          </g>
+        ))}
         <polyline
           points={points}
           fill="none"
           className="stroke-primary"
-          strokeWidth="3"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
+        {history.map((point) => (
+          <g key={point.turn} className="group">
+            <rect
+              x={xOf(point.turn) - hitWidth / 2}
+              y={padY}
+              width={hitWidth}
+              height={height - padY * 2}
+              fill="transparent"
+            >
+              <title>{`Turn ${point.turn}: ${historyValueLabel(metric, countryId, point.value)}`}</title>
+            </rect>
+            <circle
+              cx={xOf(point.turn)}
+              cy={yOf(point.value)}
+              r={4}
+              className="pointer-events-none fill-primary opacity-0 group-hover:opacity-100"
+            />
+          </g>
+        ))}
       </svg>
       <div className="flex justify-between gap-4 text-body-xs text-muted">
         <span>
           Turn {first.turn}: {historyValueLabel(metric, countryId, first.value)}
         </span>
+        <span>Hover the line for each recorded turn</span>
         <span>
           Turn {last.turn}: {historyValueLabel(metric, countryId, last.value)}
         </span>
