@@ -55,3 +55,22 @@ describe("shared policy pressure", () => {
     ).toBeUndefined();
   });
 });
+
+it("keeps an unbooked opening regional statute in force without a receipt", () => {
+  const regional = {
+    ...law,
+    scope: "regional" as const,
+    regionId: "CT",
+    settlementLawId: "opening-source",
+    openingAnnualBooked: 0,
+  };
+  const result = metricPolicyPressure({
+    ...input,
+    board: { countryId: "US", scope: "regional", regionId: "CT" },
+    programs: [regional],
+    opening: [regional],
+    settlements: new Map(),
+  });
+  expect(result["16"]).toMatchObject({ grossLaw: 1.31, openingLaw: 1.31, netLaw: 0, combined: 0 });
+  expect(input.settlements.size).toBe(1);
+});

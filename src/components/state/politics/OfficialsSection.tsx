@@ -1,5 +1,6 @@
 "use client";
 
+import { regionHasNoLocalGovernment } from "@/lib/countries/us/rules/districtGovernment";
 import { useState } from "react";
 
 import type { State } from "@/lib/db/types";
@@ -132,8 +133,8 @@ export function SenateSection({
         </CollapsibleRows>
       ) : (
         <EmptyChamber>
-          <p>No {label.toLowerCase()} seats initialized yet.</p>
-          <p className="mt-1 text-body-sm">Admin needs to initialize elected officials.</p>
+          <p>No {label.toLowerCase()} members are seated for this region.</p>
+          <p className="mt-1 text-body-sm">Seats fill when the next election is held.</p>
         </EmptyChamber>
       )}
     </Chamber>
@@ -182,6 +183,14 @@ export function HouseSection({
   );
 }
 
+/** DC has no governor or state legislature in the game; the seeds carry none. */
+function isDistrictWithoutLocalGovernment(state: State): boolean {
+  return regionHasNoLocalGovernment(String(state.countryId), String(state._id));
+}
+
+const NO_LOCAL_GOVERNMENT_NOTE =
+  "The District of Columbia has no elected governor or state legislature in the game.";
+
 export function GovernorSection({
   state,
   governor,
@@ -197,6 +206,7 @@ export function GovernorSection({
    * Falls back to "governor" to preserve existing US/JP behavior.
    */
   officeType = "governor",
+  note,
 }: {
   state: State;
   governor: {
@@ -212,9 +222,18 @@ export function GovernorSection({
   } | null;
   label?: string;
   officeType?: string;
+  note?: string;
 }) {
+  if (isDistrictWithoutLocalGovernment(state)) {
+    return (
+      <Chamber title={label} meta="no office">
+        <EmptyChamber>{NO_LOCAL_GOVERNMENT_NOTE}</EmptyChamber>
+      </Chamber>
+    );
+  }
   return (
     <Chamber title={label} meta="1 seat">
+      {note && <p className="pt-3 text-body-sm text-muted">{note}</p>}
       <ul>
         <OfficialRow
           official={
@@ -247,11 +266,20 @@ export function StateSenateSection({
   state,
   stateSenators,
   label = "State Senate",
+  memberTitle = "State senator",
 }: {
   state: State;
   stateSenators: SerializedOfficial[];
   label?: string;
+  memberTitle?: string;
 }) {
+  if (stateSenators.length === 0 && isDistrictWithoutLocalGovernment(state)) {
+    return (
+      <Chamber title={label} meta="no seats">
+        <EmptyChamber>{NO_LOCAL_GOVERNMENT_NOTE}</EmptyChamber>
+      </Chamber>
+    );
+  }
   return (
     <Chamber
       title={label}
@@ -266,7 +294,7 @@ export function StateSenateSection({
                 <OfficialRow
                   key={senator._id}
                   official={senator}
-                  title="State senator"
+                  title={memberTitle}
                   subtitle={seatCountLabel(senator.seatsHeld ?? 1)}
                   isVacant={!senator.characterId && !senator.nppId}
                   countryId={state.countryId}

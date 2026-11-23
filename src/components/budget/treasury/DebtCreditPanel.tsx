@@ -28,16 +28,31 @@ function ratingClasses(rating: CreditRating): string {
   return "border-error/40 bg-error/10 text-error";
 }
 
-function KV({ label, value, delta }: { label: string; value: string; delta?: ReactNode }) {
+function KV({
+  label,
+  value,
+  delta,
+  title,
+  sub,
+}: {
+  label: string;
+  value: string;
+  delta?: ReactNode;
+  title?: string;
+  sub?: string;
+}) {
   return (
     <div>
-      <div className="text-body-sm font-medium text-muted">{label}</div>
+      <div className="text-body-sm font-medium text-muted" title={title}>
+        {label}
+      </div>
       <div className="mt-0.5 flex items-baseline gap-1.5">
         <span className="font-mono text-[15px] font-bold tabular-nums text-foreground">
           {value}
         </span>
         {delta}
       </div>
+      {sub ? <div className="mt-0.5 text-[11px] leading-snug text-muted">{sub}</div> : null}
     </div>
   );
 }
@@ -45,13 +60,17 @@ function KV({ label, value, delta }: { label: string; value: string; delta?: Rea
 interface DebtCreditPanelProps {
   sym: string;
   principal: number;
-  /** The rate the "Why this rate" table composes from today's inputs. */
+  /** The rate new borrowing would pay today, from the "Why this rate" table. */
   interestRate: number;
-  /** Rate stored at the last rollover; shown only when it differs. */
+  /** New-borrowing rate stored at the last rollover; shown only when it differs. */
   bookedRate?: number;
+  /** Annual interest the budget charges. Its ratio to principal is the rate actually paid. */
+  debtInterest?: number;
   ceiling: number;
   ceilingLabel: string;
   debtToGdp: number;
+  /** Smoothed GDP the debt-to-GDP ratio divides by, in local currency. */
+  ratioGdp?: number;
   rating: CreditRating;
   /** Debt-to-GDP percentages over the FY history, for the trend sparkline. */
   trend: number[];
@@ -67,9 +86,11 @@ export function DebtCreditPanel({
   principal,
   interestRate,
   bookedRate,
+  debtInterest,
   ceiling,
   ceilingLabel,
   debtToGdp,
+  ratioGdp,
   rating,
   trend,
   trendRange,
@@ -89,6 +110,7 @@ export function DebtCreditPanel({
       <div className="mb-3 flex items-center justify-between">
         <div className="text-sm font-semibold text-foreground">Debt &amp; credit</div>
         <span
+          title="Sovereign credit rating, set from debt-to-GDP and the country's sovereign risk anchor. The bond pages show this same rating."
           className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${ratingClasses(rating)}`}
         >
           {rating}
@@ -99,7 +121,9 @@ export function DebtCreditPanel({
         <KV label="Debt principal" value={money(principal)} />
         <KV
           label="Debt-to-GDP"
+          title="Outstanding bond principal divided by smoothed budget GDP, not headline GDP, so it can differ slightly from principal over the GDP shown elsewhere."
           value={`${(debtToGdp * 100).toFixed(1)}%`}
+          sub={ratioGdp && ratioGdp > 0 ? `of smoothed budget GDP ${money(ratioGdp)}` : undefined}
           delta={
             compare ? (
               <Delta
@@ -111,12 +135,27 @@ export function DebtCreditPanel({
             ) : undefined
           }
         />
-        <KV label="Effective rate" value={`${(interestRate * 100).toFixed(2)}%`} />
+        {debtInterest != null && principal > 0 && (
+          <KV
+            label="Average rate paid"
+            value={`${((debtInterest / principal) * 100).toFixed(2)}%`}
+          />
+        )}
+        <KV label="New borrowing rate" value={`${(interestRate * 100).toFixed(2)}%`} />
         {bookedRate != null && Math.abs(bookedRate - interestRate) > 0.00005 && (
-          <KV label="Booked at last rollover" value={`${(bookedRate * 100).toFixed(2)}%`} />
+          <KV
+            label="New borrowing rate at last rollover"
+            value={`${(bookedRate * 100).toFixed(2)}%`}
+          />
         )}
         <KV label={ceilingLabel} value={money(ceiling)} />
       </div>
+
+      <p className="mt-2 text-[11px] text-muted">
+        Interest is charged at the coupons the existing bonds were issued at, so the average rate
+        paid sits between old and new rates. The new borrowing rate is what bonds issued or rolled
+        over today would pay.
+      </p>
 
       {/* Debt-to-GDP scale */}
       <div className="mt-4">

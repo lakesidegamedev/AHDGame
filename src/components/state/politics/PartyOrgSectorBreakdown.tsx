@@ -21,7 +21,11 @@ export function PartyOrgSectorBreakdown({ partyOrg }: { partyOrg: PartyOrgDispla
 
   return (
     <div>
-      <h3 className="mb-3 text-body text-muted">Party organization</h3>
+      <h3 className="mb-1 text-body text-muted">Party organization</h3>
+      <p className="mb-3 text-body-sm text-muted">
+        Organization is each party&apos;s share of the ground game in this state. It is built by
+        party officers and is separate from how many voters are registered with the party.
+      </p>
 
       <div className="flex h-6 w-full gap-px overflow-hidden rounded-md">
         {active.map((po) => (

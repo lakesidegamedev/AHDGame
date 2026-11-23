@@ -44,6 +44,8 @@ import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { sovereignMaturityLadder } from "@/lib/budget/rules/maturityLadder";
+import { spendingAreaForLaw, type SpendingAreaId } from "@/lib/budget/rules/portfolioSpendingLines";
+import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
@@ -492,15 +494,33 @@ export async function loadFederalBudgetDetail(params: {
     new Set(enactedLaws.map((l) => l.legislationTypeId).filter((id): id is string => !!id))
   );
   const revenueTaxTypeByLegId = new Map<string, string>();
+  const spendingAreaByLegId = new Map<string, SpendingAreaId>();
   if (legislationTypeIds.length > 0) {
     const legislationTypes = await legislationTypesCollection<{
       _id: string;
       taxRateChange?: { taxType?: string };
+      policyDomain?: string;
+      administration?: { primaryPortfolioId?: string };
     }>(db)
-      .find({ _id: { $in: legislationTypeIds } }, { projection: { "taxRateChange.taxType": 1 } })
+      .find(
+        { _id: { $in: legislationTypeIds } },
+        {
+          projection: {
+            "taxRateChange.taxType": 1,
+            policyDomain: 1,
+            "administration.primaryPortfolioId": 1,
+          },
+        }
+      )
       .toArray();
     for (const t of legislationTypes) {
       if (t.taxRateChange?.taxType) revenueTaxTypeByLegId.set(t._id, t.taxRateChange.taxType);
+      const area = spendingAreaForLaw({
+        legislationTypeId: t._id,
+        policyDomain: t.policyDomain,
+        portfolioId: t.administration?.primaryPortfolioId,
+      });
+      if (area) spendingAreaByLegId.set(t._id, area);
     }
   }
   const { items: federalLawCosts } = await calculateFederalLawAnnualCosts(
@@ -515,8 +535,12 @@ export async function loadFederalBudgetDetail(params: {
       ? revenueTaxTypeByLegId.get(law.legislationTypeId)
       : undefined;
     const annualCost = annualCostByLawId.get(law._id.toString());
+    const spendingArea = law.legislationTypeId
+      ? spendingAreaByLegId.get(law.legislationTypeId)
+      : undefined;
     return {
       ...law,
+      ...(spendingArea ? { spendingArea } : {}),
       ...(revenueTaxType ? { revenueTaxType } : {}),
       ...(annualCost != null ? { annualCost } : {}),
     };
@@ -561,12 +585,24 @@ export async function loadFederalBudgetDetail(params: {
         matured: { $ne: true },
         defaulted: { $ne: true },
       },
-      { projection: { totalIssued: 1, couponRate: 1, maturityTurn: 1 } }
+      {
+        projection: {
+          issuerType: 1,
+          matured: 1,
+          defaulted: 1,
+          totalIssued: 1,
+          restructureHaircutPercent: 1,
+          couponRate: 1,
+          maturityTurn: 1,
+        },
+      }
     )
     .toArray();
+  // Same outstanding face the coupon book charges interest on, so the ladder
+  // adds up to the interest line instead of drifting by restructure haircuts.
   const maturityLadder = sovereignMaturityLadder(
     sovereignBonds.map((bond) => ({
-      principal: bond.totalIssued,
+      principal: sovereignBondOutstanding(bond),
       couponRatePct: bond.couponRate,
       maturityTurn: bond.maturityTurn,
     })),

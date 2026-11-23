@@ -8,7 +8,23 @@ import type { PartyData } from "./types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles";
 import { NppAbbr } from "@/components/elections/NppAbbr";
-import type { PartyLeadershipTitleKey } from "@/lib/db/types/party";
+import { partyMemberOfficeLabels } from "./partyMemberRole";
+import { stateRoleLabel } from "@/lib/parties/rules/stateRoles";
+
+function memberRoleLabel(
+  party: PartyData,
+  m: PartyData["members"][number],
+  isCampaigner: boolean
+): string | null {
+  if (m.isNPP) return null;
+  const labels = partyMemberOfficeLabels(party, m.id);
+  if (labels.length) return labels.join(", ");
+  if (m.stateRoles?.length)
+    return m.stateRoles
+      .map((r) => stateRoleLabel(r, displayCanadianRegionCode(r.stateId)))
+      .join(", ");
+  return isCampaigner ? "Campaigner" : null;
+}
 
 type RosterFilter = "all" | "player" | "npp";
 
@@ -101,24 +117,7 @@ export function MembersPanel({ party }: { party: PartyData }) {
             <tbody className="divide-y divide-card-border border-b border-card-border">
               {filteredMembers.map((m) => {
                 const isCampaigner = !m.isNPP && party.campaigners.some((c) => c.id === m.id);
-                const roleKey: PartyLeadershipTitleKey | null =
-                  !m.isNPP && m.id === party.chair?.id
-                    ? "chair"
-                    : !m.isNPP && m.id === party.viceChair?.id
-                      ? "viceChair"
-                      : !m.isNPP && m.id === party.treasurer?.id
-                        ? "treasurer"
-                        : null;
-                const role = roleKey
-                  ? party.leadershipTitles?.[roleKey]?.trim() ||
-                    (roleKey === "viceChair"
-                      ? "Vice Chair"
-                      : roleKey === "treasurer"
-                        ? "Treasurer"
-                        : "Chair")
-                  : isCampaigner
-                    ? "Campaigner"
-                    : null;
+                const role = memberRoleLabel(party, m, isCampaigner);
                 return (
                   <tr
                     key={m.isNPP ? `npp-${m.id}` : m.id}

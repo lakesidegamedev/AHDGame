@@ -160,6 +160,15 @@ describe("PrimaryBlendView", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("never tells a primary map reader a state carries 0 electoral votes", async () => {
+    stubFetch(() => detailFor("1", "First Filer"));
+    render(<PrimaryBlendView election={election()} wire={[]} />);
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /Iowa/ }).length).toBeGreaterThan(0)
+    );
+    expect(screen.queryAllByRole("button", { name: /electoral votes/i })).toHaveLength(0);
+  });
+
   it("leaves the rest of the screen standing when the detail cannot be loaded", async () => {
     stubFetch(() => null);
     render(<PrimaryBlendView election={election()} wire={[]} />);

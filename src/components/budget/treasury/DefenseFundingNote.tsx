@@ -4,6 +4,19 @@ import type { DefenseFundingPosition } from "@/lib/publicFinance/queries/defense
 import type { OrganizationContributionPosition } from "@/lib/publicFinance/queries/organizationContributions";
 import { formatFundsCompact1dp } from "@/lib/utils/formatters";
 
+/** Two decimals so a row of near-equal lines still adds up to the shown total. */
+function formatMoney2dp(amount: number, sym: string): string {
+  const abs = Math.abs(amount);
+  if (abs >= 1e12) return `${sym}${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${sym}${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sym}${(abs / 1e6).toFixed(2)}M`;
+  return `${sym}${abs.toFixed(0)}`;
+}
+
+function formatDuesRate(rateAnnual: number): string {
+  return `${parseFloat((rateAnnual * 100).toFixed(4))}%`;
+}
+
 export interface DefenseFundingNoteProps {
   sym: string;
   funding: DefenseFundingPosition;
@@ -16,6 +29,8 @@ export interface DefenseFundingNoteProps {
   soeNetPerTurn?: number | null;
   /** Recurring dues or tribute debited directly from the treasury per turn. */
   organizationContributions?: OrganizationContributionPosition | null;
+  /** Whole-budget balance per turn (revenue less spending). Negative is a deficit. */
+  budgetBalancePerTurn?: number | null;
 }
 
 /**
@@ -31,8 +46,12 @@ export function DefenseFundingNote({
   funding,
   soeNetPerTurn,
   organizationContributions,
+  budgetBalancePerTurn,
 }: DefenseFundingNoteProps) {
   const money = (n: number) => formatFundsCompact1dp(n, sym);
+  const money2 = (n: number) => formatMoney2dp(n, sym);
+  const wholeDeficit =
+    budgetBalancePerTurn != null && budgetBalancePerTurn < 0 ? -budgetBalancePerTurn : 0;
   const moneySigned = (n: number) =>
     `${n < 0 ? "-" : ""}${formatFundsCompact1dp(Math.abs(n), sym)}`;
   const overdrawn = (funding.potBalance ?? 0) < 0;
@@ -75,15 +94,28 @@ export function DefenseFundingNote({
           </p>
         </div>
         <div>
-          <div className="text-body-sm font-medium text-muted">New treasury debt per turn</div>
+          <div className="text-body-sm font-medium text-muted">New defence debt per turn</div>
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
             {money(treasuryDraw)}
           </div>
           <p className="mt-1 text-[11px] leading-snug text-muted">
-            Actual new debt after the appropriation pot applies this turn&apos;s accrual and upkeep.
-            Existing appropriation debt is not charged again.
+            Defence only: new debt after the appropriation pot applies this turn&apos;s accrual and
+            upkeep. Existing appropriation debt is not charged again. It is not the whole budget
+            deficit.
           </p>
         </div>
+        {wholeDeficit > 0 ? (
+          <div>
+            <div className="text-body-sm font-medium text-muted">Whole-budget deficit per turn</div>
+            <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
+              {money(wholeDeficit)}
+            </div>
+            <p className="mt-1 text-[11px] leading-snug text-muted">
+              One turn&apos;s share of annual spending above revenue, all lines included. It is
+              borrowed through bond sales, separately from the defence draw.
+            </p>
+          </div>
+        ) : null}
         <div>
           <div className="text-body-sm font-medium text-muted">Appropriation balance</div>
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
@@ -117,7 +149,7 @@ export function DefenseFundingNote({
               International organization contributions per turn
             </div>
             <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
-              {money(organizationBacking)}
+              {money2(organizationBacking)}
             </div>
             <p className="mt-1 text-[11px] leading-snug text-muted">
               Dues or tribute for current memberships. Charged directly to the treasury and not
@@ -127,7 +159,15 @@ export function DefenseFundingNote({
               <ul className="mt-2 space-y-1 text-[11px] leading-snug text-muted">
                 {organizationContributions.lines.map((line) => (
                   <li key={`${line.organizationId}:${line.kind}`}>
-                    {line.organizationId.replaceAll("_", " ")} {line.kind}: {money(line.perTurn)}
+                    {line.organizationName ?? line.organizationId.replaceAll("_", " ")} {line.kind}:{" "}
+                    {money2(line.perTurn)}
+                    {line.rateAnnual != null
+                      ? ` (${formatDuesRate(line.rateAnnual)} of GDP a year${
+                          line.isDefaultRate
+                            ? ", the default rate until members vote a different one"
+                            : ""
+                        })`
+                      : null}
                   </li>
                 ))}
               </ul>

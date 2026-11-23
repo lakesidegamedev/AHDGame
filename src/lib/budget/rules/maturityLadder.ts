@@ -40,7 +40,13 @@ export interface SovereignMaturityLadder {
   years: MaturityLadderYear[];
   /** Face maturing beyond the horizon, so the total still reconciles. */
   beyondPrincipal: number;
+  /** Annual coupons on the face beyond the horizon, so coupons reconcile too. */
+  beyondCouponCost: number;
   totalPrincipal: number;
+  /** Annual coupons across the whole stock: the interest the coupon book charges. */
+  totalCouponCost: number;
+  /** Total coupons over total face, in percent: the rate actually charged. */
+  averageCouponPct: number;
   todayRatePct: number;
 }
 
@@ -90,7 +96,9 @@ export function sovereignMaturityLadder(
     repricingGapPct: 0,
   }));
   let beyondPrincipal = 0;
+  let beyondCouponCost = 0;
   let totalPrincipal = 0;
+  let totalCouponCost = 0;
 
   for (const bond of rows) {
     const turnsUntil = bond.maturityTurn - currentTurn;
@@ -99,8 +107,10 @@ export function sovereignMaturityLadder(
     const coupon = (bond.principal * bond.couponRatePct) / 100;
     const repriced = (bond.principal * todayRatePct) / 100;
     totalPrincipal += bond.principal;
+    totalCouponCost += coupon;
     if (!bucket) {
       beyondPrincipal += bond.principal;
+      beyondCouponCost += coupon;
       continue;
     }
     bucket.principal += bond.principal;
@@ -114,7 +124,15 @@ export function sovereignMaturityLadder(
     year.repricingGapPct = year.principal > 0 ? todayRatePct - year.averageCouponPct : 0;
   }
 
-  return { years, beyondPrincipal, totalPrincipal, todayRatePct };
+  return {
+    years,
+    beyondPrincipal,
+    beyondCouponCost,
+    totalPrincipal,
+    totalCouponCost,
+    averageCouponPct: totalPrincipal > 0 ? (totalCouponCost / totalPrincipal) * 100 : 0,
+    todayRatePct,
+  };
 }
 
 export interface MaturityLadderHighlights {

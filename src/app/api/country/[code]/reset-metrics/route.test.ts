@@ -257,7 +257,7 @@ it("reports zero net change for fully delivered opening laws and normalizes lega
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.metrics.find((m: { id: string }) => m.id === "16")).toMatchObject({
-      legislativeEffect: { favorableNormalizedPoints: 0 },
+      legislativeEffect: null,
       policyPressure: { grossLaw: 1.31, openingLaw: 1.31, netLaw: 0, cabinet: 0, combined: 0 },
     });
     expect(payload.metrics.find((m: { id: string }) => m.id === "18").unit).toBe(

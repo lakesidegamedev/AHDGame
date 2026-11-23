@@ -6,10 +6,8 @@ import type { EnactedLaw } from "@/lib/db/types/budget";
 import { getLegislationTypeById } from "@/lib/legislationTypeAliases";
 import { computeNationalAxes } from "@/lib/policy/nationalAxes";
 import { buildAxisEvents, replayAxesTimeline } from "@/lib/policy/axesTimeline";
-import {
-  assembleNationalPolicyRecords,
-  nationalLawCountryQuery,
-} from "@/lib/policy/nationalPolicyRecords";
+import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
+import { assembleNationalLawRecords } from "@/lib/policy/nationalPolicyRecordsList";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 // GET /api/country/[code]/national-axes - National Ideology axes (equal-weight
@@ -26,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
     const db = await getDb();
 
-    const { records, types } = await assembleNationalPolicyRecords(db, countryId);
+    const { records, types } = await assembleNationalLawRecords(db, countryId);
     const axes = computeNationalAxes(records);
 
     // Replay enacted-law history (oldest first) for the movers feed and the

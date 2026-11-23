@@ -43,6 +43,7 @@ import {
 } from "@/lib/elections/engine/midtermOppositionBoost";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
+import { incumbentCandidacy } from "@/lib/elections/rules/incumbentCandidacy";
 
 import { seatEstimateForVoteTotals } from "@/lib/elections/snapshotSeats";
 import { getPartyHex } from "@/lib/utils/politics";
@@ -398,9 +399,18 @@ export async function enrichElectionResults(
   }
 
   // Resolve incumbent display info from raw partyId → party name + color
-  let incumbentDisplay: { name: string; party: string; partyColor: string | null } | null = null;
+  let incumbentDisplay: ElectionResponse["incumbent"] = null;
   if (context.deps.incumbent) {
     const incumbentParty = context.partyMap.get(context.deps.incumbent.partyId);
+    const candidacy = incumbentCandidacy({
+      incumbentId: context.deps.incumbent.id ?? null,
+      candidateIds: context.candidates.map((c) => ({
+        characterId: c.characterId?.toString() ?? null,
+        nppId: c.nppId?.toString() ?? null,
+      })),
+      termLimited: context.deps.incumbent.termLimited === true,
+      filingOpen: context.election.status === "active",
+    });
     incumbentDisplay = {
       name: context.deps.incumbent.name,
       party:
@@ -409,6 +419,9 @@ export async function enrichElectionResults(
           ? "Independent"
           : context.deps.incumbent.partyId),
       partyColor: incumbentParty?.color ?? null,
+      ...(context.deps.incumbent.id
+        ? { running: candidacy.running, notRunningReason: candidacy.reason }
+        : {}),
     };
   }
 

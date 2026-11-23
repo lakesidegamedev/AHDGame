@@ -28,6 +28,11 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import {
+  describeLastNomination,
+  lastNominationOutcomes,
+  type ClosedNominationInput,
+} from "@/lib/cabinet/lastNominationOutcome";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -42,23 +47,43 @@ export async function GET(request: Request) {
     const db = await getDb();
     const authUser = await getAuthUser().catch(() => null);
 
-    const [cabinetMembers, nominations, presidentOfficial, myCharacter, parties] =
-      await Promise.all([
-        cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
-        cabinetNominationsCollection(db)
-          .find({ countryId, status: { $in: ["active", "proposed"] } })
-          .sort({ proposedAt: -1 })
-          .toArray(),
-        electedOfficialsCollection(db).findOne({
-          countryId,
-          officeType: "president",
-          characterId: { $ne: null },
-        }),
-        authUser
-          ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
-          : Promise.resolve(null),
-        politicalPartiesCollection(db).find({ countryId }).toArray(),
-      ]);
+    const [
+      cabinetMembers,
+      nominations,
+      closedNominations,
+      presidentOfficial,
+      myCharacter,
+      parties,
+    ] = await Promise.all([
+      cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
+      cabinetNominationsCollection(db)
+        .find({ countryId, status: { $in: ["active", "proposed"] } })
+        .sort({ proposedAt: -1 })
+        .toArray(),
+      cabinetNominationsCollection(db)
+        .find({ countryId, status: { $in: ["rejected", "withdrawn"] } })
+        .project({
+          positionId: 1,
+          nomineeCharacterName: 1,
+          status: 1,
+          votesFor: 1,
+          votesAgainst: 1,
+          votingEndsOnTurn: 1,
+          proposedAt: 1,
+        })
+        .sort({ proposedAt: -1 })
+        .limit(500)
+        .toArray(),
+      electedOfficialsCollection(db).findOne({
+        countryId,
+        officeType: "president",
+        characterId: { $ne: null },
+      }),
+      authUser
+        ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
+        : Promise.resolve(null),
+      politicalPartiesCollection(db).find({ countryId }).toArray(),
+    ]);
 
     // Build party lookup map using composite key for safety
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -102,6 +127,9 @@ export async function GET(request: Request) {
 
     const memberByPosition = new Map(cabinetMembers.map((m) => [m.positionId, m]));
     const nominationByPosition = new Map(nominations.map((n) => [n.positionId, n]));
+    const lastOutcomeByPosition = lastNominationOutcomes(
+      closedNominations as ClosedNominationInput[]
+    );
     const myCharId = myCharacter?._id.toString();
 
     const positions = resolveCabinetRoster(
@@ -180,6 +208,11 @@ export async function GET(request: Request) {
               myVote,
             }
           : null,
+        // Why a vacant seat is still vacant: the latest closed nomination.
+        lastNominationNote:
+          !member && !nomination && lastOutcomeByPosition.has(pos.id)
+            ? describeLastNomination(lastOutcomeByPosition.get(pos.id)!)
+            : null,
         // Whether this President has already spent their one acting
         // appointment for this seat. Drives the disabled state on the appoint
         // control, so the rule is visible before it is hit.

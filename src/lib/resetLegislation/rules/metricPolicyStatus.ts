@@ -67,6 +67,13 @@ export function buildMetricLawStatuses(input: {
   references: Readonly<Record<string, OpeningLawReference>>;
   programs: readonly CurrentProgram[];
   delivery: readonly LawProgramDelivery[];
+  /**
+   * Net pressure per family and metric relative to the opening law, the quantity
+   * the metric owner settles on. When present it replaces the authored gross
+   * points, so a replacement law reads only as strong as its change from the
+   * law it replaced, and an underfunded opening law reads as a drag.
+   */
+  netByFamily?: Readonly<Record<string, Readonly<Record<string, number>>>>;
   /** Turn of the next annual funding round, shown to programs that have not been funded yet. */
   nextFundingTurn?: number | null;
 }): Readonly<Record<string, MetricLawStatus[]>> {
@@ -88,14 +95,16 @@ export function buildMetricLawStatuses(input: {
 
     for (const metricId of family.primaryMetricIds) {
       const rows = byMetric.get(metricId) ?? [];
+      const net = input.netByFamily ? (input.netByFamily[family.id]?.[metricId] ?? 0) : null;
       if (!program) {
+        const drift = net !== null && Math.abs(net) >= 0.00005;
         rows.push({
           familyId: family.id,
           familyTitle: family.title,
           currentLawTitle: reference.currentLaw,
           policyLevelTitle: levelTitle(family, openingChoice),
-          state: "equilibrium",
-          favorableNormalizedPoints: null,
+          state: drift ? (net > 0 ? "pushing_favorable" : "pushing_unfavorable") : "equilibrium",
+          favorableNormalizedPoints: drift ? net : null,
         });
       } else {
         const implementationFactor = deliveryByFamily.get(family.id) ?? 0;
@@ -109,9 +118,9 @@ export function buildMetricLawStatuses(input: {
         const authored = program.primaryMetricEffects.find(
           (effect) => effect.metricId === metricId
         );
-        const points = Number(
-          ((authored?.favorableNormalizedPoints ?? 0) * implementationFactor).toFixed(4)
-        );
+        const points =
+          net ??
+          Number(((authored?.favorableNormalizedPoints ?? 0) * implementationFactor).toFixed(4));
         const awaiting = awaitingFamilies.has(family.id) && implementationFactor === 0;
         rows.push({
           familyId: family.id,

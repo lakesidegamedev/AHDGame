@@ -44,6 +44,10 @@ export function RegistrationLedgerCard({ regLedger }: { regLedger: StateRegLedge
         </span>
         <span className="text-body-sm text-muted">registration</span>
       </div>
+      <p className="mt-1 text-body-sm text-muted">
+        Registration is the share of voters signed up with the party. Organization is the share of
+        the ground game the party has built; the two can differ.
+      </p>
       {movement.length >= 2 ? (
         <RegSparkline points={movement} color={headline.color} />
       ) : (

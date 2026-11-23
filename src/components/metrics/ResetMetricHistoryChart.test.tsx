@@ -36,7 +36,7 @@ describe("auditable metric display", () => {
       />
     );
     expect(container.querySelector("polyline")?.getAttribute("points")).toBe(
-      "28.0,192.0 640.9,110.0 692.0,28.0"
+      "64.0,196.0 610.5,110.0 656.0,24.0"
     );
     expect(screen.getByRole("table", { hidden: true }).textContent).toContain("13");
     expect(screen.getByText("View sampled turn values")).toBeTruthy();

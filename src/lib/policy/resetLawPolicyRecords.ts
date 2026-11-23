@@ -57,6 +57,7 @@ export async function loadResetLawProgramRows(
       descriptionSnapshot: program.descriptionSnapshot,
       effectiveTurn: program.effectiveTurn,
       enactedByBillId: program.enactedByBillId.toString(),
+      supersededSourceIds: program.supersededSourceIds ?? [],
       billTitle: bill?.title ?? null,
       enactedAt,
       // The game year the program took effect, like every other statute's enactedYear.

@@ -98,4 +98,40 @@ describe("buildMetricLawStatuses", () => {
     expect(next! - 10).toBeLessThanOrEqual(48);
     expect(nextAnnualFundingTurn(next!, 40)! - next!).toBe(48);
   });
+
+  it("reports net change from the opening law when net pressure is supplied", () => {
+    const program = {
+      familyId: "L02",
+      choice: "center_left" as const,
+      titleSnapshot: "Essential Benefit Guarantee",
+      primaryMetricEffects: [{ metricId: "01", favorableNormalizedPoints: 0.7 }],
+    };
+    const replaced = buildMetricLawStatuses({
+      country: "US",
+      scope: "national",
+      families: [family],
+      references: { [family.id]: reference },
+      programs: [program],
+      delivery: [{ familyId: "L02", implementationFactor: 1 }],
+      netByFamily: {},
+    });
+    expect(replaced["01"]?.[0]).toMatchObject({
+      state: "equilibrium",
+      favorableNormalizedPoints: 0,
+    });
+    const defunded = buildMetricLawStatuses({
+      country: "US",
+      scope: "national",
+      families: [family],
+      references: { [family.id]: reference },
+      programs: [],
+      delivery: [],
+      netByFamily: { L02: { "01": -0.35 } },
+    });
+    expect(defunded["01"]?.[0]).toMatchObject({
+      currentLawTitle: reference.currentLaw,
+      state: "pushing_unfavorable",
+      favorableNormalizedPoints: -0.35,
+    });
+  });
 });

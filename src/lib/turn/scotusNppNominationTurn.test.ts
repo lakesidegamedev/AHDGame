@@ -6,6 +6,7 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/scotus/nominateJustice", () => ({
   createJusticeNomination: vi.fn(),
 }));
+vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
 
 const cursor = (rows: unknown[]) => ({
   toArray: vi.fn().mockResolvedValue(rows),
@@ -22,6 +23,8 @@ describe("processScotusNppNominations", () => {
     db.collection("supremeCourtSeats");
     db.collection("electedOfficials");
     db.collection("scotusNominations");
+    db.collection("characters");
+    db.collectionMocks.characters!.findOne.mockResolvedValue({ userId: new ObjectId() });
     db.collectionMocks.scotusNominations!.find.mockReturnValue(cursor([]));
     const { createJusticeNomination } = await import("@/lib/scotus/nominateJustice");
     vi.mocked(createJusticeNomination).mockResolvedValue({
@@ -51,6 +54,38 @@ describe("processScotusNppNominations", () => {
     expect((await run()).skipped).toBe("player-president");
     const { createJusticeNomination } = await import("@/lib/scotus/nominateJustice");
     expect(createJusticeNomination).not.toHaveBeenCalled();
+  });
+
+  it("starts the vacancy clock for a player President's unstamped seat", async () => {
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue(cursor([{ seatNumber: 2 }]));
+    db.collectionMocks.electedOfficials!.findOne.mockResolvedValue({
+      officeType: "president",
+      characterId: new ObjectId(),
+      party: "democrat",
+    });
+    await run(500);
+    expect(db.collectionMocks.supremeCourtSeats!.updateMany).toHaveBeenCalledWith(
+      expect.anything(),
+      { $set: { vacantSinceTurn: 500 } }
+    );
+  });
+
+  it("files a nomination in a player President's party once the grace window has passed", async () => {
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue(
+      cursor([{ seatNumber: 2, vacantSinceTurn: 100 }])
+    );
+    db.collectionMocks.electedOfficials!.findOne.mockResolvedValue({
+      officeType: "president",
+      characterId: new ObjectId(),
+      characterName: "Player President",
+      party: "democrat",
+    });
+    expect(await run(100 + 96)).toEqual({ nominated: 1 });
+    const { createJusticeNomination } = await import("@/lib/scotus/nominateJustice");
+    expect(vi.mocked(createJusticeNomination).mock.calls[0][1]).toMatchObject({
+      seatNumber: 2,
+      generateNppLegalScholar: { party: "democrat" },
+    });
   });
 
   it("files a nomination in the NPP President's party", async () => {
@@ -109,5 +144,32 @@ describe("processScotusNppNominations", () => {
     expect(await run(500)).toEqual({ nominated: 1 });
     const { createJusticeNomination } = await import("@/lib/scotus/nominateJustice");
     expect(vi.mocked(createJusticeNomination).mock.calls[0][1]).toMatchObject({ seatNumber: 4 });
+  });
+
+  it("reminds a player President when a seat opens and again halfway, once each", async () => {
+    const { createNotifications } = await import("@/lib/notifications");
+    db.collectionMocks.electedOfficials!.findOne.mockResolvedValue({
+      officeType: "president",
+      characterId: new ObjectId(),
+      party: "democrat",
+    });
+    const seat = (stage: number | null) =>
+      cursor([
+        { _id: new ObjectId(), seatNumber: 2, vacantSinceTurn: 100, vacancyReminderStage: stage },
+      ]);
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue(seat(null));
+    await run(100);
+    expect(vi.mocked(createNotifications).mock.calls.at(-1)![0][0]!.title).toBe(
+      "Supreme Court seat 2 is vacant"
+    );
+    vi.mocked(createNotifications).mockClear();
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue(seat(1));
+    await run(120);
+    expect(createNotifications).not.toHaveBeenCalled();
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue(seat(1));
+    await run(148);
+    expect(vi.mocked(createNotifications).mock.calls.at(-1)![0][0]!.message).toContain(
+      "by turn 196"
+    );
   });
 });

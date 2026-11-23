@@ -9,7 +9,7 @@
 import type { InboxItem } from "@/lib/inbox/inboxItem";
 import { Avatar } from "./Avatar";
 import { CatChip } from "./CatChip";
-import { CATEGORY_VISUALS, URGENCY_VISUALS } from "./inboxVisuals";
+import { categoryVisualFor, URGENCY_VISUALS } from "./inboxVisuals";
 
 interface RailItemProps {
   item: InboxItem;
@@ -19,7 +19,7 @@ interface RailItemProps {
 }
 
 export function RailItem({ item, selected, compact, onSelect }: RailItemProps) {
-  const category = CATEGORY_VISUALS[item.category];
+  const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
   const eyebrow = item.label;
 

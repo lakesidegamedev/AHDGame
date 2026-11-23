@@ -6,6 +6,7 @@ import {
   metricHasPolicyPressure,
   metricOwnerLabel,
   metricRefreshLabel,
+  metricDomainId,
   metricFreshnessLabel,
   playerMetricDescription,
   playerMetricDescriptionIds,
@@ -16,6 +17,7 @@ describe("reset metric player presentation", () => {
     expect(metricFreshnessLabel(311)).toBe("Last updated: turn 311");
     expect(metricFreshnessLabel(289, true)).toBe("Oldest regional update: turn 289");
     expect(metricFreshnessLabel(undefined)).toBe("Last updated: not recorded");
+    expect(metricFreshnessLabel(48, true, "election")).toBe("From the election on turn 48");
   });
   it("authors readable drilldown copy for every primary metric", () => {
     expect(new Set(playerMetricDescriptionIds)).toEqual(
@@ -36,6 +38,12 @@ describe("reset metric player presentation", () => {
     expect(metricAggregationLabel(unemployment.aggregation)).toContain(
       "underlying people or events"
     );
+  });
+
+  it("groups military readiness with energy security", () => {
+    expect(metricDomainId({ id: "57", path: "governance.militaryReadiness" })).toBe("security");
+    expect(metricDomainId({ id: "58", path: "security.energySecurity" })).toBe("security");
+    expect(metricDomainId({ id: "48", path: "governance.corruptionIndex" })).toBe("governance");
   });
 });
 

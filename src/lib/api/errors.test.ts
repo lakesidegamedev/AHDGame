@@ -196,6 +196,15 @@ describe("handleRouteError", () => {
     expect(body.code).toBe("BAD_REQUEST");
   });
 
+  it("tells the player a funded treasury is short instead of returning a server error", () => {
+    const error = new Error("Funded Treasury cash cannot cover 69415478660 for US");
+    error.name = "InsufficientFundedTreasuryCash";
+    const result = handleRouteError(error);
+    expect(result.status).toBe(409);
+    expect((result as any).data.error).toMatch(/treasury does not have enough cash/);
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
   it("returns 500 response for non-Error objects", () => {
     const result = handleRouteError("string error");
     expect(result.status).toBe(500);

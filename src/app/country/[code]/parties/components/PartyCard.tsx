@@ -63,6 +63,7 @@ export function PartyCard({
               <span className="font-medium text-foreground">{party.abbreviation}</span>
               {regimeLabel && <> · {regimeLabel}</>}
               {tier === "major" ? " · Major party" : " · Minor party"}
+              {party.memberCount === 0 && " · Dormant, no members"}
             </p>
             {party.isDefault && <DefaultPartyBadge />}
           </div>

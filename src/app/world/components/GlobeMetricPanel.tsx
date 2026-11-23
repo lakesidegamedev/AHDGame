@@ -113,8 +113,9 @@ export default function GlobeMetricPanel({
   return (
     <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-none flex justify-center">
       <div className="pointer-events-auto max-w-3xl w-full bg-card rounded-xl border border-card-border shadow-lg overflow-hidden">
-        {/* Top row: quick filters */}
-        <div className="flex items-center gap-1 px-3 py-2 border-b border-card-border overflow-x-auto scrollbar-none">
+        {/* Top row: quick filters. Wraps on wider screens so no filter hides
+            past the edge with no scroll cue; a phone keeps one swipeable row. */}
+        <div className="scroll-cue-x flex items-center gap-1 gap-y-1.5 px-3 py-2 border-b border-card-border overflow-x-auto scrollbar-none sm:flex-wrap sm:overflow-visible">
           {blocsAvailable && (
             <FilterChip
               label="Blocs"

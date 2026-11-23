@@ -10,6 +10,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryCode } from "@/lib/country/countryCodes";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import { reconcileRegionApproval } from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
 interface StateApprovalData {
@@ -61,6 +62,9 @@ export function RegionApprovalClient({
     ? Math.round((data.governmentApproval - data.governmentApprovalBase) * 10) / 10
     : 0;
   const netMargin = computeRegionalConditionMargin(modifiers);
+  const reconciliation = data
+    ? reconcileRegionApproval(data.governmentApprovalBase, modifiers)
+    : null;
 
   const backHref = regionUrl(countryId, stateId);
   const nationalHref = approvalUrl(countryId);
@@ -141,6 +145,36 @@ export function RegionApprovalClient({
                 )}
               </div>
               <ModifierList modifiers={modifiers} emptyText="No active effects." />
+              {reconciliation && modifiers.length > 0 && (
+                <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Base score</dt>
+                    <dd className="tabular-nums">{reconciliation.base.toFixed(1)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Conditions and decisions listed above</dt>
+                    <dd className="tabular-nums">
+                      {reconciliation.effects > 0 ? "+" : ""}
+                      {reconciliation.effects.toFixed(1)}
+                    </dd>
+                  </div>
+                  {reconciliation.adjustments !== 0 && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted">
+                        Cap, gradual movement toward target, and floor or ceiling
+                      </dt>
+                      <dd className="tabular-nums">
+                        {reconciliation.adjustments > 0 ? "+" : ""}
+                        {reconciliation.adjustments.toFixed(1)}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-4 border-t border-card-border/40 pt-1 font-medium">
+                    <dt>Approval</dt>
+                    <dd className="tabular-nums">{reconciliation.total.toFixed(1)}%</dd>
+                  </div>
+                </dl>
+              )}
             </div>
           </div>
         )}

@@ -24,6 +24,7 @@ import {
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import { effectivePsInvestmentBudget } from "@/lib/parties/rules/nppTreasurySpendDown";
 import { getPartyHex } from "@/lib/utils/politics";
+import { isDisplayedPartyPlayer } from "@/lib/parties/rules/displayedPlayers";
 import {
   calculateTaxAmount,
   projectCharacterGeneration,
@@ -32,13 +33,14 @@ import {
 import { campaignAnchorToLocal, campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isUserActive } from "@/lib/players/playerActivity";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRolesByPerson } from "@/lib/parties/rules/stateRoles";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import type { Document } from "mongodb";
@@ -201,16 +203,25 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   const now = new Date();
   const activeMemberUserIds = new Set(
     memberUsers
-      .filter(
-        (user) => user.isBanned !== true && isUserActive(user.lastActivity, user.createdAt, now)
-      )
+      .filter((user) => isDisplayedPartyPlayer(user, now))
       .map((user) => user._id.toString())
   );
   const displayMembers = members.filter((member) =>
     activeMemberUserIds.has(member.userId.toString())
   );
 
+  const stateOrgs = await statePartyOrgCollection(db)
+    .find(
+      { countryId: partyCountry, partyId: String(party.sequentialId) },
+      { projection: { stateId: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+    )
+    .toArray();
+  const stateRoles = stateRolesByPerson(stateOrgs);
+
   const characterMembers: PartyMember[] = displayMembers.map((member) => ({
+    ...(stateRoles.has(member._id.toString())
+      ? { stateRoles: stateRoles.get(member._id.toString()) }
+      : {}),
     id: member._id.toString(),
     sequentialId: member.sequentialId,
     name: member.name,

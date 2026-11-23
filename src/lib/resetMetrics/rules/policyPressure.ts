@@ -1,5 +1,8 @@
 import {
   deliveredMetricEffects,
+  isUnbookedOpeningStatute,
+  netMetricLawPressure,
+  netMetricLawPressureByFamily,
   metricLawApplies,
   type MetricLawProgram,
   type MetricLawSettlement,
@@ -23,10 +26,18 @@ export function metricPolicyPressure(input: {
   turn: number;
   temporary: readonly { target: string; favorableNormalizedPoints: number }[];
 }): Record<string, MetricPolicyPressure> {
-  const gross = deliveredMetricEffects(
-    input.programs.filter((p) => metricLawApplies(p, input.board)),
-    input.settlements,
-    input.turn
+  const programs = input.programs.filter((p) => metricLawApplies(p, input.board));
+  const openingPrograms = input.opening.filter((p) => metricLawApplies(p, input.board));
+  const effectiveSettlements = new Map(input.settlements);
+  for (const program of programs)
+    if (isUnbookedOpeningStatute(program, input.settlements))
+      effectiveSettlements.set(program._id, {
+        implementationFactor: 1,
+        lastSettledTurn: input.turn,
+      });
+  const gross = deliveredMetricEffects(programs, effectiveSettlements, input.turn);
+  const net = netMetricLawPressure(
+    netMetricLawPressureByFamily(programs, openingPrograms, input.settlements, input.turn)
   );
   const opening: Record<string, number> = {};
   for (const program of input.opening.filter((p) => metricLawApplies(p, input.board)))
@@ -41,7 +52,7 @@ export function metricPolicyPressure(input: {
   return Object.fromEntries(
     [...new Set([...Object.keys(gross), ...Object.keys(opening), ...Object.keys(cabinet)])].map(
       (id) => {
-        const netLaw = (gross[id] ?? 0) - (opening[id] ?? 0);
+        const netLaw = net[id] ?? 0;
         return [
           id,
           {

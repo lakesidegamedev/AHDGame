@@ -21,6 +21,8 @@ import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
 import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/catalog";
 import { withPostLaunchReferences } from "@/lib/resetLegislation/rules/postLaunchReferences";
+import { openingLawTitle } from "@/lib/resetLegislation/rules/openingLawTitle";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { resetCabinetActions } from "@/lib/resetCabinet/catalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import {
@@ -31,7 +33,11 @@ import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
-import { deliveredLawFactor, metricLawApplies } from "@/lib/resetMetrics/rules/lawDelivery";
+import {
+  deliveredLawFactor,
+  metricLawApplies,
+  netMetricLawPressureByFamily,
+} from "@/lib/resetMetrics/rules/lawDelivery";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
@@ -191,9 +197,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       countryIds: [countryId],
       regions: board.board.regionId ? [{ _id: board.board.regionId, countryId }] : [],
     });
-    const applicable = [...laws.programs, ...laws.opening].filter((p) =>
-      metricLawApplies(p, board.board)
-    );
     const pressure = metricPolicyPressure({
       board: board.board,
       ...laws,
@@ -203,14 +206,48 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         favorableNormalizedPoints: effect.favorableNormalizedPoints,
       })),
     });
+    const netByFamily = netMetricLawPressureByFamily(
+      laws.programs.filter((p) => metricLawApplies(p, board.board)),
+      laws.opening.filter((p) => metricLawApplies(p, board.board)),
+      laws.settlements,
+      board.board.asOfTurn
+    );
+    const openingReferences = openingLawBoard ? withPostLaunchReferences(openingLawBoard) : {};
+    const componentIds = [
+      ...new Set(
+        Object.values(openingReferences).flatMap((reference) =>
+          reference.sourceComponents.map((component) => component.sourceId)
+        )
+      ),
+    ];
+    const lawTypes = componentIds.length
+      ? await legislationTypesCollection(db)
+          .find({ _id: { $in: componentIds } }, { projection: { name: 1, policyOptions: 1 } })
+          .toArray()
+      : [];
+    const lawTypeById = new Map(lawTypes.map((type) => [String(type._id), type]));
+    const readableReferences = Object.fromEntries(
+      Object.entries(openingReferences).map(([familyId, reference]) => [
+        familyId,
+        {
+          ...reference,
+          currentLaw: openingLawTitle(reference, (sourceId, optionIndex) => {
+            const type = lawTypeById.get(sourceId);
+            const level = type?.policyOptions?.[optionIndex]?.name;
+            return type?.name && level ? { lawName: type.name, levelName: level } : null;
+          }),
+        },
+      ])
+    );
     const standingLaws = openingLawBoard
       ? buildMetricLawStatuses({
           country: countryId,
           scope: board.board.scope,
           families: resetLawFamilies,
-          references: withPostLaunchReferences(openingLawBoard),
+          references: readableReferences,
           programs,
           delivery,
+          netByFamily,
           nextFundingTurn: nextAnnualFundingTurn(
             board.board.asOfTurn,
             getSharedFiscalYearStartTurnInYear()
@@ -245,20 +282,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
               }
             : null,
           policyPressure: policyPressure ?? null,
-          legislativeEffect: policyPressure
-            ? {
-                favorableNormalizedPoints: policyPressure.netLaw,
-                contributingPrograms: [
-                  ...new Set(
-                    applicable
-                      .filter((p) =>
-                        p.primaryMetricEffects.some((e) => e.metricId === definition.id)
-                      )
-                      .map((p) => resetLawFamilyById(p.familyId)?.title ?? "Legislative program")
-                  ),
-                ],
-              }
-            : null,
+          legislativeEffect:
+            policyPressure && Math.abs(policyPressure.netLaw) >= 0.00005
+              ? {
+                  favorableNormalizedPoints: policyPressure.netLaw,
+                  contributingPrograms: Object.entries(netByFamily)
+                    .filter(([, metrics]) => metrics[definition.id] !== undefined)
+                    .map(
+                      ([familyId]) => resetLawFamilyById(familyId)?.title ?? "Legislative program"
+                    ),
+                }
+              : null,
           standingLaws: standingLaws[definition.id] ?? [],
         };
       });
