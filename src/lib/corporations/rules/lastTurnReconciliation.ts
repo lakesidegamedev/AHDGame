@@ -169,6 +169,21 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   corp_supply_agreement: { key: "supply_agreement", label: "Supply agreement settlements" },
 };
 
+/**
+ * Stored per-turn income is operating profit after tax, dividends and fees. It
+ * leaves out bond coupons and issuer interest, which settle in the bond phase
+ * and move cash. The walk treats retained income as including them (they are
+ * listed beside it and their ledger rows are not a cash line), so add them here
+ * once, from the same stored figures the Financials net income uses.
+ */
+export function retainedWithBondFlows(
+  income: number,
+  bondCouponIncome: number | null | undefined,
+  bondInterestPaid: number | null | undefined
+): number {
+  return income + Math.max(0, bondCouponIncome ?? 0) - Math.max(0, bondInterestPaid ?? 0);
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

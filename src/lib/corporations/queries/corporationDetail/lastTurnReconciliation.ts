@@ -7,6 +7,7 @@ import {
   reconcileLastTurn,
   type CashFlowInput,
   type LastTurnReconciliation,
+  retainedWithBondFlows,
 } from "@/lib/corporations/rules/lastTurnReconciliation";
 
 interface HistoryProjection {
@@ -177,7 +178,11 @@ export async function loadLastTurnReconciliation(
       turn: latest.turn,
       revenue: latest.revenue,
       totalCosts: latest.totalCosts,
-      retained: latest.income,
+      retained: retainedWithBondFlows(
+        latest.income,
+        anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
+        anchorToLocal(latest.perTurnBondDragOnNetIncome, latest.fxRateAtWrite)
+      ),
       dividendPaid: Math.max(0, latest.dividendPaidPerTurn ?? 0),
       tax: Math.max(0, latest.corporateTaxPaid ?? 0),
       bondCouponIncome: anchorToLocal(latest.perTurnBondCouponIncome, latest.fxRateAtWrite),
