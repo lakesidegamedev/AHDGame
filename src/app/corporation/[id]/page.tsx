@@ -179,6 +179,9 @@ function useCorporationDetailPageContext() {
   const isPendingCeo =
     !!corporation && !!myCharacterId && corporation.pendingCeoCharacterId === myCharacterId;
   const hasLoaded = useRef(false);
+  // Only the newest request may write: a slow earlier response (another view
+  // mode or a turn refresh) must not overwrite what a later one already set.
+  const latestFetchId = useRef(0);
   // Sticky tabs on a phone sit under the site navbar; measured on the page root.
   const navbarRootRef = useSiteNavbarHeight();
 
@@ -265,12 +268,15 @@ function useCorporationDetailPageContext() {
 
   const fetchCorporation = useCallback(async () => {
     const url = makeCorpApiUrl();
+    const fetchId = ++latestFetchId.current;
+    const isCurrent = () => latestFetchId.current === fetchId;
 
     // Only show the full-page skeleton on the initial load; refreshes update data silently
     // so that local subtab state (e.g. CEO Office subtab) is not reset on save.
 
     return fetch(url)
       .then(async (res) => {
+        if (!isCurrent()) return;
         if (!res.ok) {
           // A proxy error or deploy restart can return an empty or non-JSON body, so read
           // the error envelope leniently instead of letting res.json() throw.
@@ -287,6 +293,7 @@ function useCorporationDetailPageContext() {
           return;
         }
         const data = await readCorporationResponse(res, url);
+        if (!isCurrent()) return;
         setError("");
         setErrorRef(null);
         setCorporation(data.corporation);

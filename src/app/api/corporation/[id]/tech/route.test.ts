@@ -82,6 +82,8 @@ describe("GET /api/corporation/[id]/tech", () => {
       defaultRevenueFraction: 0.05,
       capacityFloorApplied: true,
       minimumCashCost: 4_900_000,
+      // A node with a running value pays at least a tenth of the floor.
+      valuedMinimumCashCost: 490_000,
     });
   });
 

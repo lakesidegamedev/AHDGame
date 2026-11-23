@@ -30,6 +30,7 @@ import {
   hasSettledOperatingHistory,
 } from "@/lib/corporations/investment/rules";
 import { STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
+import { unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
 import {
   deliveredFraction,
   resolveBuildSettledTurn,
@@ -209,10 +210,15 @@ export function buildSectorPlantsSection(args: {
       : null;
   const idleUnits =
     capacityUnits != null && producedUnits != null ? nonNeg(capacityUnits - producedUnits) : null;
-  const fillRate =
+  // A settled receipt gives the one sector-level figure: units sold over units
+  // offered, the same share the sector list and the money panel print.
+  const legacyFillRate =
     producedUnits != null && producedUnits > 0 && soldUnits != null
       ? Math.min(1, nonNeg(soldUnits) / producedUnits)
       : null;
+  const fillRate =
+    (settledOffer ? unitsSoldShare(settledOffer.offered, settledOffer.sold) : null) ??
+    legacyFillRate;
 
   // Buyers' room is reported against the plant that would receive the build.
   // A sector its own demand throttle held back last turn already has idle

@@ -180,3 +180,13 @@ it("warns how much of next turn's run the build would cut before the confirm but
     ).toBeTruthy()
   );
 });
+
+it("shows a forecast reason per sector when the sector has no result to project from", async () => {
+  const { rowForecast } = await import("./BulkBuildCapacityDialog");
+  expect(rowForecast(null, 100)).toEqual({ kind: "none", reason: "Forecast unavailable" });
+  const idle = { capacityUnits: 0, mothballed: false } as never;
+  expect(rowForecast(idle, 100)).toEqual({
+    kind: "none",
+    reason: "No forecast yet: no plants running here",
+  });
+});

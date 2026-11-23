@@ -1,4 +1,5 @@
 import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosure";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { NextResponse } from "next/server";
@@ -109,7 +110,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
     if (user) {
       if (corporation) {
-        isCeo = corporation.userId != null && corporation.userId.toString() === user.userId;
+        isCeo = isCeoActor(corporation, user);
       }
       const [forexEnabled, bankPropTradingEnabled, userDoc] = await Promise.all([
         isForexEnabled(),

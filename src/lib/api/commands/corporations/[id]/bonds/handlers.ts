@@ -9,6 +9,7 @@ import { issueBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import type { Corporation, Bond } from "@/lib/db/types";
 import { getTurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import { withCorpLock } from "@/lib/corporations/corpMoneyLock";
@@ -202,7 +203,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     let isCeo = false;
     const user = await getAuthUser();
     if (user) {
-      isCeo = corporation.userId?.toString() === user.userId;
+      isCeo = isCeoActor(corporation, user);
     }
     const modViewEnabled =
       !user?.isAdmin &&
@@ -219,10 +220,16 @@ export async function GET(request: Request, { params }: RouteParams) {
       corporation,
       user?.userId,
       user?.isAdmin === true,
-      modViewEnabled
+      modViewEnabled,
+      user?.activeCharacterId
     );
     if (redact && user?.userId) {
-      redact = !(await isSittingCeoOfControllingParent(db, corporation, user.userId));
+      redact = !(await isSittingCeoOfControllingParent(
+        db,
+        corporation,
+        user.userId,
+        user.activeCharacterId
+      ));
     }
     if (redact) {
       return NextResponse.json({
@@ -507,7 +514,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     // CEO check
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (corporation.imfBailoutActive) {

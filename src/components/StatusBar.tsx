@@ -12,6 +12,7 @@ import {
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useRefetchNav, useHasSession } from "@/contexts/AuthDataContext";
+import { noteServerCharacter } from "@/lib/activeCharacterGuard";
 import { CHARACTER_STATS_UPDATED, CHARACTER_STATS_REFETCH } from "@/lib/characterStatsSync";
 import {
   useCharacterStats,
@@ -222,6 +223,10 @@ export function StatusBar({
     const data = result.data;
     if (!data) return;
     if (data.status === "no-character") return;
+    noteServerCharacter(
+      typeof data.id === "string" ? data.id : null,
+      typeof data.name === "string" ? data.name : null
+    );
     // Another session switched the active character. Replace the held figures
     // whole (never merge numbers into the other character's), and bring the
     // nav and server-rendered page back in step.

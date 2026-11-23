@@ -1,9 +1,7 @@
-import { referenceValuation } from "../acquisitions/referenceValuation";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
 import {
-  PRIVATIZATION_BUYOUT_PREMIUM,
   PRIVATIZATION_THRESHOLD_PCT,
   PRIVATIZATION_VOTE_DURATION_TURNS,
 } from "@/lib/constants/corporations";
@@ -12,19 +10,7 @@ import {
   refundCharacterCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
-import {
-  anchorToCorpCapital,
-  corpCapitalToAnchor,
-  fxRateForCorpFromMap,
-  loadFxRatesByCurrency,
-} from "@/lib/currency/corporationCapital";
-import { loadBankingPolicy } from "@/lib/banking/policy";
-import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
-import {
-  applyBankNavFloor,
-  bankNavFloorPerShareAnchor,
-  takeoverBankNav,
-} from "../takeovers/rules/bankNavFloor";
+import { quotePrivatizationBuyout } from "./privatizationQuote";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
@@ -187,62 +173,8 @@ export async function openPrivatizationVote(
   const lockedCurrency = corporation.liquidCurrencyCode ?? "USD";
   const ceoCurrency = getHomeCurrency(character);
 
-  // Round to two decimal places to avoid float drift through later arithmetic.
-  const marketLockedPrice =
-    Math.round(corporation.sharePrice * (1 + PRIVATIZATION_BUYOUT_PREMIUM) * 100) / 100;
-  // Bank-NAV floor: a take-private forces out the minority like a squeeze-out, so it shares the same floor. Otherwise a CEO could buy a bank-heavy corp at market price and capture the bank's net assets cheaply. Inert without an active charter; missing floor fails open to market locked price, never zero.
-  let lockedBuyoutPrice = marketLockedPrice;
-  let bankNavFloorApplied = false;
-  const activeCharter =
-    corporation.bankCharter?.status === "active" ? corporation.bankCharter : null;
-  if (activeCharter) {
-    try {
-      const fxByCurrency = await loadFxRatesByCurrency(db);
-      const bankCurrency = activeCharter.currency;
-      let playerDepositsAreLiabilities = false;
-      try {
-        const bankingPolicy = await loadBankingPolicy(db);
-        playerDepositsAreLiabilities = bankCurrency
-          ? savingsReadsAuthoritative(bankingPolicy, bankCurrency)
-          : false;
-      } catch {
-        playerDepositsAreLiabilities = false;
-      }
-      const navAnchor = corpCapitalToAnchor(
-        takeoverBankNav(activeCharter, { playerDepositsAreLiabilities }),
-        bankCurrency,
-        bankCurrency ? (fxByCurrency.get(bankCurrency) ?? 1) : 1
-      );
-      const floorLocked = anchorToCorpCapital(
-        bankNavFloorPerShareAnchor({
-          bankNavAnchor: navAnchor,
-          totalShares: corporation.totalShares ?? 0,
-        }),
-        lockedCurrency,
-        fxRateForCorpFromMap(corporation, fxByCurrency)
-      );
-      const floored = applyBankNavFloor(marketLockedPrice, floorLocked);
-      if (floored.floorApplied) {
-        lockedBuyoutPrice = Math.round(floored.pricePerShareAnchor * 100) / 100;
-        bankNavFloorApplied = true;
-      }
-    } catch {
-      // Floor infra unavailable: proceed at the market locked price.
-    }
-  }
-  const assetFloor = await referenceValuation(db, corporation);
-  if (assetFloor.minimumPriceAnchor > 0) {
-    const assetFloorFx = await loadFxRatesByCurrency(db);
-    lockedBuyoutPrice = Math.max(
-      lockedBuyoutPrice,
-      anchorToCorpCapital(
-        assetFloor.minimumPriceAnchor / Math.max(1, corporation.totalShares),
-        lockedCurrency,
-        fxRateForCorpFromMap(corporation, assetFloorFx)
-      )
-    );
-  }
-  const totalReservedCash = Math.ceil(nonCeoShares * lockedBuyoutPrice);
+  const quote = await quotePrivatizationBuyout(db, corporation, ceoShares);
+  const { lockedBuyoutPrice, totalReservedCash, bankNavFloorApplied } = quote;
 
   // Cross-currency privatization is out of scope for v1 — surface a clear error.
   // This only matters under forex; legacy USD corps + USD CEOs always pass.

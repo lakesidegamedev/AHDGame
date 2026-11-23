@@ -104,6 +104,16 @@ describe("owner sale-tax preview", () => {
       (await db.collection("characters").findOne({}))!.pendingStockTaxReceipts
     ).toBeUndefined();
   });
+  it("shows cost basis, gain and rate so withheld tax equals gain times rate", async () => {
+    const { preview } = await fixture();
+    const body = await (await preview(10)).json();
+    const b = body.taxBreakdown;
+    expect(b.costBasis).toBeCloseTo(40);
+    expect(b.shortTermGain + b.longTermGain).toBeCloseTo(body.grossProceeds - b.costBasis);
+    const rate = b.longTermGain > 0 ? b.longTermRatePct : b.shortTermRatePct;
+    expect(((b.shortTermGain + b.longTermGain) * rate) / 100).toBeCloseTo(body.withheldTax, 0);
+    expect(b.shortTermTax + b.longTermTax).toBeCloseTo(body.withheldTax);
+  });
   it("rejects invalid quantities and quantities above the owned holding", async () => {
     const { preview } = await fixture();
     expect((await preview(-1)).status).toBe(400);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { ObjectId, type Db, type Document, type Filter, type UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -474,7 +475,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
-      if (corp.userId?.toString() !== user.userId) {
+      if (!isCeoActor(corp, user)) {
         return errorResponse(403, "Only the CEO can sell bonds for a corporation");
       }
 

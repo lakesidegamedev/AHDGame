@@ -76,7 +76,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       db,
       corporation,
       authUser?.userId ?? undefined,
-      authUser?.isAdmin === true
+      authUser?.isAdmin === true,
+      false,
+      authUser?.activeCharacterId
     );
 
     const selfId = corporation._id.toString();

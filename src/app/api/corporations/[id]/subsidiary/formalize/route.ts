@@ -52,6 +52,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       parent,
       target: targetResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       turn,
       now: new Date(),
     });

@@ -17,6 +17,7 @@ import { getControllingCorporateParent } from "@/lib/corporations/corporateOwner
 import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/authorization";
 import { ObjectId } from "mongodb";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import {
@@ -88,19 +89,22 @@ export async function loadSectorDetailContext({
   if (user && controllingParent) {
     const parentCorp = await corporationsCollection(db).findOne(
       { _id: controllingParent.corporationId },
-      { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
+      {
+        projection: {
+          userId: 1,
+          ceoId: 1,
+          ceoType: 1,
+          caretakerCeo: 1,
+          ceoVacant: 1,
+          name: 1,
+          sequentialId: 1,
+        },
+      }
     );
-    isParentCeo =
-      !!parentCorp &&
-      parentCorp.ceoVacant !== true &&
-      parentCorp.userId?.toString() === user.userId;
+    isParentCeo = !!parentCorp && isCeoActor(parentCorp, user);
     // The parent CEO may retool an AI-run managed subsidiary's sectors; the
     // strategy command re-checks the same rule.
-    if (
-      parentCorp &&
-      isParentCeo &&
-      (await canDirectSubsidiaryAsParent(db, new ObjectId(user.userId), corporation))
-    ) {
+    if (parentCorp && isParentCeo && (await canDirectSubsidiaryAsParent(db, user, corporation))) {
       parentDirection = {
         parentName: parentCorp.name,
         parentPathId: corporationPathIdFromDoc(parentCorp),
@@ -110,7 +114,13 @@ export async function loadSectorDetailContext({
   }
   const shouldRedact =
     !isParentCeo &&
-    shouldRedactCorporation(corporation, user?.userId ?? undefined, viewerIsAdmin, modViewEnabled);
+    shouldRedactCorporation(
+      corporation,
+      user?.userId ?? undefined,
+      viewerIsAdmin,
+      modViewEnabled,
+      user?.activeCharacterId
+    );
   // Financial fog of war (public corps only, non-insiders), mirrors the
   // protection GET /api/corporations/[id] already applies, so a competitor
   // can't see a public corp's live sector financials through this page when

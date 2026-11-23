@@ -3,6 +3,7 @@
  * loadArrearsView performs one indexed read for the displayed turn and never
  * exposes these private cash balances to other viewers.
  */
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -15,16 +16,12 @@ export async function loadArrearsView(args: {
   db: Db;
   corporation: Corporation;
   viewerUserId?: string | null;
+  viewerCharacterId?: string | null;
   turn: number;
   rates: ReadonlyMap<CurrencyCode, number>;
 }) {
-  const { db, corporation, viewerUserId, turn, rates } = args;
-  if (
-    !viewerUserId ||
-    corporation.ceoVacant === true ||
-    corporation.userId?.toString() !== viewerUserId
-  )
-    return undefined;
+  const { db, corporation, viewerUserId, viewerCharacterId, turn, rates } = args;
+  if (!viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId)) return undefined;
   const id = corporation._id.toString();
   const producerEpoch = corporation.producerPayables?.worldEpoch;
   const producerKeys = producerPayableReceiptKeys(id);

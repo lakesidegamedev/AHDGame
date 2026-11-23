@@ -377,6 +377,7 @@ export async function handleClientStatus(request: Request) {
       return conditionalJson(
         request,
         {
+          id: character._id.toString(),
           characterId: character._id.toString(),
           name: character.name,
           avatarUrl: character.avatarUrl,
@@ -881,6 +882,7 @@ export async function handleClientStatus(request: Request) {
     }
 
     const statusPayload = {
+      id: character._id.toString(),
       characterId: character._id.toString(),
       name: character.name,
       avatarUrl: character.avatarUrl,

@@ -163,8 +163,8 @@
       "helpInformation": "Help/Information"
     },
     "characterSwitch": {
-      "message": "You switched character in another tab. This tab still shows the old one.",
-      "messageNamed": "You switched to {name} in another tab. This tab still shows the old character.",
+      "message": "Your character was switched in another session. This page still shows the old one.",
+      "messageNamed": "You are now acting as {name}, switched in another session. Reload to continue.",
       "reload": "Reload"
     },
     "userMenu": {

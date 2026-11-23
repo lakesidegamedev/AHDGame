@@ -1,4 +1,5 @@
 import type { Corporation } from "@/lib/db/types";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 
 /**
  * Field allowlist of corp-level financial values that are hidden from non-CEO
@@ -20,6 +21,7 @@ const PRIVATE_REDACTED_CORP_FIELDS = [
   "rdBudget",
   "rdScore",
   "rdScoreNetChange",
+  "lastTurnStrengthChange",
   "rdDevelopmentProjects",
   "ceoSalary",
   "sharePrice",
@@ -112,15 +114,28 @@ const PRIVATE_REDACTED_BOND_FIELDS = [
 ] as const;
 
 export function shouldRedactCorporation(
-  corp: Pick<Corporation, "isPrivate" | "userId">,
+  corp: Pick<
+    Corporation,
+    "isPrivate" | "userId" | "ceoId" | "ceoType" | "ceoVacant" | "caretakerCeo"
+  >,
   viewerUserId: string | undefined,
   viewerIsAdmin: boolean,
-  viewerHasModeratorOverride = false
+  viewerHasModeratorOverride = false,
+  viewerCharacterId?: string | null
 ): boolean {
   if (!corp.isPrivate) return false;
   if (viewerIsAdmin) return false;
   if (viewerHasModeratorOverride) return false;
-  if (viewerUserId && corp.userId?.toString() === viewerUserId) return false;
+  if (viewerUserId && corp.userId?.toString() === viewerUserId) {
+    // The owner account's other characters see the corporation as any outsider.
+    if (!viewerCharacterId) return false;
+    const runs = isCeoActor(corp, {
+      userId: viewerUserId,
+      activeCharacterId: viewerCharacterId,
+    });
+    // A vacant seat still belongs to the account; keep the owner view.
+    return !(runs || corp.ceoVacant === true);
+  }
   return true;
 }
 

@@ -15,6 +15,11 @@ import {
 } from "@/lib/wireEvent";
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import {
+  privatizationFunding,
+  quotePrivatizationBuyout,
+} from "@/lib/corporations/commands/privatization/privatizationQuote";
+import { getHomeCurrency, getPersonalBalance } from "@/lib/currency/characterFunds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -46,7 +51,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
@@ -95,6 +100,55 @@ export async function POST(_request: Request, { params }: RouteParams) {
       lockedBuyoutPrice: result.lockedBuyoutPrice,
       totalReservedCash: result.totalReservedCash,
       bankNavFloorApplied: result.bankNavFloorApplied,
+    });
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+/**
+ * GET /api/corporations/[id]/privatize
+ * The buyout quote the next vote would lock, plus whether the CEO's personal
+ * cash covers the reservation. CEO only.
+ */
+export async function GET(_request: Request, { params }: RouteParams) {
+  try {
+    const auth = await requireBasicAuth();
+    if (!auth.ok) return auth.response;
+
+    const { id } = await params;
+    const db = await getDb();
+    const resolved = await resolveCorporation(db, id);
+    if (!resolved.ok) return resolved.response;
+    const { corporation } = resolved;
+
+    const ceoCheck = requireCeo(corporation, auth.user);
+    if (ceoCheck) return ceoCheck;
+
+    const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
+    if (!character) return errorResponse(404, "CEO character not found");
+
+    const ceoShares =
+      corporation.shareholders.find(
+        (s) => s.characterId?.toString() === corporation.ceoId.toString()
+      )?.shares ?? 0;
+    const forexEnabled = await isForexEnabled();
+    const quote = await quotePrivatizationBuyout(db, corporation, ceoShares);
+    const ceoCurrency = getHomeCurrency(character);
+    const crossCurrency = forexEnabled && quote.currency !== ceoCurrency;
+    const personalCash = getPersonalBalance(
+      character,
+      quote.currency as Parameters<typeof getPersonalBalance>[1],
+      forexEnabled
+    );
+    const funding = privatizationFunding(quote.totalReservedCash, personalCash);
+
+    return NextResponse.json({
+      ...quote,
+      personalCash,
+      affordable: funding.affordable && !crossCurrency,
+      shortfall: funding.shortfall,
+      crossCurrency,
     });
   } catch (error) {
     return handleRouteError(error);

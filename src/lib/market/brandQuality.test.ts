@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   QUALITY_NEUTRAL_INPUT,
   computeSectorQuality,
+  estimateQualityAfterTechScore,
   isExtractionOnly,
   rollupCorpQuality,
 } from "./brandQuality";
@@ -90,5 +91,18 @@ describe("rollupCorpQuality", () => {
   it("returns null when the corp has no quality-bearing sectors", () => {
     expect(rollupCorpQuality([{ quality: null, revenueWeight: 100 }])).toBeNull();
     expect(rollupCorpQuality([])).toBeNull();
+  });
+});
+
+describe("estimateQualityAfterTechScore", () => {
+  it("drops quality by the tech pillar ratio to the tech weight", () => {
+    const after = estimateQualityAfterTechScore(79, 42, 4);
+    expect(after).toBeCloseTo(79 * Math.pow(0.4, 0.4), 1);
+  });
+  it("is unchanged when the score does not move", () => {
+    expect(estimateQualityAfterTechScore(60, 10, 10)).toBe(60);
+  });
+  it("does not exceed the pillar floor when R&D goes to zero", () => {
+    expect(estimateQualityAfterTechScore(80, 25, 0)).toBeCloseTo(80 * Math.pow(0.1, 0.4), 1);
   });
 });

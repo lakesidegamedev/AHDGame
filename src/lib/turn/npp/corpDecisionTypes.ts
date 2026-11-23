@@ -142,6 +142,8 @@ export interface NppCorpDecision {
     /** Sectors the brain would have divested; autopilot keeps them. */
     losingSectors: number;
   };
+  /** Budgets autopilot changed this turn, for the owner's record. */
+  autopilotBudgetChanges?: import("@/lib/corporations/rules/autopilotBudgetRule").AutopilotBudgetChanges;
   /**
    * Non-cash field writes only. `liquidCapital` MUST NOT appear here — the NPP
    * ops are appended to the corporation bulkWrite AFTER this turn's income

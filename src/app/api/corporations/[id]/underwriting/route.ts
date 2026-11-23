@@ -36,7 +36,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoError = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoError = requireCeo(resolved.corporation, auth.user);
     if (ceoError) return ceoError;
 
     const policy = await loadBankingPolicy(db);
@@ -69,7 +69,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const ceoError = requireCeo(corporation, auth.user.userId);
+    const ceoError = requireCeo(corporation, auth.user);
     if (ceoError) return ceoError;
 
     const policy = await loadBankingPolicy(db);

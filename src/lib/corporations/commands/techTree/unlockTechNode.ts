@@ -24,6 +24,9 @@ import {
   type UnlockBlockReason,
 } from "@/lib/constants/techTree";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { getSectorTechEffectBreakdown } from "@/lib/techTree/rules/selectors";
+import { inputEfficiencyHeadroom } from "@/lib/techTree/rules/inputEfficiencyHeadroom";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 
 export type UnlockTechNodeResult =
   | {
@@ -47,6 +50,9 @@ const REASON_STATUS: Record<UnlockBlockReason, number> = {
   "insufficient-rd": 402,
   "insufficient-cash": 402,
 };
+
+export const NO_REMAINING_BENEFIT_MESSAGE =
+  "This technology only reduces plant inputs, and your inputs are already at the cap, so it would add nothing.";
 
 const REASON_MESSAGE: Record<UnlockBlockReason, string> = {
   "unknown-node": "That technology is not part of this corporation's tree.",
@@ -96,6 +102,27 @@ export async function unlockTechNode(
     return reject(preCheck.reason);
   }
   const { node } = preCheck;
+
+  const legacy = await loadLegacyTechContext(db);
+  const headroom = inputEfficiencyHeadroom(
+    node.effects,
+    node.lane,
+    getSectorTechEffectBreakdown(
+      {
+        type: corporation.type,
+        unlockedTechNodeIds: corporation.unlockedTechNodeIds,
+        techDecadeLane: corporation.techDecadeLane,
+        frontierProgrammes: corporation.frontierProgrammes,
+        frontierMethods: corporation.frontierMethods,
+      },
+      corporation.type,
+      currentYear,
+      legacy
+    ).researched.inputEfficiencyBonus
+  );
+  if (headroom.noRemainingBenefit) {
+    return { ok: false, status: 409, error: NO_REMAINING_BENEFIT_MESSAGE };
+  }
 
   const pricing = await corpDailyGrossRevenuePricingLocal(db, corporation);
   const cashCost = techNodeCashCost(

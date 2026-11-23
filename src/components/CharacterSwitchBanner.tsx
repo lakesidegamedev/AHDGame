@@ -1,18 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
+import { subscribeToCharacterSwitch } from "@/lib/characterSwitchSignal";
 import {
-  subscribeToCharacterSwitch,
-  type CharacterSwitchMessage,
-} from "@/lib/characterSwitchSignal";
+  getActiveCharacterMismatch,
+  noteCharacterSwitchSignal,
+  subscribeActiveCharacterMismatch,
+} from "@/lib/activeCharacterGuard";
 
-/** Shown in a tab that was open when another tab switched the active character. */
+/**
+ * Shown when the active character changed after this page rendered, whether the
+ * switch came from another tab in this browser or from another browser or
+ * device. The page body is made inert until reload so nothing is done as the
+ * wrong character.
+ */
 export function CharacterSwitchBanner() {
   const t = useTranslations("nav.characterSwitch");
-  const [switched, setSwitched] = useState<CharacterSwitchMessage | null>(null);
+  const switched = useSyncExternalStore(
+    subscribeActiveCharacterMismatch,
+    getActiveCharacterMismatch,
+    () => null
+  );
 
-  useEffect(() => subscribeToCharacterSwitch(setSwitched), []);
+  useEffect(() => subscribeToCharacterSwitch(noteCharacterSwitchSignal), []);
+
+  useEffect(() => {
+    if (!switched) return;
+    const main = document.querySelector("main");
+    if (!main) return;
+    main.setAttribute("inert", "");
+    main.setAttribute("aria-disabled", "true");
+    return () => {
+      main.removeAttribute("inert");
+      main.removeAttribute("aria-disabled");
+    };
+  }, [switched]);
 
   if (!switched) return null;
   return (

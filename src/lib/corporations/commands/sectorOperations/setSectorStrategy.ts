@@ -129,7 +129,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const cashBlock = requireSpendableCorporateCash(corporation);
     if (cashBlock) return cashBlock;
 
-    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user.userId);
+    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user);
     if (!authorized.ok) return authorized.response;
     const { directingParentId } = authorized;
 

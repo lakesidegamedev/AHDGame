@@ -36,3 +36,36 @@ it("renders nothing when nobody is selling or the feature is off", async () => {
   await Promise.resolve();
   expect(container.textContent).toBe("");
 });
+
+it("says so when a short input has no offers in the sector's state", async () => {
+  respond({
+    enabled: true,
+    offers: [
+      { side: "sell", own: false, stateId: "TX" },
+      { side: "sell", own: false, stateId: "OH" },
+    ],
+  });
+  render(
+    <InputOffersHint
+      flow={{ commodity: "freight", label: "Freight" } as CommodityFlow}
+      variant="short"
+      stateId="CT"
+      stateName="Connecticut"
+    />
+  );
+  await waitFor(() => screen.getByText(/No offers for Freight in Connecticut/));
+  expect(screen.getByText("2 elsewhere on the market")).toBeTruthy();
+});
+
+it("keeps the seller link when a short input has offers in its state", async () => {
+  respond({ enabled: true, offers: [{ side: "sell", own: false, stateId: "CT" }] });
+  render(
+    <InputOffersHint
+      flow={{ commodity: "freight", label: "Freight" } as CommodityFlow}
+      variant="short"
+      stateId="CT"
+      stateName="Connecticut"
+    />
+  );
+  await waitFor(() => screen.getByText("1 seller offering"));
+});

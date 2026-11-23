@@ -58,7 +58,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     const { corporation } = resolved;
 
     // Only CEO can modify settings
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (

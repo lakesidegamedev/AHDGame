@@ -55,7 +55,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     const resolved = await resolveCorporation(db, (await params).id);
     if (!resolved.ok) return resolved.response;
     const corporation = resolved.corporation;
-    const denied = requireCeo(corporation, auth.user.userId);
+    const denied = requireCeo(corporation, auth.user);
     if (denied) return denied;
     const mode = await getMarketSystemMode();
     const [config, world] = await Promise.all([

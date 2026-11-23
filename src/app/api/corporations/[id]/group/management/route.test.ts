@@ -69,7 +69,7 @@ describe("group management API", () => {
     expect(updateGroupManagement).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.any(String),
+      expect.objectContaining({ userId: expect.any(String) }),
       command
     );
     expect(
@@ -125,7 +125,7 @@ describe("group management API", () => {
     expect(updateGroupManagement).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.any(String),
+      expect.objectContaining({ userId: expect.any(String) }),
       { action: "policy", policy: "members" }
     );
   });
@@ -136,7 +136,7 @@ it("passes a validated discount command through the authenticated route", async 
   expect(updateGroupManagement).toHaveBeenCalledWith(
     expect.anything(),
     expect.anything(),
-    expect.any(String),
+    expect.objectContaining({ userId: expect.any(String) }),
     { action: "discount", discount: 0.35 }
   );
 });

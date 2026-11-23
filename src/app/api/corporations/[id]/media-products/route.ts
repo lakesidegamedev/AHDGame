@@ -54,7 +54,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const enabled = await slatesAvailable(db);
     if (!enabled) {
       return NextResponse.json(
-        { enabled: false, isCeo: requireCeo(resolved.corporation, auth.user.userId) === null },
+        { enabled: false, isCeo: requireCeo(resolved.corporation, auth.user) === null },
         { headers: noStore }
       );
     }
@@ -110,7 +110,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json(
       {
         enabled: true,
-        isCeo: requireCeo(resolved.corporation, auth.user.userId) === null,
+        isCeo: requireCeo(resolved.corporation, auth.user) === null,
         currentTurn,
         currentYear: gameState?.currentYear ?? null,
         projects: projects.map((project) => ({

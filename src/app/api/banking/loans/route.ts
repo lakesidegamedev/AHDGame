@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       }
       const resolved = await resolveCorporation(db, borrowerCorporationId);
       if (!resolved.ok) return resolved.response;
-      const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
+      const ceoCheck = requireCeo(resolved.corporation, auth.user);
       if (ceoCheck) return ceoCheck;
       borrowerId = resolved.corporation._id;
     }

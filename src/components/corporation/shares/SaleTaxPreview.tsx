@@ -2,11 +2,13 @@
 import { useEffect, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { HoldingTerm } from "@/lib/corporations/rules/holdingTerms";
+import type { SaleTaxBreakdown } from "@/lib/corporations/rules/saleTaxBreakdown";
 
 interface SaleQuote {
   grossProceeds: number;
   withheldTax: number;
   netProceeds: number;
+  taxBreakdown?: SaleTaxBreakdown | null;
   outstandingArrears: number;
   turn: number;
 }
@@ -70,6 +72,9 @@ export function SaleTaxPreview({
         <dl className="grid grid-cols-2 gap-1">
           <dt>Estimated gross proceeds</dt>
           <dd className="text-right">{formatAmount(quote.grossProceeds)}</dd>
+          {quote.taxBreakdown && (
+            <TaxBreakdownRows breakdown={quote.taxBreakdown} formatAmount={formatAmount} />
+          )}
           <dt>Tax withheld</dt>
           <dd className="text-right">{formatAmount(quote.withheldTax)}</dd>
           <dt>Estimated cash received</dt>
@@ -91,5 +96,49 @@ export function SaleTaxPreview({
         when they execute.
       </p>
     </div>
+  );
+}
+
+const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
+
+function TaxBreakdownRows({
+  breakdown,
+  formatAmount,
+}: {
+  breakdown: SaleTaxBreakdown;
+  formatAmount: (n: number) => string;
+}) {
+  return (
+    <>
+      <dt>Cost basis of the shares sold</dt>
+      <dd className="text-right">{formatAmount(breakdown.costBasis)}</dd>
+      {breakdown.shortTermGain > 0 && (
+        <>
+          <dt>
+            Short-term gain at {pct(breakdown.shortTermRatePct)} (income rate, held under 48 turns)
+          </dt>
+          <dd className="text-right">
+            {formatAmount(breakdown.shortTermGain)} gives {formatAmount(breakdown.shortTermTax)}
+          </dd>
+        </>
+      )}
+      {breakdown.longTermGain > 0 && (
+        <>
+          <dt>
+            Long-term gain at {pct(breakdown.longTermRatePct)} (capital gains rate, held 48 turns or
+            more)
+          </dt>
+          <dd className="text-right">
+            {formatAmount(breakdown.longTermGain)} gives {formatAmount(breakdown.longTermTax)}
+          </dd>
+        </>
+      )}
+      {breakdown.shortTermGain <= 0 && breakdown.longTermGain <= 0 && (
+        <>
+          <dt>Gain</dt>
+          <dd className="text-right">None, so no tax</dd>
+        </>
+      )}
+    </>
   );
 }
