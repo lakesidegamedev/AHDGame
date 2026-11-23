@@ -21,6 +21,18 @@ export function fmtPct(n: number | null | undefined, digits = 0): string {
   return `${(n * 100).toFixed(digits)}%`;
 }
 
+/** Units made over the sector's capacity, unclamped so a production push can pass 1. Null with no capacity. */
+export function madeShareOfCapacity(
+  producedUnits: number | null | undefined,
+  capacityUnits: number | null | undefined
+): number | null {
+  if (producedUnits == null || capacityUnits == null) return null;
+  if (!Number.isFinite(producedUnits) || !Number.isFinite(capacityUnits) || capacityUnits <= 0) {
+    return null;
+  }
+  return Math.max(0, producedUnits / capacityUnits);
+}
+
 /** Format a multiplier leg for the cost breakdown, e.g. "1.12x". */
 export function fmtMult(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "1.00x";

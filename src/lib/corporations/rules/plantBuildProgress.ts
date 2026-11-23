@@ -41,3 +41,27 @@ export function plantBuildProgress(
   }
   return { ordered, built, building: ordered - built };
 }
+
+/**
+ * A plant count rounded from capacity counts a plant that is more than half
+ * delivered. The build list counts whole plants only, so a header showing the
+ * rounded figure beside "N of M built" disagrees by one. This removes the
+ * partly delivered plant the rounding added.
+ */
+export function wholeBuiltPlantCount(
+  roundedCount: number,
+  orders: readonly PlantBuildOrderUnits[],
+  unitsPerPlant: number
+): number {
+  const size = Math.max(1, unitsPerPlant);
+  let partial = 0;
+  for (const order of orders) {
+    const plants = orderedPlants(order.unitsOrdered, size);
+    if (plants <= 0) continue;
+    const arrived = Math.max(0, Number.isFinite(order.unitsDelivered) ? order.unitsDelivered : 0);
+    const inPlants = arrived / size;
+    if (inPlants >= plants) continue;
+    partial += inPlants - Math.floor(inPlants + EPSILON);
+  }
+  return Math.max(0, roundedCount - Math.round(partial));
+}

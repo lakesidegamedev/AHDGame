@@ -3,10 +3,10 @@
 import { ArrowRight } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
-import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import { TURNS_PER_DAY, type OperatingSectorType } from "@/lib/constants/corporationsClient";
 import type { RunReport as RunReportData } from "@/lib/corporations/queries/sectorRunReport";
 import type { PlantIdleCause } from "../types";
-import { fmtPct, fmtUnits } from "../lib/plants";
+import { fmtPct, fmtUnits, madeShareOfCapacity } from "../lib/plants";
 
 /**
  * What the run did, why, and what to do about it, above the run meter.
@@ -163,7 +163,7 @@ export default function RunReport({
   const { formatAmount } = useCurrency();
   const sites = facilityPlural(sectorType);
   const head = runReportHeadline(report, sites);
-  const running = capacityUnits > 0 ? producedUnits / capacityUnits : 0;
+  const running = madeShareOfCapacity(producedUnits, capacityUnits) ?? 0;
   const fixes = mothballed ? [] : fixesFor(report, idleCauses, sites, capacityUnits);
   const price = report.unitPrice;
   const costs = [
@@ -272,11 +272,12 @@ export default function RunReport({
 
       {ownSiteUnits > 0 && (
         <p className="text-body-xs text-muted" data-testid="own-site-line">
-          Sent to your own sites last turn: {fmtUnits(ownSiteUnits)} units, worth{" "}
+          Sent to your own sites last turn: {fmtUnits(ownSiteUnits * TURNS_PER_DAY)} units a day,
+          worth{" "}
           <span className="font-semibold text-foreground">
-            {formatAmount(report.ownSiteValueAtAsk ?? 0)}
+            {formatAmount((report.ownSiteValueAtAsk ?? 0) * TURNS_PER_DAY)}
           </span>{" "}
-          at your asking price. Not a sale, so not in the per-unit figures above.
+          a day at your asking price. Not a sale, so not in the per-unit figures above.
         </p>
       )}
 

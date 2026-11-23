@@ -39,6 +39,7 @@ import {
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
+import { formatPercent } from "@/lib/ui/numbers";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
 import { CapacityChain } from "./sectors/CapacityChain";
 
@@ -665,11 +666,12 @@ export function SectorRow({
             }`}
             title={
               fillAdjusted != null
-                ? `Net margin, profit over revenue after paying for everything made: ${fillAdjusted}%. Effective margin on sold units only: ${sector.effectiveProfitMargin}%.`
-                : `Effective margin applied to this sector's revenue: ${sector.effectiveProfitMargin}%.`
+                ? `Net margin, profit over revenue after paying for everything made: ${formatPercent(fillAdjusted)}. Effective margin on sold units only: ${formatPercent(sector.effectiveProfitMargin)}.`
+                : `Effective margin applied to this sector's revenue: ${formatPercent(sector.effectiveProfitMargin)}.`
             }
           >
-            {netMargin ?? (sector.siteStatement ? "n/a" : `${sector.effectiveProfitMargin}%`)}
+            {netMargin ??
+              (sector.siteStatement ? "n/a" : formatPercent(sector.effectiveProfitMargin))}
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>

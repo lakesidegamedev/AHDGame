@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { plantBuildProgress } from "./plantBuildProgress";
+import { plantBuildProgress, wholeBuiltPlantCount } from "./plantBuildProgress";
 import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import type { SectorBuildOrder } from "@/lib/db/types";
@@ -59,5 +59,18 @@ describe("plantBuildProgress", () => {
     const lagging = summarizeBuildQueue(queue, 150, 110);
     const built = (s: typeof caughtUp) => plantBuildProgress(s?.orderUnits ?? [], 100).built;
     expect(built(lagging)).toBeLessThan(built(caughtUp));
+  });
+});
+
+describe("wholeBuiltPlantCount", () => {
+  it("drops a partly delivered plant that rounding counted", () => {
+    // 81.6 plants delivered rounds to 82 in a header; the list says 81 built.
+    expect(wholeBuiltPlantCount(82, [{ unitsOrdered: 8600, unitsDelivered: 8160 }], 100)).toBe(81);
+  });
+  it("keeps the count when the partial plant rounded down", () => {
+    expect(wholeBuiltPlantCount(81, [{ unitsOrdered: 8600, unitsDelivered: 8130 }], 100)).toBe(81);
+  });
+  it("leaves the count alone with no open orders", () => {
+    expect(wholeBuiltPlantCount(12, [], 100)).toBe(12);
   });
 });

@@ -277,7 +277,7 @@ export default function CeoBudgetPanel({
     <DenseSection
       id="ceo-budget"
       title="Budget and income"
-      meta={MONEY_PERIOD_PER_LABEL[periodView]}
+      meta={`${MONEY_PERIOD_PER_LABEL[periodView]}, forecast`}
       actions={
         <>
           <WikiHelpLink screen="corporation-budget" />
