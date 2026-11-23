@@ -91,7 +91,7 @@ export async function loadCorporationDetailView(args: {
     corporation.averageQuality != null
       ? corporationHistoryCollection<{ turn: number; averageQuality?: number }>(db)
           .find(
-            { corporationId: corporation._id, averageQuality: { $type: "number" } },
+            { corporationId: corporation._id, averageQuality: { $ne: null } },
             { sort: { turn: -1 }, limit: 12, projection: { turn: 1, averageQuality: 1 } }
           )
           .toArray()
