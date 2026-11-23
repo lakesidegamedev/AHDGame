@@ -2338,5 +2338,230 @@
         "description": "Restructure widely for lower unit cost; transition gaps can reduce near-term availability."
       }
     ]
+  },
+  {
+    "id": "L53",
+    "title": "Intelligence service funding",
+    "domain": "Defense and strategic security",
+    "scope": "N only; funds the national intelligence service through its own appropriation; no regional duplicate or \"leave it\"",
+    "ownerCode": "INT",
+    "primaryMetricIds": ["31"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Intelligence Restraint Act",
+        "description": "Hold the service to a small budget under strict warrants and parliamentary oversight."
+      },
+      {
+        "position": "center_left",
+        "title": "Accountable Intelligence Fund",
+        "description": "Fund core analysis and counter-terrorism work with independent oversight of every operation."
+      },
+      {
+        "position": "center",
+        "title": "Standing Intelligence Service Act",
+        "description": "Fund a standing service for analysis, counter-intelligence and foreign operations."
+      },
+      {
+        "position": "center_right",
+        "title": "Expanded Intelligence Service Act",
+        "description": "Expand collection, analysis and covert operations with ministerial sign-off."
+      },
+      {
+        "position": "far_right",
+        "title": "Unrestricted Intelligence Fund",
+        "description": "Fund the service at its full size with broad operational latitude and light oversight."
+      }
+    ]
+  },
+  {
+    "id": "L54",
+    "title": "Diplomacy and foreign aid",
+    "domain": "Defense and strategic security",
+    "scope": "N only; funds the foreign ministry, embassies and development aid; no regional duplicate",
+    "ownerCode": "FOR",
+    "primaryMetricIds": ["08"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Global Partnership and Aid Act",
+        "description": "Fund a large diplomatic corps and a generous development-aid budget."
+      },
+      {
+        "position": "center_left",
+        "title": "Development Cooperation Fund",
+        "description": "Fund embassies fully and grow targeted development aid."
+      },
+      {
+        "position": "center",
+        "title": "Foreign Service Operations Act",
+        "description": "Fund embassies, consular services and a steady aid budget."
+      },
+      {
+        "position": "center_right",
+        "title": "Diplomatic Efficiency Act",
+        "description": "Fund core embassies and tie aid to trade and security goals."
+      },
+      {
+        "position": "far_right",
+        "title": "Lean Foreign Service Act",
+        "description": "Keep a minimal foreign service and cut development aid to the bone."
+      }
+    ]
+  },
+  {
+    "id": "L55",
+    "title": "Homeland and public safety",
+    "domain": "Safety and justice",
+    "scope": "N only; funds border, emergency management and national public-safety agencies; no regional duplicate",
+    "ownerCode": "HSC",
+    "primaryMetricIds": ["38"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Community Resilience Act",
+        "description": "Fund a small border and enforcement budget and put the money into disaster preparedness."
+      },
+      {
+        "position": "center_left",
+        "title": "Preparedness and Oversight Fund",
+        "description": "Fund emergency management fully and keep border enforcement modest under civilian oversight."
+      },
+      {
+        "position": "center",
+        "title": "Homeland Security Operations Act",
+        "description": "Fund border protection, emergency management and national safety agencies at a steady level."
+      },
+      {
+        "position": "center_right",
+        "title": "Secure Borders and Response Act",
+        "description": "Expand border protection and emergency response capacity."
+      },
+      {
+        "position": "far_right",
+        "title": "National Security Expansion Act",
+        "description": "Fund border, enforcement and emergency agencies at full size with broad powers."
+      }
+    ]
+  },
+  {
+    "id": "L56",
+    "title": "Trade and export promotion",
+    "domain": "Economy, work, trade, and fiscal affairs",
+    "scope": "N only; funds export promotion, trade missions and export credit; no regional duplicate",
+    "ownerCode": "TRD",
+    "primaryMetricIds": ["05"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Fair Trade Development Act",
+        "description": "Fund small trade missions focused on labour and environmental standards."
+      },
+      {
+        "position": "center_left",
+        "title": "Export Readiness Fund",
+        "description": "Help small firms export with advice and modest trade missions."
+      },
+      {
+        "position": "center",
+        "title": "Trade Promotion Operations Act",
+        "description": "Fund trade commissioners, missions and export advice at a steady level."
+      },
+      {
+        "position": "center_right",
+        "title": "Export Credit Expansion Act",
+        "description": "Expand export credit and trade missions for growing firms."
+      },
+      {
+        "position": "far_right",
+        "title": "Global Markets Push Act",
+        "description": "Fund aggressive export credit, missions and market-entry support."
+      }
+    ]
+  },
+  {
+    "id": "L57",
+    "title": "Veterans services",
+    "domain": "Households, opportunity, and demography",
+    "scope": "N only; funds veterans health care, benefits and reintegration; no regional duplicate",
+    "ownerCode": "VET",
+    "primaryMetricIds": ["21"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Veterans Care Guarantee Act",
+        "description": "Fund full health care, housing and benefits for every veteran."
+      },
+      {
+        "position": "center_left",
+        "title": "Veterans Health and Housing Fund",
+        "description": "Fund veterans health care fully and expand housing help."
+      },
+      {
+        "position": "center",
+        "title": "Veterans Services Act",
+        "description": "Fund veterans health care, disability benefits and reintegration at a steady level."
+      },
+      {
+        "position": "center_right",
+        "title": "Veterans Choice Act",
+        "description": "Fund care through private providers with a smaller agency."
+      },
+      {
+        "position": "far_right",
+        "title": "Lean Veterans Benefits Act",
+        "description": "Fund core disability benefits only and wind down agency-run care."
+      }
+    ]
   }
 ]

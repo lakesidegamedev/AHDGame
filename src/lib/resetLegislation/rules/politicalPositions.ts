@@ -64,6 +64,11 @@ export const V2_POLITICAL_ROUTES: Readonly<Record<string, PoliticalRoute>> = {
   L50: { axis: "social", domain: "criminal_justice" },
   L51: { axis: "social", domain: "healthcare" },
   L52: { axis: "economic", domain: "immigration" },
+  L53: { axis: "social", domain: "criminal_justice" },
+  L54: { axis: "economic", domain: "economic" },
+  L55: { axis: "social", domain: "criminal_justice" },
+  L56: { axis: "economic", domain: "economic" },
+  L57: { axis: "economic", domain: "welfare" },
 };
 
 const CHOICES = ["far_left", "center_left", "center", "center_right", "far_right"] as const;

@@ -120,7 +120,7 @@ describe("modeled preset v2 openings", () => {
     expect(opening.fiscal.laws.filter((b) => b.countryId === "CA")).toHaveLength(14);
     expect(opening.partition.accounts.filter((a) => a.countryId === "CA")).toHaveLength(19);
     const board = opening.fiscal.laws.find((b) => b.countryId === "CA" && b.scope === "national")!;
-    expect(Object.keys(board.references)).toHaveLength(61);
+    expect(Object.keys(board.references)).toHaveLength(66);
     expect(Object.values(board.references).every((r) => r.country === "CA")).toBe(true);
     expect(
       opening.fiscal.regional
