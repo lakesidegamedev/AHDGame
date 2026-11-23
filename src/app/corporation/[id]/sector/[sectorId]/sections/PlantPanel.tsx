@@ -27,7 +27,7 @@ import RunReport from "../components/RunReport";
 import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
-import { fmtUnits, fmtPct, fmtTeuEstimate, buildOrderMoney } from "../lib/plants";
+import { fmtUnits, fmtPct, fmtTeuEstimate, buildOrderMoney, withAnchorAmount } from "../lib/plants";
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import {
   estimateSectorFullCapacityOneHopFreightTeu,
@@ -120,6 +120,8 @@ export default function PlantPanel({
   const vocab = facilityVocabulary(sectorType);
   const sites = facilityPlural(sectorType);
   const money = (anchor: number) => formatAmount(anchor);
+  // Anchor-stored amounts shift with the exchange rate; show the fixed figure beside them.
+  const moneyWithAnchor = (anchor: number) => withAnchorAmount(money(anchor), anchor);
   const mothballed = plants.mothballed;
   const idleRetirement = plants.idleRetirement;
   const hasRun = plants.producedUnits != null;
@@ -417,7 +419,7 @@ export default function PlantPanel({
           value={fmtUnits(plantsBeingBuilt)}
           sub={
             plants.constructionInProgressAnchor > 0
-              ? `${money(plants.constructionInProgressAnchor)} paid for what is still to arrive`
+              ? `${moneyWithAnchor(plants.constructionInProgressAnchor)} paid for what is still to arrive`
               : "nothing on order"
           }
           help={`${vocab.plural.charAt(0).toUpperCase()}${vocab.plural.slice(1)} you have paid for that are still under construction. They arrive a few at a time and are finished on the turn shown in the build list.`}
@@ -476,9 +478,9 @@ export default function PlantPanel({
                         {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
-                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(orderMoney.paid)} paid`
-                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(orderMoney.paid)} paid`
-                          : `arrives next turn · ${money(orderMoney.paid)} paid`}
+                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
+                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
+                          : `arrives next turn · ${moneyWithAnchor(orderMoney.paid)} paid`}
                       </p>
                     </div>
                     {isCeo && o.turnsRemaining > 0 && (
@@ -486,7 +488,7 @@ export default function PlantPanel({
                         type="button"
                         onClick={() => onCancelOrder(o.orderIndex)}
                         disabled={busy}
-                        title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back: ${money(orderMoney.refund)}.`}
+                        title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back: ${moneyWithAnchor(orderMoney.refund)}.`}
                         aria-label={`Cancel the order placed on turn ${o.startTurn}`}
                         className="inline-flex shrink-0 items-center gap-1 rounded-md border border-card-border px-2 py-1 text-body-xs font-medium text-muted transition-colors hover:border-error/40 hover:text-error disabled:opacity-40"
                       >

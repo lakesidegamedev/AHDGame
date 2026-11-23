@@ -23,6 +23,7 @@ import {
   StatusBadge,
 } from "./SectorRowComponents";
 import { SECTOR_TABLE_GRID, PLANTS_SECTOR_TABLE_GRID } from "./SectorTableHeader";
+import { ModelledMarginMark } from "./ModelledMarginMark";
 import {
   BuildQueueBadge,
   DeliveryLimitedPill,
@@ -271,7 +272,10 @@ export function SectorRow({
         </div>
         <div className="flex justify-between gap-3">
           <span>× effective margin (outside sales only)</span>
-          <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
+          <span className="tabular-nums">
+            {sector.effectiveProfitMargin}%
+            <ModelledMarginMark modelled={sector.effectiveMarginModelled} />
+          </span>
         </div>
         <div className="flex justify-between gap-3">
           <span>Operating profit</span>
@@ -672,6 +676,9 @@ export function SectorRow({
           >
             {netMargin ??
               (sector.siteStatement ? "n/a" : formatPercent(sector.effectiveProfitMargin))}
+            {netMargin == null && !sector.siteStatement && (
+              <ModelledMarginMark modelled={sector.effectiveMarginModelled} />
+            )}
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>
@@ -753,6 +760,7 @@ export function SectorRow({
               <span className="mr-1 font-sans text-[10px] text-warning">tariff</span>
             )}
             {sector.effectiveProfitMargin}%
+            <ModelledMarginMark modelled={sector.effectiveMarginModelled} />
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>

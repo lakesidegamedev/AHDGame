@@ -92,6 +92,8 @@ export interface ProducerMarketResult {
     deliveredUnits: number;
     cost: number;
     internalCost?: number;
+    /** Units that came from the buyer's own company's sites. Set only when some did. */
+    internalDeliveredUnits?: number;
   }>;
   /**
    * Units each own offer handed to each own order, only when
@@ -229,6 +231,11 @@ function prepareSettleProducerMarket(input: {
     const row = internalDeliveries.get(key) ?? { offerId: offer.id, orderId: order.id, units: 0 };
     row.units += units;
     internalDeliveries.set(key, row);
+  };
+  const noteBuyerInternal = (orderId: string, units: number): void => {
+    if (!(units > 0)) return;
+    const buyer = orderResults.get(orderId);
+    if (buyer) buyer.internalDeliveredUnits = (buyer.internalDeliveredUnits ?? 0) + units;
   };
   const countryBookRows = new Map<string, FundedCountryBookRow>();
   const regionalBookRows = new Map<string, import("./fundedBookRules").FundedRegionalBookRow>();
@@ -702,6 +709,7 @@ function prepareSettleProducerMarket(input: {
           const seller = offerResults.get(offer.id)!;
           seller.internalDeliveredUnits += units;
           recordInternal(offer, order, units);
+          noteBuyerInternal(order.id, units);
           seller.deliveredUnits += units;
           tradeCount++;
         }
@@ -780,6 +788,7 @@ function prepareSettleProducerMarket(input: {
       const seller = offerResults.get(offer.id)!;
       seller.internalDeliveredUnits += units;
       recordInternal(offer, order, units);
+      noteBuyerInternal(order.id, units);
       seller.deliveredUnits += units;
       tradeCount++;
     }

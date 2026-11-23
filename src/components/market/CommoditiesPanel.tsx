@@ -69,7 +69,8 @@ export function CommoditiesPanel({
           </Link>
         </div>
         <p className="text-xs text-muted">
-          Prices are world averages per unit, shown in {inputSymbol}.
+          Prices are world averages per unit, shown in {inputSymbol}. A commodity page for one
+          country shows that country&apos;s own market price in its currency, so the two can differ.
         </p>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
           <table className="w-full min-w-[720px] text-sm">

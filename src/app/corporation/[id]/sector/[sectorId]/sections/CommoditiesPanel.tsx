@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 import ShortageBadge from "../components/ShortageBadge";
 import { THROUGHPUT_MIN } from "@/lib/market/throughput";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -172,15 +173,18 @@ function CommodityItem({
               trigger={
                 <span
                   className={`text-[10px] font-medium tabular-nums ${
-                    flow.soldFraction >= 0.995
+                    flow.soldFraction + (flow.ownSite?.share ?? 0) >= 0.995
                       ? "text-success"
-                      : flow.soldFraction >= 0.7
+                      : flow.soldFraction + (flow.ownSite?.share ?? 0) >= 0.7
                         ? "text-warning"
                         : "text-error"
                   }`}
                 >
                   {Math.round(flow.soldFraction * 100)}% of this output’s offers sold
                   {flow.soldFractionBasis === "estimate" ? " (market estimate)" : ""}
+                  {ownSiteLabel(flow.ownSite?.share)
+                    ? `, ${ownSiteLabel(flow.ownSite?.share)}`
+                    : ""}
                 </span>
               }
             >

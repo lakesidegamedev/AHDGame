@@ -10,6 +10,8 @@ export interface InputShortageReading {
   neededPerDay: number;
   arrivedPerDay: number;
   missingPerDay: number;
+  /** Units a day that came from the company's own sites. Absent on older receipts or when none did. */
+  ownSitePerDay?: number;
   blocker?: InputBlocker;
 }
 
@@ -32,6 +34,9 @@ export function inputShortageReading(
     neededPerDay: row.neededUnits * TURNS_PER_DAY,
     arrivedPerDay: row.arrivedUnits * TURNS_PER_DAY,
     missingPerDay: short ? row.missingUnits * TURNS_PER_DAY : 0,
+    ...(row.ownSiteUnits && row.ownSiteUnits > 0
+      ? { ownSitePerDay: row.ownSiteUnits * TURNS_PER_DAY }
+      : {}),
     ...(short && row.blocker ? { blocker: row.blocker } : {}),
   };
 }
@@ -54,4 +59,29 @@ export function inputBlockerText(blocker: InputBlocker): string {
     case "freight_capacity":
       return "Freight capacity ran out. Carriers had no more to sell.";
   }
+}
+
+export interface InputSourceSplit {
+  ownSitePerDay: number;
+  boughtPerDay: number;
+  /** Every unit came from own sites, so there is no purchase price to show. */
+  allOwnSite: boolean;
+}
+
+/**
+ * How a row's daily units divide between the company's own sites and purchases.
+ * Null when no own-site units were recorded, so older receipts keep the plain row.
+ */
+export function inputSourceSplit(
+  unitsPerDay: number,
+  ownSitePerDay: number | null | undefined
+): InputSourceSplit | null {
+  if (!(typeof ownSitePerDay === "number" && ownSitePerDay > 0)) return null;
+  const own = Math.min(ownSitePerDay, Math.max(unitsPerDay, ownSitePerDay));
+  const bought = Math.max(0, unitsPerDay - own);
+  return {
+    ownSitePerDay: own,
+    boughtPerDay: bought,
+    allOwnSite: bought <= 1e-9 * Math.max(1, unitsPerDay),
+  };
 }

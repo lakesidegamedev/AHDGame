@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inputShortageReading } from "./inputShortageReading";
+import { inputShortageReading, inputSourceSplit } from "./inputShortageReading";
 
 describe("inputShortageReading", () => {
   const receipts = [
@@ -32,5 +32,29 @@ describe("inputShortageReading", () => {
   it("is null without a row", () => {
     expect(inputShortageReading(receipts, "oil", 5)).toBeNull();
     expect(inputShortageReading(undefined, "steel", 5)).toBeNull();
+  });
+});
+
+describe("own-site units", () => {
+  const receipt = { commodity: "steel", neededUnits: 10, arrivedUnits: 10, missingUnits: 0 };
+
+  it("converts recorded own-site units to a daily figure", () => {
+    const r = inputShortageReading([{ ...receipt, ownSiteUnits: 4 }], "steel", 3);
+    expect(r?.ownSitePerDay).toBeGreaterThan(0);
+  });
+
+  it("leaves older receipts without the field", () => {
+    expect(inputShortageReading([receipt], "steel", 3)).not.toHaveProperty("ownSitePerDay");
+  });
+
+  it("splits units, and flags an all own-site row", () => {
+    expect(inputSourceSplit(100, 40)).toEqual({
+      ownSitePerDay: 40,
+      boughtPerDay: 60,
+      allOwnSite: false,
+    });
+    expect(inputSourceSplit(100, 100)?.allOwnSite).toBe(true);
+    expect(inputSourceSplit(100, undefined)).toBeNull();
+    expect(inputSourceSplit(100, 0)).toBeNull();
   });
 });

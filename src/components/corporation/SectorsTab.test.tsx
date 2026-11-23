@@ -136,6 +136,29 @@ describe("media advertising output on corporation sector cards", () => {
     expect(screen.getByText("137/day (10% factor)")).toBeTruthy();
   });
 
+  it("marks a modifier-stack margin as an estimate and leaves realized margins alone", () => {
+    const { rerender } = render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[
+          sector({ _id: "m1", sectorType: "manufacturing", effectiveMarginModelled: true }),
+        ]}
+        isCeo={false}
+      />
+    );
+    expect(screen.getAllByTestId("modelled-margin-mark").length).toBeGreaterThan(0);
+    rerender(
+      <SectorsTab
+        {...baseProps}
+        sectors={[
+          sector({ _id: "m1", sectorType: "manufacturing", effectiveMarginModelled: false }),
+        ]}
+        isCeo={false}
+      />
+    );
+    expect(screen.queryByTestId("modelled-margin-mark")).toBeNull();
+  });
+
   it("shows zero planned-economy campaign output and its factor", () => {
     const { container } = render(
       <SectorsTab
