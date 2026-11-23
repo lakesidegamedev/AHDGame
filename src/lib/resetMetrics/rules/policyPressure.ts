@@ -28,14 +28,12 @@ export function metricPolicyPressure(input: {
 }): Record<string, MetricPolicyPressure> {
   const programs = input.programs.filter((p) => metricLawApplies(p, input.board));
   const openingPrograms = input.opening.filter((p) => metricLawApplies(p, input.board));
-  const effectiveSettlements = new Map(input.settlements);
+  const gross = deliveredMetricEffects(programs, input.settlements, input.turn);
   for (const program of programs)
     if (isUnbookedOpeningStatute(program, input.settlements))
-      effectiveSettlements.set(program._id, {
-        implementationFactor: 1,
-        lastSettledTurn: input.turn,
-      });
-  const gross = deliveredMetricEffects(programs, effectiveSettlements, input.turn);
+      for (const effect of program.primaryMetricEffects)
+        if (/^\d{2}$/.test(effect.metricId) && Number.isFinite(effect.favorableNormalizedPoints))
+          gross[effect.metricId] = (gross[effect.metricId] ?? 0) + effect.favorableNormalizedPoints;
   const net = netMetricLawPressure(
     netMetricLawPressureByFamily(programs, openingPrograms, input.settlements, input.turn)
   );
