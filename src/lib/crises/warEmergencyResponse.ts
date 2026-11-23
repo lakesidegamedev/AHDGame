@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CrisisOptionAction } from "@/lib/db/types/crisis";
 import { applyCountryTreasuryDelta } from "@/lib/events/substrate/applyEffects";
@@ -131,7 +132,7 @@ export async function applyWarEmergencyResponse(
   if (effects.approval) {
     await governmentApprovalsCollection<Document>(ctx.db).updateOne(
       { _id: countryId as unknown as import("mongodb").ObjectId },
-      { $inc: { approvalRating: effects.approval } }
+      approvalDeltaUpdate(effects.approval)
     );
   }
   if (effects.treasuryCost) {

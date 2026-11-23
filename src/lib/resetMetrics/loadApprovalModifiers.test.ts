@@ -81,6 +81,37 @@ describe("Metrics v2 approval source", () => {
     expect(db.collectionMocks.politicalMetrics).toBeUndefined();
     expect(db.collectionMocks.resetMetricSnapshots!.find).toHaveBeenCalledOnce();
   });
+  it("keeps national debt and deficit out of every regional approval input", async () => {
+    const before = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    const changed = structuredClone(boards);
+    const national = changed.find((board) => board.scope === "national")!;
+    national.observations["09"].value = -20;
+    national.observations["10"].value = 180;
+    db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(changed);
+    const after = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    expect(after!.byRegion).toEqual(before!.byRegion);
+    expect(after!.modifiersByRegion).toEqual(before!.modifiersByRegion);
+    expect(after!.nationalModifiers).toContainEqual(
+      expect.objectContaining({ id: "nationalDebt", effect: -1 })
+    );
+    expect(after!.nationalModifiers).toContainEqual(
+      expect.objectContaining({ id: "nationalDeficit", effect: -3 })
+    );
+  });
+  it("lets every region improve against its own frozen opening reference", async () => {
+    const before = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    const changed = structuredClone(boards);
+    for (const board of changed.filter((row) => row.scope === "regional")) {
+      const metric = Object.values(board.observations).find(
+        (observation) => observation.path === "healthcare.lifeExpectancy"
+      )!;
+      metric.value = metric.value! * 1.2;
+    }
+    db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(changed);
+    const after = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    for (const [id, base] of before!.byRegion)
+      expect(after!.byRegion.get(id)).toBeGreaterThan(base);
+  });
   it("rejects a missing, mismatched, incomplete or stale owner board", async () => {
     for (const rows of [
       [],

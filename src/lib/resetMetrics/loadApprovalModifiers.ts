@@ -3,6 +3,7 @@
  * loadResetApprovalModifiers batches a country's boards and rejects missing,
  * mismatched or stale inputs instead of substituting retired metric stores.
  */
+import { performanceApproval, fiscalApprovalModifiers } from "@/lib/approval/rules/performance";
 import { primaryMetrics } from "./catalog";
 import type { TemporaryTargetEffect } from "@/lib/resetCabinet/rules/actions";
 import type { Db } from "mongodb";
@@ -28,6 +29,8 @@ import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetri
 /** Approval needs current observations, never their notes or retained history. */
 export const RESET_APPROVAL_BOARD_PROJECTION = {
   _id: 1,
+  openingValues: 1,
+  gameplayReferences: 1,
   worldId: 1,
   countryId: 1,
   scope: 1,
@@ -62,7 +65,12 @@ export async function loadResetApprovalModifiers(
   turn?: number,
   prefetchedBoards?: readonly ResetMetricSnapshot[],
   prefetchedCabinetEffects?: readonly TemporaryTargetEffect[]
-): Promise<{ modifiersByRegion: Map<string, ActiveModifier[]>; metrics: StateMetrics[] } | null> {
+): Promise<{
+  modifiersByRegion: Map<string, ActiveModifier[]>;
+  metrics: StateMetrics[];
+  basesByRegion: Map<string, number>;
+  nationalModifiers: ActiveModifier[];
+} | null> {
   if (
     !isResetV2Country(countryId) ||
     resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).metrics !== "v2"
@@ -137,11 +145,72 @@ export async function loadResetApprovalModifiers(
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =
     prefetchedCabinetEffects ?? (await loadCabinetGameplayEffects(db, gameState, turn));
+  const score = (regionId?: string) => {
+    const observations = read(regionId);
+    const board = byId.get(`${countryId}:${regionId ?? "national"}`)!;
+    return performanceApproval(
+      primaryMetrics.flatMap((metric) => {
+        const observation = observations[metric.id];
+        const reference =
+          board.gameplayReferences?.[metric.id]?.value ?? board.openingValues?.[metric.id];
+        if (
+          !observation ||
+          observation.value == null ||
+          reference == null ||
+          !["higher", "lower"].includes(metric.interpretation)
+        )
+          return [];
+        return [
+          { value: observation.value, reference, higherBetter: metric.interpretation === "higher" },
+        ];
+      })
+    );
+  };
+  const nationalModifiers: ActiveModifier[] = [
+    ...evaluateResetApprovalModifiers(national, context).filter(
+      (modifier) =>
+        ![
+          "balanced_budget",
+          "fiscal_discipline",
+          "government_deficit",
+          "fiscal_crisis",
+          "heavy_public_debt",
+        ].includes(modifier.id)
+    ),
+    ...fiscalApprovalModifiers(national["10"]?.value ?? 0, national["09"]?.value ?? 0),
+  ];
+  const nationalPerformance = score() - 50;
+  if (nationalPerformance !== 0)
+    nationalModifiers.push({
+      id: "national_performance",
+      label: "National performance",
+      effect: nationalPerformance,
+      marginEffect: 0,
+    });
+  const nationalResponse = cabinetApprovalResponse(
+    cabinetEffectsForRegion(
+      cabinetEffects.filter((effect) => effect.scope === "Nat"),
+      countryId
+    )
+  );
+  if (nationalResponse > 0)
+    nationalModifiers.push({
+      id: "cabinet_service_response",
+      label: "Cabinet service delivery",
+      effect: nationalResponse,
+      marginEffect: 0,
+      source: "cabinet",
+    });
+  const basesByRegion = new Map(stateIds.map((id) => [id, score(id)]));
   const metrics = stateIds.map((id) => {
-    const observations = { ...read(id), ...national };
+    const observations = read(id);
     const modifiers = evaluateResetApprovalModifiers(observations, context);
     const response = cabinetApprovalResponse(
-      cabinetEffectsForRegion(cabinetEffects, countryId, id)
+      cabinetEffectsForRegion(
+        cabinetEffects.filter((effect) => effect.scope !== "Nat"),
+        countryId,
+        id
+      )
     );
     if (response > 0)
       modifiers.push({
@@ -158,5 +227,5 @@ export async function loadResetApprovalModifiers(
       countryId,
     } as unknown as StateMetrics;
   });
-  return { modifiersByRegion, metrics };
+  return { modifiersByRegion, metrics, basesByRegion, nationalModifiers };
 }

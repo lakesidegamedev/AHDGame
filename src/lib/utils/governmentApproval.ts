@@ -1,3 +1,6 @@
+import { buildApprovalBreakdown } from "@/lib/country/rules/approvalBreakdown";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { adjustmentModifiers, unclampedApproval } from "@/lib/approval/rules/adjustment";
 /**
  * Government Approval Calculation
  *
@@ -13,8 +16,8 @@ import { metricApprovalContribution } from "@/lib/utils/approvalContributionRule
 import { regionalModifierBreakdown } from "@/lib/country/rules/regionalModifierBreakdown";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import type { StateMetrics, MetricCategoryId, State } from "@/lib/db/types";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+import type { StateMetrics, MetricCategoryId } from "@/lib/db/types";
+
 import { enforcementApprovalModifier } from "@/lib/unions/enforcementCosts";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import {
@@ -27,7 +30,7 @@ import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
-import type { GameState } from "@/lib/db/types/gameState";
+
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
   ACTING_APPOINTMENT_PENALTY,
@@ -39,13 +42,13 @@ import {
   expectationsRampTurns,
 } from "@/lib/country/rules/approvalHoneymoon";
 import type { LeaderReference } from "@/lib/government/leaderReference";
-import type { ElectedOfficial } from "@/lib/db/types/officials";
+
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { recordLeaderDeparture } from "@/lib/government/leaderLegacy";
 import { logger } from "@/lib/observability/logger";
 import {
-  evaluateModifiers,
+  evaluateRegionalApprovalModifiers as evaluateModifiers,
   applyModifiers,
   type ActiveModifier,
 } from "@/lib/utils/approvalModifiers";
@@ -59,7 +62,7 @@ import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessAppro
 import { computeWarApproval } from "@/lib/military/warApproval";
 import { IS_HIGHER_BETTER } from "@/lib/utils/metricScoring";
 import { axisAffinityFor, type AxisAffinity } from "@/lib/utils/metricAxisAffinity";
-import type { StateDemographicGroup, StateDemographics } from "@/lib/db/types/demographics";
+import type { StateDemographicGroup } from "@/lib/db/types/demographics";
 import { appendApprovalTelemetry } from "@/lib/telemetry/longHorizon/telemetry";
 import type { LongHorizonContext } from "@/lib/telemetry/longHorizon/telemetry";
 // SP4: hybrid political approval for LAW_COUNTRY_IDS. Function-time-only cycle
@@ -179,6 +182,8 @@ export { IS_HIGHER_BETTER };
  * a direct approval term.
  */
 export const APPROVAL_EXCLUDED_METRICS = new Set([
+  "budgetBalance",
+  "debtToGdp",
   "sexRatio",
   "dependencyRatio",
   "populationGrowth",
@@ -370,9 +375,9 @@ export function computeNationalAveragesFromMetrics(
   for (const category of CATEGORIES) {
     averages[category] = {};
     if (allMetrics.length === 0) continue;
-    const sample = allMetrics.find((m) => (m[category] as Record<string, unknown>) != null);
-    if (!sample) continue;
-    const metricKeys = Object.keys((sample[category] as Record<string, { value: number }>) || {});
+    const metricKeys = [
+      ...new Set(allMetrics.flatMap((metrics) => Object.keys((metrics[category] as object) ?? {}))),
+    ];
     for (const key of metricKeys) {
       const values = allMetrics
         .map((m) => (m[category] as Record<string, { value: number }>)?.[key]?.value)
@@ -578,7 +583,7 @@ export function calculateNationalApproval(
  * one query, grouped by stateId. Used by snapshotApprovalHistory so per-turn
  * snapshots include the State of the State bump without an O(N) round trip.
  */
-async function getActiveAddressModifiersByState(
+export async function getActiveAddressModifiersByState(
   db: Db,
   countryId: CountryId,
   currentTurn: number
@@ -636,7 +641,16 @@ interface StateApprovalBulkOp {
   updateOne: {
     filter: { _id: string };
     update: {
-      $set: { stateId: string; countryId: CountryId; approvalRating: number; updatedAt: Date };
+      $set: {
+        stateId: string;
+        countryId: CountryId;
+        approvalRating: number;
+        approvalRawRating: number;
+        updatedAt: Date;
+        lastSnapshotTurn: number;
+        baseApproval?: number;
+        activeModifiers?: ActiveModifier[];
+      };
       $push: {
         history: { $each: Array<{ turn: number; approval: number; net: number }>; $slice: number };
       };
@@ -652,16 +666,30 @@ interface StateApprovalBulkOp {
  * `governmentApprovals` snapshot at region scope.
  */
 export function buildStateApprovalBulkOps(
-  stateApprovals: Array<{ stateId: string; approval: number }>,
+  stateApprovals: Array<{
+    stateId: string;
+    approval: number;
+    baseApproval?: number;
+    activeModifiers?: ActiveModifier[];
+  }>,
   countryId: CountryId,
   turn: number,
   now: Date
 ): StateApprovalBulkOp[] {
-  return stateApprovals.map(({ stateId, approval }) => ({
+  return stateApprovals.map(({ stateId, approval, baseApproval, activeModifiers }) => ({
     updateOne: {
       filter: { _id: stateId },
       update: {
-        $set: { stateId, countryId, approvalRating: approval, updatedAt: now },
+        $set: {
+          stateId,
+          countryId,
+          approvalRating: approval,
+          approvalRawRating: approval,
+          updatedAt: now,
+          lastSnapshotTurn: turn,
+          ...(baseApproval !== undefined ? { baseApproval } : {}),
+          ...(activeModifiers ? { activeModifiers } : {}),
+        },
         $push: {
           // net = approval − disapproval = approval − (100 − approval)
           history: { $each: [{ turn, approval, net: approval - (100 - approval) }], $slice: -20 },
@@ -714,6 +742,20 @@ export async function snapshotApprovalHistory(
   telemetryCtx?: LongHorizonContext,
   bankFailureMods: ActiveModifier[] = []
 ): Promise<void> {
+  await withSessionDb(db, (tx) =>
+    snapshotApprovalHistoryInSession(tx, countryId, turn, telemetryCtx, bankFailureMods)
+  );
+}
+
+async function snapshotApprovalHistoryInSession(
+  db: Db,
+  countryId: CountryId,
+  turn: number,
+  telemetryCtx?: LongHorizonContext,
+  bankFailureMods: ActiveModifier[] = []
+): Promise<void> {
+  const approvalDoc = await governmentApprovalsCollection(db).findOne({ _id: countryId });
+  if ((approvalDoc?.lastSnapshotTurn ?? -1) >= turn) return;
   const statesCol = statesCollection(db);
 
   // Score approval with the live era's ruleset. Omitting this silently used the
@@ -741,18 +783,6 @@ export async function snapshotApprovalHistory(
   // whichever direction the country is currently going, so it only reaches the
   // right value if it is stepped EVERY turn. A country that returned early here
   // would freeze its exhaustion — and, once at peace, never finish healing.
-  const approvalDoc = await governmentApprovalsCollection(db).findOne(
-    { _id: countryId },
-    {
-      projection: {
-        warExhaustion: 1,
-        warExhaustionConflictId: 1,
-        headOfGovernmentKey: 1,
-        headOfGovernmentSinceTurn: 1,
-        approvalRating: 1,
-      },
-    }
-  );
   const war = await computeWarApproval(db, countryId, turn, {
     exhaustion: approvalDoc?.warExhaustion,
     conflictId: approvalDoc?.warExhaustionConflictId,
@@ -772,6 +802,7 @@ export async function snapshotApprovalHistory(
       { _id: countryId },
       {
         $set: {
+          lastSnapshotTurn: turn,
           warApprovalTotal: war.total,
           warExhaustion: war.exhaustion,
           warExhaustionConflictId: war.conflictId,
@@ -797,6 +828,13 @@ export async function snapshotApprovalHistory(
   // congressional map exceeds its efficiency-gap ceiling (empty when the
   // redistricting flag is off or the country has no district docs).
   const fairnessModifiersByState = await getActiveFairnessGapModifiers(db, countryId);
+  const prevDocs = await stateApprovalHistoryCollection(db)
+    .find(
+      { _id: { $in: allMetrics.map((m) => m._id) }, countryId },
+      { projection: { _id: 1, approvalRating: 1, approvalAdjustment: 1 } }
+    )
+    .toArray();
+  const prevByState = new Map(prevDocs.map((doc) => [doc._id, doc]));
   const stateApprovals = allMetrics.map((m) => {
     return {
       stateId: m._id,
@@ -806,6 +844,8 @@ export async function snapshotApprovalHistory(
         [
           ...(addressModifiersByState.get(m._id) ?? []),
           ...(fairnessModifiersByState.get(m._id) ?? []),
+          ...(politicalBases?.regionalModifiersByRegion?.get(m._id) ?? []),
+          ...adjustmentModifiers(prevByState.get(m._id)?.approvalAdjustment),
         ],
         weightingFor(groupsByState, countryId, String(m._id)),
         preset,
@@ -823,19 +863,40 @@ export async function snapshotApprovalHistory(
   // derived target by at most APPROVAL_MAX_STEP_PER_TURN points instead of
   // jumping. Damped values feed both the per-state snapshot and the national
   // aggregate, so all readers see the same smoothed series.
-  const prevDocs = await stateApprovalHistoryCollection(db)
-    .find(
-      { _id: { $in: stateApprovals.map((s) => s.stateId) }, countryId },
-      { projection: { _id: 1, approvalRating: 1 } }
-    )
-    .toArray();
-  const prevByState = new Map(prevDocs.map((d) => [d._id, d.approvalRating]));
   const dampedStateApprovals = stateApprovals.map((s) => ({
     ...s,
-    approval: dampApprovalStep(prevByState.get(s.stateId), s.approval),
+    approval: dampApprovalStep(prevByState.get(s.stateId)?.approvalRating, s.approval),
   }));
 
-  let approval = calculateNationalApproval(dampedStateApprovals);
+  const nationalRegions = allMetrics.map((metrics) => ({
+    stateId: metrics._id,
+    population: statePopMap.get(metrics._id) ?? 0,
+    approval: calculateStateApproval(
+      metrics,
+      nationalAverages,
+      [],
+      weightingFor(groupsByState, countryId, String(metrics._id)),
+      preset,
+      year,
+      isPoliticalApprovalCountry(countryId, true)
+        ? (politicalBases?.byRegion.get(metrics._id) ?? BASE_APPROVAL)
+        : undefined,
+      politicalBases?.modifiersByRegion?.get(metrics._id)
+    ),
+  }));
+  const previousStateAverage =
+    approvalDoc?.stateAverage ??
+    (Number.isFinite(approvalDoc?.approvalRating)
+      ? buildApprovalBreakdown(
+          approvalDoc!.approvalRating,
+          approvalDoc!.activeNationalModifiers ?? []
+        ).stateAverage
+      : undefined);
+  const stateAverage = dampApprovalStep(
+    previousStateAverage,
+    calculateNationalApproval(nationalRegions)
+  );
+  let approval = stateAverage;
 
   // Every national-scope modifier goes through ONE applyModifiers call:
   // head-of-government address bump (country level, not per-state), international
@@ -905,18 +966,24 @@ export async function snapshotApprovalHistory(
   } catch {
     // keep the stored tenure
   }
-  // A head who has just left office gets a legacy. It must never block the
-  // snapshot, and a retry writes nothing twice (the row id is stable).
+  // Legacy publication is deferred until the ratings commit.
   if (storedTenure?.key && storedTenure.key !== tenure.key) {
+    const departedKey = storedTenure.key;
     try {
-      await recordLeaderDeparture(db, {
-        countryId,
-        leaderKey: storedTenure.key,
-        sinceTurn: storedTenure.sinceTurn,
-        nextKey: tenure.key,
-        turn,
-        exitApproval:
-          typeof approvalDoc?.approvalRating === "number" ? approvalDoc.approvalRating : null,
+      await afterCommit(db, async () => {
+        try {
+          await recordLeaderDeparture(unboundDb(db), {
+            countryId,
+            leaderKey: departedKey,
+            sinceTurn: storedTenure.sinceTurn,
+            nextKey: tenure.key,
+            turn,
+            exitApproval:
+              typeof approvalDoc?.approvalRating === "number" ? approvalDoc.approvalRating : null,
+          });
+        } catch (err) {
+          logger.error("Approval", `Leader legacy failed for ${countryId}`, err);
+        }
       });
     } catch (err) {
       logger.error("Approval", `Leader legacy failed for ${countryId}`, err);
@@ -957,39 +1024,55 @@ export async function snapshotApprovalHistory(
     ...bankFailureMods,
     ...(unionEnforcementMod ? [unionEnforcementMod] : []),
   ];
-  const allNationalMods = [expectationsMod, ...nationalMods];
+  const allNationalMods = [
+    expectationsMod,
+    ...nationalMods,
+    ...(politicalBases?.nationalModifiers ?? []),
+    ...adjustmentModifiers(approvalDoc?.approvalAdjustment),
+  ];
   approval = applyModifiers(approval, allNationalMods);
 
+  const nationalSmoothing =
+    Math.round((stateAverage - calculateNationalApproval(nationalRegions)) * 10) / 10;
   await governmentApprovalsCollection(db).updateOne(
     { _id: countryId },
     {
       $set: {
         countryId,
         approvalRating: approval,
+        approvalRawRating: unclampedApproval(stateAverage, allNationalMods),
+        stateAverage,
+        lastSnapshotTurn: turn,
         approvalBase: politicalBases?.national ?? BASE_APPROVAL,
         activeRegionalModifiers: politicalBases?.modifiersByRegion
-          ? regionalModifierBreakdown(
-              dampedStateApprovals.map((state) => ({
-                base: politicalBases.byRegion.get(state.stateId) ?? BASE_APPROVAL,
-                approval: state.approval,
-                population: state.population,
-                modifiers: [
-                  ...(politicalBases.modifiersByRegion?.get(state.stateId) ?? []),
-                  ...(addressModifiersByState.get(state.stateId) ?? []),
-                  ...(fairnessModifiersByState.get(state.stateId) ?? []),
-                ],
-              }))
-            )
+          ? [
+              ...regionalModifierBreakdown(
+                nationalRegions.map((state) => ({
+                  base: politicalBases.byRegion.get(state.stateId) ?? BASE_APPROVAL,
+                  approval: state.approval,
+                  population: state.population,
+                  modifiers: [...(politicalBases.modifiersByRegion?.get(state.stateId) ?? [])],
+                }))
+              ),
+              ...(nationalSmoothing !== 0
+                ? [
+                    {
+                      id: "national_performance_smoothing",
+                      label: "Approval adjustment over time",
+                      effect: nationalSmoothing,
+                      marginEffect: 0,
+                      source: "metric" as const,
+                    },
+                  ]
+                : []),
+            ]
           : [
               {
                 id: "regional_conditions",
                 label: "Regional conditions (population weighted)",
                 effect:
-                  Math.round(
-                    (calculateNationalApproval(dampedStateApprovals) -
-                      (politicalBases?.national ?? BASE_APPROVAL)) *
-                      10
-                  ) / 10,
+                  Math.round((stateAverage - (politicalBases?.national ?? BASE_APPROVAL)) * 10) /
+                  10,
                 source: "metric" as const,
                 marginEffect: 0,
               },
@@ -1015,8 +1098,35 @@ export async function snapshotApprovalHistory(
   // Per-region approval history (mirrors the national snapshot at region scope)
   // so the regional metrics tab can chart approval over time. Uses the same
   // per-state approvals computed above (incl. governor-address modifiers).
+  const metricsByState = new Map(allMetrics.map((metrics) => [metrics._id, metrics]));
   const stateApprovalOps = buildStateApprovalBulkOps(
-    dampedStateApprovals.map((s) => ({ stateId: s.stateId, approval: s.approval })),
+    dampedStateApprovals.map((s) => ({
+      stateId: s.stateId,
+      approval: s.approval,
+      baseApproval:
+        politicalBases?.byRegion.get(s.stateId) ??
+        (isPoliticalApprovalCountry(countryId, true)
+          ? BASE_APPROVAL
+          : computeStateApprovalBase(
+              metricsByState.get(s.stateId)!,
+              nationalAverages,
+              weightingFor(groupsByState, countryId, s.stateId),
+              preset ?? undefined,
+              year
+            )),
+      activeModifiers: [
+        ...(politicalBases?.modifiersByRegion?.get(s.stateId) ??
+          evaluateModifiers(buildFlatMetrics(metricsByState.get(s.stateId)!), {
+            countryId,
+            preset,
+            year,
+          })),
+        ...(politicalBases?.regionalModifiersByRegion?.get(s.stateId) ?? []),
+        ...(addressModifiersByState.get(s.stateId) ?? []),
+        ...(fairnessModifiersByState.get(s.stateId) ?? []),
+        ...adjustmentModifiers(prevByState.get(s.stateId)?.approvalAdjustment),
+      ],
+    })),
     countryId,
     turn,
     new Date()
@@ -1027,10 +1137,7 @@ export async function snapshotApprovalHistory(
     );
   }
 
-  // Durable long-horizon series: the same damped values the pages read, one
-  // point per scope, with world/run provenance. Runs after operational writes
-  // so a telemetry failure can never block them; a missed turn is an explicit
-  // gap, never a fabricated point.
+  // Telemetry and operational ratings share the same atomic snapshot.
   if (telemetryCtx) {
     const netOf = (value: number): number => value - (100 - value);
     await appendApprovalTelemetry(db, telemetryCtx, countryId, turn, {

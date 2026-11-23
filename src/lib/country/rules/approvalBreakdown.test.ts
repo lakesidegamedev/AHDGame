@@ -54,3 +54,17 @@ describe("displayEffect", () => {
     expect(displayEffect(NaN)).toBeNull();
   });
 });
+
+describe("clamped approval breakdown", () => {
+  it.each([
+    [0, -80],
+    [100, 80],
+  ])("preserves the true regional average at approval %s", (approval, effect) => {
+    const breakdown = buildApprovalBreakdown(approval, [mod("shock", effect)], 50);
+    expect(breakdown.stateAverage).toBe(50);
+    expect(breakdown.stateAverage + breakdown.nationalNet).toBe(approval);
+    expect(breakdown.nationalAdjustments).toContainEqual(
+      expect.objectContaining({ id: "approval_bounds" })
+    );
+  });
+});

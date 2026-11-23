@@ -1,3 +1,7 @@
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { getActiveAddressModifiersByState } from "./governmentApproval";
+import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessApproval";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 /**
  * Fetches state government approval for use in election vote accumulation (party strength).
  * Returns 0-100. Uses BASE_APPROVAL (50) when metrics are missing.
@@ -5,7 +9,7 @@
 
 import { getDb } from "@/lib/mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import type { State, StateMetrics } from "@/lib/db/types";
+import type { StateMetrics } from "@/lib/db/types";
 import { getEraContext } from "@/lib/era/context";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -58,6 +62,23 @@ export async function getAllStateApprovalsForElection(
     .find(stateFilter, { projection: { _id: 1, countryId: 1 } })
     .toArray();
 
+  const snapshots = await stateApprovalHistoryCollection(db)
+    .find(stateFilter, {
+      projection: { stateId: 1, countryId: 1, approvalRating: 1, lastSnapshotTurn: 1 },
+    })
+    .toArray();
+  const stored = new Map(
+    snapshots
+      .filter((doc) => doc.lastSnapshotTurn != null && Number.isFinite(doc.approvalRating))
+      .map((doc) => [`${doc.countryId}:${doc.stateId ?? doc._id}`, doc.approvalRating])
+  );
+  const recorded = new Map(
+    allStates.flatMap((state) => {
+      const approval = stored.get(`${state.countryId}:${state._id}`);
+      return approval === undefined ? [] : [[String(state._id).toUpperCase(), approval] as const];
+    })
+  );
+  if (recorded.size === allStates.length) return recorded;
   const stateIdsForMetrics = allStates.map((s) => s._id);
   let metricsFilter: Record<string, unknown> = {};
   if (countryIds && countryIds.length > 0) {
@@ -105,26 +126,41 @@ export async function getAllStateApprovalsForElection(
   }
 
   // Compute per-country national averages, then approval for each state
-  const result = new Map<string, number>();
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
+  const result = new Map(recorded);
   for (const [cid, countryMetrics] of metricsByCountry) {
     const nationalAverages = computeNationalAveragesFromMetrics(countryMetrics);
     const bases = politicalBasesByCountry.get(cid);
+    const addresses = await getActiveAddressModifiersByState(
+      db,
+      cid as CountryId,
+      game?.currentTurn ?? 0
+    );
+    const fairness = await getActiveFairnessGapModifiers(db, cid as CountryId);
     for (const m of countryMetrics) {
       const id = (typeof m._id === "string" ? m._id : String(m._id)).toUpperCase();
       result.set(
         id,
-        calculateStateApproval(
-          m,
-          nationalAverages,
-          [],
-          weightingFor(groupsByState, cid, String(m._id)),
-          preset,
-          year,
-          isPoliticalApprovalCountry(cid, true)
-            ? (bases?.byRegion.get(String(m._id)) ?? BASE_APPROVAL)
-            : undefined,
-          bases?.modifiersByRegion?.get(String(m._id))
-        )
+        stored.get(`${cid}:${m._id}`) ??
+          calculateStateApproval(
+            m,
+            nationalAverages,
+            [
+              ...(addresses.get(String(m._id)) ?? []),
+              ...(fairness.get(String(m._id)) ?? []),
+              ...(bases?.regionalModifiersByRegion?.get(String(m._id)) ?? []),
+            ],
+            weightingFor(groupsByState, cid, String(m._id)),
+            preset,
+            year,
+            isPoliticalApprovalCountry(cid, true)
+              ? (bases?.byRegion.get(String(m._id)) ?? BASE_APPROVAL)
+              : undefined,
+            bases?.modifiersByRegion?.get(String(m._id))
+          )
       );
     }
   }

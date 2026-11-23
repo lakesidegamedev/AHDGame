@@ -1,7 +1,10 @@
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessApproval";
+import { loadElectorateGroups, weightingFor } from "@/lib/utils/governmentApproval";
 import type { Db } from "mongodb";
 import { findMergedRegionMetrics, findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameState } from "@/lib/db/types";
+
 import { resolveGameYear } from "@/lib/era/era";
 import { getActiveAddressApprovalModifiers } from "@/lib/governorOffice/address/activeAddressModifiers";
 import {
@@ -10,7 +13,10 @@ import {
   computeNationalAveragesFromMetrics,
   computeStateApprovalBase,
 } from "@/lib/utils/governmentApproval";
-import { evaluateModifiers, type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import {
+  evaluateRegionalApprovalModifiers as evaluateModifiers,
+  type ActiveModifier,
+} from "@/lib/utils/approvalModifiers";
 import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -35,6 +41,13 @@ export async function getRegionalApprovalData(
   countryId: CountryId,
   stateId: string
 ): Promise<RegionalApprovalData | null> {
+  const stored = await stateApprovalHistoryCollection(db).findOne({ _id: stateId, countryId });
+  if (stored?.lastSnapshotTurn != null && Number.isFinite(stored.approvalRating))
+    return {
+      approval: stored.approvalRating,
+      baseApproval: stored.baseApproval ?? 50,
+      modifiers: stored.activeModifiers ?? [],
+    };
   // SP5: merged two-store view.
   const metrics = await findMergedRegionMetrics(db, { _id: stateId, countryId });
   if (!metrics) return null;
@@ -84,7 +97,15 @@ export async function getRegionalApprovalData(
   const metricModifiers =
     bases?.modifiersByRegion?.get(stateId) ??
     evaluateModifiers(buildFlatMetrics(metrics), { preset, countryId, year });
-  const modifiers: ActiveModifier[] = [...metricModifiers, ...addressModifiers];
+  const fairness = await getActiveFairnessGapModifiers(db, countryId);
+  const extras = [
+    ...addressModifiers,
+    ...(fairness.get(stateId) ?? []),
+    ...(bases?.regionalModifiersByRegion?.get(stateId) ?? []),
+  ];
+  const groups = await loadElectorateGroups(db, { countryId, _id: stateId });
+  const weighting = weightingFor(groups, countryId, stateId);
+  const modifiers: ActiveModifier[] = [...metricModifiers, ...extras];
 
   // SP4: playable countries score from the hybrid political base; modifiers
   // (metric-named + address) still apply on top via the shared seam.
@@ -97,8 +118,8 @@ export async function getRegionalApprovalData(
     approval: calculateStateApproval(
       metrics,
       nationalAverages,
-      addressModifiers,
-      undefined,
+      extras,
+      weighting,
       preset,
       year,
       baseOverride,
@@ -106,7 +127,7 @@ export async function getRegionalApprovalData(
     ),
     baseApproval:
       baseOverride ??
-      computeStateApprovalBase(metrics, nationalAverages, undefined, preset ?? undefined, year),
+      computeStateApprovalBase(metrics, nationalAverages, weighting, preset ?? undefined, year),
     modifiers,
   };
 }

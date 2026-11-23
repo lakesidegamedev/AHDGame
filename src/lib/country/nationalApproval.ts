@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import type { State } from "@/lib/db/types";
+
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { getEraContext } from "@/lib/era/context";
 import {
@@ -109,7 +109,8 @@ export async function loadNationalApproval(
 
   const { stateAverage, nationalAdjustments } = buildApprovalBreakdown(
     governmentApproval,
-    nationalModifiers
+    nationalModifiers,
+    approvalDoc?.stateAverage
   );
 
   return {

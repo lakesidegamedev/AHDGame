@@ -1,10 +1,9 @@
-import { applyModifiers } from "@/lib/utils/approvalModifiers";
+import { loadNationalFiscalApprovalModifiers } from "@/lib/approval/nationalFiscal";
 import { loadRegionalDebtApprovalModifiers } from "@/lib/budget/regionalDebtApproval";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
-import { resetApprovalDirections } from "@/lib/resetMetrics/rules/approval";
 /**
  * Government approval bases and named conditions share one version-aware loader.
- * Metrics v2 compares current owner outcomes with the country's regional mean;
+ * Metrics v2 compares owner outcomes with frozen opening references;
  * v1 retains its hybrid political board. Surfaces apply conditions and damping
  * through the shared scorer after loading these inputs once per country.
  */
@@ -24,7 +23,7 @@ import {
 } from "@/lib/utils/governmentApproval";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
-import { approvalComponent, electorateLean } from "./politicalApproval";
+import { approvalComponent, approvalNeutralFor, electorateLean } from "./politicalApproval";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
@@ -65,6 +64,8 @@ export interface PoliticalApprovalBases {
   byRegion: Map<string, number>;
   /** Owner-derived named conditions when Metrics v2 is active. */
   modifiersByRegion?: Map<string, ActiveModifier[]>;
+  regionalModifiersByRegion?: Map<string, ActiveModifier[]>;
+  nationalModifiers?: ActiveModifier[];
   /** Population-weighted national base (same rounding). */
   national: number;
 }
@@ -114,31 +115,12 @@ export async function loadPoliticalApprovalBases(
       .toArray(),
   ]);
   const debtModifiers = await loadRegionalDebtApprovalModifiers(db, countryId, states);
-  const withDebt = (result: PoliticalApprovalBases): PoliticalApprovalBases => {
-    if (!result.modifiersByRegion) {
-      return {
-        ...result,
-        byRegion: new Map(
-          [...result.byRegion].map(([id, value]) => [
-            id,
-            applyModifiers(value, debtModifiers.get(id) ?? []),
-          ])
-        ),
-      };
-    }
-    return {
-      ...result,
-      modifiersByRegion: new Map(
-        states.map((state) => [
-          String(state._id),
-          [
-            ...(result.modifiersByRegion?.get(String(state._id)) ?? []),
-            ...(debtModifiers.get(String(state._id)) ?? []),
-          ],
-        ])
-      ),
-    };
-  };
+  let legacyNationalModifiers: ActiveModifier[] = [];
+  const withDebt = (result: PoliticalApprovalBases): PoliticalApprovalBases => ({
+    ...result,
+    regionalModifiersByRegion: debtModifiers,
+    nationalModifiers: result.nationalModifiers ?? legacyNationalModifiers,
+  });
   const resetInputs = await loadResetApprovalModifiers(
     db,
     countryId,
@@ -147,21 +129,7 @@ export async function loadPoliticalApprovalBases(
     turn
   );
   if (resetInputs) {
-    const averages = computeNationalAveragesFromMetrics(resetInputs.metrics);
-    const year = gameState ? resolveGameYear(gameState) : null;
-    const byRegion = new Map(
-      resetInputs.metrics.map((metrics) => [
-        String(metrics._id),
-        computeStateApprovalBase(
-          metrics,
-          averages,
-          undefined,
-          gameState?.preset,
-          year,
-          resetApprovalDirections
-        ),
-      ])
-    );
+    const byRegion = resetInputs.basesByRegion;
     const totalPop = states.reduce((sum, state) => sum + Math.max(0, state.population ?? 0), 0);
     const national =
       totalPop > 0
@@ -175,8 +143,14 @@ export async function loadPoliticalApprovalBases(
             ) / totalPop
           )
         : BASE_APPROVAL;
-    return withDebt({ byRegion, national, modifiersByRegion: resetInputs.modifiersByRegion });
+    return withDebt({
+      byRegion,
+      national,
+      modifiersByRegion: resetInputs.modifiersByRegion,
+      nationalModifiers: resetInputs.nationalModifiers,
+    });
   }
+  legacyNationalModifiers = await loadNationalFiscalApprovalModifiers(db, countryId);
   // Successors in a v1 world still use the original relative metric scorer.
   // Opting approval into successor routing must not replace that base with 50.
   if (isResetV2Country(countryId) && !isPoliticalApprovalCountry(countryId)) {
@@ -228,7 +202,15 @@ export async function loadPoliticalApprovalBases(
     if (!state) continue;
     const lean = state ? electorateLean(state) : 0;
     const base = round1(
-      clamp100(BASE_APPROVAL + approvalComponent(doc.values, lean, countryId, gameState?.preset))
+      clamp100(
+        BASE_APPROVAL +
+          approvalComponent(
+            { ...doc.values, "economy.fiscal": approvalNeutralFor(countryId, gameState?.preset) },
+            lean,
+            countryId,
+            gameState?.preset
+          )
+      )
     );
     byRegion.set(doc._id, base);
     const pop = state?.population ?? 0;

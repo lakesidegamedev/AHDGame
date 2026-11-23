@@ -1,3 +1,4 @@
+import { unclampedApproval } from "@/lib/approval/rules/adjustment";
 /**
  * Approval Modifiers — Democracy 3-style named conditions that add or subtract
  * from the base approval score when a set of metric thresholds are all met.
@@ -800,12 +801,16 @@ export function evaluateModifiers(
  * negatives remain uncapped so crisis stacks still hurt.
  */
 export function applyModifiers(base: number, modifiers: ActiveModifier[]): number {
-  let positive = 0;
-  let negative = 0;
-  for (const m of modifiers) {
-    if (m.effect >= 0) positive += m.effect;
-    else negative += m.effect;
-  }
-  const total = Math.min(positive, POSITIVE_MODIFIER_NET_CAP) + negative;
-  return Math.max(0, Math.min(100, Math.round((base + total) * 10) / 10));
+  return Math.max(0, Math.min(100, unclampedApproval(base, modifiers)));
+}
+
+/** National fiscal outcomes never become local-government approval conditions. */
+export function evaluateRegionalApprovalModifiers(
+  metrics: Record<string, Record<string, number>>,
+  context: EvaluateModifiersOptions = {}
+): ActiveModifier[] {
+  const governance = { ...metrics.governance };
+  delete governance.budgetBalance;
+  delete governance.debtToGdp;
+  return evaluateModifiers({ ...metrics, governance }, context);
 }
