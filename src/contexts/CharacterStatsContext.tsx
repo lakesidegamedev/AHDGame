@@ -1,5 +1,6 @@
 "use client";
 
+import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
 export interface CorpHistoryPoint {
@@ -52,6 +53,8 @@ export interface CampaignIncomeBreakdown {
 }
 
 export interface CharacterStats {
+  /** The character these figures belong to; lets a refetch detect a switch made elsewhere. */
+  characterId?: string;
   name: string;
   actions: number;
   /** Per-turn action cap, scaled by the character's Energy stat (200–250). */
@@ -152,4 +155,48 @@ export function buildStatusPatch(data: Record<string, unknown>): Partial<Charact
     patch.politicalInfluence = data.politicalInfluence;
   if (typeof data.favorability === "number") patch.favorability = data.favorability;
   return patch;
+}
+
+/** Whole-object mapping of a `/api/client-status` response, defaults for absent fields. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function buildStatusStats(data: Record<string, any>): CharacterStats {
+  return {
+    characterId: typeof data.characterId === "string" ? data.characterId : undefined,
+    name: data.name,
+    actions: data.actions ?? 0,
+    actionCap: data.actionCap ?? ACTION_CAP,
+    hoardThreshold: data.hoardThreshold ?? ACTION_HOARDING_THRESHOLD,
+    funds: data.funds ?? 0,
+    campaignFundsStored: data.campaignFundsStored ?? data.funds ?? 0,
+    cashOnHand: data.cashOnHand ?? 0,
+    personalHomeLiquid: data.personalHomeLiquid ?? data.cashOnHand ?? 0,
+    homeCurrency: data.homeCurrency ?? "USD",
+    corp: data.corpNav ?? null,
+    projectedIncome: data.projectedIncome ?? null,
+    campaignIncomeBreakdown: data.campaignIncomeBreakdown ?? null,
+    donorBaseLevel: data.donorBaseLevel ?? 0,
+    politicalInfluence: data.politicalInfluence ?? 0,
+    favorability: data.favorability ?? 0,
+    currentOfficeType: data.currentOfficeType ?? null,
+    isCentralBankChair: data.isCentralBankChair ?? false,
+    chairActionBonus: data.chairActionBonus ?? 0,
+    baseActionsPerTurn: data.baseActionsPerTurn ?? 4,
+    officeActionBonus: data.officeActionBonus ?? 0,
+    bonusActionsFromParty: data.bonusActionsFromParty ?? 0,
+    dividendIncome: data.dividendIncome ?? 0,
+    bondIncome: data.bondIncome ?? 0,
+    electionStats: data.electionStats ?? null,
+  };
+}
+
+/** True when a status response belongs to a different character than the held stats. */
+export function statusIsForOtherCharacter(
+  held: Pick<CharacterStats, "characterId"> | null,
+  data: Record<string, unknown>
+): boolean {
+  return (
+    !!held?.characterId &&
+    typeof data.characterId === "string" &&
+    data.characterId !== held.characterId
+  );
 }
