@@ -39,15 +39,21 @@ export function fiscalApprovalModifiers(debtPct: number, balancePct: number, reg
       label: regional ? "Regional budget deficit" : "National budget deficit",
       effect: Math.round(deficit * 10) / 10,
     },
-    ...(!regional && Number.isFinite(balancePct) && balancePct >= 0.5
-      ? [{ id: "nationalBalancedBudget", label: "National balanced budget", effect: 1 }]
+    // A region earns the same surplus bonuses from its own budget; national
+    // results never reach a region's rating (owner, 2026-11-23).
+    ...(Number.isFinite(balancePct) && balancePct >= 0.5
+      ? [
+          regional
+            ? { id: "regionalBalancedBudget", label: "Balanced budget", effect: 1 }
+            : { id: "nationalBalancedBudget", label: "National balanced budget", effect: 1 },
+        ]
       : []),
-    ...(!regional &&
-    Number.isFinite(balancePct) &&
-    Number.isFinite(debtPct) &&
-    balancePct >= 1 &&
-    debtPct <= 90
-      ? [{ id: "nationalFiscalDiscipline", label: "National fiscal discipline", effect: 1 }]
+    ...(Number.isFinite(balancePct) && Number.isFinite(debtPct) && balancePct >= 1 && debtPct <= 90
+      ? [
+          regional
+            ? { id: "regionalFiscalDiscipline", label: "Fiscal discipline", effect: 1 }
+            : { id: "nationalFiscalDiscipline", label: "National fiscal discipline", effect: 1 },
+        ]
       : []),
   ]
     .filter((row) => row.effect !== 0)
