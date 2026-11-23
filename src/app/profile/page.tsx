@@ -92,7 +92,7 @@ import { CeoCorporationCard } from "./components/CeoCorporationCard";
 import { ReplayTutorialButton } from "@/components/tutorial/ReplayTutorialButton";
 import { OnboardingFlaggedCard } from "./components/OnboardingFlaggedCard";
 import { isOnboardingDismissed, loadOnboardingChecklist } from "@/lib/onboarding/checklist";
-import { recordOnboardingProgress } from "@/lib/onboarding/stepStamps";
+import { isWithinOnboardingWindow, recordOnboardingProgress } from "@/lib/onboarding/stepStamps";
 import { loadFirstDays, type FirstDaysData } from "@/lib/onboarding/firstDays";
 import { FirstDaysPanel } from "./components/FirstDaysPanel";
 import { partiesUrl } from "@/lib/urls";
@@ -891,8 +891,10 @@ export default async function ProfilePage({
               </Link>
             )}
             <OnboardingFlaggedCard
-              checklist={onboardingChecklist}
-              bannerDismissed={!!character.onboardingDismissed}
+              checklist={isWithinOnboardingWindow(character) ? onboardingChecklist : null}
+              bannerDismissed={
+                !!character.onboardingDismissed || !isWithinOnboardingWindow(character)
+              }
             />
             {/* Persistent reminder when the one-time stat allocation was set aside */}
             {!character.statsAllocated && character.statAllocationDismissed && (
