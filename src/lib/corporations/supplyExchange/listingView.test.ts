@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
-import {
-  toListingView,
-  loadOpenOffers,
-  offerSort,
-  openOffersFilter,
-  openOffersPipeline,
-} from "./listingView";
+import { loadOpenOffers, offerSort, openOffersFilter, openOffersPipeline } from "./listingView";
 import { COMMODITIES_BY_NAME } from "./offerOrdering";
 
 function makeDb(rows: unknown[], publishers: unknown[]) {
@@ -146,29 +140,5 @@ describe("offer filters and ordering", () => {
     });
     expect(stages().$sort).toEqual({ volumeCap: -1, _id: 1 });
     expect(out.offers[0].corporationLogoUrl).toBe("/l.png");
-  });
-});
-
-describe("toListingView", () => {
-  it("settles single precision quantities and premiums", () => {
-    const corpId = new ObjectId();
-    const view = toListingView(
-      {
-        _id: "l1",
-        corporationId: corpId,
-        slot: 0,
-        side: "sell",
-        commodity: "oil",
-        volumeCap: 12.3100004196167,
-        pricePremium: 0.20000000298023224,
-        expiresAtTurn: 99,
-        publishedByUserId: "u",
-        aiListed: true,
-      } as never,
-      { _id: corpId, name: "Acme" } as never,
-      new Set()
-    );
-    expect(view?.volumeCap).toBe(12.31);
-    expect(view?.pricePremium).toBe(0.2);
   });
 });

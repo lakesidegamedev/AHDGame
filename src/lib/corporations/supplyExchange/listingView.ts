@@ -13,7 +13,6 @@ import {
 } from "./offerOrdering";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
-import { settleSinglePrecision } from "@/lib/utils/singlePrecision";
 import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 export type PublisherFields = Pick<
@@ -75,8 +74,8 @@ export function toListingView(
     side: row.side,
     commodity: row.commodity,
     ...(row.stateId ? { stateId: row.stateId } : {}),
-    volumeCap: settleSinglePrecision(row.volumeCap),
-    pricePremium: settleSinglePrecision(row.pricePremium),
+    volumeCap: row.volumeCap,
+    pricePremium: row.pricePremium,
     ...(row.durationTurns != null ? { durationTurns: row.durationTurns } : {}),
     expiresAtTurn: row.expiresAtTurn,
   };

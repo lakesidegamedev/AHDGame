@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Slider } from "@/components/ui";
 import { WAGE_LEVEL_MIN, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
-import { settleSinglePrecision } from "@/lib/utils/singlePrecision";
 import type { SectorData } from "../types";
 
 interface WageLevelPanelProps {
@@ -20,7 +19,7 @@ interface WageLevelPanelProps {
 
 /** Round a wage level to a clean slider step and avoid float dust (e.g. 1.0500000001). */
 function roundWage(value: number): number {
-  return Math.round(value * 20) / 20; // 0.05 steps
+  return Math.round(value * 100) / 100; // 0.01 steps, the same grain the API stores
 }
 
 function pctVsBaseline(level: number): string {
@@ -38,7 +37,7 @@ export default function WageLevelPanel({
   onWageChange,
   onSave,
 }: WageLevelPanelProps) {
-  const activeLevel = settleSinglePrecision(sector.wageLevel ?? 1);
+  const activeLevel = sector.wageLevel ?? 1;
   const draft = roundWage(wageDraft);
   const aboveBaseline = draft > 1;
   const floorBinds = sector.minWageUplift != null && sector.minWageUplift > 0;
@@ -109,7 +108,7 @@ export default function WageLevelPanel({
             <Slider
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step={0.01}
               value={draft}
               onChange={(e) => onWageChange(roundWage(Number(e.target.value)))}
               variant={aboveBaseline ? "error" : "success"}
@@ -119,7 +118,7 @@ export default function WageLevelPanel({
               type="number"
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step={0.01}
               value={draft}
               onChange={(e) =>
                 onWageChange(

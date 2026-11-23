@@ -288,10 +288,10 @@ it("uses the settled statement for CEO revenue, profit and margin", () => {
 });
 
 describe("CeoOperationsTable: wage input", () => {
-  it("shows a single precision wage cleanly and accepts it as valid", () => {
-    renderTable({ sectors: [sector({ wageLevel: 1.0800000429153442 })] as never });
+  it("treats a stored wage such as 1.08 as a valid step", () => {
+    renderTable({ sectors: [sector({ wageLevel: 1.08 })] as never });
     const input = screen.getByLabelText(/Wage level/) as HTMLInputElement;
     expect(input.value).toBe("1.08");
-    expect(input.getAttribute("step")).toBe("any");
+    expect(input.getAttribute("step")).toBe("0.01");
   });
 });
