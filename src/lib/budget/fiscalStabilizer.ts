@@ -236,10 +236,17 @@ export async function emitFiscalConsolidationNews(
  * Approval chips for every country whose latest package is still within a
  * year of enactment. One projected read for the whole snapshot.
  */
+export interface FiscalConsolidationEffect {
+  effect: number;
+  appliedTurn: number;
+  /** First turn the cost has faded to nothing. */
+  expiresTurn: number;
+}
+
 export async function loadFiscalConsolidationApprovalEffects(
   db: Db,
   turn: number
-): Promise<Map<string, number>> {
+): Promise<Map<string, FiscalConsolidationEffect>> {
   const budgets = await federalBudgetCollection(db)
     .find(
       { "fiscalConsolidation.lastPackage.appliedTurn": { $gt: turn - TURNS_PER_YEAR } },
@@ -253,7 +260,7 @@ export async function loadFiscalConsolidationApprovalEffects(
       }
     )
     .toArray();
-  const out = new Map<string, number>();
+  const out = new Map<string, FiscalConsolidationEffect>();
   for (const budget of budgets) {
     const last = budget.fiscalConsolidation?.lastPackage;
     if (!last) continue;
@@ -262,18 +269,28 @@ export async function loadFiscalConsolidationApprovalEffects(
       turn - last.appliedTurn,
       TURNS_PER_YEAR
     );
-    if (effect < 0) out.set(String(budget.countryId ?? budget._id), effect);
+    if (effect < 0)
+      out.set(String(budget.countryId ?? budget._id), {
+        effect,
+        appliedTurn: last.appliedTurn,
+        expiresTurn: last.appliedTurn + TURNS_PER_YEAR,
+      });
   }
   return out;
 }
 
-export function fiscalConsolidationApprovalModifiers(effect: number | undefined): ActiveModifier[] {
-  if (!effect) return [];
+export function fiscalConsolidationApprovalModifiers(
+  consolidation: FiscalConsolidationEffect | undefined
+): ActiveModifier[] {
+  if (!consolidation?.effect) return [];
   return [
     {
       id: "fiscal_consolidation",
       label: "Austerity budget",
-      effect,
+      effect: consolidation.effect,
+      sinceTurn: consolidation.appliedTurn,
+      expiresTurn: consolidation.expiresTurn,
+      detail: "Austerity budget the government enacted to close its deficit",
       marginEffect: 0,
       source: "fiscal",
     },

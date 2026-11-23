@@ -14,7 +14,11 @@ import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { mergeApprovalModifiers } from "./mergeApprovalModifiers";
-import { displayEffect, listedRegionAverage } from "@/lib/country/rules/approvalBreakdown";
+import {
+  displayEffect,
+  listedRegionAverage,
+  nationalMarginFromRegions,
+} from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
 interface StateApprovalEntry {
@@ -162,7 +166,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
     : governmentApproval != null && base != null
       ? Math.round((governmentApproval - base) * 10) / 10
       : netModifierEffect(modifiers);
-  const netMargin = computeRegionalConditionMargin(modifiers);
+  const netMargin =
+    nationalMarginFromRegions(sortedStates) ?? computeRegionalConditionMargin(modifiers);
 
   return (
     <div className="min-h-screen bg-background pb-16">

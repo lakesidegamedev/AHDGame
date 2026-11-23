@@ -3,7 +3,12 @@
  * loadResetApprovalModifiers batches a country's boards and rejects missing,
  * mismatched or stale inputs instead of substituting retired metric stores.
  */
-import { performanceApproval, fiscalApprovalModifiers } from "@/lib/approval/rules/performance";
+import {
+  performanceApproval,
+  fiscalApprovalModifiers,
+  describePerformanceComponents,
+  type PerformanceInput,
+} from "@/lib/approval/rules/performance";
 import { primaryMetrics } from "./catalog";
 import type { TemporaryTargetEffect } from "@/lib/resetCabinet/rules/actions";
 import type { Db } from "mongodb";
@@ -145,27 +150,31 @@ export async function loadResetApprovalModifiers(
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =
     prefetchedCabinetEffects ?? (await loadCabinetGameplayEffects(db, gameState, turn));
-  const score = (regionId?: string) => {
+  const performanceInputs = (regionId?: string): PerformanceInput[] => {
     const observations = read(regionId);
     const board = byId.get(`${countryId}:${regionId ?? "national"}`)!;
-    return performanceApproval(
-      primaryMetrics.flatMap((metric) => {
-        const observation = observations[metric.id];
-        const reference =
-          board.gameplayReferences?.[metric.id]?.value ?? board.openingValues?.[metric.id];
-        if (
-          !observation ||
-          observation.value == null ||
-          reference == null ||
-          !["higher", "lower"].includes(metric.interpretation)
-        )
-          return [];
-        return [
-          { value: observation.value, reference, higherBetter: metric.interpretation === "higher" },
-        ];
-      })
-    );
+    return primaryMetrics.flatMap((metric) => {
+      const observation = observations[metric.id];
+      const reference =
+        board.gameplayReferences?.[metric.id]?.value ?? board.openingValues?.[metric.id];
+      if (
+        !observation ||
+        observation.value == null ||
+        reference == null ||
+        !["higher", "lower"].includes(metric.interpretation)
+      )
+        return [];
+      return [
+        {
+          value: observation.value,
+          reference,
+          higherBetter: metric.interpretation === "higher",
+          label: metric.name,
+        },
+      ];
+    });
   };
+  const score = (regionId?: string) => performanceApproval(performanceInputs(regionId));
   const nationalModifiers: ActiveModifier[] = [
     ...evaluateResetApprovalModifiers(national, context).filter(
       (modifier) =>
@@ -186,6 +195,7 @@ export async function loadResetApprovalModifiers(
       label: "National performance",
       effect: nationalPerformance,
       marginEffect: 0,
+      detail: describePerformanceComponents(performanceInputs()),
     });
   const nationalResponse = cabinetApprovalResponse(
     cabinetEffectsForRegion(

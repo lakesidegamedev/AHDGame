@@ -1,4 +1,5 @@
 import { POSITIVE_MODIFIER_NET_CAP, type ActiveModifier } from "@/lib/approval/activeModifier";
+import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 
 export interface ApprovalBreakdown {
   /** Population-weighted state average, before any national adjustment. */
@@ -98,4 +99,58 @@ export function listedRegionAverage(
   if (total <= 0 || !Number.isFinite(storedAverage)) return null;
   const listedAverage = round1(weighted / total);
   return { listedAverage, gap: round1(storedAverage - listedAverage) };
+}
+
+/**
+ * National profit margin swing: the population-weighted mean of each region's
+ * own capped margin, so it reconciles with the region pages (each region is
+ * the sum of its visible pp values, capped at 3).
+ */
+export function nationalMarginFromRegions(
+  regions: readonly { population?: number; modifiers: ActiveModifier[] }[]
+): number | null {
+  let weighted = 0;
+  let total = 0;
+  for (const region of regions) {
+    const population = region.population;
+    if (!Number.isFinite(population) || !population || population <= 0) continue;
+    weighted += computeRegionalConditionMargin(region.modifiers) * population;
+    total += population;
+  }
+  return total > 0 ? round1(weighted / total) : null;
+}
+
+export interface RegionReconciliation {
+  base: number;
+  /** Named conditions and decisions, as listed. */
+  effects: number;
+  /** Cap, gradual movement and floor or ceiling lines. */
+  adjustments: number;
+  total: number;
+}
+
+const ADJUSTMENT_LINE_IDS = new Set([
+  "approval_positive_cap",
+  "approval_smoothing",
+  "approval_bounds",
+]);
+
+/** Base plus the listed effects plus the adjustment lines, which equals the stated rating. */
+export function reconcileRegionApproval(
+  base: number,
+  modifiers: readonly ActiveModifier[]
+): RegionReconciliation {
+  let effects = 0;
+  let adjustments = 0;
+  for (const m of modifiers) {
+    if (!Number.isFinite(m.effect)) continue;
+    if (ADJUSTMENT_LINE_IDS.has(m.id)) adjustments += m.effect;
+    else effects += m.effect;
+  }
+  return {
+    base,
+    effects: round1(effects),
+    adjustments: round1(adjustments),
+    total: round1(base + effects + adjustments),
+  };
 }

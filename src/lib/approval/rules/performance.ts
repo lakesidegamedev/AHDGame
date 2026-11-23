@@ -1,14 +1,42 @@
-/** Frozen opening references let all regions improve without moving their own goalposts. */
-export function performanceApproval(
-  metrics: readonly { value: number; reference: number; higherBetter: boolean }[]
-): number {
+export interface PerformanceInput {
+  value: number;
+  reference: number;
+  higherBetter: boolean;
+  label?: string;
+}
+
+/** Each metric's signed contribution, in approval points, to the performance score. */
+export function performanceComponents(metrics: readonly PerformanceInput[]) {
   const valid = metrics.filter((m) => Number.isFinite(m.value) && Number.isFinite(m.reference));
-  if (!valid.length) return 50;
-  const sum = valid.reduce((total, metric) => {
+  return valid.map((metric) => {
     const deviation = (metric.value - metric.reference) / Math.max(1, Math.abs(metric.reference));
-    return total + Math.max(-2, Math.min(2, deviation * (metric.higherBetter ? 15 : -15)));
-  }, 0);
-  return Math.round((50 + (sum / valid.length) * 10) * 10) / 10;
+    const score = Math.max(-2, Math.min(2, deviation * (metric.higherBetter ? 15 : -15)));
+    return { label: metric.label ?? "Metric", points: (score / valid.length) * 10 };
+  });
+}
+
+/** Frozen opening references let all regions improve without moving their own goalposts. */
+export function performanceApproval(metrics: readonly PerformanceInput[]): number {
+  const parts = performanceComponents(metrics);
+  if (!parts.length) return 50;
+  return Math.round((50 + parts.reduce((t, p) => t + p.points, 0)) * 10) / 10;
+}
+
+/** Plain-language list of the metrics pulling a performance score furthest from 50. */
+export function describePerformanceComponents(metrics: readonly PerformanceInput[], max = 3) {
+  const parts = performanceComponents(metrics)
+    .filter((p) => Math.abs(p.points) >= 0.05)
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points));
+  const fmt = (p: { label: string; points: number }) =>
+    `${p.label} ${p.points > 0 ? "+" : ""}${p.points.toFixed(1)}`;
+  const down = parts.filter((p) => p.points < 0).slice(0, max);
+  const up = parts.filter((p) => p.points > 0).slice(0, max);
+  const lines = [
+    "Average of how far each national outcome metric has moved from its opening value (better is up, worse is down), scaled to approval points.",
+  ];
+  if (down.length) lines.push(`Biggest drags: ${down.map(fmt).join(", ")}.`);
+  if (up.length) lines.push(`Biggest gains: ${up.map(fmt).join(", ")}.`);
+  return lines.join(" ");
 }
 
 export function fiscalApprovalModifiers(debtPct: number, balancePct: number, regional = false) {

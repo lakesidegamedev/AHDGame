@@ -134,12 +134,15 @@ export function emptyCabinetSeatsModifier(
   }
   const empty = Math.max(0, totalSeats - Math.min(seatedCount, totalSeats));
   if (empty === 0) return null;
+  const perSeat = Math.round((NO_CABINET_PENALTY / totalSeats) * 100) / 100;
+  const detail = `An empty cabinet costs ${NO_CABINET_PENALTY} approval in total, shared across all ${totalSeats} seats: ${perSeat} for each empty seat. A larger cabinet means a smaller cost per seat.`;
   if (empty === totalSeats) {
     return {
       id: "cabinet_none",
       label: "No cabinet seated",
       effect: -NO_CABINET_PENALTY,
       marginEffect: 0,
+      detail,
     };
   }
   return {
@@ -148,6 +151,7 @@ export function emptyCabinetSeatsModifier(
     // Magnitude rounded, so half-tenths round away from zero on the penalty.
     effect: -Math.round(NO_CABINET_PENALTY * (empty / totalSeats) * 10) / 10,
     marginEffect: 0,
+    detail,
   };
 }
 

@@ -128,7 +128,7 @@ export function approvalModifiersForDisplay(
   );
   add(
     "approval_smoothing",
-    "Approval adjustment over time",
+    "Gradual movement toward target",
     raw - unclampedApproval(base, authored)
   );
   add("approval_bounds", "Approval floor or ceiling", rating - raw);

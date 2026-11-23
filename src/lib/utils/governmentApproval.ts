@@ -1065,7 +1065,7 @@ async function snapshotApprovalHistoryInSession(
                 ? [
                     {
                       id: "national_performance_smoothing",
-                      label: "Approval adjustment over time",
+                      label: "Gradual movement toward target",
                       effect: nationalSmoothing,
                       marginEffect: 0,
                       source: "metric" as const,
