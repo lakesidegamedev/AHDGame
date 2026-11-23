@@ -17,7 +17,7 @@ import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { FiscalRatios } from "./fiscalMirror";
+import { regionalFiscalRatios, type FiscalRatios, type RegionalFiscalRatios } from "./fiscalMirror";
 import type { GameConfig } from "@/lib/db/types";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
@@ -363,6 +363,26 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
     });
   }
   return byCountry;
+}
+
+/** Each region's own balance and debt ratios, keyed by region id. */
+export async function regionalFiscalRatiosProvider(
+  db: Db
+): Promise<Map<string, RegionalFiscalRatios>> {
+  const budgets = await stateBudgetsCollection(db)
+    .find({})
+    .project<Pick<StateBudget, "_id" | "surplus" | "stateGdp" | "financing">>({
+      surplus: 1,
+      stateGdp: 1,
+      "financing.principal": 1,
+    })
+    .toArray();
+  const byRegion = new Map<string, RegionalFiscalRatios>();
+  for (const b of budgets) {
+    const ratios = regionalFiscalRatios(b);
+    if (ratios) byRegion.set(String(b._id), ratios);
+  }
+  return byRegion;
 }
 
 /**
