@@ -1,6 +1,6 @@
 /**
  * Regional growth from the owned-company signal, weighted by the owned share of
- * the regional economy (owner decision, 2026-11-23).
+ * the regional economy.
  *
  * Player and NPP companies are a slice of a region's output. Their measured
  * growth (which also counts new companies opening) moves regional GDP only in
