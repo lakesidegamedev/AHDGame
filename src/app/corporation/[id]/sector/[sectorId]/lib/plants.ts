@@ -59,7 +59,6 @@ function localMarketNote(outputs: string[]): string {
 
 export function idleCauseMeta(
   sectorType: OperatingSectorType | string | null | undefined,
-  bankCapacityShare?: number,
   localMarketOutputs: string[] = []
 ): Record<PlantIdleCauseKey, IdleCauseMeta> {
   const v = facilityVocabulary(sectorType);
@@ -115,11 +114,6 @@ export function idleCauseMeta(
       label: "Stopped: short of workers",
       tone: "warning",
       help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
-    },
-    bank: {
-      label: "Reserved for your bank network",
-      tone: "info",
-      help: `Your active bank charter allocates ${fmtPct(bankCapacityShare)} of financial capacity to deposit-taking branches, set by its branch capacity share. This capacity is not lost: it backs your bank's deposit ceiling.`,
     },
     deposits: {
       label: "Deposits ran short",
@@ -178,7 +172,6 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
   disaster: "bg-fuchsia-600/55",
   policy: "bg-indigo-400/55",
   staffing: "bg-orange-600/60",
-  bank: "bg-teal-400/55",
   deposits: "bg-lime-500/55",
   mothballed: "bg-muted/45",
   other: "bg-slate-500/30",

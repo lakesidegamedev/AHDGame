@@ -430,8 +430,8 @@ export async function snapshotMarketCap(
         ...(sourceCorp?.averageQuality != null
           ? { averageQuality: sourceCorp.averageQuality }
           : {}),
-        // Branch-network take for deposit-taking banks: the charter keeps only
-        // current values, so this is the per-turn record of it.
+        // Deposit ceiling history for deposit-taking banks: the charter keeps
+        // only current values.
         ...(bankBranch ? { bankBranch } : {}),
         marketCap: Math.round(localPrice * s.totalShares),
         liquidCapital: Math.round(s.liquidCapital),

@@ -75,7 +75,6 @@ import {
   sectorSiteStatement,
 } from "@/lib/corporations/rules/siteStatement";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 import { withRunReport } from "@/lib/corporations/queries/sectorRunReport";
@@ -797,10 +796,6 @@ export async function buildSectorDetailPlantsTier({
           .attackerSharePercent
       : marketShare;
     plants = buildSectorPlantsSection({
-      bankingCommodityScale: commodityProductionCapacityScale(
-        corporation.bankCharter,
-        governorConfig?.privateBankingEnabled === true
-      ),
       sector,
       sectorType,
       worldBuildSettledTurn: gameState?.buildDeliverySettledTurn,

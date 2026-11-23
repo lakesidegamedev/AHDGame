@@ -582,7 +582,6 @@ function prepareProcessSector(
     demandThrottleFactor,
     demandFill,
     embargoExportExposure,
-    bankingCommodityScale,
     hourlyRevenue: realizedHourlyRevenue,
     capacityBindingEvent,
   } = resolvePlantsRevenue({
@@ -637,7 +636,6 @@ function prepareProcessSector(
     governorRampTurns: market.governorRampTurns,
     worldGovernorAnchorTurn: market.worldGovernorAnchorTurn,
     governorGlide: market.governorGlide,
-    privateBankingEnabled: env.privateBankingEnabled,
     marketPlantsEnabled: market.plantsEnabled,
     contractProductionTargetBySectorId: market.contractProductionTargetBySectorId,
     // The same market each leg clears and realizes in (see clearing.ts):
@@ -825,12 +823,7 @@ function prepareProcessSector(
       })
     : 1;
   const explicitPayrollBasis =
-    (plantsNameplateRevenue *
-      activeFraction *
-      plantCrew *
-      bankingCommodityScale *
-      staffedShare *
-      fundedShare) /
+    (plantsNameplateRevenue * activeFraction * plantCrew * staffedShare * fundedShare) /
     TURNS_PER_DAY;
 
   const payrollSpecializationMod = isStateOwned(corp)

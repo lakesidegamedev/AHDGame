@@ -25,7 +25,6 @@ import { computePriceRealization } from "@/lib/market/priceRealization";
 import { TRADE_EMBARGO_EXPORT_LOSS_SHARE } from "@/lib/trade/constants";
 import { computeExportExposure } from "@/lib/trade/exportPremium";
 import { freshMilitaryDiversion } from "@/lib/military/arsenal";
-import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import type { getSectorTechEffects } from "@/lib/constants/techTree";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
 import type { MarketContext } from "@/lib/market/marketContext";
@@ -115,7 +114,6 @@ export interface PlantsRevenueInput {
   worldGovernorAnchorTurn?: number | null;
   /** Proportional governor glide (see `MarketContext.governorGlide`). */
   governorGlide?: GovernorGlide | null;
-  privateBankingEnabled?: boolean;
   marketPlantsEnabled: boolean;
   contractProductionTargetBySectorId: MarketContext["contractProductionTargetBySectorId"];
   /**
@@ -166,7 +164,6 @@ export interface PlantsRevenueResult {
   plantsTechOutputMultiplier: number;
   policyTonnageMultiplier: number;
   productionFactor: number;
-  bankingCommodityScale: number;
   productionNameplateUnits: number;
   producedUnits: number;
   soldUnits: number;
@@ -229,7 +226,6 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     governorRampTurns,
     worldGovernorAnchorTurn,
     governorGlide,
-    privateBankingEnabled,
     marketPlantsEnabled,
     contractProductionTargetBySectorId,
     restartRunShare = 1,
@@ -369,19 +365,11 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     (plantsEnabled ? 1 : capitalFactor) *
     plantsTechOutputMultiplier *
     labourOutputFactor;
-  // Locked decision 18: chartered financial capacity is split between commodity
-  // financial_services output and the branch network (deposit ceiling). Scale
-  // only the capacity that enters production; stored capitalStock is untouched.
-  // Gated on privateBankingEnabled + ACTIVE charter — zero change otherwise.
-  const bankingCommodityScale =
-    sector.sectorType === "financial"
-      ? commodityProductionCapacityScale(corp.bankCharter, privateBankingEnabled === true)
-      : 1;
   const productionNameplateUnits = plantsEnabled
     ? mothballed
       ? 0
-      : plantsCapacity * bankingCommodityScale * activeFraction
-    : nameplateUnits * bankingCommodityScale;
+      : plantsCapacity * activeFraction
+    : nameplateUnits;
   // The pre-pass just cleared the persisted prior output. Use that fill with
   // that quantity, not the saved fill from an older clearing book. Prices and
   // revenue retain their existing lagged-market convention.
@@ -447,7 +435,7 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     plantsEnabled,
     actualNameplateUnits: productionNameplateUnits,
     actualProductionFactor: productionFactor * restartFactor,
-    fullPolicyNameplateUnits: plantsCapacity * bankingCommodityScale,
+    fullPolicyNameplateUnits: plantsCapacity,
     involuntaryProductionFactor:
       disasterOutputFactor *
       nationalizationTransition *
@@ -554,7 +542,6 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     plantsTechOutputMultiplier,
     policyTonnageMultiplier,
     productionFactor,
-    bankingCommodityScale,
     productionNameplateUnits,
     producedUnits,
     soldUnits,

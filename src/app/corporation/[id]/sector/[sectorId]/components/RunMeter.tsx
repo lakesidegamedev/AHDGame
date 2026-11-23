@@ -85,11 +85,7 @@ export default function RunMeter({
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
   const t = useTranslations("corporations.runHold");
-  const causeMeta = idleCauseMeta(
-    sectorType,
-    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare,
-    localMarketOutputs
-  );
+  const causeMeta = idleCauseMeta(sectorType, localMarketOutputs);
   const capacity = capacityUnits > 0 ? capacityUnits : 0;
   const sold = Math.max(0, Math.min(producedUnits, soldUnits));
   const ownSite = Math.max(0, Math.min(producedUnits - sold, ownSiteUnits));

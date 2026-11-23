@@ -28,7 +28,6 @@ import {
   activeCapacityFraction,
   hasSettledOperatingHistory,
 } from "@/lib/corporations/investment/rules";
-import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import { STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
 import {
   deliveredFraction,
@@ -66,8 +65,6 @@ export { fundedIdleWeights, type IdleWeight } from "./sectorFundedIdle";
  * the prime rate the caller already has to resolve.
  */
 export function buildSectorPlantsSection(args: {
-  /** Commodity-side capacity scale from the corporation's active bank charter. */
-  bankingCommodityScale?: number;
   sector: CorporateSector;
   sectorType: OperatingSectorType;
   currentTurn: number;
@@ -235,16 +232,7 @@ export function buildSectorPlantsSection(args: {
   } else if (idleUnits != null && idleUnits > 0 && capacityUnits && capacityUnits > 0) {
     const coldUnits = Math.min(idleUnits, capacityUnits * (1 - activeFraction));
     if (coldUnits > 0) idleCauses.push({ cause: "mothballed", units: coldUnits });
-    const { units: bankUnits, capacityShare: bankShare } = bankIdleCapacity(
-      sectorType,
-      capacityUnits,
-      idleUnits - coldUnits,
-      args.bankingCommodityScale
-    );
-    if (bankUnits > 0) {
-      idleCauses.push({ cause: "bank", units: bankUnits, capacityShare: bankShare });
-    }
-    const idleShare = (idleUnits - coldUnits - bankUnits) / capacityUnits;
+    const idleShare = (idleUnits - coldUnits) / capacityUnits;
     const weights: IdleWeight[] = [];
     const funded = fundedIdleWeights(sector.producerSettlement, currentTurn);
     if (funded) {
@@ -284,7 +272,7 @@ export function buildSectorPlantsSection(args: {
     // unmeasured losses under "other"; the resource panel shows constraints.
     const sumW = weights.reduce((s, x) => s + x.w, 0);
     const scale = sumW > 0 ? Math.min(1, idleShare / sumW) : 0;
-    let attributed = coldUnits + bankUnits;
+    let attributed = coldUnits;
     for (const { cause, w, heldInput } of weights) {
       const units = w * scale * capacityUnits;
       if (units <= 0) continue;
