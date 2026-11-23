@@ -263,18 +263,17 @@ export function buildPollingData(
     primaryPartyColors[cid] = resolvePartyColor(pid);
   }
 
-  const snapshotGroups: PartyGroup[] = Object.entries(latestPrimarySnapshot.byParty).map(
-    ([pid, entries]) =>
-      ({
-        partyId: pid,
-        partyName: resolvePartyName(pid),
-        partyColor: resolvePartyColor(pid),
-        candidates: entries.map((e) => ({
-          id: e.candidateId,
-          characterName: e.characterName,
-          sharePct: e.sharePct,
-        })),
-      }) as unknown as PartyGroup
+  const snapshotGroups: PrimaryLeaderGroup[] = Object.entries(latestPrimarySnapshot.byParty).map(
+    ([pid, entries]) => ({
+      partyId: pid,
+      partyName: resolvePartyName(pid),
+      partyColor: resolvePartyColor(pid),
+      candidates: entries.map((e) => ({
+        id: e.candidateId,
+        characterName: e.characterName,
+        sharePct: e.sharePct,
+      })),
+    })
   );
   const primaryLeaders = primaryLeadersByParty(snapshotGroups, activeCandidateIdSet);
   const only = primaryLeaders.length === 1 ? primaryLeaders[0] : null;
@@ -311,8 +310,13 @@ export interface PrimaryLeader {
  * has no single leader until the general. Ties break on candidate id so the
  * answer never depends on document order.
  */
+/** The fields a primary leader is chosen from; live and snapshot groups both supply them. */
+export type PrimaryLeaderGroup = Pick<PartyGroup, "partyId" | "partyName" | "partyColor"> & {
+  candidates: readonly { id: string; characterName: string; sharePct: number }[];
+};
+
 export function primaryLeadersByParty(
-  groups: readonly PartyGroup[],
+  groups: readonly PrimaryLeaderGroup[],
   activeCandidateIdSet?: ReadonlySet<string>
 ): PrimaryLeader[] {
   const leaders: PrimaryLeader[] = [];

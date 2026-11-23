@@ -7,7 +7,7 @@
  * legal-scholar nomination for one vacant seat per turn; the existing Senate
  * lifecycle (`scotusNominationLifecycle`) votes and seats the nominee.
  */
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getElectedOfficialsCollection } from "@/lib/db/collections";
@@ -157,6 +157,7 @@ async function remindPlayerPresident(
     { projection: { userId: 1 } }
   );
   const notifications: NotificationInput[] = [];
+  const stageWrites: AnyBulkWriteOperation<SupremeCourtSeat>[] = [];
   for (const { seat, stage } of due) {
     const deadline = (seat.vacantSinceTurn ?? currentTurn) + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS;
     if (character?.userId)
@@ -170,10 +171,10 @@ async function remindPlayerPresident(
         message: `Nominate a justice from the White House page by turn ${deadline}. If the seat is still empty then, the Administration files a nominee from your party and the Senate votes as usual.`,
         metadata: { recipientCharacterId: String(characterId), seatNumber: seat.seatNumber },
       });
-    await supremeCourtSeatsCollection(database).updateOne(
-      { _id: seat._id },
-      { $set: { vacancyReminderStage: stage } }
-    );
+    stageWrites.push({
+      updateOne: { filter: { _id: seat._id }, update: { $set: { vacancyReminderStage: stage } } },
+    });
   }
+  await supremeCourtSeatsCollection(database).bulkWrite(stageWrites);
   await createNotifications(notifications);
 }
