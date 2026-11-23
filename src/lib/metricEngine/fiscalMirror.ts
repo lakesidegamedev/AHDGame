@@ -11,6 +11,31 @@ export interface FiscalRatios {
   schuldenbremseHeadroom: number; // percent of GDP, [-1,1]
 }
 
+/**
+ * A region's own readings. The headroom rule is a national constitutional limit,
+ * so a region never carries it.
+ */
+export type RegionalFiscalRatios = Partial<FiscalRatios>;
+
+/** Percent-of-output balance and debt from a region's own budget; nothing without output. */
+export function regionalFiscalRatios(budget: {
+  surplus?: number;
+  stateGdp?: number;
+  financing?: { principal?: number };
+}): RegionalFiscalRatios | undefined {
+  const gdp = budget.stateGdp;
+  if (gdp == null || !Number.isFinite(gdp) || gdp <= 0) return undefined;
+  const out: RegionalFiscalRatios = {};
+  if (budget.surplus != null && Number.isFinite(budget.surplus)) {
+    out.budgetBalance = Math.max(-100, Math.min(100, (budget.surplus / gdp) * 100));
+  }
+  const principal = budget.financing?.principal ?? 0;
+  if (Number.isFinite(principal)) {
+    out.debtToGdp = Math.max(0, Math.min(300, (Math.max(0, principal) / gdp) * 100));
+  }
+  return out;
+}
+
 export const FISCAL_MIRROR_METRICS = [
   { id: "governance.debtToGdp", key: "debtToGdp", decimals: 1 },
   { id: "governance.budgetBalance", key: "budgetBalance", decimals: 1 },
@@ -30,15 +55,16 @@ export const MIRROR_CONTROLLED_METRIC_IDS: ReadonlySet<string> = new Set(
 
 /** Build `${id}.value` set-fields for the mirror metrics the region already stores. */
 export function fiscalMirrorFields(
-  ratios: FiscalRatios | undefined,
+  ratios: RegionalFiscalRatios | undefined,
   isStored: (id: string) => boolean
 ): Record<string, number> {
   const out: Record<string, number> = {};
   if (!ratios) return out;
   for (const m of FISCAL_MIRROR_METRICS) {
     if (!isStored(m.id)) continue;
+    if (ratios[m.key] === undefined) continue;
     const f = 10 ** m.decimals;
-    out[`${m.id}.value`] = Math.round(ratios[m.key] * f) / f;
+    out[`${m.id}.value`] = Math.round(ratios[m.key]! * f) / f;
   }
   return out;
 }
