@@ -90,17 +90,16 @@ export function overlayMetricValues(
   values: MetricValuesByPath | null | undefined
 ): StateMetrics | null {
   if (!values || Object.keys(values).length === 0) return base;
-  const out: Record<string, unknown> = base
-    ? { ...(base as unknown as Record<string, unknown>) }
-    : { _id: id };
+  const out: StateMetrics = Object.assign({}, base ?? ({ _id: id } as StateMetrics));
   for (const [category, metrics] of Object.entries(values)) {
-    const merged: Record<string, unknown> = {
-      ...((out[category] as Record<string, unknown> | undefined) ?? {}),
+    const existing: unknown = Reflect.get(out, category);
+    const merged: Record<string, { value: number }> = {
+      ...(existing && typeof existing === "object" ? existing : {}),
     };
     for (const [metricId, value] of Object.entries(metrics)) {
       merged[metricId] = { value };
     }
-    out[category] = merged;
+    Object.assign(out, { [category]: merged });
   }
-  return out as unknown as StateMetrics;
+  return out;
 }
