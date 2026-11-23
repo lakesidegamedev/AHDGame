@@ -27,6 +27,8 @@ export interface KeyStatisticsProps {
   currentGrowthRate: number | null;
   balanceSheet: BalanceSheet | null;
   bondInfo: BondInfo | null;
+  bondInfoFailed?: boolean;
+  onRetryBondInfo?: () => void;
   leverageRating: string | null;
   creditComposite: number | null;
   activeBonds: number;
@@ -101,6 +103,8 @@ export function KeyStatistics({
   currentGrowthRate,
   balanceSheet,
   bondInfo,
+  bondInfoFailed,
+  onRetryBondInfo,
   leverageRating,
   creditComposite,
   activeBonds,
@@ -420,7 +424,18 @@ export function KeyStatistics({
           ) : (
             <KVRow
               label="Leverage"
-              value={<span className="text-muted">Loading</span>}
+              value={
+                bondInfoFailed ? (
+                  <span className="text-muted">Could not load</span>
+                ) : (
+                  <span className="text-muted">Loading</span>
+                )
+              }
+              action={
+                bondInfoFailed && onRetryBondInfo ? (
+                  <RowLink onClick={onRetryBondInfo}>Retry</RowLink>
+                ) : undefined
+              }
               mono={false}
             />
           )}

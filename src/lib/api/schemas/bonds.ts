@@ -1,12 +1,19 @@
 import { z } from "zod";
 import { CORPORATE_BOND_MATURITY_ISSUANCE_OPTIONS } from "@/lib/db/types/bond";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
+import { MIN_BOND_ISSUANCE } from "@/lib/constants/bonds";
 
 const CORPORATE_MATURITY_SET = new Set<number>(CORPORATE_BOND_MATURITY_ISSUANCE_OPTIONS);
 
 export const issueBondSchema = z.object({
   /** Total face value to issue ($) */
-  faceValue: z.number().min(100_000, "Minimum bond issuance is $100,000").positive(),
+  faceValue: z
+    .number()
+    .min(
+      MIN_BOND_ISSUANCE,
+      `Minimum bond issuance is ₳${MIN_BOND_ISSUANCE.toLocaleString("en-US")}`
+    )
+    .positive(),
   /** Maturity in turns: 96 (2yr), 240 (5yr), or 336 (7yr) */
   maturityTurns: z
     .number()

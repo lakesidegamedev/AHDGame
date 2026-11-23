@@ -1,6 +1,5 @@
 "use client";
 
-import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +7,17 @@ import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { bondIssueIncomePreview } from "@/lib/bonds/bondIssueIncomePreview";
 import { floorToBondUnits } from "@/lib/bonds/rules/issuanceUnits";
-import { BOND_DEFAULT_CREDIT_PENALTY_TURNS, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
+import {
+  BOND_DEFAULT_CREDIT_PENALTY_TURNS,
+  BOND_UNIT_FACE_VALUE,
+  MAX_BOND_ISSUANCE_REVENUE_FRACTION,
+  MIN_BOND_ISSUANCE_PER_ISSUE,
+} from "@/lib/constants/bonds";
+import {
+  bondIssueInputProblem,
+  bondIssueMinimum,
+  bondIssueRefusalText,
+} from "@/lib/bonds/rules/bondIssueInput";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondData, BondInfo, CorporationDetail, Financials } from "./CorporationPageTypes";
 import BondHistoryPanel from "./bonds/BondHistoryPanel";
@@ -138,7 +147,7 @@ export default function BondsTab({
         setBondIssueFaceValue(0);
         onRefresh();
       } else {
-        setBondActionError(apiErrorText(data, "Failed to issue bond"));
+        setBondActionError(bondIssueRefusalText(data, "Failed to issue bond"));
       }
     } catch {
       setBondActionError("Network error");
@@ -259,8 +268,6 @@ export default function BondsTab({
           const parsedFaceValue = bondIssueFaceValue;
           // Minimum is clamped server-side to the corp's own ceiling, so a
           // small corp can issue below ₳100,000 (ticket #1083).
-          const isValidInput =
-            !isNaN(parsedFaceValue) && parsedFaceValue >= (bondInfo.minIssuance ?? 100_000);
           const couponRate = couponFor(bondIssueMaturity);
           if (couponRate == null) return null;
           // Headroom and the issuance ceiling both come from the server, the only
@@ -275,8 +282,8 @@ export default function BondsTab({
               : bondInfo.creditDiagnostics
                 ? toBondUnits(bondInfo.creditDiagnostics.totalEquity * 2 - bondInfo.totalDebt)
                 : null;
-          // Per-issuance cap: 25% of annual revenue, floored at $100M
-          const perIssuanceCap = bondInfo.maxPerIssuance ?? 100_000_000;
+          // Per-issuance cap: the larger of 25% of annual revenue and the flat floor.
+          const perIssuanceCap = bondInfo.maxPerIssuance ?? MIN_BOND_ISSUANCE_PER_ISSUE;
 
           // NOT floored to bond units: the server guarantees
           // `minIssuance <= maxAllowedIssuance`, and flooring the ceiling
@@ -295,7 +302,7 @@ export default function BondsTab({
           // Server clamps the minimum to the corp's own ceiling, so a small corp
           // can issue below ₳100,000 rather than being locked out. `bondsAvailable`
           // is false below the dust floor.
-          const effectiveMin = bondInfo.minIssuance ?? 100_000;
+          const effectiveMin = bondIssueMinimum(bondInfo.minIssuance);
           const bondsUnavailable = bondInfo.bondsAvailable === false;
           const cooldown = bondInfo.cooldownTurnsRemaining;
           // Cash the pool will actually hand over at issuance, in ₳. Null when
@@ -315,7 +322,20 @@ export default function BondsTab({
             !!liquidCode &&
             displayCurrencyPreference !== "local" &&
             nativeDisplay !== userPrefDisplay;
+          // Every figure on the card shares one form: the bond currency, then the
+          // viewer's display currency when it differs.
+          const both = (anchor: number) => {
+            const native = inLiquid(anchor);
+            const pref = formatAmount(anchor);
+            return showParens && native !== pref ? `${native} (${pref})` : native;
+          };
           const sliderDisabled = effectiveCap === 0 || bondsUnavailable || cooldown > 0;
+          const inputProblem = bondIssueInputProblem({
+            faceValue: parsedFaceValue,
+            minimum: effectiveMin,
+            maximum: effectiveCap,
+          });
+          const isValidInput = inputProblem === null;
 
           const preview = isValidInput
             ? (() => {
@@ -383,7 +403,11 @@ export default function BondsTab({
                         max={effectiveCap}
                         step={unitFace}
                         value={bondIssueFaceValue}
-                        onChange={(e) => setBondIssueFaceValue(Number(e.target.value))}
+                        onChange={(e) => {
+                          setBondIssueFaceValue(Number(e.target.value));
+                          setBondActionError("");
+                        }}
+                        aria-valuetext={nativeDisplay}
                         disabled={sliderDisabled}
                         className="w-full accent-primary disabled:opacity-40"
                       />
@@ -413,7 +437,7 @@ export default function BondsTab({
                     <SmallButton
                       tone="primary"
                       onClick={() => void issueBond()}
-                      disabled={bondActionLoading || cooldown > 0}
+                      disabled={bondActionLoading || cooldown > 0 || !isValidInput}
                     >
                       {bondActionLoading ? "Issuing..." : "Issue bonds"}
                     </SmallButton>
@@ -427,13 +451,8 @@ export default function BondsTab({
                     </p>
                   ) : parsedFaceValue < effectiveMin ? (
                     <p className="text-xs text-muted">
-                      Minimum{" "}
-                      <span className="font-mono tabular-nums">
-                        {liquidCode
-                          ? formatAmountIn(effectiveMin, liquidCode)
-                          : `$${effectiveMin.toLocaleString("en-US")}`}
-                      </span>
-                      , in whole units, each with a face value of{" "}
+                      Minimum <span className="font-mono tabular-nums">{both(effectiveMin)}</span>,
+                      in whole units, each with a face value of{" "}
                       <span className="font-mono tabular-nums">
                         {fmtMoney(BOND_UNIT_FACE_VALUE)}
                       </span>
@@ -480,7 +499,7 @@ export default function BondsTab({
                     <KVRow
                       label="Cap per issue"
                       value={formatFull(perIssuanceCap)}
-                      title="25% of annual revenue, with a floor. One issue cannot exceed this, whatever your debt room."
+                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. A company with smaller revenue still gets that floor. One issue cannot exceed this, whatever your debt room.`}
                     />
                     <KVRow
                       label="Largest issue now"

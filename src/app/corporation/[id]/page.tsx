@@ -185,6 +185,7 @@ function useCorporationDetailPageContext() {
   // Bond/credit rating state
   const [bondInfo, setBondInfo] = useState<BondInfo | null>(null);
   const [bondDefaultModalOpen, setBondDefaultModalOpen] = useState(false);
+  const [bondInfoFailed, setBondInfoFailed] = useState(false);
   const bondInfoLoadedRef = useRef(false);
   const bondInfoPromiseRef = useRef<Promise<void> | null>(null);
   const [showBankTab, setShowBankTab] = useState(false);
@@ -517,10 +518,13 @@ function useCorporationDetailPageContext() {
           if (res.ok) {
             const data = await res.json();
             setBondInfo(data);
+            setBondInfoFailed(false);
             bondInfoLoadedRef.current = true;
+          } else {
+            setBondInfoFailed(true);
           }
         } catch {
-          // ignore
+          setBondInfoFailed(true);
         }
       })();
 
@@ -983,6 +987,7 @@ function useCorporationDetailPageContext() {
       balanceSheet,
       bondDefaultModalOpen,
       bondInfo,
+      bondInfoFailed,
       canTrade,
       cancelTransitionSectorId,
       ceo,
