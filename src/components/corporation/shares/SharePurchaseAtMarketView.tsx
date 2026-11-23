@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -128,6 +128,7 @@ export function SharePurchaseAtMarketView({
 }: SharePurchaseAtMarketViewProps) {
   const {
     formatAmount,
+    formatPrice,
     formatPriceOrder,
     toInternalFrom,
     forexRates,
@@ -139,6 +140,19 @@ export function SharePurchaseAtMarketView({
   const loadingRates = ratesLoading && !forexRates;
   const formatQuote = (localPrice: number) =>
     formatPriceOrder(toInternalFrom(localPrice, corpCurrency), corpCurrency);
+  const buyQuantityErrorId = useId();
+  let buyQuantityError: string | null = null;
+  if (atMarketSide === "buy") {
+    if (quantityDraft !== null && quantity === 0) {
+      buyQuantityError = "Enter a whole number of shares greater than zero.";
+    } else if (floatInsufficient) {
+      buyQuantityError = `Only ${floatAvailable.toLocaleString("en-US")} shares are available.`;
+    } else if (quantity > maxMarketShares) {
+      buyQuantityError = `Your CEO purchase limit allows ${maxMarketShares.toLocaleString("en-US")} more shares.`;
+    } else if (!ratesNeededButMissing && (floatFundsShort || quantity > maxBuyableShares)) {
+      buyQuantityError = `You can afford up to ${maxBuyableShares.toLocaleString("en-US")} shares.`;
+    }
+  }
 
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -404,18 +418,25 @@ export function SharePurchaseAtMarketView({
               value={
                 quantityDraft !== null ? quantityDraft : quantity === 0 ? "" : String(quantity)
               }
-              onFocus={() => setQuantityDraft(quantity === 0 ? "" : String(quantity))}
               onChange={(e) => {
                 const raw = e.target.value;
+                const entered = raw.trim();
+                const integer = /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(entered)
+                  ? Number(entered.replaceAll(",", ""))
+                  : 0;
                 setQuantityDraft(raw);
-                setQuantity(
-                  parseQtyDigits(raw, ratesNeededButMissing ? maxMarketShares : maxBuyableShares)
-                );
+                setQuantity(Number.isSafeInteger(integer) ? integer : 0);
               }}
-              onBlur={() => setQuantityDraft(null)}
+              aria-invalid={buyQuantityError != null}
+              aria-describedby={buyQuantityError ? buyQuantityErrorId : undefined}
               placeholder="Quantity"
               className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
             />
+            {buyQuantityError && (
+              <p id={buyQuantityErrorId} className="mt-1.5 text-xs text-error">
+                {buyQuantityError}
+              </p>
+            )}
             {/* CEO limit first: a limit order counts toward the same window. */}
             {(ceoLimitReached || (floatAvailable <= 0 && !buyAsInvestmentBank)) && (
               <p className="mt-1.5 text-xs text-warning">
@@ -439,7 +460,7 @@ export function SharePurchaseAtMarketView({
                 <span
                   className={`tabular-nums font-medium ${floatFundsShort ? "text-error" : "text-foreground"}`}
                 >
-                  {formatAmount(Math.round(buyCost))}
+                  {formatPrice(buyCost, corpCurrency)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -464,7 +485,7 @@ export function SharePurchaseAtMarketView({
                   </span>
                 </div>
               )}
-              {!ratesNeededButMissing && (
+              {!ratesNeededButMissing && !buyQuantityError && (
                 <div className="flex justify-between border-t border-card-border pt-2">
                   <span className="text-muted">After purchase</span>
                   <span
@@ -483,11 +504,6 @@ export function SharePurchaseAtMarketView({
               {ratesNeededButMissing && (
                 <p className="text-xs text-muted border-t border-card-border pt-2">
                   Loading market rates…
-                </p>
-              )}
-              {floatInsufficient && (
-                <p className="text-xs text-error border-t border-card-border pt-2">
-                  Only {floatAvailable.toLocaleString("en-US")} shares available.
                 </p>
               )}
             </div>
