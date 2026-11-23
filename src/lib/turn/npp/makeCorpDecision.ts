@@ -34,6 +34,12 @@ import {
 import type { CorporateSector } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
+import {
+  AUTOPILOT_BUDGET_SHARES,
+  type AutopilotBudgetChanges,
+  autopilotBudgetBand,
+  buildAutopilotBudgetChanges,
+} from "@/lib/corporations/rules/autopilotBudgetRule";
 import { operatorPermissionsFor } from "./operatorPermissions";
 import { operatorAllowsPlacement, operatorMay } from "@/lib/corporations/rules/operatorPolicy";
 import {
@@ -432,37 +438,25 @@ export function makeNppCorpDecision(
 
   // Base budget shares by margin band, then scaled by archetype (marketing/R&D).
   // Logistics is an operational lever, not a personality one, so it's unscaled.
-  let marketingPct: number;
-  let logisticsPct: number;
-  let rdPct: number;
   const isCashCrisis = liquidCapital <= effectiveCashFloor;
-  if (!isProfitable || totalRevenue === 0 || isCashCrisis) {
-    // Cash distress overrides accounting profit for discretionary budgets.
-    marketingPct = 0.005;
-    logisticsPct = 0.003;
-    rdPct = 0;
-  } else if (corpMargin < 10) {
-    // Thin margins: lean budgets, no R&D
-    marketingPct = 0.015;
-    logisticsPct = 0.01;
-    rdPct = 0;
-  } else if (corpMargin < 25) {
-    // Healthy margins: moderate investment
-    marketingPct = 0.03;
-    logisticsPct = 0.02;
-    rdPct = 0.01;
-  } else {
-    // Strong margins: aggressive investment to grow
-    marketingPct = 0.05;
-    logisticsPct = 0.03;
-    rdPct = 0.02;
-  }
+  // Cash distress overrides accounting profit for discretionary budgets.
+  const {
+    marketing: marketingPct,
+    logistics: logisticsPct,
+    rd: rdPct,
+  } = AUTOPILOT_BUDGET_SHARES[
+    autopilotBudgetBand({
+      distressed: !isProfitable || totalRevenue === 0 || isCashCrisis,
+      marginPct: corpMargin,
+    })
+  ];
 
   // Budget-leg flag (section 3), in the code's own branch order.
   if (isCashCrisis) constraintFlags.budget_cash_crisis = true;
   else if (!isProfitable || totalRevenue === 0) constraintFlags.budget_unprofitable = true;
   else if (corpMargin < 10) constraintFlags.budget_thin_margin = true;
 
+  let autopilotBudgetChanges: AutopilotBudgetChanges = {};
   const marketingBudget = Math.round(
     totalRevenue * marketingPct * modifiers.marketingMult * levers.marketingMult
   );
@@ -481,6 +475,18 @@ export function makeNppCorpDecision(
     if (marketingBudget !== (corp.marketingBudget ?? 0)) updates.marketingBudget = marketingBudget;
     if (logisticsBudget !== (corp.logisticsBudget ?? 0)) updates.logisticsBudget = logisticsBudget;
     if (rdBudget !== (corp.rdBudget ?? 0)) updates.rdBudget = rdBudget;
+    if (isAutopilotRun(corp)) {
+      autopilotBudgetChanges = buildAutopilotBudgetChanges({
+        turn: ctx.turn,
+        revenue: totalRevenue,
+        current: {
+          marketing: corp.marketingBudget ?? 0,
+          logistics: corp.logisticsBudget ?? 0,
+          rd: corp.rdBudget ?? 0,
+        },
+        next: { marketing: marketingBudget, logistics: logisticsBudget, rd: rdBudget },
+      });
+    }
   }
 
   // ── 4. Dividend policy ────────────────────────────────────────────────────
@@ -800,6 +806,7 @@ export function makeNppCorpDecision(
             debtDominant,
             losingSectors: autopilotLosers,
           },
+          autopilotBudgetChanges,
         }
       : {}),
     operatorObservation: buildNppOperatorObservation({

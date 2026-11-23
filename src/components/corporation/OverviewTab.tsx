@@ -443,12 +443,24 @@ function qualityChangeHint(change: CorporationDetail["averageQualityChange"]) {
  * redacts a private corporation's books for an outside viewer, which is
  * unknown rather than zero, so no hint is shown.
  */
-function perTurnChangeHint(change: number | undefined) {
+function perTurnChangeHint(change: number | undefined, realized?: number | null) {
   if (change == null || !Number.isFinite(change)) return undefined;
   return (
-    <span className={signTone(change)}>
-      {change >= 0 ? "+" : ""}
-      {change.toFixed(2)}
+    <span>
+      <span className={signTone(change)}>
+        {change >= 0 ? "+" : ""}
+        {change.toFixed(2)}
+      </span>{" "}
+      forecast next turn
+      {realized != null && Number.isFinite(realized) && (
+        <>
+          {", last turn "}
+          <span className={signTone(realized)}>
+            {realized >= 0 ? "+" : ""}
+            {realized.toFixed(2)}
+          </span>
+        </>
+      )}
     </span>
   );
 }
@@ -777,22 +789,31 @@ export default function OverviewTab({
                 : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
             }
           >
-            <DenseSection title="Operations" meta="change per turn">
+            <DenseSection title="Operations" meta="forecast and last turn">
               <KVList>
                 <KVRow
                   label="Marketing strength"
                   value={formatMarketingStrength(corporation.marketingStrength)}
-                  hint={perTurnChangeHint(corporation.marketingStrengthGrowth)}
+                  hint={perTurnChangeHint(
+                    corporation.marketingStrengthGrowth,
+                    corporation.lastTurnStrengthChange?.marketing
+                  )}
                 />
                 <KVRow
                   label="Logistics"
                   value={formatMarketingStrength(corporation.logisticsStrength)}
-                  hint={perTurnChangeHint(corporation.logisticsStrengthNetChange)}
+                  hint={perTurnChangeHint(
+                    corporation.logisticsStrengthNetChange,
+                    corporation.lastTurnStrengthChange?.logistics
+                  )}
                 />
                 <KVRow
                   label="R&D score"
                   value={formatMarketingStrength(corporation.rdScore)}
-                  hint={perTurnChangeHint(corporation.rdScoreNetChange)}
+                  hint={perTurnChangeHint(
+                    corporation.rdScoreNetChange,
+                    corporation.lastTurnStrengthChange?.rd
+                  )}
                 />
                 {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
                 {(corporation.managementOverheadPp ?? 0) > 0 && (

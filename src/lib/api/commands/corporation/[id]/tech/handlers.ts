@@ -361,6 +361,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       isCeo,
       redacted: redact,
       rdScore,
+      rdScoreExact: redact ? null : Math.round((corporation.rdScore ?? 0) * 1000) / 1000,
+      averageQuality:
+        redact || corporation.averageQuality == null
+          ? null
+          : Math.round(corporation.averageQuality * 10) / 10,
       rdBudget: redact ? null : Math.round(corporation.rdBudget ?? 0),
       // Must match the turn engine / Budget / Operations formula: FX-anchor the
       // R&D budget and subtract decay (calculateCorpStrengthProjection).

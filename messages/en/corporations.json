@@ -538,6 +538,7 @@
       "unlockPrerequisite": "Unlock {technology} first",
       "available": "Available",
       "unlock": "Unlock",
+      "qualityEstimate": "Estimated quality after this unlock: {after} (now {before}). Spending R&D points lowers the tech part of quality. This is an estimate that holds your other inputs fixed.",
       "needsRd": "{amount} more R&D",
       "needsCash": "{amount} more cash",
       "needs": "Needs {shortfalls}",

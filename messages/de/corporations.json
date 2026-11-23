@@ -55,6 +55,7 @@
       "unlockPrerequisite": "Zuerst {technology} freischalten",
       "available": "Verfügbar",
       "unlock": "Freischalten",
+      "qualityEstimate": "Geschätzte Qualität nach dieser Freischaltung: {after} (jetzt {before}). Das Ausgeben von F&E-Punkten senkt den Technik-Anteil der Qualität. Dies ist eine Schätzung, bei der die übrigen Faktoren gleich bleiben.",
       "needsRd": "{amount} weitere F&E-Punkte",
       "needsCash": "{amount} mehr Geld",
       "needs": "Benötigt {shortfalls}",

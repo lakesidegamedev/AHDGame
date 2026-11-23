@@ -123,6 +123,22 @@ export function computeSectorQuality(input: SectorQualityInput): number | null {
   return Math.round(clamp01(geo) * 1000) / 10; // 0–100, one decimal
 }
 
+/**
+ * Estimated corp quality after the R&D score changes to `newTechScore`. Every sector shares
+ * the corp's tech pillar, so each sector's quality scales by (new pillar / old pillar)^weight
+ * and the revenue-weighted rollup scales by the same factor. Other pillars are held fixed.
+ */
+export function estimateQualityAfterTechScore(
+  currentQuality: number,
+  currentTechScore: number,
+  newTechScore: number
+): number {
+  const before = pillarScore(currentTechScore, QUALITY_TECH_REF);
+  const after = pillarScore(newTechScore, QUALITY_TECH_REF);
+  const scaled = currentQuality * Math.pow(after / before, QUALITY_WEIGHT_TECH);
+  return Math.round(Math.max(0, Math.min(100, scaled)) * 10) / 10;
+}
+
 /** Pillar sub-scores for a sector, 0-100. Null for extraction-only sectors. Pure. */
 export function computeSectorQualityPillars(input: SectorQualityInput): QualityPillars | null {
   if (isExtractionOnly(input.outputCommodities)) return null;

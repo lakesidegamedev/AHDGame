@@ -48,6 +48,10 @@ import {
   lastQualityChangeFromHistory,
   type QualityHistoryRow,
 } from "@/lib/corporations/rules/qualityChange";
+import {
+  lastTurnStrengthChange,
+  type StrengthHistoryRow,
+} from "@/lib/corporations/rules/strengthRealizedChange";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { loadLastTurnReconciliation } from "./corporationDetail/lastTurnReconciliation";
 import { loadArrearsView } from "./corporationDetail/arrears";
@@ -103,6 +107,16 @@ export async function loadCorporationDetailView(args: {
           )
           .toArray()
       : Promise.resolve([]);
+  const strengthHistoryPromise = corporationHistoryCollection<StrengthHistoryRow>(db)
+    .find(
+      { corporationId: corporation._id },
+      {
+        sort: { turn: -1 },
+        limit: 2,
+        projection: { turn: 1, marketingStrength: 1, logisticsStrength: 1, rdScore: 1 },
+      }
+    )
+    .toArray();
   const viewerOwnsCorporation = !!viewerUserId && corporation.userId?.toString() === viewerUserId;
   const bankingPolicyPromise =
     corporation.bankCharter || viewerOwnsCorporation
@@ -354,6 +368,7 @@ export async function loadCorporationDetailView(args: {
       rdBudget: corporation.rdBudget ?? 0,
       rdScore: Math.round(income.currentRdScore * 1000) / 1000,
       rdScoreNetChange: Math.round(income.rdScoreNetChange * 1000) / 1000,
+      lastTurnStrengthChange: lastTurnStrengthChange(await strengthHistoryPromise) ?? undefined,
       rdDevelopmentProjects: income.rdDevelopmentProjects,
       marketCapitalization: Math.round(income.marketCapitalization),
       logoUrl: corporation.logoUrl,
@@ -436,6 +451,7 @@ export async function loadCorporationDetailView(args: {
         viewerOwnsCorporation && corporation.autopilot
           ? {
               enabledTurn: corporation.autopilot.enabledTurn,
+              budgetChanges: corporation.autopilot.budgetChanges ?? {},
               advisories: withoutOwnedTechAdvisory(
                 corporation.autopilot.advisories ?? [],
                 ownedTechNames(corporation)

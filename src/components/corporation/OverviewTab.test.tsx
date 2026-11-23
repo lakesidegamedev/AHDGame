@@ -263,6 +263,33 @@ describe("OverviewTab", () => {
     expect(screen.getByText("+0.50")).toBeTruthy();
   });
 
+  it("labels the per-turn changes as forecasts and shows last turn's realized change", () => {
+    const { container } = render(
+      <OverviewTab
+        corporation={
+          {
+            ...corporation,
+            lastTurnStrengthChange: { turn: 5, marketing: 0.05, logistics: 3.22, rd: -1.5 },
+          } as never
+        }
+        financials={financials as never}
+        balanceSheet={null}
+        bondInfo={null}
+        sectors={[] as never}
+        corpId="7"
+        periodView="turn"
+        financialFogOfWar={null}
+        isCeo={false}
+        onTabChange={vi.fn()}
+        onPeriodViewChange={vi.fn()}
+        onTrade={vi.fn()}
+      />
+    );
+    expect(container.textContent).toContain("forecast next turn, last turn +0.05");
+    expect(container.textContent).toContain("last turn +3.22");
+    expect(container.textContent).toContain("last turn -1.50");
+  });
+
   it("names the pillar behind a quality move, and keeps the plain text for old rows", () => {
     const withChange = (averageQualityChange: Record<string, unknown>) => ({
       ...corporation,

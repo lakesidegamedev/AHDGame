@@ -8,6 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { CORP_LANE_EFFECT_SCALE } from "@/lib/constants/techTree/effects";
 import { useTranslations } from "next-intl";
+import { estimateQualityAfterTechScore } from "@/lib/market/brandQuality";
 import { DenseSection, InlineStatus, KVList, KVRow, SmallButton } from "./dense/DenseKit";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -72,6 +73,8 @@ interface TechResponse {
   isCeo?: boolean;
   redacted?: boolean;
   rdScore?: number | null;
+  rdScoreExact?: number | null;
+  averageQuality?: number | null;
   rdBudget?: number | null;
   rdGainPerTurn?: number | null;
   rdDecayPerTurn?: number | null;
@@ -275,6 +278,17 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   // Node prices in the tables: compact, the exact figure is in the unlock dialog.
   const fmtCashShort = (n: number | null | undefined) =>
     n == null ? "n/a" : formatAmount(toInternalFrom(n, code as CurrencyCode), code as CurrencyCode);
+  const qualityEstimate =
+    confirmNode && data.averageQuality != null && data.rdScoreExact != null
+      ? {
+          before: data.averageQuality,
+          after: estimateQualityAfterTechScore(
+            data.averageQuality,
+            data.rdScoreExact,
+            Math.max(0, data.rdScoreExact - confirmNode.node.cost)
+          ),
+        }
+      : null;
   const previous = reached.find((d) => d.id === previousDecadeId);
   const methods = data.unlockedStrategyNames ?? [];
   const chancePct = Math.round((data.breakthroughChance ?? 0) * 100);
@@ -563,6 +577,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               </strong>
               .
             </p>
+            {qualityEstimate && (
+              <p className="text-sm text-muted">
+                {t("qualityEstimate", {
+                  before: qualityEstimate.before,
+                  after: qualityEstimate.after,
+                })}
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <Button
                 variant="secondary"
