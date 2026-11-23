@@ -148,19 +148,25 @@ export function renderCorporationDetailPageView(
         >
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
-            <Link
-              href={`/stockmarket/${exchange}?tab=stocks`}
-              className="hover:text-foreground transition-colors"
-            >
-              {exchangeLabel}
-            </Link>
-            <span aria-hidden>/</span>
-            <Link
-              href={`/stockmarket/${exchange}?tab=stocks`}
-              className="hover:text-foreground transition-colors"
-            >
-              Corporations
-            </Link>
+            {corporation.isPrivate ? (
+              <span>Private corporation</span>
+            ) : (
+              <>
+                <Link
+                  href={`/stockmarket/${exchange}?tab=stocks`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {exchangeLabel}
+                </Link>
+                <span aria-hidden>/</span>
+                <Link
+                  href={`/stockmarket/${exchange}?tab=stocks`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  Corporations
+                </Link>
+              </>
+            )}
             <span aria-hidden>/</span>
             <span className="text-foreground font-medium truncate">{corporation.name}</span>
           </nav>
@@ -171,6 +177,11 @@ export function renderCorporationDetailPageView(
             isCeo={isCeo}
             corpId={id}
             exchangeLabel={exchangeLabel}
+            bookValuePerShare={
+              balanceSheet && corporation.totalShares > 0
+                ? balanceSheet.equity.bookValue / corporation.totalShares
+                : null
+            }
             creditRating={
               resolveCreditStanding(corporation, bondInfo?.creditRating).rating ?? undefined
             }

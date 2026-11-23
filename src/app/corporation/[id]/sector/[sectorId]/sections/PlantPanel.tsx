@@ -494,12 +494,24 @@ export default function PlantPanel({
                       </button>
                     )}
                   </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-track">
+                  <div
+                    className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(o.progress * 100)}
+                    aria-label={`${Math.round(o.progress * 100)}% of the ordered capacity has arrived`}
+                  >
                     <div
                       className="h-full bg-info transition-[width] duration-500"
                       style={{ width: `${o.progress * 100}%` }}
                     />
                   </div>
+                  <p className="mt-1 text-body-xs text-muted">
+                    Bar: {Math.round(o.progress * 100)}% of the ordered capacity has arrived. A{" "}
+                    {vocab.singular} only runs once it is finished, and the bar is not the share
+                    paid.
+                  </p>
                 </li>
               );
             })}

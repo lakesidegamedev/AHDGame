@@ -194,6 +194,34 @@ describe("CorporationMasthead ledger", () => {
     ).toBe("true");
   });
 
+  it("an unlisted private corporation shows book value per share, no quote and no exchange", () => {
+    const { container } = render(
+      <CorporationMasthead
+        corporation={privateCorp as never}
+        ceo={{ name: "Avery Lane", sequentialId: 1, profilePath: "/character/1" } as never}
+        isCeo
+        corpId="7"
+        exchangeLabel="NYSE"
+        bookValuePerShare={0.18}
+        creditRating="AA"
+        retainedDaily={null}
+        netIncomeDaily={null}
+        revenueGrowth={{ pct: 3.2, realized: true }}
+        effectiveDividendRate={5}
+        periodView="turn"
+        financialFogOfWar={null}
+        ceoIsInactive={false}
+        onRefresh={vi.fn()}
+      />
+    );
+    expect(screen.queryByLabelText("Share quote")).toBeNull();
+    expect(container.textContent).not.toContain("NYSE");
+    expect(container.textContent).toContain("Private: KSTN");
+    expect(container.textContent).toContain("Book value / share");
+    expect(container.textContent).not.toContain("Mkt cap");
+    expect(container.textContent).toContain("Valuation");
+  });
+
   it("name truncates on narrow screens", () => {
     renderPrivateOutsider();
     const name = screen.getByRole("heading", { level: 1 });

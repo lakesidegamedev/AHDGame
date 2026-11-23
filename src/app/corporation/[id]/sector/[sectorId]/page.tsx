@@ -730,12 +730,16 @@ export default function SectorDetailPage() {
             <ArrowLeft className="h-4 w-4 text-primary" />
             All {corporation.name} sectors
           </Link>
-          <Link
-            href={`/stockmarket/${exchange}?tab=stocks`}
-            className="text-xs font-medium text-muted transition-colors hover:text-foreground"
-          >
-            Listed on {exchangeLabel}
-          </Link>
+          {corporation.isPrivate ? (
+            <span className="text-xs font-medium text-muted">Private, not listed</span>
+          ) : (
+            <Link
+              href={`/stockmarket/${exchange}?tab=stocks`}
+              className="text-xs font-medium text-muted transition-colors hover:text-foreground"
+            >
+              Listed on {exchangeLabel}
+            </Link>
+          )}
         </nav>
 
         {/* Hero card */}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { fundedClearingReading, soldShareForList } from "./fundedClearingReading";
+import {
+  fundedClearingReading,
+  settledOfferedUnits,
+  soldShareForList,
+} from "./fundedClearingReading";
 
 describe("fundedClearingReading", () => {
   it("reads an unsold run of unstorable output as nothing sold, not a full clear", () => {
@@ -65,5 +69,15 @@ describe("soldShareForList", () => {
   it("falls back to the legacy figure with no recent receipt", () => {
     expect(soldShareForList(null, 10, 0.8)).toBe(0.8);
     expect(soldShareForList({ turn: 3, offeredUnits: 10, soldUnits: 5 }, 10, 0.8)).toBe(0.8);
+  });
+});
+
+describe("settledOfferedUnits", () => {
+  it("returns offered units only when the list reads the receipt", () => {
+    const receipt = { turn: 10, offeredUnits: 120, soldUnits: 60 };
+    expect(settledOfferedUnits(receipt, 11)).toBe(120);
+    expect(settledOfferedUnits(receipt, 20)).toBeNull();
+    expect(settledOfferedUnits({ turn: 10, offeredUnits: 0 }, 11)).toBeNull();
+    expect(settledOfferedUnits(null, 11)).toBeNull();
   });
 });

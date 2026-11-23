@@ -86,6 +86,8 @@ export interface CorporationRef {
   countryId?: string;
   brandColor?: string;
   logoUrl?: string | null;
+  /** Private corporations are not on any exchange. */
+  isPrivate?: boolean;
   /** Currency code for sector.revenue / maintenance / growthCost / tax (v0.2.6). */
   liquidCurrencyCode?: string;
   /** True when the owning corp is a National Corporation, market actions (attack) are blocked. */

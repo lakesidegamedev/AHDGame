@@ -187,7 +187,9 @@ export default function InputsOutputsPanel({
             ? " and what each thing you make sold for"
             : " and what your sales averaged"
           : ""}
-        .{" "}
+        . Goods your own sites send here are transfers inside the company, not purchases: with a
+        free transfer price no cash moves for them, and any price shown for them is a market value
+        estimate.{" "}
         {hasPerOutput && "Each thing you make sells at its own rate, the rows are not one number."}
       </p>
 

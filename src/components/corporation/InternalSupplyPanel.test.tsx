@@ -192,7 +192,7 @@ it("hides the discount controls and explains the free transfer on funded worlds"
   expect(screen.queryByText("Net internal discount credit: ₳20 per day.")).toBeNull();
   expect(
     screen.getByText(
-      "Output sent to your own plants is a free transfer: your plants get it at no cost and this plant books no revenue for it."
+      "Output sent to your own plants is a free transfer: your plants get it at no cost and this plant books no revenue for it. Any market value shown for it on a sector page is an estimate, not a charge."
     )
   ).toBeTruthy();
   expect(screen.getByLabelText("Supply priority")).toBeTruthy();
