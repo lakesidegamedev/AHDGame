@@ -140,7 +140,9 @@ describe("media advertising output on corporation sector cards", () => {
     const { rerender } = render(
       <SectorsTab
         {...baseProps}
-        sectors={[sector({ _id: "m1", effectiveMarginModelled: true })]}
+        sectors={[
+          sector({ _id: "m1", sectorType: "manufacturing", effectiveMarginModelled: true }),
+        ]}
         isCeo={false}
       />
     );
@@ -148,7 +150,9 @@ describe("media advertising output on corporation sector cards", () => {
     rerender(
       <SectorsTab
         {...baseProps}
-        sectors={[sector({ _id: "m1", effectiveMarginModelled: false })]}
+        sectors={[
+          sector({ _id: "m1", sectorType: "manufacturing", effectiveMarginModelled: false }),
+        ]}
         isCeo={false}
       />
     );
