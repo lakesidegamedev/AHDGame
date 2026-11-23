@@ -182,6 +182,14 @@ export function HouseSection({
   );
 }
 
+/** DC has no governor or state legislature in the game; the seeds carry none. */
+function isDistrictWithoutLocalGovernment(state: State): boolean {
+  return state._id === "DC" && state.countryId === "US";
+}
+
+const NO_LOCAL_GOVERNMENT_NOTE =
+  "The District of Columbia has no elected governor or state legislature in the game.";
+
 export function GovernorSection({
   state,
   governor,
@@ -215,6 +223,13 @@ export function GovernorSection({
   officeType?: string;
   note?: string;
 }) {
+  if (isDistrictWithoutLocalGovernment(state)) {
+    return (
+      <Chamber title={label} meta="no office">
+        <EmptyChamber>{NO_LOCAL_GOVERNMENT_NOTE}</EmptyChamber>
+      </Chamber>
+    );
+  }
   return (
     <Chamber title={label} meta="1 seat">
       {note && <p className="pt-3 text-body-sm text-muted">{note}</p>}
@@ -257,6 +272,13 @@ export function StateSenateSection({
   label?: string;
   memberTitle?: string;
 }) {
+  if (stateSenators.length === 0 && isDistrictWithoutLocalGovernment(state)) {
+    return (
+      <Chamber title={label} meta="no seats">
+        <EmptyChamber>{NO_LOCAL_GOVERNMENT_NOTE}</EmptyChamber>
+      </Chamber>
+    );
+  }
   return (
     <Chamber
       title={label}

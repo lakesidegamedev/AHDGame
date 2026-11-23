@@ -81,3 +81,21 @@ describe("empty and country-specific chambers", () => {
     expect(screen.getByText(/elected in a separate vote/)).toBeTruthy();
   });
 });
+
+describe("District of Columbia", () => {
+  it("says DC has no elected governor or legislature instead of showing Vacant", () => {
+    render(
+      <>
+        <GovernorSection state={{ _id: "DC", countryId: "US" } as State} governor={null} />
+        <StateSenateSection state={{ _id: "DC", countryId: "US" } as State} stateSenators={[]} />
+      </>
+    );
+    expect(screen.getAllByText(/no elected governor or state legislature/)).toHaveLength(2);
+    expect(screen.queryByText("Vacant")).toBeNull();
+  });
+
+  it("still shows Vacant for an ordinary state with no governor", () => {
+    render(<GovernorSection state={{ _id: "OH", countryId: "US" } as State} governor={null} />);
+    expect(screen.queryByText(/no elected governor/)).toBeNull();
+  });
+});
