@@ -421,7 +421,7 @@
     "49af895026badf87f7fe1bd74ea59a0fc28031d3344d040da6ed7348139d8997": 1,
     "13f99631dd713511f46430bcbcea8fc12717fa403de37a4211700ffc9f90fb00": 1,
     "d48edf43c3976105161bf842f6bceb8cf5cde79c987f206ff3e7f0e31f7cf247": 1,
-    "02da66d6d33334e27bb1a9f4fd78b982f7c1a2cdd9d0272af10e82bd1facbd4a": 1,
+    "f02cd4d87113f9866cdbcd06bf4130ec323e0eda38938f82969fde9abdc54412": 1,
     "57ae3b9a8b44b584172be81ae461f8dcb3f6c11c2980fe47223254b826e362db": 1,
     "4912ff4a74b96c8a728367096771293c3d7adce3ea72ef4cc2db6c7d4b4c6273": 1,
     "ce81a6dcc19c69a816a258f26e724ac0ed61ec22587846de4857ccc4d0dc065d": 1,
@@ -2839,8 +2839,8 @@
       "file": "src/lib/turn/subsidyBudgetTurn.ts",
       "operation": "updateOne",
       "owner": "processSubsidyBudget",
-      "expression": "db .collection<StateBudget>(\"stateBudgets\") .updateOne({ _id: budget._id }, { $set: { spending, surplus: balance, balance, updatedAt: now } })",
-      "fingerprint": "4b1e52588208753ffd5f2e967f1c41371a937f809062038a022408f0f5505bb8"
+      "expression": "stateBudgetsCollection(db) .updateOne({ _id: budget._id }, { $set: { spending, surplus, updatedAt: now } })",
+      "fingerprint": "f02cd4d87113f9866cdbcd06bf4130ec323e0eda38938f82969fde9abdc54412"
     },
     {
       "file": "src/lib/turn/autoReelectionEntry.ts",
