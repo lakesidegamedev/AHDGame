@@ -280,3 +280,39 @@ describe("GET /api/sectors (view=owned)", () => {
     });
   });
 });
+
+describe("GET /api/sectors margin and growth", () => {
+  it("reads the settled margin, not the seeded base, and shows no data when absent", async () => {
+    const corpId = new ObjectId();
+    db.collectionMocks.exchangeRates.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([{ currencyCode: "USD", rate: 1 }]),
+    });
+    const base = {
+      corporationId: corpId,
+      stateId: "CA",
+      countryId: "US",
+      sectorType: "defense",
+      revenue: 1000,
+      profitMargin: 35,
+      currentGrowthRate: 0,
+    };
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { ...base, _id: new ObjectId(), effectiveProfitMargin: 41.3 },
+        { ...base, _id: new ObjectId(), growthRate: undefined },
+      ]),
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        { _id: corpId, name: "Acme", sequentialId: 1, countryId: "US", liquidCurrencyCode: "USD" },
+      ]),
+    });
+
+    const { GET } = await import("./route");
+    const data = await (await GET(makeRequest("view=owned"))).json();
+    const margins = (data.sectors as { margin: number | null }[]).map((s) => s.margin).sort();
+    expect(margins).toEqual([41.3, null]);
+  });
+});

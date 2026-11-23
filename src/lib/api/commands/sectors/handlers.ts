@@ -185,8 +185,9 @@ export async function GET(request: Request) {
             countryId: 1,
             corporationId: 1,
             revenue: 1,
-            profitMargin: 1,
+            effectiveProfitMargin: 1,
             currentGrowthRate: 1,
+            growthRate: 1,
             forSale: 1,
           },
         })
@@ -254,8 +255,10 @@ export async function GET(request: Request) {
           corporationLogoUrl: corp?.logoUrl ?? null,
           revenue: Math.round(s.revenue),
           revenueAnchor: Math.round(revenueAnchor),
-          margin: s.profitMargin ?? null,
-          growthRate: s.currentGrowthRate ?? null,
+          // The margin the last turn settled at, the figure the sector page shows.
+          // The seeded base margin is a constant and would read the same everywhere.
+          margin: s.effectiveProfitMargin ?? null,
+          growthRate: s.currentGrowthRate ?? s.growthRate ?? null,
           workers: null,
           forSale: !!s.forSale,
           forSalePrice: s.forSale?.priceAnchor ?? null,
