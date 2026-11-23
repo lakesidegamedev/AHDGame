@@ -6,8 +6,8 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import type { ElectionDetail } from "./ElectionDetailTypes";
 
 /**
- * Shown to a player who has been invited onto a presidential ticket. They join
- * only by accepting here (ticket 1889); declining clears the invitation.
+ * Shown to a player who has been invited onto a presidential slate. They join
+ * only by accepting here; declining clears the invitation.
  */
 export function RunningMateInvitationPanel({
   election,

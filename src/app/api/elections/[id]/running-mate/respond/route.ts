@@ -1,7 +1,7 @@
 /**
  * POST /api/elections/[id]/running-mate/respond
- * The invited player accepts or declines a running-mate invitation (ticket 1889).
- * Only an accepted invitation puts a player on a presidential ticket.
+ * The invited player accepts or declines a running-mate invitation.
+ * Only an accepted invitation puts a player on a presidential slate.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

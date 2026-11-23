@@ -1,8 +1,8 @@
 /**
- * Running-mate invitations (ticket 1889, issue 7248).
+ * Running-mate invitations.
  *
  * A presidential nominee no longer writes another player straight onto the
- * ticket. Naming a running mate records an invitation (`pendingRunningMateId`)
+ * slate. Naming a running mate records an invitation (`pendingRunningMateId`)
  * and notifies the invited player, who accepts or declines from the election
  * page. Only an accepted invitation sets `runningMateId`, which is the field
  * presidential resolution reads, so nobody can be made Vice President without
@@ -20,7 +20,7 @@ export interface InviteRunningMateInput {
   nomineeName: string;
   invitee: { _id: ObjectId; userId?: ObjectId | null; name: string };
   now?: Date;
-  /** Extra filter on the nominee row (e.g. the Russian ticket lock). */
+  /** Extra filter on the nominee row (e.g. the Russian slate lock). */
   guard?: Record<string, unknown>;
   /** Wording for the invited player's notification. */
   automatic?: boolean;
@@ -28,7 +28,7 @@ export interface InviteRunningMateInput {
 
 /**
  * Records a pending invitation on the nominee's candidate row and notifies the
- * invited player. Any accepted running mate stays on the ticket until the new
+ * invited player. Any accepted running mate stays on the slate until the new
  * invitee accepts. Returns false when the guarded write matched no row.
  */
 export async function inviteRunningMate(db: Db, input: InviteRunningMateInput): Promise<boolean> {
@@ -69,7 +69,7 @@ export type RespondResult =
 
 /**
  * The invited character accepts or declines. Accepting moves the invitation
- * onto `runningMateId`, replacing any earlier running mate on that ticket, and
+ * onto `runningMateId`, replacing any earlier running mate on that slate, and
  * withdraws every other open invitation the character holds in this election.
  */
 export async function respondToRunningMateInvitation(
@@ -113,7 +113,7 @@ export async function respondToRunningMateInvitation(
     return { ok: false, status: 409, error: "That ticket is no longer in the race." };
   }
 
-  // One ticket per running mate, and no running mate who is also a live candidate.
+  // One slate per running mate, and no running mate who is also a live candidate.
   const conflict = await candidates.findOne({
     electionId: input.electionId,
     _id: { $ne: nominee._id },

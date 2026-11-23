@@ -280,7 +280,7 @@ describe("Presidential running mate integration tests", () => {
     expect(json.success).toBe(true);
     expect(json.pending).toBe(true);
     expect(json.message).toContain("Across The Aisle");
-    // Ticket 1889: naming a player sends an invitation; it never seats them.
+    // naming a player sends an invitation; it never seats them.
     expect(updateOne).toHaveBeenCalledTimes(1);
     const [, update] = updateOne.mock.calls[0];
     expect(update.$set.pendingRunningMateId).toEqual(runningMateId);

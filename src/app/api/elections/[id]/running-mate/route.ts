@@ -2,7 +2,7 @@
  * POST /api/elections/[id]/running-mate
  * Invite a running mate (VP) for a presidential candidate. Only the candidate can name their own running mate.
  * Running mates must be eligible player characters from the same country and cannot be the current President.
- * Naming a player sends an invitation; they join the ticket only once they accept (ticket 1889).
+ * Naming a player sends an invitation; they join the slate only once they accept.
  * Clearing removes both the running mate and any open invitation.
  */
 import { NextResponse } from "next/server";
@@ -215,7 +215,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
 
-    // Nobody joins a ticket unasked: record an invitation the player must accept.
+    // Nobody joins a slate unasked: record an invitation the player must accept.
     const invited = await inviteRunningMate(db, {
       electionId: election._id,
       nomineeCandidateId: myCandidate._id,

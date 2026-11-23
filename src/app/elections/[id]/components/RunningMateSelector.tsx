@@ -21,7 +21,7 @@ interface RunningMateSelectorProps {
   electionId: string;
   currentRunningMateCharacterId: string | null;
   currentRunningMateName: string | null;
-  /** Invited but not yet accepted (ticket 1889). */
+  /** Invited but not yet accepted. */
   pendingRunningMateName?: string | null;
   onSuccess: () => void;
 }

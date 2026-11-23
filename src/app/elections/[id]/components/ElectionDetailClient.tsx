@@ -438,7 +438,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
 
   // The reader's own action on the race sits in a strip under the masthead,
   // above the map, so it is not buried under the map on a phone.
-  // A pending running-mate invitation for the reader (ticket 1889).
+  // A pending running-mate invitation for the reader.
   const invitationPanel = (
     <RunningMateInvitationPanel election={election} electionId={id} onAnswered={fetchElection} />
   );

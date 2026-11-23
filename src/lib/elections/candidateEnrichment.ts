@@ -325,7 +325,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       ? nppMap.get(c.russianRunningMateNppId.toString())
       : null;
     const runningMateName = runningMateChar?.name ?? runningMateNpp?.name ?? null;
-    // Invited but not yet accepted (ticket 1889): shown to the nominee and the invitee.
+    // Invited but not yet accepted: shown to the nominee and the invitee.
     const pendingRunningMateCharacterId = c.pendingRunningMateId?.toString() ?? null;
     const pendingRunningMateName = c.pendingRunningMateId
       ? (charMap.get(c.pendingRunningMateId.toString())?.name ?? null)

@@ -18,7 +18,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
  * For each player presidential nominee without a running mate or an open
  * invitation, invite the highest-favorability same-party character in the
  * same country who is not themselves a candidate or the incumbent president.
- * The invitee joins the ticket only by accepting (ticket 1889); the nominee is
+ * The invitee joins the slate only by accepting; the nominee is
  * told who was invited and can name someone else via the running-mate UI.
  */
 export async function autoAssignTentativeRunningMates(
@@ -56,7 +56,6 @@ export async function autoAssignTentativeRunningMates(
       .find({
         countryId,
         party,
-        userId: { $ne: null },
         _id: { $nin: needsVp.map((n) => n.characterId) },
       })
       .sort({ favorability: -1 })
@@ -91,6 +90,7 @@ export async function autoAssignTentativeRunningMates(
 
     const pick = candidates.find(
       (c) =>
+        c.userId != null &&
         !candidateIdSet.has(c._id.toString()) &&
         (!incumbentId || !c._id.equals(incumbentId)) &&
         !(

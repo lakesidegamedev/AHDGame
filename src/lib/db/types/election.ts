@@ -252,11 +252,11 @@ export interface ElectionCandidate {
   withdrawnBy?: "candidate";
   /**
    * For president: running mate character ID. Cannot be current President.
-   * Only set once the named character has accepted the invitation (ticket
-   * 1889): resolution reads this field, so nobody reaches the ticket unasked.
+   * Only set once the named character has accepted the invitation:
+   * resolution reads this field, so nobody reaches the slate unasked.
    */
   runningMateId?: ObjectId;
-  /** Character invited to be this ticket's running mate who has not answered yet. */
+  /** Character invited to be this nominee's running mate who has not answered yet. */
   pendingRunningMateId?: ObjectId;
   /** When the pending running-mate invitation was sent. */
   pendingRunningMateInvitedAt?: Date;
