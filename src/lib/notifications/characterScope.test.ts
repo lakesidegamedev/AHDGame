@@ -41,10 +41,18 @@ describe("characterScopeClause", () => {
         { "metadata.recipientCharacterId": second._id.toString() },
         {
           "metadata.recipientCharacterId": { $in: [null, ""] },
+          "metadata.corporationId": { $in: [null, ""] },
           createdAt: { $gte: second.createdAt },
         },
       ],
     });
+  });
+  it("lets untagged corporation alerts through only for corporations the character runs", () => {
+    const base = resolveActiveCharacterScope([first, second], second._id)!;
+    const clause = characterScopeClause(userId, { ...base, corporationIds: ["corp-a"] }) as {
+      $or: Array<Record<string, unknown>>;
+    };
+    expect(clause.$or[2]!["metadata.corporationId"]).toEqual({ $in: [null, "", "corp-a"] });
   });
   it("targets mail at the active character", () => {
     const scope = resolveActiveCharacterScope([first, second], second._id);
