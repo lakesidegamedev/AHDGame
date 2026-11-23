@@ -40,7 +40,7 @@ describe("planBackfill", () => {
   it("ignores held rows with no account id instead of failing", () => {
     const grants = planBackfill({
       characters: [first],
-      achievements: [hat],
+      achievements,
       heldRows: [{ userId: undefined, achievementId: hat._id }],
       progress: () => ({ current: 5, target: 1 }),
     });
@@ -50,7 +50,7 @@ describe("planBackfill", () => {
   it("treats a row on the character as held even without an account id", () => {
     const grants = planBackfill({
       characters: [first],
-      achievements: [hat],
+      achievements,
       heldRows: [{ userId: undefined, characterId: first._id, achievementId: hat._id }],
       progress: () => ({ current: 5, target: 1 }),
     });
