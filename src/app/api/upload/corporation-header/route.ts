@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -57,14 +58,13 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    // Use userId (not ceoId via character lookup) so users with multiple characters
-    // still pass auth — corporation.userId is authoritative for CEO ownership.
+    // The account must own it and the active character must be its CEO.
     const corporation = await corporationsCollection(db).findOne({
       _id: corpObjectId,
       userId: new ObjectId(auth.user.userId),
       ceoVacant: { $ne: true },
     });
-    if (!corporation) {
+    if (!corporation || !isCeoActor(corporation, auth.user)) {
       return errorResponse(403, "You are not the CEO of this corporation");
     }
 

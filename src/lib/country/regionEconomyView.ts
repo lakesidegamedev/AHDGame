@@ -222,6 +222,7 @@ export async function buildRegionEconomyResponse({
             liquidCurrencyCode: 1,
             isPrivate: 1,
             userId: 1,
+            caretakerCeo: 1,
           })
           .toArray()
       : [];
@@ -472,10 +473,11 @@ export async function buildRegionEconomyResponse({
       const redact =
         !!corp &&
         shouldRedactCorporation(
-          { isPrivate: corp.isPrivate, userId: corp.userId },
+          corp,
           viewerUserId,
           viewerIsAdmin,
-          modViewEnabled
+          modViewEnabled,
+          user?.activeCharacterId
         );
       if (!redact) return o;
       return {

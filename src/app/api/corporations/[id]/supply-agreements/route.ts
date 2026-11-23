@@ -65,7 +65,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoError = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoError = requireCeo(resolved.corporation, auth.user);
     if (ceoError) return ceoError;
     const corp = resolved.corporation;
     const corpId = corp._id;

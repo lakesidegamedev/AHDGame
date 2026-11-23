@@ -48,7 +48,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             )
             .toArray();
     const canViewManagement = members.some(
-      (c) => !requireCeo(c, auth.user.userId) && c.ceoType !== "npp" && !c.countryOwnerId
+      (c) => !requireCeo(c, auth.user) && c.ceoType !== "npp" && !c.countryOwnerId
     );
     return NextResponse.json({ group, canViewManagement });
   } catch (error) {

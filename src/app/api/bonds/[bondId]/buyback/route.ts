@@ -83,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation: issuingCorp } = resolved;
 
-    const ceoCheck = requireCeo(issuingCorp, user.userId);
+    const ceoCheck = requireCeo(issuingCorp, user);
     if (ceoCheck) return ceoCheck;
 
     if (bond.publicFloat < units) {

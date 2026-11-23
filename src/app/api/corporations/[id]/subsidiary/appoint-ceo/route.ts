@@ -49,6 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await appointSubsidiaryCeo(db, {
       sub: subResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       ceoType: parsed.data.ceoType,
       characterId: parsed.data.characterId ? new ObjectId(parsed.data.characterId) : undefined,
       forcedNppId: parsed.data.forcedNppId,

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoErr = requireCeo(corporation, auth.user.userId);
+    const ceoErr = requireCeo(corporation, auth.user);
     if (ceoErr) return ceoErr;
 
     const turn = await getCurrentTurn(db);

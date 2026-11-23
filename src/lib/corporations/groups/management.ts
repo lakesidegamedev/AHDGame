@@ -14,7 +14,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import { groupHistoryInAnchor } from "./rules/financialHistory";
 import type { Corporation, GameState, GameConfig, State } from "@/lib/db/types";
-import { requireCeo } from "@/lib/api/corporations/resolveQuery";
+import { requireCeo, type CeoActor } from "@/lib/api/corporations/resolveQuery";
 import { resolveFormalizedGroups } from "./groupMembership";
 import { canActOnCorporationAsParent } from "../subsidiaries/authorization";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
@@ -33,7 +33,17 @@ export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   ...root.groupManagement,
   supplyDiscount: clampGroupDiscount(root.groupManagement?.supplyDiscount),
 });
-export async function loadGroupManagement(db: Db, corporation: Corporation, userId: string) {
+/** The account id alone is accepted for account-level callers. */
+type ManagementActor = CeoActor | string;
+const asActor = (actor: ManagementActor): CeoActor =>
+  typeof actor === "string" ? { userId: actor } : actor;
+
+export async function loadGroupManagement(
+  db: Db,
+  corporation: Corporation,
+  actorInput: ManagementActor
+) {
+  const actor = asActor(actorInput);
   const membership = await resolveFormalizedGroups(db, {
     includeReserved: true,
     includeControl: true,
@@ -89,7 +99,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
   const root = corps.find((c) => c._id.toString() === rootId);
   if (!root) return null;
   const parent =
-    !requireCeo(root, userId) &&
+    !requireCeo(root, actor) &&
     root.ceoType !== "npp" &&
     !root.suspended &&
     !!root.ceoId &&
@@ -110,13 +120,18 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
     supplyAgreementsEnabled: config?.supplyAgreementsEnabled === true,
   };
 }
-export async function groupManagementView(db: Db, corporation: Corporation, userId: string) {
-  const ctx = await loadGroupManagement(db, corporation, userId);
+export async function groupManagementView(
+  db: Db,
+  corporation: Corporation,
+  actorInput: ManagementActor
+) {
+  const actor = asActor(actorInput);
+  const ctx = await loadGroupManagement(db, corporation, actor);
   if (!ctx) return null;
   const rootId = ctx.root._id.toString();
   const privateIds = ctx.corps
     .filter(
-      (c) => ctx.parent || (!requireCeo(c, userId) && c.ceoType !== "npp" && !c.countryOwnerId)
+      (c) => ctx.parent || (!requireCeo(c, actor) && c.ceoType !== "npp" && !c.countryOwnerId)
     )
     .map((c) => c._id);
   const [history, debtByCorp] = await Promise.all([
@@ -200,7 +215,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     supplyAgreementsEnabled: ctx.supplyAgreementsEnabled,
     regions: ctx.regions.map((r) => ({ id: String(r._id), name: r.name, countryId: r.countryId })),
     members: ctx.corps.map((c) => {
-      const own = !requireCeo(c, userId) && c.ceoType !== "npp" && !c.countryOwnerId;
+      const own = !requireCeo(c, actor) && c.ceoType !== "npp" && !c.countryOwnerId;
       const privateAccess = ctx.parent || own;
       const operator = groupOperator(c, rootId);
       const preference = c.groupReceiving;
@@ -239,18 +254,20 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
 export async function updateGroupManagement(
   db: Db,
   corporation: Corporation,
-  userId: string,
+  actorInput: ManagementActor,
   command: GroupManagementCommand
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const deny = (error: string, status = 403) => ({ ok: false as const, status, error });
   const paused = await requireCorporationActionsEnabled(db);
   if (paused) return deny("Corporation actions are paused.", 409);
-  const ctx = await loadGroupManagement(db, corporation, userId);
+  const actor = asActor(actorInput);
+  const { userId } = actor;
+  const ctx = await loadGroupManagement(db, corporation, actor);
   if (!ctx) return deny("Subsidiary group management is unavailable.", 409);
   const rootId = ctx.root._id.toString(),
     now = new Date();
   const own =
-    !requireCeo(corporation, userId) &&
+    !requireCeo(corporation, actor) &&
     corporation.ceoType !== "npp" &&
     !corporation.suspended &&
     !!corporation.ceoId &&
@@ -313,7 +330,7 @@ export async function updateGroupManagement(
     const target = ctx.corps.find((c) => c._id.toString() === command.memberId);
     if (!target || target._id.equals(ctx.root._id))
       return deny("Choose a current subsidiary.", 400);
-    if (!(await canActOnCorporationAsParent(db, new ObjectId(userId), target)))
+    if (!(await canActOnCorporationAsParent(db, actor, target)))
       return deny("You no longer control this subsidiary.");
     const result = await corporationsCollection(db).updateOne(
       {

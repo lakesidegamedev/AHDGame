@@ -74,7 +74,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const cashBlock = requireSpendableCorporateCash(corporation);
     if (cashBlock) return cashBlock;
 
-    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user.userId);
+    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user);
     if (!authorized.ok) return authorized.response;
 
     if (!ObjectId.isValid(sectorId)) {

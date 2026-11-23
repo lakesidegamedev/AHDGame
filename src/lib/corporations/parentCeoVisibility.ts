@@ -1,6 +1,7 @@
 /** Batch read-only parent-CEO access for a page of private corporations. */
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
+import { viewerRunsCorporation } from "./ceoActor";
 import { getControllingCorporateParent } from "./corporateOwnership";
 import {
   corporationWithReservedHoldings,
@@ -12,7 +13,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function parentCeoVisibleCorporationIds(
   db: Db,
   corporations: readonly Corporation[],
-  viewerUserId: string | null | undefined
+  viewerUserId: string | null | undefined,
+  viewerCharacterId?: string | null
 ): Promise<Set<string>> {
   if (!viewerUserId || !corporations.length) return new Set();
   const reservations = await loadReservedCorporatePositionsByTarget(
@@ -29,11 +31,11 @@ export async function parentCeoVisibleCorporationIds(
   const ids = [...new Map(parents.map((row) => [row.parentId.toString(), row.parentId])).values()];
   const parentRows = await corporationsCollection(db)
     .find({ _id: { $in: ids } })
-    .project({ userId: 1, ceoVacant: 1 })
+    .project({ userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 })
     .toArray();
   const controlled = new Set(
     parentRows
-      .filter((row) => row.ceoVacant !== true && row.userId?.toString() === viewerUserId)
+      .filter((row) => viewerRunsCorporation(row, viewerUserId, viewerCharacterId))
       .map((row) => row._id.toString())
   );
   return new Set(

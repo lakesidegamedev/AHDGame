@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
@@ -216,16 +217,17 @@ export async function resolveControllingCorporateParent(
 export async function isSittingCeoOfControllingParent(
   db: Db,
   corporation: Corporation,
-  viewerUserId: string | undefined | null
+  viewerUserId: string | undefined | null,
+  viewerCharacterId?: string | null
 ): Promise<boolean> {
   if (!viewerUserId) return false;
   const controllingParent = await resolveControllingCorporateParent(db, corporation);
   if (!controllingParent) return false;
   const parent = await corporationsCollection(db).findOne(
     { _id: controllingParent.corporationId },
-    { projection: { userId: 1, ceoVacant: 1 } }
+    { projection: { userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 } }
   );
-  return parent != null && parent.ceoVacant !== true && parent.userId?.toString() === viewerUserId;
+  return parent != null && viewerRunsCorporation(parent, viewerUserId, viewerCharacterId);
 }
 
 /**
@@ -239,17 +241,19 @@ export async function shouldRedactCorporationForViewer(
   corporation: Corporation,
   viewerUserId: string | undefined | null,
   viewerIsAdmin: boolean,
-  viewerHasModeratorOverride = false
+  viewerHasModeratorOverride = false,
+  viewerCharacterId?: string | null
 ): Promise<boolean> {
   if (
     !shouldRedactCorporation(
       corporation,
       viewerUserId ?? undefined,
       viewerIsAdmin,
-      viewerHasModeratorOverride
+      viewerHasModeratorOverride,
+      viewerCharacterId
     )
   ) {
     return false;
   }
-  return !(await isSittingCeoOfControllingParent(db, corporation, viewerUserId));
+  return !(await isSittingCeoOfControllingParent(db, corporation, viewerUserId, viewerCharacterId));
 }

@@ -1,4 +1,5 @@
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
@@ -80,8 +81,9 @@ export async function loadCorporationDetailView(args: {
   corporation: Corporation;
   currentTurn: number;
   viewerUserId?: string | null;
+  viewerCharacterId?: string | null;
 }) {
-  const { db, corporation, currentTurn, viewerUserId } = args;
+  const { db, corporation, currentTurn, viewerUserId, viewerCharacterId } = args;
 
   const refDataPromise = getTurnReferenceData(db, currentTurn);
   // Funded-market transition window, for the sector rows' transition panel.
@@ -117,7 +119,7 @@ export async function loadCorporationDetailView(args: {
       }
     )
     .toArray();
-  const viewerOwnsCorporation = !!viewerUserId && corporation.userId?.toString() === viewerUserId;
+  const viewerOwnsCorporation = viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId);
   const bankingPolicyPromise =
     corporation.bankCharter || viewerOwnsCorporation
       ? loadBankingPolicy(db)
@@ -149,7 +151,8 @@ export async function loadCorporationDetailView(args: {
     corporation,
     viewerUserId,
     isImperialCeo,
-    currentTurn
+    currentTurn,
+    viewerCharacterId
   );
 
   const { refData, sectors, blendPresenceKeys, ftaCoverage } = await loadReferenceSectors(
@@ -229,10 +232,7 @@ export async function loadCorporationDetailView(args: {
       stateCtx,
       marketCtx,
       // Same test the CEO-only routes apply (requireCeo).
-      viewerIsCeo:
-        !!viewerUserId &&
-        corporation.ceoVacant !== true &&
-        corporation.userId?.toString() === viewerUserId,
+      viewerIsCeo: viewerOwnsCorporation,
     });
 
   const portfolio = await loadPortfolioHoldings(db, corporation, currentTurn, fxByCurrency);
@@ -258,7 +258,8 @@ export async function loadCorporationDetailView(args: {
     corporationForControl,
     corporation,
     viewerUserId,
-    currentTurn
+    currentTurn,
+    viewerCharacterId
   );
 
   const financials = buildFinancials({
@@ -290,7 +291,7 @@ export async function loadCorporationDetailView(args: {
   // norm are owner-only intel. Everyone else gets the hidden 5-label scale, never
   // the number. Absent ⇒ feature disabled for this corp; omit entirely so the UI
   // hides the indicator rather than showing a misleading 0.
-  const brandLoyaltyFields = buildBrandLoyaltyFields(corporation, viewerUserId);
+  const brandLoyaltyFields = buildBrandLoyaltyFields(corporation, viewerUserId, viewerCharacterId);
 
   // Corp-level physical P&L rollup (plants only). One object rather than eight
   // loose keys so a client can test `physical != null` as its plants switch and
@@ -536,6 +537,7 @@ export async function loadCorporationDetailView(args: {
               db,
               corporation,
               viewerUserId,
+              viewerCharacterId,
               rates: fxByCurrency,
               turn: portfolio.latestCorpIncomeRow?.turn ?? currentTurn,
             }),

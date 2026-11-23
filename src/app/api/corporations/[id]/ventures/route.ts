@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
     const context = await loadVentureContext(db, corporation);
-    const isCeo = requireCeo(corporation, auth.user.userId) === null;
+    const isCeo = requireCeo(corporation, auth.user) === null;
     const view = buildStudioView({
       isCeo,
       corporation,
@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const denied = requireCeo(corporation, auth.user.userId);
+    const denied = requireCeo(corporation, auth.user);
     if (denied) return denied;
 
     const context = await loadVentureContext(db, corporation);
