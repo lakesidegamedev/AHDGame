@@ -4,6 +4,7 @@ import {
   canUnlock,
   getCommittedLane,
   isNodeOpenForResearch,
+  isBaselineGrant,
   type TechCorpView,
 } from "./selectors";
 import { corpNodeId, sectorNodeId } from "./nodes";
@@ -62,5 +63,33 @@ describe("completed-decade specializations (ticket 1606)", () => {
       ok: false,
       reason: "lane-locked",
     });
+  });
+});
+
+describe("isBaselineGrant", () => {
+  const none = new Set<string>();
+  it("labels an unpurchased baseline node of a passed decade as granted", () => {
+    expect(
+      isBaselineGrant(
+        { id: "a", slot: 3 },
+        { owned: true, isPastDecade: true, purchasedNodeIds: none }
+      )
+    ).toBe(true);
+  });
+  it("does not call a bought node granted once its decade has passed", () => {
+    expect(
+      isBaselineGrant(
+        { id: "a", slot: 3 },
+        { owned: true, isPastDecade: true, purchasedNodeIds: new Set(["a"]) }
+      )
+    ).toBe(false);
+  });
+  it("never calls a specialization granted", () => {
+    expect(
+      isBaselineGrant(
+        { id: "a", slot: 10 },
+        { owned: true, isPastDecade: true, purchasedNodeIds: none }
+      )
+    ).toBe(false);
   });
 });

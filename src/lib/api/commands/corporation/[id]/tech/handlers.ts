@@ -47,6 +47,7 @@ import {
   getPassedDecadeIds,
   getUnlockedStrategyIds,
   isNodeOpenForResearch,
+  isBaselineGrant,
   isLegacyTechDecade,
   getSectorTechEffectBreakdown,
   getActiveTechDecadeIds,
@@ -74,6 +75,7 @@ import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /** Effect kinds that are not per-turn running effects: they apply at unlock or as availability. */
 const NON_RUNNING_EFFECT_KINDS: ReadonlySet<string> = new Set([
@@ -145,6 +147,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const legacy = await loadLegacyTechContext(db, { startingYear });
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
+    const purchasedNodeIds = new Set<string>();
+    if (!redact) {
+      const purchases = await financialTxLogCollection(db)
+        .find(
+          { type: "corp_tech_unlock", subjectId: corporation._id },
+          { projection: { "meta.nodeId": 1 } }
+        )
+        .toArray();
+      for (const row of purchases) {
+        const nodeId = (row.meta as { nodeId?: unknown } | undefined)?.nodeId;
+        if (typeof nodeId === "string") purchasedNodeIds.add(nodeId);
+      }
+    }
     const activeDecadeIds = getActiveTechDecadeIds(currentYear);
     // Strength upkeep: from its shield stage the dominance shield expires too.
     const shieldExpires = strengthUpkeepActive(
@@ -249,7 +264,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             : null,
           owned: redact ? false : owned,
           effectExpired: redact ? false : effectExpired,
-          autoGranted: !redact && owned && isPastDecade,
+          autoGranted: !redact && isBaselineGrant(node, { owned, isPastDecade, purchasedNodeIds }),
           tierClosed: redact ? false : !tierOpen,
           laneLocked: redact ? false : laneLocked,
           prereqMet: redact ? false : prereqMet,
