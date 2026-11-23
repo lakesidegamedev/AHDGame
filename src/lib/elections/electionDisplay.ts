@@ -50,6 +50,8 @@ export function toElectionDisplay(e: ElectionResponse): ElectionDisplay {
           name: e.incumbent.name,
           party: e.incumbent.party,
           partyColor: e.incumbent.partyColor ?? undefined,
+          running: e.incumbent.running,
+          notRunningReason: e.incumbent.notRunningReason ?? null,
         }
       : undefined,
     candidates: e.candidates.map((c) => ({

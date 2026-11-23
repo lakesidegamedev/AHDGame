@@ -129,6 +129,26 @@ const MAX_PRIMARY_LEADERS_SHOWN = 3;
  * candidate with nobody against them is marked uncontested.
  */
 export function FieldCell({ election }: { election: ElectionDisplay }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <FieldCellBody election={election} />
+      <IncumbentNote election={election} />
+    </div>
+  );
+}
+
+/** Says so when the sitting officeholder is not defending their seat. */
+function IncumbentNote({ election }: { election: ElectionDisplay }) {
+  const inc = election.incumbent;
+  if (!inc || inc.running !== false || election.status === "completed") return null;
+  return (
+    <span className="truncate text-xs text-muted">
+      Incumbent {inc.name} not running{inc.notRunningReason ? `: ${inc.notRunningReason}` : ""}
+    </span>
+  );
+}
+
+function FieldCellBody({ election }: { election: ElectionDisplay }) {
   const count = election.candidates.length;
   const polling = election.polling;
   const primaryLeaders = polling?.source === "primary" ? (polling.primaryLeaders ?? []) : [];

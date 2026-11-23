@@ -79,4 +79,22 @@ describe("FieldCell", () => {
     render(<FieldCell election={race({ candidates: [{}] as never })} />);
     expect(screen.getByText("1 candidate, uncontested")).toBeTruthy();
   });
+
+  it("says when the sitting officeholder is not running, and why", () => {
+    render(
+      <FieldCell
+        election={race({
+          status: "active",
+          candidates: [{}] as never,
+          incumbent: {
+            name: "Chris Hansen",
+            party: "Democratic",
+            running: false,
+            notRunningReason: "Has not filed yet",
+          },
+        })}
+      />
+    );
+    expect(screen.getByText("Incumbent Chris Hansen not running: Has not filed yet")).toBeTruthy();
+  });
 });
