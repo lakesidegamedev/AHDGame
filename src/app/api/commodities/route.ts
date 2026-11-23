@@ -31,7 +31,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { FUNDED_SCARCITY_MAX } from "@/lib/market/scarcityDrift";
+import { fundedPriceCeiling } from "@/lib/market/fundedPriceClamp";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -125,13 +125,17 @@ export async function GET(request: Request) {
     // that sit on it all read the same "vs base", so the page names it.
     const ceilingConfig = await gameConfigCollection(db).findOne(
       { _id: "default" } as Record<string, unknown>,
-      { projection: { producerPriceMaxMultiplier: 1 } }
+      { projection: { producerPriceMaxMultiplier: 1, commodityNominalPriceIndex: 1 } }
     );
     const configuredCeiling = ceilingConfig?.producerPriceMaxMultiplier;
-    const priceCeilingMultiplier =
-      typeof configuredCeiling === "number" && configuredCeiling >= 1
-        ? configuredCeiling
-        : FUNDED_SCARCITY_MAX;
+    // The turn clamps against base x the shared nominal price index, not the
+    // bare base, so the reported ceiling carries the same index.
+    const nominalIndex = ceilingConfig?.commodityNominalPriceIndex;
+    const priceNominalIndex =
+      typeof nominalIndex === "number" && Number.isFinite(nominalIndex) && nominalIndex > 0
+        ? nominalIndex
+        : 1;
+    const pricePace = { maxMultiplier: configuredCeiling };
 
     // Filter state data by exchange if specified
     const exchangeCountry = exchange ? getCountryForExchange(exchange) : undefined;
@@ -212,7 +216,8 @@ export async function GET(request: Request) {
         colors: COMMODITY_COLORS[commodity],
         unit: COMMODITY_UNITS[commodity],
         basePrice,
-        priceCeiling: Math.round(basePrice * priceCeilingMultiplier * 100) / 100,
+        priceCeiling:
+          Math.round(fundedPriceCeiling(basePrice * priceNominalIndex, pricePace) * 100) / 100,
         globalPrice: data?.globalPrice ?? basePrice,
         globalSupply: data?.globalSupply ?? 0,
         globalDemand: data?.globalDemand ?? 0,

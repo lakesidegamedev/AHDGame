@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: Context) {
       { id } = await params,
       resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const management = await groupManagementView(db, resolved.corporation, auth.user.userId);
+    const management = await groupManagementView(db, resolved.corporation, auth.user);
     if (
       management &&
       !management.canManage &&
@@ -44,12 +44,7 @@ export async function PATCH(request: Request, { params }: Context) {
       { id } = await params,
       resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const result = await updateGroupManagement(
-      db,
-      resolved.corporation,
-      auth.user.userId,
-      parsed.data
-    );
+    const result = await updateGroupManagement(db, resolved.corporation, auth.user, parsed.data);
     if (!result.ok) return errorResponse(result.status, result.error);
     recordAudit({
       source: "api",

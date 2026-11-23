@@ -12,6 +12,7 @@ import {
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useRefetchNav, useHasSession } from "@/contexts/AuthDataContext";
+import { noteServerCharacter } from "@/lib/activeCharacterGuard";
 import { CHARACTER_STATS_UPDATED, CHARACTER_STATS_REFETCH } from "@/lib/characterStatsSync";
 import {
   useCharacterStats,
@@ -215,6 +216,10 @@ export function StatusBar({
     const data = result.data;
     if (!data) return;
     if (data.status === "no-character") return;
+    noteServerCharacter(
+      typeof data.id === "string" ? data.id : null,
+      typeof data.name === "string" ? data.name : null
+    );
     if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
       const delta = data.cashOnHand - prevCashRef.current;
       if (delta !== 0) setCashDelta(delta);

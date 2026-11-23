@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { isCeoActor, type CeoActor } from "@/lib/corporations/ceoActor";
 import type { Corporation } from "@/lib/db/types";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -16,7 +17,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
  */
 export async function canActOnCorporationAsParent(
   db: Db,
-  callerUserId: ObjectId,
+  caller: ObjectId | CeoActor,
   sub: Corporation
 ): Promise<boolean> {
   if (sub.subsidiaryFormalizedAtTurn == null) return false;
@@ -27,12 +28,14 @@ export async function canActOnCorporationAsParent(
 
   const parent = await corporationsCollection(db).findOne(
     { _id: controllingParent.corporationId },
-    { projection: { userId: 1, ceoVacant: 1 } }
+    { projection: { userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 } }
   );
   if (!parent) return false;
   if (parent.ceoVacant === true) return false;
   if (!parent.userId) return false;
-  return parent.userId.equals(callerUserId);
+  // A bare account id is account-level; an actor also pins the active character.
+  if ("userId" in caller && typeof caller.userId === "string") return isCeoActor(parent, caller);
+  return parent.userId.equals(caller as ObjectId);
 }
 
 /** True when no player sits in the corporation's CEO chair, so an AI manager runs it. */
@@ -48,11 +51,11 @@ export function isAiRunCorporation(sub: Pick<Corporation, "ceoType" | "ceoVacant
  */
 export async function canDirectSubsidiaryAsParent(
   db: Db,
-  callerUserId: ObjectId,
+  caller: ObjectId | CeoActor,
   sub: Corporation
 ): Promise<boolean> {
   if (!isAiRunCorporation(sub)) return false;
-  return canActOnCorporationAsParent(db, callerUserId, sub);
+  return canActOnCorporationAsParent(db, caller, sub);
 }
 
 /**
@@ -61,9 +64,9 @@ export async function canDirectSubsidiaryAsParent(
  */
 export async function directingParentCorporationId(
   db: Db,
-  callerUserId: ObjectId,
+  caller: ObjectId | CeoActor,
   sub: Corporation
 ): Promise<ObjectId | null> {
-  if (!(await canDirectSubsidiaryAsParent(db, callerUserId, sub))) return null;
+  if (!(await canDirectSubsidiaryAsParent(db, caller, sub))) return null;
   return (await resolveControllingCorporateParent(db, sub))?.corporationId ?? null;
 }

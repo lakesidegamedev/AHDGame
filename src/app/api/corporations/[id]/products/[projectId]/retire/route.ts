@@ -28,7 +28,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const corporation = resolved.corporation;
-    const ceoError = requireCeo(corporation, auth.user.userId);
+    const ceoError = requireCeo(corporation, auth.user);
     if (ceoError) return ceoError;
     const config = await gameConfigCollection(db).findOne(
       { _id: "default" },

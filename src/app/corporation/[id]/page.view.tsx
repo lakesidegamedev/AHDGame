@@ -21,6 +21,7 @@ import { NationalizationStatusCard } from "@/components/corporation/Nationalizat
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
 import { SwitchToCeoCharacterNotice } from "@/components/corporation/SwitchToCeoCharacterNotice";
 import { NoticeStrip } from "@/components/corporation/ledger/NoticeStrip";
+import { StaleTurnNotice } from "@/components/corporation/StaleTurnNotice";
 
 import BondMaturityNotice from "@/components/corporation/BondMaturityNotice";
 import PrivateNotListedNotice from "@/components/corporation/PrivateNotListedNotice";
@@ -278,6 +279,8 @@ export function renderCorporationDetailPageView(
               corporationName={corporation.name}
             />
           )}
+
+          <StaleTurnNotice dataTurn={corporation.currentTurn} />
 
           {!isCeo &&
             corporation.viewerAccountRunsCorporation &&

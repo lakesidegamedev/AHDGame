@@ -226,6 +226,40 @@ describe("sector action visibility", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("shows the listing price, how the sale completes and how to unlist before confirming", () => {
+    const onRequestListQuote = vi.fn();
+    const { container, rerender } = render(
+      <ForSalePanel
+        {...saleProps}
+        isCeo
+        sector={{ ...saleProps.sector, forSale: undefined }}
+        onRequestListQuote={onRequestListQuote}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "List for sale" }));
+    expect(onRequestListQuote).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Confirm listing" })).toHaveProperty(
+      "disabled",
+      true
+    );
+    rerender(
+      <ForSalePanel
+        {...saleProps}
+        isCeo
+        sector={{ ...saleProps.sector, forSale: undefined }}
+        listQuote={{ priceAnchor: 850, npvAnchor: 1000 }}
+      />
+    );
+    expect(container.textContent).toContain("You would receive");
+    expect(container.textContent).toContain("Estimated worth now");
+    expect(container.textContent).toContain("No fee comes out of the price");
+    expect(container.textContent).toContain("unlist at any time");
+    expect(screen.getByRole("button", { name: "Confirm listing" })).toHaveProperty(
+      "disabled",
+      false
+    );
+  });
+
   it("hides the People menu when workforce controls are disabled", () => {
     render(
       <SectorWorkspaceTabs

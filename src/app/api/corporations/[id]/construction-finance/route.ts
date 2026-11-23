@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
     const currency = resolveCorpLiquidCurrencyCode(corporation) as CurrencyCode | undefined;
     if (!currency)

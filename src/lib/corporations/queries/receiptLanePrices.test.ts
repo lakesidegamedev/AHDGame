@@ -17,7 +17,7 @@ describe("loadReceiptLanePrices", () => {
     });
     expect(findOne).toHaveBeenCalledWith(
       { _id: "epoch-1:9" },
-      { projection: { laneClearingPrices: 1 } }
+      { projection: { laneClearingPrices: 1, buyerDemand: 1 } }
     );
     expect(out).toEqual({ laneClearingPrices: { "energy|world": 10 } });
   });

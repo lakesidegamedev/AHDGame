@@ -40,7 +40,7 @@ async function access(context: Context) {
   const db = await getDb();
   const resolved = await resolveCorporation(db, (await context.params).id);
   if (!resolved.ok) return resolved;
-  const denied = requireCeo(resolved.corporation, auth.user.userId);
+  const denied = requireCeo(resolved.corporation, auth.user);
   if (denied) return { ok: false as const, response: denied };
   const config = await gameConfigCollection(db).findOne(
     { _id: "default" },

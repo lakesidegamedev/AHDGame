@@ -116,6 +116,51 @@ describe("getCorporationSectorDetail", () => {
     expect(db.collectionMocks.sourcingNetworkLoad.find).toHaveBeenCalledWith({});
   });
 
+  it("lists advertising as an input once the world buys it on the funded turn", async () => {
+    const corporationId = new ObjectId();
+    const sectorId = new ObjectId();
+    const ownerUserId = new ObjectId();
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValueOnce({ userId: ownerUserId.toHexString() } as Awaited<
+      ReturnType<typeof getAuthUser>
+    >);
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corporationId,
+      userId: ownerUserId,
+      sequentialId: 6,
+      name: "Steel Corp",
+      type: "manufacturing",
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+    });
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
+      _id: sectorId,
+      corporationId,
+      stateId: "CA",
+      countryId: "US",
+      sectorType: "manufacturing",
+      strategyId: "additive_manufacturing",
+      revenue: 1_000_000,
+    });
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      worldEpochId: "epoch-1",
+      producerOpening: { worldEpoch: "epoch-1", turn: 10, digest: "d" },
+    });
+
+    const response = await getCorporationSectorDetail(
+      new Request(`http://localhost/api/corporations/6/sectors/${sectorId.toHexString()}`),
+      { params: Promise.resolve({ id: "6", sectorId: sectorId.toHexString() }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    const commodities = (data.commodities?.demands ?? []).map(
+      (d: { commodity: string }) => d.commodity
+    );
+    expect(commodities).toContain("advertising");
+  });
+
   it("redacts financial details for private corps from public viewers but keeps attack info accessible", async () => {
     const corporationId = new ObjectId();
     const ownerUserId = new ObjectId();

@@ -89,3 +89,21 @@ describe("makeNppCorpDecision autopilot signals", () => {
     expect(autopilot.autopilotSignals?.losingSectors).toBe(1);
   });
 });
+
+describe("makeNppCorpDecision autopilot budget record", () => {
+  it("records each budget it changed, matching the update it writes", () => {
+    const decision = decide(corp({ marketingBudget: 1, logisticsBudget: 1, rdBudget: 1 }));
+    const changes = decision.autopilotBudgetChanges ?? {};
+    const updates = decision.updates as Record<string, number | undefined>;
+    expect(Object.keys(changes).length).toBeGreaterThan(0);
+    if (changes.marketing) {
+      expect(changes.marketing).toMatchObject({ turn: 100, from: 1, to: updates.marketingBudget });
+    }
+    if (changes.rd) expect(changes.rd.to).toBe(updates.rdBudget);
+  });
+
+  it("records nothing when the corporation is not on autopilot", () => {
+    const decision = decide(corp({ autopilot: undefined }));
+    expect(decision.autopilotBudgetChanges ?? {}).toEqual({});
+  });
+});

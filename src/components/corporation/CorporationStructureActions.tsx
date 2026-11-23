@@ -1,7 +1,7 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   IPO_MIN_FLOAT_PCT,
   IPO_MAX_FLOAT_PCT,
@@ -305,6 +305,32 @@ function GoPublicCard({
   );
 }
 
+interface PrivatizeQuote {
+  nonCeoShares: number;
+  marketPrice: number;
+  lockedBuyoutPrice: number;
+  totalReservedCash: number;
+  priceBasis: "market" | "bankNav" | "assetValue";
+  personalCash: number;
+  affordable: boolean;
+  shortfall: number;
+  crossCurrency: boolean;
+}
+
+/** Why the vote cannot open yet, in the same terms the server enforces. */
+export function privatizeBlockedReason(
+  quote: Pick<PrivatizeQuote, "affordable" | "shortfall" | "crossCurrency">,
+  fmt: (local: number) => string
+): string | null {
+  if (quote.crossCurrency) {
+    return "Your home currency differs from the corporation's, so the buyout cannot be funded yet.";
+  }
+  if (!quote.affordable) {
+    return `The reservation comes from your personal cash, not the corporation's. You are ${fmt(quote.shortfall)} short.`;
+  }
+  return null;
+}
+
 function PrivatizeCard({
   corporation,
   corpId,
@@ -319,20 +345,40 @@ function PrivatizeCard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const { formatAmount, toInternalFrom } = useCurrency();
+  const [quote, setQuote] = useState<PrivatizeQuote | null>(null);
+  const [quoteFailed, setQuoteFailed] = useState(false);
+  const { formatAmount, formatPrice, toInternalFrom } = useCurrency();
   const code = corporation.liquidCurrencyCode as CurrencyCode | undefined;
   // Prices and costs here are in the corp's currency; format through the anchor.
   const fmtLocal = (local: number) =>
     code ? formatAmount(toInternalFrom(local, code), code) : formatAmount(local);
+  const fmtLocalPrice = (local: number) =>
+    code ? formatPrice(toInternalFrom(local, code), code) : formatPrice(local);
 
-  const lockedPrice = corporation.sharePrice * (1 + PRIVATIZATION_BUYOUT_PREMIUM);
   const ceoShares = Math.round((ceoOwnershipPct / 100) * corporation.totalShares);
-  const nonCeoShares = Math.max(
-    0,
-    corporation.totalShares - ceoShares - (corporation.pendingIpoShares ?? 0)
-  );
-  const estimatedCost = Math.ceil(nonCeoShares * lockedPrice);
-  const isFullOwner = nonCeoShares === 0;
+  const isFullOwner =
+    corporation.totalShares - ceoShares - (corporation.pendingIpoShares ?? 0) <= 0;
+
+  // The server quote is what the vote will lock: it includes the asset and bank
+  // floors the page cannot compute, and it carries the CEO's personal cash.
+  useEffect(() => {
+    if (isFullOwner) return;
+    let cancelled = false;
+    fetch(`/api/corporations/${corpId}/privatize`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("quote");
+        const data = (await res.json()) as PrivatizeQuote;
+        if (!cancelled) setQuote(data);
+      })
+      .catch(() => {
+        if (!cancelled) setQuoteFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [corpId, isFullOwner, corporation.sharePrice, corporation.totalShares]);
+
+  const blockedReason = quote ? privatizeBlockedReason(quote, fmtLocal) : null;
 
   async function handleOpenVote() {
     setSubmitting(true);
@@ -372,15 +418,44 @@ function PrivatizeCard({
         </p>
         {!isFullOwner && (
           <dl className="max-w-sm">
-            <KVRow
-              label={`Buyout price (+${(PRIVATIZATION_BUYOUT_PREMIUM * 100).toFixed(0)}%)`}
-              value={fmtLocal(lockedPrice)}
-              hint="/share"
-            />
-            <KVRow label="Cash to reserve" value={fmtLocal(estimatedCost)} />
+            {quote ? (
+              <>
+                <KVRow
+                  label="Shares to buy out"
+                  value={quote.nonCeoShares.toLocaleString("en-US")}
+                />
+                <KVRow
+                  label={`Market price (+${(PRIVATIZATION_BUYOUT_PREMIUM * 100).toFixed(0)}%)`}
+                  value={fmtLocalPrice(quote.marketPrice)}
+                  hint="/share"
+                />
+                {quote.priceBasis !== "market" && (
+                  <KVRow
+                    label={
+                      quote.priceBasis === "bankNav"
+                        ? "Offer price (bank net asset floor)"
+                        : "Offer price (asset value floor)"
+                    }
+                    value={fmtLocalPrice(quote.lockedBuyoutPrice)}
+                    hint="/share"
+                  />
+                )}
+                <KVRow label="Cash to reserve" value={fmtLocal(quote.totalReservedCash)} />
+                <KVRow label="Your personal cash" value={fmtLocal(quote.personalCash)} />
+              </>
+            ) : (
+              <p className="text-xs text-muted">
+                {quoteFailed ? "The buyout quote could not be loaded." : "Loading the buyout quote"}
+              </p>
+            )}
           </dl>
         )}
-        <SmallButton tone="primary" onClick={handleOpenVote} disabled={submitting}>
+        {blockedReason && <p className="text-xs text-warning">{blockedReason}</p>}
+        <SmallButton
+          tone="primary"
+          onClick={handleOpenVote}
+          disabled={submitting || (!isFullOwner && (!quote || Boolean(blockedReason)))}
+        >
           {submitting
             ? isFullOwner
               ? "Taking private"

@@ -207,6 +207,8 @@ export interface CorpAutopilotAdvisory {
 
 interface CorporationAutopilot {
   enabledTurn: number;
+  /** Latest budget change autopilot made per lever. */
+  budgetChanges?: import("@/lib/corporations/rules/autopilotBudgetRule").AutopilotBudgetChanges;
   advisories?: CorpAutopilotAdvisory[];
   /** Last turn the owner was notified about each advisory kind (throttle). */
   notifiedTurn?: Partial<Record<CorpAutopilotAdvisoryKind, number>>;

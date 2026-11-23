@@ -534,6 +534,7 @@ export async function snapshotMarketCap(
           : {}),
         marketingStrength: Math.round(s.marketingStrength * 100) / 100,
         logisticsStrength: s.logisticsStrength,
+        rdScore: s.rdScore,
         dividendRate: s.dividendRate,
         creditComposite: s.creditComposite,
         creditRating: s.creditRating,

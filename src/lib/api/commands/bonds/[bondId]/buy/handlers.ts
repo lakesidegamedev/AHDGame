@@ -1,4 +1,5 @@
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -137,7 +138,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
-      if (corp.userId?.toString() !== user.userId) {
+      if (!isCeoActor(corp, user)) {
         return errorResponse(403, "Only the CEO can buy bonds for a corporation");
       }
       // Bond cost originates in `bondCurrency` but corp liquidity is in

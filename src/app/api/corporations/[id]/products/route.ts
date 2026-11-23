@@ -107,7 +107,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const enabled = await productLinesAvailable(db);
     if (!enabled) {
       return NextResponse.json(
-        { enabled: false, isCeo: requireCeo(corporation, auth.user.userId) === null },
+        { enabled: false, isCeo: requireCeo(corporation, auth.user) === null },
         { headers: noStore }
       );
     }
@@ -199,7 +199,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json(
       {
         enabled: true,
-        isCeo: requireCeo(corporation, auth.user.userId) === null,
+        isCeo: requireCeo(corporation, auth.user) === null,
         currentTurn,
         activeProject: projectView(project),
         productResults,

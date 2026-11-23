@@ -48,7 +48,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const corp = resolved.corporation;
 
-    const ceoCheck = requireCeo(corp, auth.user.userId);
+    const ceoCheck = requireCeo(corp, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const charter = corp.bankCharter;

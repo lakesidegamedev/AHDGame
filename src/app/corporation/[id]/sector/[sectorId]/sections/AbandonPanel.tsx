@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { settledSectorRevenuePerTurn } from "../settledRevenue";
 import type { SectorData, Financials, CorporationRef } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
@@ -58,9 +59,25 @@ export default function AbandonPanel({
         </p>
         <p className="text-xs text-muted">
           {financials
-            ? `You give up ${fmtMoney(Math.round(financials.revenue / 24))}/turn in revenue. An NPP operator takes over most of the built plants.`
-            : "Are you sure? This cannot be undone."}
+            ? `You give up ${fmtMoney(settledSectorRevenuePerTurn(financials))}/turn in revenue, the settled figure on the sector overview.`
+            : "This cannot be undone."}
         </p>
+        <ul className="list-disc space-y-1 pl-4 text-xs text-muted">
+          <li>
+            Cash: abandoning pays nothing for built plants. Build orders not yet delivered are
+            cancelled and refunded at 75% of what you paid.
+          </li>
+          <li>
+            Plants: an NPP operator takes over most of the built plants; the rest stop and the
+            market reopens to builders.
+          </li>
+          <li>Workers: the sector&apos;s jobs end with it. No severance is paid.</li>
+          <li>Unsold stock: stock held at the sector is lost. It is not sold or paid out.</li>
+          <li>
+            Contracts: a defence contract moves to the NPP operator when it can hold it. An
+            extraction concession moves only if you have no other extraction plant in that state.
+          </li>
+        </ul>
         <div className="flex items-center gap-3">
           <button
             onClick={onConfirm}

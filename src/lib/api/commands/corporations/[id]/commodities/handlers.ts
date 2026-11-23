@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { getAuthUser } from "@/lib/auth";
 import {
   isSittingCeoOfControllingParent,
@@ -95,16 +96,22 @@ export async function GET(request: Request, { params }: RouteParams) {
     const canViewPrivateSupply =
       authUser?.isAdmin === true ||
       modViewEnabled ||
-      (!!authUser?.userId && corporation.userId?.toString() === authUser.userId) ||
+      (!!authUser && isCeoActor(corporation, authUser)) ||
       (corporation.isPrivate === true &&
-        (await isSittingCeoOfControllingParent(db, corporation, authUser?.userId)));
+        (await isSittingCeoOfControllingParent(
+          db,
+          corporation,
+          authUser?.userId,
+          authUser?.activeCharacterId
+        )));
     if (
       await shouldRedactCorporationForViewer(
         db,
         corporation,
         authUser?.userId,
         authUser?.isAdmin === true,
-        modViewEnabled
+        modViewEnabled,
+        authUser?.activeCharacterId
       )
     ) {
       return NextResponse.json(

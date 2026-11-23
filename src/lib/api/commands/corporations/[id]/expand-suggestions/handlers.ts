@@ -117,7 +117,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const sectorType = lane;
     const marketFilter = { sectorType };
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const gameStateDoc = await gameStateCollection(db).findOne({ _id: "current" });
