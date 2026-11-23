@@ -677,20 +677,23 @@ export function MarketOverview({
               The combined value of the companies listed here, which are the game&apos;s modelled
               corporations. It is not the whole national stock market and is not comparable to GDP.
             </p>
-            {!loading && last && (
-              <div className="text-sm tabular-nums">
-                <span className="font-mono font-bold text-foreground">
-                  {formatAmount(last.close)}
-                </span>{" "}
-                <span
-                  title={`${range} raw capitalization change from first open to last close; includes changes in listings and valuation coverage`}
-                  className={`font-mono font-bold ${toneText(toneForDelta(rangeChg))}`}
-                >
-                  {rangeChg > 0 ? "+" : ""}
-                  {formatAmount(Math.round(rangeChg))} ({formatPercentDelta(rangeChgPct, 2)})
-                </span>
-              </div>
-            )}
+            {/* Holds its line while loading so the chart below does not jump. */}
+            <div className="min-h-5 text-sm tabular-nums">
+              {!loading && last && (
+                <>
+                  <span className="font-mono font-bold text-foreground">
+                    {formatAmount(last.close)}
+                  </span>{" "}
+                  <span
+                    title={`${range} raw capitalization change from first open to last close; includes changes in listings and valuation coverage`}
+                    className={`font-mono font-bold ${toneText(toneForDelta(rangeChg))}`}
+                  >
+                    {rangeChg > 0 ? "+" : ""}
+                    {formatAmount(Math.round(rangeChg))} ({formatPercentDelta(rangeChgPct, 2)})
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {RANGES.map((r) => (
@@ -831,25 +834,27 @@ export function MarketOverview({
             </span>
           )}
         </div>
-        {last && (
-          <p className="mb-2 text-xs text-muted">
-            Through {marketTurnLabel(last.endTurn ?? last.turn, meta?.calendar ?? null, true)}
-            {bucketed && (last.endTurn ?? last.turn) - last.turn + 1 < bucketTurns
-              ? " · partial bucket"
-              : ""}
-            {meta?.asOf && (
-              <>
-                {" "}
-                · Observed <RelativeTime value={meta.asOf} /> ({" "}
-                <LocalTime
-                  value={meta.asOf}
-                  options={{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }}
-                />
-                ) · refreshes every minute
-              </>
-            )}
-          </p>
-        )}
+        <p className="mb-2 min-h-4 text-xs text-muted">
+          {last && (
+            <>
+              Through {marketTurnLabel(last.endTurn ?? last.turn, meta?.calendar ?? null, true)}
+              {bucketed && (last.endTurn ?? last.turn) - last.turn + 1 < bucketTurns
+                ? " · partial bucket"
+                : ""}
+              {meta?.asOf && (
+                <>
+                  {" "}
+                  · Observed <RelativeTime value={meta.asOf} /> ({" "}
+                  <LocalTime
+                    value={meta.asOf}
+                    options={{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }}
+                  />
+                  ) · refreshes every minute
+                </>
+              )}
+            </>
+          )}
+        </p>
         {(meta?.invalidVolumeTrades ?? 0) > 0 && (
           <p className="mb-2 text-xs text-warning">
             Turnover incomplete: {meta?.invalidVolumeTrades} invalid trade records excluded.
