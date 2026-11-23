@@ -392,7 +392,8 @@
     "experimental": {
       "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away. Right now this turns on the ASCII page decode: each page scrambles into place through a character grid.",
       "toggleLabel": "Turn on experimental features",
-      "toggleHint": "Off until you turn it on. Only changes things for you.",
+      "toggleHintOn": "On for you now. Turn it off and the experiments go away straight away. Only changes things for you.",
+      "toggleHintOff": "Off for you now. Turn it on to try the experiments. Only changes things for you.",
       "saveError": "Could not save. Try again.",
       "desktopNavigation": {
         "title": "Desktop navigation",
