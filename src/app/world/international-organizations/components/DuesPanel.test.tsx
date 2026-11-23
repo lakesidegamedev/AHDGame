@@ -109,8 +109,13 @@ describe("DuesPanel and the display-currency preference", () => {
   it("says the assessment falls on VOTING members, not on the bloc", () => {
     // Dues are voters-only — the rest pay tribute at a rate they do not set —
     // so "across the bloc" described a charge nobody makes.
+    renderPanel({ ...rated, fund: { ...rated.fund, tributeRateAnnual: 0.01 } } as typeof org);
+    expect(screen.getByText(/across its voting members/)).toBeTruthy();
+  });
+
+  it("says every member pays when the organisation levies no tribute", () => {
     renderPanel(rated);
-    expect(screen.getByText(/across its VOTING members/)).toBeTruthy();
+    expect(screen.getByText(/across all its members/)).toBeTruthy();
   });
 
   it("falls back to the fund's currency when no era rate came down", () => {

@@ -53,10 +53,14 @@ export function EndorsementsTab(props: Props) {
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="text-sm font-semibold mb-2">Active endorsements</h2>
+        <h2 className="text-sm font-semibold mb-1">Active candidate endorsements</h2>
+        <p className="mb-2 text-xs text-muted">
+          Endorsements you have given to election candidates. Endorsements an international
+          organisation gives your country are joint statements, listed on that organisation's page.
+        </p>
         <InlineError error={error} className="text-sm text-error mb-2" />
         {props.activeEndorsements.length === 0 ? (
-          <p className="text-sm text-muted">No active endorsements.</p>
+          <p className="text-sm text-muted">You have not endorsed any candidates.</p>
         ) : (
           <ul className="space-y-2">
             {props.activeEndorsements.map((e) => (
