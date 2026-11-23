@@ -176,6 +176,14 @@
       "cashLeft": "Cash left after build",
       "cashShort": "Additional cash needed",
       "forecastUnavailable": "Profit and payback need a current operating forecast.",
+      "forecastUnavailableReasons": {
+        "noCapacity": "No profit or payback yet: this sector has no plants running, so there is no result to project from. It appears after the first plants open and run a turn.",
+        "notRun": "No profit or payback yet: this sector made nothing last turn, so there is no result to project from. It appears after its next turn that produces output.",
+        "mothballed": "No profit or payback while the plants are mothballed. It appears after they reopen and run a turn.",
+        "other": "No profit or payback yet: last turn's results for this sector are incomplete. It appears after this sector's next settled turn."
+      },
+      "noExtraBuyersNote": "No unmet demand is measured for this output, so the extra capacity is modelled with no extra sales, only its running cost. Sectors of the same type with similar costs show the same figure.",
+      "warnFreight": "Freight in {state} is at {share}% of capacity. Output sent to other states will not ship until freight frees up. Local sales are not affected.",
       "baseOrderPrice": "Base price for this order",
       "baseOrderPriceHelp": "Price for the chosen quantity before discounts and surcharges.",
       "marketShareAdjustment": "Market share adjustment",
@@ -235,7 +243,7 @@
       "firstOpening": "First opening",
       "inTurns": "{turns, plural, one {# turn} other {# turns}}",
       "profitPerTurn": "Profit per turn once open",
-      "payback": "Payback",
+      "payback": "Payback on this order",
       "noPayback": "Does not pay back in 192 turns",
       "notAvailable": "n/a",
       "roomRecommended": "{count, plural, one {# {facility} recommended} other {# {facilities} recommended}}",
@@ -252,8 +260,8 @@
       "siteQuoteFailed": "Could not get a quote.",
       "siteBuildWithReserve": "Build using operating reserve",
       "siteInsufficientFunds": "Insufficient corporate funds.",
-      "warnLabour": "This sector fills {percent} of its jobs. New jobs may stay vacant.",
-      "warnLabourPool": "{state} has more jobs than workers. New jobs may stay vacant.",
+      "warnLabour": "This sector fills {percent} of its jobs. New jobs may stay vacant. Raising the wage level (People tab) fills more of them.",
+      "warnLabourPool": "{state} has more jobs than workers. New jobs may stay vacant. Raising the wage level (People tab) draws more workers to this sector.",
       "matchDemandPaidOrders": "Match demand uses paid orders only.",
       "marketReadout": {
         "title": "Buyers for what you make",
@@ -283,9 +291,9 @@
         "sidebarNone": "No buyers waiting",
         "sidebarCapEstimate": "Possible demand hidden by the cap",
         "headlinePaidOrdersCovered": "Last turn’s paid orders were covered. The cap may have hidden other demand.",
-        "capEstimate": "The cap figures are estimates from the demand model. Paid orders show what buyers actually placed.",
+        "capEstimate": "The cap figures are model estimates, not measured buyers and not a recommendation. Paid orders show what buyers actually placed.",
         "capProduct": "Model estimate of demand hidden by the cap, after existing supply: {units} units a day. It is not counted in room to build.",
-        "capRoom": "Including the estimate, there may be room for {count, plural, one {# {site}} other {# {sites}}} after idle and queued capacity. Paid orders show what buyers actually placed."
+        "capRoom": "Model estimate, not a recommendation: if the demand cap were lifted, the model puts room at {count, plural, one {# {site}} other {# {sites}}} after idle and queued capacity. It comes from market demand the cap removed, not from buyers placing orders. Use the paid orders above to size a build."
       }
     },
     "bankConsole": {

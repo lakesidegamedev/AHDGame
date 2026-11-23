@@ -45,11 +45,26 @@ export function investmentForecastInput(
     : null;
 }
 
+export type ForecastBlocker = "noCapacity" | "mothballed" | "notRun" | "other";
+
+/**
+ * Why the dialog has no profit or payback figure. The projection needs an
+ * operating turn of this sector to scale from; this names which part is missing.
+ */
+export function forecastBlocker(plants: PlantsData): ForecastBlocker {
+  if (plants.mothballed || (plants.activeCapacityPercent ?? 100) <= 0) return "mothballed";
+  if (!((plants.capacityUnits ?? 0) > 0)) return "noCapacity";
+  if (!((plants.producedUnits ?? 0) > 0)) return "notRun";
+  return "other";
+}
+
 export interface BuildReturnSummary {
   /** Net cash per turn once the whole order is delivered, after costs, overhead, tax and replacement. */
   profitPerTurn: number;
   /** Turns from the order until the charged build cash is recovered, or null beyond the forecast. */
   paybackTurn: number | null;
+  /** No unmet demand is measured for this output, so added capacity is modelled with no extra sales. */
+  noExtraBuyers: boolean;
 }
 
 /** Headline return figures for the build dialog, read off the same scenario as the forecast table. */
@@ -65,5 +80,6 @@ export function buildReturnSummary(plants: PlantsData, units: number): BuildRetu
   return {
     profitPerTurn: next.availableCashAnchor - first.availableCashAnchor,
     paybackTurn: last.cashPaybackTurn,
+    noExtraBuyers: !((plants.demandGapUnits ?? 0) > 0),
   };
 }

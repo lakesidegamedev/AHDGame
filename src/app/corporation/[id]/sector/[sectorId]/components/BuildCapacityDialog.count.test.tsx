@@ -191,7 +191,7 @@ it("keeps the default view to the headline figures and one details disclosure", 
   expect(screen.getByText("Build total")).toBeTruthy();
   expect(screen.getByText("First opening")).toBeTruthy();
   expect(screen.getByText("Profit per turn once open")).toBeTruthy();
-  expect(screen.getByText("Payback")).toBeTruthy();
+  expect(screen.getByText("Payback on this order")).toBeTruthy();
   expect(screen.getByTestId("build-room").textContent).toContain("recommended");
   expect(document.querySelectorAll("details")).toHaveLength(1);
   expect(screen.queryByText(/Demand today is not guaranteed/)).toBeNull();
@@ -277,7 +277,67 @@ it("reports profit per turn and payback from the cash scenario", () => {
   renderDialog();
   const text = document.querySelector("dl")?.textContent ?? "";
   expect(text).toMatch(/Profit per turn once open\$[\d,]+/);
-  expect(text).toMatch(/Payback\d+ turns/);
+  expect(text).toMatch(/Payback on this order\d+ turns/);
+});
+
+describe("build advice lines", () => {
+  it("names why profit and payback are missing, by cause", () => {
+    renderDialog(vi.fn(), { ...plants, producedUnits: 0 });
+    expect(screen.getByTestId("build-forecast-reason").textContent).toContain(
+      "made nothing last turn"
+    );
+    cleanup();
+    renderDialog(vi.fn(), { ...plants, capacityUnits: 0, producedUnits: 0 });
+    expect(screen.getByTestId("build-forecast-reason").textContent).toContain("no plants running");
+    cleanup();
+    renderDialog(vi.fn(), { ...plants, mothballed: true });
+    expect(screen.getByTestId("build-forecast-reason").textContent).toContain("mothballed");
+  });
+
+  it("explains a cost-only figure when no unmet demand is measured", () => {
+    renderDialog(vi.fn(), {
+      ...plants,
+      demandGapUnits: 0,
+      pnl: { ...plants.pnl, labourAnchor: 6000 },
+    });
+    expect(screen.getByTestId("build-no-extra-buyers")).toBeTruthy();
+    cleanup();
+    renderDialog();
+    expect(screen.queryByTestId("build-no-extra-buyers")).toBeNull();
+  });
+
+  it("shows the recommended count, or the reason there is none, beside Match demand", () => {
+    renderDialog();
+    expect(screen.getByTestId("build-match-demand-line").textContent).toMatch(/recommended/);
+    cleanup();
+    renderDialog(vi.fn(), plants, "extraction");
+    expect(screen.getByTestId("build-match-demand-line").textContent).toMatch(
+      /Automatic sizing can't check/
+    );
+  });
+
+  it("warns when the target state's freight is over its limit", () => {
+    render(
+      <BuildCapacityDialog
+        open
+        onClose={vi.fn()}
+        plants={plants}
+        stateName="Ohio"
+        freightState={{ observedLoad: 150, capacity: 100, turn: 1 }}
+        sectorType="manufacturing"
+        sectorLabel="Manufacturing"
+        submitting={false}
+        errorMessage=""
+        onSubmit={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("build-freight-warning").textContent).toContain("will not ship");
+  });
+
+  it("points a worker shortage at the wage level", () => {
+    renderDialog(vi.fn(), { ...plants, workers: 5 });
+    expect(document.body.textContent).toContain("Raising the wage level");
+  });
 });
 
 it("sizes funded building counts from the funded build room", () => {

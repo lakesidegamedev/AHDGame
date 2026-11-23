@@ -133,7 +133,7 @@ export function idleCauseMeta(
     staffing: {
       label: "Stopped: short of workers",
       tone: "warning",
-      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
+      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is. Raising the wage level (People tab) fills more jobs.`,
     },
     deposits: {
       label: "Deposits ran short",

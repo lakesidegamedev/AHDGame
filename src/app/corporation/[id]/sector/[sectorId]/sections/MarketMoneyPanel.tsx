@@ -297,7 +297,7 @@ export default function MarketMoneyPanel({
             help="The daily totals below divided across every unit produced. Unsold units count as zero revenue but still carry their share of materials, wages, idle-capacity upkeep and overheads."
           />
           <UnitTile
-            label="Break even"
+            label="Break even on builds under way"
             value={
               truth.breakEven.status === "profitable_now"
                 ? "Profitable now"
@@ -312,7 +312,7 @@ export default function MarketMoneyPanel({
                   ? "default"
                   : "warning"
             }
-            help="Turns = money already spent on capacity that is not finished yet, divided by this sector's profit per turn at last turn's sales. It moves when either part moves: new builds raise the first, a change in sales or costs moves the second. Not at current fills means the sector does not clear a profit at those sales."
+            help="This is not the payback shown when you expand. Turns = money already spent on capacity that is not finished yet, divided by this sector's profit per turn at last turn's sales. It moves when either part moves: new builds raise the first, a change in sales or costs moves the second. Not at current fills means the sector does not clear a profit at those sales."
           />
         </div>
       )}

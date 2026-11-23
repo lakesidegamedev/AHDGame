@@ -1181,6 +1181,7 @@ export default function SectorDetailPage() {
             plants={plants}
             stateLabourMarket={sector.stateLabourMarket}
             stateName={sector.stateName}
+            freightState={commodities?.freightState}
             sectorType={sector.sectorType}
             sectorLabel={sector.displayName || sector.sectorLabel}
             strategy={strategy}
