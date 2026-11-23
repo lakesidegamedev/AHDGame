@@ -164,6 +164,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       countryId,
       currencyCode: nationalCurrency,
       primeRate,
+      inflationRate,
       apyPercent,
       savingsHolderType,
       savingsHolderName,

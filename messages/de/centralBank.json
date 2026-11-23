@@ -10,8 +10,8 @@
       "privateBank": "deiner Privatbank",
       "atBank": "Bei {bank}",
       "holderUnknown": "Die Bank für dein Guthaben konnte nicht ermittelt werden",
-      "centralRate": "Die Hälfte des realen Leitzinses von {prime}%",
-      "centralRateWithBonus": "Die Hälfte des realen Leitzinses von {prime}% plus {bonus}% Zentralbankbonus"
+      "centralRate": "Die Hälfte des Realzinses von {real}% (Leitzins {prime}% minus Inflation {inflation}%)",
+      "centralRateWithBonus": "Die Hälfte des Realzinses von {real}% (Leitzins {prime}% minus Inflation {inflation}%) plus {bonus}% Zentralbankbonus"
     }
   }
 }

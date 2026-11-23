@@ -123,6 +123,7 @@ describe("RaceView", () => {
 
   it("reads the change from the last two turns of polling", () => {
     const full = election({
+      id: "s",
       generalVotes: {
         turnSnapshots: [
           { turn: 8, sharesPct: { a: 50, b: 50 } },
@@ -133,6 +134,22 @@ describe("RaceView", () => {
     view(senate, full);
     expect(screen.getByText("+2.0")).toBeTruthy();
     expect(screen.getByText("-2.0")).toBeTruthy();
+  });
+
+  it("does not draw another race's polling while this race's data loads", () => {
+    const other = election({
+      id: "other",
+      generalVotes: {
+        turnSnapshots: [
+          { turn: 8, sharesPct: { a: 50, b: 50 } },
+          { turn: 9, sharesPct: { a: 52, b: 48 } },
+        ],
+      } as never,
+    });
+    view(senate, other);
+    expect(screen.getByText("Loading polling history.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Turn 9" })).toBeNull();
+    expect(screen.queryByText("No polling history yet.")).toBeNull();
   });
 
   it("notes a primary and its stakes", () => {
@@ -156,6 +173,7 @@ describe("RaceView", () => {
         "Democratic primary. Only Democratic members vote. Top 1 advances to the general in 3 turns."
       )
     ).toBeTruthy();
+    expect(screen.getByText(/Primary poll share comes from a score/)).toBeTruthy();
   });
 });
 

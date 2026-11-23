@@ -106,12 +106,26 @@ export function RegionMapPaths({
     yRatio: number;
   } | null>(null);
   const [geo, setGeo] = useState<FeatureCollection<Geometry> | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFailed(false);
     fetchJson<FeatureCollection<Geometry>>(geoUrl, { feature: "region-map" })
-      .then((data) => setGeo(data))
-      .catch(() => {});
-  }, [geoUrl]);
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.features?.length) setGeo(data);
+        else setFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [geoUrl, attempt]);
 
   const shapes = useMemo<Shape[]>(() => {
     if (!geo?.features?.length) return [];
@@ -146,6 +160,23 @@ export function RegionMapPaths({
   const flipTooltip = tooltipPos ? tooltipPos.yRatio > 0.5 : false;
 
   if (shapes.length === 0) {
+    if (failed || (geo && geo.features?.length)) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted text-sm">
+          <span>The map could not be loaded.</span>
+          <button
+            type="button"
+            className="underline hover:text-foreground"
+            onClick={() => {
+              setGeo(null);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="w-full h-full flex items-center justify-center text-muted text-sm">
         Loading map…
