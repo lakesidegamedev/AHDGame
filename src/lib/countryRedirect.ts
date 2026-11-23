@@ -45,3 +45,17 @@ export function legacyCountryRootRedirects() {
     { source: `/${path}`, destination: `/country/us/${path}`, permanent: true },
   ]);
 }
+
+/**
+ * Addresses a new player would guess that have no page of their own. Each
+ * points at the screen that holds the content.
+ */
+export function guessableUrlRedirects() {
+  return [
+    { source: "/help", destination: "https://wiki.ahousedividedgame.com", permanent: true },
+    { source: "/leaderboard", destination: "/contests?view=rankings", permanent: true },
+    { source: "/achievements", destination: "/profile", permanent: false },
+    { source: "/country/:code/senate", destination: "/country/:code/legislature", permanent: true },
+    { source: "/country/:code/house", destination: "/country/:code/legislature", permanent: true },
+  ];
+}

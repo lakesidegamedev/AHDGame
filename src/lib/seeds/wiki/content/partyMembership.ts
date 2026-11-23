@@ -38,6 +38,10 @@ Decide before you start a campaign. Leaving or switching ends your old-party pri
 
 The tenure clock matters if you want to run for chair: you need 24 turns in the party before you can run or vote, so check it first.
 
+## Why member counts are bigger than player counts
+
+A party's member count and a country's politician count include non-player politicians ([NPPs](/wiki/npps-overview)) as well as players. That is why a country can show hundreds of party members and politicians while the leaderboard counts far fewer players: the leaderboard and the current-iteration player count are players only. Where a page lists both, NPPs are marked with a tag.
+
 ## What membership costs
 
 Every member pays two taxes out of their hourly income: a **state tax** to the state party treasury and a **national tax** to the national party treasury. Each rate is set by that level's leaders from 0% to 33%. Both are taken from your total income, not one after the other. Independents pay nothing. That money fills the treasuries that fund Political Strength and budgets in [Party Actions](/wiki/party-actions).

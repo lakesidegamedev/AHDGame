@@ -296,7 +296,7 @@ export default function PartiesPage() {
                         Party roster
                       </h2>
                       <p className="text-body-sm text-muted">
-                        {parties.length} total, ranked by membership
+                        {parties.length} total, ranked by membership. Member counts include non-player politicians (NPPs).
                       </p>
                     </div>
                     <div className="grid gap-4 lg:grid-cols-2">

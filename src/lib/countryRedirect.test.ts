@@ -46,3 +46,16 @@ describe("legacyCountryRootRedirects", () => {
     expect(rules.every((rule) => rule.permanent)).toBe(true);
   });
 });
+
+describe("guessableUrlRedirects", () => {
+  it("sends help, leaderboard, achievements and chamber addresses to real screens", async () => {
+    const { guessableUrlRedirects } = await import("./countryRedirect");
+    const bySource = Object.fromEntries(guessableUrlRedirects().map((r) => [r.source, r]));
+    expect(bySource["/help"].destination).toContain("wiki.ahousedividedgame.com");
+    expect(bySource["/leaderboard"].destination).toBe("/contests?view=rankings");
+    expect(bySource["/achievements"].destination).toBe("/profile");
+    expect(bySource["/country/:code/senate"].destination).toBe("/country/:code/legislature");
+    expect(existsSync(join(process.cwd(), "src/app/contests/page.tsx"))).toBe(true);
+    expect(existsSync(join(process.cwd(), "src/app/profile/page.tsx"))).toBe(true);
+  });
+});
