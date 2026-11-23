@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants/bonds";
 import {
   bondIssueInputProblem,
+  bondIssueLimitText,
   bondIssueMinimum,
   bondIssueSliderMax,
   bondIssueRefusalText,
@@ -499,14 +500,15 @@ export default function BondsTab({
                       value={`${couponRate.toFixed(2)}%`}
                     />
                     <KVRow
-                      label="Cap per issue"
-                      value={formatFull(perIssuanceCap)}
-                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. A company with smaller revenue still gets that floor. One issue cannot exceed this, whatever your debt room.`}
+                      label="You can issue now"
+                      value={formatFull(effectiveCap)}
+                      title={`The most one issue can be today, and the slider's maximum. Set by ${bondIssueLimitText(bondInfo.issuanceLimitedBy)}.`}
+                      hint={`Limited by ${bondIssueLimitText(bondInfo.issuanceLimitedBy)}`}
                     />
                     <KVRow
-                      label="Largest issue now"
-                      value={formatFull(effectiveCap)}
-                      title="The lower of the cap per issue and the debt room left. This is the slider's maximum."
+                      label="Per-issue cap"
+                      value={formatFull(perIssuanceCap)}
+                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. Debt to equity and what creditors could recover can set a lower limit, shown above.`}
                     />
                     {maxIssuableDebt !== null && (
                       <KVRow

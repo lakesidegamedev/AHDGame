@@ -63,3 +63,15 @@ export function fundedClearingReading(
     clearingFactor: askedValue > 0 ? positive(receipt.revenue) / askedValue : null,
   };
 }
+
+/**
+ * The share of offered output buyers took, for list rows. The settled receipt
+ * wins; the legacy made-versus-sold figure is used only when there is none.
+ */
+export function soldShareForList(
+  receipt: ClearingReceipt | null | undefined,
+  currentTurn: number,
+  legacyFill: number | null
+): number | null {
+  return fundedClearingReading(receipt, currentTurn)?.soldFraction ?? legacyFill;
+}

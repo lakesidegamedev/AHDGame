@@ -43,3 +43,19 @@ export function bondIssueRefusalText(body: unknown, fallback: string): string {
   if (!message) return fallback;
   return message.replace(/^[a-z][A-Za-z0-9_.]*:\s+/, "").replace(/\s*\([A-Z_]+\)$/, "");
 }
+
+export type BondIssueLimit = "perIssuance" | "leverage" | "exitEquity";
+
+/** Plain-words name of the rule that currently sets the largest issue. */
+export function bondIssueLimitText(limit: BondIssueLimit | undefined): string {
+  switch (limit) {
+    case "exitEquity":
+      return "what creditors could recover if the corporation sold up";
+    case "leverage":
+      return "the debt to equity limit";
+    case "perIssuance":
+      return "the per-issue cap";
+    default:
+      return "your borrowing limits";
+  }
+}

@@ -586,7 +586,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       sectorNPV +
       sumCorporateSectorConstructionInProgress(sectors, corporation._id, currentTurn);
 
-    // Per-issuance cap: 25% of annual revenue, floored at $100M
+    // Per-issuance cap: 25% of annual revenue, never below MIN_BOND_ISSUANCE_PER_ISSUE
     const annualRevenuePost = sumCorporateSectorAnnualRevenue(
       sectors,
       corporation._id,

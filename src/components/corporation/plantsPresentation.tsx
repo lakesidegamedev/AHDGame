@@ -327,7 +327,7 @@ export function roomInPlantsLabel(
 /** Column heading and its tooltip for the one running and sold reading. */
 export const RUNNING_SOLD_HEADING = "Running / sold";
 export const RUNNING_SOLD_HEADING_TITLE =
-  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they made found buyers.";
+  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they offered for sale found buyers.";
 
 /**
  * The one reading of how a sector's plants did last turn, used by every table:
@@ -402,7 +402,7 @@ export function RunningSoldReading({
             ? "Nothing was made last turn, so nothing could be sold."
             : exactFill
               ? soldShareTitle(
-                  `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+                  `${fillBandSentence(band)}. Share of what these plants offered for sale last turn, made plus stock, that found buyers.`
                 )
               : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
         }

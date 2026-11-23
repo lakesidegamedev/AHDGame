@@ -73,11 +73,18 @@ afterEach(() => {
 describe("BondsTab issuance", () => {
   it("states the real per-issue cap rule including the floor", () => {
     renderTab();
-    const row = screen.getByText("Cap per issue");
+    const row = screen.getByText("Per-issue cap");
     const tip = row.closest("[title]")?.getAttribute("title") ?? row.getAttribute("title") ?? "";
     const all = document.querySelector(`[title*="25% of annual revenue"]`)?.getAttribute("title");
     expect(tip + (all ?? "")).toContain("25% of annual revenue");
     expect(all).toContain(`A${MIN_BOND_ISSUANCE_PER_ISSUE}`);
+  });
+
+  it("leads with the amount that can be issued now and names the binding limit", () => {
+    renderTab();
+    expect(screen.getByText("You can issue now")).toBeTruthy();
+    expect(screen.getByText(/Limited by /)).toBeTruthy();
+    expect(screen.queryByText("Largest issue now")).toBeNull();
   });
 
   it("offers the server minimum, lowered for a small corporation", () => {

@@ -5,6 +5,7 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import Link from "next/link";
 import {
   MONEY_PERIODS,
@@ -105,6 +106,11 @@ export default function FinancialsTab({
   financialFogOfWar,
 }: FinancialsTabProps) {
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
+  const { formatAmount: formatAnchor } = useCurrency();
+  const constructionPaidAnchor = sectors.reduce(
+    (sum, s) => sum + Math.max(0, s.constructionInProgressAnchor ?? 0),
+    0
+  );
   const tArrears = useTranslations("corporations.arrears");
   const [view, setView] = useState<StatementView>("income");
   // "all" or a country id. A country the corporation has left falls back to All.
@@ -396,6 +402,16 @@ export default function FinancialsTab({
                       amount={cost(financials.growthCosts)}
                       pct={pctOf(financials.growthCosts)}
                       title="Cost of growing sector revenue. Scales with revenue and growth rate."
+                    />
+                  )}
+                  {constructionPaidAnchor > 0 && (
+                    <StatementLine
+                      indent
+                      label="Construction paid up front"
+                      amount={formatAnchor(constructionPaidAnchor)}
+                      amountClass="text-muted"
+                      note="Not in the costs above"
+                      title="Cash for builds still under construction. It was charged in full when each build was ordered, so it is not part of this period's growth cost or profit."
                     />
                   )}
                   <StatementLine
