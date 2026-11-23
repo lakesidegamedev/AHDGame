@@ -224,6 +224,53 @@ describe("foundCorporation", () => {
     expect(refundCharacterCash).not.toHaveBeenCalled();
   });
 
+  describe("one corporation per character", () => {
+    function ownedBy(owner: ObjectId) {
+      return async (filter: { ceoId?: ObjectId; ceoVacant?: unknown; userId?: ObjectId }) =>
+        filter.ceoId && filter.ceoId.equals(owner) && !filter.userId
+          ? { _id: new ObjectId() }
+          : null;
+    }
+
+    it("lets a second character on the same account found a corporation", async () => {
+      const insertedId = new ObjectId();
+      const { db, corporations } = makeDb(async () => ({ insertedId }));
+      const firstCharacter = makeCharacter();
+      const secondCharacter = makeCharacter();
+      corporations.findOne.mockImplementation(ownedBy(firstCharacter._id) as never);
+
+      const result = await foundCorporation({
+        db: db as never,
+        userId: new ObjectId().toString(),
+        character: secondCharacter,
+        request: request as never,
+      });
+
+      expect(result).toMatchObject({ ok: true, status: 201 });
+    });
+
+    it("rejects a character that already owns a corporation", async () => {
+      const { db, writes, corporations } = makeDb(async () => ({}));
+      const character = makeCharacter();
+      corporations.findOne.mockImplementation(ownedBy(character._id) as never);
+
+      const result = await foundCorporation({
+        db: db as never,
+        userId: new ObjectId().toString(),
+        character,
+        request: request as never,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        status: 400,
+        error: "This character already owns a corporation.",
+      });
+      expect(writes).toEqual([]);
+      expect(atomicallyDebitCharacterCash).not.toHaveBeenCalled();
+    });
+  });
+
   it("rejects a secondary sector equal to the primary before any write", async () => {
     const { db, writes } = makeDb(async () => ({}));
 

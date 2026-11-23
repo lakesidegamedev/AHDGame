@@ -3,6 +3,11 @@
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
+import type { CurrencyCode } from "@/lib/constants/currencies";
+import {
+  formatCommodityPrice,
+  getCommodityDisplayCurrency,
+} from "@/lib/commodity-map/commodityPriceDisplay";
 import { formatUnits } from "../lib/helpers";
 import { postImportBalance } from "@/lib/trade/postImportGap";
 
@@ -23,6 +28,13 @@ interface DislocationPanelProps {
   /** Imports attributed to each state; empty or absent when imports are unknown. */
   stateImports?: Record<string, number>;
   unit: string;
+  forexEnabled?: boolean;
+  exchangeRates?: Partial<Record<CurrencyCode, number>>;
+}
+
+/** The multiplier as shown: both prices go through the same formatter as the regional table. */
+export function premiumLabel(price: number, basePrice: number, formatPrice: (n: number) => string) {
+  return `${(price / basePrice).toFixed(2)}x base price (${formatPrice(price)} vs ${formatPrice(basePrice)})`;
 }
 
 /**
@@ -48,6 +60,8 @@ export default function DislocationPanel({
   capacityByState,
   stateImports,
   unit,
+  forexEnabled = false,
+  exchangeRates = {},
 }: DislocationPanelProps) {
   if (!(basePrice > 0)) return null;
   const stateIds = Object.keys(stateCountryMap);
@@ -90,6 +104,12 @@ export default function DislocationPanel({
     return after.coveredByImports ? ", gap covered by imports" : "";
   };
 
+  const priceLabel = (id: string) => {
+    const currency = getCommodityDisplayCurrency(stateCountryMap[id] as CountryId);
+    const format = (n: number) => formatCommodityPrice(n, currency, forexEnabled, exchangeRates);
+    return premiumLabel(statePriceOr(statePrices[id], basePrice), basePrice, format);
+  };
+
   const stateRow = (id: string, right: string) => {
     const countryId = stateCountryMap[id] as CountryId;
     return (
@@ -115,9 +135,7 @@ export default function DislocationPanel({
           <div>
             <p className="text-xs font-medium text-foreground">Short: buyers pay a premium</p>
             <ul className="mt-1 divide-y divide-card-border/60">
-              {short.map((s) =>
-                stateRow(s.id, `${s.ratio.toFixed(2)}x base price${shortDetail(s.id)}`)
-              )}
+              {short.map((s) => stateRow(s.id, `${priceLabel(s.id)}${shortDetail(s.id)}`))}
             </ul>
           </div>
         )}

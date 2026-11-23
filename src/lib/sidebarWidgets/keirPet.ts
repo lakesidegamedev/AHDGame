@@ -14,6 +14,8 @@ export { BOND_LEVELS, type AdviceTone, type KeirAdvice, type KeirPetWidgetData }
 
 /** Keir writes a fresh tip at most this often. */
 export const ADVICE_TTL_MS = 12 * 60 * 60_000;
+/** A tip quoting live figures is re-read this often, so it never lags a turn. */
+export const ADVICE_REFRESH_MS = 60 * 60_000;
 /** Tea once every four hours; pats every ten minutes. */
 export const TEA_COOLDOWN_MS = 4 * 60 * 60_000;
 export const PAT_COOLDOWN_MS = 10 * 60_000;
@@ -174,11 +176,34 @@ export async function loadKeirPet(
   let state = registerVisit(before, now);
   const stale =
     !state.advice || now.getTime() - Date.parse(state.advice.generatedAt) >= ADVICE_TTL_MS;
-  if (stale) {
-    const { recommendations } = await loadRecommendations(db, userId).catch(() => ({
-      recommendations: [] as ActionRecommendation[],
-    }));
-    state = { ...state, advice: chooseAdvice(recommendations, state.advice?.id, now) };
+  const current = state.advice;
+  const needsRefresh =
+    !stale &&
+    current !== undefined &&
+    !EVERGREEN.some((tip) => tip.id === current.id) &&
+    now.getTime() - Date.parse(current.refreshedAt ?? current.generatedAt) >= ADVICE_REFRESH_MS;
+  if (stale || needsRefresh) {
+    let lookupFailed = false;
+    const { recommendations } = await loadRecommendations(db, userId).catch(() => {
+      lookupFailed = true;
+      return { recommendations: [] as ActionRecommendation[] };
+    });
+    const live = needsRefresh ? recommendations.find((rec) => rec.id === current!.id) : undefined;
+    state = {
+      ...state,
+      advice:
+        needsRefresh && lookupFailed
+          ? current
+          : live
+            ? {
+                ...current!,
+                title: live.title,
+                why: live.why,
+                link: live.link || null,
+                refreshedAt: now.toISOString(),
+              }
+            : chooseAdvice(recommendations, state.advice?.id, now),
+    };
   }
   if (state !== before) {
     await users.updateOne({ _id }, { $set: { keirPet: state } as Record<string, unknown> });
