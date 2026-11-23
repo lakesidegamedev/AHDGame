@@ -46,6 +46,8 @@ export function MoneyHistoryPanel() {
     }
   }, []);
 
+  const showBalance = rows.some((row) => row.balanceAfter !== null);
+
   const toggle = () => {
     const next = !open;
     setOpen(next);
@@ -107,7 +109,7 @@ export function MoneyHistoryPanel() {
                     <th className="py-1 pr-3">{t("turn")}</th>
                     <th className="py-1 pr-3">{t("source")}</th>
                     <th className="py-1 pr-3 text-right">{t("amount")}</th>
-                    <th className="py-1 text-right">{t("balance")}</th>
+                    {showBalance && <th className="py-1 text-right">{t("balance")}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -125,19 +127,21 @@ export function MoneyHistoryPanel() {
                       >
                         {formatCurrencyFaceAmount(row.amount, row.currencyCode as CurrencyCode)}
                       </td>
-                      <td className="py-1 text-right tabular-nums">
-                        {row.balanceAfter === null
-                          ? ""
-                          : formatCurrencyFaceAmount(
-                              row.balanceAfter,
-                              row.currencyCode as CurrencyCode
-                            )}
-                      </td>
+                      {showBalance && (
+                        <td className="py-1 text-right tabular-nums">
+                          {row.balanceAfter === null
+                            ? "-"
+                            : formatCurrencyFaceAmount(
+                                row.balanceAfter,
+                                row.currencyCode as CurrencyCode
+                              )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 text-body-sm text-muted">{t("balanceNote")}</p>
+              {showBalance && <p className="mt-2 text-body-sm text-muted">{t("balanceNote")}</p>}
             </div>
           )}
 

@@ -3,7 +3,7 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import {
   toMoneyHistoryRow,
-  typesForWallet,
+  walletFilter,
   type MoneyHistoryRow,
   type MoneyHistoryWallet,
 } from "./rules";
@@ -27,6 +27,7 @@ const PROJECTION = {
   counterpartyType: 1,
   counterpartyName: 1,
   counterpartyDeletedAt: 1,
+  "meta.wallet": 1,
 } as const;
 
 /**
@@ -48,11 +49,11 @@ export async function loadMoneyHistory(
     expiresAt: { $gt: opts.now ?? new Date() },
     amount: { $ne: 0 },
   };
-  if (opts.wallet) filter.type = typesForWallet(opts.wallet);
+  if (opts.wallet) Object.assign(filter, walletFilter(opts.wallet));
   if (opts.cursor && ObjectId.isValid(opts.cursor)) filter._id = { $lt: new ObjectId(opts.cursor) };
 
   const docs = await financialTxLogCollection<
-    Pick<FinancialTxLogEntry, "_id" | keyof typeof PROJECTION>
+    Pick<FinancialTxLogEntry, "_id" | "meta" | Exclude<keyof typeof PROJECTION, "meta.wallet">>
   >(db)
     .find(filter, { projection: PROJECTION })
     .sort({ _id: -1 })

@@ -133,33 +133,39 @@ export function StatePartyFundraisingPanel({
   const psInvestmentMaxDisplay = psInvestmentRateDisplay * PS_INVESTMENT_MAX_TIERS;
 
   const [insights, setInsights] = useState<StateTreasuryInsights | null>(null);
-  const emptyInsights = useMemo<StateTreasuryInsights>(() => ({ overrideHistory: [] }), []);
+  const [insightsFailed, setInsightsFailed] = useState(false);
+  const [insightsAttempt, setInsightsAttempt] = useState(0);
 
   useEffect(() => {
     if (!canManageTreas) return;
     let cancelled = false;
-    fetch(`${partyApiBase}/treasury/insights`, { cache: "no-store" })
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    fetch(`${partyApiBase}/treasury/insights`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) return null;
+        if (!response.ok) throw new Error(String(response.status));
         return (await response.json()) as StateTreasuryInsights;
       })
       .then((payload) => {
-        if (!cancelled) setInsights(payload ?? emptyInsights);
+        if (!cancelled) setInsights(payload);
       })
       .catch(() => {
-        if (!cancelled) setInsights(emptyInsights);
-      });
+        if (!cancelled) setInsightsFailed(true);
+      })
+      .finally(() => clearTimeout(timeout));
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
   }, [
     canManageTreas,
     partyApiBase,
+    insightsAttempt,
     stateParty.treasury,
     stateParty.transferReserveAmount,
     stateParty.memberSupportReserveAmount,
     stateParty.nppRecruitmentReserveAmount,
-    emptyInsights,
   ]);
 
   const handlePresetSelect = useCallback(
@@ -231,7 +237,6 @@ export function StatePartyFundraisingPanel({
           turnsToReachReserveFloor={stateParty.turnsToReachReserveFloor}
           saving={savingTreasuryPlan}
           saveDisabled={!treasuryPlanDirty || savingTreasuryPlan}
-          accentColor={stateParty.partyColor}
           treasuryPreset={treasuryPreset}
           presetOptions={presetOptions}
           budgetSummary={[
@@ -258,7 +263,23 @@ export function StatePartyFundraisingPanel({
         />
       )}
 
-      {canManageTreas && !insights && (
+      {canManageTreas && !insights && insightsFailed && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
+          <span>Treasury insights could not be loaded.</span>
+          <button
+            type="button"
+            onClick={() => {
+              setInsightsFailed(false);
+              setInsightsAttempt((n) => n + 1);
+            }}
+            className="underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {canManageTreas && !insights && !insightsFailed && (
         <div className="rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
           Loading treasury insights...
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui";
+import { toneBg } from "@/lib/ui/tone";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatLocalAmount, formatLocalAmountFull } from "@/lib/utils/formatters";
 import type { TreasuryPresetId, TreasuryPresetOption } from "@/lib/treasury/partyTreasuryPresets";
@@ -22,7 +23,6 @@ interface TreasuryPlanningCardProps {
   turnsToReachReserveFloor: number | null;
   saving: boolean;
   saveDisabled: boolean;
-  accentColor: string;
   treasuryPreset?: TreasuryPresetId;
   presetOptions?: TreasuryPresetOption[];
   budgetSummary?: Array<{ label: string; value: string }>;
@@ -74,7 +74,6 @@ export function TreasuryPlanningCard({
   turnsToReachReserveFloor,
   saving,
   saveDisabled,
-  accentColor,
   treasuryPreset = "custom",
   presetOptions = [],
   budgetSummary = [],
@@ -284,8 +283,7 @@ export function TreasuryPlanningCard({
           <button
             onClick={onSave}
             disabled={!canEdit || saveDisabled}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: accentColor }}
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${toneBg("action")}`}
           >
             {saving ? "Saving…" : "Save treasurer plan"}
           </button>
