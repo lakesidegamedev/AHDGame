@@ -39,8 +39,7 @@ export function fiscalApprovalModifiers(debtPct: number, balancePct: number, reg
       label: regional ? "Regional budget deficit" : "National budget deficit",
       effect: Math.round(deficit * 10) / 10,
     },
-    // A region earns the same surplus bonuses from its own budget; national
-    // results never reach a region's rating (owner, 2026-11-23).
+    // A region earns the surplus bonuses from its own budget only.
     ...(Number.isFinite(balancePct) && balancePct >= 0.5
       ? [
           regional
