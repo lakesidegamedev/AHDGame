@@ -48,12 +48,14 @@ describe("reset metric player presentation", () => {
 });
 
 it("does not label a modeled index as days or an unrelated opening era", () => {
-  expect(metricDisplayUnit("treatment-delay index, later median days")).toBe(
-    "treatment-delay index"
+  expect(metricDisplayUnit("treatment-delay index, later median days")).toContain(
+    "20 is the typical wait"
   );
-  expect(metricDisplayUnit("1991 country housing-burden index")).toBe(
-    "country-relative housing-burden index"
+  expect(metricDisplayUnit("treatment-delay index")).toContain("40 is twice as long");
+  expect(metricDisplayUnit("1991 country housing-burden index")).toContain(
+    "100 is the country's typical burden"
   );
+  expect(metricDisplayUnit("1991 country housing-burden index")).not.toContain("days");
   expect(metricDisplayUnit("median days")).toBe("median days");
   expect(metricDisplayUnit("% disposable income spent on housing")).toBe(
     "% disposable income spent on housing"

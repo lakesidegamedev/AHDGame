@@ -203,8 +203,13 @@ export function metricQualityExplanation(status: ObservationStatus): string {
 export const playerMetricDescriptionIds = Object.freeze(Object.keys(PLAYER_DESCRIPTIONS));
 
 export function metricDisplayUnit(unit: string): string {
-  if (unit === "treatment-delay index, later median days") return "treatment-delay index";
-  if (unit === "1991 country housing-burden index") return "country-relative housing-burden index";
+  if (unit === "treatment-delay index, later median days" || unit === "treatment-delay index")
+    return "treatment-delay index (20 is the typical wait at the 1991 start, 40 is twice as long)";
+  if (
+    unit === "1991 country housing-burden index" ||
+    unit === "country-relative housing-burden index"
+  )
+    return "housing-burden index (100 is the country's typical burden at the 1991 start, 110 is 10% heavier)";
   return unit;
 }
 

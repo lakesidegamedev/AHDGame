@@ -125,7 +125,7 @@ describe("first live v2 metric owners", () => {
       const ready = await collectResetMetricOwnerReadings(db as unknown as Db, regional, 49);
       for (const b of regional) {
         expect(ready[b._id]!.updates["06"]!.value).toBeCloseTo(100 * (1.03 / 1.01 - 1));
-        expect(ready[b._id]!.updates["05"]!.value).toBeCloseTo(3);
+        expect(ready[b._id]!.updates["05"]!.value).toBe(99);
         expect(ready[b._id]!.updates["06"]!.observedAtTurn).toBe(49);
       }
       const adopted = regional.map((b) => ({
@@ -136,6 +136,42 @@ describe("first live v2 metric owners", () => {
       expect(stale[adopted[0]!._id]!.updates["06"]!.observedAtTurn).toBe(49);
     }
   );
+  it("reports the economy's current growth rate each turn and drops a retained trailing window", async () => {
+    const db = createMockDb();
+    mockOwnerSources(db);
+    const board = boards.find((b) => b.countryId === "US" && b.scope === "regional")!;
+    const stale = {
+      ...board,
+      observations: {
+        ...board.observations,
+        "05": {
+          ...board.observations["05"]!,
+          value: 6.24,
+          growthBasis: {
+            startTurn: 1,
+            endTurn: 49,
+            openingOutput: 1000,
+            closingOutput: 1062.4,
+            openingHours: 100,
+            closingHours: 101,
+          },
+        },
+      },
+    };
+    db.collection("macroMetrics").find.mockReturnValue({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: board.regionId, countryId: "US", economic: { gdpGrowth: { value: 1.3 } } },
+        ]),
+    });
+    const readings = await collectResetMetricOwnerReadings(db as unknown as Db, [stale], 166);
+    const growth = readings[board._id]!.updates["05"]!;
+    expect(growth.value).toBe(1.3);
+    expect(growth.observedAtTurn).toBe(166);
+    expect(growth.growthBasis).toBeUndefined();
+    expect(growth.note).toContain("budget");
+  });
   it("uses measured local delivery shortfalls, not global spare capacity, in health estimates", async () => {
     const db = createMockDb();
     mockOwnerSources(db);
@@ -443,7 +479,7 @@ describe("first live v2 metric owners", () => {
     expect(readings["US:CA"]!.updates["01"]?.value).toBe(8.4);
     expect(readings["US:PA"]!.updates["03"]?.value).toBe(12.3);
     expect(readings["US:PA"]!.updates["03"]?.status).toBe("proxy");
-    expect(readings["US:PA"]!.updates["03"]?.note).toContain("funded law delivery");
+    expect(readings["US:PA"]!.updates["03"]?.note).toContain("modeled poverty line");
     expect(readings["US:CA"]!.updates["05"]?.value).toBe(2.6);
     expect(readings["US:PA"]!.updates["06"]?.value).toBe(1.1);
     expect(readings["US:PA"]!.updates["08"]?.source).toContain(
