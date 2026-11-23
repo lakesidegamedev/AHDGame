@@ -10,7 +10,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ParliamentaryResultsView } from "@/app/elections/[id]/results/components/ParliamentaryResultsView";
 import { useElectionNightLoad, useElectionNightPoll } from "@/hooks/useElectionNight";
-import { electionNightTitle } from "@/lib/elections/liveResults/electionNight";
+import {
+  electionNightBoardState,
+  electionNightTitle,
+} from "@/lib/elections/liveResults/electionNightChrome";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
 import { EMBEDDED_RESULTS_PLACEHOLDER_CLASS } from "./embeddedResultsPlaceholder";
 
@@ -64,6 +67,10 @@ function EmbeddedParliamentaryResultsReady({
 }) {
   const t = useTranslations("elections");
   const { data } = useElectionNightPoll(electionId, initialData);
+
+  // Nothing is counting yet: a board of zeros says nothing. The race list
+  // already carries the voting dates, and a finished race keeps its result.
+  if (electionNightBoardState(data) === "idle") return null;
 
   return (
     <div className="mb-6 space-y-3">
