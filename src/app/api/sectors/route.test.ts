@@ -306,7 +306,13 @@ describe("GET /api/sectors margin and growth", () => {
     db.collectionMocks.corporations.find.mockReturnValue({
       project: vi.fn().mockReturnThis(),
       toArray: vi.fn().mockResolvedValue([
-        { _id: corpId, name: "Acme", sequentialId: 1, countryId: "US", liquidCurrencyCode: "USD" },
+        {
+          _id: corpId,
+          name: "Acme",
+          sequentialId: 1,
+          countryId: "US",
+          liquidCurrencyCode: "USD",
+        },
       ]),
     });
 

@@ -18,16 +18,12 @@ interface TopProducersConsumersProps {
   unit: string;
   commodity: string;
   consumerNote?: string;
-  /** Units supplied to this market; used to reconcile what the listed buyers received. */
+  /** Units supplied to this market, so listed buyer receipts can be reconciled against it. */
   marketSupply?: number;
   marketLabel?: string;
 }
 
-/**
- * One plain line on what the non-company buyers received against what the
- * market supplied, and how a short supply is shared. Null when the buyers
- * carry no received figures (a formula world).
- */
+/** Non-company buyer receipts against market supply. Null without received figures. */
 export function buyerFillNotes(
   sources: readonly SyntheticDemandSource[],
   supply: number | undefined,
