@@ -84,6 +84,9 @@ interface OverviewTabProps {
   financials: Financials | null;
   balanceSheet: BalanceSheet | null;
   bondInfo: BondInfo | null;
+  /** The bond and credit request failed, so `bondInfo` will not arrive on its own. */
+  bondInfoFailed?: boolean;
+  onRetryBondInfo?: () => void;
   sectors: SectorDetail[];
   corpId: string;
   periodView: MoneyPeriod;
@@ -426,6 +429,8 @@ export default function OverviewTab({
   financials,
   balanceSheet,
   bondInfo,
+  bondInfoFailed,
+  onRetryBondInfo,
   sectors,
   corpId,
   periodView,
@@ -657,6 +662,8 @@ export default function OverviewTab({
                 currentGrowthRate={currentGrowthRate}
                 balanceSheet={balanceSheet}
                 bondInfo={bondInfo}
+                bondInfoFailed={bondInfoFailed}
+                onRetryBondInfo={onRetryBondInfo}
                 leverageRating={leverageRating}
                 creditComposite={creditComposite}
                 activeBonds={activeBonds}
