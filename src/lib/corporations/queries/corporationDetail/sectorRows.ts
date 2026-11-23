@@ -874,6 +874,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
         sectorRealizedRevenueLocal != null ? Math.round(sectorRealizedRevenueLocal) : null,
       profitMargin: sector.profitMargin,
       effectiveProfitMargin,
+      effectiveMarginModelled: sector.effectiveMarginModelled === true,
       // "physical": effectiveProfitMargin is the engine's derived margin and
       // `physicalCosts` explains it; "additive": legacy stack recompute.
       marginBasis: physicalCosts != null ? ("physical" as const) : ("additive" as const),

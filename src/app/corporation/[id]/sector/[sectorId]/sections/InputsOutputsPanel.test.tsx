@@ -616,4 +616,47 @@ describe("short input rows", () => {
     expect(container.querySelector("[data-short-input]")).toBeNull();
     expect(container.querySelector("[data-unmarked-input-stop]")).toBeNull();
   });
+
+  describe("own-site input split", () => {
+    const rowText = (ownSitePerDay: number | undefined) => {
+      const c: CommoditiesData = {
+        ...healthcare,
+        demands: healthcare.demands.map((d) => ({
+          ...d,
+          inputAvailability: 1,
+          inputReceipt: {
+            turn: 7,
+            neededPerDay: d.units,
+            arrivedPerDay: d.units,
+            missingPerDay: 0,
+            ...(ownSitePerDay !== undefined ? { ownSitePerDay } : {}),
+          },
+        })),
+        throughput: { bindingInput: null, applied: 1, projected: 1 },
+      };
+      const { container } = renderPanel(c, { fillRate: 1 } as PlantsData);
+      return container.querySelectorAll("[data-own-site-split]");
+    };
+
+    it("keeps the plain row when no units came from own sites", () => {
+      expect(rowText(undefined).length).toBe(0);
+      expect(rowText(0).length).toBe(0);
+    });
+
+    it("splits own-site and bought units on a mixed row", () => {
+      const first = healthcare.demands[0];
+      const rows = rowText(first.units / 2);
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0].textContent).toContain("From your own sites");
+      expect(rows[0].textContent).toContain("no charge");
+      expect(rows[0].textContent).toContain("Bought:");
+    });
+
+    it("shows only market worth when everything came from own sites", () => {
+      const rows = rowText(1e9);
+      expect(rows[0].textContent).toContain("From your own sites");
+      expect(rows[0].textContent).toContain("at market");
+      expect(rows[0].textContent).not.toContain("Bought:");
+    });
+  });
 });

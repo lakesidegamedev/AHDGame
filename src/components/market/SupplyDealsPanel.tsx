@@ -13,6 +13,7 @@ import {
 } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { SupplyOfferHeader, SupplyOfferRow } from "./SupplyOfferRow";
 import {
+  ComputerRunOfferNote,
   SUPPLY_PAGE_SIZE,
   SupplyFilterBar,
   offersQuery,
@@ -60,6 +61,7 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
             {offerCountLabel(total, totalAll)}.
             {!single && " Taking one starts a binding agreement at the listed terms."}
           </p>
+          {offers.some((offer) => offer.ai) && <ComputerRunOfferNote />}
           <div className="mt-3">
             <SupplyOfferHeader />
           </div>

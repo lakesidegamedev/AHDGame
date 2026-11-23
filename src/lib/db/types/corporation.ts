@@ -6,6 +6,7 @@ import type {
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import type { ObjectId } from "mongodb";
+import type { QualityPillars } from "@/lib/market/brandQuality";
 import type {
   ManufacturingDevelopmentCashReceiptV2,
   ManufacturingProductAdvertisingObligationV2,
@@ -881,6 +882,8 @@ export interface Corporation {
    * into corporationHistory. Absent until quality pillars (Package B) are live.
    */
   averageQuality?: number;
+  /** Pillar scores behind `averageQuality`, set in memory each turn for the history snapshot; not persisted on this document. */
+  qualityPillars?: QualityPillars;
   /** Project-bound cash receipt written beside the R&D cash debit while product lines v2 is on. */
   manufacturingProductDevelopmentReceiptV2?: ManufacturingDevelopmentCashReceiptV2;
   manufacturingProductAdvertisingObligationsV2?: ManufacturingProductAdvertisingObligationV2[];

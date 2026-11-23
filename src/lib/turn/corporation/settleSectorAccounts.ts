@@ -496,10 +496,11 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
   // ratio to derive from — profit ÷ 0 is not "0% margin", it is undefined. Such
   // a sector keeps reporting the modifier stack, which is what its margin WOULD
   // be if it ran, and is what the P3a mothball-upkeep pricing already reads.
-  const reportedEffectiveMargin =
-    physicalPnl && context.hourlyRevenue > 0
-      ? physicalPnl.derivedMarginPct
-      : context.effectiveMargin;
+  const marginIsRealized = Boolean(physicalPnl) && context.hourlyRevenue > 0;
+  const reportedEffectiveMargin = marginIsRealized
+    ? (physicalPnl as NonNullable<typeof physicalPnl>).derivedMarginPct
+    : context.effectiveMargin;
+  sectorUpdate.effectiveMarginModelled = !marginIsRealized;
   if (context.market.plantsEnabled)
     sectorUpdate.internalSupplyReceipt = {
       ...(context.market.internalSupplyReceiptsBySectorId?.get(context.sectorId) ?? {

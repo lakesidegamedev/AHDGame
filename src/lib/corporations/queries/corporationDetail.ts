@@ -44,7 +44,10 @@ import { loadSubsidiaryContext } from "./corporationDetail/subsidiaryContext";
 import { buildFinancials } from "./corporationDetail/financials";
 import { withoutOwnedTechAdvisory } from "@/lib/corporations/autopilot";
 import { getTreeForType } from "@/lib/constants/techTree";
-import { lastQualityChange } from "@/lib/corporations/rules/qualityChange";
+import {
+  lastQualityChangeFromHistory,
+  type QualityHistoryRow,
+} from "@/lib/corporations/rules/qualityChange";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { loadLastTurnReconciliation } from "./corporationDetail/lastTurnReconciliation";
 import { loadArrearsView } from "./corporationDetail/arrears";
@@ -89,10 +92,14 @@ export async function loadCorporationDetailView(args: {
   const sellPacingPromise = loadPoolSellPacing(db, corporation._id);
   const qualityHistoryPromise =
     corporation.averageQuality != null
-      ? corporationHistoryCollection<{ turn: number; averageQuality?: number }>(db)
+      ? corporationHistoryCollection<QualityHistoryRow>(db)
           .find(
             { corporationId: corporation._id, averageQuality: { $exists: true } },
-            { sort: { turn: -1 }, limit: 12, projection: { turn: 1, averageQuality: 1 } }
+            {
+              sort: { turn: -1 },
+              limit: 12,
+              projection: { turn: 1, averageQuality: 1, qualityPillars: 1 },
+            }
           )
           .toArray()
       : Promise.resolve([]);
@@ -294,13 +301,7 @@ export async function loadCorporationDetailView(args: {
           : undefined,
       averageQualityChange:
         corporation.averageQuality != null
-          ? (lastQualityChange(
-              corporation.averageQuality,
-              (await qualityHistoryPromise).map((row) => ({
-                turn: row.turn,
-                value: row.averageQuality ?? Number.NaN,
-              }))
-            ) ?? undefined)
+          ? lastQualityChangeFromHistory(corporation.averageQuality, await qualityHistoryPromise)
           : undefined,
       ceoShareWindow,
       _id: corporation._id.toString(),

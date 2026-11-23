@@ -10,10 +10,10 @@ import HeroPanel from "./HeroPanel";
 
 // Resolve copy from the real English catalog so a missing key fails here.
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => {
+  useTranslations: () => (key: string, params?: Record<string, string>) => {
     const copy = (enCorporations.corporations.commodityMarket as Record<string, string>)[key];
     if (copy === undefined) throw new Error(`Missing commodityMarket message: ${key}`);
-    return copy;
+    return copy.replace(/\{(\w+)\}/g, (_, name: string) => params?.[name] ?? "");
   },
 }));
 vi.mock("@/components/HeroImage", () => ({ HeroImage: () => null }));
@@ -64,6 +64,36 @@ describe("HeroPanel supply card", () => {
     expect(screen.getByText("offered per day")).toBeTruthy();
     const note = screen.getByText("includes unsold stock");
     expect(note.getAttribute("title")).toMatch(/counted again every turn/);
+  });
+});
+
+describe("HeroPanel price basis", () => {
+  it("labels the global figure as a world average", () => {
+    render(
+      <HeroPanel
+        data={data}
+        marketScope={scope}
+        activeCountry={null}
+        forexEnabled={false}
+        exchangeRates={{}}
+        onSelectExchange={() => {}}
+      />
+    );
+    expect(screen.getByText("World average price")).toBeTruthy();
+  });
+
+  it("names the country market and its currency", () => {
+    render(
+      <HeroPanel
+        data={data}
+        marketScope={{ ...scope, marketLabel: "US Market" } as unknown as CommodityMarketScope}
+        activeCountry="US"
+        forexEnabled={false}
+        exchangeRates={{}}
+        onSelectExchange={() => {}}
+      />
+    );
+    expect(screen.getByText("US Market price (USD)")).toBeTruthy();
   });
 });
 

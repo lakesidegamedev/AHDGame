@@ -168,4 +168,17 @@ describe("SupplyDealsPanel controls", () => {
     await screen.findByText("There are no open offers right now.");
     expect(screen.queryByRole("button", { name: "Show all offers" })).toBeNull();
   });
+
+  it("explains computer-run offer sizing only when computer-run offers are listed", async () => {
+    render(<SupplyDealsPanel />);
+    await screen.findByText("Corp a");
+    expect(screen.queryByTestId("computer-run-offer-note")).toBeNull();
+    cleanup();
+    clearMarketJsonCache();
+    response = { ...response, offers: [{ ...offer("n", "sell", 50), ai: true }] };
+    render(<SupplyDealsPanel />);
+    const note = await screen.findByTestId("computer-run-offer-note");
+    expect(note.textContent).toMatch(/computer-run/);
+    expect(note.textContent).toMatch(/capped at \+20%/);
+  });
 });

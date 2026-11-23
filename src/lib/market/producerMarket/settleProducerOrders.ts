@@ -430,6 +430,7 @@ export function settleProducerOrders(
           if (internal) {
             seller.internalDeliveredUnits += units;
             (0, context.recordInternal)(offer, order, units);
+            buyer.internalDeliveredUnits = (buyer.internalDeliveredUnits ?? 0) + units;
           } else seller.soldUnits += units;
           seller.deliveredUnits += units;
           seller.revenue += amount;

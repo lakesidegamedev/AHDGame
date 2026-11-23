@@ -68,6 +68,10 @@ export default function HeroPanel({
     ? formatCommodityPrice(data.basePrice, selectedCurrency, forexEnabled, exchangeRates)
     : formatCurrencyPrecise(data.basePrice);
 
+  const priceBasisLabel = selectedCurrency
+    ? t("priceBasisMarket", { market: marketScope.marketLabel, currency: selectedCurrency })
+    : t("priceBasisWorld");
+
   // A funded country book carries trade both ways: show what local producers
   // actually sold. Without one, show the plain gap between offers and orders.
   // Never label a gap "surplus": exports and shipments to other states can
@@ -156,7 +160,7 @@ export default function HeroPanel({
       {/* Stats strip */}
       <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
-          <span className="text-body-sm font-medium text-muted">Market price</span>
+          <span className="text-body-sm font-medium text-muted">{priceBasisLabel}</span>
           <span className="text-base font-bold tabular-nums">{priceDisplay}</span>
           <span
             className={`text-xs tabular-nums ${

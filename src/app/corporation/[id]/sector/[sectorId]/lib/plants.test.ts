@@ -5,6 +5,7 @@ import {
   fmtTeuEstimate,
   idleCauseMeta,
   TONE_FILL,
+  withAnchorAmount,
 } from "./plants";
 
 describe("bank charter", () => {
@@ -85,5 +86,14 @@ describe("buildOrderMoney", () => {
       stillToArrive: 0,
       refund: 0,
     });
+  });
+});
+
+describe("withAnchorAmount", () => {
+  it("pins the fixed anchor figure beside a re-priced amount", () => {
+    expect(withAnchorAmount("$19.3K", 18_500)).toBe("$19.3K at today's rates, ₳18.5K when paid");
+  });
+  it("adds nothing when the amount is already in the anchor currency", () => {
+    expect(withAnchorAmount("₳18.5K", 18_500)).toBe("₳18.5K");
   });
 });
