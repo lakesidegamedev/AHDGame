@@ -79,6 +79,20 @@ describe("ProfileAchievements", () => {
     );
   });
 
+  it("says how many achievements the whole account has when this character has fewer", async () => {
+    fetchJson.mockResolvedValue({
+      highlighted: [],
+      allAchievements: [earned],
+      totalEarned: 1,
+      accountTotalEarned: 49,
+      totalAchievements: 67,
+    });
+    renderAchievements();
+
+    await waitFor(() => expect(screen.getByText("1/67")).toBeTruthy());
+    expect(screen.getByText(/49 across all of this player's characters/)).toBeTruthy();
+  });
+
   it("offers highlight editing only on the player's own profile", async () => {
     fetchJson.mockResolvedValue({
       highlighted: [],

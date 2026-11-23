@@ -78,6 +78,8 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Layer 1**: The census dimensions a region carries and the buckets inside them. In the US: race, age, education, wealth (plus ideology, which is not part of the cells). They are combined into the cells used for vote appeal and turnout.
 
+**Life**: One character a player has created, in any iteration, including retired ones. The Lives column on the [all time leaderboard](/contests?view=rankings) counts every life on the account. The player's name on the board is the life they chose to show; their scores come from the life that ranks best.
+
 **Majority**: The seat count required to control a legislative chamber or form a government: a bare majority of the chamber. US House: 218; UK Commons: 326; JP Shūgiin: 233; IE Dáil: 81; DE Bundestag: 316 in the modern preset, 244 in the 1953 preset (487 seats).
 
 **Manhattan distance**: The sum of absolute differences on the econ axis and social axis. Used to calculate ideological alignment. Distance 0 is a perfect match. State primaries price each point at 1.25 against state lean and 0.75 against party position; the party-only fallback prices it at 2.
@@ -99,6 +101,8 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 **Opposition research**: A campaign branch tree (starter node plus Dossier, Scandal Leak, and Counter-Intel branches) that passively debuffs a target opponent's favorability each turn. Retargetable.
 
 **Party org**: Party organization: a 0 to 100 metric per state representing a party's ground-level infrastructure. General-election weight uses the party's normalized state Org share raised to the 0.2 exponent. Presidential primaries use party influence and national reach instead.
+
+**PP**: Not a stat in this game, and there are no Prestige Points. If you saw "PP" next to a leaderboard row, it was party influence, which the leaderboard shows in its Party influence column. See [Stats & Actions](/wiki/stats-actions) for how party influence works.
 
 **Phase**: One step in the hourly turn processing sequence. Turn processing uses 14 ordered groups with more than 120 named base phases, plus country election phases. See [Reference: Turn Order](/wiki/reference-turn-order) for the grouped sequence.
 

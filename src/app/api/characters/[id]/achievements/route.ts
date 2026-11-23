@@ -41,11 +41,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const additional = await isAdditionalCharacter(db, character);
 
-    const [earned, rarityMap, allAchievements] = await Promise.all([
+    const [earned, accountEarned, rarityMap, allAchievements] = await Promise.all([
       getAccountAchievements(character.userId, {
         characterId: character._id,
         includeUntagged: !additional,
       }),
+      getAccountAchievements(character.userId),
       getAchievementRarityMap(),
       getAllAchievements(),
     ]);
@@ -114,6 +115,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       highlighted: sortedHighlights,
       allAchievements: allItems,
       totalEarned: items.length,
+      accountTotalEarned: new Set(
+        accountEarned.map(({ achievement }) => achievement._id.toString())
+      ).size,
       totalAchievements: allAchievements.length,
     });
   } catch (error) {

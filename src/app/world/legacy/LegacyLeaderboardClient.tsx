@@ -2,7 +2,7 @@
 
 import { ANCHOR_UNIT_NOTE } from "@/lib/currency/anchorUnitNote";
 import { InlineError } from "@/components/ui/InlineError";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Trophy, Info } from "lucide-react";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -34,7 +34,7 @@ const SCORE_BREAKDOWN_ROWS: {
   label: string;
 }[] = [
   { key: "nationalInfluence", label: "National influence" },
-  { key: "partyInfluence", label: "Party power" },
+  { key: "partyInfluence", label: "Party influence" },
   { key: "achievements", label: "Achievements" },
   { key: "officeTier", label: "Highest office held" },
   { key: "wealth", label: "Business and net worth" },
@@ -183,13 +183,20 @@ export default function LegacyLeaderboardClient({
   const [scope, setScope] = useState<LegacyLeaderboardScope>(initialScope);
   const [rankBy, setRankBy] = useState<LegacyRankBy>(initialRankBy);
   const [loading, setLoading] = useState(false);
+  // The ranking the rows on screen were sorted by. It trails `rankBy` while a
+  // refetch is in flight so rows and columns never disagree.
+  const [shownRankBy, setShownRankBy] = useState<LegacyRankBy>(initialRankBy);
+  const requestSeq = useRef(0);
   const [breakdownRow, setBreakdownRow] = useState<LegacyLeaderboardEntry | null>(null);
 
   async function refetch(nextScope: LegacyLeaderboardScope, nextRankBy: LegacyRankBy) {
+    const seq = ++requestSeq.current;
     const refreshed = await fetchJson<LegacyLeaderboardData>(
       `/api/v1/leaderboard/legacy?limit=50&scope=${nextScope}&rankBy=${nextRankBy}`,
       { feature: "legacy-leaderboard-refresh" }
     );
+    if (seq !== requestSeq.current) return;
+    setShownRankBy(nextRankBy);
     setEntries(refreshed.entries);
     setTotalCount(refreshed.total);
     setSelf(refreshed.self);
@@ -214,6 +221,8 @@ export default function LegacyLeaderboardClient({
     router.replace(buildLegacyUrl(scope, nextRankBy, embedded), { scroll: false });
     try {
       await refetch(scope, nextRankBy);
+    } catch {
+      setRankBy(shownRankBy);
     } finally {
       setLoading(false);
     }
@@ -238,7 +247,7 @@ export default function LegacyLeaderboardClient({
     }
   }
 
-  const isNetWorth = rankBy === "netWorth";
+  const isNetWorth = shownRankBy === "netWorth";
 
   const columns: ResponsiveTableColumn<LegacyLeaderboardEntry>[] = [
     {
@@ -304,7 +313,7 @@ export default function LegacyLeaderboardClient({
     },
     {
       key: "partyInfluence",
-      header: "Party power",
+      header: "Party influence",
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-muted">{formatCompactNumber(row.partyInfluence)}</span>
@@ -320,13 +329,27 @@ export default function LegacyLeaderboardClient({
       key: "achievements",
       header: "Achievements",
       hideOnMobile: true,
-      render: (row) => <span className="text-sm text-muted">{row.achievementCount}</span>,
+      render: (row) => (
+        <span
+          className="text-sm text-muted"
+          title="Different achievements earned by any of this player's characters"
+        >
+          {row.achievementCount}
+        </span>
+      ),
     },
     {
       key: "lives",
-      header: "Lives",
+      header: "Lives (characters)",
       hideOnMobile: true,
-      render: (row) => <span className="text-sm text-muted">{row.lifetimeLives}</span>,
+      render: (row) => (
+        <span
+          className="text-sm text-muted"
+          title="A life is one character this player has created, in any iteration, including retired ones"
+        >
+          {row.lifetimeLives}
+        </span>
+      ),
     },
   ];
 
@@ -367,7 +390,10 @@ export default function LegacyLeaderboardClient({
                 The name is the life the player chose to show. Office, influence and wealth come
                 from the life named underneath, the one that ranks best. A retired life is frozen as
                 it was when it retired, so it can differ from the player&apos;s current character.
-                Equal scores share a rank.
+                Equal scores share a rank. A life is one character a player has created, in any
+                iteration; the Lives column counts them all. Achievements counts the different
+                achievements earned by any of the player&apos;s characters, so it can be higher than
+                the total on a single character&apos;s profile.
               </p>
             </div>
           </header>
@@ -535,7 +561,7 @@ export default function LegacyLeaderboardClient({
 
       <ScoreBreakdownModal
         row={breakdownRow}
-        rankBy={rankBy}
+        rankBy={shownRankBy}
         onClose={() => setBreakdownRow(null)}
       />
     </div>
