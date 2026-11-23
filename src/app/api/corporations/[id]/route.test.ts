@@ -312,6 +312,71 @@ describe("GET /api/corporations/[id]", () => {
     expect(json.financials).toEqual(detailPayload.financials);
   });
 
+  it.each([
+    ["a sibling character on the CEO's account", false],
+    ["the CEO character", true],
+  ])("financial fog for %s of a public corp", async (_label, asCeo) => {
+    await wireDb();
+    const ceoCharacterId = new ObjectId();
+    const siblingCharacterId = new ObjectId();
+    const corporation = makeCorporation({
+      _id: new ObjectId(),
+      countryId: "US",
+      headquartersState: "CA",
+      liquidCurrencyCode: "USD",
+      isPrivate: false,
+      ceoId: ceoCharacterId,
+      liquidCapital: 160_000,
+    });
+    db.collectionMocks["corporations"]!.findOne.mockResolvedValue(corporation);
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: corporation.userId!.toString(),
+      activeCharacterId: (asCeo ? ceoCharacterId : siblingCharacterId).toString(),
+    } as never);
+    const detailPayload = {
+      corporation: { _id: corporation._id.toString(), liquidCapital: 160_000 },
+      ceo: null,
+      financials: { totalRevenue: 424_000, federalTaxByCountry: {} },
+      sectors: [],
+      balanceSheet: {
+        assets: {
+          cashOnHand: 160_000,
+          sectorNPVs: [],
+          totalSectorNPV: 0,
+          bondHoldingsValue: 0,
+          stockHoldingsValue: 0,
+          imfFacilityReceivablesValue: 0,
+          imfFacilityReceivables: [],
+          totalPortfolioValue: 0,
+          heldBonds: [],
+          techAssetValue: 0,
+          totalAssets: 160_000,
+        },
+        liabilities: { dailyCosts: 5_000, totalDebt: 0, dailyInterestCost: 0, bondCount: 0 },
+        equity: { totalEquity: 160_000, bookValue: 160_000, marketCapitalization: 200_000 },
+      },
+    };
+    const { loadCorporationDetailView } =
+      await import("@/lib/corporations/queries/corporationDetail");
+    vi.mocked(loadCorporationDetailView).mockResolvedValue(detailPayload as never);
+    const { GET } = await import("./route");
+    const res = await GET(new Request(`http://localhost/api/corporations/${corporation._id}`), {
+      params: Promise.resolve({ id: corporation._id.toString() }),
+    });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    if (asCeo) {
+      expect(json.financialFogOfWar).toBeNull();
+      expect(json.financials.totalRevenue).toBe(424_000);
+      expect(json.corporation.liquidCapital).toBe(160_000);
+    } else {
+      expect(json.financialFogOfWar).toMatchObject({ isFinancialFogOfWar: true });
+      expect(json.financials.totalRevenue).not.toBe(424_000);
+      expect(json.corporation.liquidCapital).not.toBe(160_000);
+    }
+  });
+
   it("keeps financial fog for anonymous viewers when a public corp has no userId", async () => {
     await wireDb();
     const corporation = makeCorporation({
