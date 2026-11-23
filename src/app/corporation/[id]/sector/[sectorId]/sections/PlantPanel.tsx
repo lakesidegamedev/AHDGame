@@ -207,9 +207,11 @@ export default function PlantPanel({
               )}
               {fullCapacityFreightEstimate != null && (
                 <p>
-                  {t("freightOneHopEstimate", {
-                    estimate: fmtTeuEstimate(fullCapacityFreightEstimate),
-                  })}
+                  {fullCapacityFreightEstimate > 0
+                    ? t("freightOneHopEstimate", {
+                        estimate: fmtTeuEstimate(fullCapacityFreightEstimate),
+                      })
+                    : t("freightNoneEstimate")}
                 </p>
               )}
             </div>

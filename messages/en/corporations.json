@@ -158,6 +158,7 @@
       "freightStateTurn": " in turn {turn}",
       "freightCongested": "Freight here is over capacity ({share}% used). Shipments past capacity still move but pay {surcharge}% more for shipping, and nothing more leaves the state past {limit} TEU. Local sales use no freight.",
       "freightBlocked": "Freight here is at its limit ({share}% of capacity). Out-of-state shipments past {limit} TEU did not move, so some output could not reach buyers in other states. Local sales use no freight.",
+      "freightNoneEstimate": "This sector's output moves by wire or pipe, not by freight, so it needs no TEU of its own.",
       "freightOneHopEstimate": "If this sector ran at full capacity and shipped all output one state away, it would need about {estimate} TEU per day of its own. Local sales use no freight; longer routes use more.",
       "expansionDiscount": "Expansion cost adjustment",
       "expansionDiscountHelp": "New ordinary expansion receives this build-cost reduction. Founder pricing is separate.",

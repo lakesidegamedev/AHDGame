@@ -90,6 +90,9 @@ describe("SupplyChainTab", () => {
     expect(suppliers().getByText("$30")).toBeTruthy();
     expect(suppliers().getAllByText("No cash payment")).toHaveLength(2);
     expect(screen.getByText(/Trade values exclude tariffs/)).toBeTruthy();
+    expect(suppliers().getByRole("columnheader", { name: "Units this turn" })).toBeTruthy();
+    expect(suppliers().getByRole("columnheader", { name: "Total this turn" })).toBeTruthy();
+    expect(screen.getByText(/daily rate, which is 24 turns/)).toBeTruthy();
     expect(suppliers().getAllByRole("row")).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "Sector / location" }));
     expect(suppliers().getAllByRole("row")).toHaveLength(4);
