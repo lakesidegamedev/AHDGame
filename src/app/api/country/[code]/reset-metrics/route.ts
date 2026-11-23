@@ -29,7 +29,11 @@ import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
-import { deliveredLawFactor, deliveredMetricEffects } from "@/lib/resetMetrics/rules/lawDelivery";
+import {
+  deliveredLawFactor,
+  netMetricLawPressure,
+  netMetricLawPressureByFamily,
+} from "@/lib/resetMetrics/rules/lawDelivery";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
@@ -189,31 +193,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       countryIds: [countryId],
       regions: board.board.regionId ? [{ _id: board.board.regionId, countryId }] : [],
     });
-    const applicable = laws.programs.filter(
-      (p) =>
-        p.country === countryId && (p.scope === "national" || p.regionId === board.board.regionId)
+    const appliesToBoard = (p: { country: string; scope: string; regionId?: string }) =>
+      p.country === countryId && (p.scope === "national" || p.regionId === board.board.regionId);
+    // Net of the opening law: the same pressure the metric owner settles on.
+    const netByFamily = netMetricLawPressureByFamily(
+      laws.programs.filter(appliesToBoard),
+      laws.opening.filter(appliesToBoard),
+      laws.settlements,
+      board.board.asOfTurn
     );
     const legislativeEffects = new Map(
-      Object.entries(
-        deliveredMetricEffects(applicable, laws.settlements, board.board.asOfTurn)
-      ).map(([metricId, favorableNormalizedPoints]) => [
-        metricId,
-        {
+      Object.entries(netMetricLawPressure(netByFamily))
+        .filter(([, points]) => Math.abs(points) >= 0.00005)
+        .map(([metricId, points]) => [
           metricId,
-          favorableNormalizedPoints,
-          contributingPrograms: [
-            ...new Set(
-              applicable
-                .filter(
-                  (p) =>
-                    deliveredLawFactor(p, laws.settlements.get(p._id), board.board.asOfTurn) > 0 &&
-                    p.primaryMetricEffects.some((e) => e.metricId === metricId)
-                )
-                .map((p) => p.familyId)
-            ),
-          ],
-        },
-      ])
+          {
+            metricId,
+            favorableNormalizedPoints: Number(points.toFixed(4)),
+            contributingPrograms: Object.entries(netByFamily)
+              .filter(([, metrics]) => metrics[metricId] !== undefined)
+              .map(([familyId]) => familyId)
+              .sort(),
+          },
+        ])
     );
     const standingLaws = openingLawBoard
       ? buildMetricLawStatuses({
@@ -223,6 +225,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           references: withPostLaunchReferences(openingLawBoard),
           programs,
           delivery,
+          netByFamily,
           nextFundingTurn: nextAnnualFundingTurn(
             board.board.asOfTurn,
             getSharedFiscalYearStartTurnInYear()

@@ -9,6 +9,8 @@ export interface MetricLawProgram {
   effectiveTurn: number;
   choice?: string;
   settlementLawId?: string;
+  /** Annual spending booked for an opening regional source claim; zero means no funding path. */
+  openingAnnualBooked?: number;
   annualAgencyAllocation?: number;
   primaryMetricEffects: readonly { metricId: string; favorableNormalizedPoints: number }[];
 }
@@ -149,4 +151,74 @@ export function deliveredMetricEffects(
     }
   }
   return effects;
+}
+
+/**
+ * An unreplaced regional opening statute that books no regional spending has no
+ * settlement path, so it can never show funding evidence. It stays in force as
+ * written; reading it as defunded would push every region below its opening.
+ */
+export function isUnbookedOpeningStatute(
+  program: MetricLawProgram,
+  settlements: ReadonlyMap<string, MetricLawSettlement>
+): boolean {
+  return (
+    program.scope === "regional" &&
+    program.settlementLawId !== undefined &&
+    program.openingAnnualBooked === 0 &&
+    !settlements.has(program._id)
+  );
+}
+
+/**
+ * Statutory pressure relative to the opening law, per law family and metric.
+ * The opening observation already embodies its statutes at full delivery, so
+ * only change from that reference moves a metric: a replacement law, a defunded
+ * opening law, or a newly funded one. `programs` are the current programs
+ * (replacements plus unreplaced opening laws) and `opening` the full opening
+ * reference, both already filtered to the board they apply to.
+ */
+export function netMetricLawPressureByFamily(
+  programs: readonly MetricLawProgram[],
+  opening: readonly MetricLawProgram[],
+  settlements: ReadonlyMap<string, MetricLawSettlement>,
+  turn: number
+): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  const add = (familyId: string, metricId: string, points: number) => {
+    if (!/^\d{2}$/.test(metricId) || !Number.isFinite(points)) return;
+    const family = (out[familyId] ??= {});
+    family[metricId] = (family[metricId] ?? 0) + points;
+  };
+  for (const program of programs) {
+    const factor = isUnbookedOpeningStatute(program, settlements)
+      ? 1
+      : deliveredLawFactor(program, settlements.get(program._id), turn);
+    if (factor === 0) continue;
+    for (const effect of program.primaryMetricEffects)
+      add(program.familyId, effect.metricId, effect.favorableNormalizedPoints * factor);
+  }
+  for (const program of opening)
+    for (const effect of program.primaryMetricEffects)
+      add(program.familyId, effect.metricId, -effect.favorableNormalizedPoints);
+  for (const [familyId, metrics] of Object.entries(out)) {
+    for (const [metricId, points] of Object.entries(metrics)) {
+      const rounded = Number(points.toFixed(4));
+      if (rounded === 0) delete metrics[metricId];
+      else metrics[metricId] = rounded;
+    }
+    if (Object.keys(metrics).length === 0) delete out[familyId];
+  }
+  return out;
+}
+
+/** Net statutory pressure per metric, summed across law families. */
+export function netMetricLawPressure(
+  byFamily: Readonly<Record<string, Readonly<Record<string, number>>>>
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const metrics of Object.values(byFamily))
+    for (const [metricId, points] of Object.entries(metrics))
+      out[metricId] = (out[metricId] ?? 0) + points;
+  return out;
 }
