@@ -111,7 +111,7 @@ describe("national v2 metric aggregation", () => {
     ).toThrow(/missing A\/02/);
   });
 
-  it("uses the same weights for every aligned history point", () => {
+  it("uses each sample's frozen weights, not today's weights", () => {
     const observationsA = completeRegionalObservations(() => 10);
     const observationsB = completeRegionalObservations(() => 30);
     const result = aggregateNationalMetricHistory("02", [
@@ -121,8 +121,8 @@ describe("national v2 metric aggregation", () => {
         observations: observationsA,
         history: {
           "02": [
-            { turn: 1, value: 10 },
-            { turn: 13, value: 12 },
+            { turn: 1, value: 10, aggregationWeight: 100 },
+            { turn: 13, value: 12, aggregationWeight: 200 },
           ],
         },
       },
@@ -132,15 +132,28 @@ describe("national v2 metric aggregation", () => {
         observations: observationsB,
         history: {
           "02": [
-            { turn: 1, value: 30 },
-            { turn: 13, value: 34 },
+            { turn: 1, value: 30, aggregationWeight: 300 },
+            { turn: 13, value: 34, aggregationWeight: 200 },
           ],
         },
       },
     ]);
     expect(result).toEqual([
       { turn: 1, value: 25 },
-      { turn: 13, value: 28.5 },
+      { turn: 13, value: 23 },
     ]);
   });
+});
+
+it("omits legacy weighted samples whose original weights cannot be recovered", () => {
+  expect(
+    aggregateNationalMetricHistory("35", [
+      {
+        regionId: "A",
+        population: 999,
+        observations: completeRegionalObservations(() => 10),
+        history: { "35": [{ turn: 1, value: 10 }] },
+      },
+    ])
+  ).toEqual([]);
 });

@@ -20,6 +20,7 @@ export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
   cohortDue: boolean;
   electionDue: boolean;
+  historyWeights?: Readonly<Record<string, number>>;
   housingState?: HousingState;
   householdProductionStatus?: HouseholdProductionStatus;
   housingProductionStatus?: HouseholdProductionStatus;
@@ -166,7 +167,12 @@ export async function refreshResetMetricSnapshotsTurn(input: {
     const written = await collection.bulkWrite(
       pending.map(({ board, changedIds }) => {
         const history = recordHistory
-          ? appendMetricHistory(board.history ?? {}, board.observations, turn)
+          ? appendMetricHistory(
+              board.history ?? {},
+              board.observations,
+              turn,
+              ownerReadings[board._id]?.historyWeights
+            )
           : undefined;
         const fields: Document = {
           asOfTurn: turn,

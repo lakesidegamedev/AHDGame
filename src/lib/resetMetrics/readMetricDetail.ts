@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { State } from "@/lib/db/types/state";
 import { primaryMetricById } from "./catalog";
 import type { ResetMetricHistoryPoint } from "./rules/history";
 import {
@@ -14,6 +13,7 @@ import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetri
 
 export interface ResetMetricDetailRead {
   history: ResetMetricHistoryPoint[];
+  historyNotice?: string;
   nationalValue: number;
   regions: Array<{ regionId: string; name: string; value: number }>;
 }
@@ -42,7 +42,6 @@ function withCurrentPoint(
   };
   const last = next.at(-1);
   if (!last || last.turn < turn) next.push(current);
-  else if (last.turn === turn) next[next.length - 1] = current;
   return next;
 }
 
@@ -160,6 +159,9 @@ export async function readResetMetricDetail(
         ? readings.find((reading) => reading.regionId === board.regionId)
         : undefined;
     if (board.scope === "regional" && !selectedRegion) return null;
+    const nationalHistory = selectedRegion
+      ? []
+      : aggregateNationalMetricHistory(metricId, readings);
     const displayedHistory = selectedRegion
       ? withCurrentPoint(
           selectedRegion.history[metricId]!,
@@ -168,13 +170,19 @@ export async function readResetMetricDetail(
           selectedRegion.observations[metricId]
         )
       : withCurrentPoint(
-          aggregateNationalMetricHistory(metricId, readings),
+          nationalHistory,
           board.asOfTurn,
           nationalValue,
           readings[0]!.observations[metricId]
         );
     return {
       history: displayedHistory,
+      ...(!selectedRegion && nationalHistory.length < (readings[0]?.history[metricId]?.length ?? 0)
+        ? {
+            historyNotice:
+              "Older national samples without their original aggregation weights are unavailable. Regional histories remain available.",
+          }
+        : {}),
       nationalValue,
       regions: readings
         .map((reading) => ({

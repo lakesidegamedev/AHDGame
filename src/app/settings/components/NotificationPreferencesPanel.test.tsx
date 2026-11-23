@@ -17,6 +17,12 @@ function mount() {
     </NextIntlClientProvider>
   );
 }
+/** Groups start folded; open them all so every switch is on screen. */
+async function openAllGroups() {
+  const folded = await screen.findAllByRole("button", { expanded: false });
+  for (const button of folded) fireEvent.click(button);
+}
+
 describe("notification controls", () => {
   it("has a readable label for every notification type", () => {
     for (const type of NOTIFICATION_TYPES)
@@ -32,7 +38,8 @@ describe("notification controls", () => {
     );
     mount();
 
-    expect(await screen.findByRole("heading", { name: "Elections" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /^Elections/ })).toBeTruthy();
+    await openAllGroups();
     expect(screen.getByText(/The in-game status bar tracks live turns/)).toBeTruthy();
     expect(screen.queryByRole("switch", { name: "Turn notifications" })).toBeNull();
   });
@@ -46,6 +53,7 @@ describe("notification controls", () => {
       .mockResolvedValueOnce({ ok: false });
     vi.stubGlobal("fetch", fetch);
     mount();
+    await openAllGroups();
     const control = await screen.findByRole("switch", {
       name: "National and international crises",
     });
@@ -67,6 +75,7 @@ describe("notification controls", () => {
     vi.stubGlobal("fetch", fetch);
     mount();
     fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    await openAllGroups();
     const control = await screen.findByRole("switch", { name: "Party whips" });
     fireEvent.click(control);
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Saved"));
@@ -80,7 +89,8 @@ describe("notification controls", () => {
         .mockResolvedValue({ ok: true, json: async () => ({ mutedTypes: [], snoozedTypes: [] }) })
     );
     mount();
-    expect(await screen.findByRole("heading", { name: "Elections" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /^Elections/ })).toBeTruthy();
+    await openAllGroups();
     const vote = screen.getByRole("switch", {
       name: messages.settings.notifications.types.bill_vote_open,
     });
@@ -89,5 +99,21 @@ describe("notification controls", () => {
       name: messages.settings.notifications.types.rd_breakthrough,
     });
     expect(rd.closest(".border-b")?.textContent).not.toContain("Phone and desktop");
+  });
+});
+
+describe("folded groups", () => {
+  it("starts folded with an on-count, and a search opens matching groups", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ ok: true, json: async () => ({ mutedTypes: [], snoozedTypes: [] }) })
+    );
+    mount();
+    expect(await screen.findByRole("heading", { name: /^Elections/ })).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: "Party whips" })).toBeNull();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "whip" } });
+    expect(screen.getByRole("switch", { name: "Party whips" })).toBeTruthy();
   });
 });

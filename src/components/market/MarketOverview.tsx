@@ -68,7 +68,7 @@ export function MarketOverview({
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <PreviewCard
         title="Stocks"
-        detail="Largest by market cap"
+        detail="Largest by market cap, change over the last 24 hours"
         href="/market?tab=stocks"
         loading={stocks.loading}
         error={stocks.error}
@@ -89,8 +89,22 @@ export function MarketOverview({
                 <span className="truncate">{`${l.tickerSymbol ? `${l.tickerSymbol} ` : ""}${l.name}`}</span>
               </span>
             }
-            right={`${formatListingPrice(l.sharePrice, l.liquidCurrencyCode as CurrencyCode | null | undefined)} ${pctText(l.priceChange24h)}`}
-            rightTone={toneClass(l.priceChange24h)}
+            right={
+              // Price in the text colour, only the change carries gain/loss colour.
+              <span className="inline-flex items-baseline gap-2.5">
+                <span>
+                  {formatListingPrice(
+                    l.sharePrice,
+                    l.liquidCurrencyCode as CurrencyCode | null | undefined
+                  )}
+                </span>
+                <span
+                  className={`min-w-[4.5rem] text-right text-xs ${toneClass(l.priceChange24h)}`}
+                >
+                  {pctText(l.priceChange24h)}
+                </span>
+              </span>
+            }
           />
         ))}
       </PreviewCard>

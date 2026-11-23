@@ -57,10 +57,16 @@ export function TitlesRail({
             <span className="truncate">{getDomainLabel(domain)}</span>
             {lean ? (
               <span
-                className="font-mono text-[10px] font-semibold"
-                // Bucket ramp hex — the established chart-colour exception.
+                className="shrink-0 font-mono text-[10px] font-semibold"
+                // Bucket ramp hex, the established chart-colour exception. The
+                // axis is printed so the colour has a stated rule: it is the
+                // same left/right or liberal/traditional scale as the compass.
                 style={{ color: positionBucketHex(lean.value, lean.axis, european) }}
+                title={`Average ${lean.axis === "economic" ? "economic" : "social"} lean of the laws in this title, coloured on the same scale as the political compass.`}
               >
+                <span className="mr-1 font-sans font-medium text-muted">
+                  {lean.axis === "economic" ? "Econ" : "Social"}
+                </span>
                 {lean.value > 0 ? "+" : ""}
                 {lean.value.toFixed(1)}
               </span>

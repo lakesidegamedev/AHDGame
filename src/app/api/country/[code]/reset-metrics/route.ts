@@ -1,3 +1,5 @@
+import { metricDisplayUnit } from "@/lib/resetMetrics/presentation";
+import { metricPolicyPressure } from "@/lib/resetMetrics/rules/policyPressure";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
@@ -33,7 +35,7 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
 import {
   deliveredLawFactor,
-  netMetricLawPressure,
+  metricLawApplies,
   netMetricLawPressureByFamily,
 } from "@/lib/resetMetrics/rules/lawDelivery";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
@@ -195,29 +197,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       countryIds: [countryId],
       regions: board.board.regionId ? [{ _id: board.board.regionId, countryId }] : [],
     });
-    const appliesToBoard = (p: { country: string; scope: string; regionId?: string }) =>
-      p.country === countryId && (p.scope === "national" || p.regionId === board.board.regionId);
-    // Net of the opening law: the same pressure the metric owner settles on.
+    const pressure = metricPolicyPressure({
+      board: board.board,
+      ...laws,
+      turn: board.board.asOfTurn,
+      temporary: [...temporaryEffects].map(([id, effect]) => ({
+        target: `M${id}`,
+        favorableNormalizedPoints: effect.favorableNormalizedPoints,
+      })),
+    });
     const netByFamily = netMetricLawPressureByFamily(
-      laws.programs.filter(appliesToBoard),
-      laws.opening.filter(appliesToBoard),
+      laws.programs.filter((p) => metricLawApplies(p, board.board)),
+      laws.opening.filter((p) => metricLawApplies(p, board.board)),
       laws.settlements,
       board.board.asOfTurn
-    );
-    const legislativeEffects = new Map(
-      Object.entries(netMetricLawPressure(netByFamily))
-        .filter(([, points]) => Math.abs(points) >= 0.00005)
-        .map(([metricId, points]) => [
-          metricId,
-          {
-            metricId,
-            favorableNormalizedPoints: Number(points.toFixed(4)),
-            contributingPrograms: Object.entries(netByFamily)
-              .filter(([, metrics]) => metrics[metricId] !== undefined)
-              .map(([familyId]) => familyId)
-              .sort(),
-          },
-        ])
     );
     const openingReferences = openingLawBoard ? withPostLaunchReferences(openingLawBoard) : {};
     const componentIds = [
@@ -265,11 +258,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       .filter((metric) => board.board.scope === "national" || metric.aggregation !== "national")
       .map((definition) => {
         const temporary = temporaryEffects.get(definition.id);
-        const legislative = legislativeEffects.get(definition.id);
+        const policyPressure = pressure[definition.id];
         const observation = observations[definition.id];
         return {
           ...definition,
-          ...(observation?.unit ? { unit: observation.unit } : {}),
+          unit: metricDisplayUnit(observation?.unit ?? definition.unit),
           observation,
           conditionScore:
             observation?.definitionVersion === 2 && ["02", "24"].includes(definition.id)
@@ -288,14 +281,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                 ),
               }
             : null,
-          legislativeEffect: legislative
-            ? {
-                ...legislative,
-                contributingPrograms: legislative.contributingPrograms.map(
-                  (familyId) => resetLawFamilyById(familyId)?.title ?? "Legislative program"
-                ),
-              }
-            : null,
+          policyPressure: policyPressure ?? null,
+          legislativeEffect:
+            policyPressure && Math.abs(policyPressure.netLaw) >= 0.00005
+              ? {
+                  favorableNormalizedPoints: policyPressure.netLaw,
+                  contributingPrograms: Object.entries(netByFamily)
+                    .filter(([, metrics]) => metrics[definition.id] !== undefined)
+                    .map(
+                      ([familyId]) => resetLawFamilyById(familyId)?.title ?? "Legislative program"
+                    ),
+                }
+              : null,
           standingLaws: standingLaws[definition.id] ?? [],
         };
       });

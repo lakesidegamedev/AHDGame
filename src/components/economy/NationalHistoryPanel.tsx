@@ -424,6 +424,22 @@ function MacroChart({
           })}
       </svg>
 
+      {/* The plot has no value axis, so its range is printed under it. */}
+      <div className="flex justify-between px-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+        <span>
+          {t("span", {
+            from: entries[0].point.turn,
+            to: entries[entries.length - 1].point.turn,
+          })}
+        </span>
+        <span className="tabular-nums">
+          {t("range", {
+            low: formatMetricValue(min, metric, prefix, peopleUnit),
+            high: formatMetricValue(max, metric, prefix, peopleUnit),
+          })}
+        </span>
+      </div>
+
       {hoveredEntry && (
         <div className="pointer-events-none absolute right-2 top-1 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
           <span className="text-muted">

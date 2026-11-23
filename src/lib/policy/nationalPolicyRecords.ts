@@ -1,12 +1,7 @@
 import { isLegacyIncomeTax } from "@/lib/budget/incomeTaxCatalog";
 import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTaxTiers";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  StatePolicyRecord,
-  LegislationType,
-  LegislationPolicyOption,
-  GovernorExecutiveOrder,
-} from "@/lib/db/types";
+import type { StatePolicyRecord, LegislationType, LegislationPolicyOption } from "@/lib/db/types";
 import { NATIONAL_POLICY_STATE_IDS } from "@/lib/policy/nationalStateId";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { FederalBudget, FederalTaxRates } from "@/lib/db/types/budget";
@@ -280,19 +275,11 @@ export function buildPolicyResponse(
     policyOptionIndex: record.policyOptionIndex,
     options: legislationType.policyOptions ?? [],
   });
-  const retainedOption =
-    effectOptionId !== record.policyOptionId
-      ? legislationType.policyOptions?.find((option) => option.id === effectOptionId)
-      : undefined;
-  // The stored option id is the enacted level. Many ladders give every level the
-  // same economic/social lean, so matching by lean alone always lands on the first
-  // level (e.g. "No Watchdogs" for an Ethics Enforcement statute).
-  const storedOption = record.policyOptionId
-    ? legislationType.policyOptions?.find((option) => option.id === record.policyOptionId)
-    : undefined;
   const matchedOption =
-    retainedOption ??
-    storedOption ??
+    legislationType.policyOptions?.find((option) => option.id === effectOptionId) ??
+    (Number.isSafeInteger(record.policyOptionIndex) && record.policyOptionIndex! >= 0
+      ? legislationType.policyOptions?.[record.policyOptionIndex!]
+      : undefined) ??
     findMatchedOption(legislationType.policyOptions, economic, social);
   const encodedSliderRate =
     legislationType.taxSlider || legislationType.taxRateChange

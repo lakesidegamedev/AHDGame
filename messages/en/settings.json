@@ -756,7 +756,8 @@
         "treasury": "Money and companies",
         "system": "Account and community"
       },
-      "noMatch": "No alert matches that search."
+      "noMatch": "No alert matches that search.",
+      "groupOnCount": "{on} of {total} on"
     },
     "email": {
       "noneOnFile": "No email on file",
