@@ -43,6 +43,13 @@ export function ElectionHeader({
             isUpcoming={localIsUpcoming}
           />
         </div>
+        {election.incumbent && election.incumbent.running === false && (
+          <p className="text-sm text-muted" data-testid="incumbent-not-running">
+            Sitting officeholder {election.incumbent.name} ({election.incumbent.party}) is not on
+            the ballot
+            {election.incumbent.notRunningReason ? `: ${election.incumbent.notRunningReason}` : ""}.
+          </p>
+        )}
         {election.electionType === "president" && (
           <p className="text-sm text-muted">
             <Link
