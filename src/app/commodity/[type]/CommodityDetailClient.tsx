@@ -248,6 +248,8 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 capacityByState={marketScope.capacityByState}
                 stateImports={marketScope.stateImports}
                 unit={data.unit}
+                forexEnabled={forexEnabled}
+                exchangeRates={exchangeRates}
               />
             )}
           </div>
@@ -333,6 +335,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           unit={data.unit}
           commodity={data.commodity}
           consumerNote={data.demandDriver?.consumerNote}
+          marketSupply={marketScope.supply}
           marketLabel={marketScope.marketLabel}
         />
 

@@ -145,3 +145,42 @@ describe("producer list basis caption", () => {
     expect(screen.getByText(/Largest corporations by output volume/i)).toBeTruthy();
   });
 });
+
+describe("buyer fill notes", () => {
+  const households = { ...otherDemand, name: "Households", units: 100, receivedUnits: 67 };
+  const government = {
+    ...otherDemand,
+    name: "Government procurement",
+    units: 100,
+    receivedUnits: 59,
+  };
+
+  it("reconciles received units against supply and explains a short market", () => {
+    render(
+      <TopProducersConsumers
+        topProducers={[]}
+        topConsumers={[]}
+        syntheticDemandSources={[households, government]}
+        unit="visits"
+        commodity="healthcare_services"
+        marketSupply={130}
+      />
+    );
+    expect(screen.getByText(/ordered 200 visits and received 126 visits/)).toBeTruthy();
+    expect(screen.getByText(/The rest of the 130 visits supplied/)).toBeTruthy();
+    expect(screen.getByText(/When supply is short, company plant orders/)).toBeTruthy();
+  });
+
+  it("skips the note when no buyer records received units", () => {
+    render(
+      <TopProducersConsumers
+        topProducers={[]}
+        topConsumers={[]}
+        syntheticDemandSources={[otherDemand]}
+        unit="visits"
+        commodity="healthcare_services"
+      />
+    );
+    expect(screen.queryByText(/These buyers ordered/)).toBeNull();
+  });
+});

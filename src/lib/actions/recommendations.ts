@@ -222,7 +222,7 @@ export function checkStatThresholds(
       priority: "high",
       category: "stat-recovery",
       title: `Political Influence Below ${INFLUENCE_LOW_THRESHOLD}%`,
-      why: `Your influence is ${influence}%. Build a foothold with Campaign actions to unlock candidate options and improve election odds.`,
+      why: `Your influence is ${influence.toFixed(1)}%. Build a foothold with Campaign actions to unlock candidate options and improve election odds.`,
       action: {
         type: "campaign",
         targetState: homeStateId,

@@ -62,6 +62,10 @@ export default function IndexCommitteePanel({
   const money = useCorpMoney(liquidCurrencyCode, countryId);
   const anchorPerLocal = money.toAnchor(1);
   const toLocal = (anchor: number) => (anchorPerLocal > 0 ? anchor / anchorPerLocal : anchor);
+  // Same whole number the fee box is prefilled with, in the box's currency, so the
+  // default always meets the stated minimum.
+  const suggestedLocal = (anchor: number) =>
+    `${Math.ceil(toLocal(anchor)).toLocaleString("en-US")}${money.code ? ` ${money.code}` : ""}`;
   const [standing, setStanding] = useState<IssuerStanding | null>(null);
   const [inbox, setInbox] = useState<InboxPetition[]>([]);
   const [seatName, setSeatName] = useState<string | null>(null);
@@ -184,7 +188,7 @@ export default function IndexCommitteePanel({
                 <p className="text-muted">
                   The request costs a lobbying fee paid from company cash, and it is not refunded.
                   If nobody decides it, a fee of at least{" "}
-                  {formatAnchor(standing.suggestedContributionAnchor)} gets it approved. Companies
+                  {suggestedLocal(standing.suggestedContributionAnchor)} gets it approved. Companies
                   far below the bars are refused whatever the fee.
                 </p>
                 <div className="flex items-center gap-1.5">
