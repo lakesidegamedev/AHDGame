@@ -10,6 +10,8 @@ badges: [patch]
 areas: [frontend]
 ---
 
+## What changed
+
 - The "Next level costs" figure on the Actions page now matches the Build Donor Network card.
 - Running an action several times says when later runs cost more than the first, and shows the first-run price beside the total.
 - Targeted ads shows its price per action on the Actions page and in its dialog before you pick a target.
