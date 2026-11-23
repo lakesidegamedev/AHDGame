@@ -9,7 +9,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isAgreementPremiumLegal, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { SUPPLY_AGREEMENT_INDEXED_BAND } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import type { SupplyListing } from "@/lib/db/types/supplyListing";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import {
@@ -76,9 +77,15 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
     if (supplyAgreementRequiresState(listing.commodity) && !listing.stateId) {
       return errorResponse(409, "This offer names no fulfillment state and cannot be taken");
     }
-    if (!isAgreementPremiumLegal(listing.pricePremium)) {
-      return errorResponse(409, "This offer's price is outside the contract band");
+    if (!Number.isFinite(listing.pricePremium)) {
+      return errorResponse(409, "This offer's price is not valid");
     }
+    // A listing's percentage means market price plus or minus that share. A
+    // stored legacy listing outside the band is clamped to its edge.
+    const premium = Math.max(
+      -SUPPLY_AGREEMENT_INDEXED_BAND,
+      Math.min(SUPPLY_AGREEMENT_INDEXED_BAND, listing.pricePremium)
+    );
 
     const publisher = await corporationsCollection(db).findOne({ _id: listing.corporationId });
     // The same staleness rule the board applies when listing: the offer binds
@@ -154,7 +161,8 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       proposedByCorpId: publisher._id,
       terms: {
         volumeCap: volume,
-        pricePremium: listing.pricePremium,
+        pricePremium: premium,
+        priceMode: "indexed",
         exclusive: false,
         ...(listing.durationTurns != null ? { durationTurns: listing.durationTurns } : {}),
       },
@@ -169,7 +177,8 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       commodity: listing.commodity,
       ...(listing.stateId ? { stateId: listing.stateId } : {}),
       volumeCap: volume,
-      pricePremium: listing.pricePremium,
+      pricePremium: premium,
+      priceMode: "indexed",
       exclusive: false,
       ...(listing.durationTurns != null ? { durationTurns: listing.durationTurns } : {}),
       listingId: listing._id,
@@ -208,12 +217,13 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
         { field: "status", before: null, after: "active" },
         { field: "listingId", before: null, after: listing._id },
         { field: "volumeCap", before: null, after: volume },
-        { field: "pricePremium", before: null, after: listing.pricePremium },
+        { field: "pricePremium", before: null, after: premium },
+        { field: "priceMode", before: null, after: "indexed" },
       ],
       outcome: "ok",
     });
 
-    const terms = `${Math.round(volume * 100) / 100} units per turn at ${listing.pricePremium >= 0 ? "+" : ""}${Math.round(listing.pricePremium * 1000) / 10}%.`;
+    const terms = `${Math.round(volume * 100) / 100} units per turn at market price ${premium >= 0 ? "plus" : "minus"} ${Math.abs(Math.round(premium * 1000) / 10)}%.`;
     await notifySupplyAgreementEvent({
       recipient: publisher,
       actor: taker,

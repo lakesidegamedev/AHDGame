@@ -16,3 +16,4 @@ areas: [fullstack]
 - Shortfall damages are now valued at the contract price for these agreements.
 - The offer form shows what the seller receives and what the buyer pays in total for the option you pick.
 - Older agreements keep working as before. They add a bonus or discount on the input price and do not fix a price.
+- Standing offers on the board now mean market price plus or minus their percentage. The card says so ("Market +5%") and shows the per-unit price at today's market price. Taking an offer starts an agreement on that basis. Offers already taken keep their old terms.

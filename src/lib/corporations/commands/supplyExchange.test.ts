@@ -150,11 +150,21 @@ describe("takeSupplyListing", () => {
         buyerCorpId: takerId,
         volumeCap: 30,
         pricePremium: 0.05,
+        priceMode: "indexed",
         status: "active",
         startsAtTurn: 100,
         expiresAtTurn: 148,
         proposedByCorpId: publisherId,
       })
+    );
+  });
+
+  it("clamps a stored listing percentage outside the band to the band edge", async () => {
+    db.collection("supplyListings").findOne.mockResolvedValue(listing({ pricePremium: 0.5 }));
+    const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 30 });
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks.supplyAgreements.insertOne).toHaveBeenCalledWith(
+      expect.objectContaining({ priceMode: "indexed", pricePremium: 0.35 })
     );
   });
 
@@ -209,6 +219,7 @@ describe("takeSupplyListing", () => {
         supplierCorpId: publisherId,
         buyerCorpId: takerId,
         status: "active",
+        priceMode: "indexed",
       })
     );
   });
@@ -395,7 +406,13 @@ describe("amend and accept on a pending offer", () => {
   it("lets the author revise their own pending offer as a new revision", async () => {
     db.collection("supplyAgreements").findOne.mockResolvedValue(pending(takerId));
     const response = await patch(
-      { action: "amend", volumeCap: 80, pricePremium: -0.05, exclusive: false },
+      {
+        action: "amend",
+        volumeCap: 80,
+        pricePremium: -0.05,
+        priceMode: "indexed",
+        exclusive: false,
+      },
       taker()
     );
     expect(response.status).toBe(200);
@@ -418,7 +435,7 @@ describe("amend and accept on a pending offer", () => {
 
   it("refuses an amendment from the counterparty and a counter from the author", async () => {
     db.collection("supplyAgreements").findOne.mockResolvedValue(pending(takerId));
-    const terms = { volumeCap: 80, pricePremium: 0, exclusive: false };
+    const terms = { volumeCap: 80, pricePremium: 0, priceMode: "indexed", exclusive: false };
     expect((await patch({ action: "amend", ...terms }, publisher() as never)).status).toBe(403);
     expect((await patch({ action: "counter", ...terms }, taker())).status).toBe(403);
   });
