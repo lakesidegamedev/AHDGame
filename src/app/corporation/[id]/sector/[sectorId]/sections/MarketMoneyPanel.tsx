@@ -337,7 +337,7 @@ export default function MarketMoneyPanel({
               truth.breakEven.status === "profitable_now"
                 ? "Profitable now"
                 : truth.breakEven.status === "turns"
-                  ? `${fmtUnits(truth.breakEven.turns)} turns`
+                  ? `${fmtUnits(truth.breakEven.turns)} ${truth.breakEven.turns === 1 ? "turn" : "turns"}`
                   : "Not at current fills"
             }
             tone={

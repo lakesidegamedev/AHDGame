@@ -91,3 +91,21 @@ export const URGENCY_VISUALS: Record<
     text: "text-muted",
   },
 };
+
+/** A finished crisis is good news or at least closed news: never the alarm red. */
+const RESOLVED_CRISIS_VISUAL = {
+  label: "Crisis",
+  bar: "bg-success",
+  wash: "bg-success/10",
+  border: "border-success/30",
+  text: "text-success",
+} as const;
+
+/** Category colours for one item, with resolved crises taken out of the alarm tone. */
+export function categoryVisualFor(item: {
+  category: InboxCategory;
+  type?: string;
+}): (typeof CATEGORY_VISUALS)[InboxCategory] {
+  if (item.category === "crisis" && item.type === "crisis_resolved") return RESOLVED_CRISIS_VISUAL;
+  return CATEGORY_VISUALS[item.category];
+}

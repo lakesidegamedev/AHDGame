@@ -487,7 +487,9 @@ function CorpStocksTable({
                 Avg cost
               </th>
               <th className="px-4 py-3 text-muted text-body-sm font-medium text-right">
-                Unr. P&amp;L
+                <span title="Unrealised profit or loss: what you would gain or lose selling today, against what you paid.">
+                  Gain/loss
+                </span>
               </th>
               <th className="px-4 py-3 text-muted text-body-sm font-medium text-right hidden md:table-cell">
                 Price

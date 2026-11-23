@@ -178,16 +178,7 @@ export function BillWhipPanel({
                   onClick={() => postBillWhip(chamber.chamberKey, "for", audience)}
                   disabled={!whip.canWhip || whippingId === busyFor || whippingId === busyAgainst}
                   title={!whip.canWhip ? "Maximum whip attempts reached" : undefined}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/30 bg-primary/10 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={
-                    whip.canWhip
-                      ? {
-                          backgroundColor: `${whipPanel.party.color}20`,
-                          borderColor: `${whipPanel.party.color}66`,
-                          color: whipPanel.party.color,
-                        }
-                      : undefined
-                  }
+                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-card-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {whippingId === busyFor ? "Issuing..." : "Whip FOR"}
                 </button>
