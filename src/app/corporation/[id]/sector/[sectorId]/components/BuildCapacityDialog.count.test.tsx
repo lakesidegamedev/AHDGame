@@ -190,7 +190,7 @@ it("keeps the default view to the headline figures and one details disclosure", 
   renderDialog();
   expect(screen.getByText("Build total")).toBeTruthy();
   expect(screen.getByText("First opening")).toBeTruthy();
-  expect(screen.getByText("Profit per turn")).toBeTruthy();
+  expect(screen.getByText("Profit per turn once open")).toBeTruthy();
   expect(screen.getByText("Payback")).toBeTruthy();
   expect(screen.getByTestId("build-room").textContent).toContain("recommended");
   expect(document.querySelectorAll("details")).toHaveLength(1);
@@ -276,7 +276,7 @@ it("quotes and submits an alternate strategy as a new site", async () => {
 it("reports profit per turn and payback from the cash scenario", () => {
   renderDialog();
   const text = document.querySelector("dl")?.textContent ?? "";
-  expect(text).toMatch(/Profit per turn\$[\d,]+/);
+  expect(text).toMatch(/Profit per turn once open\$[\d,]+/);
   expect(text).toMatch(/Payback\d+ turns/);
 });
 
