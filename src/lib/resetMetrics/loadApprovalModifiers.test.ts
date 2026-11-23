@@ -180,4 +180,33 @@ describe("Metrics v2 approval source", () => {
     expect(await loadResetApprovalModifiers(db as unknown as Db, "DE", [], game)).toBeNull();
     expect(db.collection("resetMetricSnapshots").find.mock.calls.length).toBe(count);
   });
+  it("judges a region on its own budget and the treasury's deficit on national approval (ticket 1892)", async () => {
+    const indebted = boards.map((board) =>
+      board.scope === "national"
+        ? {
+            ...board,
+            observations: {
+              ...board.observations,
+              "09": { ...board.observations["09"], value: -18.4 },
+              "10": { ...board.observations["10"], value: 131.9 },
+            },
+          }
+        : board
+    );
+    db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(indebted);
+    db.collection("states")
+      .find()
+      .toArray.mockResolvedValue(states.map((state) => ({ ...state, gdp: 100_000 })));
+    db.collection("stateBudgets").find().toArray.mockResolvedValue([]);
+    db.collection("regionalBudgets")
+      .find()
+      .toArray.mockResolvedValue([{ _id: "SCO", surplus: 2e9, financing: { principal: 0 } }]);
+    const result = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    const fiscal = new Set(["government_deficit", "fiscal_crisis", "heavy_public_debt"]);
+    const national = result!.nationalModifiers!.map((m) => m.id);
+    expect(national).toContain("government_deficit");
+    for (const id of states.map((state) => state._id))
+      expect(result!.modifiersByRegion!.get(id)!.filter((m) => fiscal.has(m.id))).toEqual([]);
+    expect(result!.modifiersByRegion!.get("SCO")!.map((m) => m.id)).toContain("balanced_budget");
+  });
 });

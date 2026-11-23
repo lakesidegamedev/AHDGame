@@ -65,6 +65,11 @@ export interface PoliticalApprovalBases {
   byRegion: Map<string, number>;
   /** Owner-derived named conditions when Metrics v2 is active. */
   modifiersByRegion?: Map<string, ActiveModifier[]>;
+  /**
+   * National treasury fiscal conditions (deficit, debt) under Metrics v2. They
+   * judge national approval only; governors answer for their own budgets.
+   */
+  nationalModifiers?: ActiveModifier[];
   /** Population-weighted national base (same rounding). */
   national: number;
 }
@@ -175,7 +180,12 @@ export async function loadPoliticalApprovalBases(
             ) / totalPop
           )
         : BASE_APPROVAL;
-    return withDebt({ byRegion, national, modifiersByRegion: resetInputs.modifiersByRegion });
+    return withDebt({
+      byRegion,
+      national,
+      modifiersByRegion: resetInputs.modifiersByRegion,
+      nationalModifiers: resetInputs.nationalModifiers,
+    });
   }
   // Successors in a v1 world still use the original relative metric scorer.
   // Opting approval into successor routing must not replace that base with 50.
