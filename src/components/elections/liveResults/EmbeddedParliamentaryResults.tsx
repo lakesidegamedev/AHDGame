@@ -12,6 +12,7 @@ import { ParliamentaryResultsView } from "@/app/elections/[id]/results/component
 import { useElectionNightLoad, useElectionNightPoll } from "@/hooks/useElectionNight";
 import { electionNightTitle } from "@/lib/elections/liveResults/electionNight";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
+import { EMBEDDED_RESULTS_PLACEHOLDER_CLASS } from "./embeddedResultsPlaceholder";
 
 export function EmbeddedParliamentaryResults({
   electionId,
@@ -29,7 +30,7 @@ export function EmbeddedParliamentaryResults({
     title ?? (electionType ? electionNightTitle(electionType) : t("embeddedResults.electionNight"));
 
   if (state.kind === "loading") {
-    return <div className="mb-6 h-40 animate-pulse rounded-xl border border-card-border bg-card" />;
+    return <div className={EMBEDDED_RESULTS_PLACEHOLDER_CLASS} aria-hidden />;
   }
   if (state.kind === "disabled") return null;
   if (state.kind === "error") {

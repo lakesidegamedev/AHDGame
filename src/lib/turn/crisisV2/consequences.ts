@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { createHash } from "node:crypto";
 import {
@@ -54,21 +55,14 @@ const WITNESS_CAP = 200;
  * update: the filter refuses a write whose witness is already on the document.
  */
 function witnessedApproval(delta: number, witness: string) {
-  return [
-    {
-      $set: {
-        approvalRating: {
-          $max: [0, { $min: [100, { $add: [{ $ifNull: ["$approvalRating", 50] }, delta] }] }],
-        },
-        appliedCrisisEffects: {
-          $slice: [
-            { $concatArrays: [{ $ifNull: ["$appliedCrisisEffects", []] }, [witness]] },
-            -WITNESS_CAP,
-          ],
-        },
-      },
+  return approvalDeltaUpdate(delta, {
+    appliedCrisisEffects: {
+      $slice: [
+        { $concatArrays: [{ $ifNull: ["$appliedCrisisEffects", []] }, [witness]] },
+        -WITNESS_CAP,
+      ],
     },
-  ];
+  });
 }
 
 function shiftId(crisisId: ObjectId, countryId: string, partyId: string, region: string): ObjectId {

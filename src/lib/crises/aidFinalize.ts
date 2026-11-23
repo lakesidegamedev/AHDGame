@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { type Db } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import type { CrisisAidCommitment } from "@/lib/db/types/crisisAid";
@@ -37,7 +38,7 @@ function negate(effects: CrisisEffect[]): CrisisEffect[] {
 async function incApproval(db: Db, countryId: string, delta: number): Promise<void> {
   await governmentApprovalsCollection<Document>(db).updateOne(
     { _id: countryId as unknown as import("mongodb").ObjectId },
-    { $inc: { approvalRating: delta } }
+    approvalDeltaUpdate(delta)
   );
 }
 

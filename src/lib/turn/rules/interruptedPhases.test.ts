@@ -58,6 +58,7 @@ describe("rerun-safe list", () => {
   });
   it("lists the steps proven so far", () => {
     expect(Object.keys(RERUN_SAFE_WHEN_INTERRUPTED)).toEqual([
+      "approvalSnapshot",
       "treasuryTurn",
       "savingsInterestTurn",
       "pensionTurn",
@@ -69,8 +70,8 @@ describe("rerun-safe list", () => {
 describe("classifyInterruptedPhases", () => {
   it("treats snapshots as safe", () => {
     expect(classifyInterruptedPhases(["approvalSnapshot", "portfolioSnapshot"])).toEqual({
-      safe: ["approvalSnapshot", "portfolioSnapshot"],
-      moneyMoving: [],
+      safe: ["portfolioSnapshot"],
+      moneyMoving: ["approvalSnapshot"],
     });
   });
   it("treats decay counters as safe", () => {
@@ -122,8 +123,8 @@ describe("classifyInterruptedPhases", () => {
   });
   it("mixed set holds on the money step only", () => {
     expect(classifyInterruptedPhases(["approvalSnapshot", "bondTurn"])).toEqual({
-      safe: ["approvalSnapshot"],
-      moneyMoving: ["bondTurn"],
+      safe: [],
+      moneyMoving: ["approvalSnapshot", "bondTurn"],
     });
   });
 });

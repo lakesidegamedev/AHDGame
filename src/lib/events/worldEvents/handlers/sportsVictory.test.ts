@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -74,9 +75,9 @@ describe("worldEvents.sportsVictory — offer → resolve → effects (Phase 0 p
     await resolveEvent(db as never, offered._id, "acknowledge", "player", 100);
 
     // approvalDelta
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 2 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(2) } }],
+      { ordered: true }
     );
     // treasuryDelta moved the treasury and logged a conservation-tracked tx row.
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(

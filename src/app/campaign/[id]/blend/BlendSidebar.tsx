@@ -110,9 +110,14 @@ export function RunningMateBlock({
       >
         Running mate
       </div>
+      {vm.ticket.pendingRunningMateName ? (
+        <div style={{ marginTop: 4, fontFamily: FONT.sans, fontSize: 13, color: BLEND.mutedDim }}>
+          Invited {vm.ticket.pendingRunningMateName}, waiting for them to accept
+        </div>
+      ) : null}
       {pickingMate && canManageTicket ? (
         <BlendCharacterPicker
-          placeholder="Search a character to name…"
+          placeholder="Search a character to invite…"
           excludeIds={[candidateId, ...vm.managers.list.map((m) => m.characterId)]}
           disabled={busy === "runningMate"}
           onPick={(r) => {

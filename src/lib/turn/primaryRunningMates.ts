@@ -15,17 +15,20 @@ import type { Document } from "mongodb";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
- * For each player presidential nominee without a runningMateId, tentatively
- * assign the highest-favorability same-party character in the same country
- * who is not themselves a candidate or the incumbent president. Sends a
- * notification so the nominee knows and can override via the running-mate UI.
+ * For each player presidential nominee without a running mate or an open
+ * invitation, invite the highest-favorability same-party character in the
+ * same country who is not themselves a candidate or the incumbent president.
+ * The invitee joins the slate only by accepting; the nominee is
+ * told who was invited and can name someone else via the running-mate UI.
  */
 export async function autoAssignTentativeRunningMates(
   db: Awaited<ReturnType<typeof getDb>>,
   nominees: ElectionCandidate[],
   countryId: CountryId
 ): Promise<void> {
-  const needsVp = nominees.filter((c) => !c.isNPP && !c.runningMateId && c.characterId != null);
+  const needsVp = nominees.filter(
+    (c) => !c.isNPP && !c.runningMateId && !c.pendingRunningMateId && c.characterId != null
+  );
   if (needsVp.length === 0) return;
 
   // Incumbent president is disqualified from being a running mate
@@ -78,7 +81,7 @@ export async function autoAssignTentativeRunningMates(
   const notificationAssignments: Array<{
     nomineeId: ObjectId;
     runningMateId: ObjectId;
-    notification: NotificationInput;
+    notifications: NotificationInput[];
   }> = [];
   const assignedAt = new Date();
 
@@ -87,6 +90,7 @@ export async function autoAssignTentativeRunningMates(
 
     const pick = candidates.find(
       (c) =>
+        c.userId != null &&
         !candidateIdSet.has(c._id.toString()) &&
         (!incumbentId || !c._id.equals(incumbentId)) &&
         !(
@@ -98,32 +102,60 @@ export async function autoAssignTentativeRunningMates(
     if (!pick) continue;
     runningMateWrites.push({
       updateOne: {
-        // Do not overwrite a player selection made after `needsVp` was read.
+        // Do not overwrite a player selection or invitation made after `needsVp` was read.
         filter: {
           _id: nominee._id,
-          $or: [{ runningMateId: { $exists: false } }, { runningMateId: { $type: 10 } }],
+          $and: [
+            { $or: [{ runningMateId: { $exists: false } }, { runningMateId: { $type: 10 } }] },
+            {
+              $or: [
+                { pendingRunningMateId: { $exists: false } },
+                { pendingRunningMateId: { $type: 10 } },
+              ],
+            },
+          ],
         },
-        update: { $set: { runningMateId: pick._id, updatedAt: assignedAt } },
+        update: {
+          $set: {
+            pendingRunningMateId: pick._id,
+            pendingRunningMateInvitedAt: assignedAt,
+            updatedAt: assignedAt,
+          },
+        },
       },
     });
 
+    const notifications: NotificationInput[] = [];
     const nomineeChar = nomineeCharMap.get(nominee.characterId.toString());
     if (nomineeChar?.userId) {
-      notificationAssignments.push({
-        nomineeId: nominee._id,
-        runningMateId: pick._id,
-        notification: {
-          userId: nomineeChar.userId,
-          type: "general_win",
-          title: "Running mate tentatively assigned",
-          message: `Since you didn't pick a running mate before the primary ended, ${pick.name} has been assigned as your tentative VP. You can change them from the election page.`,
-          metadata: {
-            electionId: nominee.electionId.toString(),
-            tentativeVpId: pick._id.toString(),
-          },
+      notifications.push({
+        userId: nomineeChar.userId,
+        type: "general_win",
+        title: "Running mate invitation sent",
+        message: `Since you didn't pick a running mate before the primary ended, ${pick.name} has been invited to join your ticket. They join only if they accept. You can invite someone else from the election page.`,
+        metadata: {
+          electionId: nominee.electionId.toString(),
+          tentativeVpId: pick._id.toString(),
         },
       });
     }
+    if (pick.userId) {
+      notifications.push({
+        userId: pick.userId,
+        type: "running_mate_invite",
+        title: "Running mate invitation",
+        message: `${nominee.characterName}'s primary ended without a running mate, so you have been invited to join the ticket. You will only join if you accept. If the ticket wins, its running mate becomes Vice President.`,
+        metadata: {
+          electionId: nominee.electionId.toString(),
+          nomineeCandidateId: nominee._id.toString(),
+        },
+      });
+    }
+    notificationAssignments.push({
+      nomineeId: nominee._id,
+      runningMateId: pick._id,
+      notifications,
+    });
   }
   if (runningMateWrites.length > 0) {
     const result = await electionCandidatesCollection(db).bulkWrite(runningMateWrites, {
@@ -137,13 +169,13 @@ export async function autoAssignTentativeRunningMates(
             _id: { $in: notificationAssignments.map(({ nomineeId }) => nomineeId) },
             updatedAt: assignedAt,
           },
-          { projection: { _id: 1, runningMateId: 1 } }
+          { projection: { _id: 1, pendingRunningMateId: 1 } }
         )
         .toArray();
       const confirmedRunningMateByNominee = new Map(
         confirmed.map((candidate) => [
           candidate._id.toString(),
-          candidate.runningMateId?.toString(),
+          candidate.pendingRunningMateId?.toString(),
         ])
       );
       confirmedNotifications = notificationAssignments.filter(
@@ -152,7 +184,9 @@ export async function autoAssignTentativeRunningMates(
       );
     }
     if (confirmedNotifications.length > 0) {
-      await createNotifications(confirmedNotifications.map(({ notification }) => notification));
+      await createNotifications(
+        confirmedNotifications.flatMap(({ notifications }) => notifications)
+      );
     }
   }
 }

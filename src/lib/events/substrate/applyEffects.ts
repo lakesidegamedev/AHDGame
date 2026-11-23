@@ -1,3 +1,5 @@
+import type { AnyBulkWriteOperation } from "mongodb";
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
@@ -8,9 +10,9 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import type { Character } from "@/lib/db/types/character";
-import type { ElectionCandidate } from "@/lib/db/types/election";
+
 import type { EventEffect } from "@/lib/db/types/events";
-import type { ElectedOfficial } from "@/lib/db/types/officials";
+
 import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
 import { anchorToLocal, campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import {
@@ -125,6 +127,7 @@ async function applyCountryEffects(
     );
   }
 
+  const approvalOps: AnyBulkWriteOperation<Document>[] = [];
   for (const [effectIndex, effect] of effects.entries()) {
     const effectKey = `${ctx.instance._id.toHexString()}:${effectIndex}`;
     switch (effect.type) {
@@ -173,23 +176,24 @@ async function applyCountryEffects(
       }
       case "approvalDelta": {
         if (effect.delta === 0) break;
-        if (ctx.treasuryCashLedgerEnabled) {
-          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
-            {
+        approvalOps.push({
+          updateOne: {
+            filter: {
               _id: countryId as unknown as ObjectId,
-              appliedEventEffects: { $ne: effectKey },
+              ...(ctx.treasuryCashLedgerEnabled ? { appliedEventEffects: { $ne: effectKey } } : {}),
             },
-            {
-              $inc: { approvalRating: effect.delta },
-              $addToSet: { appliedEventEffects: effectKey },
-            }
-          );
-        } else {
-          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
-            { _id: countryId as unknown as ObjectId },
-            { $inc: { approvalRating: effect.delta } }
-          );
-        }
+            update: approvalDeltaUpdate(
+              effect.delta,
+              ctx.treasuryCashLedgerEnabled
+                ? {
+                    appliedEventEffects: {
+                      $setUnion: [{ $ifNull: ["$appliedEventEffects", []] }, [effectKey]],
+                    },
+                  }
+                : {}
+            ),
+          },
+        });
         break;
       }
       case "sectorDemandModifier": {
@@ -283,6 +287,8 @@ async function applyCountryEffects(
         );
     }
   }
+  if (approvalOps.length)
+    await governmentApprovalsCollection<Document>(ctx.db).bulkWrite(approvalOps, { ordered: true });
 }
 
 /**
@@ -517,7 +523,7 @@ export async function applyCountryApprovalDelta(
   if (delta === 0) return;
   await governmentApprovalsCollection<Document>(db).updateOne(
     { _id: countryId as unknown as ObjectId },
-    { $inc: { approvalRating: delta } }
+    approvalDeltaUpdate(delta)
   );
 }
 

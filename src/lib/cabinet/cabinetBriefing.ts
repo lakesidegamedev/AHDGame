@@ -110,6 +110,7 @@ import type { StateMetrics } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { resolveNationalMetricValue } from "@/lib/cabinet/nationalMetricSource";
+import { loadResetMetricDisplay, overlayMetricValues } from "@/lib/cabinet/resetMetricOverlay";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import {
   getCabinetSettingsCollection,
@@ -306,33 +307,63 @@ export async function buildCabinetBriefing(
   // (e.g. the prime/interest rate) rather than stateMetrics — fetch the bank
   // only when a requested metric actually needs it.
   const needsCentralBank = mechanics.nationalMetrics.some((m) => m.source === "centralBank");
-  const [stateMetrics, nationalMetricsDoc, regionalBudgets, budget, sovereignBonds, bank] =
-    await Promise.all([
-      // SP5: merged two-store views (cabinet stat strips span macro +
-      // political metrics; playable political rows read absent -> 0, the
-      // documented parked channel).
-      findMergedRegionMetricsManyForDisplay(db, { _id: { $in: stateIds } }),
-      nationalDocId
-        ? findMergedRegionMetricsForDisplay(db, { _id: nationalDocId })
-        : Promise.resolve(null),
-      mechanics.allocation || positionId === "chancellor"
-        ? // Scope by CURRENT state ids (not countryId) so stale orphan
-          // regionalBudgets from prior region-id schemes — e.g. CN's pre-rename
-          // NORTHEAST/EAST/… docs alongside the live DB/HB/… ones — are excluded
-          // and the funding pool is not inflated. Mirrors federalBudgetDetail and
-          // calculateFederalSpending, which the National Budget page reads.
-          regionalBudgetsCollection(db)
-            .find({ _id: { $in: stateIds } })
-            .toArray()
-        : Promise.resolve([]),
-      federalBudgetCollection(db).findOne({ _id: budgetId }),
-      bondsCollection(db)
-        .find({ issuerType: "sovereign", countryId, matured: false, defaulted: false })
-        .toArray(),
-      needsCentralBank
-        ? centralBanksCollection(db).findOne({ _id: getBankId(countryId) })
-        : Promise.resolve(null),
-    ]);
+  const [
+    legacyStateMetrics,
+    legacyNationalMetricsDoc,
+    regionalBudgets,
+    budget,
+    sovereignBonds,
+    bank,
+    resetMetricDisplay,
+  ] = await Promise.all([
+    // SP5: merged two-store views (cabinet stat strips span macro +
+    // political metrics; playable political rows read absent -> 0, the
+    // documented parked channel).
+    findMergedRegionMetricsManyForDisplay(db, { _id: { $in: stateIds } }),
+    nationalDocId
+      ? findMergedRegionMetricsForDisplay(db, { _id: nationalDocId })
+      : Promise.resolve(null),
+    mechanics.allocation || positionId === "chancellor"
+      ? // Scope by CURRENT state ids (not countryId) so stale orphan
+        // regionalBudgets from prior region-id schemes — e.g. CN's pre-rename
+        // NORTHEAST/EAST/… docs alongside the live DB/HB/… ones — are excluded
+        // and the funding pool is not inflated. Mirrors federalBudgetDetail and
+        // calculateFederalSpending, which the National Budget page reads.
+        regionalBudgetsCollection(db)
+          .find({ _id: { $in: stateIds } })
+          .toArray()
+      : Promise.resolve([]),
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    bondsCollection(db)
+      .find({ issuerType: "sovereign", countryId, matured: false, defaulted: false })
+      .toArray(),
+    needsCentralBank
+      ? centralBanksCollection(db).findOne({ _id: getBankId(countryId) })
+      : Promise.resolve(null),
+    loadResetMetricDisplay(db, gameState, countryId),
+  ]);
+
+  // A Metrics v2 world keeps its live indicators on the v2 boards; the legacy
+  // store is empty (Canada in 2027) or stale there. v2 readings win per path,
+  // legacy-only paths keep their legacy value.
+  const legacyById = new Map(legacyStateMetrics.map((doc) => [String(doc._id), doc]));
+  const stateMetrics: StateMetrics[] = resetMetricDisplay
+    ? stateIds.flatMap((id) => {
+        const doc = overlayMetricValues(
+          legacyById.get(String(id)) ?? null,
+          String(id),
+          resetMetricDisplay.regional.get(String(id))
+        );
+        return doc ? [doc] : [];
+      })
+    : legacyStateMetrics;
+  const nationalMetricsDoc = resetMetricDisplay
+    ? overlayMetricValues(
+        legacyNationalMetricsDoc,
+        nationalDocId ?? `${countryId}:national`,
+        resetMetricDisplay.national
+      )
+    : legacyNationalMetricsDoc;
 
   // Resolve each metric from its declared source: stateMetrics (national doc
   // then regional average), the federal budget (inflation), or the central

@@ -625,7 +625,14 @@ export function NavbarWrapper({
           data-site-navbar
           className="sticky top-0 z-50 border-b pt-[env(safe-area-inset-top,0px)] border-card-border bg-card/50 backdrop-blur-md"
         >
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          {/* Same height as the navbar that replaces it (modern: 56 px, 60 px
+              from lg; classic: 56 px), so the page does not jump when the
+              session bootstrap finishes. */}
+          <div
+            className={`mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 ${
+              useExperimentalNav ? "h-14 lg:h-[60px]" : "h-14"
+            }`}
+          >
             <div className="flex items-center gap-2">
               <Image
                 src={CDN_LOGO_URL}

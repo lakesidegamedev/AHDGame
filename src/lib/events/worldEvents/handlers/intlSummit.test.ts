@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -58,9 +59,9 @@ describe("worldEvents.intlSummit — Phase 2 executive decision event", () => {
 
   it("'assertive' raises approval and dents manufacturing demand", async () => {
     await resolveOption("assertive");
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 3 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(3) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.countryModifiers!.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({ sectorType: "manufacturing", pct: -3 })
@@ -69,9 +70,9 @@ describe("worldEvents.intlSummit — Phase 2 executive decision event", () => {
 
   it("'moderate' has no treasury or sector effect — never spends", async () => {
     await resolveOption("moderate");
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 1 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(1) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.federalBudget!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.countryModifiers!.insertOne).not.toHaveBeenCalled();
@@ -79,9 +80,9 @@ describe("worldEvents.intlSummit — Phase 2 executive decision event", () => {
 
   it("'conciliatory' costs approval but boosts manufacturing demand", async () => {
     await resolveOption("conciliatory");
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: -1 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(-1) } }],
+      { ordered: true }
     );
     expect(db.collectionMocks.countryModifiers!.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({ sectorType: "manufacturing", pct: 3 })

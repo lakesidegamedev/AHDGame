@@ -10,6 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/country/countryTier", () => ({
   loadCountryTiers: async () => ({ fullSimulationIds: [] }),
 }));
+// Formula fixtures use a mock database; transaction rollback is covered by the atomic snapshot suite.
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: unknown, work: (tx: unknown) => Promise<unknown>) => work(db),
+}));
 import type { Db } from "mongodb";
 import { createMockDb, getAccessedCollections, type MockDb } from "@/lib/test-utils/mockDb";
 import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";
@@ -57,11 +61,10 @@ describe("snapshotApprovalHistory (SP4 conversion)", () => {
   it("scores UK regions from the hybrid political base (board moves the snapshot)", async () => {
     seedUk(APPROVAL_NEUTRAL_SCORE.UK + 10);
     await snapshotApprovalHistory(db as unknown as Db, "UK", 100);
-    // Uniform board +10 → component +5 → base 55 per region; national 55; empty
-    // cabinetMembers costs the NO_CABINET penalty 7.5 → 47.5 stored.
+    // Fiscal metrics stay neutral in regional performance; national penalties apply once.
     const call = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls.at(-1)!;
     const set = (call[1] as { $set: { approvalRating: number } }).$set;
-    expect(set.approvalRating).toBeCloseTo(42.5, 5);
+    expect(set.approvalRating).toBeCloseTo(42.4, 5);
 
     // A degraded board must move the snapshot the other way.
     db = createMockDb();
@@ -69,7 +72,7 @@ describe("snapshotApprovalHistory (SP4 conversion)", () => {
     await snapshotApprovalHistory(db as unknown as Db, "UK", 100);
     const call2 = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls.at(-1)!;
     const set2 = (call2[1] as { $set: { approvalRating: number } }).$set;
-    expect(set2.approvalRating).toBeCloseTo(32.5, 5);
+    expect(set2.approvalRating).toBeCloseTo(32.6, 5);
   });
 
   it("includes crackdown drag in the stored approval used by elections, then removes it on repeal", async () => {
@@ -80,7 +83,7 @@ describe("snapshotApprovalHistory (SP4 conversion)", () => {
     });
     await snapshotApprovalHistory(db as unknown as Db, "UK", 100);
     const first = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls.at(-1)![1].$set;
-    expect(first.approvalRating).toBeCloseTo(40.5, 5);
+    expect(first.approvalRating).toBeCloseTo(40.4, 5);
     expect(first.activeNationalModifiers).toContainEqual({
       id: "union_crackdown",
       label: "Union crackdown",
@@ -93,7 +96,7 @@ describe("snapshotApprovalHistory (SP4 conversion)", () => {
     });
     await snapshotApprovalHistory(db as unknown as Db, "UK", 101);
     const second = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls.at(-1)![1].$set;
-    expect(second.approvalRating).toBeCloseTo(42.5, 5);
+    expect(second.approvalRating).toBeCloseTo(42.4, 5);
     expect(second.activeNationalModifiers).not.toContainEqual(
       expect.objectContaining({ id: "union_crackdown" })
     );
@@ -126,10 +129,10 @@ describe("snapshotApprovalHistory (SP4 conversion)", () => {
       ]);
     await snapshotApprovalHistory(db as unknown as Db, "JP", 100);
     expect(getAccessedCollections(db)).toContain("politicalMetrics");
-    // Uniform board +10 → component +5 → base 55, minus the 7.5 cabinet penalty.
+    // The regional base excludes fiscal performance; national cabinet penalties still apply.
     const call = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls.at(-1)!;
     const set = (call[1] as { $set: { approvalRating: number } }).$set;
-    expect(set.approvalRating).toBeCloseTo(42.5, 5);
+    expect(set.approvalRating).toBeCloseTo(42.4, 5);
   });
 
   it("falls back to BASE_APPROVAL, never the legacy scorer, when a board country is unseeded", async () => {

@@ -81,6 +81,37 @@ describe("Metrics v2 approval source", () => {
     expect(db.collectionMocks.politicalMetrics).toBeUndefined();
     expect(db.collectionMocks.resetMetricSnapshots!.find).toHaveBeenCalledOnce();
   });
+  it("keeps national debt and deficit out of every regional approval input", async () => {
+    const before = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    const changed = structuredClone(boards);
+    const national = changed.find((board) => board.scope === "national")!;
+    national.observations["09"].value = -20;
+    national.observations["10"].value = 180;
+    db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(changed);
+    const after = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    expect(after!.byRegion).toEqual(before!.byRegion);
+    expect(after!.modifiersByRegion).toEqual(before!.modifiersByRegion);
+    expect(after!.nationalModifiers).toContainEqual(
+      expect.objectContaining({ id: "nationalDebt", effect: -1 })
+    );
+    expect(after!.nationalModifiers).toContainEqual(
+      expect.objectContaining({ id: "nationalDeficit", effect: -3 })
+    );
+  });
+  it("lets every region improve against its own frozen opening reference", async () => {
+    const before = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    const changed = structuredClone(boards);
+    for (const board of changed.filter((row) => row.scope === "regional")) {
+      const metric = Object.values(board.observations).find(
+        (observation) => observation.path === "healthcare.lifeExpectancy"
+      )!;
+      metric.value = metric.value! * 1.2;
+    }
+    db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(changed);
+    const after = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
+    for (const [id, base] of before!.byRegion)
+      expect(after!.byRegion.get(id)).toBeGreaterThan(base);
+  });
   it("rejects a missing, mismatched, incomplete or stale owner board", async () => {
     for (const rows of [
       [],
@@ -204,9 +235,9 @@ describe("Metrics v2 approval source", () => {
     const result = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
     const fiscal = new Set(["government_deficit", "fiscal_crisis", "heavy_public_debt"]);
     const national = result!.nationalModifiers!.map((m) => m.id);
-    expect(national).toContain("government_deficit");
+    expect(national).toContain("nationalDeficit");
     for (const id of states.map((state) => state._id))
       expect(result!.modifiersByRegion!.get(id)!.filter((m) => fiscal.has(m.id))).toEqual([]);
-    expect(result!.modifiersByRegion!.get("SCO")!.map((m) => m.id)).toContain("balanced_budget");
+    expect(result!.regionalModifiersByRegion!.get("SCO")).toEqual([]);
   });
 });

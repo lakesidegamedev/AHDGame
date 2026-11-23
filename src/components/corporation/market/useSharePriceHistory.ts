@@ -21,10 +21,12 @@ export interface SharePriceHistoryState {
  * Degrades gracefully (empty series, null dayChange) on error or thin history.
  */
 export function useSharePriceHistory(corpId: string, enabled: boolean): SharePriceHistoryState {
+  // Loading from the first render when the fetch will run, so the masthead can
+  // hold the sparkline's space instead of growing when the history lands.
   const [state, setState] = useState<SharePriceHistoryState>({
     series: [],
     dayChange: null,
-    loading: false,
+    loading: enabled,
   });
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -144,9 +145,7 @@ describe("processCrisisAidResolutions — failed", () => {
     // governmentApprovals.updateOne called with $inc.approvalRating === -AID_FAILED_PENALTY
     const approvalCalls = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls;
     const penaltyCall = approvalCalls.find(
-      (call) =>
-        (call[1] as { $inc?: Record<string, unknown> })?.$inc?.approvalRating ===
-        -AID_FAILED_PENALTY
+      (call) => JSON.stringify(call[1]) === JSON.stringify(approvalDeltaUpdate(-AID_FAILED_PENALTY))
     );
     expect(penaltyCall).toBeDefined();
 
@@ -208,8 +207,7 @@ describe("reverseCrisisAidPenalties", () => {
     // governmentApprovals.updateOne called with $inc.approvalRating === +AID_FAILED_PENALTY
     const approvalCalls = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls;
     const reversalCall = approvalCalls.find(
-      (call) =>
-        (call[1] as { $inc?: Record<string, unknown> })?.$inc?.approvalRating === AID_FAILED_PENALTY
+      (call) => JSON.stringify(call[1]) === JSON.stringify(approvalDeltaUpdate(AID_FAILED_PENALTY))
     );
     expect(reversalCall).toBeDefined();
 

@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -145,9 +146,9 @@ describe("applyDeclarativeEffects — country scope (World Events v1 Phase 0)", 
 
     await applyDeclarativeEffects(ctx, tier.effects);
 
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: 3 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(3) } }],
+      { ordered: true }
     );
   });
 

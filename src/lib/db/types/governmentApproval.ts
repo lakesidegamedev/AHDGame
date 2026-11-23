@@ -6,8 +6,8 @@ import type { ActiveModifier } from "../../utils/approvalModifiers";
  *
  * One document per country, updated each turn.
  *
- * Source is always "aggregate" — computed from state metrics compared to
- * national averages, not from any individual politician's favorability.
+ * Source is "aggregate": regional outcomes plus national-only conditions,
+ * rather than an individual politician's favorability.
  *
  * The `history` array keeps the last 20 turns for charting.
  */
@@ -17,8 +17,16 @@ export interface GovernmentApproval {
   countryId: CountryId;
   /** 0–100: percentage of population approving the government */
   approvalRating: number;
+  /** Unclamped score keeps compensating decisions reversible at 0 and 100. */
+  approvalRawRating?: number;
+  /** Durable additive decisions, kept separate from recomputed performance. */
+  approvalAdjustment?: number;
+  /** Atomic country snapshot receipt; repeat runs do not advance smoothing. */
+  lastSnapshotTurn?: number;
   /** Political base and regional contribution consumed by this snapshot. */
   approvalBase?: number;
+  /** Regional performance before national-only effects, including clamp information. */
+  stateAverage?: number;
   activeRegionalModifiers?: import("@/lib/utils/approvalModifiers").ActiveModifier[];
 
   /** 0–100: percentage of population disapproving (computed as 100 − approvalRating) */

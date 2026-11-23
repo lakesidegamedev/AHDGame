@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
@@ -39,7 +40,7 @@ export async function applyCovertCrackdown(
   );
   await governmentApprovalsCollection<Document>(db).updateOne(
     { _id: countryId as unknown as ObjectId },
-    { $inc: { approvalRating: CRACKDOWN_APPROVAL_HIT } }
+    approvalDeltaUpdate(CRACKDOWN_APPROVAL_HIT)
   );
   await createSystemNewsPost(
     `Soviet inspection teams have raided undeclared industrial facilities in the ${countryName}. Moscow has issued a formal rebuke. Officials in Berlin declined to comment.`,

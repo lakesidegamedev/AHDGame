@@ -60,11 +60,7 @@ describe("hold on a mid-turn death (stage 1)", () => {
     });
     const r = validateLockedResume(l, 3, new Set(), true);
     expect(r?.interruptedMoneyMoving).toEqual([]);
-    expect([...(r?.appliedPhases ?? [])].sort()).toEqual([
-      "approvalSnapshot",
-      "fundGeneration",
-      "metricDecay",
-    ]);
+    expect([...(r?.appliedPhases ?? [])].sort()).toEqual(["fundGeneration", "metricDecay"]);
   });
   it("without the stage it resumes and reports the skipped money step", () => {
     const l = locked({ bondTurn: st("running") });
