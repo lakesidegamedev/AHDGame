@@ -52,7 +52,7 @@ export async function generateMetadata({
 export default async function CorporationLayout({ children, params }: LayoutProps) {
   const { id } = await params;
   const db = await getDb();
-  const resolved = await resolveCorporation(db, id);
+  const resolved = await resolveCorporation(db, id, { countryId: 1, headquartersState: 1 });
   const pageCountryId = resolved.ok ? resolved.corporation.countryId : null;
 
   return (
