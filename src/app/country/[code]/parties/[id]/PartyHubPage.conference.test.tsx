@@ -63,6 +63,7 @@ function makeParty(overrides: Record<string, unknown> = {}) {
     suppressionTargetGroup: null,
     registrationBudgetPercent: 0,
     registrationEstimatedSpend: 0,
+    psInvestmentEstimatedSpend: 0,
     transferReserveAmount: 0,
     memberSupportReserveAmount: 0,
     nppRecruitmentReserveAmount: 0,

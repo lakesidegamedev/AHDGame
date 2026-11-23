@@ -17,6 +17,7 @@ import {
   PortfolioShell,
   ChartPill,
   StatCard,
+  incomeTone,
   IconOverview,
   IconCash,
   IconStocks,
@@ -374,8 +375,8 @@ function CorpOverviewPane({
         <StatCard label="Liabilities" value={formatAmount(data.totalLiabilityValue)} />
         <StatCard
           label="Bond income"
-          value={`+${formatAmount(data.totalCouponIncomePerTurn)}/turn`}
-          accent="success"
+          value={`${data.totalCouponIncomePerTurn > 0 ? "+" : ""}${formatAmount(data.totalCouponIncomePerTurn)}/turn`}
+          tone={incomeTone(data.totalCouponIncomePerTurn)}
         />
       </div>
 

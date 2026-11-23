@@ -22,6 +22,7 @@ import {
   NATIONAL_PASSIVE_PS_PER_TURN,
   nationalCapForCountry,
 } from "@/lib/turn/politicalStrength/strengthConstants";
+import { effectivePsInvestmentBudget } from "@/lib/parties/rules/nppTreasurySpendDown";
 import { getPartyHex } from "@/lib/utils/politics";
 import {
   calculateTaxAmount,
@@ -349,7 +350,13 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   );
   // psInvestmentBudget is debited from treasury each turn in partyActionGeneration
   // but was previously excluded from the net income estimate shown in the UI.
-  const psInvestmentBudgetNational = party.psInvestmentBudget ?? 0;
+  const psInvestmentBudgetNational = effectivePsInvestmentBudget({
+    party,
+    chairBudget: party.psInvestmentBudget ?? 0,
+    treasury: party.treasury ?? 0,
+    ratePerPs: psInvestmentRate(partyCountry, "national"),
+    maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
+  });
   // Tier-resolved effective PS cap — Major → full national cap; Minor →
   // 100 + 10×earned-regions (clamped). An explicit `politicalStrengthCap`
   // override wins. Mirrors the cap the turn engine actually enforces, so the
@@ -384,6 +391,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     suppressionEstimatedSpend -
     registrationEstimatedSpend -
     estimatedPsInvestmentDebit;
+  const psInvestmentEstimatedSpend = estimatedPsInvestmentDebit;
   const reserveSummary = getTreasuryReserveSummary(party.treasury, effectiveBudget);
   const treasuryForecast = getTreasuryForecast(
     party.treasury,
@@ -444,6 +452,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     suppressionTargetGroup,
     registrationBudgetPercent,
     registrationEstimatedSpend,
+    psInvestmentEstimatedSpend,
     transferReserveAmount: reserveSummary.transferReserveAmount,
     memberSupportReserveAmount: reserveSummary.memberSupportReserveAmount,
     nppRecruitmentReserveAmount: reserveSummary.nppRecruitmentReserveAmount,

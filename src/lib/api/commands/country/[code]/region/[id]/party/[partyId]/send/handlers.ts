@@ -16,13 +16,16 @@ import {
   getStatePartyOrgDocumentId,
 } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getPartyBudgetCollection } from "@/lib/db/collections";
 import { findPartyBudgetForScope } from "@/lib/partyBudgetGuards";
 import { wouldTriggerTreasuryReserveOverride } from "@/lib/partyTreasuryPlan";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
+import { emitPartyCampaignFunds } from "@/lib/financialTxLog/partyCampaignFunds";
+import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { getGameState } from "@/lib/gameState";
 import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 // Imported from the values module, not the re-export on `payoutCap`: it is a
 // pure helper with no database dependency, and tests that mock the
@@ -319,6 +322,21 @@ export async function POST(request: Request, { params }: RouteParams) {
       details: `Sent $${sendAmount.toLocaleString()} from ${stateId} ${party.name} treasury to ${targetCharacter.name}${reserveWarning ? ` (${reserveWarning})` : ""}`,
     };
     await adminLogsCollection(db).insertOne(adminLog);
+
+    const gameStateForCurrency = await getGameState().catch(() => null);
+    await emitPartyCampaignFunds(db, {
+      characterId: targetCharacterOid,
+      characterName: targetCharacter.name,
+      amount: sendAmount,
+      currencyCode: gameStateForCurrency
+        ? getSeedCurrencyCode(countryId, gameStateForCurrency.preset ?? DEFAULT_SEED_PRESET)
+        : (COUNTRY_CURRENCY_MAP[countryId] ?? "USD"),
+      turn: currentTurn,
+      partyId: String(party._id),
+      partyName: party.name,
+      flow: "payout",
+      statePartyKey,
+    });
 
     await emitTreasuryTransaction({
       db,

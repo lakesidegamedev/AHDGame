@@ -5,6 +5,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatFundsCompact } from "@/lib/utils/formattersCore";
 import { YAxisGrid } from "./YAxisGrid";
+import { axisTickFormatter } from "./axisTicks";
 
 interface HistoryPoint {
   turn: number;
@@ -115,6 +116,7 @@ export function PortfolioChart({ history, view = "total" }: Props) {
 
   // Y-axis: 5 labels from min to max
   const yLabels = Array.from({ length: 5 }, (_, i) => minVal + (range * i) / 4);
+  const axisFmt = axisTickFormatter(yLabels, symbol);
 
   // X-axis: up to 5 evenly spaced turn labels
   const xLabelIndices: number[] = [];
@@ -154,7 +156,7 @@ export function PortfolioChart({ history, view = "total" }: Props) {
           toY={toY}
           left={PAD_LEFT}
           right={WIDTH - PAD_RIGHT}
-          format={fmt}
+          format={axisFmt}
         />
 
         {/* Area fill */}

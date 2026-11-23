@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ALL_TX_TYPES } from "@/lib/financialTxLog/types-extended";
-import { moneyHistoryKind, moneyHistoryWallet, toMoneyHistoryRow, typesForWallet } from "./rules";
+import { moneyHistoryKind, moneyHistoryWallet, toMoneyHistoryRow, walletFilter } from "./rules";
 
 const base = {
   turn: 12,
@@ -18,9 +18,27 @@ describe("money history rules", () => {
   it("puts campaign credits in the campaign wallet and everything else in personal", () => {
     expect(moneyHistoryWallet("office_income")).toBe("campaign");
     expect(moneyHistoryWallet("corp_dividend")).toBe("personal");
-    const campaign = typesForWallet("campaign").$in ?? [];
-    const personal = typesForWallet("personal").$nin ?? [];
-    expect(personal).toEqual(campaign);
+    expect(moneyHistoryWallet("caucus_tax_debit")).toBe("campaign");
+  });
+
+  it("lets an explicit wallet on the row override the type", () => {
+    expect(moneyHistoryWallet("starting_capital", { wallet: "campaign" })).toBe("campaign");
+    expect(moneyHistoryWallet("starting_capital", { wallet: "personal" })).toBe("personal");
+    expect(moneyHistoryWallet("starting_capital")).toBe("personal");
+    const row = toMoneyHistoryRow({
+      ...base,
+      type: "starting_capital",
+      amount: 344620,
+      meta: { wallet: "campaign" },
+    });
+    expect(row.wallet).toBe("campaign");
+  });
+
+  it("builds wallet filters that split on the same rule", () => {
+    const campaign = walletFilter("campaign");
+    expect(JSON.stringify(campaign)).toContain('"meta.wallet":"campaign"');
+    const personal = walletFilter("personal");
+    expect(personal["meta.wallet"]).toEqual({ $ne: "campaign" });
   });
 
   it("maps every known tx type to some kind without throwing", () => {

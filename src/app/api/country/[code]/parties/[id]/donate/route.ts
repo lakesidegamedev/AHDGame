@@ -10,6 +10,10 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
+import { emitPartyCampaignFunds } from "@/lib/financialTxLog/partyCampaignFunds";
+import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { getGameState } from "@/lib/gameState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -188,6 +192,19 @@ export async function POST(request: Request, { params }: RouteParams) {
           label: character.name,
         },
         now,
+      });
+      const gameState = await getGameState().catch(() => null);
+      await emitPartyCampaignFunds(db, {
+        characterId: authUser.character._id,
+        characterName: character.name,
+        amount: -amount,
+        currencyCode: gameState
+          ? getSeedCurrencyCode(countryId, gameState.preset ?? DEFAULT_SEED_PRESET)
+          : (COUNTRY_CURRENCY_MAP[countryId] ?? "USD"),
+        turn: gameState?.currentTurn ?? 0,
+        partyId: party._id.toString(),
+        partyName: party.name,
+        flow: "donation",
       });
     }
 

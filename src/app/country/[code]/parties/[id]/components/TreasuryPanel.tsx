@@ -35,6 +35,8 @@ import { TreasuryOverrideHistoryCard } from "@/components/party/TreasuryOverride
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useTurnoutTargetSections } from "@/hooks/useTurnoutTargetSections";
 
+const INSIGHTS_TIMEOUT_MS = 15_000;
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface TreasuryPanelProps {
@@ -97,15 +99,6 @@ export function TreasuryPanel({
   const partyCurrencyCode = COUNTRY_CURRENCY_MAP[party.countryId];
   const presetOptions = useMemo(() => getTreasuryPresetOptions(), []);
   const targetSections = useTurnoutTargetSections(countryId);
-  const emptyInsights = useMemo<NationalTreasuryInsights>(
-    () => ({
-      recentTransferRecipients: [],
-      lowestTreasuryStates: [],
-      growthLeaders: [],
-      overrideHistory: [],
-    }),
-    []
-  );
   const reserveDisplayValues = useMemo(
     () => ({
       transferReserveAmount: formatTreasuryReserveInputValue(party.transferReserveAmount),
@@ -124,6 +117,8 @@ export function TreasuryPanel({
     party.treasuryPreset ?? "custom"
   );
   const [insights, setInsights] = useState<NationalTreasuryInsights | null>(null);
+  const [insightsFailed, setInsightsFailed] = useState(false);
+  const [insightsAttempt, setInsightsAttempt] = useState(0);
   const canViewTreasuryInsights = canManageTreasury || modViewEnabled;
 
   // Country-aware PS investment rate, converted to display currency for the
@@ -221,32 +216,37 @@ export function TreasuryPanel({
   useEffect(() => {
     if (!canViewTreasuryInsights) return;
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), INSIGHTS_TIMEOUT_MS);
     const insightsUrl = modViewEnabled
       ? `${partyBaseUrl}/treasury/insights?modView=1`
       : `${partyBaseUrl}/treasury/insights`;
-    fetch(insightsUrl, { cache: "no-store" })
+    fetch(insightsUrl, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) return null;
+        if (!response.ok) throw new Error(String(response.status));
         return (await response.json()) as NationalTreasuryInsights;
       })
       .then((payload) => {
-        if (!cancelled) setInsights(payload ?? emptyInsights);
+        if (!cancelled) setInsights(payload);
       })
       .catch(() => {
-        if (!cancelled) setInsights(emptyInsights);
-      });
+        if (!cancelled) setInsightsFailed(true);
+      })
+      .finally(() => clearTimeout(timeout));
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
   }, [
     canViewTreasuryInsights,
     modViewEnabled,
     partyBaseUrl,
+    insightsAttempt,
     party.treasury,
     party.transferReserveAmount,
     party.memberSupportReserveAmount,
     party.nppRecruitmentReserveAmount,
-    emptyInsights,
   ]);
 
   const dispatchWithPreset = useCallback(
@@ -541,16 +541,10 @@ export function TreasuryPanel({
   }, [apiPost, partyBaseUrl, donateForm.amount, onUserRefresh, partyCurrencyCode, party.name]);
 
   // Computed values for display
-  // netIncome uses the server-computed value which includes the psInvestmentBudget debit.
+  // Every line comes from the server forecast, which mirrors the settled turn math:
+  // revenue - GOTV - suppression - registration - Political Strength purchases.
   const netIncome = party.netHourlyTreasuryChange;
-  const psEstimatedSpend = Math.max(
-    0,
-    party.expectedHourlyIncome -
-      party.gotvEstimatedSpend -
-      party.suppressionEstimatedSpend -
-      party.registrationEstimatedSpend -
-      netIncome
-  );
+  const psEstimatedSpend = party.psInvestmentEstimatedSpend;
   const totalSpending =
     party.gotvEstimatedSpend +
     party.suppressionEstimatedSpend +
@@ -559,6 +553,7 @@ export function TreasuryPanel({
   const revenue = party.expectedHourlyIncome;
   const gotvPct = revenue > 0 ? (party.gotvEstimatedSpend / revenue) * 100 : 0;
   const supPct = revenue > 0 ? (party.suppressionEstimatedSpend / revenue) * 100 : 0;
+  const regPct = revenue > 0 ? (party.registrationEstimatedSpend / revenue) * 100 : 0;
   const psPct = revenue > 0 ? (psEstimatedSpend / revenue) * 100 : 0;
   const netPct = revenue > 0 ? Math.max(0, (netIncome / revenue) * 100) : 100;
 
@@ -601,7 +596,7 @@ export function TreasuryPanel({
               <div className="text-xs font-semibold text-muted">Donate to national party</div>
             </div>
             <p className="text-body-sm text-muted mb-3">
-              Contribute your personal funds to the national party treasury. Funds support GOTV,
+              Contribute your campaign funds to the national party treasury. Funds support GOTV,
               state transfers, and other party operations.
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -621,7 +616,7 @@ export function TreasuryPanel({
               </button>
             </div>
             <div className="mt-1 text-xs text-muted">
-              Your funds: {fmt(user?.character?.funds ?? 0, party.countryId)} · Min.{" "}
+              Your campaign funds: {fmt(user?.character?.funds ?? 0, party.countryId)} · Min.{" "}
               {CURRENCY_SYMBOLS[partyCurrencyCode]}1,000
             </div>
           </div>
@@ -639,7 +634,9 @@ export function TreasuryPanel({
         revenue={revenue}
         gotvPct={gotvPct}
         supPct={supPct}
+        regPct={regPct}
         psPct={psPct}
+        psSpend={psEstimatedSpend}
         netPct={netPct}
       />
 
@@ -662,7 +659,6 @@ export function TreasuryPanel({
           turnsToReachReserveFloor={party.turnsToReachReserveFloor}
           saving={reserveForm.saving}
           saveDisabled={!treasuryPlanDirty || reserveForm.saving}
-          accentColor={party.color}
           treasuryPreset={treasuryPreset}
           presetOptions={presetOptions}
           budgetSummary={[
@@ -695,7 +691,23 @@ export function TreasuryPanel({
         </>
       )}
 
-      {canViewTreasuryInsights && !insights && (
+      {canViewTreasuryInsights && !insights && insightsFailed && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
+          <span>Treasury insights could not be loaded.</span>
+          <button
+            type="button"
+            onClick={() => {
+              setInsightsFailed(false);
+              setInsightsAttempt((n) => n + 1);
+            }}
+            className="underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {canViewTreasuryInsights && !insights && !insightsFailed && (
         <div className="rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
           Loading treasury insights...
         </div>
