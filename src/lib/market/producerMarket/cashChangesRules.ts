@@ -100,8 +100,19 @@ export function closingProducerCash(
   });
 }
 
-/** Two rounded additions can straddle the adjacent representable balances. */
+/**
+ * Rounding drift allowed between the summed cash change and the closing
+ * snapshot. A turn's change is the sum of many receipt legs, so float error
+ * grows with the leg count: on a 42M balance it reached 1.1e-7 and stopped
+ * the turn. The floor is a hundredth of a cent, far below any real
+ * mismatch; very large balances still get two units in the last place.
+ */
+export const PRODUCER_CASH_SNAPSHOT_MIN_TOLERANCE = 1e-4;
+
 export function producerCashSnapshotTolerance(a: number, b: number): number {
   const magnitude = Math.max(Math.abs(a), Math.abs(b));
-  return Math.max(1e-7, magnitude > 0 ? 2 ** (Math.floor(Math.log2(magnitude)) - 51) : 0);
+  return Math.max(
+    PRODUCER_CASH_SNAPSHOT_MIN_TOLERANCE,
+    magnitude > 0 ? 2 ** (Math.floor(Math.log2(magnitude)) - 51) : 0
+  );
 }
