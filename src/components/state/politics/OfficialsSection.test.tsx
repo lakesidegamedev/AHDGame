@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { State } from "@/lib/db/types";
 import type { SerializedOfficial } from "../StatePageTabsTypes";
-import { SenateSection, StateSenateSection } from "./OfficialsSection";
+import { GovernorSection, SenateSection, StateSenateSection } from "./OfficialsSection";
 
 describe("SenateSection", () => {
   it("explains an unelected national council instead of asking admins to seed two senators", () => {
@@ -67,5 +67,17 @@ describe("empty and country-specific chambers", () => {
     );
     expect(screen.queryByText(/State senator/)).toBeNull();
     expect(screen.getByText(/Member of the Provincial Legislature/)).toBeTruthy();
+  });
+
+  it("explains on the premier card that premiers are elected apart from the legislature", () => {
+    render(
+      <GovernorSection
+        state={{ countryId: "CA", _id: "CA_SK" } as State}
+        governor={null}
+        label="Premier"
+        note="The premier is elected in a separate vote from the legislature."
+      />
+    );
+    expect(screen.getByText(/elected in a separate vote/)).toBeTruthy();
   });
 });

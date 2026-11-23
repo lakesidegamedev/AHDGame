@@ -197,6 +197,7 @@ export function GovernorSection({
    * Falls back to "governor" to preserve existing US/JP behavior.
    */
   officeType = "governor",
+  note,
 }: {
   state: State;
   governor: {
@@ -212,9 +213,11 @@ export function GovernorSection({
   } | null;
   label?: string;
   officeType?: string;
+  note?: string;
 }) {
   return (
     <Chamber title={label} meta="1 seat">
+      {note && <p className="pt-3 text-body-sm text-muted">{note}</p>}
       <ul>
         <OfficialRow
           official={
