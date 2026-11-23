@@ -20,7 +20,30 @@ interface TopProducersConsumersProps {
   consumerNote?: string;
   /** Units supplied to this market, so listed buyer receipts can be reconciled against it. */
   marketSupply?: number;
+  /** Recorded demand for this market, so the listed buyers can be reconciled against it. */
+  marketDemand?: number;
   marketLabel?: string;
+}
+
+/**
+ * Demand the listed buyers do not account for, so the list sums to the market
+ * total. Only meaningful when buyers carry recorded orders (funded markets).
+ * `unlisted` is the positive remainder; `over` is how far the listed buyers
+ * exceed recorded demand when company figures (estimated from plant output)
+ * overshoot it.
+ */
+export function unlistedDemand(
+  demand: number | undefined,
+  consumers: readonly { units: number }[],
+  sources: readonly SyntheticDemandSource[]
+): { unlisted: number; over: number } | null {
+  if (demand == null || !(demand > 0)) return null;
+  if (!sources.some((s) => s.receivedUnits != null)) return null;
+  const listed =
+    consumers.reduce((sum, c) => sum + Math.max(0, c.units), 0) +
+    sources.reduce((sum, s) => sum + Math.max(0, s.units), 0);
+  const gap = Math.round((demand - listed) * 100) / 100;
+  return gap >= 0 ? { unlisted: gap, over: 0 } : { unlisted: 0, over: -gap };
 }
 
 /** Non-company buyer receipts against market supply. Null without received figures. */
@@ -156,6 +179,7 @@ export default function TopProducersConsumers({
   commodity,
   consumerNote,
   marketSupply,
+  marketDemand,
   marketLabel,
 }: TopProducersConsumersProps) {
   const [producerPage, setProducerPage] = useState(1);
@@ -181,6 +205,7 @@ export default function TopProducersConsumers({
     producerPage * PAGE_SIZE
   );
   const fillNotes = buyerFillNotes(syntheticDemandSources, marketSupply, unit);
+  const demandGap = unlistedDemand(marketDemand, topConsumers, syntheticDemandSources);
   const pagedConsumers = topConsumers.slice(
     (consumerPage - 1) * PAGE_SIZE,
     consumerPage * PAGE_SIZE
@@ -256,6 +281,14 @@ export default function TopProducersConsumers({
               {fillNotes.sharing ? ` ${fillNotes.sharing}` : ""}
             </p>
           )}
+          {demandGap && (
+            <p className="text-xs text-muted mb-3">
+              Company figures are estimated from plant output and utilisation, not recorded orders.
+              {demandGap.over > 0
+                ? ` The listed buyers add up to ${formatUnits(demandGap.over, unit)} more than the recorded demand of ${formatUnits(marketDemand ?? 0, unit)}.`
+                : ""}
+            </p>
+          )}
           <div className="space-y-2">
             {pagedConsumers.map((c, i) => (
               <Link
@@ -309,6 +342,25 @@ export default function TopProducersConsumers({
                   </span>
                 </div>
               ))}
+            {consumerPage === Math.max(1, Math.ceil(topConsumers.length / PAGE_SIZE)) &&
+              demandGap &&
+              demandGap.unlisted > 0 && (
+                <div
+                  className="flex items-center justify-between text-sm -mx-2 px-2 py-1 rounded-lg bg-card-elevated/30 border border-dashed border-card-border"
+                  title="Recorded demand that is not matched to a listed company or buyer group."
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+                      ⚙
+                    </span>
+                    <span className="text-muted font-medium truncate">Other buyers</span>
+                    <span className="text-[10px] text-muted shrink-0">Unlisted</span>
+                  </div>
+                  <span className="text-muted font-medium tabular-nums shrink-0 ml-2 text-right">
+                    {formatUnits(demandGap.unlisted, unit)}
+                  </span>
+                </div>
+              )}
           </div>
           <Pagination
             page={consumerPage}

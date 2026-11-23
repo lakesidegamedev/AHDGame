@@ -920,7 +920,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
 
         if (fundraiseTxEntries.length > 0) {
           const thresholds = await loadTxThresholds(db);
-          void emitTxBulk(db, fundraiseTxEntries, thresholds);
+          await emitTxBulk(db, fundraiseTxEntries, thresholds);
         }
 
         return {

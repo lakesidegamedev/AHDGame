@@ -180,3 +180,14 @@ describe("StockList trade shortcut", () => {
     expect(screen.queryByRole("link", { name: /^Trade / })).toBeNull();
   });
 });
+
+describe("StockList growth line", () => {
+  it("shows no growth figure when the average is exactly zero", () => {
+    render(<StockList listings={[{ ...tradable, avgSectorGrowth: 0 }]} />);
+    expect(document.body.textContent).not.toContain("% growth");
+  });
+  it("shows a signed growth figure when there is one", () => {
+    render(<StockList listings={[{ ...tradable, avgSectorGrowth: 2.5 }]} />);
+    expect(document.body.textContent).toContain("+2.5% growth");
+  });
+});

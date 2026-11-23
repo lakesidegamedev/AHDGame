@@ -94,4 +94,30 @@ describe("ProfileAchievements", () => {
     await waitFor(() => expect(screen.getAllByText("Founding Father").length).toBeGreaterThan(0));
     expect(screen.queryByText("Edit highlights")).toBeNull();
   });
+
+  it("does not list locked badges in the showcase while the counter reads zero", async () => {
+    fetchJson.mockResolvedValue({
+      highlighted: [],
+      allAchievements: [{ ...earned, earned: false, earnedAt: null }],
+      totalEarned: 0,
+      totalAchievements: 67,
+    });
+    renderAchievements();
+
+    await waitFor(() => expect(screen.getByText("0/67")).toBeTruthy());
+    expect(screen.queryByText("Founding Father")).toBeNull();
+    expect(screen.getByText("No achievements earned yet.")).toBeTruthy();
+  });
+
+  it("counts the earned badges it lists", async () => {
+    fetchJson.mockResolvedValue({
+      highlighted: [],
+      allAchievements: [earned],
+      totalEarned: 0,
+      totalAchievements: 67,
+    });
+    renderAchievements();
+
+    await waitFor(() => expect(screen.getByText("1/67")).toBeTruthy());
+  });
 });

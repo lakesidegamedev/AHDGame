@@ -1,5 +1,6 @@
 "use client";
 
+import { compareHoldersByShares } from "@/lib/corporations/rules/holderOrder";
 import { useTranslations } from "next-intl";
 import { brandShades, resolveCorpColor } from "@/lib/corporations/brandColor";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
@@ -24,9 +25,7 @@ export default function OwnershipOverview({ corporation }: { corporation: Corpor
   const t = useTranslations("corporations.ownership");
   const total = corporation.totalShares;
   const votingTotal = totalVotingPower(corporation);
-  const holders = corporation.shareholders
-    .filter((h) => h.shares > 0)
-    .sort((a, b) => b.shares - a.shares);
+  const holders = corporation.shareholders.filter((h) => h.shares > 0).sort(compareHoldersByShares);
   const colors = brandShades(
     resolveCorpColor(corporation.brandColor, corporation._id),
     Math.min(holders.length, 5)

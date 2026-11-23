@@ -435,7 +435,8 @@ export function StockList({
             <div className="truncate text-[11px] text-muted/80">
               {listing.ceo ? `CEO ${listing.ceo.name}` : "No CEO"}
               {listing.headquartersStateName ? ` · ${listing.headquartersStateName}` : ""}
-              {` · ${listing.avgSectorGrowth >= 0 ? "+" : ""}${listing.avgSectorGrowth.toFixed(1)}% growth`}
+              {listing.avgSectorGrowth !== 0 &&
+                ` · ${listing.avgSectorGrowth > 0 ? "+" : ""}${listing.avgSectorGrowth.toFixed(1)}% growth`}
             </div>
           </div>
         </Link>

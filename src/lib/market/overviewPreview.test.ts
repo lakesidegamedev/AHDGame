@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parsePreviewRows, topBondsForPreview, topStocksForPreview } from "./overviewPreview";
+import {
+  atPriceCap,
+  parsePreviewRows,
+  topBondsForPreview,
+  topStocksForPreview,
+} from "./overviewPreview";
 
 describe("parsePreviewRows", () => {
   it("accepts a positive integer and caps it", () => {
@@ -36,5 +41,13 @@ describe("topStocksForPreview", () => {
       { id: "c", marketCap: 99, isNpp: true },
     ];
     expect(topStocksForPreview(listings, 5).map((l) => l.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("atPriceCap", () => {
+  it("flags prices on the ceiling and ignores unknown ceilings", () => {
+    expect(atPriceCap({ globalPrice: 358.1, priceCeiling: 360 })).toBe(true);
+    expect(atPriceCap({ globalPrice: 200, priceCeiling: 360 })).toBe(false);
+    expect(atPriceCap({ globalPrice: 200 })).toBe(false);
   });
 });

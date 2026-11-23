@@ -11,6 +11,16 @@ export function bondIssueMinimum(serverMinimum: number | undefined): number {
   return serverMinimum != null && serverMinimum > 0 ? serverMinimum : MIN_BOND_ISSUANCE;
 }
 
+/**
+ * The slider ceiling in whole currency units. The server ceiling can carry a
+ * fraction; the face value the player sees and submits is whole, so the
+ * slider's end stops on a whole number unless that would fall below the minimum.
+ */
+export function bondIssueSliderMax(ceiling: number, minimum: number): number {
+  const whole = Math.floor(ceiling);
+  return whole >= minimum ? whole : ceiling;
+}
+
 /** Why a face value cannot be submitted, or null when it can. */
 export function bondIssueInputProblem(args: {
   faceValue: number;
@@ -32,4 +42,20 @@ export function bondIssueRefusalText(body: unknown, fallback: string): string {
   const { message } = parseErrorBody(body);
   if (!message) return fallback;
   return message.replace(/^[a-z][A-Za-z0-9_.]*:\s+/, "").replace(/\s*\([A-Z_]+\)$/, "");
+}
+
+export type BondIssueLimit = "perIssuance" | "leverage" | "exitEquity";
+
+/** Plain-words name of the rule that currently sets the largest issue. */
+export function bondIssueLimitText(limit: BondIssueLimit | undefined): string {
+  switch (limit) {
+    case "exitEquity":
+      return "what creditors could recover if the corporation sold up";
+    case "leverage":
+      return "the debt to equity limit";
+    case "perIssuance":
+      return "the per-issue cap";
+    default:
+      return "your borrowing limits";
+  }
 }

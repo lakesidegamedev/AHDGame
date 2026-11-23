@@ -327,9 +327,10 @@ export default function CommoditiesTab({
           policy and freight. The private supply line under a commodity shows where consumed inputs
           came from. Stock and cover are the world&apos;s shadow inventory from the market ledger,
           not this corporation&apos;s. Prices here are market prices per unit. A sector page shows
-          what that plant was charged per unit for each input, which is the market price after the
-          game&apos;s price smoothing, so prices can differ. Input quantities are the same on both
-          screens: units bought a day in the last settled turn.
+          what that plant was charged per unit for each input. Plants are billed at the base price
+          moved by only the square root of how far the world price sits from base, and never below
+          70% or above 200% of base, so a price far from base shows up here only in part. Input
+          quantities are the same on both screens: units bought a day in the last settled turn.
         </p>
         {features.length > 0 && (
           <p className="pb-1 text-xs text-muted">

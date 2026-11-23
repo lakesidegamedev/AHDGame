@@ -222,9 +222,9 @@ export default function MarketMoneyPanel({
     },
     {
       key: "growth",
-      label: "Growth and building",
+      label: "Growth and building (excludes construction paid when ordered)",
       value: pnl.growthAndBuildAnchor,
-      help: "What you spend each day expanding this sector.",
+      help: "What you spend each day expanding this sector. A new plant is paid in full when you order it, so that cash is not in this line. It shows under construction in progress.",
     },
   ];
 
@@ -560,7 +560,7 @@ export default function MarketMoneyPanel({
             value={money(pnl.revenueAnchor * MONEY_PERIOD_FACTOR.annual)}
           />
           <DetailRow
-            label="Operating profit / unit produced"
+            label="Operating profit per unit made (all costs, all units made)"
             value={pnl.profitPerUnitAnchor == null ? "n/a" : unitMoney(pnl.profitPerUnitAnchor)}
           />
           <DetailRow

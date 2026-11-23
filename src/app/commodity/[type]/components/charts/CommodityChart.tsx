@@ -29,6 +29,8 @@ interface CommodityChartProps {
   basePrice: number;
   unit: string;
   scopeLabel?: string;
+  priceScale?: number;
+  formatValue?: (value: number) => string;
 }
 
 export default function CommodityChart({
@@ -36,6 +38,8 @@ export default function CommodityChart({
   basePrice,
   unit,
   scopeLabel,
+  priceScale,
+  formatValue,
 }: CommodityChartProps) {
   const [view, setView] = useState<ChartView>("price");
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
@@ -107,7 +111,12 @@ export default function CommodityChart({
         </div>
       </div>
       {view === "price" ? (
-        <PriceChart history={filteredHistory} basePrice={basePrice} />
+        <PriceChart
+          history={filteredHistory}
+          basePrice={basePrice}
+          priceScale={priceScale}
+          formatValue={formatValue}
+        />
       ) : (
         <SupplyDemandChart history={filteredHistory} unit={unit} />
       )}

@@ -140,3 +140,18 @@ describe("RunMeter past the production push limit", () => {
     expect(text).toContain("Installed capacity is lower now");
   });
 });
+
+describe("run meter input shortage", () => {
+  it("names the missing input in the legend", () => {
+    const { container } = render(
+      <RunMeter
+        capacityUnits={100}
+        producedUnits={60}
+        soldUnits={60}
+        idleCauses={[{ cause: "inputs", units: 40, heldInput: "Steel" }]}
+        sectorType="manufacturing"
+      />
+    );
+    expect(container.textContent).toContain("Stopped: short of Steel");
+  });
+});
