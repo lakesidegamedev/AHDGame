@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Slider } from "@/components/ui";
 import { WAGE_LEVEL_MIN, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
+import { estimateWageChange } from "@/lib/corporations/rules/bulkWagePreview";
 import type { SectorData } from "../types";
 
 interface WageLevelPanelProps {
@@ -15,11 +16,15 @@ interface WageLevelPanelProps {
   wageError?: boolean;
   onWageChange: (value: number) => void;
   onSave: () => void;
+  /** Wage bill per turn at the saved wage level, for the change preview. Null when unknown. */
+  labourCostPerTurn?: number | null;
+  /** Formats a per-turn money amount in the viewer's display currency. */
+  formatCost?: (amount: number) => string;
 }
 
 /** Round a wage level to a clean slider step and avoid float dust (e.g. 1.0500000001). */
 function roundWage(value: number): number {
-  return Math.round(value * 20) / 20; // 0.05 steps
+  return Math.round(value * 100) / 100; // 0.01 steps, the same grain the API stores
 }
 
 function pctVsBaseline(level: number): string {
@@ -36,10 +41,19 @@ export default function WageLevelPanel({
   wageError,
   onWageChange,
   onSave,
+  labourCostPerTurn,
+  formatCost,
 }: WageLevelPanelProps) {
   const activeLevel = sector.wageLevel ?? 1;
   const draft = roundWage(wageDraft);
   const aboveBaseline = draft > 1;
+  const baselineVsMedian = sector.payVsMedian;
+  const previewCurrent = labourCostPerTurn ?? null;
+  const hasWorkers = (sector.workers ?? 0) > 0;
+  const preview =
+    hasWorkers && previewCurrent != null && formatCost
+      ? estimateWageChange(previewCurrent, activeLevel, draft, 0)
+      : null;
   const floorBinds = sector.minWageUplift != null && sector.minWageUplift > 0;
 
   return (
@@ -63,16 +77,27 @@ export default function WageLevelPanel({
             {activeLevel.toFixed(2)}× baseline ({pctVsBaseline(activeLevel)})
           </span>
         </span>
-        {sector.payVsMedian != null && (
-          <span
-            className="text-xs text-muted"
-            title="What this sector actually pays compared with the median wage across the region. Reflects the floor and other effects, so it can differ from your setting."
-          >
-            Actual pay:{" "}
-            <span className="text-foreground font-medium">
-              {sector.payVsMedian.toFixed(2)}× regional median
+        {baselineVsMedian != null && (
+          <>
+            <span
+              className="text-xs text-muted"
+              title="How this industry's standard pay compares with the median across all industries. It does not include your setting."
+            >
+              Industry baseline:{" "}
+              <span className="text-foreground font-medium">
+                {baselineVsMedian.toFixed(2)}× the median industry
+              </span>
             </span>
-          </span>
+            <span
+              className="text-xs text-muted"
+              title="Your setting times the industry baseline, against the median across all industries. A minimum-wage floor can lift real pay above this."
+            >
+              Your pay:{" "}
+              <span className="text-foreground font-medium">
+                {(activeLevel * baselineVsMedian).toFixed(2)}× the median industry
+              </span>
+            </span>
+          </>
         )}
         {floorBinds && (
           <span
@@ -108,7 +133,7 @@ export default function WageLevelPanel({
             <Slider
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step={0.01}
               value={draft}
               onChange={(e) => onWageChange(roundWage(Number(e.target.value)))}
               variant={aboveBaseline ? "error" : "success"}
@@ -118,7 +143,7 @@ export default function WageLevelPanel({
               type="number"
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step={0.01}
               value={draft}
               onChange={(e) =>
                 onWageChange(
@@ -138,6 +163,12 @@ export default function WageLevelPanel({
               {wageSaving ? "Saving..." : "Set wage"}
             </button>
           </div>
+          {preview && formatCost && (
+            <p className="text-xs text-muted" role="status">
+              Wage bill at {draft.toFixed(2)}×: about {formatCost(preview.projected)} per turn, now{" "}
+              {formatCost(preview.current)}. An estimate: output and other costs held constant.
+            </p>
+          )}
           {wageMessage && (
             <p className={`text-xs font-medium ${wageError ? "text-error" : "text-success"}`}>
               {wageMessage}

@@ -5,6 +5,7 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import Link from "next/link";
 import {
   MONEY_PERIODS,
@@ -105,6 +106,11 @@ export default function FinancialsTab({
   financialFogOfWar,
 }: FinancialsTabProps) {
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
+  const { formatAmount: formatAnchor } = useCurrency();
+  const constructionPaidAnchor = sectors.reduce(
+    (sum, s) => sum + Math.max(0, s.constructionInProgressAnchor ?? 0),
+    0
+  );
   const tArrears = useTranslations("corporations.arrears");
   const [view, setView] = useState<StatementView>("income");
   // "all" or a country id. A country the corporation has left falls back to All.
@@ -248,7 +254,12 @@ export default function FinancialsTab({
                   <Td align="right">~{money.fmt(scale(revenue))}</Td>
                 </tr>
                 <tr>
-                  <Td className="text-muted">Total costs</Td>
+                  <Td
+                    className="text-muted"
+                    title="Operating costs plus bond interest. Tax is not included."
+                  >
+                    Total costs
+                  </Td>
                   <Td align="right">
                     {lastQ.totalCosts != null
                       ? `(${money.fmt(scale(lastQ.totalCosts * TURNS_PER_DAY))})`
@@ -376,11 +387,12 @@ export default function FinancialsTab({
                   {financials.subsidyBenefit > 0 && (
                     <StatementLine
                       indent
-                      label="Subsidy benefit"
+                      label="Subsidy benefit (estimate)"
                       amount={fmt(scale(financials.subsidyBenefit))}
-                      amountClass="text-success"
+                      amountClass="text-muted"
                       pct={pctOf(financials.subsidyBenefit)}
-                      title="Margin from active government subsidies, +7.5% each."
+                      note="Already in the costs above"
+                      title="Estimate of the +7.5% margin from active government subsidies on the sectors they cover. It lowers the sector costs above, so it is not added to gross profit again."
                     />
                   )}
                   {financials.growthCosts > 0 && (
@@ -390,6 +402,16 @@ export default function FinancialsTab({
                       amount={cost(financials.growthCosts)}
                       pct={pctOf(financials.growthCosts)}
                       title="Cost of growing sector revenue. Scales with revenue and growth rate."
+                    />
+                  )}
+                  {constructionPaidAnchor > 0 && (
+                    <StatementLine
+                      indent
+                      label="Construction paid, still to arrive"
+                      amount={formatAnchor(constructionPaidAnchor)}
+                      amountClass="text-muted"
+                      note="Not in the costs above"
+                      title="The unfinished share of builds you have already paid for. It was charged in full when each build was ordered, so it is not part of this period's growth cost or profit."
                     />
                   )}
                   <StatementLine

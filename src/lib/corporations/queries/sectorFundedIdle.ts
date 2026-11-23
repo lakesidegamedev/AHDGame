@@ -58,7 +58,8 @@ export function fundedIdleWeights(
       ? Math.min(shortfall, made * (1 / billed - 1))
       : null;
   if (inputCut != null) {
-    if (inputCut > 0) weights.push({ cause: "inputs", w: inputCut });
+    if (inputCut > 0)
+      weights.push({ cause: "inputs", w: inputCut, ...(heldInput ? { heldInput } : {}) });
     if (cutBy.includes("cash") && shortfall - inputCut > 0)
       weights.push({ cause: "cash", w: shortfall - inputCut });
   } else if (shortfall > 0) {
@@ -73,7 +74,12 @@ export function fundedIdleWeights(
         : (receipt.operatingArrears ?? 0) > 0
           ? "cash"
           : null;
-    if (cause) weights.push({ cause, w: shortfall });
+    if (cause)
+      weights.push({
+        cause,
+        w: shortfall,
+        ...(cause === "inputs" && heldInput ? { heldInput } : {}),
+      });
   }
   return weights;
 }

@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -259,9 +262,9 @@ describe("POST /api/events/[id]/resolve", () => {
 
     const freeResolve = callRoute(makeRequest("free"), instanceId.toHexString());
     await freeApplied;
-    const paidResponse = await callRoute(makeRequest("paid"), instanceId.toHexString());
+    const paidResolve = callRoute(makeRequest("paid"), instanceId.toHexString());
     releaseFree();
-    const freeResponse = await freeResolve;
+    const [freeResponse, paidResponse] = await Promise.all([freeResolve, paidResolve]);
 
     expect(freeResponse.status).toBe(200);
     expect(paidResponse.status).toBe(400);

@@ -66,6 +66,15 @@ describe("historical currency presentation through the provider", () => {
     await act(async () => state.onGameEvent?.());
     await waitFor(() => expect(result.current.convert(100)).toBe(90));
   });
+  it("keeps cached rates when a later refresh fails instead of flipping to the anchor", async () => {
+    const result = await currency();
+    expect(result.current.convert(100)).toBe(85);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+    await act(async () => state.onGameEvent?.());
+    expect(result.current.forexRates).not.toBeNull();
+    expect(result.current.convert(100)).toBe(85);
+    expect(result.current.resolveDisplayAt(100, undefined).symbol).toBe("DM");
+  });
   it("displays marks and accepts marks while preserving raw ledger conversion", async () => {
     const result = await currency();
     const display = result.current.resolveDisplayAt(100, undefined);

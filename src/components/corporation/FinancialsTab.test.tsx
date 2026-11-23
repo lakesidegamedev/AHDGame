@@ -2,7 +2,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import FinancialsTab from "./FinancialsTab";
-import type { CorporationDetail, Financials, FinancialFogMeta } from "./CorporationPageTypes";
+import type {
+  CorporationDetail,
+  Financials,
+  FinancialFogMeta,
+  SectorDetail,
+} from "./CorporationPageTypes";
 import messages from "../../../messages/en/corporations.json";
 
 vi.mock("next-intl", () => ({
@@ -91,6 +96,28 @@ describe("corporation income statement", () => {
     expect(screen.queryByText("Arrears remaining")).toBeNull();
     view.rerender(<FinancialsTab {...props} financials={financials} />);
     expect(screen.queryByText("Arrears remaining")).toBeNull();
+  });
+  it("lists construction paid up front outside the costs, only when something is being built", () => {
+    const props = {
+      corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
+      financials,
+      balanceSheet: null,
+      bondInfo: null,
+      corpId: "test",
+      periodView: "daily" as const,
+      onPeriodViewChange: vi.fn(),
+    };
+    const none = render(<FinancialsTab {...props} sectors={[]} />);
+    expect(screen.queryByText("Construction paid, still to arrive")).toBeNull();
+    none.unmount();
+    render(
+      <FinancialsTab
+        {...props}
+        sectors={[{ constructionInProgressAnchor: 11_000 } as unknown as SectorDetail]}
+      />
+    );
+    expect(screen.getByText("Construction paid, still to arrive")).toBeTruthy();
+    expect(screen.getByText("M11000")).toBeTruthy();
   });
   it("shows the estimate-to-recorded change before a retained loss", () => {
     render(

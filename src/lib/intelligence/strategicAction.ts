@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -66,7 +67,7 @@ export interface StrategicActionResult {
  * Reaching here at all required exact-tier coverage through the action gate, so
  * the patron has genuinely FOUND the programme rather than guessed at it.
  */
-export async function applyStrategicAction(
+async function applyStrategicActionInTransaction(
   db: Db,
   ownerCountryId: CountryId,
   targetCountryId: CountryId,
@@ -84,4 +85,15 @@ export async function applyStrategicAction(
   if (isPatron) await applyCovertCrackdown(db, targetCountryId, turn);
 
   return { sabotaged: true, crackdown: isPatron };
+}
+
+export async function applyStrategicAction(
+  db: Db,
+  ownerCountryId: CountryId,
+  targetCountryId: CountryId,
+  turn: number
+): Promise<StrategicActionResult> {
+  return withSessionDb(db, (tx) =>
+    applyStrategicActionInTransaction(tx, ownerCountryId, targetCountryId, turn)
+  );
 }

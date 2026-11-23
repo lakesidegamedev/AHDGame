@@ -331,9 +331,9 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               </p>
             )}
             <p>
-              Each {data.breakthroughInterval ?? 6} turns, accumulated R&amp;D may spark a free
-              revenue boost to one of your sectors. The chance rises with your R&amp;D score and is
-              guaranteed at 200.
+              Every {data.breakthroughInterval ?? 6} turns there is one roll. The chance is your
+              R&amp;D score divided by 200, guaranteed at 200. A hit adds 2% to 10% free capacity to
+              one random sector (1% to 10% for extraction).
             </p>
           </div>
         </DenseSection>

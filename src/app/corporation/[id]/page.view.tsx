@@ -19,6 +19,7 @@ import { ManagePrivateShareholdersPanel } from "@/components/corporation/ManageP
 import IndexCommitteePanel from "@/components/corporation/IndexCommitteePanel";
 import { NationalizationStatusCard } from "@/components/corporation/NationalizationStatusCard";
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
+import { SwitchToCeoCharacterNotice } from "@/components/corporation/SwitchToCeoCharacterNotice";
 import { NoticeStrip } from "@/components/corporation/ledger/NoticeStrip";
 
 import BondMaturityNotice from "@/components/corporation/BondMaturityNotice";
@@ -27,7 +28,11 @@ import PrivateNotListedNotice from "@/components/corporation/PrivateNotListedNot
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 
 import { SuperTabNav } from "@/components/nav/SuperTabNav";
-import { CORP_LEGACY_TAB_MAP, corpTabIdFor } from "@/components/corporation/CorporationTabGroups";
+import {
+  CORP_LEGACY_TAB_MAP,
+  corpTabIdFor,
+  isCeoOfficeBlocked,
+} from "@/components/corporation/CorporationTabGroups";
 
 import { AutopilotCard } from "@/components/corporation/AutopilotCard";
 import {
@@ -143,19 +148,25 @@ export function renderCorporationDetailPageView(
         >
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
-            <Link
-              href={`/stockmarket/${exchange}?tab=stocks`}
-              className="hover:text-foreground transition-colors"
-            >
-              {exchangeLabel}
-            </Link>
-            <span aria-hidden>/</span>
-            <Link
-              href={`/stockmarket/${exchange}?tab=stocks`}
-              className="hover:text-foreground transition-colors"
-            >
-              Corporations
-            </Link>
+            {corporation.isPrivate ? (
+              <span>Private corporation</span>
+            ) : (
+              <>
+                <Link
+                  href={`/stockmarket/${exchange}?tab=stocks`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {exchangeLabel}
+                </Link>
+                <span aria-hidden>/</span>
+                <Link
+                  href={`/stockmarket/${exchange}?tab=stocks`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  Corporations
+                </Link>
+              </>
+            )}
             <span aria-hidden>/</span>
             <span className="text-foreground font-medium truncate">{corporation.name}</span>
           </nav>
@@ -166,6 +177,11 @@ export function renderCorporationDetailPageView(
             isCeo={isCeo}
             corpId={id}
             exchangeLabel={exchangeLabel}
+            bookValuePerShare={
+              balanceSheet && corporation.totalShares > 0
+                ? balanceSheet.equity.bookValue / corporation.totalShares
+                : null
+            }
             creditRating={
               resolveCreditStanding(corporation, bondInfo?.creditRating).rating ?? undefined
             }
@@ -262,6 +278,14 @@ export function renderCorporationDetailPageView(
               corporationName={corporation.name}
             />
           )}
+
+          {!isCeo &&
+            corporation.viewerAccountRunsCorporation &&
+            ceo?.characterId &&
+            !ceo.isNpp &&
+            !ceo.isImperial && (
+              <SwitchToCeoCharacterNotice characterId={ceo.characterId} characterName={ceo.name} />
+            )}
 
           {corporation.isPrivate && !isCeo && (isModerator || isAdmin) && (
             <NoticeStrip
@@ -449,6 +473,14 @@ export function renderCorporationDetailPageView(
               </span>{" "}
               <span className="text-muted">
                 Shareholders voted you their first choice. You can hold one CEO seat at a time.
+              </span>
+            </NoticeStrip>
+          )}
+
+          {!!myCharacterId && isCeoOfficeBlocked(searchParams.get("tab"), isCeo) && (
+            <NoticeStrip tone="warning" tag="CEO Office">
+              <span className="text-muted">
+                The CEO Office is only open to this corporation&apos;s CEO.
               </span>
             </NoticeStrip>
           )}

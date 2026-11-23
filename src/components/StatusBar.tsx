@@ -331,6 +331,9 @@ export function StatusBar({
   );
 
   const influence = stats?.politicalInfluence ?? 0;
+  // Until the first stats arrive the chips show a neutral mark, not zeros.
+  const statsPending = !stats;
+  const PENDING_VALUE = "…";
 
   // Elections compact data
   const elStats = stats?.electionStats ?? null;
@@ -547,8 +550,8 @@ export function StatusBar({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             }
-            value={stats?.actions ?? 0}
-            ariaLabel={`${stats?.actions ?? 0} actions`}
+            value={statsPending ? PENDING_VALUE : stats.actions}
+            ariaLabel={statsPending ? "Actions loading" : `${stats.actions} actions`}
           >
             <p className="font-semibold text-foreground mb-2">Actions</p>
             <div className="space-y-1 mb-2">
@@ -614,8 +617,12 @@ export function StatusBar({
                 />
               </svg>
             }
-            value={compactFaceHome(stats?.campaignFundsStored ?? 0)}
-            ariaLabel={`Campaign funds: ${compactFaceHome(stats?.campaignFundsStored ?? 0)}`}
+            value={statsPending ? PENDING_VALUE : compactFaceHome(stats.campaignFundsStored ?? 0)}
+            ariaLabel={
+              statsPending
+                ? "Campaign funds loading"
+                : `Campaign funds: ${compactFaceHome(stats.campaignFundsStored ?? 0)}`
+            }
           >
             <div className="flex items-center justify-between mb-2">
               <p className="font-semibold text-foreground">Campaign funds</p>
@@ -700,8 +707,12 @@ export function StatusBar({
                 />
               </svg>
             }
-            value={compactFaceHome(stats?.personalHomeLiquid ?? 0)}
-            ariaLabel={`Personal cash: ${compactFaceHome(stats?.personalHomeLiquid ?? 0)}`}
+            value={statsPending ? PENDING_VALUE : compactFaceHome(stats.personalHomeLiquid ?? 0)}
+            ariaLabel={
+              statsPending
+                ? "Personal cash loading"
+                : `Personal cash: ${compactFaceHome(stats.personalHomeLiquid ?? 0)}`
+            }
           >
             <div className="flex items-center justify-between mb-2">
               <p className="font-semibold text-foreground">Personal cash</p>
@@ -786,10 +797,14 @@ export function StatusBar({
                     <span className="hidden sm:inline text-[10px] font-semibold text-indigo-400/60">
                       PI
                     </span>
-                    {Math.round(influence)}%
+                    {statsPending ? PENDING_VALUE : `${Math.round(influence)}%`}
                   </>
                 }
-                ariaLabel={`Political influence: ${Math.round(influence)}%`}
+                ariaLabel={
+                  statsPending
+                    ? "Political influence loading"
+                    : `Political influence: ${Math.round(influence)}%`
+                }
               >
                 <p className="font-semibold text-foreground mb-2">Political influence</p>
                 <p className="text-[11px] text-muted leading-relaxed">
@@ -833,10 +848,12 @@ export function StatusBar({
                         <span className="hidden sm:inline text-[10px] font-semibold opacity-60">
                           FAV
                         </span>
-                        {Math.round(fav)}%
+                        {statsPending ? PENDING_VALUE : `${Math.round(fav)}%`}
                       </>
                     }
-                    ariaLabel={`Favorability: ${Math.round(fav)}%`}
+                    ariaLabel={
+                      statsPending ? "Favorability loading" : `Favorability: ${Math.round(fav)}%`
+                    }
                   >
                     <p className="font-semibold text-foreground mb-2">Favorability</p>
                     <p className="text-[11px] text-muted leading-relaxed">

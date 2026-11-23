@@ -134,7 +134,13 @@ export default function RunMeter({
                 ? t("heldByInputHelp", { input: c.heldInput, sites })
                 : t("heldByCashHelp", { sites }),
             }
-          : causeMeta[c.cause];
+          : c.cause === "inputs" && c.heldInput
+            ? {
+                ...causeMeta.inputs,
+                label: t("stoppedByInput", { input: c.heldInput }),
+                help: t("stoppedByInputHelp", { input: c.heldInput, sites }),
+              }
+            : causeMeta[c.cause];
       return {
         key: `idle-${c.cause}`,
         group: GROUP_OF[c.cause] ?? "unplanned",

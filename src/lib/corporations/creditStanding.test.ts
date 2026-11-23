@@ -48,4 +48,20 @@ describe("weightedComponentComposite", () => {
     expect(notched.compositeScore).toBe(plain.compositeScore);
     expect(notched.rating).not.toBe(plain.rating === "CCC" ? "CCC" : plain.rating);
   });
+
+  it("does not pair a live rating with a snapshot score from a different rating", () => {
+    const snapshot = { creditRatingSnapshot: "AA", creditCompositeSnapshot: 88 };
+    expect(resolveCreditStanding(snapshot, { rating: "AAA" })).toEqual({
+      rating: "AAA",
+      composite: null,
+    });
+    expect(resolveCreditStanding(snapshot, { rating: "AA" })).toEqual({
+      rating: "AA",
+      composite: 88,
+    });
+    expect(resolveCreditStanding(snapshot, { rating: "AAA", compositeScore: 100 })).toEqual({
+      rating: "AAA",
+      composite: 100,
+    });
+  });
 });

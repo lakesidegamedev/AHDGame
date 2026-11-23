@@ -27,7 +27,7 @@ import RunReport from "../components/RunReport";
 import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
-import { fmtUnits, fmtPct } from "../lib/plants";
+import { fmtUnits, fmtPct, fmtTeuEstimate, buildOrderMoney } from "../lib/plants";
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import {
   estimateSectorFullCapacityOneHopFreightTeu,
@@ -206,7 +206,7 @@ export default function PlantPanel({
               {fullCapacityFreightEstimate != null && (
                 <p>
                   {t("freightOneHopEstimate", {
-                    estimate: fmtUnits(fullCapacityFreightEstimate),
+                    estimate: fmtTeuEstimate(fullCapacityFreightEstimate),
                   })}
                 </p>
               )}
@@ -247,7 +247,7 @@ export default function PlantPanel({
         }`}
       >
         <p className="text-body-sm font-medium text-muted">
-          {capitalizeFacility(sites)} {mothballed ? "in cold storage" : "running"}
+          {capitalizeFacility(sites)} {mothballed ? "in cold storage" : "built"}
         </p>
         <p className="mt-1 flex items-baseline gap-2">
           <span className="text-display font-bold tabular-nums text-foreground">
@@ -268,7 +268,7 @@ export default function PlantPanel({
           </InfoTooltip>
           {plantsBeingBuilt > 0 && (
             <span className="text-body-sm text-muted">
-              · {fmtUnits(plantsBeingBuilt)} more being built
+              · {fmtUnits(plantsBeingBuilt)} more still being built, not counted here
             </span>
           )}
         </p>
@@ -417,7 +417,7 @@ export default function PlantPanel({
           value={fmtUnits(plantsBeingBuilt)}
           sub={
             plants.constructionInProgressAnchor > 0
-              ? `${money(plants.constructionInProgressAnchor)} paid`
+              ? `${money(plants.constructionInProgressAnchor)} paid for what is still to arrive`
               : "nothing on order"
           }
           help={`${vocab.plural.charAt(0).toUpperCase()}${vocab.plural.slice(1)} you have paid for that are still under construction. They arrive a few at a time and are finished on the turn shown in the build list.`}
@@ -457,6 +457,7 @@ export default function PlantPanel({
               // quoting the queue in them read as though you were buying units
               // of output directly.
               const { ordered: sitesOrdered, built: sitesDelivered } = orderPlants(o);
+              const orderMoney = buildOrderMoney(o);
               const sitesPerTurn = unitsPerTurn != null ? unitsPerTurn / unitsPerPlant : null;
               const orderedNoun = sitesOrdered === 1 ? vocab.singular : vocab.plural;
               return (
@@ -475,9 +476,9 @@ export default function PlantPanel({
                         {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
-                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(o.costPaidAnchor)} paid`
-                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(o.costPaidAnchor)} paid`
-                          : `arrives next turn · ${money(o.costPaidAnchor)} paid`}
+                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(orderMoney.paid)} paid`
+                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${money(orderMoney.paid)} paid`
+                          : `arrives next turn · ${money(orderMoney.paid)} paid`}
                       </p>
                     </div>
                     {isCeo && o.turnsRemaining > 0 && (
@@ -485,7 +486,7 @@ export default function PlantPanel({
                         type="button"
                         onClick={() => onCancelOrder(o.orderIndex)}
                         disabled={busy}
-                        title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back.`}
+                        title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back: ${money(orderMoney.refund)}.`}
                         aria-label={`Cancel the order placed on turn ${o.startTurn}`}
                         className="inline-flex shrink-0 items-center gap-1 rounded-md border border-card-border px-2 py-1 text-body-xs font-medium text-muted transition-colors hover:border-error/40 hover:text-error disabled:opacity-40"
                       >
@@ -493,12 +494,24 @@ export default function PlantPanel({
                       </button>
                     )}
                   </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-track">
+                  <div
+                    className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(o.progress * 100)}
+                    aria-label={`${Math.round(o.progress * 100)}% of the ordered capacity has arrived`}
+                  >
                     <div
                       className="h-full bg-info transition-[width] duration-500"
                       style={{ width: `${o.progress * 100}%` }}
                     />
                   </div>
+                  <p className="mt-1 text-body-xs text-muted">
+                    Bar: {Math.round(o.progress * 100)}% of the ordered capacity has arrived. A{" "}
+                    {vocab.singular} only runs once it is finished, and the bar is not the share
+                    paid.
+                  </p>
                 </li>
               );
             })}

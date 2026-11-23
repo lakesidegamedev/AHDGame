@@ -242,6 +242,44 @@ describe("Metrics v2 approval source", () => {
     expect(national).toContain("nationalDeficit");
     for (const id of states.map((state) => state._id))
       expect(result!.modifiersByRegion!.get(id)!.filter((m) => fiscal.has(m.id))).toEqual([]);
-    expect(result!.regionalModifiersByRegion!.get("SCO")).toEqual([]);
+    // Its own 2% surplus earns both regional bonuses; the national deficit never reaches it.
+    expect(result!.regionalModifiersByRegion!.get("SCO")!.map((m) => m.id)).toEqual([
+      "regionalBalancedBudget",
+      "regionalFiscalDiscipline",
+    ]);
   });
+});
+
+it("does not compare converted currency observations with an incompatible index reference", async () => {
+  const converted = boards.map((board) =>
+    board.observations["02"]
+      ? {
+          ...board,
+          observations: {
+            ...board.observations,
+            "02": {
+              ...board.observations["02"],
+              value: 25000,
+              definitionVersion: 2 as const,
+              unit: "GBP per person",
+            },
+          },
+          gameplayReferences: {
+            ...board.gameplayReferences,
+            "02": { value: 1, definitionVersion: 2 as const, unit: "old index" },
+          },
+        }
+      : board
+  );
+  const result = await loadResetApprovalModifiers(
+    db as unknown as Db,
+    "UK",
+    states.map((s) => s._id),
+    game,
+    1,
+    converted,
+    []
+  );
+  expect(result!.nationalModifiers.find((m) => m.id === "national_performance")).toBeUndefined();
+  expect([...result!.basesByRegion.values()]).toEqual(states.map(() => 50));
 });

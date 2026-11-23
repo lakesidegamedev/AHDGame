@@ -168,7 +168,6 @@ export async function loadCorporationLookupInputs({
             nationalSupply: 1,
             nationalDemand: 1,
             reachablePrices: 1,
-            demandTruncatedUnits: 1,
           },
         }
       )

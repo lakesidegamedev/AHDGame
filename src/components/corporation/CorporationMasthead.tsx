@@ -35,6 +35,8 @@ interface CorporationMastheadProps {
   corpId: string;
   /** Short exchange name ("NYSE"), or "Global" for a country with no venue. */
   exchangeLabel: string;
+  /** Equity over shares, shown instead of a price for an unlisted private corporation. */
+  bookValuePerShare?: number | null;
   creditRating?: string;
   /** Retained income after dividends, daily basis, corp currency. */
   retainedDaily: number | null;
@@ -65,6 +67,7 @@ export function CorporationMasthead({
   isCeo,
   corpId,
   exchangeLabel,
+  bookValuePerShare = null,
   creditRating,
   retainedDaily,
   netIncomeDaily = null,
@@ -120,9 +123,11 @@ export function CorporationMasthead({
 
   // A public corp's price is public knowledge; a private corp shows it only to
   // its CEO or controlling parent CEO (mirrors the API insider rule).
+  // An unlisted private corporation has no market, so no quote or change at all.
   const priceVisible =
     !corporation.isPrivate || isCeo || !!corporation.viewerIsControllingParentCeo;
-  const { series, dayChange, loading: historyLoading } = useSharePriceHistory(corpId, priceVisible);
+  const quoteShown = priceVisible && corporation.isPrivate !== true;
+  const { series, dayChange, loading: historyLoading } = useSharePriceHistory(corpId, quoteShown);
 
   const fogged = financialFogOfWar != null;
   const fogTitle = fogged
@@ -148,7 +153,7 @@ export function CorporationMasthead({
     corporation.totalShares > 0 && Number.isFinite(corporation.publicFloat)
       ? (corporation.publicFloat / corporation.totalShares) * 100
       : null;
-  const hasPrice = priceVisible && Number.isFinite(corporation.sharePrice);
+  const hasPrice = quoteShown && Number.isFinite(corporation.sharePrice);
 
   const nationalizationRisk = corporation.nationalizationRisk;
   const threat = corporation.nationalizationThreat;
@@ -178,9 +183,26 @@ export function CorporationMasthead({
   }
   const mktCapCell: FigureCell | null =
     priceVisible && Number.isFinite(corporation.marketCapitalization)
-      ? { key: "cap", label: "Mkt cap", value: money.fmt(corporation.marketCapitalization) }
+      ? corporation.isPrivate
+        ? {
+            key: "cap",
+            label: "Valuation",
+            title: "Estimated value of all shares. Private shares have no market price.",
+            value: money.fmt(corporation.marketCapitalization),
+          }
+        : { key: "cap", label: "Mkt cap", value: money.fmt(corporation.marketCapitalization) }
+      : null;
+  const bookCell: FigureCell | null =
+    corporation.isPrivate && bookValuePerShare != null && Number.isFinite(bookValuePerShare)
+      ? {
+          key: "book",
+          label: "Book value / share",
+          title: "Assets minus debt, per share. Private shares have no market price.",
+          value: money.fmtPrice(bookValuePerShare),
+        }
       : null;
   if (mktCapCell) cells.push(mktCapCell);
+  if (bookCell) cells.push(bookCell);
   if (Number.isFinite(corporation.totalShares) && corporation.totalShares > 0) {
     cells.push({
       key: "shares",

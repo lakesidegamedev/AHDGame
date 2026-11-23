@@ -126,4 +126,18 @@ describe("CeoOperationsPanel — bulk by type", () => {
       });
     });
   });
+
+  it("asks for confirmation, with the retooling cost, before retooling a sector", async () => {
+    const fetchSpy = vi.mocked(global.fetch);
+    const { SECTOR_STRATEGIES } = await import("@/lib/constants/sectorStrategies");
+    const [first, second] = SECTOR_STRATEGIES.energy;
+    const strategyVm = JSON.parse(JSON.stringify(vm));
+    strategyVm.holdingsByRegion[0].sectors[0].strategyId = first.id;
+    render(<CeoOperationsPanel vm={strategyVm as never} corpId="c1" onRefresh={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Production method"), { target: { value: second.id } });
+    expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("/strategy"))).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Retool" }));
+    expect(screen.getByTestId("retool-confirm").textContent).toMatch(/Retooling cost/);
+    expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("/strategy"))).toHaveLength(0);
+  });
 });

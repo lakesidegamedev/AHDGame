@@ -34,7 +34,7 @@ it.each([0, 4800])(
     );
     expect(html).toContain(`M${income / 24}`);
     expect(html).toContain(`M${(income - 2400) / 24}`);
-    expect(html).toContain("Net margin");
+    expect(html).toContain("Pre-tax margin");
     expect(html).toContain(income ? "50.0%" : "n/a");
   }
 );

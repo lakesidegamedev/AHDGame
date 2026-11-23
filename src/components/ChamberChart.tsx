@@ -7,6 +7,7 @@
 import { PartyLogo } from "@/components/PartyLogo";
 import type { CoalitionViewData } from "@/components/legislature/useCoalitionView";
 import type { CountryId } from "@/lib/constants/countriesCore";
+import { seatSharePercents } from "@/lib/legislature/seatShares";
 import { computeRowRadii, getParliamentSizing } from "@/lib/charts/parliamentSizing";
 
 export interface PartySeatsDisplay {
@@ -328,6 +329,16 @@ export function SeatLegend({
   total: number;
   coalitionView?: CoalitionViewData | null;
 }) {
+  const shares = seatSharePercents(
+    seats.map((p) => p.seats),
+    total
+  );
+  const sharePct = new Map(seats.map((p, i) => [p.party, shares[i]]));
+  const pctOf = (p: { party: string }) => (sharePct.get(p.party) ?? 0).toFixed(1);
+  const groupPct = (members: Array<{ party: string }>) =>
+    (
+      members.reduce((sum, p) => sum + Math.round((sharePct.get(p.party) ?? 0) * 10), 0) / 10
+    ).toFixed(1);
   if (coalitionView) {
     return (
       <div className="space-y-3">
@@ -348,7 +359,7 @@ export function SeatLegend({
                   {group.totalSeats}
                 </span>
                 <span className="text-[10px] text-muted/60 tabular-nums">
-                  ({total > 0 ? ((group.totalSeats / total) * 100).toFixed(1) : "0"}%)
+                  ({groupPct(group.members)}%)
                 </span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-[18px]">
@@ -367,9 +378,7 @@ export function SeatLegend({
                     >
                       {p.seats}
                     </span>
-                    <span className="text-[10px] text-muted/60 tabular-nums">
-                      ({total > 0 ? ((p.seats / total) * 100).toFixed(1) : "0"}%)
-                    </span>
+                    <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
                   </div>
                 ))}
               </div>
@@ -395,9 +404,7 @@ export function SeatLegend({
                 >
                   {p.seats}
                 </span>
-                <span className="text-[10px] text-muted/60 tabular-nums">
-                  ({total > 0 ? ((p.seats / total) * 100).toFixed(1) : "0"}%)
-                </span>
+                <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
               </div>
             ))}
           </div>
@@ -421,9 +428,7 @@ export function SeatLegend({
           <span className="text-xs font-semibold tabular-nums" style={{ color: p.partyColor }}>
             {p.seats}
           </span>
-          <span className="text-[10px] text-muted/60 tabular-nums">
-            ({total > 0 ? ((p.seats / total) * 100).toFixed(1) : "0"}%)
-          </span>
+          <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
         </div>
       ))}
     </div>

@@ -55,7 +55,7 @@ export function MastheadIdentity({
     <div className="flex min-w-0 flex-col justify-between gap-4">
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
         <span className="rounded-[3px] border border-primary px-2 py-1 text-foreground">
-          {exchangeLabel}: {ticker}
+          {corporation.isPrivate ? `Private: ${ticker}` : `${exchangeLabel}: ${ticker}`}
         </span>
         {isCeo ? (
           // The CEO changes the sector type in Settings; the label is the

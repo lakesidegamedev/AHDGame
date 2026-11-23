@@ -74,6 +74,13 @@ describe("CommoditiesTab private supply", () => {
     ).toBeTruthy();
   });
 
+  it("says why the charged input price differs from the market price", async () => {
+    render(<CommoditiesTab corpId="buyer" isCeo />);
+    await waitFor(() => expect(screen.getByText("Energy")).toBeTruthy());
+    expect(screen.getByText(/square root of how far the world price sits from base/)).toBeTruthy();
+    expect(screen.queryByText(/price smoothing/)).toBeNull();
+  });
+
   it("reconciles private delivery with consumption and the prior turn", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,

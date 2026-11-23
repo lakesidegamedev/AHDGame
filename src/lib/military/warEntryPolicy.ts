@@ -5,9 +5,6 @@ import type { ConflictDoc, TreatyEntry } from "@/lib/db/types/conflict";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
 import { mobilizeImmediateWarEntry } from "@/lib/nppAutonomy/autonomousWarCommands";
 import { joinSide } from "@/lib/military/joinSide";
-import type { CountryAlignment } from "@/lib/db/types/countryAlignment";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { PersistedSphereMembership } from "@/lib/world/spheres/membershipStore";
 import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 import type { InternationalOrganizationDef } from "@/lib/constants/internationalOrganizations";
@@ -235,7 +232,7 @@ export async function assessWarEntryPoliticalPressure(params: {
     ready.length > 0 ? ready.reduce((sum, unit) => sum + unit.readiness, 0) / ready.length : 15;
   const readiness = (averageReadiness - 55) * 0.25;
   const approvalForce = ((approval?.approvalRating ?? 45) - 50) * 0.3;
-  const debtBrake = Math.max(0, (budget?.debtToGdpRatio ?? 0) - 80) * 0.15;
+  const debtBrake = Math.max(0, 100 * (budget?.debtToGdpRatio ?? 0) - 80) * 0.15;
   const domesticPolitics = approvalForce - debtBrake;
   const total = clamp(blocRelations + securityStakes + readiness + domesticPolitics, -40, 40);
 

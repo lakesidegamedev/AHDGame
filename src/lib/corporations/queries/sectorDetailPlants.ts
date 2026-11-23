@@ -2,6 +2,7 @@
 import type { PlantIdleCause, SectorPlantsSection, PlantBuildOrderView } from "./sectorPlantsTypes";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import type { CommodityType } from "@/lib/constants/commodities";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
 import { type OperatingSectorType, TURNS_PER_DAY } from "@/lib/constants/corporations";
 import {
@@ -240,7 +241,12 @@ export function buildSectorPlantsSection(args: {
     } else {
       const throughput = num(sector.throughputFactor);
       if (throughput != null && throughput < 1) {
-        weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
+        const bound = sector.throughputBindingInput;
+        weights.push({
+          cause: "inputs",
+          w: 1 - Math.max(0, throughput),
+          ...(bound ? { heldInput: COMMODITY_LABELS[bound as CommodityType] ?? bound } : {}),
+        });
       }
       const demandThrottle = num(sector.demandThrottleFactor);
       if (demandThrottle != null && demandThrottle < 1) {
@@ -479,6 +485,23 @@ export function buildSectorPlantsSection(args: {
   // lowers cost. Rendered as its own row with a drilldown, so a player can see
   // their subsidy or a live crisis as a number in the same units as the wage
   // bill instead of it vanishing inside "other running costs".
+  // The named parts of `otherOperatingAnchor`, so no credit hides inside a cost
+  // line. Only the turn's own lines can be split; the margin-inversion fallback
+  // has nothing to name.
+  const otherBreakdown = engine
+    ? (() => {
+        const overheadAnchor = engine.otherOpex;
+        const inventoryCarryAnchor = engine.inventoryCarry;
+        const eventsAnchor = engine.financialLegs - internalSupplyDiscountAnchor;
+        return {
+          overheadAnchor,
+          inventoryCarryAnchor,
+          eventsAnchor,
+          remainderAnchor:
+            otherOperatingAnchor - overheadAnchor - inventoryCarryAnchor - eventsAnchor,
+        };
+      })()
+    : null;
   const policyAnchor = engine ? engine.policyCredit : 0;
   const policyPp = engine ? engine.policyPp : 0;
   const financialEventsAnchor = engine
@@ -677,6 +700,7 @@ export function buildSectorPlantsSection(args: {
       policyAnchor,
       policyPp,
       otherOperatingAnchor,
+      ...(otherBreakdown ? { otherBreakdown } : {}),
       internalSupplyDiscountAnchor,
       ...((money.internalSupplyIncomeAnchor ?? 0) > 0
         ? { internalSupplyIncomeAnchor: money.internalSupplyIncomeAnchor }

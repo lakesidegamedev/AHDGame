@@ -120,27 +120,9 @@ function stateCommodityBalance(price: CommodityPrice, stateId: string): Commodit
   return { supply: supply ?? 0, demand: demand ?? 0 };
 }
 
-/**
- * Demand that has no current supply. The persisted truncation leg is allocated
- * by the scope's share of visible global demand because the price document
- * records that hidden demand globally, not by country or state. The top-up
- * stays INSIDE the max(0, demand - supply) floor, matching
- * `commodityDemandGap`: a scope whose capped demand already clears against
- * its supply has no latent market even when the commodity is truncated
- * globally. Adding the share outside the floor would book phantom demand in
- * every surplus scope of a capped commodity.
- */
-function latentDemandUnits(
-  price: CommodityPrice,
-  balance: CommodityBalance,
-  demandShareDenominator: number
-): number {
-  const truncated = finiteNonNegative(price.demandTruncatedUnits) ?? 0;
-  const share =
-    demandShareDenominator > 0
-      ? Math.max(0, Math.min(1, balance.demand / demandShareDenominator))
-      : 0;
-  return Math.max(0, balance.demand + truncated * share - balance.supply);
+/** Demand that has no current supply: real `max(0, demand - supply)`. */
+function latentDemandUnits(balance: CommodityBalance): number {
+  return Math.max(0, balance.demand - balance.supply);
 }
 
 function outputRatesForSector(
@@ -351,16 +333,14 @@ function buildPlantsMarketAggregation(args: {
     if (!price) continue;
     const nationalBalance = nationalCommodityBalance(price, args.countryId, stateIds);
     if (nationalBalance) {
-      const globalDemand = finiteNonNegative(price.globalDemand) ?? 0;
-      const latent = latentDemandUnits(price, nationalBalance, globalDemand);
+      const latent = latentDemandUnits(nationalBalance);
       if (latent > 0) nationalLatentByCommodity.set(commodity, latent);
     }
     const stateLatent = new Map<string, number>();
     for (const state of states) {
       const balance = stateCommodityBalance(price, state.stateId);
       if (!balance) continue;
-      const globalDemand = finiteNonNegative(price.globalDemand) ?? 0;
-      const latent = latentDemandUnits(price, balance, globalDemand);
+      const latent = latentDemandUnits(balance);
       if (latent > 0) stateLatent.set(state.stateId, latent);
     }
     if (stateLatent.size > 0) stateLatentByCommodity.set(commodity, stateLatent);

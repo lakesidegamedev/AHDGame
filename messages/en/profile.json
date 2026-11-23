@@ -112,7 +112,7 @@
         "error": "Could not load your history.",
         "balanceNote": "Balance is shown only where it was recorded.",
         "kinds": {
-          "office_income": "Campaign fund income",
+          "office_income": "Office income",
           "fundraise": "Fundraising",
           "campaign_donation": "Campaign donation",
           "union_contribution": "Union contribution",

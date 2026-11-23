@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 import { computeClearingFactors } from "@/lib/market/clearing";
-import {
-  demandThrottleFactor,
-  soldOutMarketHeadroomUnits,
-  withLatentDemand,
-} from "../corporation/demandThrottle";
+import { demandThrottleFactor, soldOutMarketHeadroomUnits } from "../corporation/demandThrottle";
 import {
   aggregateByCountry,
   applyGovernmentDemand,
@@ -190,7 +186,6 @@ describe("healthcare local final-demand cap", () => {
           priceRatios: new Map(),
         },
       });
-      const latentFactor = 300 / balance.demand;
       const next = produced.map((units, i) => {
         const clear = cleared.get(String(i))!;
         const headroom = soldOutMarketHeadroomUnits({
@@ -198,7 +193,7 @@ describe("healthcare local final-demand cap", () => {
           supplyRates: { [healthcare]: 1 },
           mixWeightFor: () => 1,
           marketShareFor: () => clear.marketSupplyShareByCommodity?.[healthcare],
-          balanceFor: () => withLatentDemand(balance, latentFactor),
+          balanceFor: () => balance,
           priceRatioFor: () => 1,
         });
         return (
@@ -218,11 +213,6 @@ describe("healthcare local final-demand cap", () => {
     }
     return history;
   }
-
-  it("reproduces the old permanent full/floor cycle", () => {
-    const history = simulate(false, 100, 10, [100]);
-    expect(history.slice(-4)).toEqual([10, 100, 10, 100]);
-  });
 
   it.each([
     [100, 10, [100]],

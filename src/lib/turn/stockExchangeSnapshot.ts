@@ -541,7 +541,8 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             const maintenance = sectorRevenue * (1 - sector.profitMargin / 100);
             const profit = sectorRevenue - maintenance - sectorGrowthCost;
             totalIncome += profit;
-            totalGrowth += sector.targetGrowthRate ?? 0;
+            totalGrowth +=
+              sector.currentGrowthRate ?? sector.growthRate ?? sector.targetGrowthRate ?? 0;
             growthCount++;
             sectorProfitSamples.push({
               revenue: sectorRevenue,
@@ -677,7 +678,8 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           const maintenance = sectorRevenue * (1 - mods.effective / 100);
           const profit = sectorRevenue - maintenance - sectorGrowthCost;
           totalIncome += profit;
-          totalGrowth += sector.targetGrowthRate ?? 0;
+          totalGrowth +=
+            sector.currentGrowthRate ?? sector.growthRate ?? sector.targetGrowthRate ?? 0;
           growthCount++;
           sectorProfitSamples.push({
             revenue: sectorRevenue,

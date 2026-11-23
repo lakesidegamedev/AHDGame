@@ -52,10 +52,14 @@ export const CA_V2_NATIONAL_FAMILIES: readonly string[] = [
   "L50",
   "L51",
   "L52",
+  "L53",
+  "L54",
+  "L55",
+  "L56",
 ];
 
 // Regional service choices cannot rewrite federal trade, border, firearms,
 // criminal reproductive-care prohibitions, immigration admission, or defence law.
 export const CA_V2_REGIONAL_FAMILIES = CA_V2_NATIONAL_FAMILIES.filter(
-  (id) => !["L07", "L48", "L49", "L50", "L51", "L52"].includes(id)
+  (id) => !["L07", "L48", "L49", "L50", "L51", "L52", "L53", "L54", "L55", "L56"].includes(id)
 );

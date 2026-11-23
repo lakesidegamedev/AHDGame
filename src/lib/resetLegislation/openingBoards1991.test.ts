@@ -28,13 +28,13 @@ describe("1991 current-law boards", () => {
         .every((s) => !Object.hasOwn(s, "replacementRestriction"))
     ).toBe(true);
   });
-  it("builds four national and 79 regional boards with all 61 law and tax types", () => {
+  it("builds four national and 79 regional boards with all 66 law and tax types", () => {
     const boards = buildOpeningLawBoards1991("world-test", 1);
     expect(boards).toHaveLength(83);
     expect(boards.filter((board) => board.scope === "national")).toHaveLength(4);
     expect(new Set(boards.map((board) => board._id)).size).toBe(83);
     for (const board of boards) {
-      expect(Object.keys(board.references)).toHaveLength(61);
+      expect(Object.keys(board.references)).toHaveLength(66);
       expect(board.references.L19?.currentLaw).toBeTruthy();
       expect(board.references.T01?.currentLaw).toBeTruthy();
       if (board.countryId === "UK" && board.scope === "regional") {

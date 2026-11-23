@@ -160,6 +160,31 @@ describe("fundGeneration", () => {
       expect(result.totalNationalTaxes).toBeGreaterThan(0);
     });
 
+    it("records the character credit even when the party-side write fails", async () => {
+      const character = createCharacter({ party: "1", countryId: "US" });
+      const party = createParty(1, "US");
+      party.nationalTaxRate = 10;
+      vi.mocked(projectCharacterGeneration).mockReturnValue(1000);
+      vi.mocked(calculateTaxAmount).mockImplementation((amount, rate) =>
+        Math.floor(amount * (rate / 100))
+      );
+      setupCollection<State>("states", [createState("US-CA", 100000)]);
+      setupCollection<PoliticalParty>("politicalParties", [party]);
+      setupCollection<StatePartyOrg>("statePartyOrg", []);
+      db.collectionMocks["politicalParties"]!.bulkWrite = vi
+        .fn()
+        .mockRejectedValue(new Error("party write failed"));
+
+      await expect(
+        processFundGeneration([character], new Date(), undefined, true, 137)
+      ).rejects.toThrow("party write failed");
+
+      const calls = vi.mocked(emitTxBulk).mock.calls;
+      const rows = calls.flatMap((c) => c[1] as Array<{ type: string; turn: number }>);
+      expect(rows.filter((r) => r.type === "office_income")).toHaveLength(1);
+      expect(rows.find((r) => r.type === "office_income")?.turn).toBe(137);
+    });
+
     it("uses preloaded state map when provided", async () => {
       const character = createCharacter();
       const state = createState("US-CA", 100000);
@@ -279,11 +304,13 @@ describe("fundGeneration", () => {
       setupCollection<StatePartyOrg>("statePartyOrg", [statePartyOrg]);
 
       let releaseEmission: (() => void) | undefined;
-      vi.mocked(emitTxBulk).mockReturnValue(
-        new Promise<void>((resolve) => {
-          releaseEmission = resolve;
-        })
-      );
+      vi.mocked(emitTxBulk)
+        .mockResolvedValueOnce(undefined)
+        .mockReturnValueOnce(
+          new Promise<void>((resolve) => {
+            releaseEmission = resolve;
+          })
+        );
 
       let phaseFinished = false;
       const processing = processFundGeneration([character], new Date(), undefined, true, 91).then(
@@ -293,8 +320,8 @@ describe("fundGeneration", () => {
         }
       );
 
-      await vi.waitFor(() => expect(emitTxBulk).toHaveBeenCalledOnce());
-      const entries = vi.mocked(emitTxBulk).mock.calls[0]![1];
+      await vi.waitFor(() => expect(emitTxBulk).toHaveBeenCalledTimes(2));
+      const entries = vi.mocked(emitTxBulk).mock.calls[1]![1];
       expect(entries).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

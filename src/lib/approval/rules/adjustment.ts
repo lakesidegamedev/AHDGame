@@ -159,7 +159,7 @@ export function regionalApprovalSnapshot(
     prior === undefined || !Number.isFinite(prior)
       ? target
       : prior + Math.max(-maxStep, Math.min(maxStep, target - prior));
-  const raw = Math.round((performance + adjustmentContribution(modifiers, adjustment)) * 10) / 10;
+  const raw = performance + adjustmentContribution(modifiers, adjustment);
   const approval = Math.max(0, Math.min(100, raw));
   return {
     approval,

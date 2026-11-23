@@ -367,7 +367,6 @@ function prepareProcessSector(
             ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
             : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
                 lookups.globalCommodityBalances?.get(commodity)),
-          lookups.latentDemandFactorByCommodity?.get(commodity),
           isStateScopedCommodity(commodity) || !lookups.countryClearingBooks?.has(sectorCountryId)
             ? 0
             : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
@@ -644,15 +643,12 @@ function prepareProcessSector(
       isStateScopedCommodity(commodity)
         ? lookups.statePriceRatioByState?.get(sector.stateId)?.get(commodity)
         : lookups.reachablePriceRatioByCountry?.get(sectorCountryId)?.get(commodity),
-    // The lagged books hold demand capped at 1.5x supply; restore the truncated
-    // share so a plant in a deep shortage ramps toward real unmet demand.
     throttleLegBalance: (commodity) =>
       liftedThrottleBalance(
         isStateScopedCommodity(commodity)
           ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
           : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
               lookups.globalCommodityBalances?.get(commodity)),
-        lookups.latentDemandFactorByCommodity?.get(commodity),
         // Only a country-scoped book pins an exporter's demand to its supply.
         // Local services never cross a state line, and a single worldwide book
         // already holds every country's demand, so neither adds foreign room.
@@ -668,7 +664,6 @@ function prepareProcessSector(
     throttleWideBalance: (commodity) =>
       liftedThrottleBalance(
         wideCommodityBalances.get(commodity),
-        lookups.latentDemandFactorByCommodity?.get(commodity),
         isStateScopedCommodity(commodity) || !lookups.countryClearingBooks?.has(sectorCountryId)
           ? 0
           : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)

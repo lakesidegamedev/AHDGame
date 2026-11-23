@@ -1,5 +1,6 @@
 import type { PlantIdleCauseKey } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import { facilityVocabulary } from "@/lib/constants/facilityVocabulary";
 
 /**
@@ -13,6 +14,14 @@ import { facilityVocabulary } from "@/lib/constants/facilityVocabulary";
 export function fmtUnits(n: number | null | undefined, digits = 0): string {
   if (n == null || !Number.isFinite(n)) return "n/a";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(n);
+}
+
+/** A TEU estimate that never reads "0" for a real, small need. */
+export function fmtTeuEstimate(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  if (n < 0.1) return "less than 0.1";
+  if (n < 10) return fmtUnits(n, 1);
+  return fmtUnits(n);
 }
 
 /** Format a 0–1 share as a whole percent. */
@@ -125,7 +134,7 @@ export function idleCauseMeta(
     staffing: {
       label: "Stopped: short of workers",
       tone: "warning",
-      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
+      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is. Raising the wage level (People tab) fills more jobs.`,
     },
     deposits: {
       label: "Deposits ran short",
@@ -195,3 +204,22 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
  */
 export const PLANTS_CLOCK_NOTE =
   "Totals cover one financial day (24 turns). Per-unit figures are averages across the same day's output. One game year is 48 turns.";
+
+/**
+ * Money on one build order, all in anchor currency from the stored paid amount.
+ * `stillToArrive` is the unfinished share of what was paid and `refund` is what
+ * cancelling returns on it, the same terms the cancel command applies.
+ */
+export function buildOrderMoney(order: { costPaidAnchor: number; progress: number }): {
+  paid: number;
+  stillToArrive: number;
+  refund: number;
+} {
+  const paid = Math.max(0, Number.isFinite(order.costPaidAnchor) ? order.costPaidAnchor : 0);
+  const remaining = Math.min(
+    1,
+    Math.max(0, 1 - (Number.isFinite(order.progress) ? order.progress : 0))
+  );
+  const stillToArrive = paid * remaining;
+  return { paid, stillToArrive, refund: stillToArrive * CAPACITY_BUILD_CANCEL_REFUND };
+}

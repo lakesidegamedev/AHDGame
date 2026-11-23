@@ -188,6 +188,7 @@ export async function applyResetLawBillEnactment(
       }
     }
     let defenseAnnualDelta = 0;
+    let intelligenceAnnualDelta = 0;
     for (const [accountId, familyDeltas] of deltas) {
       const account = accountById.get(accountId);
       if (!account) throw new Error(`Missing v2 funding account ${accountId}`);
@@ -237,14 +238,20 @@ export async function applyResetLawBillEnactment(
       if (written.matchedCount !== 1)
         throw new Error("V2 department authority changed concurrently");
       if (account.externallySettled && familyDeltas.has("L48")) defenseAnnualDelta += accountDelta;
+      if (account.externallySettled && familyDeltas.has("L53"))
+        intelligenceAnnualDelta += accountDelta;
     }
     const totalSpendingDelta = enactment.annualAllocationDelta + strandedAnnualDelta;
-    if (totalSpendingDelta !== 0 || defenseAnnualDelta !== 0) {
+    if (totalSpendingDelta !== 0 || defenseAnnualDelta !== 0 || intelligenceAnnualDelta !== 0) {
       const spendingIncrement: Record<string, number> = {
         "spending.total": totalSpendingDelta,
       };
       if (defenseAnnualDelta !== 0) {
         spendingIncrement["spending.byCategory.defense"] = defenseAnnualDelta;
+      }
+      // The intelligence appropriation line reads this category each turn.
+      if (intelligenceAnnualDelta !== 0) {
+        spendingIncrement["spending.byCategory.intelligence"] = intelligenceAnnualDelta;
       }
       const written = await federalBudgetCollection(db).updateOne(
         { countryId: country },

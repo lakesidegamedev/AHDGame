@@ -44,10 +44,9 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
   lastRefreshFromTurn: 1,
   ...Object.fromEntries(
     primaryMetrics.flatMap((metric) =>
-      ["metricId", "path", "value", "status", "source", "owner"].map((field) => [
-        `observations.${metric.id}.${field}`,
-        1,
-      ])
+      ["metricId", "path", "value", "status", "source", "owner", "unit", "definitionVersion"].map(
+        (field) => [`observations.${metric.id}.${field}`, 1]
+      )
     )
   ),
 };
@@ -154,8 +153,13 @@ export async function loadResetApprovalModifiers(
     const board = byId.get(`${countryId}:${regionId ?? "national"}`)!;
     return primaryMetrics.flatMap((metric) => {
       const observation = observations[metric.id];
+      const savedReference = board.gameplayReferences?.[metric.id];
       const reference =
-        board.gameplayReferences?.[metric.id]?.value ?? board.openingValues?.[metric.id];
+        observation?.definitionVersion === 2
+          ? savedReference?.definitionVersion === 2 && savedReference.unit === observation.unit
+            ? savedReference.value
+            : undefined
+          : board.openingValues?.[metric.id];
       if (
         !observation ||
         observation.value == null ||

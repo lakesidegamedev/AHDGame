@@ -24,6 +24,22 @@ describe("scoped government performance", () => {
     expect(regional.map((row) => row.effect)).toEqual([-10, -5]);
     expect(fiscalApprovalModifiers(0, 0)).toEqual([]);
   });
+
+  it("rewards a region's own surplus like the national budget", () => {
+    const surplus = fiscalApprovalModifiers(0, 1.5, true);
+    expect(surplus.map((row) => row.id)).toEqual([
+      "regionalBalancedBudget",
+      "regionalFiscalDiscipline",
+    ]);
+    expect(surplus.every((row) => row.effect === 1)).toBe(true);
+    expect(fiscalApprovalModifiers(10, 0.6, true).map((row) => row.id)).toEqual([
+      "regionalDebt",
+      "regionalBalancedBudget",
+    ]);
+    expect(fiscalApprovalModifiers(95, 2, true).map((row) => row.id)).not.toContain(
+      "regionalFiscalDiscipline"
+    );
+  });
 });
 
 describe("performance components", () => {

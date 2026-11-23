@@ -17,6 +17,8 @@ export interface StateApprovalHistory {
   countryId: CountryId;
   /** 0–100: this region's approval at the latest snapshot */
   approvalRating: number;
+  disapprovalRating?: number;
+  netApproval?: number;
   /** Unclamped score keeps compensating decisions reversible at 0 and 100. */
   approvalRawRating?: number;
   baseApproval?: number;

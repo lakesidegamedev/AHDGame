@@ -676,7 +676,9 @@ describe("SectorsTab plants total reconciliation", () => {
         <SectorsTab {...baseProps} isCeo={false} sectors={manySectors} logisticsStrength={100} />
       );
       const text = container.textContent ?? "";
-      expect(text).toContain("threshold is now 23, with 16 owned");
+      expect(text).toContain("threshold is now 23");
+      expect(text).toContain("the base of 15, plus 8 from your Logistics & Operations strength");
+      expect(text).toContain("with 16 owned");
       expect(text).not.toContain("NaN");
     });
   });

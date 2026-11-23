@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { MIN_BOND_ISSUANCE } from "@/lib/constants/bonds";
 import { issueBondSchema } from "@/lib/api/schemas/bonds";
-import { bondIssueInputProblem, bondIssueMinimum, bondIssueRefusalText } from "./bondIssueInput";
+import {
+  bondIssueInputProblem,
+  bondIssueLimitText,
+  bondIssueMinimum,
+  bondIssueRefusalText,
+  bondIssueSliderMax,
+} from "./bondIssueInput";
 
 describe("bondIssueRefusalText", () => {
   it("drops the field path and error code from a validation refusal", () => {
@@ -41,6 +47,16 @@ describe("bondIssueMinimum", () => {
   });
 });
 
+describe("bondIssueSliderMax", () => {
+  it("stops the slider on a whole number", () => {
+    expect(bondIssueSliderMax(8_362_752.5, 40_000)).toBe(8_362_752);
+    expect(bondIssueSliderMax(1_000_000, 40_000)).toBe(1_000_000);
+  });
+  it("keeps the exact ceiling when flooring would drop under the minimum", () => {
+    expect(bondIssueSliderMax(40_000.5, 40_001)).toBe(40_000.5);
+  });
+});
+
 describe("bondIssueInputProblem", () => {
   const window = { minimum: 100_000, maximum: 1_000_000 };
   it("flags zero, under-minimum, over-maximum and empty windows", () => {
@@ -52,5 +68,14 @@ describe("bondIssueInputProblem", () => {
     );
     expect(bondIssueInputProblem({ faceValue: 100_000, ...window })).toBeNull();
     expect(bondIssueInputProblem({ faceValue: 1_000_000, ...window })).toBeNull();
+  });
+});
+
+describe("bondIssueLimitText", () => {
+  it("names each binding limit in plain words", () => {
+    expect(bondIssueLimitText("exitEquity")).toContain("recover");
+    expect(bondIssueLimitText("leverage")).toContain("debt to equity");
+    expect(bondIssueLimitText("perIssuance")).toContain("per-issue cap");
+    expect(bondIssueLimitText(undefined)).toContain("limits");
   });
 });

@@ -4,7 +4,6 @@ import { SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
   COMMODITY_DOMINANCE_MULT_AT_DOUBLE,
-  COMMODITY_DOMINANCE_MULT_AT_PARITY,
   DUMPING_GUARD_SOLD_SHARE,
   commodityDominanceMarket,
   commodityDominanceMultiplier,
@@ -23,10 +22,10 @@ describe("commodity dominance ramp", () => {
   });
 
   it("hits the named anchors", () => {
-    expect(commodityDominanceMultiplier(1)).toBe(COMMODITY_DOMINANCE_MULT_AT_PARITY);
+    expect(commodityDominanceMultiplier(0.75)).toBe(1);
+    expect(commodityDominanceMultiplier(1)).toBe(1);
+    expect(commodityDominanceMultiplier(1.5)).toBeCloseTo(5.5, 10);
     expect(commodityDominanceMultiplier(2)).toBe(COMMODITY_DOMINANCE_MULT_AT_DOUBLE);
-    expect(commodityDominanceMultiplier(0.75)).toBeCloseTo(2, 10);
-    expect(commodityDominanceMultiplier(1.5)).toBeCloseTo(6.5, 10);
   });
 
   it("keeps growing, convexly, beyond double demand", () => {
@@ -45,7 +44,7 @@ describe("commodity dominance ramp", () => {
       expect(m).toBeGreaterThanOrEqual(prev - 1e-9);
       prev = m;
     }
-    expect(commodityDominanceMultiplier(1.0000001)).toBeCloseTo(3, 4);
+    expect(commodityDominanceMultiplier(1.0000001)).toBeCloseTo(1, 4);
     expect(commodityDominanceMultiplier(2.0000001)).toBeCloseTo(10, 4);
   });
 
@@ -98,9 +97,9 @@ describe("computeBuildCost with the commodity toll", () => {
       marketSharePercent: 100,
       competitorCount: 0,
       techDominanceShield: 0.9,
-      commodityDominanceRatio: 1,
+      commodityDominanceRatio: 1.5,
     });
-    expect(both.dominanceMultiplier).toBe(3);
+    expect(both.dominanceMultiplier).toBeCloseTo(5.5, 10);
   });
 
   it("prices an order by the ratio after it lands", () => {
@@ -114,8 +113,12 @@ describe("computeBuildCost with the commodity toll", () => {
       },
     ];
     expect(dominanceMultiplierForOrder({ localMultiplier: 1, models, units: 50 })).toBe(1);
-    expect(dominanceMultiplierForOrder({ localMultiplier: 1, models, units: 600 })).toBe(3);
-    expect(dominanceMultiplierForOrder({ localMultiplier: 4, models, units: 600 })).toBe(4);
+    expect(dominanceMultiplierForOrder({ localMultiplier: 1, models, units: 600 })).toBe(1);
+    expect(dominanceMultiplierForOrder({ localMultiplier: 1, models, units: 1100 })).toBeCloseTo(
+      5.5,
+      10
+    );
+    expect(dominanceMultiplierForOrder({ localMultiplier: 6, models, units: 1100 })).toBe(6);
   });
 });
 
@@ -335,5 +338,13 @@ describe("commodityDominanceRatio for country-booked services (ticket 1787)", ()
         countryDemand: null,
       })
     ).toEqual({ demand: 5, stateId: "AZ" });
+  });
+});
+
+describe("commodity dominance ramp: sole provider in a short market", () => {
+  it("charges nothing while potential output stays at or below market demand", () => {
+    for (const ratio of [0.51, 0.75, 0.9, 1]) {
+      expect(commodityDominanceMultiplier(ratio)).toBe(1);
+    }
   });
 });
