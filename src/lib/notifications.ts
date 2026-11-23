@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { NotificationType, Notification } from "@/lib/db/types";
@@ -94,7 +95,7 @@ async function stampCorporationOwners(
       };
     });
   } catch (err) {
-    console.error("[stampCorporationOwners] Failed:", err);
+    Sentry.captureException(err, { tags: { operation: "stamp_corporation_owners" } });
     return inputs;
   }
 }
