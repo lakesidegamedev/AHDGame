@@ -6,6 +6,7 @@ import {
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 import { getDb } from "@/lib/mongodb";
+import { loadPriceCapBasis } from "./priceCapBasisLoad";
 import {
   MARKET_OVERVIEW_ROWS,
   topCommodityMovers,
@@ -15,6 +16,7 @@ import {
 
 export async function loadOverviewPreviews() {
   const db = await getDb();
+  const capBasis = await loadPriceCapBasis(db).catch(() => null);
   const [stocks, movers] = await Promise.all([
     stockExchangeSnapshotsCollection(db)
       .findOne({ _id: "global" }, { projection: { listings: 1 } })
@@ -45,6 +47,12 @@ export async function loadOverviewPreviews() {
               label: COMMODITY_LABELS[commodity],
               basePrice,
               globalPrice: price?.globalPrice ?? basePrice,
+              ...(capBasis
+                ? {
+                    priceCapBasis: capBasis,
+                    priceCeiling: basePrice * capBasis.multiplier * capBasis.nominalIndex,
+                  }
+                : {}),
             };
           })
         );

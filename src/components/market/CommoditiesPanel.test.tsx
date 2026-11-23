@@ -82,3 +82,22 @@ it("shows a rising last-turn price alongside a negative annualized change", () =
     cells[columns.indexOf(screen.getByRole("columnheader", { name: "Yearly rate" }))]?.textContent
   ).toBe("-31.3%");
 });
+
+describe("CommoditiesPanel price cap basis", () => {
+  it("states what the cap is a multiple of next to the cap label", () => {
+    renderPanel([
+      row({
+        commodity: "steel",
+        label: "Steel",
+        basePrice: 100,
+        globalPrice: 360,
+        priceCeiling: 360,
+        priceCapBasis: { multiplier: 3, nominalIndex: 1.2 },
+      }),
+    ]);
+    expect(screen.getByText(/at price cap/).textContent).toContain(
+      "3x the inflation-adjusted base (base x 1.20 = +260% vs original base)"
+    );
+    expect(screen.getByText("vs original base")).toBeTruthy();
+  });
+});

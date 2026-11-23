@@ -77,6 +77,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { loadPriceCapBasis } from "@/lib/market/priceCapBasisLoad";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
@@ -927,6 +928,7 @@ export async function getCommodityDetailData(
       colors: COMMODITY_COLORS[commodity],
       unit: COMMODITY_UNITS[commodity],
       basePrice,
+      priceCapBasis: await loadPriceCapBasis(db).catch(() => null),
       globalPrice: currentPrice?.globalPrice ?? basePrice,
       globalSupply: currentPrice?.globalSupply ?? 0,
       globalDemand: currentPrice?.globalDemand ?? 0,

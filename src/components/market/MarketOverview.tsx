@@ -11,6 +11,8 @@ import {
   type SectorsForSaleResponse,
 } from "./marketEndpoints";
 import type { SupplyOffersResponse } from "./supplyOfferUi";
+import { atPriceCap } from "@/lib/market/overviewPreview";
+import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { PreviewCard, PreviewRow, pctText, toneClass, vsBasePct } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
@@ -61,6 +63,10 @@ export function MarketOverview({
     .slice(0, 5);
   const topFunds = [...(funds.data?.funds ?? [])].sort(byDesc((f) => f.aumAnchor)).slice(0, 5);
   const movers = previews?.movers ?? topCommodityMovers(commodities ?? []);
+  const capMover = (movers as Partial<CommodityData>[]).find((c) =>
+    atPriceCap({ globalPrice: c.globalPrice ?? 0, priceCeiling: c.priceCeiling })
+  );
+  const capNote = priceCapBasisText(capMover?.priceCapBasis);
   const sectorRows = (sectors?.sectors ?? []).slice(0, 5);
   const offerRows = (offers?.offers ?? []).slice(0, 5);
 
@@ -166,7 +172,11 @@ export function MarketOverview({
       </PreviewCard>
       <PreviewCard
         title="Commodities"
-        detail="Furthest from base price"
+        detail={
+          capNote
+            ? `Furthest from original base price. At cap: ${capNote}`
+            : "Furthest from original base price"
+        }
         href="/market?tab=commodities"
         loading={commoditiesLoading}
         error=""
