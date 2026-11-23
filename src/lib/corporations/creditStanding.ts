@@ -31,9 +31,14 @@ export function resolveCreditStanding(
   live: LiveCreditStandingInput | null | undefined
 ): CreditStanding {
   const rating = live?.rating || snapshot?.creditRatingSnapshot || null;
+  // A live rating without a live score (a rating-only view) never borrows the
+  // snapshot score unless the snapshot carries the same rating, so the pair
+  // always comes from one source.
+  const liveRatingOnly = !!live?.rating && !finite(live.compositeScore);
+  const snapshotMatchesLive = !liveRatingOnly || snapshot?.creditRatingSnapshot === live?.rating;
   const composite = finite(live?.compositeScore)
     ? live.compositeScore
-    : finite(snapshot?.creditCompositeSnapshot)
+    : finite(snapshot?.creditCompositeSnapshot) && snapshotMatchesLive
       ? snapshot.creditCompositeSnapshot
       : null;
   return { rating, composite };
