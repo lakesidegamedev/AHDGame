@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import { fetchJson } from "@/lib/observability/fetchJson";
+import { fetchMapJson, reportMapLoadFailure } from "@/lib/maps/mapLoad";
 
 interface D3GeoProjection {
   fitSize(size: [number, number], object: unknown): D3GeoProjection;
@@ -111,11 +111,14 @@ export function RegionMapPaths({
 
   useEffect(() => {
     let cancelled = false;
-    fetchJson<FeatureCollection<Geometry>>(geoUrl, { feature: "region-map" })
+    fetchMapJson<FeatureCollection<Geometry>>(geoUrl, undefined, "region-map")
       .then((data) => {
         if (cancelled) return;
         if (data?.features?.length) setGeo(data);
-        else setFailed(true);
+        else {
+          reportMapLoadFailure("region-map-empty", geoUrl, new Error("Region map has no features"));
+          setFailed(true);
+        }
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
