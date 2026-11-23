@@ -248,7 +248,12 @@ export default function FinancialsTab({
                   <Td align="right">~{money.fmt(scale(revenue))}</Td>
                 </tr>
                 <tr>
-                  <Td className="text-muted">Total costs</Td>
+                  <Td
+                    className="text-muted"
+                    title="Operating costs plus bond interest. Tax is not included."
+                  >
+                    Total costs
+                  </Td>
                   <Td align="right">
                     {lastQ.totalCosts != null
                       ? `(${money.fmt(scale(lastQ.totalCosts * TURNS_PER_DAY))})`
@@ -376,11 +381,12 @@ export default function FinancialsTab({
                   {financials.subsidyBenefit > 0 && (
                     <StatementLine
                       indent
-                      label="Subsidy benefit"
+                      label="Subsidy benefit (estimate)"
                       amount={fmt(scale(financials.subsidyBenefit))}
-                      amountClass="text-success"
+                      amountClass="text-muted"
                       pct={pctOf(financials.subsidyBenefit)}
-                      title="Margin from active government subsidies, +7.5% each."
+                      note="Already in the costs above"
+                      title="Estimate of the +7.5% margin from active government subsidies on the sectors they cover. It lowers the sector costs above, so it is not added to gross profit again."
                     />
                   )}
                   {financials.growthCosts > 0 && (

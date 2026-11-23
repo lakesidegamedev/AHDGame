@@ -16,6 +16,7 @@ import {
 import {
   bondIssueInputProblem,
   bondIssueMinimum,
+  bondIssueSliderMax,
   bondIssueRefusalText,
 } from "@/lib/bonds/rules/bondIssueInput";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -303,6 +304,7 @@ export default function BondsTab({
           // can issue below ₳100,000 rather than being locked out. `bondsAvailable`
           // is false below the dust floor.
           const effectiveMin = bondIssueMinimum(bondInfo.minIssuance);
+          const sliderMax = bondIssueSliderMax(effectiveCap, effectiveMin);
           const bondsUnavailable = bondInfo.bondsAvailable === false;
           const cooldown = bondInfo.cooldownTurnsRemaining;
           // Cash the pool will actually hand over at issuance, in ₳. Null when
@@ -333,7 +335,7 @@ export default function BondsTab({
           const inputProblem = bondIssueInputProblem({
             faceValue: parsedFaceValue,
             minimum: effectiveMin,
-            maximum: effectiveCap,
+            maximum: sliderMax,
           });
           const isValidInput = inputProblem === null;
 
@@ -400,7 +402,7 @@ export default function BondsTab({
                       <input
                         type="range"
                         min={0}
-                        max={effectiveCap}
+                        max={sliderMax}
                         step={unitFace}
                         value={bondIssueFaceValue}
                         onChange={(e) => {
@@ -413,7 +415,7 @@ export default function BondsTab({
                       />
                       <span className="flex justify-between font-mono text-[11px] tabular-nums">
                         <span>0</span>
-                        <span>{inLiquid(effectiveCap)}</span>
+                        <span>{inLiquid(sliderMax)}</span>
                       </span>
                     </label>
                     <label className="flex flex-col gap-1 text-xs text-muted">
@@ -552,7 +554,7 @@ export default function BondsTab({
                       </h3>
                       <KVList>
                         <KVRow
-                          label="Coupon cost per day"
+                          label="Coupon cost per day (24 turns)"
                           value={
                             <span className="text-error">
                               ({formatAmount(Math.round(preview.dailyCost))})

@@ -75,6 +75,19 @@ describe("revenueSplit", () => {
     expect(split.retained).toBe(2.9);
   });
 
+  it("adds up to revenue when net income is above operating income", () => {
+    const f = { totalRevenue: 100, totalCosts: 76, operatingIncome: 24 };
+    const split = revenueSplit(f, { netIncome: 29, dividendPaid: 0, retained: 29 })!;
+    expect(split.costs + split.interestAndTax + split.dividends + split.retained).toBeCloseTo(100);
+    expect(split.interestAndTax).toBe(0);
+  });
+
+  it("counts interest once when total costs include it", () => {
+    const f = { totalRevenue: 100, totalCosts: 80, operatingIncome: 25 };
+    const split = revenueSplit(f, { netIncome: 20, dividendPaid: 5, retained: 15 })!;
+    expect(split.costs + split.interestAndTax + split.dividends + split.retained).toBeCloseTo(100);
+  });
+
   it("is null at zero revenue", () => {
     expect(revenueSplit({ ...financials, totalRevenue: 0 }, basis)).toBeNull();
   });

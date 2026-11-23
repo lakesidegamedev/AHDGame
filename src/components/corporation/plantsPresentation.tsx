@@ -360,7 +360,13 @@ export function RunningSoldReading({
   ownTruckHaulTeu?: number | null;
   className?: string;
 }) {
-  const ownSite = ownSiteLabel(ownSiteShare, "all output");
+  const soldWhole = fill != null && Number.isFinite(fill) ? Math.round(fill * 100) / 100 : null;
+  const ownSite = ownSiteLabel(
+    ownSiteShare != null && soldWhole != null
+      ? Math.min(ownSiteShare, Math.max(0, 1 - soldWhole))
+      : ownSiteShare,
+    "all output"
+  );
   const ownTrucks = ownTruckHaulLabel(ownTruckHaulTeu);
   if (plantCount === 0) {
     return (

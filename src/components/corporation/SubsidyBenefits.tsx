@@ -7,7 +7,7 @@ import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import type { SectorDetail } from "./CorporationPageTypes";
 
-interface SubsidyEntry {
+export interface SubsidyEntry {
   id: string;
   scope: "national" | "state";
   stateId: string | null;
@@ -32,14 +32,14 @@ const SCOPE_LABELS: Record<string, string> = {
   sector: "Sector",
 };
 
-/** Returns true if the subsidy applies to at least one sector of this corp. */
-function subsidyAppliesToCorp(
+/** The sectors of this corp the subsidy's +7.5% margin actually applies to. */
+export function subsidyCoveredSectors(
   subsidy: SubsidyEntry,
   corpHqState: string,
   corpHqCountryId: string,
   sectors: SectorDetail[]
-): boolean {
-  return sectors.some((sector) => {
+): SectorDetail[] {
+  return sectors.filter((sector) => {
     const sectorCountryId = sector.countryId ?? corpHqCountryId;
 
     // Subsidy must be in the same country as the sector
@@ -103,9 +103,9 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [corpHqState, operatingCountriesKey]);
 
-  const applicableSubsidies = subsidies.filter((s) =>
-    subsidyAppliesToCorp(s, corpHqState, corpHqCountryId, sectors)
-  );
+  const applicableSubsidies = subsidies
+    .map((s) => ({ s, covered: subsidyCoveredSectors(s, corpHqState, corpHqCountryId, sectors) }))
+    .filter((x) => x.covered.length > 0);
 
   if (loading) {
     return <div className="h-8 animate-pulse border-b border-card-border/60" />;
@@ -118,7 +118,7 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
   return (
     <table className="w-full border-collapse">
       <tbody>
-        {applicableSubsidies.map((s) => (
+        {applicableSubsidies.map(({ s, covered }) => (
           <tr key={s.id}>
             <td className="border-b border-card-border/60 py-1.5 pr-2 text-xs text-muted">
               {[
@@ -136,7 +136,8 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
               {s.domesticOnly ? ", domestic only" : ""}
             </td>
             <td className="whitespace-nowrap border-b border-card-border/60 py-1.5 text-right font-mono text-[13px] text-success">
-              +7.5% margin
+              +7.5% margin on {covered.length} of {sectors.length}{" "}
+              {sectors.length === 1 ? "sector" : "sectors"}
             </td>
           </tr>
         ))}

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { MIN_BOND_ISSUANCE } from "@/lib/constants/bonds";
 import { issueBondSchema } from "@/lib/api/schemas/bonds";
-import { bondIssueInputProblem, bondIssueMinimum, bondIssueRefusalText } from "./bondIssueInput";
+import {
+  bondIssueInputProblem,
+  bondIssueMinimum,
+  bondIssueRefusalText,
+  bondIssueSliderMax,
+} from "./bondIssueInput";
 
 describe("bondIssueRefusalText", () => {
   it("drops the field path and error code from a validation refusal", () => {
@@ -38,6 +43,16 @@ describe("bondIssueMinimum", () => {
     expect(ok(bondIssueMinimum(undefined))).toBe(true);
     expect(ok(bondIssueMinimum(40_000))).toBe(true);
     expect(ok(0)).toBe(false);
+  });
+});
+
+describe("bondIssueSliderMax", () => {
+  it("stops the slider on a whole number", () => {
+    expect(bondIssueSliderMax(8_362_752.5, 40_000)).toBe(8_362_752);
+    expect(bondIssueSliderMax(1_000_000, 40_000)).toBe(1_000_000);
+  });
+  it("keeps the exact ceiling when flooring would drop under the minimum", () => {
+    expect(bondIssueSliderMax(40_000.5, 40_001)).toBe(40_000.5);
   });
 });
 

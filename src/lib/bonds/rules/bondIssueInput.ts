@@ -11,6 +11,16 @@ export function bondIssueMinimum(serverMinimum: number | undefined): number {
   return serverMinimum != null && serverMinimum > 0 ? serverMinimum : MIN_BOND_ISSUANCE;
 }
 
+/**
+ * The slider ceiling in whole currency units. The server ceiling can carry a
+ * fraction; the face value the player sees and submits is whole, so the
+ * slider's end stops on a whole number unless that would fall below the minimum.
+ */
+export function bondIssueSliderMax(ceiling: number, minimum: number): number {
+  const whole = Math.floor(ceiling);
+  return whole >= minimum ? whole : ceiling;
+}
+
 /** Why a face value cannot be submitted, or null when it can. */
 export function bondIssueInputProblem(args: {
   faceValue: number;

@@ -439,7 +439,11 @@ export function KeyStatistics({
               mono={false}
             />
           )}
-          <KVRow label={`Costs${suffix}`} value={est(fmt(scale(financials.totalCosts)))} />
+          <KVRow
+            label={`Costs${suffix}`}
+            value={est(fmt(scale(financials.totalCosts)))}
+            title="Operating costs plus bond interest. Tax is not included."
+          />
         </KVList>
       </Column>
     </div>
