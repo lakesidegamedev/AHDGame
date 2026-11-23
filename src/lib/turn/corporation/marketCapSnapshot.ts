@@ -430,6 +430,7 @@ export async function snapshotMarketCap(
         ...(sourceCorp?.averageQuality != null
           ? { averageQuality: sourceCorp.averageQuality }
           : {}),
+        ...(sourceCorp?.qualityPillars ? { qualityPillars: { ...sourceCorp.qualityPillars } } : {}),
         // Deposit ceiling history for deposit-taking banks: the charter keeps
         // only current values.
         ...(bankBranch ? { bankBranch } : {}),

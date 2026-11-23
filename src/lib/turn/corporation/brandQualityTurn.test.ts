@@ -85,3 +85,35 @@ describe("computeQualityUpdates", () => {
     );
   });
 });
+
+describe("computeQualityUpdates pillars", () => {
+  it("records the four pillar scores alongside the corp quality without changing it", () => {
+    const corps: QualityCorpInput[] = [
+      {
+        corpId: "c",
+        techScore: 25,
+        operationsStrength: 15,
+        sectors: [{ revenueWeight: 100, wageLevel: 1, outputs: ["vehicles"], inputs: [] }],
+      },
+    ];
+    const { corpQuality, corpPillars } = computeQualityUpdates(corps, laggedNeutral);
+    // par tech and operations score 100; baseline wages and neutral inputs score 50
+    expect(corpPillars.get("c")).toEqual({ tech: 100, inputs: 50, wages: 50, operations: 100 });
+    expect(corpQuality.get("c")).toBeGreaterThan(0);
+  });
+
+  it("omits pillars for a corp with only extraction sectors", () => {
+    const { corpPillars } = computeQualityUpdates(
+      [
+        {
+          corpId: "m",
+          techScore: 10,
+          operationsStrength: 10,
+          sectors: [{ revenueWeight: 100, wageLevel: 1, outputs: ["iron"], inputs: [] }],
+        },
+      ],
+      laggedNeutral
+    );
+    expect(corpPillars.has("m")).toBe(false);
+  });
+});

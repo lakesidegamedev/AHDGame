@@ -1,6 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Shareholder } from "./corporation";
+import type { QualityPillars } from "@/lib/market/brandQuality";
 
 /**
  * Per-corporation snapshot taken each turn during turn processing.
@@ -154,6 +155,8 @@ export interface CorporationHistory {
   brandLoyalty?: number;
   /** Revenue-weighted mean output quality 0–100 (quality pillars, Package B). */
   averageQuality?: number;
+  /** Pillar scores (0-100) behind `averageQuality`; absent on older rows. */
+  qualityPillars?: QualityPillars;
   /**
    * Physical output units per commodity this turn (corp-wide). Keys are
    * `CommodityType` strings. Global supply share is derived at read time from

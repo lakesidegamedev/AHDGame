@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent, within } from "@testing-library/react";
 import OverviewTab from "./OverviewTab";
 import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { redactPrivateCorporation } from "@/lib/corporations/redaction";
@@ -261,6 +261,27 @@ describe("OverviewTab", () => {
     expect(screen.getByText("+1.00")).toBeTruthy();
     expect(screen.getByText("+0.00")).toBeTruthy();
     expect(screen.getByText("+0.50")).toBeTruthy();
+  });
+
+  it("names the pillar behind a quality move, and keeps the plain text for old rows", () => {
+    const withChange = (averageQualityChange: Record<string, unknown>) => ({
+      ...corporation,
+      averageQuality: 56,
+      averageQualityChange,
+    });
+    renderOverview({
+      corporation: withChange({
+        from: 79,
+        fromTurn: 160,
+        delta: -23,
+        biggestPillar: { key: "inputs", delta: -40 },
+      }),
+    });
+    expect(screen.getByText(/mostly input quality \(-40\)/)).toBeTruthy();
+    cleanup();
+    renderOverview({ corporation: withChange({ from: 79, fromTurn: 160, delta: -23 }) });
+    expect(screen.getByText(/down 23 from 79 at\s+turn 160/)).toBeTruthy();
+    expect(screen.queryByText(/mostly/)).toBeNull();
   });
 
   it("counts plants in the sectors table and labels running and sold", () => {

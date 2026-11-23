@@ -75,13 +75,25 @@ export function isExtractionOnly(outputs: readonly CommodityType[]): boolean {
   return outputs.length > 0 && outputs.every((c) => EXTRACTABLE_SET.has(c));
 }
 
-/**
- * Per-sector output quality, 0–100. Returns null for extraction-only sectors
- * (quality-neutral; excluded from the corp rollup). Pure.
- */
-export function computeSectorQuality(input: SectorQualityInput): number | null {
-  if (isExtractionOnly(input.outputCommodities)) return null;
+/** The four pillar sub-scores behind a quality figure, each 0-100 (one decimal). */
+export interface QualityPillars {
+  tech: number;
+  inputs: number;
+  wages: number;
+  operations: number;
+}
 
+export const QUALITY_PILLAR_KEYS = ["tech", "inputs", "wages", "operations"] as const;
+export type QualityPillarKey = (typeof QUALITY_PILLAR_KEYS)[number];
+
+interface PillarFractions {
+  tech: number;
+  inputs: number;
+  wages: number;
+  operations: number;
+}
+
+function pillarFractions(input: SectorQualityInput): PillarFractions {
   const tech = pillarScore(input.techScore, QUALITY_TECH_REF);
   const ops = pillarScore(input.operationsStrength, QUALITY_OPS_REF);
   // Wages: efficiency-wage — above baseline lifts, below drags, diminishing.
@@ -92,14 +104,62 @@ export function computeSectorQuality(input: SectorQualityInput): number | null {
   );
   const inputQ = input.inputQuality == null ? QUALITY_NEUTRAL_INPUT : input.inputQuality;
   const inputs = Math.max(QUALITY_SUBSCORE_FLOOR, clamp01(inputQ / 100));
+  return { tech, inputs, wages: wage, operations: ops };
+}
 
+/**
+ * Per-sector output quality, 0–100. Returns null for extraction-only sectors
+ * (quality-neutral; excluded from the corp rollup). Pure.
+ */
+export function computeSectorQuality(input: SectorQualityInput): number | null {
+  if (isExtractionOnly(input.outputCommodities)) return null;
+  const p = pillarFractions(input);
   const geo =
-    Math.pow(tech, QUALITY_WEIGHT_TECH) *
-    Math.pow(inputs, QUALITY_WEIGHT_INPUTS) *
-    Math.pow(wage, QUALITY_WEIGHT_WAGES) *
-    Math.pow(ops, QUALITY_WEIGHT_OPERATIONS);
+    Math.pow(p.tech, QUALITY_WEIGHT_TECH) *
+    Math.pow(p.inputs, QUALITY_WEIGHT_INPUTS) *
+    Math.pow(p.wages, QUALITY_WEIGHT_WAGES) *
+    Math.pow(p.operations, QUALITY_WEIGHT_OPERATIONS);
 
   return Math.round(clamp01(geo) * 1000) / 10; // 0–100, one decimal
+}
+
+/** Pillar sub-scores for a sector, 0-100. Null for extraction-only sectors. Pure. */
+export function computeSectorQualityPillars(input: SectorQualityInput): QualityPillars | null {
+  if (isExtractionOnly(input.outputCommodities)) return null;
+  const p = pillarFractions(input);
+  const pct = (v: number) => Math.round(v * 1000) / 10;
+  return {
+    tech: pct(p.tech),
+    inputs: pct(p.inputs),
+    wages: pct(p.wages),
+    operations: pct(p.operations),
+  };
+}
+
+/**
+ * Revenue-weighted mean of sector pillar scores, using the same weights as the
+ * quality rollup. Null when the corp has no quality-bearing sectors.
+ */
+export function rollupCorpPillars(
+  sectors: readonly { pillars: QualityPillars | null; revenueWeight: number }[]
+): QualityPillars | null {
+  let w = 0;
+  const acc = { tech: 0, inputs: 0, wages: 0, operations: 0 };
+  for (const s of sectors) {
+    if (s.pillars == null) continue;
+    const weight = Number.isFinite(s.revenueWeight) ? Math.max(0, s.revenueWeight) : 0;
+    if (weight <= 0) continue;
+    w += weight;
+    for (const k of QUALITY_PILLAR_KEYS) acc[k] += weight * s.pillars[k];
+  }
+  if (w <= 0) return null;
+  const mean = (v: number) => Math.round((v / w) * 10) / 10;
+  return {
+    tech: mean(acc.tech),
+    inputs: mean(acc.inputs),
+    wages: mean(acc.wages),
+    operations: mean(acc.operations),
+  };
 }
 
 /**

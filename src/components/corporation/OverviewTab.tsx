@@ -409,16 +409,31 @@ function SectorTable({
   );
 }
 
+const QUALITY_PILLAR_LABELS = {
+  tech: "R&D",
+  inputs: "input quality",
+  wages: "wages",
+  operations: "operations strength",
+} as const;
+
 /** Where the last visible quality move came from, and what quality is built from. */
 function qualityChangeHint(change: CorporationDetail["averageQualityChange"]) {
   if (!change) return undefined;
+  const pillar = change.biggestPillar;
   return (
     <span
       className={signTone(change.delta)}
-      title="Quality blends R&D, the quality of the inputs you buy, wages and operations strength. The turn does not record which of them moved it."
+      title={
+        pillar
+          ? "Quality blends R&D, the quality of the inputs you buy, wages and operations strength. The pillar named is the one whose own score moved most between the two turns."
+          : "Quality blends R&D, the quality of the inputs you buy, wages and operations strength. Turns recorded before pillar scores were kept cannot say which of them moved it."
+      }
     >
       {change.delta >= 0 ? "up" : "down"} {Math.abs(change.delta)} from {Math.round(change.from)} at
       turn {change.fromTurn}
+      {pillar
+        ? `, mostly ${QUALITY_PILLAR_LABELS[pillar.key]} (${pillar.delta >= 0 ? "+" : ""}${pillar.delta})`
+        : ""}
     </span>
   );
 }

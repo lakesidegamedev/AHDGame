@@ -518,10 +518,8 @@ export async function processCorporationTurn(
         sectors: qSectors,
       });
     }
-    const { corpQuality, commodityQuality, sectorQualityBySectorId } = computeQualityUpdates(
-      qCorps,
-      laggedQ
-    );
+    const { corpQuality, corpPillars, commodityQuality, sectorQualityBySectorId } =
+      computeQualityUpdates(qCorps, laggedQ);
     lookups.productSectorQualityById = sectorQualityBySectorId;
     if (sectorQualityEnabled) {
       qualityCorpUpdates = corpQuality;
@@ -530,7 +528,11 @@ export async function processCorporationTurn(
     // Keep in-memory corp docs current so the history snapshot charts this turn.
     for (const [corpId, q] of corpQuality) {
       const corp = lookups.corpById.get(corpId);
-      if (corp) corp.averageQuality = q;
+      if (corp) {
+        corp.averageQuality = q;
+        const pillars = corpPillars.get(corpId);
+        if (pillars) corp.qualityPillars = pillars;
+      }
     }
   }
 

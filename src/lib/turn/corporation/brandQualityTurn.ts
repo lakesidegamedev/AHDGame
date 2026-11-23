@@ -1,7 +1,10 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import {
   computeSectorQuality,
+  computeSectorQualityPillars,
+  rollupCorpPillars,
   rollupCorpQuality,
+  type QualityPillars,
   QUALITY_NEUTRAL_INPUT,
 } from "@/lib/market/brandQuality";
 
@@ -36,6 +39,8 @@ export interface QualityCorpInput {
 export interface QualityUpdateResult {
   /** corpId → new averageQuality (0–100); corps with only extraction are omitted. */
   corpQuality: Map<string, number>;
+  /** corpId → revenue-weighted pillar sub-scores behind `corpQuality`. */
+  corpPillars: Map<string, QualityPillars>;
   /** commodity → new average output quality (0–100), for next turn's inputs. */
   commodityQuality: Map<CommodityType, number>;
   /** Current live quality by sector for gated product-line output adapters. */
@@ -63,23 +68,30 @@ export function computeQualityUpdates(
   laggedCommodityQuality: ReadonlyMap<CommodityType, number>
 ): QualityUpdateResult {
   const corpQuality = new Map<string, number>();
+  const corpPillars = new Map<string, QualityPillars>();
   // Accumulate revenue-weighted output quality per commodity.
   const commodityAcc = new Map<CommodityType, { w: number; acc: number }>();
   const sectorQualityBySectorId = new Map<string, number>();
 
   for (const corp of corps) {
     const perSector: { quality: number | null; revenueWeight: number }[] = [];
+    const perSectorPillars: { pillars: QualityPillars | null; revenueWeight: number }[] = [];
     for (const sector of corp.sectors) {
       const inputQuality =
         meanInputQuality(sector.inputs, laggedCommodityQuality) ?? QUALITY_NEUTRAL_INPUT;
-      const q = computeSectorQuality({
+      const qualityInput = {
         techScore: corp.techScore,
         wageLevel: sector.wageLevel,
         operationsStrength: corp.operationsStrength,
         inputQuality,
         outputCommodities: sector.outputs,
-      });
+      };
+      const q = computeSectorQuality(qualityInput);
       perSector.push({ quality: q, revenueWeight: sector.revenueWeight });
+      perSectorPillars.push({
+        pillars: computeSectorQualityPillars(qualityInput),
+        revenueWeight: sector.revenueWeight,
+      });
       if (q != null && sector.sectorId) sectorQualityBySectorId.set(sector.sectorId, q);
       // Feed the per-commodity rollup (only quality-bearing sectors).
       if (q != null) {
@@ -96,6 +108,8 @@ export function computeQualityUpdates(
     }
     const avg = rollupCorpQuality(perSector);
     if (avg != null) corpQuality.set(corp.corpId, avg);
+    const pillars = rollupCorpPillars(perSectorPillars);
+    if (pillars != null) corpPillars.set(corp.corpId, pillars);
   }
 
   const commodityQuality = new Map<CommodityType, number>();
@@ -103,5 +117,5 @@ export function computeQualityUpdates(
     if (e.w > 0) commodityQuality.set(c, Math.round((e.acc / e.w) * 10) / 10);
   }
 
-  return { corpQuality, commodityQuality, sectorQualityBySectorId };
+  return { corpQuality, corpPillars, commodityQuality, sectorQualityBySectorId };
 }

@@ -308,6 +308,9 @@ export interface CorporateSector {
    * stored margin showed min == max for an entire run.
    */
   effectiveProfitMargin?: number;
+  /** True when `effectiveProfitMargin` is the modifier-stack estimate rather than
+   *  a margin derived from this turn's realized revenue. */
+  effectiveMarginModelled?: boolean;
   /** Logistical sprawl margin (pp, negative) the turn applied to this sector last turn. */
   sprawlMarginPp?: number;
   /**
