@@ -36,7 +36,7 @@ export interface WidgetPerTurnInput {
     fundsPerTurn: number | null;
   };
   corporationHistory?: readonly {
-    sharePrice: number;
+    sharePrice?: number;
     liquidCapital: number;
     marketCap?: number;
   }[];

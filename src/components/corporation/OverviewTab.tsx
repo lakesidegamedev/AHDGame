@@ -54,6 +54,7 @@ import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import { AntitrustCaseCard } from "./AntitrustCaseCard";
 import { TransitionReviewCard } from "./TransitionReviewCard";
 import { KeyStatistics } from "./overview/KeyStatistics";
+import { perShareFigure } from "./overview/keyStatisticsModel";
 import { RevenueMixStrip } from "./overview/RevenueMixStrip";
 import { SectorCards } from "./overview/SectorCards";
 import { OwnershipRing } from "./overview/OwnershipRing";
@@ -621,6 +622,12 @@ export default function OverviewTab({
   const modeBar = <OverviewModeBar mode={mode} onChange={setMode} />;
 
   if (mode === "simple") {
+    const simplePerShare = perShareFigure({
+      isPrivate: corporation.isPrivate === true,
+      sharePrice: corporation.sharePrice,
+      bookValue: balanceSheet?.equity.bookValue ?? null,
+      totalShares: corporation.totalShares,
+    });
     const figures: SimpleFigures = {
       revenue: financials ? fmt(scale(financials.totalRevenue)) : null,
       netIncome: basis ? { text: fmtSigned(scale(basis.netIncome)), raw: basis.netIncome } : null,
@@ -640,8 +647,12 @@ export default function OverviewTab({
       debt: bondInfo
         ? { text: fmt(bondInfo.totalDebt), rating: leverageRating, bonds: activeBonds }
         : null,
-      sharePrice: canSeeMarket ? fmtPrice(corporation.sharePrice) : null,
-      marketCap: canSeeMarket ? `cap ${fmt(corporation.marketCapitalization)}` : null,
+      sharePrice:
+        simplePerShare.amount != null && canSeeMarket ? fmtPrice(simplePerShare.amount) : null,
+      sharePriceLabel: simplePerShare.label,
+      marketCap: canSeeMarket
+        ? `${corporation.isPrivate ? "valuation" : "cap"} ${fmt(corporation.marketCapitalization)}`
+        : null,
       fillPct: physical?.fillRate != null ? physical.fillRate * 100 : null,
     };
     const attention = buildAttentionItems({

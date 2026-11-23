@@ -11,8 +11,9 @@ export interface TurnBriefingItem {
 
 interface CorporationBriefingSource {
   sequentialId: number;
+  isPrivate?: boolean;
   history: {
-    sharePrice: number;
+    sharePrice?: number;
     marketingStrength: number;
     liquidCapital: number;
   }[];
@@ -43,12 +44,13 @@ export function buildTurnBriefing(
       ["corporation", "Liquid capital", "liquidCapital", "currency"],
       ["corporation", "Marketing strength", "marketingStrength", "points"],
     ] as const) {
-      const delta = finiteDelta(current[key], previous[key]);
+      if (key === "sharePrice" && corporation.isPrivate) continue;
+      const delta = finiteDelta(current[key] ?? Number.NaN, previous[key] ?? Number.NaN);
       if (delta != null)
         items.push({
           category,
           label,
-          value: current[key],
+          value: current[key] ?? 0,
           delta,
           unit,
           href: `/corporation/${corporation.sequentialId}`,

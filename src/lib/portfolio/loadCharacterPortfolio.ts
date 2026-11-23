@@ -67,6 +67,8 @@ interface Holding {
   sequentialId?: number;
   shares: number;
   sharePrice: number;
+  /** Private shares have no market quote; the price is a valuation. */
+  isPrivate?: boolean;
   totalValue: number;
   logoUrl?: string;
   brandColor?: string;
@@ -152,6 +154,7 @@ export async function loadPortfolioForCharacter(
       name: 1,
       sequentialId: 1,
       sharePrice: 1,
+      isPrivate: 1,
       shareholders: 1,
       logoUrl: 1,
       brandColor: 1,
@@ -216,6 +219,7 @@ export async function loadPortfolioForCharacter(
       sequentialId: corp.sequentialId,
       shares: sh.shares,
       sharePrice: quote,
+      ...(corp.isPrivate === true ? { isPrivate: true } : {}),
       totalValue: Math.round(value * 100) / 100,
       logoUrl: corp.logoUrl,
       brandColor: corp.brandColor,

@@ -1089,6 +1089,7 @@ export interface PortfolioStockHolding {
   shares: number;
   avgCostPerShare: number | null;
   sharePrice: number;
+  isPrivate?: boolean;
   totalValue: number;
   unrealizedPnl: number | null;
   unrealizedPnlPct: number | null;

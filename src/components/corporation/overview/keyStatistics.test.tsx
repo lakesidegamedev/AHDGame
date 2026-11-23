@@ -203,3 +203,31 @@ describe("recordedRevenueSplit", () => {
     expect(recordedRevenueSplit({ ...statement, retained: -5 })).toBeNull();
   });
 });
+
+describe("KeyStatistics for a private corporation", () => {
+  it("shows book value per share instead of a share price", () => {
+    render(
+      <KeyStatistics
+        {...props({
+          corporation: {
+            sharePrice: 0.21,
+            marketCapitalization: 210,
+            totalShares: 1000,
+            publicFloat: 0,
+            isPrivate: true,
+            liquidCapital: 50,
+            dividendRate: 0,
+          } as KeyStatisticsProps["corporation"],
+          balanceSheet: {
+            equity: { bookValue: 150, totalEquity: 150, marketCapitalization: 210 },
+            assets: { totalAssets: 200 },
+          } as KeyStatisticsProps["balanceSheet"],
+        })}
+      />
+    );
+    expect(screen.getByText("Book value / share")).toBeTruthy();
+    expect(screen.getByText("$0.15")).toBeTruthy();
+    expect(screen.queryByText("Share price")).toBeNull();
+    expect(screen.queryByText("$0.21")).toBeNull();
+  });
+});

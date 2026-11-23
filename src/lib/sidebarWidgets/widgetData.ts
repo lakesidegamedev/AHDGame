@@ -126,11 +126,13 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
       corp.liquidCurrencyCode ??
       (corp.countryId ? (COUNTRY_CURRENCY_MAP[corp.countryId] ?? null) : null),
     cash: corp.liquidCapital ?? 0,
-    sharePrice: corp.sharePrice ?? 0,
-    sharePriceChange: percentChange(corp.sharePrice ?? 0, history[1]?.sharePrice),
+    // A private corporation has no market, so no quote leaves the server.
+    sharePrice: corp.isPrivate === true ? 0 : (corp.sharePrice ?? 0),
+    sharePriceChange:
+      corp.isPrivate === true ? null : percentChange(corp.sharePrice ?? 0, history[1]?.sharePrice),
     revenue: latest?.revenue ?? null,
     income: latest?.income ?? null,
-    sharePriceSeries: oldestFirst.map((row) => row.sharePrice),
+    sharePriceSeries: corp.isPrivate === true ? [] : oldestFirst.map((row) => row.sharePrice),
     cashSeries: oldestFirst.map((row) => row.liquidCapital),
     incomeSeries: oldestFirst.map((row) => row.income ?? 0),
     isPrivate: corp.isPrivate === true,
