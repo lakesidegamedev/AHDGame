@@ -1,14 +1,13 @@
 /**
- * Backfill action-count achievements that characters already earned but never
- * received. Awards used to be skipped for a character whenever a sibling
- * character on the same account held the achievement.
+ * Grants action-count achievements a character has earned but does not hold.
+ * Awards are per character, so a sibling character on the same account holding
+ * one does not count.
  *
  * Only action_count achievements are touched: their progress is a plain count
- * of the character's own action log. A character is granted a missing one when
- * its count meets the target. Existing rows are never changed.
+ * of the character's own action log. A missing one is granted when the count
+ * meets the target. Existing rows are never changed.
  *
- * Usage: npx tsx scripts/migrations/2026-11-23-backfill-character-action-achievements.ts          # dry run
- *        npx tsx scripts/migrations/2026-11-23-backfill-character-action-achievements.ts --apply  # write
+ * Run with tsx: dry run by default, --apply to write.
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
