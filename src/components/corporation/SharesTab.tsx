@@ -291,6 +291,7 @@ export default function SharesTab({
                 myShareValue={trading.myShareValue}
                 myOwnershipPct={trading.myOwnershipPct}
                 myCashOnHand={myCashOnHand}
+                myHomeCurrency={myHomeCurrency}
                 myEscrowedTotal={myEscrowedTotal}
               />
             )}

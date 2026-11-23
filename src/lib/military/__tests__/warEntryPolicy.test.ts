@@ -169,7 +169,7 @@ describe("offensive coalition pressure", () => {
       relationships: [],
     });
     db.collection("governmentApprovals").findOne.mockResolvedValue({ approvalRating: 60 });
-    db.collection("federalBudget").findOne.mockResolvedValue({ debtToGdpRatio: 100 });
+    db.collection("federalBudget").findOne.mockResolvedValue({ debtToGdpRatio: 1 });
     db.collection("militaryUnits").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
         {

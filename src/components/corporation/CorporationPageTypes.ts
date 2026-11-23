@@ -213,6 +213,8 @@ export interface CorporationDetail {
   brandPostureNorm?: number;
   /** Average product quality (0–100) — shown as a number to everyone when present. */
   averageQuality?: number;
+  /** The last visible move in average quality, from the turn snapshots. Absent when it has not moved. */
+  averageQualityChange?: import("@/lib/corporations/rules/qualityChange").QualityChange;
   logisticsBudget: number;
   logisticsStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
@@ -324,6 +326,8 @@ export interface CorporationDetail {
   /** The viewer is CEO of the corporation that controls this subsidiary. */
   viewerIsControllingParentCeo?: boolean;
   viewerIsShareholder?: boolean;
+  /** The viewer's account runs this corporation, through a character that may not be the active one. */
+  viewerAccountRunsCorporation?: boolean;
   /** Global feature gate — when true, the decade-gated Tech tab is shown. */
   techTreesEnabled?: boolean;
   /** Global feature gate — when true, the private supply-agreements panel is shown to the CEO. */

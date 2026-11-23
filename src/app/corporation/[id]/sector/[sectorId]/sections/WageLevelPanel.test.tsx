@@ -42,7 +42,8 @@ describe("WageLevelPanel", () => {
     );
     expect(screen.getByText(/1\.20×/)).toBeTruthy();
     expect(screen.getByText(/\+20%/)).toBeTruthy();
-    expect(screen.getByText(/0\.55× regional median/)).toBeTruthy();
+    expect(screen.getByText(/0\.55× the median industry/)).toBeTruthy();
+    expect(screen.getByText(/0\.66× the median industry/)).toBeTruthy();
   });
 
   it("shows a minimum-wage badge only when the floor binds", () => {
@@ -155,5 +156,22 @@ describe("WageLevelPanel", () => {
     // The claim is a pressure signal, not a mechanical one. The old copy
     // claimed it kept strike pressure elevated, which was never true.
     expect(screen.getByText(/binds nothing on its own/)).toBeTruthy();
+  });
+
+  it("previews the wage bill for a CEO whenever the sector employs workers", () => {
+    render(
+      <WageLevelPanel
+        sector={baseSector}
+        isCeo
+        wageDraft={1.5}
+        wageSaving={false}
+        wageMessage=""
+        onWageChange={noop}
+        onSave={noop}
+        labourCostPerTurn={1_000}
+        formatCost={(n) => "M" + Math.round(n)}
+      />
+    );
+    expect(screen.getByText(/Wage bill at 1\.50×: about M1250 per turn, now M1000/)).toBeTruthy();
   });
 });

@@ -353,7 +353,7 @@ async function prepareAccumulateVoteTurn(
     options?.approvalMap?.get(`${election.countryId ?? "US"}:${election.state.toUpperCase()}`) ??
     options?.approvalMap?.get(election.state.toUpperCase());
   const [approvalPct, enriched, partyGroupFavorabilityByKey] = await Promise.all([
-    preloadedApproval ?? getStateApprovalForElection(election.state),
+    preloadedApproval ?? getStateApprovalForElection(election.state, electionCountryId),
     fetchEnrichedCandidates(candidates, {
       countryId: electionCountryId,
       partiesCache: memo?.partiesByCountry,

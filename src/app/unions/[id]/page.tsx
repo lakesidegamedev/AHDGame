@@ -794,7 +794,7 @@ function UnionDashboard({ id }: { id: string }) {
                   <p className="text-xs text-muted">
                     {union.demandedWageLevel == null
                       ? "This union has no standing wage claim."
-                      : `Standing claim: ${union.demandedWageLevel.toFixed(2)}× the regional median.`}
+                      : `Standing claim: ${union.demandedWageLevel.toFixed(2)}× the industry baseline wage.`}
                   </p>
                 </div>
 

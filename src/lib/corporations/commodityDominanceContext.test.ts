@@ -134,7 +134,7 @@ describe("commodity dominance context for freight", () => {
 });
 
 describe("commodity dominance context with capped demand", () => {
-  it("restores demand the ledger cap removed before measuring a clinic", async () => {
+  it("reads recorded demand and ignores cap-removed units", async () => {
     const flId = new ObjectId();
     await db.collection("corporateSectors").insertOne({
       _id: flId,
@@ -155,10 +155,8 @@ describe("commodity dominance context with capped demand", () => {
       },
     ]);
     const ctx = await contextFor(flId);
-    expect(ctx.demand.healthcare_services).toBeCloseTo(100_200);
-    expect(ctx.stateDemand?.healthcare_services).toBeCloseTo(0.2 + 100_000 * (0.2 / 200));
-    const toll = commodityDominanceFor(ctx, 5);
-    expect(commodityDominanceMultiplier(toll.ratio)).toBe(1);
+    expect(ctx.demand.healthcare_services).toBe(200);
+    expect(ctx.stateDemand?.healthcare_services).toBe(0.2);
   });
 });
 

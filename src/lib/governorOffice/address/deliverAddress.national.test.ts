@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { deliverAddress } from "./deliverAddress";
@@ -37,6 +40,7 @@ function makeMockDb(seed: {
   };
 
   const collections = {
+    partyGroupFavorability: { insertOne: vi.fn().mockResolvedValue({}) },
     gameState: {
       findOne: vi.fn().mockResolvedValue({ _id: "current", currentTurn: seed.currentTurn }),
     },

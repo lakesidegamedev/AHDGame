@@ -291,6 +291,18 @@ export interface SectorPlantsSection {
     /** The same stack in percentage points of revenue, after the soft cap. */
     policyPp: number;
     otherOperatingAnchor: number;
+    /**
+     * `otherOperatingAnchor` split into named parts: overheads (signed, a
+     * negative value is a credit), stock carrying cost, disaster and crisis
+     * losses, and what none of them explain. They sum to `otherOperatingAnchor`.
+     * Absent on the fallback path.
+     */
+    otherBreakdown?: {
+      overheadAnchor: number;
+      inventoryCarryAnchor: number;
+      eventsAnchor: number;
+      remainderAnchor: number;
+    };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;

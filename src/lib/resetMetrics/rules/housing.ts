@@ -1,3 +1,5 @@
+export const HOUSING_BURDEN_INCOME_SHARE = 0.3;
+
 /**
  * Housing supply grows only through usable completions. advanceHousing keeps
  * construction cash and dwelling stocks, constrains builds by funding and real
@@ -302,7 +304,8 @@ export function housingPaymentBurden(
     payments += net * group.households;
     income += group.annualDisposableIncome * group.households;
     households += group.households;
-    if (net > group.annualDisposableIncome * 0.3) burdenedHouseholds += group.households;
+    if (net > group.annualDisposableIncome * HOUSING_BURDEN_INCOME_SHARE)
+      burdenedHouseholds += group.households;
   }
   if (![payments, income, households].every(Number.isFinite))
     throw new Error("Housing payments overflow");

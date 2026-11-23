@@ -1,3 +1,5 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { type Db } from "mongodb";
 import type { Bill } from "@/lib/db/types";
@@ -36,8 +38,9 @@ function negate(effects: CrisisEffect[]): CrisisEffect[] {
 }
 
 async function incApproval(db: Db, countryId: string, delta: number): Promise<void> {
-  await governmentApprovalsCollection<Document>(db).updateOne(
-    { _id: countryId as unknown as import("mongodb").ObjectId },
+  await ensureGovernmentApproval(db, [countryId]);
+  await governmentApprovalsCollection<Document & { _id: string }>(db).updateOne(
+    { _id: countryId },
     approvalDeltaUpdate(delta)
   );
 }
@@ -51,16 +54,19 @@ async function finalizeCrisisAid(
 ): Promise<void> {
   const now = new Date();
   if (passed) {
-    await crisisAidCommitmentsCollection(db).updateOne(
+    const claimed = await crisisAidCommitmentsCollection(db).updateOne(
       { _id: commitment._id, status: "pending" },
       { $set: { status: "passed", resolvedAt: now, updatedAt: now } }
     );
-    await logWireEvent(
-      "crisis_aid_passed",
-      `Emergency aid from ${commitment.senderCountryId} was approved.`,
-      {
-        href: `/world/crises/${commitment.crisisId.toString()}`,
-      }
+    if (claimed.matchedCount === 0) return;
+    await afterCommit(db, () =>
+      logWireEvent(
+        "crisis_aid_passed",
+        `Emergency aid from ${commitment.senderCountryId} was approved.`,
+        {
+          href: `/world/crises/${commitment.crisisId.toString()}`,
+        }
+      )
     );
     return;
   }
@@ -89,12 +95,14 @@ async function finalizeCrisisAid(
   await applyEffectsForCrisis(db, commitment.crisisId, negate(commitment.recoveryEffects));
   await applyCrisisEffects(db, negate(commitment.senderEffects), [], [commitment.senderCountryId]);
   await incApproval(db, commitment.senderCountryId, -AID_FAILED_PENALTY);
-  await logWireEvent(
-    "crisis_aid_failed",
-    `${commitment.senderCountryId}'s aid bill failed; the pledge was clawed back.`,
-    {
-      href: `/world/crises/${commitment.crisisId.toString()}`,
-    }
+  await afterCommit(db, () =>
+    logWireEvent(
+      "crisis_aid_failed",
+      `${commitment.senderCountryId}'s aid bill failed; the pledge was clawed back.`,
+      {
+        href: `/world/crises/${commitment.crisisId.toString()}`,
+      }
+    )
   );
 }
 
@@ -111,7 +119,7 @@ export async function processCrisisAidResolutions(
     if (!bill) continue;
     const outcome = isResolvedBillStatus(bill.status);
     if (!outcome) continue;
-    await finalizeCrisisAid(db, c, outcome === "passed", currentTurn);
+    await withSessionDb(db, (tx) => finalizeCrisisAid(tx, c, outcome === "passed", currentTurn));
     if (outcome === "passed") passed++;
     else failed++;
   }
@@ -119,7 +127,10 @@ export async function processCrisisAidResolutions(
 }
 
 /** Reverse expired failed-vote approval penalties exactly once. */
-export async function reverseCrisisAidPenalties(db: Db, currentTurn: number): Promise<number> {
+async function reverseCrisisAidPenaltiesInTransaction(
+  db: Db,
+  currentTurn: number
+): Promise<number> {
   const due = await crisisAidCommitmentsCollection(db)
     .find({
       status: "failed",
@@ -127,12 +138,37 @@ export async function reverseCrisisAidPenalties(db: Db, currentTurn: number): Pr
       approvalPenaltyExpiresTurn: { $lte: currentTurn },
     })
     .toArray();
-  for (const c of due) {
-    await incApproval(db, c.senderCountryId, AID_FAILED_PENALTY);
-    await crisisAidCommitmentsCollection(db).updateOne(
-      { _id: c._id, penaltyReversed: { $ne: true } },
-      { $set: { penaltyReversed: true, updatedAt: new Date() } }
-    );
-  }
+  if (due.length === 0) return 0;
+  const claimed = await crisisAidCommitmentsCollection(db).bulkWrite(
+    due.map((c) => ({
+      updateOne: {
+        filter: { _id: c._id, penaltyReversed: { $ne: true } },
+        update: { $set: { penaltyReversed: true, updatedAt: new Date() } },
+      },
+    }))
+  );
+  if (typeof claimed?.matchedCount === "number" && claimed.matchedCount !== due.length)
+    throw new Error("Aid penalty expiry changed during reversal");
+  const totals = new Map<string, number>();
+  for (const c of due)
+    totals.set(c.senderCountryId, (totals.get(c.senderCountryId) ?? 0) + AID_FAILED_PENALTY);
+  await ensureGovernmentApproval(db, [...totals.keys()]);
+  await governmentApprovalsCollection<Document & { _id: string }>(db).bulkWrite(
+    [...totals].map(([countryId, delta]) => ({
+      updateOne: {
+        filter: { _id: countryId },
+        update: approvalDeltaUpdate(delta),
+      },
+    }))
+  );
   return due.length;
+}
+
+export async function reverseCrisisAidPenalties(
+  db: Db,
+  ...args: Parameters<typeof reverseCrisisAidPenaltiesInTransaction> extends [Db, ...infer Rest]
+    ? Rest
+    : never
+) {
+  return withSessionDb(db, (tx) => reverseCrisisAidPenaltiesInTransaction(tx, ...args));
 }

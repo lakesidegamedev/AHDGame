@@ -118,6 +118,45 @@ describe("PlantPanel facility sizing", () => {
     expect(screen.getByText("0 of 40 plants finished")).toBeTruthy();
     expect(screen.queryByText(/0 of 1 plant built/)).toBeNull();
   });
+
+  it("labels the build bar as capacity arrived, not plants finished or money paid", () => {
+    const partial = {
+      ...plants,
+      capacityUnits: 250,
+      plantCount: undefined,
+      strategyId: "vehicle_assembly",
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 100,
+          onlineTurn: 140,
+          turnsRemaining: 6,
+          smooth: true,
+          unitsPerTurn: 1,
+          unitsOrdered: 40,
+          unitsDelivered: 0,
+          costPaidAnchor: 170_000,
+          progress: 0.85,
+        },
+      ],
+    } as unknown as PlantsData;
+    render(
+      <PlantPanel
+        plants={partial}
+        sectorType="manufacturing"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+    expect(screen.getByText(/Bar: 85% of the ordered capacity has arrived/)).toBeTruthy();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("85");
+  });
 });
 
 describe("PlantPanel vehicle recipe", () => {
@@ -166,7 +205,7 @@ describe("PlantPanel vehicle recipe", () => {
       )
     ).toBeTruthy();
     expect(screen.getByText("41")).toBeTruthy();
-    expect(screen.getByText(/28 more being built/)).toBeTruthy();
+    expect(screen.getByText(/28 more still being built/)).toBeTruthy();
     expect(screen.queryByText(/units per day/)).toBeNull();
   });
 });

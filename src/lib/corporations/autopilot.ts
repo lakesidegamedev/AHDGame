@@ -126,6 +126,19 @@ export function deriveAutopilotAdvisories(
   return out;
 }
 
+/**
+ * The stored advisory is only refreshed on the turn, so a technology bought
+ * since then would still read "you can afford" it. Drop that one entry.
+ */
+export function withoutOwnedTechAdvisory(
+  advisories: readonly CorpAutopilotAdvisory[],
+  ownedTechNames: ReadonlySet<string>
+): CorpAutopilotAdvisory[] {
+  return advisories.filter(
+    (a) => !(a.kind === "tech" && a.subject != null && ownedTechNames.has(a.subject))
+  );
+}
+
 /** Kinds present now that were absent last turn: what the owner should hear about. */
 export function newAdvisoryKinds(
   prior: readonly CorpAutopilotAdvisory[] | undefined,

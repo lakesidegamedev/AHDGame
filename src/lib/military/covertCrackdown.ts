@@ -1,3 +1,5 @@
+import { afterCommit } from "@/lib/db/sessionDb";
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -38,13 +40,16 @@ export async function applyCovertCrackdown(
     "Soviet inspectors raid East German facilities",
     CRACKDOWN_TENSION_SPIKE
   );
+  await ensureGovernmentApproval(db, [countryId]);
   await governmentApprovalsCollection<Document>(db).updateOne(
     { _id: countryId as unknown as ObjectId },
     approvalDeltaUpdate(CRACKDOWN_APPROVAL_HIT)
   );
-  await createSystemNewsPost(
-    `Soviet inspection teams have raided undeclared industrial facilities in the ${countryName}. Moscow has issued a formal rebuke. Officials in Berlin declined to comment.`,
-    "executive",
-    { title: "Soviet Crackdown in East Germany" }
+  await afterCommit(db, () =>
+    createSystemNewsPost(
+      `Soviet inspection teams have raided undeclared industrial facilities in the ${countryName}. Moscow has issued a formal rebuke. Officials in Berlin declined to comment.`,
+      "executive",
+      { title: "Soviet Crackdown in East Germany" }
+    )
   );
 }

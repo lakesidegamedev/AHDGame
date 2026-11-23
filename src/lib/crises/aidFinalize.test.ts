@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
@@ -200,23 +203,25 @@ describe("reverseCrisisAidPenalties", () => {
       toArray: vi.fn().mockResolvedValue([c]),
     });
 
+    db.collectionMocks["crisisAidCommitments"]!.bulkWrite.mockResolvedValue({ matchedCount: 1 });
     const n = await reverseCrisisAidPenalties(db as unknown as Db, 100);
 
     expect(n).toBe(1);
 
-    // governmentApprovals.updateOne called with $inc.approvalRating === +AID_FAILED_PENALTY
-    const approvalCalls = db.collectionMocks["governmentApprovals"]!.updateOne.mock.calls;
-    const reversalCall = approvalCalls.find(
-      (call) => JSON.stringify(call[1]) === JSON.stringify(approvalDeltaUpdate(AID_FAILED_PENALTY))
+    const approvalOps = db.collectionMocks["governmentApprovals"]!.bulkWrite.mock.calls.flatMap(
+      (call) => call[0]
     );
-    expect(reversalCall).toBeDefined();
-
-    // crisisAidCommitments.updateOne sets penaltyReversed:true
-    const commitmentCalls = db.collectionMocks["crisisAidCommitments"]!.updateOne.mock.calls;
-    const reversedCall = commitmentCalls.find(
-      (call) => (call[1] as { $set?: Record<string, unknown> })?.$set?.penaltyReversed === true
-    );
-    expect(reversedCall).toBeDefined();
+    expect(approvalOps).toContainEqual({
+      updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(AID_FAILED_PENALTY) },
+    });
+    expect(db.collectionMocks["crisisAidCommitments"]!.bulkWrite).toHaveBeenCalledWith([
+      {
+        updateOne: {
+          filter: { _id: c._id, penaltyReversed: { $ne: true } },
+          update: { $set: { penaltyReversed: true, updatedAt: expect.any(Date) } },
+        },
+      },
+    ]);
   });
 
   it("returns 0 when no commitments are due", async () => {

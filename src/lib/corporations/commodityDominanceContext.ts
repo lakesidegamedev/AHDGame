@@ -7,7 +7,6 @@
  */
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import {
   COMMODITY_BASE_PRICES,
   COMMODITY_LABELS,
@@ -27,7 +26,6 @@ import {
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
-import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import { loadFundedCountryBooks } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import {
   fundedCountryMarketsByCommodity,
@@ -238,7 +236,6 @@ export async function loadCommodityDominanceContext(
             commodity: 1,
             globalDemand: 1,
             turn: 1,
-            demandTruncatedUnits: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
             ...Object.fromEntries(countryStateIds.map((id) => [`stateDemand.${id}`, 1])),
           },
@@ -258,17 +255,11 @@ export async function loadCommodityDominanceContext(
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
     const countryDemand: Partial<Record<CommodityType, number>> = {};
-    // The books store demand after the ledger cap, which can leave a state with
-    // a fraction of a unit of "demand" for a service the world plainly wants.
-    // The toll asks how much a firm could oversupply what people want, so it
-    // reads demand with the capped-away part restored, pro rata by scope.
+    // Demand is read as recorded: real orders only.
     for (const doc of priceDocs) {
-      const worldCapped = doc.globalDemand;
-      const truncated = doc.demandTruncatedUnits;
-      demand[doc.commodity] = worldCapped + latentDemandTopUp(worldCapped, worldCapped, truncated);
+      demand[doc.commodity] = doc.globalDemand;
       const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
-      if (typeof local === "number")
-        stateDemand[doc.commodity] = local + latentDemandTopUp(local, worldCapped, truncated);
+      if (typeof local === "number") stateDemand[doc.commodity] = local;
       if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity)) {
         const fundedDemand = targetCountryId
           ? fundedMarkets?.get(doc.commodity)?.[targetCountryId]?.demand
@@ -281,7 +272,7 @@ export async function loadCommodityDominanceContext(
           (sum, id) => sum + (Number(doc.stateDemand?.[id]) || 0),
           0
         );
-        countryDemand[doc.commodity] = capped + latentDemandTopUp(capped, worldCapped, truncated);
+        countryDemand[doc.commodity] = capped;
       }
     }
     return {

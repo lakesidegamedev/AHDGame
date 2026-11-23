@@ -97,6 +97,7 @@ import type {
 } from "@/components/navbar/experimentalNavTypes";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { announceCharacterSwitch } from "@/lib/characterSwitchSignal";
 
 const NavCustomizeDialog = dynamic(
   () =>
@@ -370,14 +371,20 @@ function useExperimentalNavbarContext({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ characterId }),
         });
-        if (res.ok) window.location.reload();
+        if (res.ok) {
+          announceCharacterSwitch({
+            characterId,
+            name: adminCharacters?.find((c) => c.id === characterId)?.name ?? null,
+          });
+          window.location.reload();
+        }
       } catch {
         /* ignore */
       } finally {
         setSwitchingCharacter(false);
       }
     },
-    [switchingCharacter]
+    [switchingCharacter, adminCharacters]
   );
 
   const handleSwitchImperial = useCallback(

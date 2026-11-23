@@ -1,3 +1,5 @@
+import { BSON } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Crisis choices authorize country actions and global responses.
  * submitCrisisDecision claims each leader once and preserves humanitarian orders
@@ -20,7 +22,7 @@ import type {
   CrisisInteraction,
   CrisisDecisionNode,
 } from "@/lib/db/types/crisis";
-import type { FederalBudget, ElectedOfficial } from "@/lib/db/types";
+import type { FederalBudget } from "@/lib/db/types";
 import {
   getCountryConfig,
   getHeadOfStateOfficeType,
@@ -572,7 +574,7 @@ export interface DecisionResult {
  * response before any money or effect moves, then applies the option scoped to
  * that country and runs its action hook.
  */
-export async function answerMultiResponderNode(
+async function answerMultiResponderNodeInTransaction(
   context: DecisionContext & { crisis: Crisis }
 ): Promise<DecisionResult> {
   const { db, interactionId, interaction, currentNode, crisis, optionId, characterId, countryId } =
@@ -713,7 +715,9 @@ export async function answerMultiResponderNode(
 }
 
 /** Contribution to a collective node: claims the slot, spends, and rolls back if the spend fails. */
-export async function answerCollectiveNode(context: DecisionContext): Promise<DecisionResult> {
+async function answerCollectiveNodeInTransaction(
+  context: DecisionContext
+): Promise<DecisionResult> {
   const { db, interactionId, interaction, currentNode, optionId, characterId, countryId } = context;
   const option = currentNode.options?.find((o) => o.optionId === optionId);
   if (!option) throw badRequest("Invalid option");
@@ -797,7 +801,7 @@ export async function answerCollectiveNode(context: DecisionContext): Promise<De
 }
 
 /** Single-responder choice or aid decline: claim, charge, effects, action hook, advance the node. */
-export async function answerChoiceNode(context: DecisionContext): Promise<DecisionResult> {
+async function answerChoiceNodeInTransaction(context: DecisionContext): Promise<DecisionResult> {
   const { db, interactionId, interaction, currentNode, crisis, optionId, characterId, countryId } =
     context;
   const budgetPaid = context.budgetPaid === true;
@@ -942,7 +946,10 @@ export async function answerChoiceNode(context: DecisionContext): Promise<Decisi
  * Picks the default option ("decline" if available, otherwise the first) and
  * advances along its path, finalizing any terminal node it reaches.
  */
-export async function autoResolveCrisisInteraction(db: Db, interactionId: ObjectId): Promise<void> {
+async function autoResolveCrisisInteractionInTransaction(
+  db: Db,
+  interactionId: ObjectId
+): Promise<void> {
   const interaction = await crisisInteractionsCollection(db).findOne({ _id: interactionId });
 
   if (!interaction || interaction.resolvedAt) return;
@@ -1123,4 +1130,40 @@ export async function getExpiredInteractions(db: Db): Promise<CrisisInteraction[
       autoResolveOnExpiry: true,
     })
     .toArray();
+}
+
+export async function answerChoiceNode(context: DecisionContext): Promise<DecisionResult> {
+  return withSessionDb(context.db, (db) =>
+    answerChoiceNodeInTransaction({
+      ...context,
+      db,
+      interaction: BSON.deserialize(BSON.serialize(context.interaction)) as CrisisInteraction,
+    })
+  );
+}
+
+export async function answerMultiResponderNode(
+  context: DecisionContext & { crisis: Crisis }
+): Promise<DecisionResult> {
+  return withSessionDb(context.db, (db) =>
+    answerMultiResponderNodeInTransaction({
+      ...context,
+      db,
+      interaction: BSON.deserialize(BSON.serialize(context.interaction)) as CrisisInteraction,
+    })
+  );
+}
+
+export async function answerCollectiveNode(context: DecisionContext): Promise<DecisionResult> {
+  return withSessionDb(context.db, (db) =>
+    answerCollectiveNodeInTransaction({
+      ...context,
+      db,
+      interaction: BSON.deserialize(BSON.serialize(context.interaction)) as CrisisInteraction,
+    })
+  );
+}
+
+export async function autoResolveCrisisInteraction(db: Db, interactionId: ObjectId): Promise<void> {
+  await withSessionDb(db, (tx) => autoResolveCrisisInteractionInTransaction(tx, interactionId));
 }

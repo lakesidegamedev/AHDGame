@@ -89,7 +89,7 @@ describe("MarketPositionPanel NPP grouping", () => {
         room={{ demandGapUnits: 8000, measuredDemandGapUnits: 123 }}
       />
     );
-    expect(screen.getByText("Estimated room to build")).toBeTruthy();
+    expect(screen.getByText("Room to build (paid orders)")).toBeTruthy();
     // 123 units of measured demand at 25 units a plant: about 4 new plants.
     const room = screen.getByText(/^about 4 /);
     expect(room.getAttribute("title")).toBe("123 units/day of unmet demand");

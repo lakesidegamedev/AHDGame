@@ -1,7 +1,7 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type { GovernorAddress, GovernorOfficeState, PartyGroupFavorability } from "@/lib/db/types";
-import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
+import type { GovernorAddress, PartyGroupFavorability } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   ADDRESS_COOLDOWN_TURNS,
@@ -64,7 +64,7 @@ export interface DeliverAddressResult {
  *   - demographicEffect — additive turnout boost on the targeted voter group
  *     (write-side: applied at delivery, subtracted by the expiry turn phase).
  */
-export async function deliverAddress(
+async function deliverAddressInTransaction(
   db: Db,
   input: DeliverAddressInput
 ): Promise<DeliverAddressResult> {
@@ -291,21 +291,16 @@ export async function deliverAddress(
     partyId !== "independent" &&
     ADDRESS_PARTY_GROUP_FAVORABILITY_DELTA > 0
   ) {
-    try {
-      const pgf: PartyGroupFavorability = {
-        countryId,
-        partyId,
-        groupId: targetDemographicGroupId,
-        favorabilityDelta: ADDRESS_PARTY_GROUP_FAVORABILITY_DELTA,
-        sourceAddressId: addressId,
-        expiresAtTurn: currentTurn + ADDRESS_DEMOGRAPHIC_DURATION_TURNS,
-        createdAt: now,
-      };
-      await partyGroupFavorabilityCollection(db).insertOne(pgf);
-    } catch {
-      // Non-critical: the address is still delivered; vote distribution
-      // simply won't get the per-group bonus this cycle.
-    }
+    const pgf: PartyGroupFavorability = {
+      countryId,
+      partyId,
+      groupId: targetDemographicGroupId,
+      favorabilityDelta: ADDRESS_PARTY_GROUP_FAVORABILITY_DELTA,
+      sourceAddressId: addressId,
+      expiresAtTurn: currentTurn + ADDRESS_DEMOGRAPHIC_DURATION_TURNS,
+      createdAt: now,
+    };
+    await partyGroupFavorabilityCollection(db).insertOne(pgf);
   }
 
   const isNational = stateId === getNationalStateId(countryId);
@@ -313,17 +308,23 @@ export async function deliverAddress(
   // Announce on the news wire. Best-effort — failures here don't abort the
   // delivery (the address row is already persisted with its effects).
   try {
-    await generateAddressNews({
-      scope: isNational ? "national" : "state",
-      addressName: isNational
-        ? getNationalAddressName(countryId)
-        : getRegionalAddressName(countryId),
-      title: trimmedTitle,
-      deliveredByName: character.name,
-      countryId,
-      ...(isNational ? {} : { state: stateId }),
-      emphasizedCategories,
-      ...(trimmedBody ? { body: trimmedBody } : {}),
+    await afterCommit(db, async () => {
+      try {
+        await generateAddressNews({
+          scope: isNational ? "national" : "state",
+          addressName: isNational
+            ? getNationalAddressName(countryId)
+            : getRegionalAddressName(countryId),
+          title: trimmedTitle,
+          deliveredByName: character.name,
+          countryId,
+          ...(isNational ? {} : { state: stateId }),
+          emphasizedCategories,
+          ...(trimmedBody ? { body: trimmedBody } : {}),
+        });
+      } catch {
+        /* The committed address remains valid without a wire story. */
+      }
     });
   } catch {
     // Swallow — news is non-critical for the delivery flow.
@@ -336,19 +337,32 @@ export async function deliverAddress(
   // but guard anyway so a Discord hiccup can't abort a persisted delivery.
   if (isNational) {
     try {
-      await sendCountryGameEvent(
-        countryId,
-        buildNationalAddressEmbed({
-          countryId,
-          title: trimmedTitle,
-          ...(trimmedBody ? { body: trimmedBody } : {}),
-          deliveredByName: character.name,
-        })
-      );
+      await afterCommit(db, async () => {
+        try {
+          await sendCountryGameEvent(
+            countryId,
+            buildNationalAddressEmbed({
+              countryId,
+              title: trimmedTitle,
+              ...(trimmedBody ? { body: trimmedBody } : {}),
+              deliveredByName: character.name,
+            })
+          );
+        } catch {
+          /* Discord cannot invalidate delivery. */
+        }
+      });
     } catch {
       // Swallow — Discord is non-critical for the delivery flow.
     }
   }
 
   return { status: 200, body: { addressId: addressId.toString() } };
+}
+
+export async function deliverAddress(
+  db: Db,
+  ...args: Parameters<typeof deliverAddressInTransaction> extends [Db, ...infer Rest] ? Rest : never
+) {
+  return withSessionDb(db, (tx) => deliverAddressInTransaction(tx, ...args));
 }

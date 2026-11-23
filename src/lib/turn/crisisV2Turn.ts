@@ -1,12 +1,9 @@
+import { loadAccountabilityAttributions } from "./crisisV2/attribution";
+import { freezeAccountabilityAttributions } from "@/lib/crises/v2/accountability";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { logger } from "@/lib/observability/logger";
 import { logWireEvent } from "@/lib/wireEvent";
-import type {
-  Crisis,
-  CrisisInteraction,
-  CrisisLeverUse,
-  CrisisV2Output,
-} from "@/lib/db/types/crisis";
+import type { Crisis, CrisisLeverUse, CrisisV2Output } from "@/lib/db/types/crisis";
 import {
   recordInaction,
   recordLeverUses,
@@ -32,7 +29,6 @@ import {
   calculateDecisionDurationReduction,
 } from "@/lib/crises/interactionEngine";
 import { getGameState } from "@/lib/gameState";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { ensureCampaignCrisisContent } from "@/lib/livingConflict/campaignCrisis";
 import { applyCrisisTurnEffects, finalizeResolvedCrises } from "./crisisTurn";
 import { ensureLegacyCrisisContent } from "./crisisV2/legacyContent";
@@ -535,6 +531,14 @@ export async function processCrisisV2Turn(
         .toArray(),
       needsHolders ? loadHolders(db, turn, countryIds) : Promise.resolve([]),
     ]);
+    const attributionIds = [
+      ...runnable.flatMap(({ crisis }) => crisis.v2.ledger.map((row) => row.holderId)),
+      ...leverRows.map((row) => row.holderId),
+      ...holderMaps.flatMap((countries) =>
+        [...countries.values()].flatMap((roles) => Object.values(roles).flat())
+      ),
+    ];
+    const attributions = await loadAccountabilityAttributions(db, attributionIds);
     const footprints = needsHolders
       ? await loadFootprints(db, turn, holderMaps)
       : new Map<string, HolderFootprint>();
@@ -579,6 +583,7 @@ export async function processCrisisV2Turn(
           leverId: row.leverId,
           holderId: row.holderId,
           intensity: row.intensity,
+          ...(row.attribution ? { attribution: row.attribution } : {}),
         }));
 
         const before = crisis.v2;
@@ -596,6 +601,14 @@ export async function processCrisisV2Turn(
           reach
         );
         next = recordInaction(next, def, exposed, turn);
+        next = {
+          ...next,
+          ledger: freezeAccountabilityAttributions(
+            next.ledger,
+            attributions,
+            next.scope === "state" || next.scope === "local" ? crisis.regionIds : []
+          ),
+        };
         next = applySeverityStep(next, step, turn);
         const length = scheduledLength.get(crisis._id.toString()) ?? crisis.durationTurns;
         if (def.pacing?.kind === "tracked" && driverInputs[def.pacing.input] !== undefined) {

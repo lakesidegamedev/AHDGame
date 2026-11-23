@@ -1,3 +1,4 @@
+import { HOUSING_BURDEN_INCOME_SHARE } from "./housing";
 /**
  * Named approval conditions use owner-produced Metrics v2 observations.
  * Only compatible units are adapted; retired inputs never become guessed values.
@@ -31,6 +32,12 @@ function resetApprovalMetricValues(
   observations: Readonly<Record<string, OpeningMetricObservation>>
 ) {
   const metrics = observedMetricValues(observations);
+  const housing = observations["24"];
+  if (housing?.definitionVersion === 2 && metrics.social?.housingCostBurden != null) {
+    if (housing.unit === "% disposable income spent on housing")
+      metrics.social.housingCostBurden /= HOUSING_BURDEN_INCOME_SHARE;
+    else delete metrics.social.housingCostBurden;
+  }
   // Coverage and air quality changed polarity in v2, but retain a 0-100 scale.
   const coverage = metrics.healthcare?.coverageRate;
   if (coverage != null) metrics.healthcare.uninsuredRate = 100 - coverage;
