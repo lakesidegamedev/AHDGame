@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { applyCovertNuclearTurn, CRACKDOWN_APPROVAL_HIT } from "./covertNuclearTurn";
@@ -15,7 +16,7 @@ interface World {
   covert: Record<string, unknown> | null;
   appropriation: { balance: number; encumbered?: number };
   covertWrites: Record<string, unknown>[];
-  approvalIncs: Record<string, unknown>[];
+  approvalUpdates: unknown[];
 }
 
 /**
@@ -62,7 +63,7 @@ function stubDb(w: World): Db {
       if (name === "governmentApprovals") {
         return {
           updateOne: async (_f: unknown, u: Record<string, unknown>) => {
-            w.approvalIncs.push(u.$inc as Record<string, unknown>);
+            w.approvalUpdates.push(u);
             return { matchedCount: 1, modifiedCount: 1 };
           },
         };
@@ -98,7 +99,7 @@ describe("applyCovertNuclearTurn", () => {
       covert: covert(),
       appropriation: { balance: 10_000 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 260, discovered: false });
@@ -112,7 +113,7 @@ describe("applyCovertNuclearTurn", () => {
       covert: null,
       appropriation: { balance: 10_000 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 0, discovered: false });
@@ -125,7 +126,7 @@ describe("applyCovertNuclearTurn", () => {
       covert: covert({ funding: "crash", suspicion: 40 }),
       appropriation: { balance: 100 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 0, discovered: false });
@@ -139,7 +140,7 @@ describe("applyCovertNuclearTurn", () => {
       covert: covert(),
       appropriation: { balance: 400, encumbered: 300 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     // 100 uncommitted cannot cover steady's 260; the turn is unfunded.
@@ -153,7 +154,7 @@ describe("applyCovertNuclearTurn", () => {
       covert: covert({ funding: "crash", suspicion: 60, stage: 3, progress: 30 }),
       appropriation: { balance: 10_000 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r.discovered).toBe(true);
@@ -172,7 +173,7 @@ describe("applyCovertNuclearTurn", () => {
       "Soviet inspectors raid East German facilities",
       CRACKDOWN_TENSION_SPIKE
     );
-    expect(w.approvalIncs[0]).toEqual({ approvalRating: CRACKDOWN_APPROVAL_HIT });
+    expect(w.approvalUpdates[0]).toEqual(approvalDeltaUpdate(CRACKDOWN_APPROVAL_HIT));
     expect(createSystemNewsPost).toHaveBeenCalledWith(
       // The public learns there was SOMETHING, never what stage it reached.
       expect.not.stringMatching(/bomb|nuclear|enrich|warhead|device/i),
@@ -186,11 +187,11 @@ describe("applyCovertNuclearTurn", () => {
       covert: covert(),
       appropriation: { balance: 10_000 },
       covertWrites: [],
-      approvalIncs: [],
+      approvalUpdates: [],
     };
     await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(applyTensionEvent).not.toHaveBeenCalled();
     expect(createSystemNewsPost).not.toHaveBeenCalled();
-    expect(w.approvalIncs).toHaveLength(0);
+    expect(w.approvalUpdates).toHaveLength(0);
   });
 });

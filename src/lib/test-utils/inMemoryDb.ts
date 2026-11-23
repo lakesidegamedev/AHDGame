@@ -315,6 +315,16 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
     case "$concatArrays":
       if (args.some((arg) => !Array.isArray(arg))) throw new Error("inMemoryDb: expected arrays");
       return args.flat();
+    case "$setUnion": {
+      if (args.some((arg) => !Array.isArray(arg)))
+        throw new Error("inMemoryDb: expected arrays for $setUnion");
+      const union: unknown[] = [];
+      for (const array of args as unknown[][]) {
+        for (const value of array)
+          if (!union.some((existing) => sameValue(existing, value))) union.push(value);
+      }
+      return union;
+    }
     case "$slice": {
       if (!Array.isArray(args[0])) throw new Error("inMemoryDb: expected an array to slice");
       if (args.length === 2) {

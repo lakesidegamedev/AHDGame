@@ -1,3 +1,4 @@
+import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -100,9 +101,9 @@ describe("country-scope timeout — vacant executive resolves to a safe default"
     expect(db.collectionMocks.federalBudget!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.financialTxLog!.insertOne).not.toHaveBeenCalled();
     // The safe default's own effect still applied.
-    expect(db.collectionMocks.governmentApprovals!.updateOne).toHaveBeenCalledWith(
-      { _id: "US" },
-      { $inc: { approvalRating: -1 } }
+    expect(db.collectionMocks.governmentApprovals!.bulkWrite).toHaveBeenCalledWith(
+      [{ updateOne: { filter: { _id: "US" }, update: approvalDeltaUpdate(-1) } }],
+      { ordered: true }
     );
   });
 });
