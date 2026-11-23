@@ -11,5 +11,5 @@ areas: [fullstack]
 
 - An input row now says how much came from your own sites at no charge and how much you bought, with the price only on the bought part.
 - When everything came from your own sites, the row shows what it was worth at market instead of a price you paid.
-- The money panel line for inputs is now called "Cash paid for inputs" and leaves out goods your own sites sent.
+- The money panel line for inputs is now called "Inputs used". It shows what the inputs cost when bought, so goods your own sites sent count as nothing there.
 - Turns settled before this update keep the old row text.
