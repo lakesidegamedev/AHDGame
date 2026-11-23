@@ -114,12 +114,16 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
         <Section title="Country briefs" testId="background-briefs">
           {view.briefs.length > 0 ? (
             <ul className="space-y-4">
+              <li className="text-body-sm text-muted">
+                Briefs are written every few turns and describe the country on the date shown. The
+                figures in the header above are live, so they can be newer than a brief.
+              </li>
               {view.briefs.map((brief) => (
                 <li key={brief.id} className="space-y-1 text-body-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-semibold text-foreground">{brief.headline}</span>
                     <span className="text-muted">
-                      {rawTurnToLarpDate(brief.turn, startingYear, clock)}
+                      Posted {rawTurnToLarpDate(brief.turn, startingYear, clock)}
                     </span>
                   </div>
                   <p className="text-muted">{brief.body}</p>
@@ -188,7 +192,7 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
             {politics ? (
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-x-10 gap-y-4">
-                  <Stat label="Head of government" value={politics.headName ?? "Vacant"} />
+                  <Stat label="Head of government now" value={politics.headName ?? "Vacant"} />
                   {politics.governmentPartyNames.length > 0 && (
                     <Stat label="Governing" value={politics.governmentPartyNames.join(", ")} />
                   )}

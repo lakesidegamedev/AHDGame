@@ -92,7 +92,7 @@ describe("NationsTable", () => {
     render(<NationsTable rows={[playable, econOnly]} />);
     expect(within(rowFor("United States")).getAllByText("Ada Example").length).toBeGreaterThan(0);
     expect(within(rowFor("United States")).getAllByText("Example Party").length).toBeGreaterThan(0);
-    expect(within(rowFor("United Kingdom")).getAllByText("Vacant").length).toBeGreaterThan(0);
+    expect(within(rowFor("United Kingdom")).getAllByText("Not tracked").length).toBeGreaterThan(0);
   });
 });
 

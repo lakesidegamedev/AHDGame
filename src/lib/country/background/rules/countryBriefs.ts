@@ -149,7 +149,7 @@ export function briefActions(obs: BriefObservation): BriefAction[] {
 
 function bondLine(obs: BriefObservation): string {
   return obs.bond
-    ? ` Its nearest bond pays ${obs.bond.couponRate.toFixed(2)}% and trades at ${(obs.bond.marketPrice * 100).toFixed(1)}.`
+    ? ` Its nearest bond has a fixed coupon of ${obs.bond.couponRate.toFixed(2)}%, set when it was issued, and trades at ${(obs.bond.marketPrice * 100).toFixed(1)}.`
     : "";
 }
 
