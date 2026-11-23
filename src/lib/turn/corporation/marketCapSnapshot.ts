@@ -14,6 +14,7 @@ import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/c
 import { computeMarketIndex } from "./marketIndex";
 import { mapCostBreakdown } from "@/lib/corporations/rules/costBreakdown";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { bankBranchSnapshot } from "@/lib/banking/rules/branchSnapshot";
 import type { Document } from "mongodb";
 import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
@@ -407,6 +408,8 @@ export async function snapshotMarketCap(
           dividendTaxPaidByCountry?.get(id)
         );
 
+      const bankBranch = bankBranchSnapshot(sourceCorp?.bankCharter);
+
       return {
         corporationId: s.corpId,
         turn,
@@ -427,6 +430,9 @@ export async function snapshotMarketCap(
         ...(sourceCorp?.averageQuality != null
           ? { averageQuality: sourceCorp.averageQuality }
           : {}),
+        // Branch-network take for deposit-taking banks: the charter keeps only
+        // current values, so this is the per-turn record of it.
+        ...(bankBranch ? { bankBranch } : {}),
         marketCap: Math.round(localPrice * s.totalShares),
         liquidCapital: Math.round(s.liquidCapital),
         // SOE backing fields converted from ₳-anchor to the row's local denomination. Absent unless the backing fold set it (SOE with a shortfall this turn).
