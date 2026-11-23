@@ -125,7 +125,7 @@ function StatRow({
           {fmt(value)}
         </div>
         <div className="mt-1 flex justify-end">
-          <TrendChip trend={trend} isHigherBetter={isHigherBetter} />
+          <TrendChip trend={trend} value={value} isHigherBetter={isHigherBetter} />
         </div>
       </div>
       <span className="flex-shrink-0 text-muted" aria-hidden="true">

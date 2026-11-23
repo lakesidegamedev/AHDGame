@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareCrisisRows,
+  crisisDisplayScore,
   crisisPlaceLabel,
   crisisSection,
   crisisSeverityScore,
@@ -103,5 +104,24 @@ describe("crisisPlaceLabel", () => {
         names
       )
     ).toBe("A, B, C and 2 more");
+  });
+});
+
+describe("crisisDisplayScore", () => {
+  const base = { v2Severity: 60, effectScore: 20, legacyBand: "low" as const };
+
+  it("does not show the scripted pacing reference as severity", () => {
+    expect(crisisDisplayScore({ ...base, source: "scripted" })).toBe(20);
+    expect(crisisDisplayScore({ ...base, source: "scripted", effectScore: 85 })).toBe(85);
+  });
+
+  it("scales a scripted crisis down as a lever eases it", () => {
+    expect(
+      crisisDisplayScore({ ...base, source: "scripted", effectScore: 80, v2Severity: 30 })
+    ).toBe(40);
+  });
+
+  it("shows other v2 crises as stored", () => {
+    expect(crisisDisplayScore({ ...base, source: "emergent", v2Severity: 100 })).toBe(100);
   });
 });

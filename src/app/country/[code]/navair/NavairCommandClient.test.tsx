@@ -50,6 +50,11 @@ const props = {
 };
 
 describe("NavairCommandClient repair", () => {
+  it("says the list covers naval and air formations only", () => {
+    render(<NavairCommandClient {...props} formations={[formation()]} />);
+    expect(screen.getByText(/lists the 1 naval and air formations only/)).toBeTruthy();
+  });
+
   it("says what a mending formation is recovering and how far", () => {
     render(<NavairCommandClient {...props} formations={[formation()]} />);
     expect(screen.getByText("Mending 12% a turn in port, up to 100%.")).toBeDefined();

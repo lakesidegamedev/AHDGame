@@ -12,6 +12,13 @@ vi.mock("@/lib/api/requireAuth", () => ({
 }));
 vi.mock("@/lib/governorOffice/access", () => ({
   canManageOffice: (...args: unknown[]) => mockCanManageOffice(...args),
+  resolveOfficeAccess: async (...args: unknown[]) => ({
+    canManage: Boolean(await mockCanManageOffice(...args)),
+    holder: null,
+    viewerIsHolder: false,
+    actingRole: null,
+    officeParty: null,
+  }),
 }));
 vi.mock("@/lib/governorOffice/orders/issueOrder", () => ({
   issueOrder: (...args: unknown[]) => mockIssueOrder(...args),

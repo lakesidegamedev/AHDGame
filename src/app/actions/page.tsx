@@ -1,10 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { CampaignActionModal } from "./components/CampaignActionModal";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { campaignAnchorToLocal } from "@/lib/campaigns/rules/currency";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { Skeleton } from "@/components/ui";
 import { CARDS } from "./actionsConstants";
@@ -62,6 +65,7 @@ export default function ActionsPage() {
     localStorage.setItem("actionsViewMode", mode);
   }, []);
   const controller = useActionsController({ viewMode, onStoredViewMode: adoptStoredViewMode });
+  const { baseRates } = useCurrency();
   const { character, actionCosts, era, countryId, eraLabel } = controller;
   const turnProcessing = useGameTurnStatus()?.isProcessing === true;
 
@@ -203,7 +207,10 @@ export default function ActionsPage() {
     level: character.donorBaseLevel ?? 0,
     fundraiseYield: actionCosts.fundraiseAmount,
     currency: getHomeCurrency(character),
-    upgradeCost: actionCosts.donorUpgradeCost,
+    // Same local face value the Build Donor Network card shows.
+    upgradeCost: controller.forexEnabled
+      ? campaignAnchorToLocal(actionCosts.donorUpgradeCost, character.countryId ?? "US", baseRates)
+      : actionCosts.donorUpgradeCost,
   };
   const renderCard = (card: (typeof controller.cards)[number], index: number) => (
     <CardComponent key={card.type} {...actionCardProps(controller, card, index, viewMode)} />
@@ -260,6 +267,15 @@ export default function ActionsPage() {
           />
           <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         </div>
+
+        <p className="text-body-sm text-muted">
+          This page lists campaign operations. Post news and Sponsored news are on the{" "}
+          <Link href="/news" className="text-primary hover:underline">
+            News page
+          </Link>
+          , and Support, Attack and Barnstorm are on other characters&apos; profiles. Rest does
+          nothing and costs nothing, so it has no button.
+        </p>
 
         {/* Action cards: grouped under category headings on "All operations" */}
         {activeCategory === "all" ? (

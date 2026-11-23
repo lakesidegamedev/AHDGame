@@ -5,7 +5,10 @@ import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/error
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { canManageOffice } from "@/lib/governorOffice/access";
+import { canManageOffice, resolveOfficeAccess } from "@/lib/governorOffice/access";
+import { orderIssuerLabel } from "@/lib/governorOffice/orders/issuerLabel";
+import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
+import { getRegionalBillAssentTitleForState } from "@/lib/constants/countriesTables";
 import { issueOrder } from "@/lib/governorOffice/orders/issueOrder";
 import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 import type { Document } from "mongodb";
@@ -44,16 +47,28 @@ export async function POST(
 
     const isAdmin = auth.user.isAdmin === true;
     const adminOverride = parsed.data.adminOverride === true && isAdmin;
-    const canManage = await canManageOffice(db, countryId, stateId, auth.user.character._id);
-    if (!canManage && !adminOverride) {
+    const access = await resolveOfficeAccess(db, countryId, stateId, auth.user.character._id);
+    if (!access.canManage && !adminOverride) {
       return errorResponse(403, "Not authorized for this office");
     }
+
+    const actingRole = access.canManage ? access.actingRole : null;
+    const officeHolder =
+      actingRole && actingRole !== "holder"
+        ? await resolveExecutiveHolder(db, access.holder)
+        : null;
+    const issuerName = orderIssuerLabel(
+      auth.user.character.name,
+      actingRole,
+      officeHolder?.characterName ?? null,
+      getRegionalBillAssentTitleForState(countryId, stateId)
+    );
 
     const result = await issueOrder(db, {
       countryId,
       stateId,
       characterId: auth.user.character._id,
-      characterName: auth.user.character.name,
+      characterName: issuerName,
       legislationTypeId: parsed.data.legislationTypeId,
       effectDirection: parsed.data.effectDirection,
       steps: parsed.data.steps,

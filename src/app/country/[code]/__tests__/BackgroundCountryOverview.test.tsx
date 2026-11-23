@@ -225,6 +225,15 @@ describe("BackgroundCountryOverview", () => {
     expect(screen.getByTestId("background-austerity").textContent).toContain("fiscal year 2029");
   });
 
+  it("explains the rating, the coupon and the two party shares in place", () => {
+    show(FULL_VIEW, "France");
+    expect(screen.getByText(/rating comes from debt to GDP alone/)).toBeTruthy();
+    expect(screen.getByText(/not today's yield/)).toBeTruthy();
+    const gov = screen.getByTestId("background-government");
+    expect(gov.textContent).toContain("of seats");
+    expect(gov.textContent).toContain("of votes");
+  });
+
   it("explains an empty brief list and a missing fiscal record", () => {
     show(EMPTY_VIEW, "Poland");
     expect(screen.getByTestId("background-briefs").textContent).toContain("No briefs yet");

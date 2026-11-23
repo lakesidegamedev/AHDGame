@@ -60,5 +60,6 @@ describe("VoteRoster", () => {
 
     expect(screen.getByText("United Kingdom")).toBeTruthy();
     expect(screen.getByText("no vote yet")).toBeTruthy();
+    expect(screen.getByText(/vacant seat\) cannot vote/)).toBeTruthy();
   });
 });

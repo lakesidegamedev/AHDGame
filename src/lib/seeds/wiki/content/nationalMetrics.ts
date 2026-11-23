@@ -57,6 +57,15 @@ Each country has its own inflation target, set per country and era. Most develop
 
 So why is inflation rising when you cut rates? Rates below the neutral rate push inflation up, and the full effect of a change takes 12 turns to arrive. A healthy range is growth near the region's own trend, unemployment near its structural rate, and inflation near the country's target.
 
+## Sourced and provisional metrics, and domain scores
+
+A country's metrics board labels every metric **sourced** or **provisional**.
+
+- **Sourced** means the value is an observed figure or is worked out from the game's own systems (jobs, budgets, plants, laws).
+- **Provisional** means the game has no observed figure or live system behind that metric yet, so it shows a game-calibrated stand-in. Treat a provisional value as a rough guide to direction, not a precise reading. Many metrics start provisional and become sourced as the systems behind them are built.
+
+Each metric also gets a **condition score** from 0 to 100 that says how good the reading is for that country, using a calibration for that metric (for some, such as inequality, lower is better; others have a healthy middle). A **domain score** is the plain average of the condition scores of the metrics in that domain that have one, so it will not match an average of the raw values you see on the rows, which are in their own units. The **average score** on the board is the same average across every scored metric. The "pressure" count is how many metrics a law or Cabinet action is currently moving.
+
 ## State metrics and how they fade
 
 States track many more measures, grouped in ten categories:

@@ -114,7 +114,11 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
             const worldRank = worldMetricCtx?.rankFor(row.id) ?? null;
             const href = row.availability.isClickable ? row.availability.preferredPath : null;
             const isPlayable = row.availability.accessMode === "full";
-            const executiveName = executive.isVacant ? "Vacant" : executive.name;
+            const executiveName = executive.isVacant
+              ? row.availability.displayState === "econ-only"
+                ? "Not tracked"
+                : "Vacant"
+              : executive.name;
             return (
               <tr
                 key={row.id}

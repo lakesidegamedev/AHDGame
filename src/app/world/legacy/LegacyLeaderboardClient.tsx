@@ -1,7 +1,8 @@
 "use client";
 
+import { ANCHOR_UNIT_NOTE } from "@/lib/currency/anchorUnitNote";
 import { InlineError } from "@/components/ui/InlineError";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Trophy, Info } from "lucide-react";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -33,7 +34,7 @@ const SCORE_BREAKDOWN_ROWS: {
   label: string;
 }[] = [
   { key: "nationalInfluence", label: "National influence" },
-  { key: "partyInfluence", label: "Party power" },
+  { key: "partyInfluence", label: "Party influence" },
   { key: "achievements", label: "Achievements" },
   { key: "officeTier", label: "Highest office held" },
   { key: "wealth", label: "Business and net worth" },
@@ -93,14 +94,16 @@ function ScoreBreakdownModal({
             ).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between py-1.5 text-sm">
                 <span className="text-muted">{label}</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="font-mono font-medium text-foreground" title={ANCHOR_UNIT_NOTE}>
                   {formatNetWorth(row.netWorthBreakdown[key])}
                 </span>
               </div>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-sm font-semibold">
               <span className="text-foreground">Total net worth</span>
-              <span className="font-mono text-foreground">{formatNetWorth(row.netWorth)}</span>
+              <span className="font-mono text-foreground" title={ANCHOR_UNIT_NOTE}>
+                {formatNetWorth(row.netWorth)}
+              </span>
             </div>
             <p className="mt-2 text-xs text-muted">
               Forex-normalized so amounts are comparable across countries. Reflects the balance at
@@ -180,13 +183,20 @@ export default function LegacyLeaderboardClient({
   const [scope, setScope] = useState<LegacyLeaderboardScope>(initialScope);
   const [rankBy, setRankBy] = useState<LegacyRankBy>(initialRankBy);
   const [loading, setLoading] = useState(false);
+  // The ranking the rows on screen were sorted by. It trails `rankBy` while a
+  // refetch is in flight so rows and columns never disagree.
+  const [shownRankBy, setShownRankBy] = useState<LegacyRankBy>(initialRankBy);
+  const requestSeq = useRef(0);
   const [breakdownRow, setBreakdownRow] = useState<LegacyLeaderboardEntry | null>(null);
 
   async function refetch(nextScope: LegacyLeaderboardScope, nextRankBy: LegacyRankBy) {
+    const seq = ++requestSeq.current;
     const refreshed = await fetchJson<LegacyLeaderboardData>(
       `/api/v1/leaderboard/legacy?limit=50&scope=${nextScope}&rankBy=${nextRankBy}`,
       { feature: "legacy-leaderboard-refresh" }
     );
+    if (seq !== requestSeq.current) return;
+    setShownRankBy(nextRankBy);
     setEntries(refreshed.entries);
     setTotalCount(refreshed.total);
     setSelf(refreshed.self);
@@ -211,6 +221,8 @@ export default function LegacyLeaderboardClient({
     router.replace(buildLegacyUrl(scope, nextRankBy, embedded), { scroll: false });
     try {
       await refetch(scope, nextRankBy);
+    } catch {
+      setRankBy(shownRankBy);
     } finally {
       setLoading(false);
     }
@@ -235,7 +247,7 @@ export default function LegacyLeaderboardClient({
     }
   }
 
-  const isNetWorth = rankBy === "netWorth";
+  const isNetWorth = shownRankBy === "netWorth";
 
   const columns: ResponsiveTableColumn<LegacyLeaderboardEntry>[] = [
     {
@@ -267,7 +279,8 @@ export default function LegacyLeaderboardClient({
             <div className="flex items-center gap-1 text-xs text-muted">
               <CountryFlag country={row.countryId} size="sm" />
               <span>
-                {row.scoringCharacterName} · {row.iterationLabel}
+                {row.scoringIsActive ? "Current life" : "Retired life"}: {row.scoringCharacterName}{" "}
+                · {row.iterationLabel}
               </span>
             </div>
           </div>
@@ -283,6 +296,7 @@ export default function LegacyLeaderboardClient({
           onClick={() => setBreakdownRow(row)}
           className="group flex items-center gap-1 font-mono font-semibold text-foreground hover:text-primary"
           aria-label={`View ${isNetWorth ? "net worth" : "score"} breakdown for ${row.displayName}`}
+          title={isNetWorth ? ANCHOR_UNIT_NOTE : undefined}
         >
           {isNetWorth ? formatNetWorth(row.netWorth) : formatCompactNumber(row.score)}
           <Info className="h-3.5 w-3.5 text-muted group-hover:text-primary" aria-hidden="true" />
@@ -299,7 +313,7 @@ export default function LegacyLeaderboardClient({
     },
     {
       key: "partyInfluence",
-      header: "Party power",
+      header: "Party influence",
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-muted">{formatCompactNumber(row.partyInfluence)}</span>
@@ -315,13 +329,27 @@ export default function LegacyLeaderboardClient({
       key: "achievements",
       header: "Achievements",
       hideOnMobile: true,
-      render: (row) => <span className="text-sm text-muted">{row.achievementCount}</span>,
+      render: (row) => (
+        <span
+          className="text-sm text-muted"
+          title="Different achievements earned by any of this player's characters"
+        >
+          {row.achievementCount}
+        </span>
+      ),
     },
     {
       key: "lives",
-      header: "Lives",
+      header: "Lives (characters)",
       hideOnMobile: true,
-      render: (row) => <span className="text-sm text-muted">{row.lifetimeLives}</span>,
+      render: (row) => (
+        <span
+          className="text-sm text-muted"
+          title="A life is one character this player has created, in any iteration, including retired ones"
+        >
+          {row.lifetimeLives}
+        </span>
+      ),
     },
   ];
 
@@ -357,6 +385,15 @@ export default function LegacyLeaderboardClient({
                 {isNetWorth
                   ? "Net worth includes all currency balances, shares, bonds and funds, less personal loans, converted to anchor currency."
                   : "Career score balances politics, business, enacted laws, contest results and earned gameplay achievements. Each area contributes up to 1,000 points."}
+              </p>
+              <p className="mt-2 max-w-2xl text-sm text-muted">
+                The name is the life the player chose to show. Office, influence and wealth come
+                from the life named underneath, the one that ranks best. A retired life is frozen as
+                it was when it retired, so it can differ from the player&apos;s current character.
+                Equal scores share a rank. A life is one character a player has created, in any
+                iteration; the Lives column counts them all. Achievements counts the different
+                achievements earned by any of the player&apos;s characters, so it can be higher than
+                the total on a single character&apos;s profile.
               </p>
             </div>
           </header>
@@ -524,7 +561,7 @@ export default function LegacyLeaderboardClient({
 
       <ScoreBreakdownModal
         row={breakdownRow}
-        rankBy={rankBy}
+        rankBy={shownRankBy}
         onClose={() => setBreakdownRow(null)}
       />
     </div>

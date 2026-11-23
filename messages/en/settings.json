@@ -226,7 +226,8 @@
         "highContrast": "High contrast",
         "highContrastHint": "Strengthen borders, secondary text, and keyboard focus.",
         "language": "Language",
-        "languageHint": "A House Divided currently ships in English.",
+        "languageHint": "Menus, settings and the tutorial. Game content such as news, mail and legislation stays in English.",
+        "currencyNote": "There is no display-currency setting. Prices show in the currency of the country or market you are looking at. The symbol ₳ is the shared accounting unit used to compare amounts across countries.",
         "english": "English"
       },
       "audio": {
@@ -326,6 +327,7 @@
     "security": {
       "introChange": "Update your account password. Use a strong, unique password.",
       "introSet": "Set a password to enable username/email login alongside your social sign-in.",
+      "notAvailable": "This page only changes your password. There is no two-factor sign-in, signed-in device list or privacy switch. Your holdings and personal finances are visible only to you on every profile, and the rest of your public profile follows fixed rules rather than a setting.",
       "currentPassword": "Current Password",
       "newPassword": "New Password",
       "password": "Password",
@@ -390,7 +392,7 @@
     "experimental": {
       "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away. Right now this turns on the ASCII page decode: each page scrambles into place through a character grid.",
       "toggleLabel": "Turn on experimental features",
-      "toggleHint": "Off by default. Only changes things for you.",
+      "toggleHint": "Off until you turn it on. Only changes things for you.",
       "saveError": "Could not save. Try again.",
       "desktopNavigation": {
         "title": "Desktop navigation",

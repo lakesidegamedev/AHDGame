@@ -151,6 +151,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
       <p className="text-sm text-muted mb-6">
         {hasPassword ? t("security.introChange") : t("security.introSet")}
       </p>
+      <p className="text-xs text-muted mb-6">{t("security.notAvailable")}</p>
       <form onSubmit={handlePasswordSubmit} className="space-y-4">
         {hasPassword && (
           <div>

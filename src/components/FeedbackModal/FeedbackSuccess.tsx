@@ -28,7 +28,7 @@ export function FeedbackSuccess({
       <p className="text-lg font-medium text-foreground">Thank you!</p>
       <p className="mt-1 text-sm text-muted">
         {variant === "bug"
-          ? "Your bug report has been submitted."
+          ? "Your bug report has been submitted. Bug reports are private to the team and have no public list; we message you if we need more detail."
           : "Your suggestion has been submitted."}
       </p>
       {issueNumber != null && (

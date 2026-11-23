@@ -3,7 +3,9 @@
  * which severity band a score falls in, which section a crisis sits in, how a
  * list is ordered, and how the collapsed summary line reads.
  */
-import type { CrisisSeverity } from "@/lib/crises/severity";
+import { crisisSeverity, effectSeverityScore, type CrisisSeverity } from "@/lib/crises/severity";
+import type { Crisis } from "@/lib/db/types/crisis";
+import { SCRIPTED_REFERENCE_SEVERITY } from "@/lib/crises/v2/scriptedPacing";
 
 /** A Crisis v2 severity at or above this is "Severe". */
 export const HIGH_SEVERITY_SCORE = 70;
@@ -35,6 +37,36 @@ export function crisisSeverityScore(input: {
   legacyBand: CrisisSeverity;
 }): number {
   return input.v2Severity != null ? input.v2Severity : LEGACY_SCORE[input.legacyBand];
+}
+
+/**
+ * The severity score to show for a crisis row. A scripted crisis holds a fixed
+ * pacing reference (the same number for all of them) until someone eases it, so
+ * its score is that reference's share applied to what its effects actually do.
+ * Other v2 crises carry a live score and are shown as stored.
+ */
+export function crisisDisplayScore(input: {
+  source: string | null | undefined;
+  v2Severity: number | null | undefined;
+  effectScore: number;
+  legacyBand: CrisisSeverity;
+}): number {
+  if (input.v2Severity == null) return LEGACY_SCORE[input.legacyBand];
+  if (input.source !== "scripted") return input.v2Severity;
+  return input.effectScore * Math.min(1, input.v2Severity / SCRIPTED_REFERENCE_SEVERITY);
+}
+
+/** `crisisDisplayScore` for a crisis document and its live v2 severity. */
+export function crisisScoreFor(
+  crisis: Pick<Crisis, "effects" | "v2">,
+  v2Severity: number | null | undefined
+): number {
+  return crisisDisplayScore({
+    source: crisis.v2?.source,
+    v2Severity,
+    effectScore: effectSeverityScore(crisis.effects),
+    legacyBand: crisisSeverity(crisis),
+  });
 }
 
 export type CrisisSection = "ongoing" | "warning" | "aftermath";

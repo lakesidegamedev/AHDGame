@@ -79,6 +79,7 @@ export function PolicyBook({
   );
 
   const statuteCount = records.filter(isLawRecord).length;
+  const tariffSubsidyCount = records.length - statuteCount;
   const lastEnacted = useMemo(() => {
     const stamps = Object.values(recordPayload?.provenance ?? {});
     if (stamps.length === 0) return null;
@@ -107,6 +108,7 @@ export function PolicyBook({
         <PolicyMasthead
           countryId={countryId}
           statuteCount={statuteCount}
+          tariffSubsidyCount={tariffSubsidyCount}
           titleCount={domains.length}
           lastEnactedStamp={lastEnacted}
           axes={loading ? null : axes}

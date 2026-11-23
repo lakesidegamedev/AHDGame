@@ -673,6 +673,10 @@ export function MarketOverview({
             <h3 className="text-sm font-semibold text-muted">
               {exchangeLabel} · listed market cap
             </h3>
+            <p className="basis-full text-xs text-muted">
+              The combined value of the companies listed here, which are the game&apos;s modelled
+              corporations. It is not the whole national stock market and is not comparable to GDP.
+            </p>
             {!loading && last && (
               <div className="text-sm tabular-nums">
                 <span className="font-mono font-bold text-foreground">

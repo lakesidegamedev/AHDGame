@@ -64,3 +64,21 @@ export function askDrawerRoute(segments: readonly string[] | undefined): string 
   const route = (segments ?? []).join("/");
   return ASK_DRAWER_ROUTES.has(route) ? route : null;
 }
+
+/** Routes that answer in terms of "your character"; they carry the active character id. */
+const CHARACTER_ROUTES = new Set(["me", "ask", "nextcost", "suggest-questions", "action/confirm"]);
+
+export function askRouteNeedsCharacter(route: string): boolean {
+  return CHARACTER_ROUTES.has(route);
+}
+
+/** Headers naming the player, and the character they are playing right now. */
+export function askIdentityHeaders(
+  userId: string,
+  characterId: string | null
+): Record<string, string> {
+  return {
+    "X-Ask-User-Id": userId,
+    ...(characterId ? { "X-Ask-Character-Id": characterId } : {}),
+  };
+}

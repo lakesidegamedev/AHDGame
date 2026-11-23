@@ -20,6 +20,7 @@ export type PolicyView = "code" | "record";
 export function PolicyMasthead({
   countryId,
   statuteCount,
+  tariffSubsidyCount = 0,
   titleCount,
   lastEnactedStamp,
   axes,
@@ -30,6 +31,8 @@ export function PolicyMasthead({
 }: {
   countryId: CountryId;
   statuteCount: number;
+  /** Tariff and subsidy records sit in the titles but are not statutes. */
+  tariffSubsidyCount?: number;
   titleCount: number;
   lastEnactedStamp: string | null;
   axes: NationalAxes | null;
@@ -55,6 +58,7 @@ export function PolicyMasthead({
       }
     : nationalIdentity;
   const socialValue = socialAxisPosition ?? axes?.social ?? null;
+  const socialIsCountryPosition = socialAxisPosition != null;
   return (
     <InstitutionMasthead
       countryId={countryId}
@@ -62,8 +66,11 @@ export function PolicyMasthead({
       chips={
         <>
           <MastheadChip>
-            {statuteCount} {statuteCount === 1 ? "statute" : "statutes"} · {titleCount}{" "}
-            {titleCount === 1 ? "title" : "titles"}
+            {statuteCount} {statuteCount === 1 ? "statute" : "statutes"}
+            {tariffSubsidyCount > 0
+              ? ` + ${tariffSubsidyCount} ${tariffSubsidyCount === 1 ? "tariff or subsidy" : "tariffs and subsidies"}`
+              : ""}{" "}
+            · {titleCount} {titleCount === 1 ? "title" : "titles"}
           </MastheadChip>
           {lastEnactedStamp && (
             <MastheadChip tone="mono">last enacted {lastEnactedStamp}</MastheadChip>
@@ -85,6 +92,7 @@ export function PolicyMasthead({
                 style={{ color: hexToRgba(identity.accentSoft, 0.6) }}
               >
                 Economic
+                <span className="ml-1 font-normal opacity-80">(average of enacted laws)</span>
               </div>
               <div className="text-sm font-bold">
                 {axes?.economic != null ? (
@@ -105,6 +113,9 @@ export function PolicyMasthead({
                 style={{ color: hexToRgba(identity.accentSoft, 0.6) }}
               >
                 Social
+                <span className="ml-1 font-normal opacity-80">
+                  {socialIsCountryPosition ? "(country position)" : "(average of enacted laws)"}
+                </span>
               </div>
               <div className="text-sm font-bold">
                 {socialValue != null ? (

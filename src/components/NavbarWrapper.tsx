@@ -7,8 +7,7 @@ import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname, useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";
-import { useCharacterStats } from "@/contexts/CharacterStatsContext";
-import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
+import { buildStatusStats, useCharacterStats } from "@/contexts/CharacterStatsContext";
 import { useAuthMe, useHasSession } from "@/contexts/AuthDataContext";
 import { useStatusBarLayout } from "./statusbar/useStatusBarLayout";
 import { useInterface } from "@/contexts/InterfaceContext";
@@ -55,6 +54,7 @@ interface AdminCharacter {
   name: string;
   countryId: string;
   party: string | null;
+  detail?: string;
   isActive: boolean;
 }
 
@@ -281,7 +281,7 @@ export function NavbarWrapper({
   const isExcludedPath = isChromeHiddenPath(pathname);
   const router = useRouter();
   const { showToast } = useToast();
-  const { setStats: setCharacterStats } = useCharacterStats();
+  const { stats: heldStats, setStats: setCharacterStats } = useCharacterStats();
   const { navData, loading: authBootstrapLoading } = useAuthMe();
   const experimentUserId = navData?.user?.id;
   const experimentEligible =
@@ -361,32 +361,7 @@ export function NavbarWrapper({
           return;
         }
 
-        setCharacterStats({
-          name: data.name,
-          actions: data.actions ?? 0,
-          actionCap: data.actionCap ?? ACTION_CAP,
-          hoardThreshold: data.hoardThreshold ?? ACTION_HOARDING_THRESHOLD,
-          funds: data.funds ?? 0,
-          campaignFundsStored: data.campaignFundsStored ?? data.funds ?? 0,
-          cashOnHand: data.cashOnHand ?? 0,
-          personalHomeLiquid: data.personalHomeLiquid ?? data.cashOnHand ?? 0,
-          homeCurrency: data.homeCurrency ?? "USD",
-          corp: data.corpNav ?? null,
-          projectedIncome: data.projectedIncome ?? null,
-          campaignIncomeBreakdown: data.campaignIncomeBreakdown ?? null,
-          donorBaseLevel: data.donorBaseLevel ?? 0,
-          politicalInfluence: data.politicalInfluence ?? 0,
-          favorability: data.favorability ?? 0,
-          currentOfficeType: data.currentOfficeType ?? null,
-          isCentralBankChair: data.isCentralBankChair ?? false,
-          chairActionBonus: data.chairActionBonus ?? 0,
-          baseActionsPerTurn: data.baseActionsPerTurn ?? 4,
-          officeActionBonus: data.officeActionBonus ?? 0,
-          bonusActionsFromParty: data.bonusActionsFromParty ?? 0,
-          dividendIncome: data.dividendIncome ?? 0,
-          bondIncome: data.bondIncome ?? 0,
-          electionStats: data.electionStats ?? null,
-        });
+        setCharacterStats(buildStatusStats(data));
       }
 
       if (shouldRetry) {
@@ -397,6 +372,21 @@ export function NavbarWrapper({
     },
     [setCharacterStats]
   );
+
+  // The nav bootstrap and the status payload are separate requests. If another
+  // session switched the active character between them, re-read the status so
+  // the bar never shows one character's name over another's figures.
+  const navCharacterId =
+    (navData?.user?.character as { id?: string } | null | undefined)?.id ?? null;
+  const reconciledPairRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!navCharacterId || !heldStats?.characterId) return;
+    if (navCharacterId === heldStats.characterId) return;
+    const pair = `${navCharacterId}:${heldStats.characterId}`;
+    if (reconciledPairRef.current === pair) return;
+    reconciledPairRef.current = pair;
+    void fetchStatusData(statusLayout);
+  }, [navCharacterId, heldStats?.characterId, statusLayout, fetchStatusData]);
 
   useEffect(() => {
     if (useLightweightNav || isExcludedPath) return;

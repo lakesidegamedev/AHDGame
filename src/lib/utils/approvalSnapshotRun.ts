@@ -25,6 +25,10 @@ import {
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { ObjectId } from "mongodb";
+import { createHash } from "node:crypto";
+import { createSystemNewsPost } from "@/lib/news";
+import { approvalSwingStory } from "@/lib/country/rules/approvalSwing";
 
 /**
  * Orchestration for the per-turn approval snapshot: who gets one, and whose
@@ -98,6 +102,7 @@ export async function snapshotApprovalsForTurn(
   const bankFailures = await loadBankFailureEffects(db, turn, bankFailurePolitics);
   const marketAdjustment = await loadMarketAdjustmentEffects(db, turn, marketAdjustmentStage);
   const fiscalConsolidation = await loadFiscalConsolidationApprovalEffects(db, turn);
+  const ratingBefore = await readApprovalRatings(db, plan.ids);
   await Promise.all(
     plan.ids.map((id) => {
       const modifiers = [
@@ -110,6 +115,8 @@ export async function snapshotApprovalsForTurn(
         : snapshotApprovalHistory(db, id, turn, telemetryCtx);
     })
   );
+
+  await announceApprovalSwings(db, turn, plan.ids, ratingBefore);
 
   return {
     countriesProcessed: plan.ids.length,
@@ -155,4 +162,41 @@ async function releaseApprovalGuests(
   );
   await approvals.deleteMany({ _id: { $in: release } });
   return release;
+}
+
+async function readApprovalRatings(db: Db, ids: CountryId[]): Promise<Map<CountryId, number>> {
+  const docs = await governmentApprovalsCollection(db)
+    .find({ _id: { $in: ids } }, { projection: { _id: 1, approvalRating: 1 } })
+    .toArray();
+  return new Map(
+    docs.flatMap((doc) =>
+      typeof doc.approvalRating === "number" ? [[doc._id, doc.approvalRating] as const] : []
+    )
+  );
+}
+
+/** One wire story per country whose approval moved a long way this turn. */
+async function announceApprovalSwings(
+  db: Db,
+  turn: number,
+  ids: CountryId[],
+  before: Map<CountryId, number>
+): Promise<void> {
+  const after = await readApprovalRatings(db, ids);
+  for (const id of ids) {
+    const was = before.get(id);
+    const now = after.get(id);
+    if (was === undefined || now === undefined) continue;
+    const story = approvalSwingStory({
+      countryName: COUNTRY_CONFIGS[id]?.name ?? id,
+      before: was,
+      after: now,
+    });
+    if (!story) continue;
+    // A stable id makes a retried turn post the story once.
+    const storyId = new ObjectId(
+      createHash("sha1").update(`approval-swing:${id}:${turn}`).digest("hex").slice(0, 24)
+    );
+    await createSystemNewsPost(story.content, "general", { title: story.title, id: storyId, db });
+  }
 }

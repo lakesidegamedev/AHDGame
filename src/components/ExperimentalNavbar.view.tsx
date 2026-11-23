@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { unreadBadgeLabel } from "@/lib/inbox/badgeLabel";
 import type { ExperimentalNavbarViewContext } from "./ExperimentalNavbar";
 
 import { createPortal } from "react-dom";
@@ -575,7 +576,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                   <PixelNavIcon name="bell" className="h-4 w-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                      {unreadBadgeLabel(unreadCount)}
                     </span>
                   )}
                 </Link>

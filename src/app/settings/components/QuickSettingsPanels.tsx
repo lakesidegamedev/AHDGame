@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { setLocale } from "@/i18n/setLocaleAction";
+import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@/i18n/locales";
 import {
   Check,
   Clock3,
@@ -147,49 +150,71 @@ export function GameQuickSettings({
 export function InterfaceQuickSettings() {
   const t = useTranslations("settings");
   const { preferences, updatePreferences } = useBrowserPreferences();
+  const activeLocale = useLocale();
+  const router = useRouter();
+  const [languagePending, setLanguagePending] = useState(false);
+
+  const changeLanguage = async (locale: Locale) => {
+    if (locale === activeLocale) return;
+    setLanguagePending(true);
+    try {
+      await setLocale(locale);
+      router.refresh();
+    } finally {
+      setLanguagePending(false);
+    }
+  };
 
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <Surface
-        icon={<Pause className="h-4 w-4" />}
-        title={t("quick.interface.reducedMotion")}
-        description={t("quick.interface.reducedMotionHint")}
-      >
-        <div className="mt-3 flex justify-end">
-          <Toggle
-            checked={preferences.reducedMotion}
-            onChange={(reducedMotion) => updatePreferences({ reducedMotion })}
-            label={t("quick.interface.reducedMotion")}
-          />
-        </div>
-      </Surface>
-      <Surface
-        icon={<Contrast className="h-4 w-4" />}
-        title={t("quick.interface.highContrast")}
-        description={t("quick.interface.highContrastHint")}
-      >
-        <div className="mt-3 flex justify-end">
-          <Toggle
-            checked={preferences.highContrast}
-            onChange={(highContrast) => updatePreferences({ highContrast })}
-            label={t("quick.interface.highContrast")}
-          />
-        </div>
-      </Surface>
-      <Surface
-        icon={<Languages className="h-4 w-4" />}
-        title={t("quick.interface.language")}
-        description={t("quick.interface.languageHint")}
-      >
-        <select
-          aria-label={t("quick.interface.language")}
-          value={preferences.language}
-          disabled
-          className="mt-3 min-h-11 w-full rounded-xl border border-card-border bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-80"
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-3">
+        <Surface
+          icon={<Pause className="h-4 w-4" />}
+          title={t("quick.interface.reducedMotion")}
+          description={t("quick.interface.reducedMotionHint")}
         >
-          <option value="en">{t("quick.interface.english")}</option>
-        </select>
-      </Surface>
+          <div className="mt-3 flex justify-end">
+            <Toggle
+              checked={preferences.reducedMotion}
+              onChange={(reducedMotion) => updatePreferences({ reducedMotion })}
+              label={t("quick.interface.reducedMotion")}
+            />
+          </div>
+        </Surface>
+        <Surface
+          icon={<Contrast className="h-4 w-4" />}
+          title={t("quick.interface.highContrast")}
+          description={t("quick.interface.highContrastHint")}
+        >
+          <div className="mt-3 flex justify-end">
+            <Toggle
+              checked={preferences.highContrast}
+              onChange={(highContrast) => updatePreferences({ highContrast })}
+              label={t("quick.interface.highContrast")}
+            />
+          </div>
+        </Surface>
+        <Surface
+          icon={<Languages className="h-4 w-4" />}
+          title={t("quick.interface.language")}
+          description={t("quick.interface.languageHint")}
+        >
+          <select
+            aria-label={t("quick.interface.language")}
+            value={activeLocale}
+            disabled={languagePending}
+            onChange={(event) => void changeLanguage(event.target.value as Locale)}
+            className="mt-3 min-h-11 w-full rounded-xl border border-card-border bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-80"
+          >
+            {SUPPORTED_LOCALES.map((locale) => (
+              <option key={locale} value={locale}>
+                {LOCALE_LABELS[locale]}
+              </option>
+            ))}
+          </select>
+        </Surface>
+      </div>
+      <p className="text-xs text-muted">{t("quick.interface.currencyNote")}</p>
     </div>
   );
 }

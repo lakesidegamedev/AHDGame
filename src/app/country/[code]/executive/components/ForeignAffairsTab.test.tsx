@@ -36,6 +36,11 @@ describe("ForeignAffairsTab", () => {
     expect(await screen.findByText("Peace negotiations")).toBeTruthy();
   });
 
+  it("says what diplomacy the game has", async () => {
+    render(<ForeignAffairsTab countryId="US" canAct />);
+    expect(await screen.findByText(/no separate relations score/)).toBeTruthy();
+  });
+
   it("passes canAct through, so a non-leader cannot act", async () => {
     // The two panels express read-only differently — the declaration panel keeps
     // its button and disables it, the peace panel drops its form. Both badge the
