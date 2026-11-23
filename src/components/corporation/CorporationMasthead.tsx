@@ -122,7 +122,7 @@ export function CorporationMasthead({
   // its CEO or controlling parent CEO (mirrors the API insider rule).
   const priceVisible =
     !corporation.isPrivate || isCeo || !!corporation.viewerIsControllingParentCeo;
-  const { series, dayChange } = useSharePriceHistory(corpId, priceVisible);
+  const { series, dayChange, loading: historyLoading } = useSharePriceHistory(corpId, priceVisible);
 
   const fogged = financialFogOfWar != null;
   const fogTitle = fogged
@@ -359,6 +359,7 @@ export function CorporationMasthead({
             price={corporation.sharePrice}
             series={series}
             dayChange={dayChange}
+            historyLoading={historyLoading}
             bid={corporation.marketBidPrice}
             ask={corporation.marketAskPrice}
             // A private corporation has no market for its shares: no quote.

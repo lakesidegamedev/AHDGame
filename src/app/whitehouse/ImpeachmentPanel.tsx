@@ -152,7 +152,24 @@ export default function ImpeachmentPanel({
     }
   };
 
-  if (!hasImpeachableTarget || loading) return null;
+  if (!hasImpeachableTarget) return null;
+
+  // Hold the quiet strip's line while the case loads, so the page below does
+  // not drop when it appears.
+  if (loading) {
+    return (
+      <section
+        aria-busy="true"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-card-border/70 px-4 py-2.5 text-xs"
+      >
+        <p className="text-muted">
+          <span className="font-semibold text-foreground">Impeachment</span>
+          <span className="mx-2 text-card-border">|</span>
+          Checking for an open case.
+        </p>
+      </section>
+    );
+  }
 
   const officeLabel = isGovernor ? "Governor" : "president";
   // Governor cases run as a single conviction vote at the "senate" stage.

@@ -19,6 +19,13 @@ areas: [frontend]
   the movement during navigation.
 - The navigation bar shown while your session loads is now the same height as
   the real one, so pages no longer shift by a few pixels on every load.
+- On an election night the country elections page holds the results board's
+  space while it loads, so the race list no longer drops by several hundred
+  pixels when results arrive.
+- A corporation's quote panel holds the share price sparkline's space while
+  its history loads, so the header no longer grows after the page appears.
+- The executive page shows the impeachment line straight away instead of
+  inserting it above the approval chart once it has loaded.
 - The market page reserves the stock chart's space from the first paint, so the
   tabs and listings no longer drop by a quarter of a screen when the chart
   arrives.
