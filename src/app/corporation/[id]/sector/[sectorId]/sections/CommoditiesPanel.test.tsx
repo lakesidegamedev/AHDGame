@@ -105,4 +105,30 @@ describe("CommoditiesPanel sold share basis", () => {
     expect(container.textContent).toContain("60% of this output’s offers sold");
     expect(container.textContent).not.toContain("market estimate");
   });
+
+  it("shows own-site deliveries beside the sold share and keeps it out of the warning colour", () => {
+    const { container } = render(
+      <CommoditiesPanel
+        commodities={{
+          supplies: [
+            {
+              ...electricityDemand,
+              inputAvailability: undefined,
+              soldFraction: 0.07,
+              soldFractionBasis: "settlement",
+              ownSite: { units: 85, share: 0.92, valueAnchor: 1000 },
+            },
+          ],
+          demands: [],
+          commodityMarginModifier: 0,
+        }}
+        countryId="US"
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(container.textContent).toContain("7% of this output’s offers sold, 92% to your sites");
+    const sold = screen.getByText(/of this output’s offers sold/);
+    expect(sold.className).not.toContain("text-error");
+  });
 });

@@ -206,6 +206,10 @@ export function buildProducerOperatingResults({
         (sum, id) => sum + (ordersById.get(id)?.deliveredUnits ?? 0),
         0
       );
+      const ownSiteUnits = orderIdsForInput(p.id, recipe.commodity).reduce(
+        (sum, id) => sum + (ordersById.get(id)?.internalDeliveredUnits ?? 0),
+        0
+      );
       // Scanning the unsold book is only needed to name a blocker, so plants
       // that got everything skip it; this runs for every plant every turn.
       let unsoldWithinLimitUnits = 0;
@@ -241,6 +245,7 @@ export function buildProducerOperatingResults({
           neededUnits: need,
           stockUnits,
           boughtUnits,
+          ...(ownSiteUnits > 0 ? { ownSiteUnits } : {}),
           unsoldWithinLimitUnits,
           unsoldAboveLimitUnits,
           ...(recorded ? { recorded } : {}),

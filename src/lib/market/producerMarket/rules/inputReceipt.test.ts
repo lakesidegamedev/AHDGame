@@ -37,4 +37,15 @@ describe("buildInputReceipt", () => {
       buildInputReceipt({ ...base, unsoldWithinLimitUnits: 5, unsoldAboveLimitUnits: 500 }).blocker
     ).toBe("not_delivered");
   });
+
+  it("records own-site units without touching the other fields", () => {
+    const plain = buildInputReceipt(base);
+    const own = buildInputReceipt({ ...base, ownSiteUnits: 30 });
+    expect(own).toEqual({ ...plain, ownSiteUnits: 30 });
+    expect(buildInputReceipt(base)).not.toHaveProperty("ownSiteUnits");
+  });
+
+  it("never reports more own-site units than were delivered", () => {
+    expect(buildInputReceipt({ ...base, ownSiteUnits: 500 }).ownSiteUnits).toBe(50);
+  });
 });

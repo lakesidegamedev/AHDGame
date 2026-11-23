@@ -702,6 +702,8 @@ export interface SectorDetail {
   embargoSuspended?: boolean;
   profitMargin: number;
   effectiveProfitMargin: number;
+  /** True when `effectiveProfitMargin` is the modifier-stack estimate, not a margin from realized revenue. */
+  effectiveMarginModelled?: boolean;
   /** How `effectiveProfitMargin` was produced. "physical": the engine's
    *  physically-derived margin, explained by `physicalCosts`; "additive":
    *  the legacy modifier-stack recompute (below plants / legacy sectors). */

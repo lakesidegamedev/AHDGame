@@ -151,9 +151,24 @@ export function SideBadge({ side }: { side: "buy" | "sell" }) {
 
 function NppBadge() {
   return (
-    <span className="rounded bg-card-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted">
+    <span
+      title="Computer-run company"
+      className="rounded bg-card-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted"
+    >
       NPP
     </span>
+  );
+}
+
+/** One line on how computer-run offers are sized and priced. */
+export function ComputerRunOfferNote() {
+  return (
+    <p data-testid="computer-run-offer-note" className="mt-1 text-xs text-muted">
+      Offers marked NPP come from computer-run companies. Their size is set by rule, not chosen: a
+      sell offer is a fixed share of the seller&apos;s spare contractable capacity and a buy offer
+      is its unmet input need, so many goods show the same quantity. Their premium follows stock and
+      price levels and is capped at +20%, so many sit at the cap.
+    </p>
   );
 }
 

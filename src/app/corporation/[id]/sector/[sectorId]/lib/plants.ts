@@ -1,6 +1,7 @@
 import type { PlantIdleCauseKey } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
+import { formatFundsCompact } from "@/lib/utils/formattersCore";
 import { facilityVocabulary } from "@/lib/constants/facilityVocabulary";
 
 /**
@@ -222,4 +223,14 @@ export function buildOrderMoney(order: { costPaidAnchor: number; progress: numbe
   );
   const stillToArrive = paid * remaining;
   return { paid, stillToArrive, refund: stillToArrive * CAPACITY_BUILD_CANCEL_REFUND };
+}
+
+/**
+ * A paid or refunded amount is stored in the anchor currency and re-priced at
+ * today's exchange rate, so the shown figure drifts with the rate. Pair it with
+ * the stored anchor amount, which never moves.
+ */
+export function withAnchorAmount(shown: string, anchorAmount: number): string {
+  if (shown.includes("₳")) return shown;
+  return `${shown} at today's rates, ${formatFundsCompact(anchorAmount, "₳")} when paid`;
 }

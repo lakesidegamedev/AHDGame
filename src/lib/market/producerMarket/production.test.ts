@@ -1913,6 +1913,11 @@ describe("own freight and the input gauge", () => {
     const shipped = result.producers.find((p) => p.id === "logistics")!.products[0];
     expect(shipped.internalDeliveredUnits).toBeCloseTo(5);
     expect(shipped.soldUnits).toBeCloseTo(0);
+    // The buyer's receipt records the same units as own-site, and costs stay as before.
+    const receipt = chem.inputReceipts?.find((r) => r.commodity === "freight");
+    expect(receipt?.ownSiteUnits).toBeCloseTo(shipped.internalDeliveredUnits);
+    expect(receipt?.arrivedUnits).toBeCloseTo(5);
+    expect(receipt?.missingUnits).toBe(0);
   });
 
   it("records what the company's own sites asked for, past what the supplier could make", () => {

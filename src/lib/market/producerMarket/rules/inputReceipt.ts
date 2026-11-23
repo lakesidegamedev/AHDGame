@@ -16,6 +16,8 @@ export interface InputReceipt {
   neededUnits: number;
   arrivedUnits: number;
   missingUnits: number;
+  /** Part of the delivered units that came from the company's own sites. Absent on older receipts. */
+  ownSiteUnits?: number;
   /** Set only when units are missing. */
   blocker?: InputBlocker;
 }
@@ -34,6 +36,8 @@ export function buildInputReceipt(args: {
   neededUnits: number;
   stockUnits: number;
   boughtUnits: number;
+  /** Delivered units that came from the company's own sites; recorded, never costed here. */
+  ownSiteUnits?: number;
   unsoldWithinLimitUnits: number;
   unsoldAboveLimitUnits: number;
   /**
@@ -51,6 +55,9 @@ export function buildInputReceipt(args: {
     neededUnits,
     arrivedUnits,
     missingUnits,
+    ...(args.ownSiteUnits !== undefined
+      ? { ownSiteUnits: Math.min(Math.max(0, args.ownSiteUnits), Math.max(0, args.boughtUnits)) }
+      : {}),
   };
   if (missingUnits <= EPSILON * Math.max(1, neededUnits)) return { ...receipt, missingUnits: 0 };
   if (args.recorded) {
