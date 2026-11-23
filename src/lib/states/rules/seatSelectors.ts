@@ -22,6 +22,7 @@ import {
   STATE_ID_SET,
 } from "@/lib/constants/statesTables";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { CA_PROVINCIAL_SEATS } from "@/lib/countries/ca/data/caProvincialLegislatures";
 
 /**
  * Preset-aware CN apportionment selectors. Same shape and same fall-back-to-
@@ -46,8 +47,11 @@ export function getCnPeoplesCongressSeats(preset: string | undefined): Record<st
  * For China this is the Provincial People's Congress
  * (`getCnPeoplesCongressSeats(preset)`), NOT the State's `stateSenateSeats`
  * field, which for CN holds the separate, appointed CPPCC allocation (~half
- * the size). Every other country's sub-national chamber is sized by
- * `stateSenateSeats`.
+ * the size). For Canada it is the provincial or territorial legislature
+ * (`CA_PROVINCIAL_SEATS`, the table the provincial elections fill), NOT
+ * `stateSenateSeats`, which for CA holds the region's appointed federal Senate
+ * seats (Alberta 6 vs an 87-seat legislature). Every other country's
+ * sub-national chamber is sized by `stateSenateSeats`.
  *
  * Single source of truth shared by the seat appointer, public legislature API,
  * and state-bill vote math, so they cannot disagree with the election system,
@@ -63,6 +67,9 @@ export function subNationalChamberSeats(
 ): number {
   if (countryHasFeature("cnLib", countryId)) {
     return getCnPeoplesCongressSeats(preset)[state._id] ?? state.stateSenateSeats ?? 0;
+  }
+  if (countryHasFeature("caLib", countryId)) {
+    return CA_PROVINCIAL_SEATS[state._id] ?? state.stateSenateSeats ?? 0;
   }
   return state.stateSenateSeats ?? 0;
 }
