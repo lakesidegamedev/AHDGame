@@ -8,7 +8,10 @@ import Link from "next/link";
 import { UK_NATIONS, UK_REGIONS, getUKCouncilName } from "@/lib/constants/uk";
 import { regionUrl, regionApiSubUrl } from "@/lib/urls";
 import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
-import { getCountryOfficeConfig } from "@/lib/constants/countryOfficesClient";
+import {
+  getCountryOfficeConfig,
+  getRegionalBillAssentTitleForState,
+} from "@/lib/constants/countryOfficesClient";
 import type { BillChamber } from "@/lib/db/types/legislation";
 import { LegislatureData, StateBillDisplay } from "./legislatureTypes";
 import { BillsTab } from "./components/BillsTab";
@@ -223,7 +226,7 @@ export function StateLegislatureClient({
           </p>
           {!ukContext && data?.governor && (
             <p className="text-sm text-muted mt-1">
-              Governor:{" "}
+              {getRegionalBillAssentTitleForState(countryId as CountryId, stateId)}:{" "}
               {data.governor.characterId ? (
                 <Link
                   href={`/character/${data.governor.sequentialId ?? data.governor.characterId}`}

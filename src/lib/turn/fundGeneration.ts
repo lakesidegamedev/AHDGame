@@ -217,6 +217,12 @@ export async function processFundGeneration(
         await (await getCharactersCollection(db)).bulkWrite(characterOps);
       }
 
+      // Record each credit as soon as it lands so a later party-side failure
+      // cannot leave funds added to a character with no history row.
+      if (txCharEntries.length > 0) {
+        await emitTxBulk(db, txCharEntries, await loadTxThresholds(db));
+      }
+
       if (nationalTreasuryUpdates.size > 0) {
         const partyOps = [...nationalTreasuryUpdates.values()].map(({ amount, _id }) => ({
           updateOne: {
@@ -313,9 +319,9 @@ export async function processFundGeneration(
 
       // Party taxes fund party treasuries, not the federal budget. Emit the
       // same party accounts changed above so stock-flow follows real balances.
-      if (txCharEntries.length > 0 || partyDuesTxEntries.length > 0) {
+      if (partyDuesTxEntries.length > 0) {
         const thresholds = await loadTxThresholds(db);
-        await emitTxBulk(db, [...txCharEntries, ...partyDuesTxEntries], thresholds);
+        await emitTxBulk(db, partyDuesTxEntries, thresholds);
       }
 
       return { totalGenerated, totalStateTaxes, totalNationalTaxes };

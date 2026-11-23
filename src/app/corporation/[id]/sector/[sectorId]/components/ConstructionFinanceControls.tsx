@@ -154,7 +154,7 @@ export default function ConstructionFinanceControls({
       <div className="flex flex-wrap items-baseline justify-between gap-1">
         <h3 className="text-body-sm font-semibold text-foreground">{t("paymentTitle")}</h3>
         <p className="text-body-xs text-muted">
-          {t("cashBalance", { amount: native(cashAnchor * view.localPerAnchor) })}
+          {t("cashBalance", { amount: native(Math.round(cashAnchor * view.localPerAnchor)) })}
         </p>
       </div>
       <label

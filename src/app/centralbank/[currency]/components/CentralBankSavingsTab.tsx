@@ -15,6 +15,10 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 import { CB_TH, CentralBankFigure, CentralBankSection } from "./CentralBankSection";
 import { formatNativeFaceAmount as formatNative } from "./centralBankUtils";
+import {
+  SAVINGS_CREDIT_INTERVAL_TURNS,
+  SAVINGS_REAL_RATE_FLOOR_PERCENT,
+} from "@/lib/currency/savingsInterest";
 
 interface LedgerRow {
   type: string;
@@ -29,6 +33,7 @@ interface SavingsApiResponse {
   countryId: string;
   currencyCode: CurrencyCode;
   primeRate: number;
+  inflationRate?: number;
   apyPercent: number;
   savingsHolderType?: "central-bank" | "private-bank" | "unknown";
   savingsHolderName?: string | null;
@@ -158,6 +163,14 @@ export function CentralBankSavingsTab({ countryId }: Props) {
     savingsCashValue: h.savingsCashValue,
     exchangeRatesSnapshot: h.exchangeRatesSnapshot,
   }));
+  const centralRateParams = {
+    prime: data.primeRate.toFixed(2),
+    inflation: (data.inflationRate ?? 0).toFixed(2),
+    real: Math.max(
+      SAVINGS_REAL_RATE_FLOOR_PERCENT,
+      data.primeRate - (data.inflationRate ?? 0)
+    ).toFixed(2),
+  };
   const depositBonusInProgress = (data.centralBankPricingProgress ?? 0) < 1;
 
   return (
@@ -176,10 +189,10 @@ export function CentralBankSavingsTab({ countryId }: Props) {
                 ? t("savings.holderUnknown")
                 : (data.centralBankDepositBonusPercentPoints ?? 0) > 0
                   ? t("savings.centralRateWithBonus", {
-                      prime: data.primeRate.toFixed(2),
+                      ...centralRateParams,
                       bonus: (data.centralBankDepositBonusPercentPoints ?? 0).toFixed(2),
                     })
-                  : t("savings.centralRate", { prime: data.primeRate.toFixed(2) })
+                  : t("savings.centralRate", centralRateParams)
           }
           size="lg"
         />
@@ -192,7 +205,7 @@ export function CentralBankSavingsTab({ countryId }: Props) {
         <CentralBankFigure
           label="Lifetime interest"
           value={formatNative(data.lifetimeInterestEarned, homeCurrency)}
-          hint="Credited to balance every 12 turns"
+          hint={`Added to balance every ${SAVINGS_CREDIT_INTERVAL_TURNS} turns`}
           size="lg"
         />
         <CentralBankFigure
@@ -321,7 +334,9 @@ export function CentralBankSavingsTab({ countryId }: Props) {
           )}
 
           <p className="text-body-sm text-muted">
-            Yield is credited each game turn. Funds stay in your wallet ledger until you withdraw.
+            Interest builds up every turn and is added to your balance every{" "}
+            {SAVINGS_CREDIT_INTERVAL_TURNS} turns. Funds stay in your wallet ledger until you
+            withdraw.
           </p>
         </div>
 

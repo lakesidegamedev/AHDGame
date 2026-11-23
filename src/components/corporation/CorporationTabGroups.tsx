@@ -239,3 +239,11 @@ export function buildCorpNavTabs(
 
   return nav;
 }
+
+/**
+ * True when the URL asks for the CEO Office by a viewer who cannot open it,
+ * so the page can say why it shows another tab instead.
+ */
+export function isCeoOfficeBlocked(tabParam: string | null, isCeo: boolean): boolean {
+  return !isCeo && (tabParam === "ceo" || tabParam === "settings");
+}

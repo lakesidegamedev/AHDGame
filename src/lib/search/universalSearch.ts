@@ -26,6 +26,7 @@ import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import { legislatureUrl } from "@/lib/urls";
 import type { SearchResult } from "@/lib/search/types";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
+import { dedupeByLabel } from "@/lib/search/dedupeResults";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -674,12 +675,13 @@ export async function runUniversalSearch({
     if (enabledCountries) {
       bondQuery.countryId = { $in: enabledCountries };
     }
-    const bonds = await bondsCollection(db).find(bondQuery).limit(5).toArray();
+    const bonds = await bondsCollection(db).find(bondQuery).limit(25).toArray();
     const corpNameById = new Map(bondCorpMatches.map((c) => [c._id.toString(), c.name]));
 
+    const bondResults: SearchResult[] = [];
     for (const bond of bonds) {
       const corpName = corpNameById.get(bond.corporationId.toString()) || "Unknown Corp";
-      results.push({
+      bondResults.push({
         type: "bond",
         id: bond._id.toString(),
         title: `${corpName} Bond`,
@@ -687,6 +689,7 @@ export async function runUniversalSearch({
         href: `/bond/${bond._id.toString()}`,
       });
     }
+    results.push(...dedupeByLabel(bondResults).slice(0, 5));
   }
 
   // NPPs appended last — player characters, corps, seats, elections, bills, commodities,

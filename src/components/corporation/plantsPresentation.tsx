@@ -139,6 +139,15 @@ function formatPlantCount(plants: number): string {
   return rounded.toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
+/** Arrival pace in plain words; a slow pace reads "1 every N turns", never "About 0". */
+export function arrivalRateSentence(perTurn: number, singular: string, plural: string): string {
+  if (perTurn < 1) {
+    const every = Math.max(2, Math.round(1 / perTurn));
+    return `About 1 ${singular} arrives every ${every} turns.`;
+  }
+  return `About ${formatPlantCount(perTurn)} ${perTurn === 1 ? singular : plural} arrive each turn.`;
+}
+
 /**
  * Build progress in plants: how many are on order, how many already arrived,
  * and (for smooth orders) how many land each turn. `plantUnits` is the
@@ -173,10 +182,7 @@ export function buildProgressLabel(
   const noun = p.ordered === 1 ? singular : plural;
   const done =
     queue.lastOnlineTurn != null ? ` Last one is done on turn ${queue.lastOnlineTurn}.` : "";
-  const rate =
-    p.perTurn != null
-      ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
-      : "";
+  const rate = p.perTurn != null ? ` ${arrivalRateSentence(p.perTurn, singular, plural)}` : "";
   const arrival =
     p.perTurn != null
       ? " Capacity arrives in a slice every turn, so the capacity figure rises each turn until then."
@@ -327,7 +333,7 @@ export function roomInPlantsLabel(
 /** Column heading and its tooltip for the one running and sold reading. */
 export const RUNNING_SOLD_HEADING = "Running / sold";
 export const RUNNING_SOLD_HEADING_TITLE =
-  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they made found buyers.";
+  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they offered for sale found buyers.";
 
 /**
  * The one reading of how a sector's plants did last turn, used by every table:
@@ -360,7 +366,13 @@ export function RunningSoldReading({
   ownTruckHaulTeu?: number | null;
   className?: string;
 }) {
-  const ownSite = ownSiteLabel(ownSiteShare, "all output");
+  const soldWhole = fill != null && Number.isFinite(fill) ? Math.round(fill * 100) / 100 : null;
+  const ownSite = ownSiteLabel(
+    ownSiteShare != null && soldWhole != null
+      ? Math.min(ownSiteShare, Math.max(0, 1 - soldWhole))
+      : ownSiteShare,
+    "all output"
+  );
   const ownTrucks = ownTruckHaulLabel(ownTruckHaulTeu);
   if (plantCount === 0) {
     return (
@@ -396,7 +408,7 @@ export function RunningSoldReading({
             ? "Nothing was made last turn, so nothing could be sold."
             : exactFill
               ? soldShareTitle(
-                  `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+                  `${fillBandSentence(band)}. Share of what these plants offered for sale last turn, made plus stock, that found buyers.`
                 )
               : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
         }

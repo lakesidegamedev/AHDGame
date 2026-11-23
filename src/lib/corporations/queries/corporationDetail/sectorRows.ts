@@ -41,6 +41,7 @@ import {
   computeCorpRealizedGrowthRate,
 } from "@/lib/corporations/realizedGrowth";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
+import { soldShareForList } from "@/lib/corporations/fundedClearingReading";
 import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
 import { queueUndeliveredCost, resolveBuildSettledTurn } from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
@@ -764,7 +765,17 @@ export function buildSectorDetails(ctx: SectorRowContext) {
           )
         )
       : null;
-    const sectorFillRate = computeFillRate(producedUnits, soldUnits);
+    // The settled receipt is the record of what buyers took of what was offered,
+    // the same reading the sector page uses. Units sold from stock count on both
+    // sides, so a plant selling its stock cannot read 100% here and less there.
+    const legacyFillRate = computeFillRate(producedUnits, soldUnits);
+    const sectorFillRate = plantsMode
+      ? soldShareForList(
+          fundedSaleRecord(sector.producerSettlement, sector.soldByCommodityTurn),
+          currentTurn,
+          legacyFillRate
+        )
+      : legacyFillRate;
     // Share of the fill shortfall that is a DELIVERY failure, not a demand
     // failure. The row shows one fill number and a player reads every point of
     // missing fill as "nobody wanted it", which is the opposite instruction

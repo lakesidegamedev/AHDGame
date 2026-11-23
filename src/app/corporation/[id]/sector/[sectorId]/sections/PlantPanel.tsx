@@ -27,7 +27,7 @@ import RunReport from "../components/RunReport";
 import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
-import { fmtUnits, fmtPct } from "../lib/plants";
+import { fmtUnits, fmtPct, fmtTeuEstimate } from "../lib/plants";
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import {
   estimateSectorFullCapacityOneHopFreightTeu,
@@ -206,7 +206,7 @@ export default function PlantPanel({
               {fullCapacityFreightEstimate != null && (
                 <p>
                   {t("freightOneHopEstimate", {
-                    estimate: fmtUnits(fullCapacityFreightEstimate),
+                    estimate: fmtTeuEstimate(fullCapacityFreightEstimate),
                   })}
                 </p>
               )}

@@ -87,6 +87,8 @@ export interface CommodityData {
   colors: string;
   unit: string;
   basePrice: number;
+  /** Highest price the market can publish (base times the price ceiling multiple). */
+  priceCeiling?: number;
   globalPrice: number;
   globalSupply: number;
   globalDemand: number;

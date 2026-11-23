@@ -1,5 +1,6 @@
 "use client";
 
+import { compareHoldersByShares } from "@/lib/corporations/rules/holderOrder";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -114,7 +115,7 @@ export default function MarketOverviewPanel({
   }, [corpId]);
 
   const totalShares = corporation.totalShares ?? 0;
-  const sorted = corporation.shareholders.slice().sort((a, b) => b.shares - a.shares);
+  const sorted = corporation.shareholders.slice().sort(compareHoldersByShares);
   const hasFloat = (corporation.publicFloat ?? 0) > 0;
   const pendingIpo = corporation.pendingIpoShares ?? 0;
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));

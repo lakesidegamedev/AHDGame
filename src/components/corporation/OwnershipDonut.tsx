@@ -1,5 +1,6 @@
 "use client";
 
+import { compareHoldersByShares } from "@/lib/corporations/rules/holderOrder";
 import { brandShades, resolveCorpColor } from "@/lib/corporations/brandColor";
 import type { CorporationDetail } from "./CorporationPageTypes";
 
@@ -32,7 +33,7 @@ export function buildOwnershipSlices(
   if (!(total > 0)) return [];
   const ranked = (corporation.shareholders ?? [])
     .filter((sh) => sh.shares > 0)
-    .sort((a, b) => b.shares - a.shares);
+    .sort(compareHoldersByShares);
   const head = ranked.slice(0, MAX_NAMED);
   const tail = ranked.slice(MAX_NAMED);
   const shades = brandShades(

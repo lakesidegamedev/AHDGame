@@ -25,6 +25,15 @@ describe("RunningSoldReading own-site line", () => {
     expect(tip).toContain("own trucks");
   });
 
+  it("never lets sold plus own-site shares pass 100%", () => {
+    const { container } = render(
+      <RunningSoldReading {...base} fill={0.54} band="high" ownSiteShare={0.48} />
+    );
+    const text = container.textContent ?? "";
+    expect(text).toContain("Sold 54%");
+    expect(text).toContain("46% of all output to your sites");
+  });
+
   it("adds nothing when no output went to own sites", () => {
     const { container } = render(<RunningSoldReading {...base} ownSiteShare={null} />);
     expect(container.textContent).not.toContain("to your sites");

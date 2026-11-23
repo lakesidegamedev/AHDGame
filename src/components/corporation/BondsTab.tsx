@@ -15,7 +15,9 @@ import {
 } from "@/lib/constants/bonds";
 import {
   bondIssueInputProblem,
+  bondIssueLimitText,
   bondIssueMinimum,
+  bondIssueSliderMax,
   bondIssueRefusalText,
 } from "@/lib/bonds/rules/bondIssueInput";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -303,6 +305,7 @@ export default function BondsTab({
           // can issue below ₳100,000 rather than being locked out. `bondsAvailable`
           // is false below the dust floor.
           const effectiveMin = bondIssueMinimum(bondInfo.minIssuance);
+          const sliderMax = bondIssueSliderMax(effectiveCap, effectiveMin);
           const bondsUnavailable = bondInfo.bondsAvailable === false;
           const cooldown = bondInfo.cooldownTurnsRemaining;
           // Cash the pool will actually hand over at issuance, in ₳. Null when
@@ -333,7 +336,7 @@ export default function BondsTab({
           const inputProblem = bondIssueInputProblem({
             faceValue: parsedFaceValue,
             minimum: effectiveMin,
-            maximum: effectiveCap,
+            maximum: sliderMax,
           });
           const isValidInput = inputProblem === null;
 
@@ -400,7 +403,7 @@ export default function BondsTab({
                       <input
                         type="range"
                         min={0}
-                        max={effectiveCap}
+                        max={sliderMax}
                         step={unitFace}
                         value={bondIssueFaceValue}
                         onChange={(e) => {
@@ -413,7 +416,7 @@ export default function BondsTab({
                       />
                       <span className="flex justify-between font-mono text-[11px] tabular-nums">
                         <span>0</span>
-                        <span>{inLiquid(effectiveCap)}</span>
+                        <span>{inLiquid(sliderMax)}</span>
                       </span>
                     </label>
                     <label className="flex flex-col gap-1 text-xs text-muted">
@@ -497,14 +500,15 @@ export default function BondsTab({
                       value={`${couponRate.toFixed(2)}%`}
                     />
                     <KVRow
-                      label="Cap per issue"
-                      value={formatFull(perIssuanceCap)}
-                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. A company with smaller revenue still gets that floor. One issue cannot exceed this, whatever your debt room.`}
+                      label="You can issue now"
+                      value={formatFull(effectiveCap)}
+                      title={`The most one issue can be today, and the slider's maximum. Set by ${bondIssueLimitText(bondInfo.issuanceLimitedBy)}.`}
+                      hint={`Limited by ${bondIssueLimitText(bondInfo.issuanceLimitedBy)}`}
                     />
                     <KVRow
-                      label="Largest issue now"
-                      value={formatFull(effectiveCap)}
-                      title="The lower of the cap per issue and the debt room left. This is the slider's maximum."
+                      label="Per-issue cap"
+                      value={formatFull(perIssuanceCap)}
+                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. Debt to equity and what creditors could recover can set a lower limit, shown above.`}
                     />
                     {maxIssuableDebt !== null && (
                       <KVRow
@@ -552,7 +556,7 @@ export default function BondsTab({
                       </h3>
                       <KVList>
                         <KVRow
-                          label="Coupon cost per day"
+                          label="Coupon cost per day (24 turns)"
                           value={
                             <span className="text-error">
                               ({formatAmount(Math.round(preview.dailyCost))})
