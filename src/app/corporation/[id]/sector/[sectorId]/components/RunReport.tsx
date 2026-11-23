@@ -1,5 +1,6 @@
 "use client";
 
+import { getOutputMultiplier } from "@/lib/utils/productionPolicy";
 import { ArrowRight } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
@@ -42,6 +43,8 @@ export interface RunReportProps {
   idleCauses: PlantIdleCause[];
   sectorType: OperatingSectorType;
   mothballed?: boolean;
+  /** Production push level, to tell a real push from capacity that shrank since the run. */
+  productionPolicyLevel?: number;
 }
 
 export function runReportHeadline(
@@ -159,11 +162,16 @@ export default function RunReport({
   idleCauses,
   sectorType,
   mothballed = false,
+  productionPolicyLevel = 0,
 }: RunReportProps) {
   const { formatAmount } = useCurrency();
   const sites = facilityPlural(sectorType);
   const head = runReportHeadline(report, sites);
   const running = madeShareOfCapacity(producedUnits, capacityUnits) ?? 0;
+  // Last turn's output is measured against today's capacity. Wear between the
+  // run and now can push the share past what the production push allows; say so
+  // rather than print a figure that contradicts the limit shown beside it.
+  const pastPushCap = running > getOutputMultiplier(productionPolicyLevel) + 0.005;
   const fixes = mothballed ? [] : fixesFor(report, idleCauses, sites, capacityUnits);
   const price = report.unitPrice;
   const costs = [
@@ -198,6 +206,11 @@ export default function RunReport({
             {fmtPct(running)}
           </span>{" "}
           of capacity made something last turn
+          {pastPushCap && (
+            <span className="block text-body-xs">
+              Measured against today&apos;s capacity, which is lower than when last turn ran.
+            </span>
+          )}
         </p>
         <span
           className={`rounded-full border px-2.5 py-0.5 text-body-xs font-semibold ${TONE_PILL[head.tone]}`}

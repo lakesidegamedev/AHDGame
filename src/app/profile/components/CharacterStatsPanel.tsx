@@ -19,19 +19,54 @@ import { SectionHeader } from "./ProfileMeters";
  * Per-stat icon + accent. Class strings are written out in full (no
  * interpolation) so Tailwind's scanner keeps them in the bundle.
  */
-const STAT_STYLE: Record<StatKey, { Icon: LucideIcon; icon: string; bar: string }> = {
-  charisma: { Icon: Sparkles, icon: "text-amber-500", bar: "bg-amber-500" },
-  debate: { Icon: Mic, icon: "text-rose-500", bar: "bg-rose-500" },
-  energy: { Icon: Zap, icon: "text-lime-500", bar: "bg-lime-500" },
-  fundraising: { Icon: Banknote, icon: "text-emerald-500", bar: "bg-emerald-500" },
-  businessAcumen: { Icon: Briefcase, icon: "text-cyan-500", bar: "bg-cyan-500" },
-  statecraft: { Icon: Landmark, icon: "text-violet-500", bar: "bg-violet-500" },
-  intellect: { Icon: Brain, icon: "text-sky-500", bar: "bg-sky-500" },
+const STAT_STYLE: Record<StatKey, { Icon: LucideIcon; icon: string; tile: string; bar: string }> = {
+  charisma: {
+    Icon: Sparkles,
+    icon: "text-amber-400",
+    tile: "bg-amber-500/15 ring-amber-500/25",
+    bar: "bg-amber-400",
+  },
+  debate: {
+    Icon: Mic,
+    icon: "text-rose-400",
+    tile: "bg-rose-500/15 ring-rose-500/25",
+    bar: "bg-rose-400",
+  },
+  energy: {
+    Icon: Zap,
+    icon: "text-lime-400",
+    tile: "bg-lime-500/15 ring-lime-500/25",
+    bar: "bg-lime-400",
+  },
+  fundraising: {
+    Icon: Banknote,
+    icon: "text-emerald-400",
+    tile: "bg-emerald-500/15 ring-emerald-500/25",
+    bar: "bg-emerald-400",
+  },
+  businessAcumen: {
+    Icon: Briefcase,
+    icon: "text-cyan-400",
+    tile: "bg-cyan-500/15 ring-cyan-500/25",
+    bar: "bg-cyan-400",
+  },
+  statecraft: {
+    Icon: Landmark,
+    icon: "text-violet-400",
+    tile: "bg-violet-500/15 ring-violet-500/25",
+    bar: "bg-violet-400",
+  },
+  intellect: {
+    Icon: Brain,
+    icon: "text-sky-400",
+    tile: "bg-sky-500/15 ring-sky-500/25",
+    bar: "bg-sky-400",
+  },
 };
 
 /**
  * Read-only stat readout for the profile page. Each stat shows an accent icon,
- * its value out of 10, its current bonus and a colored bar, with a hover/focus tooltip
+ * its value out of 10, its current bonus and a row of colored pips, with a hover/focus tooltip
  * describing what the stat does. Render only when the RPG-stats feature is
  * enabled and the character has an allocated stat block.
  */
@@ -58,9 +93,8 @@ export function CharacterStatsPanel({
       <ul className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
         {STAT_KEYS.map((key) => {
           const value = Math.round(stats[key] ?? 1);
-          const pct = (value / STAT_MAX) * 100;
           const { label, blurb } = STAT_META[key];
-          const { Icon, icon, bar } = STAT_STYLE[key];
+          const { Icon, icon, tile, bar } = STAT_STYLE[key];
           const bonus = statBonus(key, value);
           return (
             <li
@@ -76,8 +110,13 @@ export function CharacterStatsPanel({
               className="group relative py-2 outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
             >
               <div className="flex items-baseline gap-3">
-                <span className="flex flex-1 items-center gap-2 text-body text-foreground">
-                  <Icon className={`h-4 w-4 shrink-0 self-center ${icon}`} aria-hidden />
+                <span className="flex flex-1 items-center gap-2.5 text-body font-medium text-foreground">
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md ring-1 ring-inset ${tile}`}
+                    aria-hidden
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${icon}`} />
+                  </span>
                   {label}
                 </span>
                 <span className="text-body-sm tabular-nums text-muted">{bonus.label}</span>
@@ -86,8 +125,15 @@ export function CharacterStatsPanel({
                   <span className="text-body-sm font-normal text-muted">/{STAT_MAX}</span>
                 </span>
               </div>
-              <div className="mt-2 h-1.5 w-full rounded-full bg-card-border" aria-hidden>
-                <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
+              {/* One pip per point, in the stat's own colour: the count reads at
+                  a glance and every stat keeps its identity. */}
+              <div className="mt-2 flex gap-[3px] pl-[34px]" aria-hidden>
+                {Array.from({ length: STAT_MAX }, (_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-[2px] ${i < value ? bar : "bg-card-border/70"}`}
+                  />
+                ))}
               </div>
 
               {/* Tooltip */}

@@ -711,6 +711,7 @@ function MapLegend({
           {l.partyAbbr}
         </li>
       ))}
+      <li style={{ fontSize: 11, color: BLEND.muted }}>{t("legendScale")}</li>
     </ul>
   );
 }

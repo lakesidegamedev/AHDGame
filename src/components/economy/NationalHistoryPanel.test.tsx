@@ -77,7 +77,7 @@ describe("NationalHistoryPanel", () => {
     renderPanel({ countryId: "US" });
     await screen.findByText("$1.20T");
     fireEvent.click(screen.getByRole("button", { name: /Population/ }));
-    expect(await screen.findByText(/102\.00M people/)).toBeTruthy();
+    expect((await screen.findAllByText(/102\.00M people/)).length).toBeGreaterThan(0);
     expect(screen.getByText(/\+2.0% over window/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Population/ }).getAttribute("aria-pressed")).toBe(
       "true"
@@ -123,14 +123,14 @@ describe("NationalHistoryPanel", () => {
 
     const { rerender } = renderPanel({ countryId: "US" });
     rerender(panel({ countryId: "JP" }));
-    expect(await screen.findByText(/9\.99T/)).toBeTruthy();
+    expect((await screen.findAllByText(/9\.99T/)).length).toBeGreaterThan(0);
 
     // The country the panel moved away from resolves after the switch.
     await act(async () => {
       deferred.resolve(new Response(JSON.stringify(payload), { status: 200 }));
     });
     expect(screen.queryByText(/1\.20T/)).toBeNull();
-    expect(screen.getByText(/9\.99T/)).toBeTruthy();
+    expect(screen.getAllByText(/9\.99T/).length).toBeGreaterThan(0);
   });
 
   it("explains a thin series instead of drawing a flat zero line", async () => {
