@@ -89,4 +89,30 @@ describe("national approval reader parity", () => {
     expect(metrics?.governmentApprovalModifiers).toEqual(card.modifiers);
     expect(metrics?.governmentApprovalBase).toBe(49);
   });
+  it("shows national fiscal effects on standalone fresh-world cards and metrics", async () => {
+    const fiscal = {
+      id: "nationalDeficit",
+      label: "National budget deficit",
+      effect: -3,
+      source: "fiscal",
+      marginEffect: 0,
+    };
+    bases.mockResolvedValue({
+      national: 50,
+      byRegion: new Map([
+        ["LON", 50],
+        ["NEE", 50],
+      ]),
+      nationalModifiers: [fiscal],
+    });
+    const card = await loadNationalApproval("UK");
+    const metrics = await loadNationalMetrics("UK");
+    expect(card.nationalAdjustments).toContainEqual(fiscal);
+    expect(card.modifiers).toContainEqual(fiscal);
+    expect(metrics?.governmentApproval).toBe(card.governmentApproval);
+    expect(metrics?.governmentApprovalModifiers).toEqual(card.modifiers);
+    expect(
+      card.stateAverage + card.nationalAdjustments.reduce((sum, m) => sum + m.effect, 0)
+    ).toBeCloseTo(card.governmentApproval);
+  });
 });

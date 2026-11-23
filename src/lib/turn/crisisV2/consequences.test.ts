@@ -112,7 +112,10 @@ describe("settleCrisisConsequences", () => {
       40
     );
     expect(approvalUpdates).toHaveLength(0);
-    expect(stateUpdates[0].filter).toMatchObject({ _id: "TX", countryId: "US" });
+    expect(stateUpdates[0].filter).toMatchObject({
+      countryId: "US",
+      $or: [{ stateId: "TX" }, { _id: "TX" }, { _id: "US:TX" }],
+    });
     const ops = (modifierWrites.mock.calls[0] as unknown as [unknown[]])[0] as {
       updateOne: { update: { $setOnInsert: { pct: number; regionIds: string[] } } };
     }[];

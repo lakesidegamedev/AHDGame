@@ -248,7 +248,7 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
 
 /** Tiny aggregation-expression evaluator, enough for the `$expr` guards. */
 function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
-  if (expr === "$REMOVE") return REMOVE_FIELD;
+  if (expr === "$REMOVE" || expr === "$$REMOVE") return REMOVE_FIELD;
   if (typeof expr === "string" && expr.startsWith("$$")) return getPath(variables, expr.slice(2));
   if (typeof expr === "string" && expr.startsWith("$")) return getPath(doc, expr.slice(1));
   if (Array.isArray(expr)) return expr.map((item) => evalExpr(item, doc, variables));
@@ -309,6 +309,10 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
   switch (op) {
     case "$objectToArray":
       return isPlainObject(args[0]) ? Object.entries(args[0]).map(([k, v]) => ({ k, v })) : [];
+    case "$sum":
+      return (Array.isArray(rawArgs) ? args : [args[0]].flat())
+        .filter((value): value is number => typeof value === "number")
+        .reduce((sum, value) => sum + value, 0);
     case "$size":
       if (!Array.isArray(args[0])) throw new Error("inMemoryDb: expected array for $size");
       return args[0].length;

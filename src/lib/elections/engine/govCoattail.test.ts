@@ -158,6 +158,12 @@ describe("resolveGovExecutiveApproval", () => {
       state: "CA",
       countryId: "US",
     } as never);
+    db.collection("states")
+      .find()
+      .toArray.mockResolvedValue([
+        { _id: "CA", countryId: "US" },
+        { _id: "TX", countryId: "US" },
+      ]);
     db.collection("macroMetrics").findOne.mockResolvedValue(makeStateMetrics("CA") as never);
     db.collection("macroMetrics").find.mockReturnValue({
       toArray: () => Promise.resolve([makeStateMetrics("CA"), makeStateMetrics("TX")]),
