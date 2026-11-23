@@ -172,7 +172,7 @@ export default function MarketPositionPanel({
         })
       : readout?.summary === "none-waiting"
         ? readout.products.some((p) => p.capHiddenUnmet != null)
-          ? readoutText("sidebarCapEstimate")
+          ? readoutText("sidebarCapped")
           : readoutText("sidebarNone")
         : null;
 

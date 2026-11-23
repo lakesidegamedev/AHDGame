@@ -518,7 +518,9 @@ export default function BuildCapacityDialog({
             </span>
             {!returns && (
               <span className="ml-2 text-body-xs text-muted" data-testid="build-forecast-reason">
-                {t(`forecastUnavailableReasons.${forecastBlocker(plants)}`)}
+                {t(`forecastUnavailableReasons.${forecastBlocker(plants)}`, {
+                  turns: plants.governor?.turnsRemaining ?? 0,
+                })}
               </span>
             )}
           </p>

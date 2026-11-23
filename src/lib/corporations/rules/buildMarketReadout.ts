@@ -1,7 +1,7 @@
 /** Per-product buyer readout for the build dialog. Pure; no rendering. */
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { BuildDemandRow } from "./fundedBuildDemand";
-import { estimatedFullMixBuildRoom, fullMixBuildRoom } from "./buildDemandCapacity";
+import { fullMixBuildRoom } from "./buildDemandCapacity";
 
 export type ProductVerdict =
   /** Paid orders went unfilled and at least one new site would serve them. */
@@ -32,7 +32,6 @@ export interface MarketReadout {
   summary: ReadoutSummary;
   /** Sites that would sell every output they make. */
   fullMixFacilities: number | null;
-  estimatedFullMixFacilities: number | null;
 }
 
 function verdictFor(row: BuildDemandRow, facilities: number | null): ProductVerdict {
@@ -77,11 +76,9 @@ export function buildMarketReadout(
           ? "all-waiting"
           : "some-waiting";
   const fullMix = fullMixBuildRoom(rows);
-  const estimate = estimatedFullMixBuildRoom(rows);
   return {
     products,
     summary,
     fullMixFacilities: fullMix == null ? null : Math.floor(fullMix / perFacility),
-    estimatedFullMixFacilities: estimate == null ? null : Math.floor(estimate / perFacility),
   };
 }

@@ -155,7 +155,6 @@ it("distinguishes paid orders from cap estimates in mixed-output advice", () => 
         unmet: 0,
         capacityUnits: 0,
         capHiddenUnmet: 200,
-        estimatedCapacityUnits: 200,
       },
     ],
   });
@@ -165,6 +164,10 @@ it("distinguishes paid orders from cap estimates in mixed-output advice", () => 
   expect(screen.getByTestId("build-market-row-software").textContent).toContain(
     "Paid orders covered"
   );
+  expect(screen.getByTestId("build-market-readout").textContent).toContain(
+    "Prices here are at the cap. Demand above paid orders is not counted."
+  );
+  expect(screen.getByTestId("build-market-readout").textContent).not.toMatch(/model estimate/i);
   expect(screen.getByText("Match demand uses paid orders only.")).toBeTruthy();
 });
 
@@ -292,6 +295,15 @@ describe("build advice lines", () => {
     cleanup();
     renderDialog(vi.fn(), { ...plants, mothballed: true });
     expect(screen.getByTestId("build-forecast-reason").textContent).toContain("mothballed");
+    cleanup();
+    renderDialog(vi.fn(), {
+      ...plants,
+      investment: undefined,
+      governor: { ...plants.governor, active: true, turnsRemaining: 5 },
+    });
+    expect(screen.getByTestId("build-forecast-reason").textContent).toContain(
+      "market support ramp"
+    );
   });
 
   it("explains a cost-only figure when no unmet demand is measured", () => {
