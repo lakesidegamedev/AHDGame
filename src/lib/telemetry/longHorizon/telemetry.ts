@@ -1,3 +1,4 @@
+import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 /**
  * Durable long-horizon telemetry.
  *
@@ -17,12 +18,8 @@ import {
   getApprovalTelemetryCollection,
   getMacroTelemetryCollection,
 } from "@/lib/db/collections/longHorizonTelemetry";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { State } from "@/lib/db/types/state";
 import { COUNTRY_CONFIGS, getExecutiveOfficeKey, type CountryId } from "@/lib/constants/countries";
 import {
   LONG_HORIZON_BOUNDED_FALLBACK_POLICY_ID,
@@ -613,7 +610,7 @@ export async function readApprovalSeriesWithFallback(
         )?.history ?? [])
       : ((
           await stateApprovalHistoryCollection(db).findOne(
-            { _id: region },
+            regionalApprovalFilter(country, region),
             { projection: { history: 1 } }
           )
         )?.history ?? []);

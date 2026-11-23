@@ -349,7 +349,9 @@ async function prepareAccumulateVoteTurn(
   // partyGroupFavorabilityByKey: Address-sourced per-group appeal boosts for the
   // leader's party. Country-scoped, keyed `${partyId}:${groupId}` for O(1)
   // lookup in the vote-distribution inner loop.
-  const preloadedApproval = options?.approvalMap?.get(election.state.toUpperCase());
+  const preloadedApproval =
+    options?.approvalMap?.get(`${election.countryId ?? "US"}:${election.state.toUpperCase()}`) ??
+    options?.approvalMap?.get(election.state.toUpperCase());
   const [approvalPct, enriched, partyGroupFavorabilityByKey] = await Promise.all([
     preloadedApproval ?? getStateApprovalForElection(election.state),
     fetchEnrichedCandidates(candidates, {
