@@ -18,7 +18,36 @@ interface TopProducersConsumersProps {
   unit: string;
   commodity: string;
   consumerNote?: string;
+  /** Units supplied to this market; used to reconcile what the listed buyers received. */
+  marketSupply?: number;
   marketLabel?: string;
+}
+
+/**
+ * One plain line on what the non-company buyers received against what the
+ * market supplied, and how a short supply is shared. Null when the buyers
+ * carry no received figures (a formula world).
+ */
+export function buyerFillNotes(
+  sources: readonly SyntheticDemandSource[],
+  supply: number | undefined,
+  unit: string
+): { totals: string; sharing: string | null } | null {
+  const funded = sources.filter((s) => s.receivedUnits != null);
+  if (funded.length === 0) return null;
+  const ordered = funded.reduce((sum, s) => sum + s.units, 0);
+  const received = funded.reduce((sum, s) => sum + (s.receivedUnits ?? 0), 0);
+  const rest =
+    supply != null && supply >= received
+      ? ` The rest of the ${formatUnits(supply, unit)} supplied went to the companies listed or was not sold.`
+      : "";
+  return {
+    totals: `These buyers ordered ${formatUnits(ordered, unit)} and received ${formatUnits(received, unit)}.${rest}`,
+    sharing:
+      received < ordered
+        ? "When supply is short, company plant orders are filled first. Government orders at the same price share what is left in proportion to what each asked for. Households and other buyers follow in a fixed order. Each buyer can also only spend its budget, so fill rates differ."
+        : null,
+  };
 }
 
 function Pagination({
@@ -130,6 +159,7 @@ export default function TopProducersConsumers({
   unit,
   commodity,
   consumerNote,
+  marketSupply,
   marketLabel,
 }: TopProducersConsumersProps) {
   const [producerPage, setProducerPage] = useState(1);
@@ -154,6 +184,7 @@ export default function TopProducersConsumers({
     (producerPage - 1) * PAGE_SIZE,
     producerPage * PAGE_SIZE
   );
+  const fillNotes = buyerFillNotes(syntheticDemandSources, marketSupply, unit);
   const pagedConsumers = topConsumers.slice(
     (consumerPage - 1) * PAGE_SIZE,
     consumerPage * PAGE_SIZE
@@ -223,6 +254,12 @@ export default function TopProducersConsumers({
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
           </p>
           {consumerNote && <p className="text-xs text-muted mb-3">{consumerNote}</p>}
+          {fillNotes && (
+            <p className="text-xs text-muted mb-3">
+              {fillNotes.totals}
+              {fillNotes.sharing ? ` ${fillNotes.sharing}` : ""}
+            </p>
+          )}
           <div className="space-y-2">
             {pagedConsumers.map((c, i) => (
               <Link
