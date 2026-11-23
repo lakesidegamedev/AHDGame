@@ -24,6 +24,7 @@ import {
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import { effectivePsInvestmentBudget } from "@/lib/parties/rules/nppTreasurySpendDown";
 import { getPartyHex } from "@/lib/utils/politics";
+import { isDisplayedPartyPlayer } from "@/lib/parties/rules/displayedPlayers";
 import {
   calculateTaxAmount,
   projectCharacterGeneration,
@@ -32,7 +33,6 @@ import {
 import { campaignAnchorToLocal, campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isUserActive } from "@/lib/players/playerActivity";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -201,9 +201,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   const now = new Date();
   const activeMemberUserIds = new Set(
     memberUsers
-      .filter(
-        (user) => user.isBanned !== true && isUserActive(user.lastActivity, user.createdAt, now)
-      )
+      .filter((user) => isDisplayedPartyPlayer(user, now))
       .map((user) => user._id.toString())
   );
   const displayMembers = members.filter((member) =>
