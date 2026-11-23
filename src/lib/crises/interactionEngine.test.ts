@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -1467,6 +1470,7 @@ describe("bilateral sequential peace decisions", () => {
     );
     expect(uk.interaction.currentNodeId).toBe("irish_position");
     expect(uk.interaction.leaderResponses).toBeUndefined();
+    db.collection("crisisInteractions").findOne.mockResolvedValue(uk.interaction);
     await expect(
       submitCrisisDecision(mdb(), interaction._id, "ie_coordinate", new ObjectId(), "UK", [
         "headOfState",

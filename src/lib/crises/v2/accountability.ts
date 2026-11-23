@@ -1,6 +1,7 @@
 import {
   clamp,
   type AccountabilityEntry,
+  type AccountabilityAttribution,
   type ActiveCrisisStage,
   type CrisisDefinition,
   type CrisisInstance,
@@ -40,6 +41,7 @@ export function recordLeverUses(
     stage,
     role: lever.role,
     holderId: use.holderId,
+    ...(use.attribution ? { attribution: use.attribution } : {}),
     leverId: lever.id,
     cost: scaleCost(lever.cost, use.intensity ?? 1),
     mitigation,
@@ -191,4 +193,26 @@ export function electoralSwing(
 ): number {
   if (maxSwing <= 0 || scale <= 0) return 0;
   return clamp(Math.tanh(score.net / scale) * maxSwing, -maxSwing, maxSwing);
+}
+
+export function freezeAccountabilityAttributions(
+  ledger: readonly AccountabilityEntry[],
+  actors: ReadonlyMap<string, AccountabilityAttribution>,
+  legacyRegionIds: readonly string[] = []
+): AccountabilityEntry[] {
+  return ledger.map((entry) => {
+    if (entry.attribution !== undefined) return entry;
+    const actor = actors.get(entry.holderId);
+    return {
+      ...entry,
+      attribution: actor
+        ? {
+            ...actor,
+            ...(entry.role === "stateGovernor" && legacyRegionIds.length === 1
+              ? { stateId: legacyRegionIds[0].toUpperCase() }
+              : {}),
+          }
+        : null,
+    };
+  });
 }

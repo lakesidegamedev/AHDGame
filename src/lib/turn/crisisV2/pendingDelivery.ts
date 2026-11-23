@@ -1,3 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { loadAccountabilityAttributions } from "./attribution";
+import { freezeAccountabilityAttributions } from "@/lib/crises/v2/accountability";
 import type { Db, ObjectId } from "mongodb";
 import type {
   CrisisDefinition,
@@ -5,7 +8,6 @@ import type {
   ForcedEventThreshold,
   PendingDelivery,
 } from "@/lib/crises/v2/types";
-import type { Crisis } from "@/lib/db/types/crisis";
 import { logger } from "@/lib/observability/logger";
 import { settleCrisisConsequences } from "./consequences";
 import { runForcedEvents } from "./forcedEventsShell";
@@ -53,19 +55,35 @@ export async function deliverPending(
   const pending = instance.pendingDelivery;
   if (!pending) return;
   const applied = new Set(pending.applied ?? []);
-  const receipts = { done: applied, mark: (key: string) => void applied.add(key) };
   let consequences = pending.consequences === true;
   let forced = [...(pending.forced ?? [])];
 
   try {
     if (consequences) {
-      await settleCrisisConsequences(
-        db,
-        instance,
-        { crisisId: target.crisisId, scope: target.scope, regionIds: target.regionIds },
-        turn,
-        receipts
-      );
+      await withSessionDb(db, async (tx) => {
+        const saved = await crisesCollection(tx).findOne(
+          { _id: target.crisisId },
+          { projection: { "v2.ledger": 1, "v2.pendingDelivery": 1 } }
+        );
+        if (saved?.v2 && saved.v2.pendingDelivery?.consequences !== true) return;
+        const ledger = saved?.v2?.ledger ?? instance.ledger;
+        const actors = await loadAccountabilityAttributions(
+          tx,
+          ledger.filter((row) => row.attribution === undefined).map((row) => row.holderId)
+        );
+        const frozen = freezeAccountabilityAttributions(ledger, actors, target.regionIds);
+        await settleCrisisConsequences(
+          tx,
+          { ledger: frozen },
+          { crisisId: target.crisisId, scope: target.scope, regionIds: target.regionIds },
+          turn,
+          { done: applied, mark: () => undefined }
+        );
+        await crisesCollection(tx).updateOne(
+          { _id: target.crisisId },
+          { $set: { "v2.ledger": frozen }, $unset: { "v2.pendingDelivery.consequences": "" } }
+        );
+      });
       consequences = false;
     }
   } catch (error) {

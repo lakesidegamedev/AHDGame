@@ -1,3 +1,7 @@
+vi.mock("@/lib/approval/ensureGovernmentApproval", () => ({ ensureGovernmentApproval: vi.fn() }));
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";

@@ -652,6 +652,8 @@ interface StateApprovalBulkOp {
         countryId: CountryId;
         approvalRating: number;
         approvalRawRating: number;
+        disapprovalRating: number;
+        netApproval: number;
         updatedAt: Date;
         lastSnapshotTurn: number;
         baseApproval?: number;
@@ -693,6 +695,8 @@ export function buildStateApprovalBulkOps(
             countryId,
             approvalRating: approval,
             approvalRawRating: rawApproval ?? approval,
+            disapprovalRating: 100 - approval,
+            netApproval: 2 * approval - 100,
             updatedAt: now,
             lastSnapshotTurn: turn,
             ...(baseApproval !== undefined ? { baseApproval } : {}),

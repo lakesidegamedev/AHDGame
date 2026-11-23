@@ -1,3 +1,4 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CrisisOptionAction } from "@/lib/db/types/crisis";
@@ -130,6 +131,7 @@ export async function applyWarEmergencyResponse(
   const countryId = ctx.countryId as CountryId;
 
   if (effects.approval) {
+    await ensureGovernmentApproval(ctx.db, [countryId]);
     await governmentApprovalsCollection<Document>(ctx.db).updateOne(
       { _id: countryId as unknown as import("mongodb").ObjectId },
       approvalDeltaUpdate(effects.approval)

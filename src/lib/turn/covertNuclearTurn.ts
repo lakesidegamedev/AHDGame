@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { stepCovertProgram } from "@/lib/military/covertNuclear";
@@ -8,7 +9,6 @@ import {
   putCovertNuclearProgram,
 } from "@/lib/db/collections/covertNuclearPrograms";
 import {
-  creditAppropriation,
   debitAppropriation,
   getDefenseAppropriation,
   uncommittedFrom,
@@ -30,14 +30,14 @@ const NOTHING: CovertNuclearTurnResult = { spent: 0, discovered: false };
  *
  * Money follows the nuclearProductionTurn pattern: size the turn against the
  * UNCOMMITTED appropriation, debit through the guarded `debitAppropriation` so
- * a concurrent spend loses cleanly, and refund on a failed programme write.
+ * a concurrent spend loses cleanly. The programme and debit commit together.
  * Covert funding deliberately IGNORES `defenceProcurementPaused`: the programme
  * is off the books by design.
  *
  * Discovery is a Soviet crackdown: a world tension spike, a public wire story
  * naming undeclared facilities but never the programme's actual stage.
  */
-export async function applyCovertNuclearTurn(
+async function applyCovertNuclearTurnInTransaction(
   db: Db,
   countryId: CountryId,
   turn: number
@@ -45,7 +45,7 @@ export async function applyCovertNuclearTurn(
   // Never started: no doc, nothing funded, nothing built. Skip without a write
   // so the collection never grows a doc for a country that never opened it.
   const doc = await getCovertNuclearProgramsCollection(db).findOne({ _id: countryId });
-  if (!doc) return NOTHING;
+  if (!doc || (doc.lastProcessedTurn ?? -1) >= turn) return NOTHING;
   const state = { ...emptyCovertNuclearProgram(countryId), ...doc };
 
   const pot = await getDefenseAppropriation(db, countryId);
@@ -61,17 +61,12 @@ export async function applyCovertNuclearTurn(
     if (!paid) result = stepCovertProgram(state, 0, roll);
   }
 
-  try {
-    await putCovertNuclearProgram(db, {
-      ...state,
-      ...result.state,
-      _id: countryId,
-    });
-  } catch (error) {
-    // Refund a turn that never persisted - money must not vanish on a failed write.
-    if (result.spent > 0) await creditAppropriation(db, countryId, result.spent);
-    throw error;
-  }
+  await putCovertNuclearProgram(db, {
+    ...state,
+    ...result.state,
+    lastProcessedTurn: turn,
+    _id: countryId,
+  });
 
   if (result.discovered) {
     // Shared with the patron's intelligence service, which can reach the same
@@ -80,4 +75,13 @@ export async function applyCovertNuclearTurn(
   }
 
   return { spent: result.spent, discovered: result.discovered };
+}
+
+export async function applyCovertNuclearTurn(
+  db: Db,
+  ...args: Parameters<typeof applyCovertNuclearTurnInTransaction> extends [Db, ...infer Rest]
+    ? Rest
+    : never
+) {
+  return withSessionDb(db, (tx) => applyCovertNuclearTurnInTransaction(tx, ...args));
 }

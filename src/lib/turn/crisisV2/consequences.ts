@@ -1,6 +1,7 @@
+import { ensureGovernmentApproval } from "@/lib/approval/ensureGovernmentApproval";
+import { loadAccountabilityAttributions } from "./attribution";
 import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
-import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { createHash } from "node:crypto";
 import {
   ObjectId,
@@ -86,10 +87,22 @@ async function writeReceipted<T extends Document>(
 ): Promise<void> {
   if (items.length === 0) return;
   try {
-    await collection.bulkWrite(
+    const written = await collection.bulkWrite(
       items.map((item) => item.op),
       { ordered: true }
     );
+    if (typeof written?.matchedCount === "number" && written.matchedCount < items.length) {
+      const identities = items.map(({ op }) => {
+        if (!("updateOne" in op)) throw new Error("Approval delivery requires updates");
+        const { appliedCrisisEffects: _witness, ...identity } = op.updateOne.filter;
+        return identity;
+      });
+      const existing = await collection.countDocuments({
+        $or: identities,
+      } as import("mongodb").Filter<T>);
+      if (existing < items.length)
+        throw new Error("Approval delivery needs an initialized regional snapshot");
+    }
   } catch (error) {
     const failedAt = (error as { writeErrors?: { index?: number }[] }).writeErrors?.[0]?.index;
     for (const item of items.slice(0, failedAt ?? 0)) receipts?.mark(item.key);
@@ -118,23 +131,22 @@ export async function settleCrisisConsequences(
   if (verdicts.length === 0) return result;
 
   const holderIds = verdicts
-    .filter((v) => ObjectId.isValid(v.holderId))
+    .filter((v) => v.attribution === undefined && ObjectId.isValid(v.holderId))
     .map((v) => new ObjectId(v.holderId));
-  const characters = await (
-    await getCharactersCollection(db)
-  )
-    .find({ _id: { $in: holderIds } }, { projection: { party: 1, countryId: 1, currentOffice: 1 } })
-    .toArray();
-  const byId = new Map(characters.map((character) => [character._id.toString(), character]));
+  const actors = await loadAccountabilityAttributions(
+    db,
+    holderIds.map((id) => id.toString())
+  );
 
   const nationalApproval = new Map<string, number>();
-  const stateApproval = new Map<string, { countryId: string; delta: number }>();
+  const stateApproval = new Map<string, { countryId: string; stateId: string; delta: number }>();
   const partyShift = new Map<string, { countryId: string; partyId: string; pct: number }>();
 
   for (const verdict of verdicts) {
-    const character = byId.get(verdict.holderId);
-    if (!character?.countryId) continue;
-    const countryId = character.countryId as string;
+    const actor =
+      verdict.attribution === undefined ? actors.get(verdict.holderId) : verdict.attribution;
+    if (!actor?.countryId) continue;
+    const countryId = actor.countryId;
 
     if (verdict.role === "headOfState") {
       nationalApproval.set(
@@ -142,18 +154,19 @@ export async function settleCrisisConsequences(
         (nationalApproval.get(countryId) ?? 0) + verdict.approvalDelta
       );
     } else if (verdict.role === "stateGovernor") {
-      const state = (character.currentOffice as { state?: string } | null)?.state;
+      const state = actor.stateId;
       if (state) {
-        const key = state.toUpperCase();
-        const row = stateApproval.get(key) ?? { countryId, delta: 0 };
+        const stateId = state.toUpperCase();
+        const key = `${countryId}:${stateId}`;
+        const row = stateApproval.get(key) ?? { countryId, stateId, delta: 0 };
         row.delta += verdict.approvalDelta;
         stateApproval.set(key, row);
       }
     }
 
-    if (ELECTORAL_ROLES.has(verdict.role) && character.party) {
-      const key = `${countryId}|${character.party}`;
-      const row = partyShift.get(key) ?? { countryId, partyId: character.party, pct: 0 };
+    if (ELECTORAL_ROLES.has(verdict.role) && actor.partyId) {
+      const key = `${countryId}|${actor.partyId}`;
+      const row = partyShift.get(key) ?? { countryId, partyId: actor.partyId, pct: 0 };
       row.pct += partyElectionPct(verdict.approvalDelta);
       partyShift.set(key, row);
     }
@@ -178,9 +191,10 @@ export async function settleCrisisConsequences(
     });
   }
   const stateOps: { key: string; op: AnyBulkWriteOperation<StateApprovalHistory> }[] = [];
-  for (const [stateId, { countryId, delta }] of stateApproval) {
-    const key = `state:${stateId}`;
-    if (Math.abs(delta) < 0.01 || receipts?.done.has(key)) continue;
+  for (const { stateId, countryId, delta } of stateApproval.values()) {
+    const key = `state:${countryId}:${stateId}`;
+    if (Math.abs(delta) < 0.01 || receipts?.done.has(key) || receipts?.done.has(`state:${stateId}`))
+      continue;
     const witness = `${targets.crisisId.toHexString()}:${key}`;
     stateOps.push({
       key,
@@ -188,13 +202,16 @@ export async function settleCrisisConsequences(
         updateOne: {
           filter: {
             ...regionalApprovalFilter(countryId, stateId),
-            appliedCrisisEffects: { $ne: witness },
+            appliedCrisisEffects: {
+              $nin: [witness, `${targets.crisisId.toHexString()}:state:${stateId}`],
+            },
           },
           update: witnessedApproval(delta, witness),
         },
       },
     });
   }
+  await ensureGovernmentApproval(db, [...nationalApproval.keys()]);
   await writeReceipted(governmentApprovalsCollection(db), nationalOps, receipts);
   await writeReceipted(stateApprovalHistoryCollection(db), stateOps, receipts);
   result.approvalWrites = nationalOps.length + stateOps.length;

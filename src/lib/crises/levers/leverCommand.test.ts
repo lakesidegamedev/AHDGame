@@ -1,3 +1,7 @@
+vi.mock("@/lib/approval/ensureGovernmentApproval", () => ({ ensureGovernmentApproval: vi.fn() }));
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import type { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { ObjectId } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -55,12 +59,26 @@ interface Store {
   regionIds?: string[];
 }
 
+const databases = new WeakMap<Store, object>();
+
 function makeDb(store: Store) {
+  const existing = databases.get(store);
+  if (existing) return existing as never;
   const sameSlot = (a: Record<string, unknown>, b: Record<string, unknown>) =>
     ["crisisId", "leverId", "holderId", "submittedTurn"].every(
       (k) => String(a[k]) === String(b[k])
     );
-  return {
+  const database = {
+    captureRollback() {
+      const uses = [...store.uses],
+        approvals = [...store.approvals],
+        actions = store.actions;
+      return () => {
+        store.uses = uses;
+        store.approvals = approvals;
+        store.actions = actions;
+      };
+    },
     collection(name: string) {
       if (name === "crises") {
         return {
@@ -140,7 +158,9 @@ function makeDb(store: Store) {
       }
       throw new Error(`unexpected collection ${name}`);
     },
-  } as never;
+  };
+  databases.set(store, database);
+  return database as never;
 }
 
 function freshStore(overrides: Partial<Store> = {}): Store {
@@ -284,7 +304,7 @@ describe("pullLever", () => {
     expect(keys[0]).not.toBe(keys[1]);
   });
 
-  it("refunds everything taken when the release write throws", async () => {
+  it("rolls back all charges when the release write throws", async () => {
     const store = freshStore();
     const db = makeDb(store) as unknown as { collection: (n: string) => Record<string, unknown> };
     const base = db.collection.bind(db);
@@ -300,17 +320,15 @@ describe("pullLever", () => {
       }
       return c;
     };
-    const result = await pullLever(db as never, { crisisId, leverId: "stimulus", characterId });
-    expect(result).toMatchObject({ ok: false, code: "charge_failed" });
-    expect(refundTreasurySpend).toHaveBeenCalledTimes(1);
-    expect(store.approvals).toEqual([
-      { id: "US", delta: -2 },
-      { id: "US", delta: 2 },
-    ]);
+    await expect(
+      pullLever(db as never, { crisisId, leverId: "stimulus", characterId })
+    ).rejects.toThrow("boom");
+    expect(refundTreasurySpend).not.toHaveBeenCalled();
+    expect(store.approvals).toEqual([]);
     expect(store.uses).toHaveLength(0);
   });
 
-  it("refunds the treasury and actions when the approval charge throws", async () => {
+  it("rolls back treasury and actions when the approval charge throws", async () => {
     const store = freshStore();
     const db = makeDb(store) as unknown as { collection: (n: string) => Record<string, unknown> };
     const base = db.collection.bind(db);
@@ -327,14 +345,11 @@ describe("pullLever", () => {
       return c;
     };
     const actionsBefore = store.actions;
-    const result = await pullLever(db as never, { crisisId, leverId: "stimulus", characterId });
-    expect(result).toMatchObject({ ok: false, code: "charge_failed" });
+    await expect(
+      pullLever(db as never, { crisisId, leverId: "stimulus", characterId })
+    ).rejects.toThrow("approval write failed");
     expect(spendFromTreasury).toHaveBeenCalledTimes(1);
-    expect(refundTreasurySpend).toHaveBeenCalledTimes(1);
-    expect(refundTreasurySpend.mock.calls[0][2]).toBe(spendFromTreasury.mock.calls[0][2]);
-    expect(refundTreasurySpend.mock.calls[0][3].key).toBe(
-      spendFromTreasury.mock.calls[0][3].witness.key
-    );
+    expect(refundTreasurySpend).not.toHaveBeenCalled();
     expect(store.actions).toBe(actionsBefore);
     expect(store.uses).toHaveLength(0);
   });

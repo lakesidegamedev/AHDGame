@@ -10,5 +10,6 @@ export interface CovertNuclearProgram extends CovertProgramState {
   _id: CountryId;
   /** Turn the breakout test went public, if it ever did. Breakout is once. */
   brokenOutTurn?: number;
+  lastProcessedTurn?: number;
   updatedAt: Date;
 }

@@ -25,6 +25,8 @@ import { logger } from "@/lib/observability/logger";
 import {
   checkLeverEligibility,
   commitLeverUse,
+  withLeverTransaction,
+  abortLeverTransaction,
   fail,
   pullLever,
   type LeverResult,
@@ -53,7 +55,7 @@ function rejected(error: unknown): LeverResult<never> | null {
  * contribution) once the pull is claimed and charged; if that code refuses, the
  * pull is refunded and freed so nothing is left half done.
  */
-export async function pullLeverWithDecision(
+async function pullLeverWithDecisionInTransaction(
   db: Db,
   input: PullLegacyLeverInput
 ): Promise<LeverResult<LeverUseSummary>> {
@@ -107,6 +109,13 @@ export async function pullLeverWithDecision(
     lever,
     holderId: actor._id,
     countryId: actor.countryId,
+    attribution: {
+      countryId: actor.countryId,
+      ...(character.party ? { partyId: character.party } : {}),
+      ...(character.currentOffice && "state" in character.currentOffice
+        ? { stateId: character.currentOffice.state }
+        : {}),
+    },
     intensity: 1,
     turn,
   });
@@ -125,7 +134,7 @@ export async function pullLeverWithDecision(
   } catch (error) {
     await committed.undo();
     const refusal = rejected(error);
-    if (refusal) return refusal;
+    if (refusal) abortLeverTransaction(refusal);
     logger.error(COMPONENT, "lever decision failed; pull refunded", error, {
       crisisId: input.crisisId.toString(),
       leverId: lever.id,
@@ -178,4 +187,8 @@ async function runDecision(db: Db, ref: LegacyLeverRef, run: DecisionRun): Promi
   } else {
     await answerChoiceNode(context);
   }
+}
+
+export async function pullLeverWithDecision(db: Db, input: PullLegacyLeverInput) {
+  return withLeverTransaction(db, (tx) => pullLeverWithDecisionInTransaction(tx, input));
 }
