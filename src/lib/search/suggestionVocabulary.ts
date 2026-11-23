@@ -17,7 +17,9 @@ export async function loadSuggestionVocabulary(
 ): Promise<SuggestionEntry[]> {
   const wikiFilter: Record<string, unknown> = { status: "published" };
   if (!canSeePrivate) wikiFilter.private = { $ne: true };
-  const countryFilter = enabledCountries ? { countryId: { $in: enabledCountries } } : {};
+  const countryFilter: Record<string, unknown> = enabledCountries
+    ? { countryId: { $in: enabledCountries } }
+    : {};
 
   const [pages, corporations, npps] = await Promise.all([
     wikiPagesCollection(db)
