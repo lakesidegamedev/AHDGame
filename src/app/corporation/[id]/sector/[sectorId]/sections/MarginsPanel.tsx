@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPercent } from "@/lib/ui/numbers";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -205,7 +206,7 @@ export default function MarginsPanel({
           <p className="text-xs text-muted">
             {pnl
               ? "Revenue less all costs"
-              : `Base ${margins.base}% · state, corporate & national modifiers`}
+              : `Base ${formatPercent(margins.base)} · state, corporate & national modifiers`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -342,7 +343,7 @@ export default function MarginsPanel({
                 <div className="mb-4 flex items-center justify-between border-b border-card-border pb-3 text-sm">
                   <span className="text-body-sm font-medium text-muted">Base margin</span>
                   <span className="text-base font-bold tabular-nums text-foreground">
-                    {margins.base}%
+                    {formatPercent(margins.base)}
                   </span>
                 </div>
               )}
@@ -795,7 +796,9 @@ export default function MarginsPanel({
                 <span className="text-xs text-muted">
                   Operating margin before upkeep and other costs
                 </span>
-                <span className="text-xs tabular-nums text-muted">{margins.effective}%</span>
+                <span className="text-xs tabular-nums text-muted">
+                  {formatPercent(margins.effective)}
+                </span>
               </div>
             </>
           ) : (
@@ -806,7 +809,7 @@ export default function MarginsPanel({
                   margins.effective >= margins.base ? "text-success" : "text-error"
                 }`}
               >
-                {margins.effective}%
+                {formatPercent(margins.effective)}
               </span>
             </div>
           )}

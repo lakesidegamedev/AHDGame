@@ -54,6 +54,8 @@ export function QuoteBoard({
     poolActive && bid != null && ask != null && Number.isFinite(bid) && Number.isFinite(ask);
   const drawn = series.length >= 2 ? sparkPaths(series, dayChange?.prevClose ?? null) : null;
   const moneyChange = change?.changeMoney ?? null;
+  // The quote above is live and may sit outside the settled series, so the range includes it.
+  const rangeValues = Number.isFinite(price) ? [...series, price] : series;
 
   // The line covers the whole drawn window, so it is coloured by the change
   // across that window and not by the last turn. Colouring an eighteen-turn
@@ -148,7 +150,8 @@ export function QuoteBoard({
           <div className="flex justify-between px-3.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             <span>{series.length} turns</span>
             <span>
-              Low {money.fmtPrice(Math.min(...series))} · High {money.fmtPrice(Math.max(...series))}
+              Low {money.fmtPrice(Math.min(...rangeValues))} · High{" "}
+              {money.fmtPrice(Math.max(...rangeValues))}
             </span>
           </div>
         </>

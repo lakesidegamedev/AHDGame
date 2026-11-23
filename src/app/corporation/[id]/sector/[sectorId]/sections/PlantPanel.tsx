@@ -1,6 +1,9 @@
 "use client";
 
-import { plantBuildProgress } from "@/lib/corporations/rules/plantBuildProgress";
+import {
+  plantBuildProgress,
+  wholeBuiltPlantCount,
+} from "@/lib/corporations/rules/plantBuildProgress";
 import { useTranslations } from "next-intl";
 import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rules";
 import CapacityRecovery from "../components/CapacityRecovery";
@@ -98,11 +101,16 @@ export default function PlantPanel({
     strategyId: plants.strategyId,
   };
   const unitsPerPlant = plantSizeForSector(plantSizing);
-  const ownedPlantCount = sectorPlantCount({
-    ...plantSizing,
-    plantCount: plants.plantCount,
-    capacityUnits: plants.capacityUnits,
-  });
+  // Whole plants only, so the header agrees with "N of M built" in the build list.
+  const ownedPlantCount = wholeBuiltPlantCount(
+    sectorPlantCount({
+      ...plantSizing,
+      plantCount: plants.plantCount,
+      capacityUnits: plants.capacityUnits,
+    }),
+    plants.buildQueue,
+    unitsPerPlant
+  );
   // Per order: plants ordered, plants finished (whole ones only, so a plant
   // a third built is not counted as built), and the rest still being built.
   const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) =>
