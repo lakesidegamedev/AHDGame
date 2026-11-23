@@ -17,6 +17,9 @@ areas: [frontend]
   footer and ad strip stay below the fold instead of flashing into view and
   being pushed back down. On the legislature page this removed nearly all of
   the movement during navigation.
+- The market page reserves the stock chart's space from the first paint, so the
+  tabs and listings no longer drop by a quarter of a screen when the chart
+  arrives.
 
 ## Experimental page decode
 
