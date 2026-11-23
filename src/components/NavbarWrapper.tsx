@@ -54,6 +54,7 @@ interface AdminCharacter {
   name: string;
   countryId: string;
   party: string | null;
+  detail?: string;
   isActive: boolean;
 }
 
