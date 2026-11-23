@@ -51,3 +51,13 @@ areas: [backend, frontend]
 - Law counts use one definition on every page. Tariffs and subsidies are counted separately.
 - Old statutes replaced by a newer law no longer appear alongside it, and each law names the bill that enacted it.
 
+
+### States, provinces and government
+- Region pages say why a chamber has no members instead of showing an admin message. DC is described as the nation's capital.
+- Canadian provinces show their own legislature titles and no Senate card.
+- Lean, registration, organization and projected seats are each defined where they appear. Premier cards explain that premiers are elected separately from the legislature.
+- A majority is half the full chamber plus one, and governments are described by the seats they hold.
+- A vacant House minority leader seat explains how it gets filled.
+- State budget cash reads the same ledger as state debt.
+- When a Supreme Court seat opens under a player President, they are notified at once and again after 48 turns. If the seat is still empty after 96 turns, the Administration files a nominee from the President's party and the Senate votes as usual.
+- The Supreme Court page exists only for countries that have one in the game.
