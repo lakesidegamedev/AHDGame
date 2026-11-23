@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SupremeCourtPage({ params }: PageProps) {
   const { code } = await params;
   const countryId = code.toUpperCase() as CountryId;
-  if (!COUNTRY_CONFIGS[countryId]) notFound();
+  // Only the United States has a modeled court; other countries have no page.
+  if (!COUNTRY_CONFIGS[countryId] || countryId !== "US") notFound();
   return <SupremeCourtClient countryId={countryId} />;
 }
