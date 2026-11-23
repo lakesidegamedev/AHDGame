@@ -32,6 +32,16 @@ export interface PollingData {
   leaderId: string | null;
   leaderName: string | null;
   leaderParty: string | null;
+  /** Each party primary's front-runner. Set during primaries only. */
+  primaryLeaders?: {
+    partyId: string;
+    partyName: string;
+    partyColor: string;
+    candidateId: string;
+    name: string;
+    sharePct: number;
+    fieldSize: number;
+  }[];
   sharesPct: Record<string, number>;
   candidateNames: Record<string, string>;
   candidateParties: Record<string, string>;

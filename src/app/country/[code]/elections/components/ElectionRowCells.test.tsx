@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ElectionDisplay } from "@/lib/db/types";
-import { RegionCell } from "./ElectionRowCells";
+import { FieldCell, RegionCell } from "./ElectionRowCells";
 
 const race = (over: Partial<ElectionDisplay>) =>
   ({
@@ -28,5 +28,55 @@ describe("RegionCell", () => {
     render(<RegionCell election={race({})} />);
     expect(screen.queryByText("By-election")).toBeNull();
     expect(screen.getByText("47 seats")).toBeTruthy();
+  });
+});
+
+describe("FieldCell", () => {
+  const leader = (
+    partyId: string,
+    partyName: string,
+    name: string,
+    sharePct: number,
+    fieldSize: number
+  ) => ({
+    partyId,
+    partyName,
+    partyColor: "#123456",
+    candidateId: `${partyId}-1`,
+    name,
+    sharePct,
+    fieldSize,
+  });
+
+  it("labels each primary's front-runner by party instead of crowning one", () => {
+    render(
+      <FieldCell
+        election={race({
+          candidates: [{}, {}, {}] as never,
+          polling: {
+            leaderId: null,
+            leaderName: null,
+            leaderParty: null,
+            sharesPct: {},
+            candidateNames: {},
+            candidateParties: {},
+            source: "primary",
+            primaryLeaders: [
+              leader("1", "Liberal", "Rachel Paquette", 100, 1),
+              leader("2", "Conservative", "Benjamin Nasser", 60, 2),
+            ],
+          },
+        })}
+      />
+    );
+    expect(screen.getByText("Rachel Paquette")).toBeTruthy();
+    expect(screen.getByText("Benjamin Nasser")).toBeTruthy();
+    expect(screen.getByText(/Uncontested in Liberal primary/)).toBeTruthy();
+    expect(screen.getByText(/60% in Conservative primary/)).toBeTruthy();
+  });
+
+  it("marks a lone candidate uncontested", () => {
+    render(<FieldCell election={race({ candidates: [{}] as never })} />);
+    expect(screen.getByText("1 candidate, uncontested")).toBeTruthy();
   });
 });

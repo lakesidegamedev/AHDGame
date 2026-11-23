@@ -205,7 +205,10 @@ export function buildPollingData(
       if (party) filteredParties[cid] = party;
     }
 
-    const leaderId = Object.entries(filteredSharesPct).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const leaderId =
+      Object.entries(filteredSharesPct).sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+      )[0]?.[0] ?? null;
 
     const filteredPartyNames: Record<string, string> = {};
     const filteredPartyColors: Record<string, string> = {};
@@ -238,11 +241,6 @@ export function buildPollingData(
   const sharesPct: Record<string, number> = {};
   const candidateNames: Record<string, string> = {};
   const candidateParties: Record<string, string> = {};
-  let topScore = -1;
-  let leaderId: string | null = null;
-  let leaderName: string | null = null;
-  let leaderParty: string | null = null;
-
   for (const entries of Object.values(latestPrimarySnapshot.byParty)) {
     for (const entry of entries) {
       // Skip snapshot entries whose candidate is no longer active (e.g. they
@@ -255,12 +253,6 @@ export function buildPollingData(
       sharesPct[entry.candidateId] = entry.sharePct;
       candidateNames[entry.candidateId] = entry.characterName;
       candidateParties[entry.candidateId] = entry.party;
-      if (entry.sharePct > topScore) {
-        topScore = entry.sharePct;
-        leaderId = entry.candidateId;
-        leaderName = entry.characterName;
-        leaderParty = entry.party;
-      }
     }
   }
 
@@ -271,10 +263,27 @@ export function buildPollingData(
     primaryPartyColors[cid] = resolvePartyColor(pid);
   }
 
+  const snapshotGroups: PartyGroup[] = Object.entries(latestPrimarySnapshot.byParty).map(
+    ([pid, entries]) =>
+      ({
+        partyId: pid,
+        partyName: resolvePartyName(pid),
+        partyColor: resolvePartyColor(pid),
+        candidates: entries.map((e) => ({
+          id: e.candidateId,
+          characterName: e.characterName,
+          sharePct: e.sharePct,
+        })),
+      }) as unknown as PartyGroup
+  );
+  const primaryLeaders = primaryLeadersByParty(snapshotGroups, activeCandidateIdSet);
+  const only = primaryLeaders.length === 1 ? primaryLeaders[0] : null;
+
   return {
-    leaderId,
-    leaderName,
-    leaderParty,
+    leaderId: only?.candidateId ?? null,
+    leaderName: only?.name ?? null,
+    leaderParty: only?.partyId ?? null,
+    primaryLeaders,
     sharesPct,
     candidateNames,
     candidateParties,
@@ -282,6 +291,50 @@ export function buildPollingData(
     candidatePartyColors: primaryPartyColors,
     source: "primary",
   };
+}
+
+/** One party primary's front-runner. */
+export interface PrimaryLeader {
+  partyId: string;
+  partyName: string;
+  partyColor: string;
+  candidateId: string;
+  name: string;
+  sharePct: number;
+  /** Candidates in this party's primary. One means nobody is running against them. */
+  fieldSize: number;
+}
+
+/**
+ * Pick the front-runner of each party primary. Every party primary sums to
+ * 100 on its own, so shares are only comparable inside one party and the race
+ * has no single leader until the general. Ties break on candidate id so the
+ * answer never depends on document order.
+ */
+export function primaryLeadersByParty(
+  groups: readonly PartyGroup[],
+  activeCandidateIdSet?: ReadonlySet<string>
+): PrimaryLeader[] {
+  const leaders: PrimaryLeader[] = [];
+  for (const group of groups) {
+    const field = group.candidates.filter(
+      (c) => !activeCandidateIdSet || activeCandidateIdSet.has(c.id)
+    );
+    if (field.length === 0) continue;
+    const top = [...field].sort((a, b) => b.sharePct - a.sharePct || a.id.localeCompare(b.id))[0];
+    leaders.push({
+      partyId: group.partyId,
+      partyName: group.partyName,
+      partyColor: group.partyColor,
+      candidateId: top.id,
+      name: top.characterName,
+      sharePct: top.sharePct,
+      fieldSize: field.length,
+    });
+  }
+  return leaders.sort(
+    (a, b) => a.partyName.localeCompare(b.partyName) || a.partyId.localeCompare(b.partyId)
+  );
 }
 
 /** Build primary polling from live party-group softmax shares. */
@@ -306,12 +359,15 @@ function buildLivePrimaryPolling(
     }
   }
 
-  const leaderId = Object.entries(sharesPct).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+  const primaryLeaders = primaryLeadersByParty(livePrimaryByParty, activeCandidateIdSet);
+  // A race-level leader exists only when a single party is fielding candidates.
+  const only = primaryLeaders.length === 1 ? primaryLeaders[0] : null;
 
   return {
-    leaderId,
-    leaderName: leaderId ? (candidateNames[leaderId] ?? null) : null,
-    leaderParty: leaderId ? (candidateParties[leaderId] ?? null) : null,
+    leaderId: only?.candidateId ?? null,
+    leaderName: only?.name ?? null,
+    leaderParty: only?.partyId ?? null,
+    primaryLeaders,
     sharesPct,
     candidateNames,
     candidateParties,
