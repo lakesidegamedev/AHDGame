@@ -7,6 +7,7 @@ import { type SettleableSupplyAgreement, settleSupplyAgreements } from "./settle
 import {
   fundedContractTradesOf,
   fundedPairFlows,
+  realisedSupplierPrices,
   fundedPairKeysOf,
 } from "./rules/contractFundedDeliveries";
 import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
@@ -350,6 +351,9 @@ export async function settleCorporationTurnPayouts({
                   fundedContractTradesOf(fundedTradeReceipt),
                   fundedPairKeysOf(settleableAgreements)
                 )
+              : undefined,
+            realisedSupplierPrices: fundedTradeReceipt
+              ? realisedSupplierPrices(fundedContractTradesOf(fundedTradeReceipt))
               : undefined,
             priceRatioByCommodity: lookups.priceRatioByCommodity,
             turn: turn ?? 0,

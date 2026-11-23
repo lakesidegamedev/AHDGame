@@ -73,15 +73,15 @@ export function formatVolume(value: number): string {
 
 export function offerPremiumLabel(premium: number): string {
   const value = Math.round(premium * 1000) / 10;
-  if (value === 0) return "At reference";
-  return `${value > 0 ? "+" : ""}${value}%`;
+  if (value === 0) return "Market price";
+  return `Market ${value > 0 ? "+" : "-"}${Math.abs(value)}%`;
 }
 
-/** Plain-words reading of a premium, so "+20%" is not mistaken for "20% of the price". */
+/** Plain-words reading of an offer's percentage: it is market price plus or minus that share. */
 export function offerPremiumDescription(premium: number): string {
   const value = Math.abs(Math.round(premium * 1000) / 10);
-  if (value === 0) return "At the reference price";
-  return `${value}% ${premium > 0 ? "above" : "below"} the reference price`;
+  if (value === 0) return "Market price";
+  return `Market price ${premium > 0 ? "plus" : "minus"} ${value}%`;
 }
 
 /** Per-unit price the offer settles at, or null without a market price. */

@@ -252,7 +252,7 @@ describe("MarketHub", () => {
   it("shows volume, value and a premium chip for an offer", async () => {
     search = "tab=supply";
     render(<MarketHub />);
-    await waitFor(() => expect(screen.getByText("+10%")).toBeTruthy(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText("Market +10%")).toBeTruthy(), { timeout: 5000 });
     expect(screen.getByText("Offering")).toBeTruthy();
     expect(screen.getByText("~A22")).toBeTruthy();
   });

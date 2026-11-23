@@ -121,6 +121,26 @@
           "buyerUsedLess": "The buyer's plants used only {used} of {cap} {unit} last turn, so the rest was not delivered.",
           "marketDeliveredLess": "The market delivered {delivered} of {cap} {unit} of your output to this buyer last turn. The contract price applies only to units actually delivered."
         }
+      },
+      "priceModes": {
+        "title": "How the price works",
+        "fixed": "Set price",
+        "indexed": "Market price plus or minus",
+        "fixedLabel": "Agreed price per {unit}",
+        "fixedHelp": "Within {band}% of the market price when the agreement is signed: {low} to {high} per {unit}. The market is {market} per {unit} now.",
+        "indexedLabel": "Percentage of market price",
+        "indexedHelp": "Up to {band}% above or below each turn's market price. Positive favours the seller; negative favours the buyer.",
+        "settlesDifference": "Each turn the contract settles the difference against that turn's market price, paid between the two companies. The sale itself still clears at the market price.",
+        "sellerFixed": "Seller receives exactly {price} per {unit} delivered, whatever the market does.",
+        "sellerIndexed": "Seller receives the market price plus {percent}: about {price} per {unit} at today's market.",
+        "buyerNet": "Buyer pays the market input bill of {bill} per {unit} plus a transfer of {transfer} per {unit} at today's market: about {net} per {unit} net.",
+        "noMarket": "There is no market price for this commodity yet, so a set price is not available.",
+        "legacyNote": "Older agreements add a bonus or discount on the input price; they do not fix a price.",
+        "modeLabel": "Price option",
+        "needMarket": "A set price needs a market price. Try again later or use market price plus or minus.",
+        "fixedRange": "Set price must be between {low} and {high}.",
+        "fixedSummary": "Set price {price} per {unit}",
+        "indexedSummary": "Market price {percent}"
       }
     },
     "sectorInvestment": {

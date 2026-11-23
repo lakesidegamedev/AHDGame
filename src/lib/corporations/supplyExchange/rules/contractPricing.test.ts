@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
-import { contractMoney, contractReferenceUnitPrice, contractSides } from "./contractPricing";
+import {
+  contractMoney,
+  contractReferenceUnitPrice,
+  contractSides,
+  fixedPriceBounds,
+  newModeSides,
+  pricingTermsError,
+} from "./contractPricing";
 import { maxContractableUnits } from "@/lib/corporations/supplyAgreementCapacity";
 
 describe("contract money", () => {
@@ -78,5 +85,52 @@ describe("maxContractableUnits", () => {
   });
   it("keeps the nameplate ceiling when output is higher", () => {
     expect(maxContractableUnits(1000, 5000)).toBeCloseTo(1200);
+  });
+});
+
+describe("new price modes", () => {
+  it("bounds a set price to 25% either side of the market", () => {
+    expect(fixedPriceBounds(100)).toEqual({ min: 75, max: 125 });
+    expect(pricingTermsError({ priceMode: "fixed", fixedUnitPrice: 125 }, 100)).toBeNull();
+    expect(pricingTermsError({ priceMode: "fixed", fixedUnitPrice: 126 }, 100)).toMatch(
+      /between 75\.00 and 125\.00/
+    );
+    expect(pricingTermsError({ priceMode: "fixed", fixedUnitPrice: 74 }, 100)).not.toBeNull();
+  });
+
+  it("refuses a set price with no market price, and a missing mode", () => {
+    expect(pricingTermsError({ priceMode: "fixed", fixedUnitPrice: 10 }, null)).toMatch(
+      /no market price/
+    );
+    expect(pricingTermsError({ pricePremium: 0.1 }, 100)).toMatch(/Choose how the price works/);
+  });
+
+  it("bounds market plus or minus to 35%", () => {
+    expect(pricingTermsError({ priceMode: "indexed", pricePremium: 0.35 }, 100)).toBeNull();
+    expect(pricingTermsError({ priceMode: "indexed", pricePremium: -0.36 }, 100)).not.toBeNull();
+  });
+
+  it("gives the seller exactly the contract price and the buyer bill plus transfer", () => {
+    const fixed = newModeSides({
+      priceMode: "fixed",
+      fixedUnitPrice: 110,
+      pricePremium: 0.1,
+      marketUnitPrice: 100,
+      billedUnitPrice: 95,
+    });
+    expect(fixed).toEqual({
+      sellerUnitPrice: 110,
+      buyerBillUnitPrice: 95,
+      transferPerUnit: 10,
+      buyerNetUnitPrice: 105,
+    });
+    const indexed = newModeSides({
+      priceMode: "indexed",
+      pricePremium: -0.1,
+      marketUnitPrice: 100,
+      billedUnitPrice: 95,
+    });
+    expect(indexed.sellerUnitPrice).toBeCloseTo(90);
+    expect(indexed.buyerNetUnitPrice).toBeCloseTo(85);
   });
 });

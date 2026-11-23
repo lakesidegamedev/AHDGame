@@ -19,6 +19,8 @@ export interface FundedContractTrade {
   buyerAccountId: string;
   commodity: string;
   units: number;
+  /** Money the sale cleared for, per the receipt. */
+  amount?: number;
   /** State of the selling plant, when known. */
   sellerStateId?: string | null;
 }
@@ -50,6 +52,7 @@ export function* fundedContractTradesOf(
       buyerAccountId: t.buyerAccountId,
       commodity: t.commodity,
       units: t.units,
+      amount: t.amount,
       sellerStateId: stateByOffer.get(t.offerId) ?? null,
     };
   }
@@ -162,6 +165,42 @@ export function fundedContractDeliveries(args: {
       const total = Math.max(0, flows.get(pair) ?? 0) * turnsPerDay;
       creditByCap(group.wide, agreements, Math.max(0, total - creditedLocal), out);
     }
+  }
+  return out;
+}
+
+/**
+ * Per-unit price each supplier realised on its funded sales this turn:
+ * money cleared over units sold, across every buyer the supplier sold to
+ * (own-site transfers excluded). Keyed supplier, then scope key: the bare
+ * commodity holds the supplier's whole sale of it, `commodity@state` the sales
+ * from its plants in that state, so a state-scoped contract reads its own lane.
+ */
+export function realisedSupplierPrices(
+  trades: Iterable<FundedContractTrade>
+): Map<string, Map<string, number>> {
+  const sums = new Map<string, Map<string, { units: number; amount: number }>>();
+  const add = (supplier: string, scope: string, units: number, amount: number) => {
+    const bySupplier = sums.get(supplier) ?? new Map<string, { units: number; amount: number }>();
+    const row = bySupplier.get(scope) ?? { units: 0, amount: 0 };
+    row.units += units;
+    row.amount += amount;
+    bySupplier.set(scope, row);
+    sums.set(supplier, bySupplier);
+  };
+  for (const t of trades) {
+    if (t.kind !== "sale" || t.sellerAccountId === t.buyerAccountId) continue;
+    if (!(Number.isFinite(t.units) && t.units > 0)) continue;
+    if (!(typeof t.amount === "number" && Number.isFinite(t.amount) && t.amount > 0)) continue;
+    add(t.sellerAccountId, t.commodity, t.units, t.amount);
+    if (t.sellerStateId)
+      add(t.sellerAccountId, `${t.commodity}@${t.sellerStateId}`, t.units, t.amount);
+  }
+  const out = new Map<string, Map<string, number>>();
+  for (const [supplier, byScope] of sums) {
+    const prices = new Map<string, number>();
+    for (const [scope, row] of byScope) prices.set(scope, row.amount / row.units);
+    out.set(supplier, prices);
   }
   return out;
 }

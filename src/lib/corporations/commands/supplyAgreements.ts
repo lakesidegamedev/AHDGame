@@ -16,8 +16,6 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import {
-  isAgreementPremiumLegal,
-  SUPPLY_AGREEMENT_PRICE_BAND,
   contractCancelEffectiveTurn,
   type SupplyAgreementOffer,
   type SupplyAgreement,
@@ -47,6 +45,13 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import {
+  fixedPriceOffset,
+  pricingTermsError,
+  roundFixedPrice,
+} from "@/lib/corporations/supplyExchange/rules/contractPricing";
+import type { SupplyAgreementPricing } from "@/lib/db/types/supplyAgreement";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -57,7 +62,58 @@ import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreemen
 type AgreementTerms = Pick<
   SupplyAgreement,
   "commodity" | "stateId" | "volumeCap" | "pricePremium" | "exclusive" | "durationTurns"
->;
+> &
+  SupplyAgreementPricing;
+
+/** The market price a new price is bounded against: the published price now. */
+async function currentMarketPrice(db: Db, commodity: CommodityType): Promise<number | null> {
+  const row = await commodityPricesCollection(db).findOne(
+    { commodity },
+    { projection: { globalPrice: 1 } }
+  );
+  return typeof row?.globalPrice === "number" && row.globalPrice > 0 ? row.globalPrice : null;
+}
+
+/**
+ * Validates a new offer's price terms against the market now and returns the
+ * fields to store, or a plain refusal. A fixed price also stores the market
+ * price it was bounded against and its offset from it.
+ */
+export function resolvePricingTerms(
+  input: { priceMode?: "fixed" | "indexed"; pricePremium?: number; fixedUnitPrice?: number },
+  marketPrice: number | null
+):
+  | {
+      ok: true;
+      terms: Required<Pick<SupplyAgreement, "pricePremium" | "priceMode">> & SupplyAgreementPricing;
+    }
+  | { ok: false; error: string } {
+  const error = pricingTermsError(input, marketPrice);
+  if (error) return { ok: false, error };
+  if (input.priceMode === "fixed") {
+    const price = roundFixedPrice(input.fixedUnitPrice!);
+    return {
+      ok: true,
+      terms: {
+        priceMode: "fixed",
+        fixedUnitPrice: price,
+        signingMarketPrice: marketPrice!,
+        pricePremium: fixedPriceOffset(price, marketPrice!),
+      },
+    };
+  }
+  return { ok: true, terms: { priceMode: "indexed", pricePremium: input.pricePremium! } };
+}
+
+function pricingFieldsOf(terms: SupplyAgreementPricing): SupplyAgreementPricing {
+  return {
+    ...(terms.priceMode ? { priceMode: terms.priceMode } : {}),
+    ...(terms.fixedUnitPrice !== undefined ? { fixedUnitPrice: terms.fixedUnitPrice } : {}),
+    ...(terms.signingMarketPrice !== undefined
+      ? { signingMarketPrice: terms.signingMarketPrice }
+      : {}),
+  };
+}
 
 export function makeOffer(args: {
   revision: number;
@@ -71,6 +127,7 @@ export function makeOffer(args: {
     proposedByCorpId: args.proposedByCorpId,
     volumeCap: args.terms.volumeCap,
     pricePremium: args.terms.pricePremium,
+    ...pricingFieldsOf(args.terms),
     exclusive: args.terms.exclusive,
     ...(args.terms.durationTurns !== undefined ? { durationTurns: args.terms.durationTurns } : {}),
     ...(args.proposedAtTurn !== undefined ? { proposedAtTurn: args.proposedAtTurn } : {}),
@@ -267,13 +324,9 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       }
     }
     const volumeCap = body.volumeCap;
-    const pricePremium = body.pricePremium;
-    if (!isAgreementPremiumLegal(pricePremium)) {
-      return errorResponse(
-        400,
-        `Contract price must be within ±${Math.round(SUPPLY_AGREEMENT_PRICE_BAND * 100)}% of market`
-      );
-    }
+    const pricing = resolvePricingTerms(body, await currentMarketPrice(db, commodity));
+    if (!pricing.ok) return errorResponse(400, pricing.error);
+    const pricePremium = pricing.terms.pricePremium;
 
     const counterparty = await corporationsCollection(db).findOne({ _id: counterpartyId });
     if (!counterparty) {
@@ -315,7 +368,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       proposedByCorpId: initiator._id,
       terms: {
         volumeCap,
-        pricePremium,
+        ...pricing.terms,
         exclusive: body.exclusive,
         ...(body.durationTurns !== undefined ? { durationTurns: body.durationTurns } : {}),
       },
@@ -342,7 +395,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       commodity,
       ...(stateId ? { stateId } : {}),
       volumeCap,
-      pricePremium,
+      ...pricing.terms,
       exclusive: body.exclusive,
       ...(body.durationTurns !== undefined ? { durationTurns: body.durationTurns } : {}),
       status: "pending",
@@ -367,6 +420,10 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
         ...(stateId ? [{ field: "stateId", before: null, after: stateId }] : []),
         { field: "volumeCap", before: null, after: volumeCap },
         { field: "pricePremium", before: null, after: pricePremium },
+        { field: "priceMode", before: null, after: pricing.terms.priceMode },
+        ...(pricing.terms.fixedUnitPrice !== undefined
+          ? [{ field: "fixedUnitPrice", before: null, after: pricing.terms.fixedUnitPrice }]
+          : []),
       ],
       outcome: "ok",
     });
@@ -474,9 +531,27 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       const currentTurn = gameState?.currentTurn ?? 0;
       const durationTurns = currentOffer.durationTurns ?? agreement.durationTurns;
       const now = new Date();
+      // A set price is signed against the market of the moment it is signed.
+      let acceptedPricing: SupplyAgreementPricing = pricingFieldsOf(currentOffer);
+      let acceptedPremium = currentOffer.pricePremium;
+      if (currentOffer.priceMode) {
+        const signing = resolvePricingTerms(
+          currentOffer,
+          await currentMarketPrice(db, agreement.commodity)
+        );
+        if (!signing.ok) {
+          return errorResponse(
+            409,
+            `${signing.error} The market has moved since this offer was made. Counter with a new price.`
+          );
+        }
+        acceptedPricing = pricingFieldsOf(signing.terms);
+        acceptedPremium = signing.terms.pricePremium;
+      }
       const acceptedTerms = {
         volumeCap: currentOffer.volumeCap,
-        pricePremium: currentOffer.pricePremium,
+        pricePremium: acceptedPremium,
+        ...acceptedPricing,
         exclusive: currentOffer.exclusive,
         ...(durationTurns !== undefined ? { durationTurns } : {}),
       };
@@ -541,14 +616,11 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
           "This legacy proposal cannot be countered because this service now sells in a local state market. Ask the supplier to propose it again naming the state."
         );
       }
-      if (!isAgreementPremiumLegal(body.pricePremium)) {
-        return errorResponse(
-          400,
-          `Contract price must be within ±${Math.round(
-            SUPPLY_AGREEMENT_PRICE_BAND * 100
-          )}% of market`
-        );
-      }
+      const counterPricing = resolvePricingTerms(
+        body,
+        await currentMarketPrice(db, agreement.commodity)
+      );
+      if (!counterPricing.ok) return errorResponse(400, counterPricing.error);
 
       const parties = await loadParties(db, agreement);
       if (!parties) return errorResponse(404, "Counterparty corporation not found");
@@ -585,7 +657,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         proposedByCorpId: corp._id,
         terms: {
           volumeCap: body.volumeCap,
-          pricePremium: body.pricePremium,
+          ...counterPricing.terms,
           exclusive: body.exclusive,
           ...(body.durationTurns !== undefined ? { durationTurns: body.durationTurns } : {}),
         },
@@ -595,7 +667,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       const update: UpdateFilter<SupplyAgreement> = {
         $set: {
           volumeCap: body.volumeCap,
-          pricePremium: body.pricePremium,
+          ...counterPricing.terms,
           exclusive: body.exclusive,
           proposedByCorpId: corp._id,
           currentOffer: offer,
@@ -604,8 +676,14 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
           ...(capacity.volumeCapValidated ? { volumeCapBasis: "scaledCapacity" } : {}),
         },
         $push: { offers: offer },
-        ...(body.durationTurns === undefined ? { $unset: { durationTurns: "" } } : {}),
+        $unset: {
+          ...(body.durationTurns === undefined ? { durationTurns: "" } : {}),
+          ...(counterPricing.terms.priceMode === "indexed"
+            ? { fixedUnitPrice: "", signingMarketPrice: "" }
+            : {}),
+        },
       };
+      if (Object.keys(update.$unset ?? {}).length === 0) delete update.$unset;
       const result = await supplyAgreementsCollection(db).updateOne(
         {
           _id: agreement._id,
@@ -634,7 +712,12 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         delta: [
           { field: "offerRevision", before: currentOffer.revision, after: revision },
           { field: "volumeCap", before: agreement.volumeCap, after: body.volumeCap },
-          { field: "pricePremium", before: agreement.pricePremium, after: body.pricePremium },
+          {
+            field: "pricePremium",
+            before: agreement.pricePremium,
+            after: counterPricing.terms.pricePremium,
+          },
+          { field: "priceMode", before: agreement.priceMode ?? null, after: body.priceMode },
         ],
         outcome: "ok",
       });

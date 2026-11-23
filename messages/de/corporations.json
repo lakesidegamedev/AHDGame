@@ -19,6 +19,26 @@
         "latestAchievable": "Zuletzt erreichbare Produktion (pro Tag)",
         "maximumContract": "Maximale zulässige Verpflichtung (pro Tag)",
         "penaltyWarning": "Dies ist eine Verpflichtung pro Tag, die je Runde zu einem Vierundzwanzigstel abgerechnet wird. Eine Produktion unterhalb der Verpflichtung, bis zur Obergrenze für Schadenersatz (die höchste Menge, die Sie in dieser Runde hätten herstellen können), führt zu Schadenersatz in Höhe von {penaltyPercent}% des Vertragsreferenzpreises jeder fehlenden Einheit."
+      },
+      "priceModes": {
+        "title": "So funktioniert der Preis",
+        "fixed": "Festpreis",
+        "indexed": "Marktpreis plus oder minus",
+        "fixedLabel": "Vereinbarter Preis pro {unit}",
+        "fixedHelp": "Innerhalb von {band}% des Marktpreises bei Vertragsabschluss: {low} bis {high} pro {unit}. Der Markt steht jetzt bei {market} pro {unit}.",
+        "indexedLabel": "Prozent vom Marktpreis",
+        "indexedHelp": "Bis zu {band}% über oder unter dem Marktpreis der jeweiligen Runde. Positiv begünstigt den Verkäufer, negativ den Käufer.",
+        "settlesDifference": "In jeder Runde wird die Differenz zum Marktpreis dieser Runde zwischen den beiden Unternehmen ausgeglichen. Der Verkauf selbst läuft weiter zum Marktpreis.",
+        "sellerFixed": "Der Verkäufer erhält genau {price} pro gelieferter {unit}, egal wie sich der Markt entwickelt.",
+        "sellerIndexed": "Der Verkäufer erhält den Marktpreis plus {percent}: beim heutigen Markt etwa {price} pro {unit}.",
+        "buyerNet": "Der Käufer zahlt die Markt-Einkaufsrechnung von {bill} pro {unit} plus eine Ausgleichszahlung von {transfer} pro {unit} beim heutigen Markt: netto etwa {net} pro {unit}.",
+        "noMarket": "Für diese Ware gibt es noch keinen Marktpreis, daher ist kein Festpreis möglich.",
+        "legacyNote": "Ältere Verträge fügen dem Einkaufspreis einen Aufschlag oder Rabatt hinzu; sie legen keinen Preis fest.",
+        "modeLabel": "Preisoption",
+        "needMarket": "Ein Festpreis braucht einen Marktpreis. Versuche es später erneut oder wähle Marktpreis plus oder minus.",
+        "fixedRange": "Der Festpreis muss zwischen {low} und {high} liegen.",
+        "fixedSummary": "Festpreis {price} pro {unit}",
+        "indexedSummary": "Marktpreis {percent}"
       }
     },
     "supplyBoard": {
