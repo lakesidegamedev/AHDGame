@@ -108,7 +108,7 @@ function makeSector(): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-describe("processSector banking capacity split", () => {
+describe("processSector: a bank charter never cuts financial output", () => {
   const charter: BankCharter = {
     type: "retail",
     status: "active",
@@ -122,47 +122,21 @@ describe("processSector banking capacity split", () => {
     depositCeiling: 10_000_000,
   };
 
-  it("scales financial output by the filled branch share only when chartered and flag on", () => {
-    const run = (enabled: boolean, charter?: BankCharter) => {
+  it("never cuts financial output for a bank, however full its deposits", () => {
+    const run = (enabled: boolean, bankCharter?: BankCharter) => {
       const env = makeEnv(enabled);
-      processSector(env, makeCorp(charter), makeSector(), 1, undefined, 1);
+      processSector(env, makeCorp(bankCharter), makeSector(), 1, undefined, 1);
       const op = env.sectorOps[0] as {
         updateOne: { update: { $set?: { producedUnits?: number } } };
       };
       return op.updateOne.update.$set?.producedUnits ?? 0;
     };
 
-    const charteredOn = run(true, charter);
-    const charteredOff = run(false, charter);
-    const uncharteredOn = run(true, undefined);
-
-    expect(charteredOff).toBeGreaterThan(0);
-    expect(uncharteredOn).toBeCloseTo(charteredOff, 2);
-    // producedUnits is persisted rounded to 2dp
-    expect(charteredOn).toBeCloseTo(charteredOff * 0.6, 1);
-  });
-
-  it("diverts nothing from a new charter until deposits fill its room", () => {
-    const run = (totalDeposits: number) => {
-      const env = makeEnv(true);
-      processSector(
-        env,
-        makeCorp({ ...charter, totalDeposits, depositCeiling: 1_000_000 }),
-        makeSector(),
-        1,
-        undefined,
-        1
-      );
-      const op = env.sectorOps[0] as {
-        updateOne: { update: { $set?: { producedUnits?: number } } };
-      };
-      return op.updateOne.update.$set?.producedUnits ?? 0;
-    };
-
-    const full = run(1_000_000);
-    const empty = run(0);
-    expect(full).toBeGreaterThan(0);
-    expect(empty).toBeCloseTo(full / 0.6, 1);
+    const unchartered = run(true, undefined);
+    expect(unchartered).toBeGreaterThan(0);
+    expect(run(true, charter)).toBeCloseTo(unchartered, 2);
+    expect(run(true, { ...charter, totalDeposits: 0 })).toBeCloseTo(unchartered, 2);
+    expect(run(true, { ...charter, branchCapacityShare: 0.9 })).toBeCloseTo(unchartered, 2);
   });
 
   function runLabour(
@@ -187,17 +161,15 @@ describe("processSector banking capacity split", () => {
     return op.updateOne.update.$set;
   }
 
-  it("charges only commodity labour for an active retail charter without reducing headcount", () => {
+  it("charges a bank the same labour as any financial company", () => {
     const baseline = runLabour(true);
     const chartered = runLabour(true, charter);
 
     expect(baseline.plantsPnl?.costModel).toBe("explicit");
     expect(baseline.plantsPnl!.labour).toBeGreaterThan(0);
-    expect(chartered.plantsPnl!.labour).toBeCloseTo(baseline.plantsPnl!.labour * 0.6, 2);
-    expect(chartered.laborCost).toBeCloseTo(baseline.laborCost! * 0.6, 2);
-    expect(chartered.workers).toBeGreaterThan(0);
+    expect(chartered.plantsPnl!.labour).toBeCloseTo(baseline.plantsPnl!.labour, 2);
+    expect(chartered.laborCost).toBeCloseTo(baseline.laborCost!, 2);
     expect(chartered.workers).toBe(baseline.workers);
-    expect(chartered.wagePerWorker).toBeCloseTo(baseline.wagePerWorker! * 0.6, 6);
   });
 
   it("keeps full labour costs without a charter", () => {

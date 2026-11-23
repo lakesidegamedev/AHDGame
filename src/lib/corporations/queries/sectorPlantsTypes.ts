@@ -24,7 +24,6 @@ export interface PlantIdleCause {
     | "disaster"
     | "policy"
     | "staffing"
-    | "bank"
     | "deposits"
     | "mothballed"
     | "other";

@@ -7,9 +7,9 @@
 import type { BankCharter } from "@/lib/db/types/bank";
 
 /**
- * Default share of financial-sector capacity allocated to the branch network
- * (vs commodity `financial_services` output) when the CEO has not set one.
- * Provisional - flagged for user review.
+ * Default share of financial-sector capacity that backs the branch network's
+ * deposit ceiling when the CEO has not set one. Backing deposits never takes
+ * capacity away from financial-services output.
  */
 export const DEFAULT_BRANCH_CAPACITY_SHARE = 0.5;
 
@@ -43,30 +43,6 @@ export function getBranchCapacityShare(
   const raw = charter?.branchCapacityShare;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   return DEFAULT_BRANCH_CAPACITY_SHARE;
-}
-
-/**
- * Share of branch capacity actually taken, given how full the bank's deposit
- * room is. A new or converting bank takes nothing until deposits arrive, and
- * the cost tops out at the CEO's set share once the room is full. Reads the
- * charter's cached depositCeiling (written each banking turn), so this stays a
- * pure function over the charter record with no extra query.
- */
-export function getEffectiveBranchCapacityShare(
-  charter:
-    Pick<BankCharter, "branchCapacityShare" | "totalDeposits" | "depositCeiling"> | null | undefined
-): number {
-  const share = getBranchCapacityShare(charter);
-  const deposits =
-    typeof charter?.totalDeposits === "number" && Number.isFinite(charter.totalDeposits)
-      ? Math.max(0, charter.totalDeposits)
-      : 0;
-  const ceiling =
-    typeof charter?.depositCeiling === "number" && Number.isFinite(charter.depositCeiling)
-      ? Math.max(0, charter.depositCeiling)
-      : 0;
-  if (!(deposits > 0) || !(ceiling > 0)) return 0;
-  return share * Math.min(1, deposits / ceiling);
 }
 
 /**

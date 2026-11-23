@@ -8,7 +8,6 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
 import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { isDepositTakingCharter } from "@/lib/banking/charterKinds";
-import { charterMay } from "@/lib/banking/rules/capabilities";
 
 export {
   DEFAULT_BRANCH_CAPACITY_SHARE,
@@ -16,11 +15,9 @@ export {
   MIN_BRANCH_CAPACITY_SHARE,
   MAX_BRANCH_CAPACITY_SHARE,
   getBranchCapacityShare,
-  getEffectiveBranchCapacityShare,
   computeDepositCeiling,
 } from "@/lib/banking/rules/capacity";
 import {
-  getEffectiveBranchCapacityShare,
   MIN_BRANCH_CAPACITY_SHARE,
   MAX_BRANCH_CAPACITY_SHARE,
   getBranchCapacityShare,
@@ -147,27 +144,6 @@ export async function abandonBankImpact(
     lastFinancialSector: remaining.length === 0,
     deposits,
   };
-}
-
-/**
- * Commodity-side production scale for a financial sector: the share of capacity
- * NOT allocated to the branch network. 1 when banking is off or the corp is
- * unchartered (zero behaviour change).
- */
-export function commodityProductionCapacityScale(
-  charter: BankCharter | null | undefined,
-  privateBankingEnabled: boolean
-): number {
-  if (!privateBankingEnabled || charter?.status !== "active") return 1;
-  // Only a DEPOSIT-TAKING charter runs a branch network, so only it pays for
-  // one. Applying it to a non-deposit charter (e.g. an investment bank) would
-  // surrender up to half its financial sector's commodity output to branches it
-  // is legally barred from running.
-  if (!charterMay(charter, "branchNetwork")) return 1;
-  // Branch capacity is charged only as the deposit room fills, so a new or
-  // converting bank keeps its sales until deposits actually arrive, and the
-  // cost tops out at the CEO's set share.
-  return Math.max(0, 1 - getEffectiveBranchCapacityShare(charter));
 }
 
 /**

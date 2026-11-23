@@ -102,9 +102,9 @@ export function CapacityAllocationEditor({
       <div className="grid gap-x-8 gap-y-3 py-1.5 md:grid-cols-2">
         <div className="space-y-1.5">
           <p className="text-xs text-muted">
-            Share of your financial-sector capacity that can run the branch network holding
-            deposits. Branches take that capacity only as deposits fill the ceiling below, and the
-            rest keeps producing financial services for the commodity market. Range 10% to 90%.
+            Share of your financial-sector capacity that backs your branch network. A larger share
+            lets your bank hold more deposits. It never reduces the financial services your sites
+            make and sell. Range 10% to 90%.
           </p>
           <p className="text-xs text-muted">
             Ceiling{" "}
@@ -132,22 +132,16 @@ export function CapacityAllocationEditor({
             onChange={(e) => setShare(parseFloat(e.target.value))}
             aria-label="Deposit network share"
           />
-          <span className="block font-mono text-[11px] text-muted">
-            at a full ceiling: commodity {(100 - share * 100).toFixed(0)}%, branches{" "}
-            {(share * 100).toFixed(0)}%
-          </span>
           {previewCeiling != null && previewBinds != null ? (
             <span className="block text-[11px] text-muted">
               At {(share * 100).toFixed(0)}% the ceiling would be{" "}
               {formatBankMoney(previewCeiling, currency)}, binding on{" "}
-              {previewBinds === "equity" ? "12x book equity" : "deposit network"}. Every point moved
-              to branches is a point not producing financial-services output.
+              {previewBinds === "equity" ? "12x book equity" : "deposit network"}.
             </span>
           ) : (
             <span className="block text-[11px] text-muted">
               Moving share to branches raises the branch-capacity half of the ceiling; the
-              12x-equity half does not move. Every point moved to branches is a point not producing
-              financial-services output.
+              12x-equity half does not move.
             </span>
           )}
         </label>
