@@ -163,7 +163,9 @@ export function DefenseFundingNote({
                     {money2(line.perTurn)}
                     {line.rateAnnual != null
                       ? ` (${formatDuesRate(line.rateAnnual)} of GDP a year${
-                          line.isDefaultRate ? ", the default rate until members vote a different one" : ""
+                          line.isDefaultRate
+                            ? ", the default rate until members vote a different one"
+                            : ""
                         })`
                       : null}
                   </li>

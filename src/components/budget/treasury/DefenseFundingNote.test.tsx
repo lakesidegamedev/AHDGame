@@ -144,7 +144,12 @@ describe("DefenseFundingNote deficit and dues labelling", () => {
           perTurn: 9_671_860,
           lines: [
             { organizationId: "UN", organizationName: "UN", kind: "dues", perTurn: 4_835_930 },
-            { organizationId: "orc", organizationName: "Orcish Concord", kind: "dues", perTurn: 4_835_930 },
+            {
+              organizationId: "orc",
+              organizationName: "Orcish Concord",
+              kind: "dues",
+              perTurn: 4_835_930,
+            },
           ],
         }}
       />
@@ -161,13 +166,31 @@ describe("DefenseFundingNote deficit and dues labelling", () => {
         organizationContributions={{
           perTurn: 2_000_000,
           lines: [
-            { organizationId: "NATO", kind: "dues", perTurn: 1_000_000, rateAnnual: 0.00006, isDefaultRate: true },
-            { organizationId: "UN", kind: "dues", perTurn: 1_000_000, rateAnnual: 0.00006, isDefaultRate: true },
+            {
+              organizationId: "NATO",
+              kind: "dues",
+              perTurn: 1_000_000,
+              rateAnnual: 0.00006,
+              isDefaultRate: true,
+            },
+            {
+              organizationId: "UN",
+              kind: "dues",
+              perTurn: 1_000_000,
+              rateAnnual: 0.00006,
+              isDefaultRate: true,
+            },
           ],
         }}
       />
     );
-    expect(screen.getByText(/NATO dues: \$1\.00M \(0\.006% of GDP a year, the default rate until members vote/)).toBeTruthy();
-    expect(screen.getByText(/UN dues: \$1\.00M \(0\.006% of GDP a year, the default rate/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /NATO dues: \$1\.00M \(0\.006% of GDP a year, the default rate until members vote/
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/UN dues: \$1\.00M \(0\.006% of GDP a year, the default rate/)
+    ).toBeTruthy();
   });
 });

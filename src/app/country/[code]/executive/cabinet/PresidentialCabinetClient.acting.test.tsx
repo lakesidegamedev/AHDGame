@@ -86,7 +86,9 @@ describe("PresidentialCabinetClient acting appointments", () => {
       ],
     });
     render(<PresidentialCabinetClient countryId="US" />);
-    expect(await screen.findByText(/Last nominee Carlos Shaw rejected by the Senate 42 to 53/)).toBeTruthy();
+    expect(
+      await screen.findByText(/Last nominee Carlos Shaw rejected by the Senate 42 to 53/)
+    ).toBeTruthy();
   });
 
   it("offers the President an acting appointment on a vacant seat", async () => {

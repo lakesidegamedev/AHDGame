@@ -43,6 +43,8 @@ describe("lastNominationOutcomes", () => {
   });
 
   it("ignores nominations that are still live or confirmed", () => {
-    expect(lastNominationOutcomes([n({ status: "confirmed" }), n({ status: "active" })]).size).toBe(0);
+    expect(lastNominationOutcomes([n({ status: "confirmed" }), n({ status: "active" })]).size).toBe(
+      0
+    );
   });
 });

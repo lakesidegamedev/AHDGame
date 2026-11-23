@@ -47,37 +47,43 @@ export async function GET(request: Request) {
     const db = await getDb();
     const authUser = await getAuthUser().catch(() => null);
 
-    const [cabinetMembers, nominations, closedNominations, presidentOfficial, myCharacter, parties] =
-      await Promise.all([
-        cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
-        cabinetNominationsCollection(db)
-          .find({ countryId, status: { $in: ["active", "proposed"] } })
-          .sort({ proposedAt: -1 })
-          .toArray(),
-        cabinetNominationsCollection(db)
-          .find({ countryId, status: { $in: ["rejected", "withdrawn"] } })
-          .project({
-            positionId: 1,
-            nomineeCharacterName: 1,
-            status: 1,
-            votesFor: 1,
-            votesAgainst: 1,
-            votingEndsOnTurn: 1,
-            proposedAt: 1,
-          })
-          .sort({ proposedAt: -1 })
-          .limit(500)
-          .toArray(),
-        electedOfficialsCollection(db).findOne({
-          countryId,
-          officeType: "president",
-          characterId: { $ne: null },
-        }),
-        authUser
-          ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
-          : Promise.resolve(null),
-        politicalPartiesCollection(db).find({ countryId }).toArray(),
-      ]);
+    const [
+      cabinetMembers,
+      nominations,
+      closedNominations,
+      presidentOfficial,
+      myCharacter,
+      parties,
+    ] = await Promise.all([
+      cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
+      cabinetNominationsCollection(db)
+        .find({ countryId, status: { $in: ["active", "proposed"] } })
+        .sort({ proposedAt: -1 })
+        .toArray(),
+      cabinetNominationsCollection(db)
+        .find({ countryId, status: { $in: ["rejected", "withdrawn"] } })
+        .project({
+          positionId: 1,
+          nomineeCharacterName: 1,
+          status: 1,
+          votesFor: 1,
+          votesAgainst: 1,
+          votingEndsOnTurn: 1,
+          proposedAt: 1,
+        })
+        .sort({ proposedAt: -1 })
+        .limit(500)
+        .toArray(),
+      electedOfficialsCollection(db).findOne({
+        countryId,
+        officeType: "president",
+        characterId: { $ne: null },
+      }),
+      authUser
+        ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
+        : Promise.resolve(null),
+      politicalPartiesCollection(db).find({ countryId }).toArray(),
+    ]);
 
     // Build party lookup map using composite key for safety
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -121,7 +127,9 @@ export async function GET(request: Request) {
 
     const memberByPosition = new Map(cabinetMembers.map((m) => [m.positionId, m]));
     const nominationByPosition = new Map(nominations.map((n) => [n.positionId, n]));
-    const lastOutcomeByPosition = lastNominationOutcomes(closedNominations as ClosedNominationInput[]);
+    const lastOutcomeByPosition = lastNominationOutcomes(
+      closedNominations as ClosedNominationInput[]
+    );
     const myCharId = myCharacter?._id.toString();
 
     const positions = resolveCabinetRoster(

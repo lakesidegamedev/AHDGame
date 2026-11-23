@@ -64,13 +64,21 @@ describe("PartySection non-player half strength", () => {
       <PartySection
         group={group([
           candidate({ id: "a", characterName: "Daniel", sharePct: 93.9 }),
-          candidate({ id: "b", characterName: "Charles Friedman", isNPP: true, nppId: "n", sharePct: 6.1 }),
+          candidate({
+            id: "b",
+            characterName: "Charles Friedman",
+            isNPP: true,
+            nppId: "n",
+            sharePct: 6.1,
+          }),
         ])}
         inPrimary
         snapshots={[]}
       />
     );
-    expect(screen.getAllByText(/Non-player candidate: half strength against a player/)).toHaveLength(1);
+    expect(
+      screen.getAllByText(/Non-player candidate: half strength against a player/)
+    ).toHaveLength(1);
   });
 
   it("stays quiet when every candidate is a non-player", () => {

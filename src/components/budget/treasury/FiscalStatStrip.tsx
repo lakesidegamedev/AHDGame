@@ -98,7 +98,8 @@ export function FiscalStatStrip({
   const deficitBasis = ratioGdp && ratioGdp > 0 ? ratioGdp : gdp;
   const deficitToGdp = deficitBasis > 0 ? (surplus / deficitBasis) * 100 : 0;
   const money = (n: number) => formatFundsCompact1dp(n, sym);
-  const budgetGdp = ratioGdp && ratioGdp > 0 ? `of smoothed budget GDP ${money(ratioGdp)}` : undefined;
+  const budgetGdp =
+    ratioGdp && ratioGdp > 0 ? `of smoothed budget GDP ${money(ratioGdp)}` : undefined;
   const usdNote = (local: number, existing?: string): string | undefined => {
     if (!toUsd) return existing;
     const usd = toUsd(local);
