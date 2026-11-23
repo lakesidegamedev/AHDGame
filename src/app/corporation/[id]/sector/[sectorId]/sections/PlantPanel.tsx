@@ -560,7 +560,7 @@ export default function PlantPanel({
         <dl className="space-y-1.5 text-body-sm">
           <DetailRow label="Made this turn" value={`${fmtUnits(plants.producedUnits)} units`} />
           <DetailRow label="Sold this turn" value={`${fmtUnits(plants.soldUnits)} units`} />
-          <DetailRow label="Share that sold" value={fmtPct(plants.fillRate)} />
+          <DetailRow label="Share of units offered that sold" value={fmtPct(plants.fillRate)} />
           <DetailRow label="Idle capacity" value={`${fmtUnits(plants.idleUnits)} units`} />
           <DetailRow label="Staff per unit of capacity" value={plants.laborIntensity.toFixed(3)} />
           <DetailRow label="Turn" value={`${plants.currentTurn}`} />

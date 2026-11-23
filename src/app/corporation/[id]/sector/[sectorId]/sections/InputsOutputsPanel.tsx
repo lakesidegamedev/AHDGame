@@ -402,7 +402,9 @@ export default function InputsOutputsPanel({
                               share < 0.9 ? "text-warning" : "text-muted"
                             }`}
                           >
-                            {fmtPct(share)} sold
+                            {perOutput
+                              ? `${f.label}: ${fmtPct(share)} of units offered sold`
+                              : `${fmtPct(share)} sold`}
                             {f.soldFractionBasis === "estimate" ? " (market estimate)" : ""}
                             {ownSite
                               ? ` · ${ownSiteLabel(ownSite.share)} (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`

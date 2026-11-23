@@ -88,3 +88,15 @@ export function settledOfferedUnits(
   if (!fundedClearingReading(receipt, currentTurn)) return null;
   return positive(receipt?.offeredUnits);
 }
+
+/**
+ * Units sold over units offered (0-1), the one sector-level "sold" figure.
+ * Null when nothing was offered.
+ */
+export function unitsSoldShare(
+  offered: number | null | undefined,
+  sold: number | null | undefined
+): number | null {
+  const o = positive(offered);
+  return o > 0 ? share(positive(sold) / o) : null;
+}

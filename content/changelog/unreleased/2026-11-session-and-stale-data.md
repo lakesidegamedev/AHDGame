@@ -13,3 +13,4 @@ areas: [frontend]
 - Corporation pages show "Figures from turn N, updating" while they refresh after a turn.
 - The supply chain tab shows a plant you just built or abandoned straight away instead of waiting for the next turn.
 - The corporation page ignores a slow earlier response that arrives after a newer one, and the commodities tab shows a loading state instead of another corporation's figures.
+- A sector now shows one "sold" figure everywhere: units sold out of units offered last turn. The sector page headline, money panel and the sector list agree, and per-product rows say which product and that they count units offered.
