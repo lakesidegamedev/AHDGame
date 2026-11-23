@@ -1,21 +1,12 @@
 #!/usr/bin/env node
 /**
- * Runs several Next.js servers in one container behind a small router.
+ * Runs AHD_WEB_PROCESSES Next.js servers behind a small router, because one
+ * `next start` renders on a single thread and uses about one core.
  *
- * Node renders pages on one thread, so a single `next start` can use about one
- * core however many the container has. With AHD_WEB_PROCESSES=N this starts N
- * servers on loopback ports and listens on PORT itself:
- *
- * - Reads (GET, HEAD, OPTIONS) go to the ready server with the fewest requests
- *   in flight.
- * - Every other method goes to server 0. Some money operations serialize per
- *   corporation with an in-process lock, and ban or revoke paths clear an
- *   in-process user cache, so all writes must share one process.
- * - Only server 0 runs the hosted boot work (seed check, required startup
- *   migrations, consumers): the others start with DISABLE_DEV_BACKGROUND=1.
- * - A server that exits is restarted with backoff. SIGTERM stops them all.
- *
- * Unset or 1, it runs a single `next start` exactly as before.
+ * Reads go to the ready server with the fewest requests in flight. Writes go
+ * to server 0: per-corporation money locks and the user cache are in-process.
+ * Only server 0 runs hosted boot work; the rest get DISABLE_DEV_BACKGROUND=1.
+ * Exited servers restart with backoff. Unset or 1 runs a plain `next start`.
  */
 import http from "node:http";
 import net from "node:net";
