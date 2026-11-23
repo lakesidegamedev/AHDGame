@@ -100,3 +100,44 @@ it("explains funded bank backstop costs without claiming a direct profit-margin 
   expect(title).toContain("Taxpayer-funded");
   expect(title).toContain("confidence is measured separately");
 });
+
+describe("modifier explanations", () => {
+  it("gives positive fiscal badges their own text, not the austerity text", async () => {
+    const { buildModifierTitle } = await import("./modifierTitle");
+    const bal = buildModifierTitle({
+      id: "nationalBalancedBudget",
+      label: "b",
+      effect: 1,
+      source: "fiscal",
+    });
+    expect(bal).not.toContain("austerity");
+    expect(bal).toContain("earns 1");
+    expect(
+      buildModifierTitle({ id: "fiscal_consolidation", label: "a", effect: -2, source: "fiscal" })
+    ).toContain("austerity");
+  });
+  it("shows a consistent pp value for approval-only chips and names source and expiry", async () => {
+    const { buildModifierExplanation, chipMargin } = await import("./modifierTitle");
+    const debt = {
+      id: "regionalDebt",
+      label: "d",
+      effect: -25,
+      source: "fiscal" as const,
+      marginEffect: 0,
+    };
+    expect(chipMargin(debt)).toBe(0);
+    expect(chipMargin({ id: "free_press", label: "f", effect: 1 })).toBe(0);
+    expect(chipMargin({ id: "approval_smoothing", label: "s", effect: 2 })).toBeNull();
+    const text = buildModifierExplanation({
+      id: "org_statement:1",
+      label: "NATO endorsement",
+      effect: 2,
+      detail: "NATO joint statement",
+      sinceTurn: 144,
+      expiresTurn: 168,
+    }).join(" ");
+    expect(text).toContain("Source: NATO joint statement");
+    expect(text).toContain("Started turn 144");
+    expect(text).toContain("Ends turn 168");
+  });
+});

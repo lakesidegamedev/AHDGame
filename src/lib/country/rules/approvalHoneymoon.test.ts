@@ -150,3 +150,10 @@ describe("expectationsRampTurns", () => {
     expect(publicExpectationsModifier(0, 192, 192).effect).toBe(-5);
   });
 });
+
+describe("empty seat per-seat rule", () => {
+  it("states the shared total and the per-seat share", () => {
+    expect(emptyCabinetSeatsModifier(1, 16)?.detail).toContain("0.47 for each empty seat");
+    expect(emptyCabinetSeatsModifier(10, 19)?.detail).toContain("0.39 for each empty seat");
+  });
+});

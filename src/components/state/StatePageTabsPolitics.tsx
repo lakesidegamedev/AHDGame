@@ -108,6 +108,9 @@ function LeanMeter({
   );
 }
 
+const PREMIER_ELECTION_NOTE =
+  "The premier is elected in a separate vote from the legislature, so the premier's party can differ from the party with the most seats.";
+
 export function PoliticsTab({
   state,
   officials,
@@ -187,6 +190,12 @@ export function PoliticsTab({
     : upperIsProportional
       ? (upperOffice?.label ?? "Senator")
       : "Senator";
+  const subNationalOffice = config.subNationalChamber
+    ? config.officeTypes.find(
+        (o) => o.chamberKey === config.subNationalChamber?.key && !o.isExecutive && o.isSubNational
+      )
+    : undefined;
+  const subNationalMemberTitle = subNationalOffice?.label ?? "State senator";
   const lowerMemberTitle =
     config.legislature?.lowerChamber?.key === "shugiin"
       ? `${lowerChamberName} Member`
@@ -405,11 +414,13 @@ export function PoliticsTab({
             governor={officials.governor}
             label={regionalExecutiveLabel}
             officeType={regionalExecutiveOfficeType}
+            note={regionalExecutiveLabel === "Premier" ? PREMIER_ELECTION_NOTE : undefined}
           />
           <StateSenateSection
             state={state}
             stateSenators={officials.stateSenators}
             label={subNationalName}
+            memberTitle={subNationalMemberTitle}
           />
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { metricFreshnessLabel } from "@/lib/resetMetrics/presentation";
+import { metricDomainId, metricFreshnessLabel } from "@/lib/resetMetrics/presentation";
 import { Button } from "@/components/ui/Button";
 import { CategoryIcon } from "@/app/country/[code]/political-metrics/components/categoryIcons";
 import { scoreTone } from "@/app/country/[code]/political-metrics/components/tones";
@@ -48,7 +48,7 @@ function targetKey(countryId: ResetMetricCountry, regionId: string | null) {
 }
 
 function categoryId(metric: ResetMetricRow) {
-  return metric.path.split(".")[0] ?? "other";
+  return metricDomainId(metric);
 }
 
 function readableCategory(category: string) {
@@ -403,7 +403,8 @@ export function ResetMetricCompare({
                                       comparisonMetric.observation.lastUpdatedTurn,
                                       comparisonMetric.observation.source.includes(
                                         "national rollup"
-                                      )
+                                      ),
+                                      comparisonMetric.refresh
                                     )}
                                   </div>
                                 </div>

@@ -52,6 +52,21 @@ describe("US budget publication", () => {
     expect(body.grantBreakdownBasis).toBe("current-formula-estimate");
     expect(body.grantBreakdownNote).toMatch(/estimate/i);
   });
+  it("reads cash and debt from the financing ledger when it disagrees with the stored balance", async () => {
+    await db.collection("stateBudgets").updateOne(
+      { _id: "TX" as never },
+      {
+        $set: {
+          balance: 0,
+          financing: { principal: 769, cash: 40, annualInterest: 38 },
+        },
+      }
+    );
+    const body = await (await request()).json();
+    expect(body.budget.balance).toBe(40);
+    expect(body.budget.financing.principal).toBe(769);
+    expect(body.budget.financing.annualInterest).toBe(38);
+  });
   it("does not substitute cash when annual surplus is zero", async () => {
     await db
       .collection("stateBudgets")

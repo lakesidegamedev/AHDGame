@@ -32,6 +32,16 @@ export interface PollingData {
   leaderId: string | null;
   leaderName: string | null;
   leaderParty: string | null;
+  /** Each party primary's front-runner. Set during primaries only. */
+  primaryLeaders?: {
+    partyId: string;
+    partyName: string;
+    partyColor: string;
+    candidateId: string;
+    name: string;
+    sharePct: number;
+    fieldSize: number;
+  }[];
   sharesPct: Record<string, number>;
   candidateNames: Record<string, string>;
   candidateParties: Record<string, string>;
@@ -216,7 +226,15 @@ export interface ElectionResponse {
    */
   seatsDecidedByDistrict?: boolean;
   /** Current officeholder for single-seat races (senate, governor, president, primeMinister). Null for multi-seat races. */
-  incumbent: { name: string; party: string; partyColor: string | null } | null;
+  incumbent: {
+    name: string;
+    party: string;
+    partyColor: string | null;
+    /** False when the holder is not on the ballot for their own seat. */
+    running?: boolean;
+    /** Why the holder is not running, when known. */
+    notRunningReason?: string | null;
+  } | null;
 
   // Full view only (null in summary)
   prevElectionId: string | null;
@@ -435,7 +453,7 @@ export interface ElectionDeps {
   // Latest primary snapshot per election (for polling in summary mode)
   latestPrimarySnapshot: PrimarySnapshot | null;
   /** Current officeholder for single-seat races. Null for multi-seat or no holder. */
-  incumbent: { name: string; partyId: string } | null;
+  incumbent: { name: string; partyId: string; id?: string; termLimited?: boolean } | null;
   /** Shared list-view data; undefined preserves the single-election loader. */
   apportionment?: Apportionment;
   preloadedDistricts?: import("@/lib/db/types/congressionalDistrict").CongressionalDistrict[];

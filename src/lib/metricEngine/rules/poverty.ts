@@ -33,6 +33,8 @@ export interface PovertyProgram {
   choice?: string;
   /** Present only for an unreplaced opening regional source claim. */
   settlementLawId?: string;
+  /** Annual spending booked for an opening regional source claim; zero means no funding path. */
+  openingAnnualBooked?: number;
   primaryMetricEffects: readonly { metricId: string; favorableNormalizedPoints: number }[];
 }
 

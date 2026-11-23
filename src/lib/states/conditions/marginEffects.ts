@@ -90,17 +90,18 @@ export function marginEffectForModifier(approvalEffect: number, modifierId: stri
   return Math.round(approvalEffect * 0.75 * factor * 10) / 10;
 }
 
-/** Sum active metric conditions into a capped regional margin modifier. */
-export function computeRegionalConditionMargin(modifiers: ActiveModifier[]): number {
+/** Uncapped sum of the per-condition margin effects, as listed beside each condition. */
+export function sumRegionalConditionMargins(modifiers: ActiveModifier[]): number {
   const raw = modifiers
     .filter((m) => m.source !== "address")
-    .reduce((sum, m) => {
-      const margin =
-        m.marginEffect ?? (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id));
-      return sum + margin;
-    }, 0);
+    .reduce((sum, m) => sum + (m.marginEffect ?? marginEffectForModifier(m.effect, m.id)), 0);
+  return Math.round(raw * 10) / 10;
+}
+
+/** Sum active metric conditions into a capped regional margin modifier. */
+export function computeRegionalConditionMargin(modifiers: ActiveModifier[]): number {
   return Math.max(
     -REGIONAL_CONDITION_MARGIN_CAP,
-    Math.min(REGIONAL_CONDITION_MARGIN_CAP, Math.round(raw * 10) / 10)
+    Math.min(REGIONAL_CONDITION_MARGIN_CAP, sumRegionalConditionMargins(modifiers))
   );
 }

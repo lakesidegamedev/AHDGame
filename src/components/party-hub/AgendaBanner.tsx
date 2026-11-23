@@ -1,3 +1,5 @@
+import { neutraliseDiscordInvites } from "@/lib/parties/rules/agendaText";
+
 /**
  * National Agenda banner: chair-set headline + detail, read-only unless
  * `editable`. One active agenda at a time; setting a new one supersedes
@@ -19,6 +21,8 @@ export function AgendaBanner({
   onEdit?: () => void;
 }) {
   if (!headline) return null;
+  const safeHeadline = neutraliseDiscordInvites(headline);
+  const safeDetail = detail ? neutraliseDiscordInvites(detail) : detail;
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm flex items-start gap-3">
@@ -33,8 +37,8 @@ export function AgendaBanner({
           ) : null}
           {partyAbbreviation ? `${partyAbbreviation} national agenda` : "National agenda"}
         </div>
-        <p className="text-sm font-semibold leading-snug truncate">{headline}</p>
-        {detail ? <p className="mt-1 text-xs text-muted leading-snug">{detail}</p> : null}
+        <p className="text-sm font-semibold leading-snug truncate">{safeHeadline}</p>
+        {safeDetail ? <p className="mt-1 text-xs text-muted leading-snug">{safeDetail}</p> : null}
       </div>
       {editable && onEdit ? (
         <button

@@ -21,6 +21,12 @@ export interface ActiveModifier {
    * tooltips.
    */
   source?: "metric" | "address" | "war" | "banking" | "market" | "cabinet" | "fiscal";
+  /** Where this effect comes from, in plain words (the law, statement, event or rule behind it). */
+  detail?: string;
+  /** Turn the effect started, when the engine knows it. */
+  sinceTurn?: number;
+  /** First turn the effect no longer applies, when the engine knows it. */
+  expiresTurn?: number;
 }
 
 /**
@@ -39,8 +45,8 @@ export function netModifierEffect(modifiers: ActiveModifier[]): number {
 const HEADLINE_MODIFIER_CAP = 8;
 
 /**
- * Split active modifiers into headline (highest-impact) and remainder lists for
- * compact UIs such as the state overview conditions card.
+ * Split active modifiers into headline (largest approval impact) and remainder lists
+ * for compact UIs such as the state overview conditions card.
  */
 export function prioritizeModifiers(
   modifiers: ActiveModifier[],
@@ -50,21 +56,13 @@ export function prioritizeModifiers(
   if (modifiers.length <= max) {
     return { headline: modifiers, remainder: [] };
   }
-  // Sort by absolute margin effect first (most impactful on profit margins),
-  // then by absolute approval effect as tie-breaker.
-  //
-  // The war block is exempt from the margin pass. It declares `marginEffect: 0`
-  // deliberately — it is purely political and must not reach profit margins —
-  // which under a margin-first sort would rank it below every economic
-  // condition and drop the largest approval swing in the game into the hidden
-  // remainder. It is ranked on approval magnitude instead.
-  const isPolitical = (m: ActiveModifier) => m.source === "war";
+  // Rank by approval impact: the biggest effect on the rating is the biggest driver,
+  // whether or not it also moves profit margins (debt and deficit costs do not).
   const sorted = [...modifiers].sort((a, b) => {
-    const marginA = isPolitical(a) ? Math.abs(a.effect) : Math.abs(a.marginEffect ?? 0);
-    const marginB = isPolitical(b) ? Math.abs(b.effect) : Math.abs(b.marginEffect ?? 0);
-    if (marginB !== marginA) return marginB - marginA;
     const impact = Math.abs(b.effect) - Math.abs(a.effect);
     if (impact !== 0) return impact;
+    const margin = Math.abs(b.marginEffect ?? 0) - Math.abs(a.marginEffect ?? 0);
+    if (margin !== 0) return margin;
     return a.label.localeCompare(b.label);
   });
   return {

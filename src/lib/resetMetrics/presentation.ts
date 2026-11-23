@@ -134,9 +134,25 @@ export function metricRefreshLabel(refresh: string): string {
 }
 
 /** National rollups report the oldest contributing regional observation. */
-export function metricFreshnessLabel(turn: number | undefined, nationalRollup = false): string {
+export function metricFreshnessLabel(
+  turn: number | undefined,
+  nationalRollup = false,
+  refresh?: string
+): string {
   if (turn === undefined) return "Last updated: not recorded";
+  // Election-cadence metrics only change when an election is held.
+  if (refresh === "election") return `From the election on turn ${turn}`;
   return nationalRollup ? `Oldest regional update: turn ${turn}` : `Last updated: turn ${turn}`;
+}
+
+/**
+ * Outcome domain a metric is grouped and averaged under. Most follow their
+ * storage path; military readiness is stored under governance but belongs
+ * with energy security in the Security domain.
+ */
+export function metricDomainId(metric: Pick<PrimaryMetricDefinition, "id" | "path">): string {
+  if (metric.id === "57") return "security";
+  return metric.path.split(".")[0] ?? "other";
 }
 
 export function metricAggregationLabel(aggregation: string): string {

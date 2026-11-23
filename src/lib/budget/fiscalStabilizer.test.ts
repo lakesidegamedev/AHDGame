@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import type { FederalBudget, FederalRevenue, FederalSpending } from "@/lib/db/types/budget";
 import { createMockDb } from "@/lib/test-utils/mockDb";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 vi.mock("@/lib/news", () => ({ createSystemNewsPost: vi.fn().mockResolvedValue(undefined) }));
 
@@ -185,9 +186,19 @@ describe("approval effect", () => {
       ])
     );
     const effects = await loadFiscalConsolidationApprovalEffects(db as unknown as Db, 760);
-    expect(effects.get("IT")).toBe(-2);
+    expect(effects.get("IT")).toEqual({
+      effect: -2,
+      appliedTurn: 760,
+      expiresTurn: 760 + TURNS_PER_YEAR,
+    });
     expect(fiscalConsolidationApprovalModifiers(effects.get("IT"))).toEqual([
-      expect.objectContaining({ id: "fiscal_consolidation", effect: -2, source: "fiscal" }),
+      expect.objectContaining({
+        id: "fiscal_consolidation",
+        effect: -2,
+        source: "fiscal",
+        sinceTurn: 760,
+        expiresTurn: 760 + TURNS_PER_YEAR,
+      }),
     ]);
     expect(fiscalConsolidationApprovalModifiers(undefined)).toEqual([]);
   });

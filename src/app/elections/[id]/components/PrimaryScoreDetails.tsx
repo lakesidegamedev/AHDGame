@@ -9,7 +9,7 @@ const signed = new Intl.NumberFormat("en-US", {
 export function PrimaryScoreDetails({ breakdown }: { breakdown: RegionalPrimaryScoreBreakdown }) {
   const adjustments = [
     ["Infamy", breakdown.infamyAdjustment],
-    ["Non-player opponent", breakdown.nppAdjustment],
+    ["Non-player half strength", breakdown.nppAdjustment],
     ["Campaign ads", breakdown.campaignAdjustment ?? 0],
   ] as const;
 

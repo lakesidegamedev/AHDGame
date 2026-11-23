@@ -42,6 +42,7 @@ export const CA_CONFIG: CountryConfig = {
       name: "Senate",
       shortName: "Senate",
       seats: 105,
+      elected: false,
       description:
         "105 appointed senators, apportioned by region. Revises and delays legislation but rarely defeats the elected House.",
     },

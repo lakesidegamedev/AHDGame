@@ -53,3 +53,25 @@ export function electionNightStyle(electionType: string): "westminster" | "gener
 export function majorityThreshold(totalSeats: number): number {
   return Math.floor(totalSeats / 2) + 1;
 }
+
+export type ElectionNightBoardState = "live" | "result" | "idle";
+
+interface BoardStateInput {
+  election: { status: string };
+  summary: { totalVotes: number; unitsReporting: number };
+  national: { regionsDeclared: number } | null;
+}
+
+/**
+ * What the national board should show. A race that has not started counting
+ * has nothing to report, so it is "idle" and the page shows no zero board. A
+ * finished race keeps its last result.
+ */
+export function electionNightBoardState(data: BoardStateInput): ElectionNightBoardState {
+  if (data.election.status === "completed" || data.election.status === "resolved") return "result";
+  const counting =
+    data.summary.totalVotes > 0 ||
+    data.summary.unitsReporting > 0 ||
+    (data.national?.regionsDeclared ?? 0) > 0;
+  return counting ? "live" : "idle";
+}

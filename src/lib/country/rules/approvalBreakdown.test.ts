@@ -3,6 +3,7 @@ import { applyModifiers, type ActiveModifier } from "@/lib/utils/approvalModifie
 import {
   buildApprovalBreakdown,
   displayEffect,
+  listedRegionAverage,
   NATIONAL_CAP_ADJUSTMENT_ID,
 } from "./approvalBreakdown";
 
@@ -66,5 +67,52 @@ describe("clamped approval breakdown", () => {
     expect(breakdown.nationalAdjustments).toContainEqual(
       expect.objectContaining({ id: "approval_bounds" })
     );
+  });
+});
+
+describe("listedRegionAverage", () => {
+  it("weights the listed ratings by population and reports the gap to the stored average", () => {
+    const result = listedRegionAverage(
+      [
+        { approval: 20, population: 1 },
+        { approval: 40, population: 3 },
+      ],
+      36.6
+    );
+    expect(result).toEqual({ listedAverage: 35, gap: 1.6 });
+  });
+
+  it("skips regions without a population and returns null when nothing can be weighted", () => {
+    expect(listedRegionAverage([{ approval: 10 }], 30)).toBeNull();
+    expect(listedRegionAverage([], 30)).toBeNull();
+  });
+});
+
+describe("national margin and region reconciliation", () => {
+  const cond = (effect: number, marginEffect: number) => ({
+    id: `c${effect}${marginEffect}`,
+    label: "c",
+    effect,
+    marginEffect,
+  });
+  it("averages each region's own capped margin by population", async () => {
+    const { nationalMarginFromRegions } = await import("./approvalBreakdown");
+    expect(
+      nationalMarginFromRegions([
+        { population: 3, modifiers: [cond(-9, -9)] },
+        { population: 1, modifiers: [cond(2, 2)] },
+      ])
+    ).toBe(-1.7);
+    expect(nationalMarginFromRegions([])).toBeNull();
+  });
+  it("base plus effects plus adjustment lines equals the stated rating", async () => {
+    const { reconcileRegionApproval } = await import("./approvalBreakdown");
+    const mods = [
+      { id: "regionalDebt", label: "d", effect: -25 },
+      { id: "economic_boom", label: "b", effect: 2 },
+      { id: "approval_smoothing", label: "s", effect: 9.1 },
+    ];
+    const r = reconcileRegionApproval(43.3, mods);
+    expect(r).toEqual({ base: 43.3, effects: -23, adjustments: 9.1, total: 29.4 });
   });
 });

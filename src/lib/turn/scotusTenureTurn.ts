@@ -53,6 +53,8 @@ function vacatedOccupantFields(now: Date) {
     socialLean: null,
     seatedAt: null,
     seatedAtTurn: null,
+    vacantSinceTurn: null,
+    vacancyReminderStage: null,
     divergentHazardStartsTurn: null,
     updatedAt: now,
   };

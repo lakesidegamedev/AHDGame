@@ -248,8 +248,16 @@ export function RegionHeader(props: RegionHeaderProps) {
           <Fact label="Lean">
             <Tooltip
               content={
-                <span className="text-body-sm tabular-nums">
-                  {`Economic ${formatLeanValue(leans.economicLean)}, social ${formatLeanValue(leans.socialLean)}`}
+                <span className="block max-w-xs text-body-sm">
+                  <span className="block tabular-nums">
+                    {`Economic ${formatLeanValue(leans.economicLean)}, social ${formatLeanValue(leans.socialLean)}`}
+                  </span>
+                  {leanDisplay && (
+                    <span className="mt-1 block text-muted">
+                      How the voters&apos; economic views compare with the two main party platforms.
+                      It does not track who currently holds seats here.
+                    </span>
+                  )}
                 </span>
               }
             >

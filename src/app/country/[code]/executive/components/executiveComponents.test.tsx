@@ -151,4 +151,10 @@ describe("ExecutiveRoster", () => {
     expect(screen.getByText("Vacant")).toBeTruthy();
     expect(screen.getByRole("link", { name: /All 15 positions/ })).toBeTruthy();
   });
+
+  it("says why the roster is empty instead of claiming nothing is configured", () => {
+    render(<ExecutiveRoster title="Cabinet" rows={[]} emptyText="Loading positions." />);
+    expect(screen.getByText("Loading positions.")).toBeTruthy();
+    expect(screen.queryByText("No positions configured.")).toBeNull();
+  });
 });

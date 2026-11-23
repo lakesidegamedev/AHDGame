@@ -76,6 +76,7 @@ interface NationalMetricsResponse {
     approval: number;
     baseApproval: number;
     modifiers: ActiveModifier[];
+    population?: number;
   }[];
 }
 
@@ -359,11 +360,12 @@ export async function loadNationalMetrics(
   response.governmentApprovalModifiers = approval.modifiers;
 
   response.stateApprovals = stateApprovalsList.map(
-    ({ stateId, stateName, approval, baseApproval, modifiers }) => ({
+    ({ stateId, stateName, approval, baseApproval, modifiers, population }) => ({
       stateId,
       stateName,
       approval,
       baseApproval,
+      population,
       modifiers: modifiers.map((m) => ({
         ...m,
         marginEffect:

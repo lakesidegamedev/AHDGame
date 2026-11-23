@@ -40,12 +40,14 @@ export {
 // use them without this module's aggregation graph; re-exported for callers
 // that already import the whole façade.
 export {
+  electionNightBoardState,
   electionNightStyle,
   electionNightTitle,
   isElectionNightType,
   majorityThreshold,
   pickElectionNightAnchor,
   type ElectionNightAnchorCandidate,
+  type ElectionNightBoardState,
 } from "./electionNightChrome";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);

@@ -682,6 +682,11 @@ export default function StateElectionResultsPage({
                 </div>
                 {subdivisionResults && seatChips.length > 0 && (
                   <div className="pt-2 mt-2 border-t border-card-border space-y-1">
+                    <p className="text-xs text-muted">
+                      {election && ["active", "upcoming"].includes(election.status)
+                        ? "Projected seats for this election, from each party's current support in every district. They can differ from the seats parties hold today."
+                        : "Seats won in this election."}
+                    </p>
                     {seatChips.map(([cid, seats]) => {
                       const party = (
                         subdivisionResults.candidateParties[cid] ?? "independent"

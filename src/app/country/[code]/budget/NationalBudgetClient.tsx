@@ -34,6 +34,7 @@ import { budgetUsdEquivalentFromRate } from "@/lib/currency/budgetUsdEquivalentF
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { budgetApiUrl } from "@/lib/urls";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
@@ -41,6 +42,7 @@ import {
   sovereignInputsFromBudget,
   sovereignInputsFromFiscalClose,
 } from "@/lib/budget/rules/sovereignInputs";
+import { splitOtherByArea, type SpendingAreaId } from "@/lib/budget/rules/portfolioSpendingLines";
 import {
   lawSpendingCategory,
   otherRevenueParts,
@@ -62,6 +64,9 @@ const PlannedEconomyPanel = dynamic(
   () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
   { ssr: false }
 );
+
+const SECTOR_SUBSIDY_DESCRIPTION =
+  "Cost of active sector and economy-wide subsidy policies: a share of the annual revenue of the company sectors that qualify, set to match the margin bonus those sectors receive. It prices qualifying company revenue, not the whole economy, so an economy-wide subsidy shows here as a modest line.";
 
 export function NationalBudgetClient() {
   const { code } = useParams<{ code: string }>();
@@ -309,23 +314,56 @@ export function NationalBudgetClient() {
   // Structured spending lines (laws / grants / debt-service), plus the synthetic
   // grants + debt-service lines. "tax" is a revenue concept, not an expenditure —
   // skip it (statutory tax laws bucket a ¥0 entry there; they live on revenue).
+  // Environment, justice and housing laws book into "other"; lift them into their
+  // own lines from their real law costs. Live budgets only: a historical snapshot
+  // stores no per-law amounts.
+  const otherSplit = data.isSnapshot
+    ? null
+    : splitOtherByArea(
+        budget.spending.byCategory.other ?? 0,
+        (enactedLaws as (DisplayEnactedLaw & { spendingArea?: SpendingAreaId })[])
+          .filter((law) => !law.isGrant && lawSpendingCategory(law.budgetCategory) === "other")
+          .map((law) => ({ law, area: law.spendingArea, amount: law.annualCost }))
+      );
+  const areaLines: BreakdownLine[] = (otherSplit?.lines ?? []).map((line) => ({
+    id: `area-${line.id}`,
+    label: line.label,
+    description: line.description,
+    amount: line.amount,
+    laws: line.laws.map((law) => ({
+      title: law.title,
+      cost: formatLawCost(law),
+      year: law.enactedYear,
+    })),
+  }));
+  const otherRemainderLaws = otherSplit?.remainderLaws ?? null;
+
   const spendingLines: BreakdownLine[] = [
     ...Object.entries(budget.spending.byCategory)
       .filter(([key]) => key !== "tax")
       .map(([key, value]) => {
+        const lineValue = key === "other" && otherSplit ? otherSplit.remainderTotal : value;
         const label =
           labels.spendingLabels[key as keyof typeof labels.spendingLabels] ?? humanizeKey(key);
         return {
           id: key,
           label,
           description:
-            labels.spendingDescriptions[key as keyof typeof labels.spendingDescriptions] ??
-            `${label} spending.`,
-          amount: value,
+            key === "sectorSubsidies"
+              ? SECTOR_SUBSIDY_DESCRIPTION
+              : (labels.spendingDescriptions[key as keyof typeof labels.spendingDescriptions] ??
+                `${label} spending.`),
+          amount: lineValue,
           // An uncategorised law books into "other" (spending.ts), so it is
           // listed there too rather than under no line at all.
           laws: enactedLaws
             .filter((law) => lawSpendingCategory(law.budgetCategory) === key)
+            .filter(
+              (law) =>
+                key !== "other" ||
+                !otherRemainderLaws ||
+                (otherRemainderLaws as unknown[]).includes(law)
+            )
             .map((law) => ({ title: law.title, cost: formatLawCost(law), year: law.enactedYear })),
           // Live laws carry their annual cost, so the Other line can be added
           // up; a historical snapshot stores only cost descriptions, so a past
@@ -334,10 +372,13 @@ export function NationalBudgetClient() {
           ...(key === "other" && !(data.isSnapshot ?? false)
             ? {
                 parts: otherSpendingParts({
-                  total: value,
+                  total: lineValue,
                   laws: (enactedLaws as DisplayEnactedLaw[])
                     .filter(
-                      (law) => !law.isGrant && lawSpendingCategory(law.budgetCategory) === key
+                      (law) =>
+                        !law.isGrant &&
+                        lawSpendingCategory(law.budgetCategory) === key &&
+                        (!otherRemainderLaws || (otherRemainderLaws as unknown[]).includes(law))
                     )
                     .map((law) => ({ title: law.title, amount: law.annualCost })),
                 }),
@@ -345,6 +386,7 @@ export function NationalBudgetClient() {
             : {}),
         };
       }),
+    ...areaLines,
     {
       id: "stateGrants",
       label: grantLabel,
@@ -387,10 +429,12 @@ export function NationalBudgetClient() {
   const revenueLinesFinal = soeNet > 0 ? [...revenueLines, soeLine(soeNet)] : revenueLines;
   const organizationContributionPerTurn = Math.round(data.organizationContributions?.perTurn ?? 0);
   const organizationNames = [
-    ...new Set(data.organizationContributions?.lines.map((line) => line.organizationId)),
-  ]
-    .map((organizationId) => organizationId.replaceAll("_", " "))
-    .join(", ");
+    ...new Set(
+      data.organizationContributions?.lines.map(
+        (line) => line.organizationName ?? line.organizationId.replaceAll("_", " ")
+      )
+    ),
+  ].join(", ");
   const organizationKinds = [
     ...new Set(data.organizationContributions?.lines.map((line) => line.kind)),
   ].join(" and ");
@@ -501,6 +545,7 @@ export function NationalBudgetClient() {
             funding={data.defenseFunding}
             soeNetPerTurn={data.stateEnterpriseNet ?? null}
             organizationContributions={data.organizationContributions ?? null}
+            budgetBalancePerTurn={(budget.revenue.total - budget.spending.total) / TURNS_PER_YEAR}
           />
         ) : null}
 
@@ -587,9 +632,11 @@ export function NationalBudgetClient() {
             principal={budget.debt.principal}
             interestRate={sovereignRate.effectiveRate}
             bookedRate={budget.debt.interestRate}
+            debtInterest={budget.spending.debtInterest}
             ceiling={budget.debt.ceiling}
             ceilingLabel={labels.ceilingLabel}
             debtToGdp={budget.debtToGdpRatio}
+            ratioGdp={resolveRatioGdp(budget)}
             rating={budget.creditRating}
             trend={fyHistory.map((p) => p.debtToGdp * 100)}
             trendRange={
