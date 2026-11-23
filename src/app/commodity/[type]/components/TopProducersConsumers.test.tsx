@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import TopProducersConsumers from "./TopProducersConsumers";
+import TopProducersConsumers, { unlistedDemand } from "./TopProducersConsumers";
 
 const otherDemand = {
   name: "Other demand (including marketing)",
@@ -182,5 +182,22 @@ describe("buyer fill notes", () => {
       />
     );
     expect(screen.queryByText(/These buyers ordered/)).toBeNull();
+  });
+});
+
+describe("unlistedDemand", () => {
+  const funded = [
+    { name: "Households", type: "system" as const, units: 30, receivedUnits: 20, description: "" },
+  ];
+  it("returns the remainder so listed buyers sum to recorded demand", () => {
+    expect(unlistedDemand(100, [{ units: 50 }], funded)).toEqual({ unlisted: 20, over: 0 });
+  });
+  it("reports overshoot instead of hiding it", () => {
+    expect(unlistedDemand(60, [{ units: 50 }], funded)).toEqual({ unlisted: 0, over: 20 });
+  });
+  it("stays silent without recorded buyer orders", () => {
+    expect(
+      unlistedDemand(100, [{ units: 50 }], [{ ...funded[0], receivedUnits: undefined }])
+    ).toBeNull();
   });
 });

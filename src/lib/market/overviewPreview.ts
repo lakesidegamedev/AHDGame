@@ -20,6 +20,17 @@ export function vsBasePct({
   return basePrice > 0 ? (globalPrice / basePrice - 1) * 100 : null;
 }
 
+/** True when the price sits on the market's price ceiling (within 1%). */
+export function atPriceCap({
+  globalPrice,
+  priceCeiling,
+}: {
+  globalPrice: number;
+  priceCeiling?: number | null;
+}): boolean {
+  return typeof priceCeiling === "number" && priceCeiling > 0 && globalPrice >= priceCeiling * 0.99;
+}
+
 export function topCommodityMovers<T extends CommodityMover>(commodities: readonly T[]): T[] {
   return [...commodities]
     .sort((a, b) => Math.abs(vsBasePct(b) ?? 0) - Math.abs(vsBasePct(a) ?? 0))
