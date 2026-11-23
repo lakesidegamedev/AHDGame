@@ -510,6 +510,10 @@ async function writeSupplierReplies(
             updatedAt: args.now,
           },
           $push: { offers: offer },
+          // An AI counter is a plain premium offer, so it drops any set price.
+          ...(raw.priceMode
+            ? { $unset: { priceMode: "", fixedUnitPrice: "", signingMarketPrice: "" } }
+            : {}),
         },
       },
     });

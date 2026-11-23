@@ -20,6 +20,15 @@
  *
  * A positive premium means the buyer pays above market; negative means a discount.
  *
+ * FIXED AND INDEXED AGREEMENTS (priceMode set) settle a difference payment
+ * against M, the per-unit price the supplier's units realised on the funded
+ * market that turn (realisedSupplierPrices, keyed supplier then scope key),
+ * else the commodity's published price, recorded as marketPriceSource:
+ *   fixed:   transfer = qty * (P - M), the seller nets P per unit delivered
+ *   indexed: transfer = qty * M * p, contract price M * (1 + p)
+ * qty and the per-turn conversion are the same as above. Damages are valued
+ * at the contract price. Agreements without a priceMode take the branch above.
+ *
  * SHORTFALL: a supplier that PRODUCED less than it contracted owes damages,
  * pro-rated across its agreements for that commodity:
  *   penalty = shortfallUnits * unitPrice * CONTRACT_SHORTFALL_PENALTY
@@ -33,6 +42,7 @@ import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
+import { contractUnitSettlement } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import { safeUnitScale } from "@/lib/constants/capacityEconomy";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
@@ -176,6 +186,14 @@ export function computeSupplyAgreementSettlements(args: {
    * read this.
    */
   fundedPairFlows?: FundedPairFlows;
+  /**
+   * Supplier corpId, then scope key, to the per-unit price that supplier's
+   * units realised on the funded market this turn (money cleared over units
+   * sold, see realisedSupplierPrices). Fixed and indexed agreements settle
+   * against it; absent or missing for a lane, they fall back to the
+   * commodity's published price and record that on the settlement.
+   */
+  realisedSupplierPrices?: ReadonlyMap<string, ReadonlyMap<string, number>>;
   turn: number;
   now: Date;
 }): SupplyAgreementSettlements {
@@ -374,7 +392,36 @@ export function computeSupplyAgreementSettlements(args: {
         priceRealizationFactor(priceRatioByCommodity.get(a.commodity))) /
       TURNS_PER_DAY;
     const priced = fundedDeliveries ? qty > 0 : filled > 0;
-    const premiumAnchor = priced ? qty * unitPriceAnchor * a.pricePremium : 0;
+    // Fixed and indexed agreements settle a difference against the market price
+    // the supplier's units realised this turn, not a premium on the billed input
+    // price. Legacy agreements take the original branch untouched.
+    const newMode = a.priceMode === "fixed" || a.priceMode === "indexed" ? a.priceMode : undefined;
+    let marketUnitPrice: number | undefined;
+    let marketPriceSource: "realised" | "published" | undefined;
+    let contractUnitPrice: number | undefined;
+    let damagesUnitPriceAnchor = unitPriceAnchor;
+    let premiumAnchor = priced ? qty * unitPriceAnchor * a.pricePremium : 0;
+    if (newMode) {
+      const realised = args.realisedSupplierPrices?.get(a.supplierCorpId)?.get(scopeOf(a));
+      if (typeof realised === "number" && Number.isFinite(realised) && realised > 0) {
+        marketUnitPrice = realised;
+        marketPriceSource = "realised";
+      } else {
+        marketUnitPrice =
+          (COMMODITY_BASE_PRICES[a.commodity] ?? 0) * (priceRatioByCommodity.get(a.commodity) ?? 1);
+        marketPriceSource = "published";
+      }
+      const unit = contractUnitSettlement({
+        priceMode: newMode,
+        fixedUnitPrice: a.fixedUnitPrice,
+        pricePremium: a.pricePremium,
+        marketUnitPrice,
+      });
+      contractUnitPrice = unit.contractUnitPrice;
+      const perTurnScale = 1 / (TURNS_PER_DAY * safeUnitScale(args.eraUnitScale));
+      damagesUnitPriceAnchor = Math.max(0, unit.contractUnitPrice) * perTurnScale;
+      premiumAnchor = priced ? qty * unit.transferPerUnit * perTurnScale : 0;
+    }
 
     // C5: record the priced position before any of the damages, solvency or
     // rounding gates below can drop this agreement from the settlement. The tax
@@ -421,13 +468,21 @@ export function computeSupplyAgreementSettlements(args: {
     // by contracting for a volume neither plant could ever make. The notional
     // is this contract's own `volumeCap × unit price` for the period, so the
     // ceiling scales with the deal actually struck and nothing else.
-    const notionalAnchor = Math.max(0, a.volumeCap) * unitPriceAnchor;
-    const uncappedPenaltyAnchor = shortfallUnits * unitPriceAnchor * CONTRACT_SHORTFALL_PENALTY;
+    const notionalAnchor = Math.max(0, a.volumeCap) * damagesUnitPriceAnchor;
+    const uncappedPenaltyAnchor =
+      shortfallUnits * damagesUnitPriceAnchor * CONTRACT_SHORTFALL_PENALTY;
     const penaltyAnchor = Math.min(
       uncappedPenaltyAnchor,
       notionalAnchor * CONTRACT_DAMAGES_CAP_FRACTION
     );
-    if (deliveryRecord) deliveryRecord.penaltyAnchor = penaltyAnchor;
+    if (deliveryRecord) {
+      deliveryRecord.penaltyAnchor = penaltyAnchor;
+      if (newMode) {
+        deliveryRecord.marketUnitPrice = marketUnitPrice;
+        deliveryRecord.marketPriceSource = marketPriceSource;
+        deliveryRecord.contractUnitPrice = contractUnitPrice;
+      }
+    }
 
     // Supplier's net position: it is credited the premium and debited damages.
     const rawNetAnchor = premiumAnchor - penaltyAnchor;
@@ -530,6 +585,14 @@ export function computeSupplyAgreementSettlements(args: {
       unitsSettled: Math.round(qty),
       pricePremium: a.pricePremium,
       premiumAnchor: Math.round(premiumAnchor),
+      ...(newMode
+        ? {
+            priceMode: newMode,
+            marketUnitPrice: Math.round((marketUnitPrice ?? 0) * 100) / 100,
+            marketPriceSource,
+            contractUnitPrice: Math.round((contractUnitPrice ?? 0) * 100) / 100,
+          }
+        : {}),
       ...(shortfallUnits > 0
         ? {
             shortfallUnits: Math.round(shortfallUnits),
@@ -603,6 +666,8 @@ export async function settleSupplyAgreements(args: {
   plantsEnabled?: boolean;
   /** Funded turns only: settled sales between contract pairs. */
   fundedPairFlows?: FundedPairFlows;
+  /** Funded turns only: per-unit price each supplier's units realised. */
+  realisedSupplierPrices?: ReadonlyMap<string, ReadonlyMap<string, number>>;
   turn: number;
   now: Date;
   thresholds: TxThresholds;
@@ -670,6 +735,7 @@ export async function settleSupplyAgreements(args: {
     achievableByCorpCommodity: args.achievableByCorpCommodity,
     plantsEnabled: args.plantsEnabled,
     fundedPairFlows: args.fundedPairFlows,
+    realisedSupplierPrices: args.realisedSupplierPrices,
     corpInfo: (corpId) => {
       const corp = lookups.corpById.get(corpId);
       if (!corp) return undefined;
@@ -753,6 +819,13 @@ export async function settleSupplyAgreements(args: {
           : {}),
         ...(delivery.buyerCurrencyCode
           ? { lastBuyerCashCurrency: delivery.buyerCurrencyCode }
+          : {}),
+        ...(delivery.marketUnitPrice !== undefined
+          ? {
+              lastMarketUnitPrice: delivery.marketUnitPrice,
+              lastMarketPriceSource: delivery.marketPriceSource,
+              lastContractUnitPrice: delivery.contractUnitPrice,
+            }
           : {}),
         updatedAt: now,
       };
