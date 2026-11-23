@@ -147,6 +147,7 @@ describe("market candle API", () => {
     expect(body.points).toHaveLength(23);
     expect(body.points[0]).toMatchObject({ turn: 7, open: 100, close: 35 });
     expect(body.missingTurns).toBe(1);
+    expect(body.windowTurns).toBe(24);
     expect(find).toHaveBeenCalledWith("marketCapHistory", { turn: { $gte: 7, $lte: 30 } });
   });
   it("keeps game-quarter detail, complete history, aligned volume and bucket end dates", async () => {
@@ -164,6 +165,7 @@ describe("market candle API", () => {
     expect(body).toMatchObject({
       bucketTurns: 12,
       totalTurns: 1252,
+      windowTurns: 1252,
       intradayTurns: 1,
       firstIntradayTurn: 1252,
       invalidVolumeTrades: 2,

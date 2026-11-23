@@ -66,8 +66,8 @@
       "privateBank": "your private bank",
       "atBank": "At {bank}",
       "holderUnknown": "Savings holder could not be verified",
-      "centralRate": "Half of real {prime}% prime",
-      "centralRateWithBonus": "Half of real {prime}% prime + {bonus}% Central Bank bonus"
+      "centralRate": "Half of the real rate {real}% (prime {prime}% minus inflation {inflation}%)",
+      "centralRateWithBonus": "Half of the real rate {real}% (prime {prime}% minus inflation {inflation}%) + {bonus}% Central Bank bonus"
     }
   }
 }

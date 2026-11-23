@@ -431,7 +431,7 @@ function OperationsRow({
               type="number"
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step={0.01}
               aria-label={`Wage level, ${sector.stateName} ${sector.sectorLabel}`}
               value={wageDraft ?? wageValue.toFixed(2)}
               disabled={busy}

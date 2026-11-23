@@ -11,9 +11,15 @@ export function revenueSplit(
   const revenue = financials.totalRevenue;
   if (!(Number.isFinite(revenue) && revenue > 0)) return null;
   if (!(Number.isFinite(basis.netIncome) && basis.netIncome >= 0)) return null;
+  // Costs are what sits between revenue and operating income, so interest is
+  // counted once, under "Interest and tax". When net income is above operating
+  // income (investment income), that surplus lowers costs rather than being
+  // dropped, which keeps the four parts adding up to revenue.
+  const operatingCosts = revenue - financials.operatingIncome;
+  const gap = financials.operatingIncome - basis.netIncome;
   return {
-    costs: Math.max(0, financials.totalCosts),
-    interestAndTax: Math.max(0, financials.operatingIncome - basis.netIncome),
+    costs: Math.max(0, gap < 0 ? operatingCosts + gap : operatingCosts),
+    interestAndTax: Math.max(0, gap),
     dividends: Math.max(0, basis.dividendPaid),
     retained: Math.max(0, basis.retained),
   };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { IDLE_CAUSE_FILL, idleCauseMeta, TONE_FILL } from "./plants";
+import { IDLE_CAUSE_FILL, fmtTeuEstimate, idleCauseMeta, TONE_FILL } from "./plants";
 
 describe("bank charter", () => {
   it("never shows financial capacity as reserved for a bank network", () => {
@@ -53,5 +53,15 @@ describe("idle cause meter colors", () => {
     expect(idleCauseMeta("construction", ["Freight", "Construction Services"]).demand.help).toMatch(
       /Freight and Construction Services sell only in this state/
     );
+  });
+});
+
+describe("fmtTeuEstimate", () => {
+  it("never rounds a real need down to zero", () => {
+    expect(fmtTeuEstimate(0.4)).toBe("0.4");
+    expect(fmtTeuEstimate(0.04)).toBe("less than 0.1");
+    expect(fmtTeuEstimate(2.26)).toBe("2.3");
+    expect(fmtTeuEstimate(80.4)).toBe("80");
+    expect(fmtTeuEstimate(0)).toBe("0");
   });
 });

@@ -124,3 +124,12 @@ describe("BuildQueueBadge", () => {
     );
   });
 });
+
+describe("arrival pace wording", () => {
+  it("says one every N turns when the pace is below one per turn", () => {
+    const slow = { ...QUEUE, unitsOrdered: 100, unitsRemaining: 100, unitsPerTurn: 100 / 24 };
+    const label = buildProgressLabel(slow, 100, "campus", "campuses");
+    expect(label).toContain("About 1 campus arrives every 24 turns.");
+    expect(label).not.toContain("About 0");
+  });
+});

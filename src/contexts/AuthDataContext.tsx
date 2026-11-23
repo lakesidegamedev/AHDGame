@@ -102,6 +102,9 @@ interface AuthDataContextValue {
   hasSession: boolean;
 }
 
+const TRANSIENT_RETRY_LIMIT = 3;
+const TRANSIENT_RETRY_MS = 4_000;
+
 const AuthDataContext = createContext<AuthDataContextValue | null>(null);
 
 // Module-level dedup: when multiple components mount simultaneously and trigger
@@ -159,25 +162,39 @@ export function AuthDataProvider({
   const [loading, setLoading] = useState(true);
   const [authFetchError, setAuthFetchError] = useState<AuthFetchError>("none");
   const mountedRef = useRef(true);
+  const retriesRef = useRef(0);
+  const retryTimerRef = useRef<number | undefined>(undefined);
 
   const load = useCallback((isManualRetry = false) => {
     if (isManualRetry) {
+      retriesRef.current = 0;
       setAuthFetchError("none");
       setLoading(true);
     }
 
-    fetchAuthMeOnce().then((result) => {
+    function attempt() {
+      fetchAuthMeOnce().then(settle);
+    }
+    function settle(result: AuthMeResult) {
       if (!mountedRef.current) return;
 
       if (result.kind === "transient") {
         setAuthFetchError(transientToErrorFlag(result.reason));
+        // Keep whatever was last known and try again shortly; a blip must not
+        // leave the chrome without a session.
+        if (retriesRef.current < TRANSIENT_RETRY_LIMIT) {
+          retriesRef.current += 1;
+          retryTimerRef.current = window.setTimeout(attempt, TRANSIENT_RETRY_MS);
+        }
       } else {
+        retriesRef.current = 0;
         setNavData(result.payload);
         setUser(result.payload.user ?? null);
         setAuthFetchError("none");
       }
       setLoading(false);
-    });
+    }
+    attempt();
   }, []);
 
   useEffect(() => {
@@ -188,6 +205,7 @@ export function AuthDataProvider({
     return () => {
       mountedRef.current = false;
       window.clearTimeout(t);
+      window.clearTimeout(retryTimerRef.current);
     };
   }, [load]);
 

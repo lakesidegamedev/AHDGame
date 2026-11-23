@@ -84,6 +84,10 @@ describe("supplyAgreementReachProblem", () => {
     expect(
       supplyReachMessage(problem!, { commodityLabel: "Steel", readerIsBuyer: false })
     ).toContain("The buyer has no active plant that uses Steel");
+    const own = supplyReachMessage(problem!, { commodityLabel: "Software", readerIsBuyer: true });
+    expect(own).toContain("could not receive Software");
+    expect(own).toContain("producing it yourself does not count");
+    expect(own).not.toContain("could never deliver");
   });
 });
 

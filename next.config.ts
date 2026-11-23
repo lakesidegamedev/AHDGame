@@ -297,6 +297,16 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/bank",
+        destination: "/banking",
+        permanent: true,
+      },
+      {
+        source: "/wallet",
+        destination: "/portfolio",
+        permanent: true,
+      },
+      {
         source: "/uk",
         destination: "/country/uk",
         permanent: true,

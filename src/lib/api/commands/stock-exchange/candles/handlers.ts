@@ -317,6 +317,7 @@ export async function GET(request: Request) {
       points,
       intradayTurns: raw.filter((c) => c.intraday).length,
       totalTurns: raw.length,
+      windowTurns: lastTurn - firstTurn + 1,
       firstIntradayTurn: raw.find((c) => c.intraday)?.turn ?? null,
       calendar,
       asOf,

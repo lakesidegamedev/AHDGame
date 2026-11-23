@@ -147,9 +147,9 @@ export function ProfileAchievements({
   }, [characterId]);
 
   const earnedAchievements = allAchievements.filter((a) => a.earned);
-  const lockedAchievements = allAchievements.filter((a) => !a.earned);
 
-  // Showcase: highlighted first, then most recently earned, pad with locked up to 8
+  // Showcase: highlighted first, then most recently earned. Locked badges only
+  // appear in the expanded view, so the tiles and the counter agree.
   const showcaseItems: AchievementItem[] = (() => {
     if (highlighted.length > 0) {
       const rest = earnedAchievements
@@ -157,11 +157,7 @@ export function ProfileAchievements({
         .slice(0, Math.max(0, 8 - highlighted.length));
       return [...highlighted, ...rest].slice(0, 8);
     }
-    const earned = earnedAchievements.slice(0, 8);
-    if (earned.length < 8) {
-      return [...earned, ...lockedAchievements.slice(0, 8 - earned.length)];
-    }
-    return earned;
+    return earnedAchievements.slice(0, 8);
   })();
 
   const grouped = CATEGORY_ORDER.map((cat) => ({
@@ -172,7 +168,8 @@ export function ProfileAchievements({
     totalCount: allAchievements.filter((a) => a.category === cat).length,
   })).filter((g) => g.items.length > 0);
 
-  const pct = totalAchievements > 0 ? (totalEarned / totalAchievements) * 100 : 0;
+  const earnedShown = allAchievements.length > 0 ? earnedAchievements.length : totalEarned;
+  const pct = totalAchievements > 0 ? (earnedShown / totalAchievements) * 100 : 0;
 
   return (
     <section>
@@ -240,7 +237,7 @@ export function ProfileAchievements({
                 <div className="h-full bg-foreground/60" style={{ width: `${pct}%` }} />
               </div>
               <span className="shrink-0 text-body-sm tabular-nums text-muted">
-                {totalEarned}/{totalAchievements}
+                {earnedShown}/{totalAchievements}
               </span>
             </div>
             <div className="flex gap-4">

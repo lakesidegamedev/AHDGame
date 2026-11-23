@@ -4,7 +4,7 @@ import type { Topology, GeometryCollection } from "topojson-specification";
 import type { RegionOverlayShard } from "@/lib/maps/regionOverlay";
 import { useWorldMapState } from "@/app/world/components/useWorldMapState";
 
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 
 import {
   WORLD_GEO_URL,
@@ -294,9 +294,13 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
     setPaths(newPaths);
   }, [graticuleRef, livePathsRef, pathRefsMap, setPaths, sphereRef, warBorderPathRef]);
 
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   // --- Load d3-geo + topojson data on mount ---
   useEffect(() => {
     let cancelled = false;
+    setLoadFailed(false);
 
     async function load() {
       const [d3, topojson] = await Promise.all([import("d3-geo"), import("topojson-client")]);
@@ -304,6 +308,7 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       d3Ref.current = d3;
 
       const resp = await fetch(WORLD_GEO_URL);
+      if (!resp.ok) throw new Error(`World map data failed to load (${resp.status})`);
       const topo: Topology<{ countries: GeometryCollection }> = await resp.json();
       if (cancelled) return;
 
@@ -500,7 +505,9 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       setIsLoaded(true);
     }
 
-    load();
+    load().catch(() => {
+      if (!cancelled) setLoadFailed(true);
+    });
 
     return () => {
       cancelled = true;
@@ -508,7 +515,7 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       if (dragFrameRef.current) cancelAnimationFrame(dragFrameRef.current);
       if (autoRotateRef.current) cancelAnimationFrame(autoRotateRef.current);
     };
-  }, [livePathsRef, setIsLoaded, setPaths]);
+  }, [livePathsRef, setIsLoaded, setPaths, loadAttempt]);
 
   // --- Auto-rotation loop (runs only while the globe is on screen and idle) ---
   useEffect(() => {
@@ -1071,7 +1078,20 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
             className={`w-full flex items-center justify-center text-muted text-body ${isFullscreen ? "h-full" : ""}`}
             style={isFullscreen ? undefined : { aspectRatio: `${SVG_W}/${SVG_H}` }}
           >
-            Loading map...
+            {loadFailed ? (
+              <span className="text-center">
+                The map could not be loaded.{" "}
+                <button
+                  type="button"
+                  className="underline hover:text-foreground"
+                  onClick={() => setLoadAttempt((n) => n + 1)}
+                >
+                  Try again
+                </button>
+              </span>
+            ) : (
+              "Loading map..."
+            )}
           </div>
         )}
 

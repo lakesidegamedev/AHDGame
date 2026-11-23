@@ -109,7 +109,7 @@
         "error": "Dein Verlauf konnte nicht geladen werden.",
         "balanceNote": "Der Kontostand wird nur angezeigt, wo er erfasst wurde.",
         "kinds": {
-          "office_income": "Wahlkampfmittel-Einkommen",
+          "office_income": "Amtseinkommen",
           "fundraise": "Spendensammlung",
           "campaign_donation": "Wahlkampfspende",
           "union_contribution": "Gewerkschaftsbeitrag",

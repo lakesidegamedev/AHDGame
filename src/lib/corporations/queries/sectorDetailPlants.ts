@@ -2,6 +2,7 @@
 import type { PlantIdleCause, SectorPlantsSection, PlantBuildOrderView } from "./sectorPlantsTypes";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import type { CommodityType } from "@/lib/constants/commodities";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
 import { type OperatingSectorType, TURNS_PER_DAY } from "@/lib/constants/corporations";
 import {
@@ -240,7 +241,12 @@ export function buildSectorPlantsSection(args: {
     } else {
       const throughput = num(sector.throughputFactor);
       if (throughput != null && throughput < 1) {
-        weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
+        const bound = sector.throughputBindingInput;
+        weights.push({
+          cause: "inputs",
+          w: 1 - Math.max(0, throughput),
+          ...(bound ? { heldInput: COMMODITY_LABELS[bound as CommodityType] ?? bound } : {}),
+        });
       }
       const demandThrottle = num(sector.demandThrottleFactor);
       if (demandThrottle != null && demandThrottle < 1) {

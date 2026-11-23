@@ -348,7 +348,10 @@ export function CurrencyProvider({
     dispatchRates({ type: "FETCH_START" });
     fetch("/api/forex/rates", { credentials: "same-origin", cache: "no-store" })
       .then((res) => {
-        if (!res.ok) return null;
+        // Only a 403 means forex is off. Any other failure (rate limit, 5xx)
+        // keeps the cached rates so prices do not flip to the anchor symbol.
+        if (res.status === 403) return null;
+        if (!res.ok) throw new Error(`forex rates ${res.status}`);
         return res.json() as Promise<{
           rates: Partial<Record<CurrencyCode, number>>;
           baseRates?: Partial<Record<CurrencyCode, number>>;

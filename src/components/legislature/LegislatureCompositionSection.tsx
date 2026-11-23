@@ -324,6 +324,12 @@ export function LegislatureCompositionSection({
                 {vacantCount > 0 && <span className="ml-1 text-muted">· {vacantCount} vacant</span>}
               </span>
             </h2>
+            {showSeatsColumn && allSortedMembers.some((m) => m.seatsHeld > 1) && (
+              <p className="mt-1 text-xs text-muted">
+                Each row is a party bloc and its leader. The seat count is how many seats the bloc
+                holds.
+              </p>
+            )}
           </div>
           <div className="divide-y divide-card-border/40">
             {paginatedMembers.map((member) => (
