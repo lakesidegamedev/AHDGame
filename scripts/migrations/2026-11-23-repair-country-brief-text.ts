@@ -1,12 +1,7 @@
 /**
- * Repairs the wording of stored background country briefs and their news posts:
- * the bond sentence (fixed coupon, price when written) and austerity amounts that
- * were printed as huge percentages of GDP. Only the text of briefs and system news
- * posts changes; nothing is deleted.
- *
- * Dry run by default.
- *   npx tsx scripts/migrations/2026-11-23-repair-country-brief-text.ts
- *   npx tsx scripts/migrations/2026-11-23-repair-country-brief-text.ts --apply
+ * Rewrites stored country brief and system news text: the bond sentence and
+ * austerity amounts printed as huge percentages. Changes text only, deletes
+ * nothing. Dry run unless --apply is passed.
  */
 import type { Db } from "mongodb";
 import { connectDb, closeDb } from "../utils/db";
