@@ -238,6 +238,10 @@ describe("Metrics v2 approval source", () => {
     expect(national).toContain("nationalDeficit");
     for (const id of states.map((state) => state._id))
       expect(result!.modifiersByRegion!.get(id)!.filter((m) => fiscal.has(m.id))).toEqual([]);
-    expect(result!.regionalModifiersByRegion!.get("SCO")).toEqual([]);
+    // Its own 2% surplus earns both regional bonuses; the national deficit never reaches it.
+    expect(result!.regionalModifiersByRegion!.get("SCO")!.map((m) => m.id)).toEqual([
+      "regionalBalancedBudget",
+      "regionalFiscalDiscipline",
+    ]);
   });
 });
