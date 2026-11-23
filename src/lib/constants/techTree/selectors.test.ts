@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getResearchableDecades, getDecadeForYear, TECH_DECADES } from "./decades";
+import { TECH_INPUT_EFFICIENCY_CAP } from "./effects";
 import { TECH_TREE, corpNodeId, sectorNodeId } from "./nodes";
 import {
   techNodeCashCost,
@@ -279,6 +280,47 @@ describe("cash cost", () => {
       all: { revenue: 2_000_000, inputs: 600_000, labour: 400_000 },
     };
     expect(techNodeValuePerTurn(node, basis)).toBeCloseTo(20_000);
+  });
+
+  describe("input reduction under the cap", () => {
+    const node = {
+      ...TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!,
+      lane: "sector" as const,
+      effects: [{ kind: "inputEfficiency" as const, pct: 0.1 }],
+    };
+    const basis = {
+      primary: { revenue: 1_000_000, inputs: 500_000, labour: 0 },
+      all: { revenue: 1_000_000, inputs: 500_000, labour: 0 },
+    };
+
+    it("values the full node when it fits under the cap", () => {
+      expect(techNodeValuePerTurn(node, basis, 0)).toBeCloseTo(50_000);
+      expect(techNodeValuePerTurn(node, basis)).toBeCloseTo(50_000);
+    });
+
+    it("values only the part that fits under the cap", () => {
+      const researched = TECH_INPUT_EFFICIENCY_CAP - 0.06;
+      expect(techNodeValuePerTurn(node, basis, researched)).toBeCloseTo(0.06 * 500_000);
+      expect(techNodeCashCost(node, 0, 0, basis, researched)).toBe(
+        Math.round(0.06 * 500_000 * TECH_NODE_PAYBACK_TURNS)
+      );
+    });
+
+    it("values nothing once the cap is reached", () => {
+      expect(techNodeValuePerTurn(node, basis, TECH_INPUT_EFFICIENCY_CAP)).toBe(0);
+    });
+
+    it("leaves other effect kinds at full value", () => {
+      const mixed = {
+        ...node,
+        effects: [
+          { kind: "inputEfficiency" as const, pct: 0.1 },
+          { kind: "laborCostReduction" as const, pct: 0.1 },
+        ],
+      };
+      const b = { ...basis, primary: { ...basis.primary, labour: 200_000 } };
+      expect(techNodeValuePerTurn(mixed, b, TECH_INPUT_EFFICIENCY_CAP)).toBeCloseTo(20_000);
+    });
   });
 
   it("scales the floor with the world era", () => {
