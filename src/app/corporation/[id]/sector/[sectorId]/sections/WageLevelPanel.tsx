@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Slider } from "@/components/ui";
 import { WAGE_LEVEL_MIN, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
+import { settleSinglePrecision } from "@/lib/utils/singlePrecision";
 import type { SectorData } from "../types";
 
 interface WageLevelPanelProps {
@@ -37,7 +38,7 @@ export default function WageLevelPanel({
   onWageChange,
   onSave,
 }: WageLevelPanelProps) {
-  const activeLevel = sector.wageLevel ?? 1;
+  const activeLevel = settleSinglePrecision(sector.wageLevel ?? 1);
   const draft = roundWage(wageDraft);
   const aboveBaseline = draft > 1;
   const floorBinds = sector.minWageUplift != null && sector.minWageUplift > 0;

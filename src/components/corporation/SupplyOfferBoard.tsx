@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/types/supplyAgreement";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { settleSinglePrecision } from "@/lib/utils/singlePrecision";
 
 export function SupplyOfferBoard({
   corpId,
@@ -103,7 +104,7 @@ export function SupplyOfferBoard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId: row.id,
-          volume: Number(takeVolumes[row.id] ?? row.volumeCap),
+          volume: Number(takeVolumes[row.id] ?? settleSinglePrecision(row.volumeCap)),
         }),
       });
       const data = await response.json();
@@ -336,7 +337,7 @@ export function SupplyOfferBoard({
                   )}
                   <p className="text-xs">
                     {t("terms", {
-                      volume: row.volumeCap.toLocaleString(),
+                      volume: settleSinglePrecision(row.volumeCap).toLocaleString(),
                       unit: COMMODITY_UNITS[row.commodity],
                       premium: Math.round(row.pricePremium * 100),
                     })}
@@ -360,7 +361,9 @@ export function SupplyOfferBoard({
                           min="0.000001"
                           max={row.volumeCap}
                           step="any"
-                          value={takeVolumes[row.id] ?? String(row.volumeCap)}
+                          value={
+                            takeVolumes[row.id] ?? String(settleSinglePrecision(row.volumeCap))
+                          }
                           onChange={(e) =>
                             setTakeVolumes((prev) => ({ ...prev, [row.id]: e.target.value }))
                           }

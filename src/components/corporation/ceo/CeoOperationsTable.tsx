@@ -41,6 +41,7 @@ import {
   signTone,
   useCorpMoney,
 } from "../dense/DenseKit";
+import { settleSinglePrecision } from "@/lib/utils/singlePrecision";
 import { BulkWageControl } from "./BulkWageControl";
 import BulkBuildCapacityDialog, {
   type BulkBuildRequestFn,
@@ -179,7 +180,7 @@ function OperationsRow({
   const [pendingPosture, setPendingPosture] = useState<Pending<number | null> | null>(null);
   const postureValue = shown(serverPosture, pendingPosture);
 
-  const serverWage = sector.wageLevel ?? 1;
+  const serverWage = settleSinglePrecision(sector.wageLevel ?? 1);
   const [wageDraft, setWageDraft] = useState<string | null>(null);
   const [pendingWage, setPendingWage] = useState<Pending<number> | null>(null);
   const wageValue = shown(serverWage, pendingWage);
@@ -431,7 +432,7 @@ function OperationsRow({
               type="number"
               min={WAGE_LEVEL_MIN}
               max={WAGE_LEVEL_MAX}
-              step={0.05}
+              step="any"
               aria-label={`Wage level, ${sector.stateName} ${sector.sectorLabel}`}
               value={wageDraft ?? wageValue.toFixed(2)}
               disabled={busy}
