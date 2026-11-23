@@ -648,7 +648,6 @@ export type PlantIdleCauseKey =
   | "disaster"
   | "policy"
   | "staffing"
-  | "bank"
   | "deposits"
   | "mothballed"
   | "other";
@@ -656,8 +655,6 @@ export type PlantIdleCauseKey =
 export interface PlantIdleCause {
   cause: PlantIdleCauseKey;
   units: number;
-  /** Configured branch share, before idle and mothball caps. Only for bank. */
-  capacityShare?: number;
   /** The input that cut the run, as a label. Only for held; absent means cash held it. */
   heldInput?: string;
 }

@@ -1,14 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { IDLE_CAUSE_FILL, idleCauseMeta, TONE_FILL } from "./plants";
 
-describe("bank capacity explanation", () => {
-  it("explains the configured branch share and its deposit ceiling benefit", () => {
-    const bank = idleCauseMeta("financial", 0.6).bank;
-    expect(bank?.label).toBe("Reserved for your bank network");
-    expect(bank.tone).toBe("info");
-    expect(bank.help).toContain("60%");
-    expect(bank.help).toContain("branch capacity share");
-    expect(bank.help).toContain("deposit ceiling");
+describe("bank charter", () => {
+  it("never shows financial capacity as reserved for a bank network", () => {
+    expect(Object.keys(idleCauseMeta("financial"))).not.toContain("bank");
   });
 });
 
@@ -44,7 +39,7 @@ describe("idle cause meter colors", () => {
   it("gives every idle cause a unique swatch so no two legend dots collide", () => {
     const entries = Object.entries(IDLE_CAUSE_FILL);
 
-    expect(entries).toHaveLength(14);
+    expect(entries).toHaveLength(13);
     const fills = new Set(entries.map(([, fill]) => fill));
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);
@@ -52,11 +47,11 @@ describe("idle cause meter colors", () => {
 
   it("says local-market outputs cannot sell into a shortage elsewhere (ticket 1700)", () => {
     expect(idleCauseMeta("manufacturing").demand.help).not.toMatch(/only in this state/);
-    expect(idleCauseMeta("construction", undefined, ["Construction Services"]).demand.help).toMatch(
+    expect(idleCauseMeta("construction", ["Construction Services"]).demand.help).toMatch(
       /Construction Services sells only in this state, so a shortage elsewhere does not raise demand here\.$/
     );
-    expect(
-      idleCauseMeta("construction", undefined, ["Freight", "Construction Services"]).demand.help
-    ).toMatch(/Freight and Construction Services sell only in this state/);
+    expect(idleCauseMeta("construction", ["Freight", "Construction Services"]).demand.help).toMatch(
+      /Freight and Construction Services sell only in this state/
+    );
   });
 });
