@@ -154,8 +154,9 @@ describe("OverviewTab", () => {
     renderOverview({
       corporation: { ...corporation, isPrivate: true, viewerIsControllingParentCeo: true },
     });
-    expect(screen.getByText("Share price")).toBeTruthy();
-    expect(screen.getByText("Market cap")).toBeTruthy();
+    expect(screen.queryByText("Share price")).toBeNull();
+    expect(screen.getByText("Valuation")).toBeTruthy();
+    expect(screen.queryByText("Market cap")).toBeNull();
     expect(screen.queryByText("Trade")).toBeNull();
     expect(screen.queryByText("Buy / sell")).toBeNull();
   });

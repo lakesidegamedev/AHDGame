@@ -225,6 +225,21 @@ describe("SupplyAgreementsSection delivery outcome", () => {
     expect(screen.getByText("Damage ceiling (per day)")).toBeTruthy();
   });
 
+  it("states what each side pays or receives on the market and under the contract", async () => {
+    render(<SupplyAgreementsSection corpId="supplier" />);
+
+    await waitFor(() => expect(screen.getByText("As supplier")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Propose agreement" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "steel" } });
+
+    expect(screen.getByTestId("contract-buyer-side").textContent).toMatch(
+      /As buyer you pay about A1060 per .* on the market\. This contract costs A1060\./
+    );
+    expect(screen.getByTestId("contract-seller-side").textContent).toMatch(
+      /As seller you receive about A1700 per .* selling on the market\. This contract pays about A1700/
+    );
+  });
+
   it("asks for the fulfilling state when freight is selected", async () => {
     render(<SupplyAgreementsSection corpId="supplier" />);
 

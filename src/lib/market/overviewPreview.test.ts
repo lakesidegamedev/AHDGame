@@ -51,3 +51,17 @@ describe("atPriceCap", () => {
     expect(atPriceCap({ globalPrice: 200 })).toBe(false);
   });
 });
+
+describe("priceCapBasisText", () => {
+  it("reads the multiple and index from the stored basis", async () => {
+    const { priceCapBasisText, resolvePriceCapBasis } = await import("./priceCapBasis");
+    expect(priceCapBasisText({ multiplier: 3, nominalIndex: 1.2 })).toBe(
+      "3x the inflation-adjusted base (base x 1.20 = +260% vs original base)"
+    );
+    expect(priceCapBasisText(null)).toBeNull();
+    expect(
+      resolvePriceCapBasis({ producerPriceMaxMultiplier: 2.5, commodityNominalPriceIndex: 1.1 })
+    ).toEqual({ multiplier: 2.5, nominalIndex: 1.1 });
+    expect(resolvePriceCapBasis(null).nominalIndex).toBe(1);
+  });
+});

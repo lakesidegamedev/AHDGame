@@ -32,6 +32,7 @@ import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices
 import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { fundedPriceCeiling } from "@/lib/market/fundedPriceClamp";
+import { resolvePriceCapBasis } from "@/lib/market/priceCapBasis";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -136,6 +137,7 @@ export async function GET(request: Request) {
         ? nominalIndex
         : 1;
     const pricePace = { maxMultiplier: configuredCeiling };
+    const priceCapBasis = resolvePriceCapBasis(ceilingConfig);
 
     // Filter state data by exchange if specified
     const exchangeCountry = exchange ? getCountryForExchange(exchange) : undefined;
@@ -218,6 +220,7 @@ export async function GET(request: Request) {
         basePrice,
         priceCeiling:
           Math.round(fundedPriceCeiling(basePrice * priceNominalIndex, pricePace) * 100) / 100,
+        priceCapBasis,
         globalPrice: data?.globalPrice ?? basePrice,
         globalSupply: data?.globalSupply ?? 0,
         globalDemand: data?.globalDemand ?? 0,

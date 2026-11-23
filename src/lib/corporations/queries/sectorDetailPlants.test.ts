@@ -955,6 +955,79 @@ describe("sector investment quote context", () => {
     });
     expect(result.investment).toBeUndefined();
   });
+  it("builds the forecast inputs for a small sector founded after the world ramp ended", () => {
+    // A funded sector carries a booked P&L with no cost breakdown and was
+    // founded recently; the world's market support ramp ended long before.
+    const result = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      currentTurn: 166,
+      eraUnitScale: 1,
+      worldGovernorAnchorTurn: 1,
+      money: { ...BASE_ARGS.money, nameplateRevenueAnchor: 1000 },
+      sector: sectorFixture({
+        capitalStock: 1.3258,
+        operatingCapacityUnits: 1.3258,
+        producedUnits: 1.3902,
+        soldUnits: 1.4452,
+        effectiveProfitMargin: 50,
+        plantsStartTurn: 160,
+        clearingStartTurn: undefined,
+        plantsPnl: {
+          turn: 166,
+          source: "funded",
+          revenue: 85861.4,
+          profit: 43148.1,
+          totalCost: 42713.3,
+          compliance: 0,
+          stockAddedAtCost: 0,
+          transitionSupport: 0,
+        } as unknown as NonNullable<CorporateSector["plantsPnl"]>,
+      }),
+      investment: { overheadDailyAnchor: 10, taxRatePercent: 25 },
+    });
+    expect(result.investment).toBeDefined();
+    expect(result.investmentWithheld).toBeUndefined();
+  });
+
+  it("names the missing input when the forecast is withheld", () => {
+    const base = {
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      money: { ...BASE_ARGS.money, nameplateRevenueAnchor: 1000 },
+      investment: { overheadDailyAnchor: 10, taxRatePercent: 25 },
+    };
+    const pnl = { turn: BASE_ARGS.currentTurn } as NonNullable<CorporateSector["plantsPnl"]>;
+    const common = { plantsStartTurn: 1, clearingStartTurn: 1, effectiveProfitMargin: 35 };
+    expect(
+      buildSectorPlantsSection({
+        ...base,
+        sector: sectorFixture({ ...common, plantsPnl: { turn: 1 } as typeof pnl }),
+      }).investmentWithheld
+    ).toBe("stale");
+    expect(
+      buildSectorPlantsSection({
+        ...base,
+        sector: sectorFixture({ ...common, plantsPnl: pnl, transitionFromStrategyId: "x" }),
+      }).investmentWithheld
+    ).toBe("transition");
+    expect(
+      buildSectorPlantsSection({
+        ...base,
+        sector: sectorFixture({
+          ...common,
+          effectiveProfitMargin: undefined,
+          plantsPnl: pnl,
+        }),
+      }).investmentWithheld
+    ).toBe("upkeepBasis");
+    expect(
+      buildSectorPlantsSection({
+        ...base,
+        sector: sectorFixture({ ...common, plantsStartTurn: 90, plantsPnl: pnl }),
+      }).investmentWithheld
+    ).toBe("ramp");
+  });
+
   it("withholds investment estimates when the operating figures are stale", () => {
     const result = buildSectorPlantsSection({
       ...BASE_ARGS,

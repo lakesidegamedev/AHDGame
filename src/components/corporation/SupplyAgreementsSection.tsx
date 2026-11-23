@@ -22,7 +22,10 @@ import { useToast } from "@/contexts/ToastContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { apiErrorText } from "@/lib/errors/catalog";
-import { contractMoney } from "@/lib/corporations/supplyExchange/rules/contractPricing";
+import {
+  contractMoney,
+  contractSides,
+} from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import {
   negotiateDraftFromSearch,
   type NegotiateDraft,
@@ -1127,6 +1130,11 @@ export default function SupplyAgreementsSection({
                 durationTurns: durationTurns === "" ? null : Number(durationTurns),
               });
               const unit = COMMODITY_UNITS[commodity];
+              const sides = contractSides({
+                referenceUnitPrice: reference,
+                marketUnitPrice: contractMarketPrices[commodity],
+                pricePremium: premiumPct / 100,
+              });
               return (
                 <ul className="space-y-0.5 rounded-lg border border-card-border bg-card-elevated p-2 text-[11px] text-muted">
                   <li>
@@ -1154,6 +1162,20 @@ export default function SupplyAgreementsSection({
                   <li>
                     {t("negotiation.moneyUnitPrice", {
                       price: formatAnchor(money.unitPrice),
+                      unit,
+                    })}
+                  </li>
+                  <li data-testid="contract-buyer-side">
+                    {t("negotiation.moneyBuyerSide", {
+                      market: formatAnchor(sides.buyerMarketUnitPrice),
+                      contract: formatAnchor(sides.buyerContractUnitPrice),
+                      unit,
+                    })}
+                  </li>
+                  <li data-testid="contract-seller-side">
+                    {t("negotiation.moneySellerSide", {
+                      market: formatAnchor(sides.sellerMarketUnitPrice),
+                      contract: formatAnchor(sides.sellerContractUnitPrice),
                       unit,
                     })}
                   </li>

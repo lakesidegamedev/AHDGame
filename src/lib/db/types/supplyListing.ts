@@ -1,6 +1,12 @@
 import type { ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 /**
+ * How a computer-run listing's quantity was sized: a share of the seller's
+ * spare contractable capacity, or the seller's total unmet output (one figure
+ * shared by every input it buys).
+ */
+export type SupplyListingSizingBasis = "spareCapacity" | "unmetOutput";
+/**
  * Standing offer. Posting is the publisher's consent: a taker who passes the
  * contract guards forms an active agreement for any volume up to what is left.
  */
@@ -18,6 +24,8 @@ export interface SupplyListing {
   stateId?: string;
   volumeCap: number;
   pricePremium: number;
+  /** Set on AI-posted listings. */
+  sizingBasis?: SupplyListingSizingBasis;
   durationTurns?: number;
   expiresAtTurn: number;
   updatedAt: Date;
@@ -44,6 +52,8 @@ export interface SupplyListingView {
   stateId?: string;
   volumeCap: number;
   pricePremium: number;
+  /** What a computer-run offer's quantity is sized from; absent on player offers. */
+  sizingBasis?: SupplyListingSizingBasis;
   durationTurns?: number;
   expiresAtTurn: number;
   /** Why the viewing corporation's plants could never receive this offer, when they could not. */

@@ -17,7 +17,7 @@ import type {
   CorporationDetail,
   Financials,
 } from "../CorporationPageTypes";
-import { recordedRevenueSplit, revenueSplit } from "./keyStatisticsModel";
+import { perShareFigure, recordedRevenueSplit, revenueSplit } from "./keyStatisticsModel";
 
 export interface KeyStatisticsProps {
   corporation: CorporationDetail;
@@ -124,8 +124,17 @@ export function KeyStatistics({
   const floatPct =
     corporation.totalShares > 0 ? (corporation.publicFloat / corporation.totalShares) * 100 : null;
   const bookValue = balanceSheet?.equity.bookValue ?? null;
+  const isPrivate = corporation.isPrivate === true;
   const priceToBook =
-    bookValue != null && bookValue > 0 ? corporation.marketCapitalization / bookValue : null;
+    !isPrivate && bookValue != null && bookValue > 0
+      ? corporation.marketCapitalization / bookValue
+      : null;
+  const perShare = perShareFigure({
+    isPrivate,
+    sharePrice: corporation.sharePrice,
+    bookValue,
+    totalShares: corporation.totalShares,
+  });
 
   const recorded = financials.lastTurnReconciliation?.statement ?? null;
   const recordedTurn = financials.lastTurnReconciliation?.turn;
@@ -157,11 +166,11 @@ export function KeyStatistics({
         lead={canSeeMarket ? fmt(corporation.marketCapitalization) : null}
         leadNote={
           canSeeMarket
-            ? `Market cap${priceToBook != null ? `, ${priceToBook.toFixed(2)} times book` : ""}`
+            ? `${isPrivate ? "Valuation" : "Market cap"}${priceToBook != null ? `, ${priceToBook.toFixed(2)} times book` : ""}`
             : undefined
         }
         chart={
-          canSeeMarket && bookValue != null && bookValue > 0 ? (
+          canSeeMarket && !isPrivate && bookValue != null && bookValue > 0 ? (
             <CompareBars
               label={`Market cap ${fmt(corporation.marketCapitalization)} against book value ${est(fmt(bookValue))}`}
               rows={[
@@ -185,10 +194,11 @@ export function KeyStatistics({
         }
       >
         <KVList>
-          {canSeeMarket && (
+          {canSeeMarket && perShare.amount != null && (
             <KVRow
-              label="Share price"
-              value={fmtPrice(corporation.sharePrice)}
+              label={perShare.label}
+              title={perShare.title}
+              value={isPrivate ? est(fmtPrice(perShare.amount)) : fmtPrice(perShare.amount)}
               action={onTrade ? <RowLink onClick={onTrade}>Trade</RowLink> : undefined}
             />
           )}

@@ -118,6 +118,23 @@ export function formatSharePrice(price: number, symbol = "$"): string {
 }
 
 /**
+ * Format a per-share rate (liquidation payout, buyout offer) with at least four
+ * significant digits, so $0.7005 is not shown as $1. Two decimals minimum,
+ * trailing zeros trimmed back to two, capped at 8 decimals.
+ */
+export function formatSharePriceFine(price: number, symbol = "$"): string {
+  if (!Number.isFinite(price)) return `${symbol}—`;
+  if (price === 0) return `${symbol}0.00`;
+  const magnitude = Math.floor(Math.log10(Math.abs(price)));
+  const decimals = Math.min(8, Math.max(2, 3 - magnitude));
+  const fixed = Math.abs(price).toFixed(decimals);
+  const [whole = "0", frac = ""] = fixed.split(".");
+  const trimmed = frac.replace(/0+$/, "").padEnd(2, "0");
+  const sign = price < 0 ? "-" : "";
+  return `${sign}${symbol}${Number(whole).toLocaleString("en-US")}.${trimmed}`;
+}
+
+/**
  * Format a per-share price on order books and limit orders (fixed four decimal places).
  * @param symbol - Currency symbol to prefix (defaults to "$")
  */

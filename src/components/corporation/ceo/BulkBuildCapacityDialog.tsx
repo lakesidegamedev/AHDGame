@@ -98,6 +98,8 @@ const FORECAST_REASON: Record<ForecastBlocker | "unavailable", string> = {
   notRun: "No forecast yet: nothing produced last turn",
   mothballed: "No forecast while mothballed",
   ramping: "No forecast yet: still in its market support ramp",
+  transition: "No forecast yet: changing strategy",
+  upkeepBasis: "No forecast yet: standing running cost not recorded",
   other: "No forecast yet: last turn's results are incomplete",
   unavailable: "Forecast unavailable",
 };

@@ -204,6 +204,17 @@ export default function FinancialsTab({
         />
       </div>
 
+      {fogged && (
+        <p
+          role="note"
+          data-testid="fog-estimate-label"
+          className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-medium text-warning"
+        >
+          Estimate from the last quarterly report, within about{" "}
+          {Math.round((financialFogOfWar?.maxDeviation ?? 0.1) * 100)}%. Not the live books.
+        </p>
+      )}
+
       {!fogged && financials.arrears && (
         <DenseSection
           title={tArrears("title")}
@@ -291,7 +302,7 @@ export default function FinancialsTab({
       {view === "income" && (
         <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <DenseSection
-            title="Income statement"
+            title={fogged ? "Income statement (estimate)" : "Income statement"}
             meta={MONEY_PERIOD_PER_LABEL[periodView]}
             actions={
               showCountries ? (
@@ -757,7 +768,7 @@ export default function FinancialsTab({
       {view === "balance" && balanceSheet && (
         <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <DenseSection
-            title="Balance sheet"
+            title={fogged ? "Balance sheet (estimate)" : "Balance sheet"}
             actions={
               !corporation.countryOwnerId ? (
                 <Link

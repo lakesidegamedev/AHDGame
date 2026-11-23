@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { ANCHOR_RULE_RATE_NOTE, anchorRuleText } from "@/lib/bonds/anchorRuleText";
 import { bondIssueIncomePreview } from "@/lib/bonds/bondIssueIncomePreview";
 import { floorToBondUnits } from "@/lib/bonds/rules/issuanceUnits";
 import {
@@ -454,12 +455,15 @@ export default function BondsTab({
                     </p>
                   ) : parsedFaceValue < effectiveMin ? (
                     <p className="text-xs text-muted">
-                      Minimum <span className="font-mono tabular-nums">{both(effectiveMin)}</span>,
-                      in whole units, each with a face value of{" "}
+                      Minimum{" "}
+                      <span className="font-mono tabular-nums">
+                        {anchorRuleText(effectiveMin, both(effectiveMin))}
+                      </span>
+                      , in whole units, each with a face value of{" "}
                       <span className="font-mono tabular-nums">
                         {fmtMoney(BOND_UNIT_FACE_VALUE)}
                       </span>
-                      .
+                      . The converted amount moves with the exchange rate.
                     </p>
                   ) : null}
 
@@ -508,7 +512,8 @@ export default function BondsTab({
                     <KVRow
                       label="Per-issue cap"
                       value={formatFull(perIssuanceCap)}
-                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${formatFull(MIN_BOND_ISSUANCE_PER_ISSUE)}. Debt to equity and what creditors could recover can set a lower limit, shown above.`}
+                      hint={`Floor ${anchorRuleText(MIN_BOND_ISSUANCE_PER_ISSUE, formatAmount(MIN_BOND_ISSUANCE_PER_ISSUE))}`}
+                      title={`${Math.round(MAX_BOND_ISSUANCE_REVENUE_FRACTION * 100)}% of annual revenue, but never less than ${anchorRuleText(MIN_BOND_ISSUANCE_PER_ISSUE, formatAmount(MIN_BOND_ISSUANCE_PER_ISSUE))}. ${ANCHOR_RULE_RATE_NOTE} Debt to equity and what creditors could recover can set a lower limit, shown above.`}
                     />
                     {maxIssuableDebt !== null && (
                       <KVRow

@@ -18,7 +18,7 @@ import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bond
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
-import { liveChangeVsPreviousClose } from "@/lib/stockExchange/quoteChange";
+import { corpNavMarketFields, withoutSharePrice } from "./corpNavMarket";
 import { normalizeStatusBarLayout } from "@/lib/statusBar/clientStatusRequest";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
@@ -144,6 +144,7 @@ export async function handleClientStatus(request: Request) {
                   logoUrl: 1,
                   tickerSymbol: 1,
                   sharePrice: 1,
+                  isPrivate: 1,
                   liquidCapital: 1,
                   liquidCurrencyCode: 1,
                   marketingStrength: 1,
@@ -166,6 +167,7 @@ export async function handleClientStatus(request: Request) {
                 logoUrl?: string;
                 tickerSymbol?: string;
                 sharePrice: number;
+                isPrivate?: boolean;
                 dividendRate: number;
                 totalShares: number;
                 liquidCurrencyCode?: string;
@@ -182,6 +184,7 @@ export async function handleClientStatus(request: Request) {
                 logoUrl: 1,
                 tickerSymbol: 1,
                 sharePrice: 1,
+                isPrivate: 1,
                 dividendRate: 1,
                 totalShares: 1,
                 liquidCurrencyCode: 1,
@@ -248,7 +251,7 @@ export async function handleClientStatus(request: Request) {
             ownedShares: holding?.shares ?? 0,
           };
         })
-        .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0)
+        .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0 && !corp.isPrivate)
         .sort((a, b) => b.ownedShares - a.ownedShares)
         .slice(0, 5);
 
@@ -257,8 +260,9 @@ export async function handleClientStatus(request: Request) {
         name: string;
         logoUrl?: string;
         tickerSymbol?: string;
-        sharePrice: number;
-        priceChange1h: number;
+        isPrivate?: boolean;
+        sharePrice?: number;
+        priceChange1h?: number;
         liquidCapital: number;
         liquidCurrencyCode?: string;
         marketingStrength: number;
@@ -266,7 +270,7 @@ export async function handleClientStatus(request: Request) {
         marketCap?: number | null;
         history: {
           turn: number;
-          sharePrice: number;
+          sharePrice?: number;
           marketingStrength: number;
           liquidCapital: number;
           marketCap?: number;
@@ -298,22 +302,20 @@ export async function handleClientStatus(request: Request) {
             ])
           : [[]];
         historyDocs.reverse();
-        const priceChange1h = includeCorpMarket
-          ? liveChangeVsPreviousClose(ceoCorp.sharePrice, historyDocs)
-          : 0;
         corpNav = {
           sequentialId: ceoCorp.sequentialId,
           name: ceoCorp.name,
           logoUrl: ceoCorp.logoUrl,
           tickerSymbol: ceoCorp.tickerSymbol,
-          sharePrice: ceoCorp.sharePrice,
-          priceChange1h,
+          ...corpNavMarketFields(ceoCorp, historyDocs, includeCorpMarket),
           liquidCapital: ceoCorp.liquidCapital,
           liquidCurrencyCode: ceoCorp.liquidCurrencyCode,
           marketingStrength: roundMarketingStrength(ceoCorp.marketingStrength ?? 0),
           ceoSalary: ceoCorp.ceoSalary ?? 0,
-          ...(includeWidgetExtras ? { marketCap: corpMarketCap(ceoCorp) } : {}),
-          history: historyDocs,
+          ...(includeWidgetExtras && !ceoCorp.isPrivate
+            ? { marketCap: corpMarketCap(ceoCorp) }
+            : {}),
+          history: ceoCorp.isPrivate ? historyDocs.map(withoutSharePrice) : historyDocs,
         };
       }
 
@@ -466,6 +468,7 @@ export async function handleClientStatus(request: Request) {
                 logoUrl: 1,
                 tickerSymbol: 1,
                 sharePrice: 1,
+                isPrivate: 1,
                 liquidCapital: 1,
                 liquidCurrencyCode: 1,
                 marketingStrength: 1,
@@ -490,6 +493,7 @@ export async function handleClientStatus(request: Request) {
           logoUrl?: string;
           tickerSymbol?: string;
           sharePrice: number;
+          isPrivate?: boolean;
           dividendRate: number;
           totalShares: number;
           liquidCurrencyCode?: string;
@@ -502,6 +506,7 @@ export async function handleClientStatus(request: Request) {
           logoUrl: 1,
           tickerSymbol: 1,
           sharePrice: 1,
+          isPrivate: 1,
           dividendRate: 1,
           totalShares: 1,
           liquidCurrencyCode: 1,
@@ -634,7 +639,7 @@ export async function handleClientStatus(request: Request) {
           ownedShares: holding?.shares ?? 0,
         };
       })
-      .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0)
+      .filter((corp) => corp.sequentialId != null && corp.ownedShares > 0 && !corp.isPrivate)
       .sort((a, b) => b.ownedShares - a.ownedShares)
       .slice(0, 5);
 
@@ -644,8 +649,9 @@ export async function handleClientStatus(request: Request) {
       name: string;
       logoUrl?: string;
       tickerSymbol?: string;
-      sharePrice: number;
-      priceChange1h: number;
+      isPrivate?: boolean;
+      sharePrice?: number;
+      priceChange1h?: number;
       liquidCapital: number;
       liquidCurrencyCode?: string;
       marketingStrength: number;
@@ -653,7 +659,7 @@ export async function handleClientStatus(request: Request) {
       marketCap?: number | null;
       history: {
         turn: number;
-        sharePrice: number;
+        sharePrice?: number;
         marketingStrength: number;
         liquidCapital: number;
         marketCap?: number;
@@ -685,22 +691,18 @@ export async function handleClientStatus(request: Request) {
           ])
         : [[]];
       historyDocs.reverse();
-      const priceChange1h = includeCorpMarket
-        ? liveChangeVsPreviousClose(ceoCorp.sharePrice, historyDocs)
-        : 0;
       corpNav = {
         sequentialId: ceoCorp.sequentialId,
         name: ceoCorp.name,
         logoUrl: ceoCorp.logoUrl,
         tickerSymbol: ceoCorp.tickerSymbol,
-        sharePrice: ceoCorp.sharePrice,
-        priceChange1h,
+        ...corpNavMarketFields(ceoCorp, historyDocs, includeCorpMarket),
         liquidCapital: ceoCorp.liquidCapital,
         liquidCurrencyCode: ceoCorp.liquidCurrencyCode,
         marketingStrength: roundMarketingStrength(ceoCorp.marketingStrength ?? 0),
         ceoSalary: ceoCorp.ceoSalary ?? 0,
-        ...(includeWidgetExtras ? { marketCap: corpMarketCap(ceoCorp) } : {}),
-        history: historyDocs,
+        ...(includeWidgetExtras && !ceoCorp.isPrivate ? { marketCap: corpMarketCap(ceoCorp) } : {}),
+        history: ceoCorp.isPrivate ? historyDocs.map(withoutSharePrice) : historyDocs,
       };
     }
 

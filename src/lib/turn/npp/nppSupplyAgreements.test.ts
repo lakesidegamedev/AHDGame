@@ -838,6 +838,7 @@ describe("decideAiSupplyListings", () => {
     expect(sell!.volumeCap).toBeLessThanOrEqual(cap * CONTRACT_OVERCOMMIT_TOLERANCE);
     expect(sell!.pricePremium).toBeCloseTo(0.05, 5);
     expect(aiListingId(sell!)).toBe("seller1:ai:sell:iron");
+    expect(sell!.sizingBasis).toBe("spareCapacity");
   });
 
   it("nets contracted volume out of the sell listing", () => {

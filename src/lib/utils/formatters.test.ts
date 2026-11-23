@@ -15,6 +15,7 @@ import {
   formatPopulation,
   formatSharePrice,
   formatSharePriceOrder,
+  formatSharePriceFine,
   formatEffectiveCouponPct,
   formatRealTimeCountdown,
   formatTimeRemaining,
@@ -664,5 +665,15 @@ describe("formatSignedPercent (ticket 1701)", () => {
     expect(formatSignedPercent(110067.17852128079)).toBe("+110,067.2%");
     expect(formatSignedPercent(-12.04)).toBe("-12.0%");
     expect(formatSignedPercent(0)).toBe("+0.0%");
+  });
+});
+
+describe("formatSharePriceFine", () => {
+  it("keeps four significant digits on a per-share rate", () => {
+    expect(formatSharePriceFine(0.7005)).toBe("$0.7005");
+    expect(formatSharePriceFine(12.3)).toBe("$12.30");
+    expect(formatSharePriceFine(1234.5678)).toBe("$1,234.57");
+    expect(formatSharePriceFine(0.00123456)).toBe("$0.001235");
+    expect(formatSharePriceFine(0)).toBe("$0.00");
   });
 });
