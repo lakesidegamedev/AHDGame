@@ -91,7 +91,7 @@ function GoPublicCard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const { formatAmount, formatPrice, toInternalFrom } = useCurrency();
+  const { formatAmount, formatPriceFine, toInternalFrom } = useCurrency();
   const liquidCode = corporation.liquidCurrencyCode as CurrencyCode | undefined;
   const toInternal = (amount: number) => (liquidCode ? toInternalFrom(amount, liquidCode) : amount);
 
@@ -170,7 +170,7 @@ function GoPublicCard({
       <div className="space-y-2">
         <p className="text-xs text-muted">
           Issue new shares to the public float at the current price (
-          {formatPrice(toInternal(corporation.sharePrice), liquidCode)}/share). The treasury
+          {formatPriceFine(toInternal(corporation.sharePrice), liquidCode)}/share). The treasury
           receives cash as those shares are bought. Your{" "}
           {corporation.totalShares.toLocaleString("en-US")} founder shares stay; your ownership
           share falls as new shares are issued.
@@ -347,13 +347,13 @@ function PrivatizeCard({
   const [success, setSuccess] = useState("");
   const [quote, setQuote] = useState<PrivatizeQuote | null>(null);
   const [quoteFailed, setQuoteFailed] = useState(false);
-  const { formatAmount, formatPrice, toInternalFrom } = useCurrency();
+  const { formatAmount, formatPriceFine, toInternalFrom } = useCurrency();
   const code = corporation.liquidCurrencyCode as CurrencyCode | undefined;
   // Prices and costs here are in the corp's currency; format through the anchor.
   const fmtLocal = (local: number) =>
     code ? formatAmount(toInternalFrom(local, code), code) : formatAmount(local);
   const fmtLocalPrice = (local: number) =>
-    code ? formatPrice(toInternalFrom(local, code), code) : formatPrice(local);
+    code ? formatPriceFine(toInternalFrom(local, code), code) : formatPriceFine(local);
 
   const ceoShares = Math.round((ceoOwnershipPct / 100) * corporation.totalShares);
   const isFullOwner =
@@ -394,7 +394,7 @@ function PrivatizeCard({
       setSuccess(
         data.immediate
           ? "Corporation taken private."
-          : `Vote opened. Buyout price locked at ${fmtLocal(data.lockedBuyoutPrice)}/share.`
+          : `Vote opened. Buyout price locked at ${fmtLocalPrice(data.lockedBuyoutPrice)}/share.`
       );
       onRefresh();
     } catch {
