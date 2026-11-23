@@ -1,5 +1,6 @@
 "use client";
 
+import { ANCHOR_UNIT_NOTE } from "@/lib/currency/anchorUnitNote";
 import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -93,14 +94,16 @@ function ScoreBreakdownModal({
             ).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between py-1.5 text-sm">
                 <span className="text-muted">{label}</span>
-                <span className="font-mono font-medium text-foreground">
+                <span className="font-mono font-medium text-foreground" title={ANCHOR_UNIT_NOTE}>
                   {formatNetWorth(row.netWorthBreakdown[key])}
                 </span>
               </div>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-sm font-semibold">
               <span className="text-foreground">Total net worth</span>
-              <span className="font-mono text-foreground">{formatNetWorth(row.netWorth)}</span>
+              <span className="font-mono text-foreground" title={ANCHOR_UNIT_NOTE}>
+                {formatNetWorth(row.netWorth)}
+              </span>
             </div>
             <p className="mt-2 text-xs text-muted">
               Forex-normalized so amounts are comparable across countries. Reflects the balance at
@@ -284,6 +287,7 @@ export default function LegacyLeaderboardClient({
           onClick={() => setBreakdownRow(row)}
           className="group flex items-center gap-1 font-mono font-semibold text-foreground hover:text-primary"
           aria-label={`View ${isNetWorth ? "net worth" : "score"} breakdown for ${row.displayName}`}
+          title={isNetWorth ? ANCHOR_UNIT_NOTE : undefined}
         >
           {isNetWorth ? formatNetWorth(row.netWorth) : formatCompactNumber(row.score)}
           <Info className="h-3.5 w-3.5 text-muted group-hover:text-primary" aria-hidden="true" />
