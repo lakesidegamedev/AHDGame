@@ -45,3 +45,14 @@ and financial ledgers are unchanged.
 The recorded pre-national-effects performance average is stored explicitly.
 Breakdowns add a floor/ceiling adjustment when necessary instead of reconstructing
 a fictitious regional average from an already-clamped rating.
+
+Regional approval records use country-qualified storage keys and retain a separate
+stateId. The next country snapshot rekeys legacy records inside the same transaction,
+preserving their history, decision adjustments and crisis receipts. Readers accept
+legacy keys until then. Ambiguous duplicate histories fail closed rather than
+silently discarding either record.
+
+Immediate decisions use the same positive-cap headroom as snapshots. Regional
+smoothing advances the underlying performance score independently of decisions,
+so offsetting decisions remain reversible across snapshots at either bound.
+Display-only cap, smoothing and bound lines do not become authored scoring inputs.

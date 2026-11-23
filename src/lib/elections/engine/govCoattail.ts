@@ -1,25 +1,8 @@
 import type { Db } from "mongodb";
-import { findMergedRegionMetrics, findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameState } from "@/lib/db/types";
-import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
-import { resolveGameYear } from "@/lib/era/era";
 import { getRegionalExecutive } from "@/lib/states/regionalExecutive";
-import {
-  BASE_APPROVAL,
-  calculateStateApproval,
-  computeNationalAveragesFromMetrics,
-  loadElectorateGroups,
-  weightingFor,
-} from "@/lib/utils/governmentApproval";
-import {
-  isPoliticalApprovalCountry,
-  loadPoliticalApprovalBases,
-} from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { getRegionalApprovalData } from "@/lib/states/approval/getRegionalApprovalData";
 import { approvalCoattailMultiplier, coattailMultiplierMapToPct } from "./coattailMagnitude";
-import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
-import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 /**
  * A down-ballot general qualifies for the governor coattail when:
@@ -92,15 +75,7 @@ export function govModifierToPct(modifier: Map<string, number>): Record<string, 
   return coattailMultiplierMapToPct(modifier);
 }
 
-/**
- * Resolve the sitting regional executive's party and their state's approval.
- * Returns null when the office is vacant / has no party, or the state has no
- * metrics. Approval uses the base computation (state metrics vs national
- * averages); State-of-the-State address bumps are a future refinement.
- *
- * Shared by the turn engine (→ `buildGovModifierByParty`) and the election
- * display (→ `govModifierToPct`) so both see the same magnitude.
- */
+/** Use the same snapshot or complete live fallback as the regional approval page. */
 export async function resolveGovExecutiveApproval(
   db: Db,
   countryId: CountryId,
@@ -109,50 +84,6 @@ export async function resolveGovExecutiveApproval(
   const exec = await getRegionalExecutive(db, countryId, stateId);
   if (!exec?.partyId) return null;
 
-  // Prefer the stored per-turn snapshot, damped at APPROVAL_MAX_STEP_PER_TURN points/turn so coattail magnitudes glide instead of jumping. Falls back to live computation when no snapshot exists yet (fresh seed).
-  const snapshot = await stateApprovalHistoryCollection(db).findOne(
-    { _id: stateId.toUpperCase(), countryId },
-    { projection: { approvalRating: 1 } }
-  );
-  if (snapshot && Number.isFinite(snapshot.approvalRating)) {
-    return { partyId: exec.partyId, approval: snapshot.approvalRating };
-  }
-
-  // SP5: merged two-store views.
-  const stateMetrics = await findMergedRegionMetrics(db, {
-    _id: stateId.toUpperCase(),
-    countryId,
-  });
-  if (!stateMetrics) return null;
-
-  const [allMetrics, groupsByState, gameStateDoc] = await Promise.all([
-    findMergedRegionMetricsMany(db, { countryId }),
-    loadElectorateGroups(db, { countryId, _id: stateId.toUpperCase() }),
-    gameStateCollection(db).findOne({ _id: "current" }),
-  ]);
-  const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
-  const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
-  // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
-  // SP4: playable-country live fallback reads the hybrid political base.
-  let metricModifiers;
-  let baseOverride: number | undefined;
-  if (isPoliticalApprovalCountry(countryId, true)) {
-    const bases = await loadPoliticalApprovalBases(db, countryId);
-    baseOverride = bases?.byRegion.get(stateId.toUpperCase()) ?? BASE_APPROVAL;
-    metricModifiers = bases?.modifiersByRegion?.get(stateId.toUpperCase());
-  }
-  // P6d: electorate-weighted, matching the stored/displayed approval.
-  const approval = calculateStateApproval(
-    stateMetrics,
-    nationalAverages,
-    [],
-    weightingFor(groupsByState, countryId, stateId.toUpperCase()),
-    preset,
-    year,
-    baseOverride,
-    metricModifiers
-  );
-
-  return { partyId: exec.partyId, approval };
+  const data = await getRegionalApprovalData(db, countryId, stateId.toUpperCase());
+  return data ? { partyId: exec.partyId, approval: data.approval } : null;
 }

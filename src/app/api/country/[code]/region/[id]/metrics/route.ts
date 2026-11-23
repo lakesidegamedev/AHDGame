@@ -1,3 +1,4 @@
+import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 import { getRegionalApprovalData } from "@/lib/states/approval/getRegionalApprovalData";
 import { NextResponse } from "next/server";
 import { findMergedRegionMetrics, findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
@@ -81,7 +82,9 @@ export async function GET(
       await Promise.all([
         nationalDocId ? findMergedRegionMetrics(db, { _id: nationalDocId }) : Promise.resolve(null),
         isNational ? Promise.resolve({}) : computeStateTickRates(db, stateId, resolvedCountryId),
-        stateApprovalHistoryCollection(db).findOne({ _id: stateId }),
+        stateApprovalHistoryCollection(db).findOne(
+          regionalApprovalFilter(resolvedCountryId, stateId)
+        ),
         gameStateCollection(db).findOne({ _id: "current" }),
         findMergedRegionMetricsMany(db, { countryId: resolvedCountryId }),
       ]);

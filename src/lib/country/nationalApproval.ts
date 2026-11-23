@@ -15,6 +15,7 @@ import {
 } from "@/lib/country/recomputeNationalApproval";
 import {
   isPoliticalApprovalCountry,
+  loadPoliticalApprovalBases,
   type PoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import type { CountryId } from "@/lib/constants/countries";
@@ -88,13 +89,17 @@ export async function loadNationalApproval(
     approvalDoc?.approvalRating == null ||
     approvalDoc.approvalBase == null ||
     approvalDoc.activeRegionalModifiers == null;
+  const effectiveBases =
+    needsLive && isPoliticalApprovalCountry(countryId, true) && bases === undefined
+      ? await loadPoliticalApprovalBases(db, countryId)
+      : bases;
   const live =
     needsLive && isPoliticalApprovalCountry(countryId, true)
-      ? await recomputePoliticalNationalApproval(db, countryId, inputs, bases)
+      ? await recomputePoliticalNationalApproval(db, countryId, inputs, effectiveBases)
       : null;
   const nationalModifiers = approvalDoc
     ? (approvalDoc.activeNationalModifiers ?? [])
-    : [PUBLIC_EXPECTATIONS_MODIFIER, ...(bases?.nationalModifiers ?? [])];
+    : [PUBLIC_EXPECTATIONS_MODIFIER, ...(effectiveBases?.nationalModifiers ?? [])];
   const modifiers = [
     ...(approvalDoc?.activeRegionalModifiers ??
       live?.regionalModifiers ??

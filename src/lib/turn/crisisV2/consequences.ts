@@ -1,3 +1,4 @@
+import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 import { approvalDeltaUpdate } from "@/lib/approval/rules/adjustment";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { createHash } from "node:crypto";
@@ -186,8 +187,7 @@ export async function settleCrisisConsequences(
       op: {
         updateOne: {
           filter: {
-            _id: stateId,
-            countryId: countryId as StateApprovalHistory["countryId"],
+            ...regionalApprovalFilter(countryId, stateId),
             appliedCrisisEffects: { $ne: witness },
           },
           update: witnessedApproval(delta, witness),

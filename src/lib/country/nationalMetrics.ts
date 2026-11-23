@@ -1,3 +1,4 @@
+import { approvalModifiersForDisplay } from "@/lib/approval/rules/adjustment";
 import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 import { getActiveAddressModifiersByState } from "@/lib/utils/governmentApproval";
 import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessApproval";
@@ -282,7 +283,9 @@ export async function loadNationalMetrics(
     : null;
   const storedApprovals = await stateApprovalHistoryCollection(db).find({ countryId }).toArray();
   const storedById = new Map(
-    storedApprovals.filter((doc) => doc.lastSnapshotTurn != null).map((doc) => [doc._id, doc])
+    storedApprovals
+      .filter((doc) => doc.lastSnapshotTurn != null)
+      .map((doc) => [doc.stateId ?? doc._id, doc])
   );
   const addresses = await getActiveAddressModifiersByState(
     db,
@@ -323,11 +326,19 @@ export async function loadNationalMetrics(
           baseOverride,
           politicalBases?.modifiersByRegion?.get(metrics._id)
         ),
-      modifiers: stored?.activeModifiers ?? [
-        ...(politicalBases?.modifiersByRegion?.get(metrics._id) ??
-          evaluateModifiers(flat, { preset, countryId, year })),
-        ...extras,
-      ],
+      modifiers:
+        stored?.activeModifiers && stored.baseApproval !== undefined
+          ? approvalModifiersForDisplay(
+              stored.baseApproval,
+              stored.approvalRawRating ?? stored.approvalRating,
+              stored.approvalRating,
+              stored.activeModifiers
+            )
+          : [
+              ...(politicalBases?.modifiersByRegion?.get(metrics._id) ??
+                evaluateModifiers(flat, { preset, countryId, year })),
+              ...extras,
+            ],
       population: state.population,
     });
   }

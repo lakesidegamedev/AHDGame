@@ -176,10 +176,10 @@ describe("atomic approval snapshots", () => {
     await snapshotApprovalHistory(db as unknown as Db, "US", 11);
     expect(db.collection("governmentApprovals").docs[0].stateAverage).toBe(70);
     expect(
-      db.collection("stateApprovalHistory").docs.find((row) => row._id === "TX")!.approvalRating
+      db.collection("stateApprovalHistory").docs.find((row) => row.stateId === "TX")!.approvalRating
     ).toBe(68);
     expect(
-      db.collection("stateApprovalHistory").docs.find((row) => row._id === "CT")!.approvalRating
+      db.collection("stateApprovalHistory").docs.find((row) => row.stateId === "CT")!.approvalRating
     ).toBe(70);
   });
   it.each([
@@ -216,5 +216,60 @@ describe("atomic approval snapshots", () => {
     expect(db.collection("governmentApprovals").docs[0].activeNationalModifiers).toContainEqual(
       expect.objectContaining({ id: "approval_events", effect: -7 })
     );
+  });
+  it("rekeys legacy histories and receipts atomically without touching another country", async () => {
+    const db = fixture();
+    const rows = db.collection("stateApprovalHistory");
+    rows.docs[0].appliedCrisisEffects = ["original-receipt"];
+    rows.docs[0].approvalAdjustment = -3;
+    rows.docs.push({
+      _id: "CN:TX",
+      stateId: "TX",
+      countryId: "CN",
+      approvalRating: 80,
+      history: [{ turn: 1 }],
+    });
+    const original = rows.bulkWrite.bind(rows);
+    const failure = vi.spyOn(rows, "bulkWrite").mockImplementationOnce(async (operations) => {
+      await original(operations.slice(0, 1));
+      throw new Error("interrupted rekey");
+    });
+    await expect(snapshotApprovalHistory(db as unknown as Db, "US", 11)).rejects.toThrow(
+      "interrupted rekey"
+    );
+    expect(rows.docs.find((row) => row._id === "TX")?.appliedCrisisEffects).toEqual([
+      "original-receipt",
+    ]);
+    failure.mockRestore();
+    await snapshotApprovalHistory(db as unknown as Db, "US", 11);
+    expect(rows.docs.find((row) => row._id === "US:TX")).toMatchObject({
+      approvalAdjustment: -3,
+      appliedCrisisEffects: ["original-receipt"],
+    });
+    expect(rows.docs.find((row) => row._id === "TX")).toBeUndefined();
+    expect(rows.docs.find((row) => row._id === "CN:TX")).toMatchObject({
+      approvalRating: 80,
+      history: [{ turn: 1 }],
+    });
+    const before = structuredClone(rows.docs);
+    await snapshotApprovalHistory(db as unknown as Db, "US", 11);
+    expect(rows.docs).toEqual(before);
+  });
+  it("creates a country's own record without inheriting another country's legacy record", async () => {
+    const db = fixture();
+    const rows = db.collection("stateApprovalHistory");
+    const foreign = rows.docs.find((row) => row._id === "TX")!;
+    Object.assign(foreign, {
+      countryId: "DE",
+      approvalAdjustment: -17,
+      appliedCrisisEffects: ["foreign"],
+    });
+    const before = structuredClone(foreign);
+    await snapshotApprovalHistory(db as unknown as Db, "US", 11);
+    expect(rows.docs.find((row) => row._id === "TX")).toEqual(before);
+    const own = rows.docs.find((row) => row._id === "US:TX")!;
+    expect(own.countryId).toBe("US");
+    expect(own.approvalAdjustment).toBeUndefined();
+    expect(own.appliedCrisisEffects).toBeUndefined();
   });
 });

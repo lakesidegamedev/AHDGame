@@ -11,7 +11,7 @@ import type { CountryId } from "../../constants/countries";
  * The `history` array keeps the last 20 turns for charting.
  */
 export interface StateApprovalHistory {
-  /** State ID — used as the document _id */
+  /** Country-qualified key; legacy unqualified keys are rekeyed by the next snapshot. */
   _id: string;
   stateId: string;
   countryId: CountryId;

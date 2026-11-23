@@ -1,14 +1,10 @@
+import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { isParliamentarySystem } from "@/lib/constants/countriesCore";
 import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countryOfficesClient";
-import type { ElectedOfficial, State } from "@/lib/db/types";
-import type { StateBudget } from "@/lib/db/types/budget";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
@@ -59,10 +55,9 @@ async function stateOffice(
   const parliamentary = isParliamentarySystem(getCountryConfig(countryId));
   const [state, approval, metrics, regionalBudget, stateBudget] = await Promise.all([
     statesCollection(db).findOne({ _id: stateId, countryId }, { projection: { name: 1 } }),
-    stateApprovalHistoryCollection(db).findOne(
-      { _id: stateId, countryId },
-      { projection: { approvalRating: 1 } }
-    ),
+    stateApprovalHistoryCollection(db).findOne(regionalApprovalFilter(countryId, stateId), {
+      projection: { approvalRating: 1 },
+    }),
     macroMetricsCollection<MetricsRow>(db).findOne(
       { _id: stateId, countryId },
       { projection: { "economic.gdpGrowth.value": 1, "economic.unemploymentRate.value": 1 } }
