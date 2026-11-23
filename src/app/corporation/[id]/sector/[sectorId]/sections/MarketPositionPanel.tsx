@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPercent } from "@/lib/ui/numbers";
 import type { BuildDemandRow } from "@/lib/corporations/rules/fundedBuildDemand";
 import { buildMarketReadout } from "@/lib/corporations/rules/buildMarketReadout";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";

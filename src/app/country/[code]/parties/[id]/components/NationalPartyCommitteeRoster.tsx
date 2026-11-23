@@ -49,7 +49,7 @@ export function NationalPartyCommitteeRoster({
               >
                 <OfficeholderPortrait
                   role={member ? getCommitteeMemberTitle(member.id, committeeTitles) : undefined}
-                  detail={showSeatNumbers || !member ? `Seat ${idx + 1}` : undefined}
+                  detail={showSeatNumbers ? `Seat ${idx + 1}` : undefined}
                   holder={
                     member
                       ? { ...member, href: `/character/${member.sequentialId ?? member.id}` }
