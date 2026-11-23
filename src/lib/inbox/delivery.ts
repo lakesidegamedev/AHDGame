@@ -39,6 +39,7 @@ export const DELIVERY_OF: Record<NotificationType, NotificationDelivery> = {
   primary_win: "push",
   primary_loss: "push",
   general_win: "push",
+  running_mate_invite: "push",
   general_loss: "push",
   impeachment_filed: "push",
   impeachment_convicted: "push",
