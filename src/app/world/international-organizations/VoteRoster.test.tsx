@@ -4,7 +4,7 @@
 import { afterEach, describe, it, expect } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { ObjectId } from "mongodb";
-import { VoteRoster } from "./VoteRoster";
+import { VoteRoster, summarizeVotes } from "./VoteRoster";
 import type { ProposalVoteRecord } from "@/lib/db/types/internationalOrganization";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -61,5 +61,19 @@ describe("VoteRoster", () => {
     expect(screen.getByText("United Kingdom")).toBeTruthy();
     expect(screen.getByText("no vote yet")).toBeTruthy();
     expect(screen.getByText(/vacant seat\) cannot vote/)).toBeTruthy();
+  });
+});
+
+describe("vote summary line", () => {
+  it("states the split and who the ballot still waits on", () => {
+    expect(summarizeVotes([{ vote: "yes" }, { vote: "yes" }, { vote: "no" }], ["Canada"])).toBe(
+      "2 yes, 1 no, 0 abstain, still waiting on Canada."
+    );
+    expect(summarizeVotes([{ vote: "yes" }], [])).toBe("1 yes, 0 no, 0 abstain.");
+  });
+
+  it("renders the line in the roster", () => {
+    render(<VoteRoster votes={[vote("US", "yes")]} expectedVoters={["US", "UK"]} />);
+    expect(screen.getByTestId("vote-roster-summary").textContent).toContain("still waiting on");
   });
 });

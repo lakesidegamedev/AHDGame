@@ -21,6 +21,17 @@ interface Props {
   expectedVoters?: string[];
 }
 
+/** One plain line that says how the ballot stands, so equal tallies on different ballots read as a coincidence of who voted. */
+export function summarizeVotes(
+  votes: ReadonlyArray<Pick<ProposalVoteRecord, "vote">>,
+  waitingNames: string[]
+): string {
+  const count = (kind: ProposalVoteRecord["vote"]) => votes.filter((v) => v.vote === kind).length;
+  const parts = [`${count("yes")} yes`, `${count("no")} no`, `${count("abstain")} abstain`];
+  const waiting = waitingNames.length > 0 ? `, still waiting on ${waitingNames.join(", ")}` : "";
+  return `${parts.join(", ")}${waiting}.`;
+}
+
 const VOTE_STYLE: Record<ProposalVoteRecord["vote"], string> = {
   yes: "border-success/40 bg-success/10 text-success",
   no: "border-error/40 bg-error/10 text-error",
@@ -54,6 +65,12 @@ export function VoteRoster({ votes: rawVotes, expectedVoters }: Props) {
   return (
     <div className="mt-3 space-y-1.5 border-t border-card-border pt-3">
       <p className="text-body-sm font-medium text-muted">Votes cast</p>
+      <p className="text-xs text-muted" data-testid="vote-roster-summary">
+        {summarizeVotes(
+          votes,
+          pendingVoters.map((c) => entityName(c))
+        )}
+      </p>
       {votes.length === 0 ? (
         <p className="text-xs italic text-muted">No votes cast yet.</p>
       ) : (
