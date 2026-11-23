@@ -11,7 +11,11 @@ import {
 } from "@/lib/approval/activeModifier";
 import { regionApprovalUrl } from "@/lib/urls";
 import { buildModifierExplanation, chipMargin } from "@/components/approval/modifierTitle";
-import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import {
+  computeRegionalConditionMargin,
+  sumRegionalConditionMargins,
+  REGIONAL_CONDITION_MARGIN_CAP,
+} from "@/lib/states/conditions/marginEffects";
 
 /** Overview shows the highest-impact drivers; the rest live on the full page. */
 const OVERVIEW_HEADLINE_MAX = 6;
@@ -210,6 +214,8 @@ export function RegionalConditionsCard({
       ? Math.round((approval - baseApproval) * 10) / 10
       : netModifierEffect(modifiers);
   const netMargin = computeRegionalConditionMargin(modifiers);
+  const rawMargin = sumRegionalConditionMargins(modifiers);
+  const marginCapped = rawMargin !== netMargin;
   const href = regionApprovalUrl(countryId, stateId);
   const showScore = approval != null;
   const { headline: topDrivers, remainder } = prioritizeModifiers(modifiers, {
@@ -269,6 +275,11 @@ export function RegionalConditionsCard({
               <div className={`mt-0.5 font-semibold tabular-nums ${toneClass(netMargin, "text")}`}>
                 {signed(netMargin, "pp")}
               </div>
+              {marginCapped && (
+                <div className="text-body-sm text-muted">
+                  from {signed(rawMargin, "pp")}, capped at {REGIONAL_CONDITION_MARGIN_CAP}
+                </div>
+              )}
             </div>
           </div>
         )}
