@@ -1749,6 +1749,7 @@ describe("spillover measurement tags", () => {
                   k !== "spilloverRequested" &&
                   k !== "spilloverRequestedUnits" &&
                   k !== "planning" &&
+                  k !== "soldTo" &&
                   k !== "cashChanges"
               )
               .map(([k, v]) => [k, untagged(v)])
@@ -2220,5 +2221,76 @@ describe("own-site deliveries credited to the valuation only", () => {
       8
     );
     expect(physical(after)).toEqual(physical(before));
+  });
+});
+
+describe("outside sales by buyer kind", () => {
+  const household = JSON.stringify(["country", "households", "US"]);
+  const government = JSON.stringify(["country", "publicBuyer", "US"]);
+  const run = () =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        ...accounts,
+        { id: household, cash: 1000 },
+        { id: government, cash: 1000 },
+        { id: "a1b2c3d4e5f6a1b2c3d4e5f6", cash: 1000 },
+      ],
+      producers: [
+        plant({
+          inputs: [],
+          outputs: [
+            {
+              commodity: "financial_services",
+              unitsPerOutput: 1,
+              book: "world",
+              policy: { kind: "manual", unitPrice: 3 },
+              referenceUnitPrice: 3,
+              storable: false,
+            },
+          ],
+        }),
+      ],
+      externalOrders: [
+        {
+          id: "h",
+          accountId: household,
+          commodity: "financial_services",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 5,
+        },
+        {
+          id: "g",
+          accountId: government,
+          commodity: "financial_services",
+          book: "world",
+          units: 20,
+          maximumUnitPrice: 5,
+        },
+        {
+          id: "c",
+          accountId: "a1b2c3d4e5f6a1b2c3d4e5f6",
+          commodity: "financial_services",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 5,
+        },
+      ],
+    });
+
+  it("tallies the units each buyer kind took and they sum to the units sold", () => {
+    const product = run().producers[0].products[0];
+    expect(product.soldUnits).toBeGreaterThan(0);
+    const soldTo = product.soldTo!;
+    expect(Object.values(soldTo).reduce((n, u) => n + (u ?? 0), 0)).toBeCloseTo(product.soldUnits);
+    expect(soldTo.households).toBeCloseTo(10);
+    expect(soldTo.publicBuyer).toBeCloseTo(20);
+    expect(soldTo.companies).toBeCloseTo(5);
+  });
+
+  it("leaves every settled figure unchanged by the tally", () => {
+    const { soldTo: _soldTo, ...rest } = run().producers[0].products[0];
+    expect(rest).toMatchObject({ revenue: 105, soldUnits: 35 });
   });
 });
