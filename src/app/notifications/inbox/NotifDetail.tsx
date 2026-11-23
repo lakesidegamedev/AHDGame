@@ -7,7 +7,7 @@ import { formatGameMonth } from "@/lib/utils/gameDate";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { Button } from "@/components/ui/Button";
 import { CatChip } from "./CatChip";
-import { CATEGORY_VISUALS, URGENCY_VISUALS } from "./inboxVisuals";
+import { categoryVisualFor, URGENCY_VISUALS } from "./inboxVisuals";
 
 interface NotifDetailProps {
   item: InboxItem;
@@ -27,7 +27,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
           preIterationTurns: turnStatus.preIterationTurns,
         })
       : null;
-  const category = CATEGORY_VISUALS[item.category];
+  const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
 
   return (

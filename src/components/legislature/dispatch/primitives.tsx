@@ -327,6 +327,21 @@ export function TheCountRail({
           }}
         >
           {votes.for}
+          <span
+            style={{
+              display: "block",
+              marginTop: 4,
+              fontFamily: "inherit",
+              fontSize: 9.5,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "var(--muted)",
+              fontWeight: 600,
+              textAlign: "left",
+            }}
+          >
+            Aye
+          </span>
         </span>
         <span
           className="tabular-nums"
@@ -339,6 +354,21 @@ export function TheCountRail({
           }}
         >
           {votes.against}
+          <span
+            style={{
+              display: "block",
+              marginTop: 4,
+              fontFamily: "inherit",
+              fontSize: 9.5,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "var(--muted)",
+              fontWeight: 600,
+              textAlign: "right",
+            }}
+          >
+            No
+          </span>
         </span>
       </div>
       <VoteBar votes={votes} eligible={eligible} height={6} />

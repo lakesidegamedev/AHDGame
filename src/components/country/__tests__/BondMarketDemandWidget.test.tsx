@@ -22,7 +22,7 @@ describe("BondMarketDemandWidget", () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
     const { container } = render(<BondMarketDemandWidget countryCode="US" />);
     // Loading state renders skeleton placeholders (no literal "loading" text).
-    expect(screen.getByText("Bond Market Demand")).toBeTruthy();
+    expect(screen.getByText("Bond market demand")).toBeTruthy();
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
   });
 
@@ -62,17 +62,17 @@ describe("BondMarketDemandWidget", () => {
     expect(screen.getByText(/Trust modifier/)).toBeTruthy();
   });
 
-  it("renders error state when fetch returns 404", async () => {
+  it("renders nothing when there is no demand signal", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 404,
       json: async () => ({ error: "Country budget not found" }),
     });
 
-    render(<BondMarketDemandWidget countryCode="ZZ" />);
+    const { container } = render(<BondMarketDemandWidget countryCode="ZZ" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/not available/i)).toBeTruthy();
+      expect(container.innerHTML).toBe("");
     });
   });
 });

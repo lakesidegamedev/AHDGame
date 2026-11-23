@@ -37,7 +37,7 @@ type State =
   | { kind: "error"; message: string };
 
 export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
-  const heading = countryLabel ? `${countryLabel} — Bond Market Demand` : "Bond Market Demand";
+  const heading = countryLabel ? `${countryLabel}: bond market demand` : "Bond market demand";
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
@@ -82,14 +82,9 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
     );
   }
 
-  if (state.kind === "error") {
-    return (
-      <div className="rounded-lg border border-card-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">{heading}</h3>
-        <p className="mt-2 text-sm text-muted">{state.message || "Demand signal not available"}</p>
-      </div>
-    );
-  }
+  // No signal (signed out, or no bond market yet) is not something a player
+  // can act on, so the panel steps aside instead of printing an empty box.
+  if (state.kind === "error") return null;
 
   const { demand, dsa, crisisState, consecutiveFailedAuctions } = state.data;
   const ratio = demand.demandRatio;
