@@ -17,6 +17,7 @@
     "retry": "Erneut versuchen",
     "empty": "Noch nicht genug erfasste Geschichte. Pro abgeschlossenem Zug wird ein Punkt gespeichert, daher füllt sich dieses Diagramm mit der Zeit.",
     "chartLabel": "{metric} über {turns} erfasste Züge",
+    "latestNote": "Der letzte erfasste Punkt ist Zug {turn}. Andere Zahlen auf der Seite sind live und können etwas neuer sein.",
     "turn": "Zug {turn}",
     "turnAxis": "Z{turn}"
   }

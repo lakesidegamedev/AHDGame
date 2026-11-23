@@ -109,6 +109,11 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
               <Stat label="Population" value={formatPopulation(economy.population)} />
             )}
           </div>
+          <p className="border-t border-card-border px-5 py-3 text-body-sm text-muted sm:px-6">
+            The credit rating comes from debt to GDP alone. It does not weigh inflation or the local
+            interest rate, so a country with low debt can be rated AAA while its bonds still pay a
+            high coupon.
+          </p>
         </header>
 
         <Section title="Country briefs" testId="background-briefs">
@@ -218,6 +223,11 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                 {politics.totalSeats > 0 && (
                   <ParliamentChart seats={seats} total={politics.totalSeats} />
                 )}
+                <p className="text-body-sm text-muted">
+                  Seat share is seats out of {politics.totalSeats}. Vote share is the share of votes
+                  cast at the last election, so the two differ and vote shares need not add up to
+                  100%.
+                </p>
                 <ul className="space-y-1 text-body-sm">
                   {politics.parties.map((p) => (
                     <li key={p.party} className="flex items-center justify-between gap-3">
@@ -231,7 +241,8 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                         {p.inGovernment ? " (government)" : ""}
                       </span>
                       <span className="text-muted">
-                        {p.seats} seats, {(p.voteShare * 100).toFixed(1)}%
+                        {p.seats} seats ({((p.seats / politics.totalSeats) * 100).toFixed(1)}% of
+                        seats), {(p.voteShare * 100).toFixed(1)}% of votes
                       </span>
                     </li>
                   ))}
@@ -321,6 +332,13 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                 </ul>
               ) : (
                 <p className="text-body text-muted">No government bonds on offer right now.</p>
+              )}
+              {view.bonds.length > 0 && (
+                <p className="text-body-sm text-muted">
+                  Each bond shows its fixed coupon, set when it was issued from the local interest
+                  rate of that day, and its current price per 100 of face value. The coupon is not
+                  today&apos;s yield and does not follow the credit rating.
+                </p>
               )}
               {view.nationalIndex ? (
                 <p className="text-body-sm">

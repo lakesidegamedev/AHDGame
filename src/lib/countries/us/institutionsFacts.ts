@@ -182,7 +182,7 @@ export const US_CONFIG: CountryConfig = {
   tagline:
     "The original simulation - all 50 states, a bicameral Congress, and a presidential executive.",
   descriptor:
-    "A federal presidential republic with 50 states, a bicameral Congress, and a directly elected President who serves as both head of state and government.",
+    "A federal presidential republic with 50 states and the District of Columbia, a bicameral Congress, and a directly elected President who serves as both head of state and government.",
   heroImage: "https://flagcdn.com/w640/us.png",
   overviewHeroImage: "/api/images/hero/us-overview-mount-rushmore",
   entryPath: "/dashboard",

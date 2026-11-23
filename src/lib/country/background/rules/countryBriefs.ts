@@ -14,11 +14,18 @@
 import { formatFundsCompact1dp } from "@/lib/utils/formattersCore";
 
 export type BriefKind =
-  "debt_stress" | "election" | "currency_move" | "austerity" | "restructuring" | "outlook";
+  | "debt_stress"
+  | "rating_upgrade"
+  | "election"
+  | "currency_move"
+  | "austerity"
+  | "restructuring"
+  | "outlook";
 
 /** Turns between two briefs of the same kind for one country. */
 export const BRIEF_COOLDOWN_TURNS: Record<BriefKind, number> = {
   debt_stress: 24,
+  rating_upgrade: 0,
   election: 0,
   currency_move: 36,
   austerity: 0,
@@ -118,7 +125,32 @@ export function currencyMovePercent(
   return (anchor.value / fx.rate - 1) * 100;
 }
 
+const RATING_ORDER = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C", "D"];
+
+/** Positive when `to` is a better rating than `from`; null when either is unknown. */
+export function ratingDirection(from: string, to: string): number | null {
+  const a = RATING_ORDER.indexOf(from);
+  const b = RATING_ORDER.indexOf(to);
+  if (a < 0 || b < 0) return null;
+  return a - b;
+}
+
 const pct = (value: number, digits = 1): string => `${value.toFixed(digits)}%`;
+
+/**
+ * One sentence about what the figures say, chosen from the data so two
+ * countries with different economies do not read alike.
+ */
+export function economyRead(obs: BriefObservation): string | null {
+  const { inflation, growth, debtToGdp } = obs;
+  if (inflation !== null && inflation >= 8)
+    return `Prices are the pressing problem, with inflation at ${pct(inflation)}.`;
+  if (growth !== null && growth < 0) return `The economy is shrinking, at ${pct(growth)} growth.`;
+  if (debtToGdp !== null && debtToGdp >= DEBT_STRESS_RATIO_PERCENT)
+    return `Debt is heavy at ${pct(debtToGdp, 0)} of GDP.`;
+  if (growth !== null && growth >= 4) return `Growth is strong, at ${pct(growth)}.`;
+  return null;
+}
 
 export function briefActions(obs: BriefObservation): BriefAction[] {
   const code = obs.countryId.toLowerCase();
@@ -149,7 +181,7 @@ export function briefActions(obs: BriefObservation): BriefAction[] {
 
 function bondLine(obs: BriefObservation): string {
   return obs.bond
-    ? ` Its nearest bond has a fixed coupon of ${obs.bond.couponRate.toFixed(2)}%, set when it was issued, and trades at ${(obs.bond.marketPrice * 100).toFixed(1)}.`
+    ? ` Its nearest bond has a fixed coupon of ${obs.bond.couponRate.toFixed(2)}%, set when it was issued, and traded at ${(obs.bond.marketPrice * 100).toFixed(1)} when this brief was written. Several bonds can mature together; the Invest list shows live prices for each.`
     : "";
 }
 
@@ -200,8 +232,25 @@ export function planBriefs(obs: BriefObservation, memory: BriefMemory | null): B
       `${obs.countryName} could no longer carry its interest bill and has restructured its sovereign debt: bondholders take a haircut, maturities are extended and the market is closed to new issues for a while. Holders of its bonds and funds are marked down.${bondLine(obs)}`
     );
   } else {
-    const downgraded =
-      memory.rating !== null && obs.creditRating !== null && obs.creditRating !== memory.rating;
+    const direction =
+      memory.rating !== null && obs.creditRating !== null && obs.creditRating !== memory.rating
+        ? ratingDirection(memory.rating, obs.creditRating)
+        : null;
+    const downgraded = direction !== null && direction < 0;
+    if (
+      direction !== null &&
+      direction > 0 &&
+      memory.rating !== null &&
+      obs.creditRating !== null
+    ) {
+      emit(
+        "rating_upgrade",
+        `${obs.countryName} upgraded to ${obs.creditRating}`,
+        `${obs.countryName}'s credit rating rose from ${memory.rating} to ${obs.creditRating}, which reflects a lighter debt burden against GDP${
+          obs.debtToGdp !== null ? ` (now ${pct(obs.debtToGdp, 0)})` : ""
+        }. The rating does not change the fixed coupons on bonds already issued.${bondLine(obs)}`
+      );
+    }
     const spiralWorse = obs.interestSpiralYears > memory.spiralYears;
     const stressed = obs.debtToGdp !== null && obs.debtToGdp >= DEBT_STRESS_RATIO_PERCENT;
     if (
@@ -237,7 +286,7 @@ export function planBriefs(obs: BriefObservation, memory: BriefMemory | null): B
       }`,
       `${outcome} in ${obs.countryName}'s ${obs.election.year} ${obs.election.snap ? "snap " : ""}national election.${
         obs.headName ? ` ${obs.headName} leads the government.` : ""
-      } Markets reprice the new fiscal stance through bonds, the index and the currency.`
+      }${economyRead(obs) ? ` ${economyRead(obs)}` : ""} Markets reprice the new fiscal stance through bonds, the index and the currency.`
     );
   }
 
@@ -282,7 +331,9 @@ export function planBriefs(obs: BriefObservation, memory: BriefMemory | null): B
     emit(
       "outlook",
       `${obs.countryName} outlook`,
-      `${obs.countryName}: ${bits.length > 0 ? bits.join(", ") : "no new figures"}.${bondLine(obs)}`
+      `${obs.countryName}: ${bits.length > 0 ? bits.join(", ") : "no new figures"}.${
+        economyRead(obs) ? ` ${economyRead(obs)}` : ""
+      }${bondLine(obs)}`
     );
   }
 

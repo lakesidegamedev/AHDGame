@@ -32,6 +32,7 @@ export const COUNTRY_BRIEF_INTERVAL_TURNS = 6;
 
 const NEWS_CATEGORY: Record<BriefKind, NewsCategory> = {
   debt_stress: "sovereign",
+  rating_upgrade: "sovereign",
   restructuring: "sovereign",
   austerity: "sovereign",
   election: "election",
@@ -133,7 +134,7 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
             defaulted: false,
           },
         },
-        { $sort: { maturityTurn: 1 } },
+        { $sort: { maturityTurn: 1, createdAt: -1, _id: 1 } },
         {
           $group: {
             _id: "$countryId",

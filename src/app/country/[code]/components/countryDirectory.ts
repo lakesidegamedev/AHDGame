@@ -143,7 +143,7 @@ function politicsRows(input: DirectoryInput): DirectoryRow[] {
       label: "Approval",
       href: approvalUrl(countryId),
       available: true,
-      figure: input.approval != null ? `${Math.round(input.approval)}%` : null,
+      figure: input.approval != null ? `${input.approval.toFixed(1)}%` : null,
     },
     // Referendums only exist for countries that have run one. Everyone else
     // would get a link to an empty hub.
@@ -266,7 +266,9 @@ function nationRows(input: DirectoryInput, config: CountryClientConfig): Directo
       href: config.mapPath,
       available: true,
       figure: counts?.regions
-        ? `${counts.regions} ${config.regionLabelPlural.toLowerCase()}`
+        ? countryId === "US" && counts.regions === 51
+          ? "50 states and DC"
+          : `${counts.regions} ${config.regionLabelPlural.toLowerCase()}`
         : null,
     },
     // SP6: playables have one metrics product; non-playables keep the legacy

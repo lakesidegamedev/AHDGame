@@ -185,6 +185,12 @@ export function NationalHistoryPanel({
         )}
       </div>
 
+      {latest && (
+        <p className="mt-0.5 text-[11px] text-muted">
+          {t("latestNote", { turn: latest.point.turn })}
+        </p>
+      )}
+
       <div className={`flex flex-wrap items-center gap-1.5 ${compact ? "mt-2" : "mt-3"}`}>
         {METRIC_ORDER.map((id) => {
           const entryColor = METRIC_COLOR[id];
