@@ -109,6 +109,7 @@ export function KVRow({
       title={title}
     >
       <dt
+        title={typeof label === "string" ? label : undefined}
         className={`truncate text-xs ${lead ? "text-foreground/80" : "text-muted"} ${
           ledger ? "min-w-0 shrink" : "min-w-0"
         }`}
@@ -122,10 +123,19 @@ export function KVRow({
           className="min-w-3 flex-1 -translate-y-1 self-end border-b border-dotted border-card-border"
         />
       )}
-      <dd className="flex min-w-0 items-center justify-end gap-2 text-right">
+      {/* A headline row puts its note under the figure: beside it, the larger
+          figure plus the note squeezed both the label and the value into an
+          ellipsis in narrow columns. */}
+      <dd
+        className={`flex min-w-0 justify-end text-right ${
+          lead && hint != null ? "flex-col items-end gap-0" : "items-center gap-2"
+        } shrink-0`}
+      >
         {mark}
         <span
-          className={`truncate font-medium tabular-nums text-foreground ${
+          // A figure never truncates; the label gives way first (it keeps its
+          // full text on hover through the row title where one is set).
+          className={`whitespace-nowrap font-medium tabular-nums text-foreground ${
             lead ? "text-[15px] font-semibold tracking-tight" : "text-[13px]"
           } ${mono ? "font-mono" : ""}`}
         >

@@ -1733,6 +1733,32 @@ html[data-high-contrast="true"] :focus-visible {
    a failsafe: if the script never lifts the cover, the page shows anyway. */
 .ascii-reveal-host[data-reveal-waiting] {
   min-height: 60vh;
+  position: relative;
+}
+/* Say what the shimmer is: without a word it read as a broken screen. */
+.ascii-reveal-host[data-reveal-waiting]::after {
+  content: "Loading";
+  position: absolute;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: ascii-reveal-label-failsafe 0s linear 4s forwards;
+}
+@keyframes ascii-reveal-label-failsafe {
+  to {
+    opacity: 0;
+  }
 }
 .ascii-reveal-host[data-reveal-waiting] > :not(.ar-overlay) {
   opacity: 0;
