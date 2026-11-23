@@ -54,8 +54,7 @@ const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 export function RaceView(props: RaceViewProps) {
   const t = useTranslations("elections.campaignManager");
   const { race, full } = props;
-  // `full` can still be the previously selected race's election while the new
-  // one loads; only read its snapshots once it belongs to this race.
+  // Read snapshots only when `full` is this race's election.
   const fullIsThisRace = race != null && full?.id === race.electionId;
   const series = useMemo(
     () => (race && full && fullIsThisRace ? pollingSeries(full, race) : []),

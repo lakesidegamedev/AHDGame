@@ -111,8 +111,6 @@ export function RegionMapPaths({
 
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFailed(false);
     fetchJson<FeatureCollection<Geometry>>(geoUrl, { feature: "region-map" })
       .then((data) => {
         if (cancelled) return;
@@ -169,6 +167,7 @@ export function RegionMapPaths({
             className="underline hover:text-foreground"
             onClick={() => {
               setGeo(null);
+              setFailed(false);
               setAttempt((n) => n + 1);
             }}
           >
