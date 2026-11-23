@@ -608,6 +608,16 @@ export default function CountryOverviewClient({
           <Link href="/world" className={NAV_BUTTON}>
             Back to world
           </Link>
+          <Link href="/world/conflicts" className={NAV_BUTTON}>
+            Wars and peace
+          </Link>
+          <Link
+            href={`/country/${countryId.toLowerCase()}/executive`}
+            className={NAV_BUTTON}
+            title="Declare war, make peace and handle alliances from the Foreign affairs tab"
+          >
+            Foreign affairs
+          </Link>
           {countryId === COUNTRY_CLIENT_CONFIGS.US.id && (
             <Link href="/dashboard" className={NAV_BUTTON}>
               Go to dashboard

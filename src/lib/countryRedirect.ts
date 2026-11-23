@@ -55,6 +55,8 @@ export function guessableUrlRedirects() {
     { source: "/help", destination: "https://wiki.ahousedividedgame.com", permanent: true },
     { source: "/leaderboard", destination: "/contests?view=rankings", permanent: true },
     { source: "/achievements", destination: "/profile", permanent: false },
+    { source: "/war", destination: "/world/conflicts", permanent: false },
+    { source: "/wars", destination: "/world/conflicts", permanent: false },
     { source: "/country/:code/senate", destination: "/country/:code/legislature", permanent: true },
     { source: "/country/:code/house", destination: "/country/:code/legislature", permanent: true },
   ];

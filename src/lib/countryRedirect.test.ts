@@ -54,6 +54,7 @@ describe("guessableUrlRedirects", () => {
     expect(bySource["/help"].destination).toContain("wiki.ahousedividedgame.com");
     expect(bySource["/leaderboard"].destination).toBe("/contests?view=rankings");
     expect(bySource["/achievements"].destination).toBe("/profile");
+    expect(bySource["/war"].destination).toBe("/world/conflicts");
     expect(bySource["/country/:code/senate"].destination).toBe("/country/:code/legislature");
     expect(existsSync(join(process.cwd(), "src/app/contests/page.tsx"))).toBe(true);
     expect(existsSync(join(process.cwd(), "src/app/profile/page.tsx"))).toBe(true);
