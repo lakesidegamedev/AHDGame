@@ -9,6 +9,7 @@
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states2027 } from "./usStates2027";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
+import { airQualityIndexFromPm25 } from "@/lib/seeds/shared/airQualityIndex";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -1263,16 +1264,17 @@ const GRADUATION_RATE_2027: Record<string, number> = {
  * mean of the real series to the national index value, so state deviations are real and the
  * country rollup does not shift.
  *
- * Air quality: index = 32 - 6 * (state PM2.5 - 7.6), where 7.6 ug/m3 is the population-weighted
- * mean of PM25_2027 and 32 is the national index. Higher is cleaner. Floored at 5.
+ * Air quality: the shared PM2.5 scale (airQualityIndexFromPm25), the same one Canada uses, so
+ * equal air reads equal across countries. The national value is that scale at the
+ * population-weighted mean of PM25_2027 (7.6 ug/m3).
  *
  * Road condition: index = 70.5 + (state acceptable share - 88.0), where 88.0 is the
  * population-weighted mean of ROAD_ACCEPTABLE_2027 and 70.5 is the national index. Floored at 5.
  */
 const PM25_NATIONAL = 7.6;
-const AIR_QUALITY_NATIONAL = 32;
-const AIR_QUALITY_PER_UG = 6;
 const ROAD_ACCEPTABLE_NATIONAL = 88.0;
+/** BJS all-state prison rate per 100k, 2023 (Table 7). */
+const PRISON_ONLY_NATIONAL = 318;
 const ROAD_INDEX_NATIONAL = 70.5;
 
 function round1(n: number): number {
@@ -1280,9 +1282,7 @@ function round1(n: number): number {
 }
 
 export function airQualityIndex2027(pm25: number): number {
-  return round1(
-    Math.max(5, Math.min(100, AIR_QUALITY_NATIONAL - AIR_QUALITY_PER_UG * (pm25 - PM25_NATIONAL)))
-  );
+  return airQualityIndexFromPm25(pm25);
 }
 
 export function roadConditionIndex2027(acceptableShare: number): number {
@@ -1359,7 +1359,7 @@ const BASELINE_2027 = {
 
   // Environment
   // EPA AQI 2023: national Good/Moderate days ≈ 78%; maps to air quality index 32 (lower = worse)
-  airQuality: 32,
+  airQuality: airQualityIndexFromPm25(PM25_NATIONAL),
   // EIA 2023: renewable share ≈ 22% of electricity gen
   renewableEnergy: 22,
   // EIA 2023: US CO2 ≈ 14.9 metric tons per capita (down from 2019)
@@ -1517,7 +1517,14 @@ function build2023Metrics(stateId: string): StateMetrics {
       crimeRate: mv(BASELINE_2027.crimeRate + (urban - 70) * 8 - leanMod * 40),
       violentCrimeRate: mv(VIOLENT_CRIME_2027[stateId] ?? BASELINE_2027.violentCrimeRate),
       policePerCapita: mv(BASELINE_2027.policePerCapita),
-      incarcerationRate: mv(IMPRISONMENT_2027[stateId] ?? BASELINE_2027.incarcerationRate),
+      // BJS counts state prisons only; scale to the prison-plus-jail national total so the
+      // rate is comparable with Canada's provincial-plus-federal custody figure.
+      incarcerationRate: mv(
+        round1(
+          ((IMPRISONMENT_2027[stateId] ?? PRISON_ONLY_NATIONAL) * BASELINE_2027.incarcerationRate) /
+            PRISON_ONLY_NATIONAL
+        )
+      ),
       recidivismRate: mv(BASELINE_2027.recidivismRate),
       publicSafetyConfidence: mv(BASELINE_2027.publicSafetyConfidence),
     },

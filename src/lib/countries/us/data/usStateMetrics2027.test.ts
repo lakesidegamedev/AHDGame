@@ -43,15 +43,15 @@ describe("US 2027 state metrics use sourced per-state data", () => {
   });
 
   it("rates Mississippi air worse than the national index and Hawaii cleaner", () => {
-    expect(val("MS", "environment", "airQuality")).toBeLessThan(32);
-    expect(val("HI", "environment", "airQuality")).toBeGreaterThan(32);
+    expect(val("MS", "environment", "airQuality")).toBeLessThan(66.4);
+    expect(val("HI", "environment", "airQuality")).toBeGreaterThan(66.4);
     expect(val("HI", "environment", "airQuality")).toBeGreaterThan(
       val("MS", "environment", "airQuality")
     );
   });
 
   it("keeps the population-weighted air quality and road means on the national index", () => {
-    expect(weightedMean((id) => val(id, "environment", "airQuality"))).toBeCloseTo(32, 0);
+    expect(weightedMean((id) => val(id, "environment", "airQuality"))).toBeCloseTo(66.4, 0);
     expect(weightedMean((id) => val(id, "infrastructure", "roadCondition"))).toBeCloseTo(70.5, 0);
   });
 
@@ -80,8 +80,8 @@ describe("US 2027 state metrics use sourced per-state data", () => {
 
   it("pins real values from the cited tables", () => {
     expect(val("DC", "publicSafety", "violentCrimeRate")).toBeGreaterThan(900);
-    expect(val("MA", "publicSafety", "incarcerationRate")).toBeLessThan(120);
-    expect(val("MS", "publicSafety", "incarcerationRate")).toBeGreaterThan(600);
+    expect(val("MA", "publicSafety", "incarcerationRate")).toBeLessThan(170);
+    expect(val("MS", "publicSafety", "incarcerationRate")).toBeGreaterThan(850);
     expect(val("TX", "healthcare", "uninsuredRate")).toBeGreaterThan(15);
     expect(val("MA", "healthcare", "uninsuredRate")).toBeLessThan(3);
     expect(val("ND", "environment", "carbonEmissions")).toBeGreaterThan(70);
