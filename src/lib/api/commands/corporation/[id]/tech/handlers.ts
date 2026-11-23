@@ -7,6 +7,7 @@
  * the picks + wallet are redacted for non-CEO viewers (tree definition stays).
  * When the gate is off, `enabled: false` and the tab hides itself.
  */
+import { inputEfficiencyHeadroom } from "@/lib/techTree/rules/inputEfficiencyHeadroom";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
@@ -64,6 +65,7 @@ import {
   CORP_LANE_EFFECT_SCALE,
   TECH_PLANT_OUTPUT_CAP,
   TECH_NODE_CASH_REVENUE_FRACTION,
+  TECH_NODE_VALUED_FLOOR_FRACTION,
   type TechCorpView,
   type TechLane,
   isFrontierOpen,
@@ -185,6 +187,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const rdScore = redact ? null : Math.floor(corporation.rdScore ?? 0);
     const liquidCapital = redact ? null : Math.floor(corporation.liquidCapital ?? 0);
 
+    // Headline = the effective bonus on the corp's PRIMARY sector
+    // (Corporate-lane scaled + Sector-lane full), which is the strongest case.
+    // Uses the same decade window as the turn, so expired techs do not count.
+    const breakdown = redact
+      ? null
+      : getSectorTechEffectBreakdown(corpView, operatingSectorType, currentYear, legacy);
+
     const buildLane = (
       decadeId: string,
       reached: boolean,
@@ -207,8 +216,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
           owned && isTechNodeEffectExpired(node, activeDecadeIds, { shieldExpires });
         // An era node in "off" mode is owned but gives no running effect.
         const effectsOff = legacy.mode === "off" && isLegacyTechDecade(node.decadeId, legacy);
+        const headroom = inputEfficiencyHeadroom(
+          node.effects,
+          lane,
+          breakdown?.researched.inputEfficiencyBonus ?? 0
+        );
+        const noRemainingBenefit = !owned && !effectsOff && headroom.noRemainingBenefit;
         const valuePerTurn =
-          techPlantBasis && !effectExpired && !effectsOff
+          techPlantBasis && !effectExpired && !effectsOff && !noRemainingBenefit
             ? techNodeValuePerTurn(node, techPlantBasis)
             : 0;
         const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
@@ -236,6 +251,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           cashCost: redact ? null : cashCost,
           valuePerTurn: redact || valuePerTurn <= 0 ? null : Math.round(valuePerTurn),
           paybackTurns: redact ? null : paybackTurns,
+          noRemainingBenefit: redact ? false : noRemainingBenefit,
           inputEfficiencyContributionPct: redact
             ? null
             : effectsOff
@@ -275,6 +291,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             !laneLocked &&
             !pathLocked &&
             prereqMet &&
+            !noRemainingBenefit &&
             (rdScore ?? 0) >= node.cost &&
             (liquidCapital ?? 0) >= cashCost,
           image: tierImageUrl(lane, operatingSectorType, decadeId),
@@ -299,13 +316,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
         },
       };
     });
-
-    // Headline = the effective bonus on the corp's PRIMARY sector
-    // (Corporate-lane scaled + Sector-lane full), which is the strongest case.
-    // Uses the same decade window as the turn, so expired techs do not count.
-    const breakdown = redact
-      ? null
-      : getSectorTechEffectBreakdown(corpView, operatingSectorType, currentYear, legacy);
 
     // ── Tech overview metrics ──────────────────────────────────────────────
     const totalNodes = (TECH_TREE[operatingSectorType] ?? []).length;
@@ -393,6 +403,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             defaultRevenueFraction: TECH_NODE_CASH_REVENUE_FRACTION,
             capacityFloorApplied,
             minimumCashCost: Math.round(techCashFloorLocal),
+            valuedMinimumCashCost: Math.round(techCashFloorLocal * TECH_NODE_VALUED_FLOOR_FRACTION),
           },
       unlockedStrategyIds: redact ? [] : getUnlockedStrategyIds(corpView),
       unlockedStrategyNames,

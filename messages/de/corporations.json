@@ -4,24 +4,32 @@
       "settlement": {
         "shortfallDamages": "Schadenersatz wegen Fehlmenge",
         "noDamages": "Kein Schadenersatz wegen Fehlmenge",
-        "commitment": "Lieferverpflichtung",
-        "damageCeiling": "Obergrenze für Schadenersatz",
-        "productionCredited": "Angerechnete Produktion",
-        "chargeableShortfall": "Berechenbare Fehlmenge",
+        "commitment": "Lieferverpflichtung (pro Tag)",
+        "damageCeiling": "Obergrenze für Schadenersatz (pro Tag)",
+        "productionCredited": "Angerechnete Produktion (pro Tag)",
+        "chargeableShortfall": "Berechenbare Fehlmenge (pro Tag)",
         "damagesAssessed": "Festgesetzter Schadenersatz",
         "netCash": "Nettozahlung aus dem Vertrag",
         "unpaid": "Offener Abrechnungsbetrag",
         "unknown": "Nicht bekannt",
-        "explanation": "Externe Produktionsgrenzen senken zuerst die Obergrenze für Schadenersatz. Berechnet wird nur eine Produktion unterhalb dieser Grenze."
+        "explanation": "Die Obergrenze für Schadenersatz ist die höchste Menge, die der Lieferant in dieser Runde hätte herstellen können, nur unter Berücksichtigung äußerer Grenzen wie fehlender Vorprodukte, Streiks und Katastrophen. Produktionspolitik und Stilllegung senken sie nicht. Berechnet wird nur die Verpflichtung bis zu dieser Obergrenze. Mengen gelten pro Tag; jede stündliche Runde rechnet ein Vierundzwanzigstel ab. Der Schadenersatz ist zudem auf 25% des Vertragswerts der Runde begrenzt."
       },
       "capacity": {
-        "current": "Aktuelle Vertragskapazität",
-        "latestAchievable": "Zuletzt erreichbare Produktion",
-        "maximumContract": "Maximale zulässige Verpflichtung",
-        "penaltyWarning": "Dies ist eine Verpflichtung pro Runde. Eine Produktion unterhalb der Obergrenze für Schadenersatz führt zu Schadenersatz in Höhe von {penaltyPercent}% des Marktwerts jeder fehlenden Einheit."
+        "current": "Aktuelle Vertragskapazität (pro Tag)",
+        "latestAchievable": "Zuletzt erreichbare Produktion (pro Tag)",
+        "maximumContract": "Maximale zulässige Verpflichtung (pro Tag)",
+        "penaltyWarning": "Dies ist eine Verpflichtung pro Tag, die je Runde zu einem Vierundzwanzigstel abgerechnet wird. Eine Produktion unterhalb der Verpflichtung, bis zur Obergrenze für Schadenersatz (die höchste Menge, die Sie in dieser Runde hätten herstellen können), führt zu Schadenersatz in Höhe von {penaltyPercent}% des Vertragsreferenzpreises jeder fehlenden Einheit."
       }
     },
     "supplyBoard": {
+      "cannotUse": "Angebote, die du nicht nutzen kannst ({count})",
+      "cannotUseHint": "Keines davon kann an deine Anlagen liefern. Sie bleiben gelistet, damit du den Grund siehst.",
+      "sizeNote": "Etwa das {ratio}-Fache deines täglichen Verbrauchs dieses Einsatzguts",
+      "confirmTitle": "Verbindliche Vereinbarung bestätigen",
+      "confirmBuy": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag von {company} zu kaufen. Laufzeit: {term}.",
+      "confirmSell": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag an {company} zu verkaufen. Laufzeit: {term}.",
+      "confirm": "Vereinbarung bestätigen",
+      "cancel": "Abbrechen",
       "npp": "NPP"
     },
     "techTree": {
@@ -54,6 +62,7 @@
       "availableFrom": "Verfügbar ab {decade}",
       "unlockPrerequisite": "Zuerst {technology} freischalten",
       "available": "Verfügbar",
+      "noRemainingBenefit": "Diese Technologie senkt nur den Einsatz der Anlagen, und dein Einsatz liegt bereits an der Obergrenze, sie würde also nichts bringen.",
       "unlock": "Freischalten",
       "qualityEstimate": "Geschätzte Qualität nach dieser Freischaltung: {after} (jetzt {before}). Das Ausgeben von F&E-Punkten senkt den Technik-Anteil der Qualität. Dies ist eine Schätzung, bei der die übrigen Faktoren gleich bleiben.",
       "needsRd": "{amount} weitere F&E-Punkte",

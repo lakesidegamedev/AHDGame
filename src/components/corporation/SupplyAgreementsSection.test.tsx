@@ -143,6 +143,8 @@ beforeEach(() => {
             ],
           },
         ],
+        contractReferencePrices: { steel: 1060 },
+        contractMarketPrices: { steel: 1700 },
         capacityByCommodity: {
           energy: {
             currentCapacityUnits: 75,
@@ -190,7 +192,7 @@ describe("SupplyAgreementsSection delivery outcome", () => {
       screen.getAllByRole("link", { name: /Buyer Industries \(BUY\)/ }).length
     ).toBeGreaterThan(0);
     expect(screen.getByText("Shortfall damages")).toBeTruthy();
-    expect(screen.getByText("Chargeable shortfall")).toBeTruthy();
+    expect(screen.getByText("Chargeable shortfall (per day)")).toBeTruthy();
     expect(screen.getByText("Damages assessed")).toBeTruthy();
     expect(screen.getByText("Net contract cash")).toBeTruthy();
   });
@@ -202,10 +204,25 @@ describe("SupplyAgreementsSection delivery outcome", () => {
     fireEvent.click(screen.getByRole("button", { name: "Propose agreement" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "energy" } });
 
-    expect(screen.getByText("Current contract capacity")).toBeTruthy();
-    expect(screen.getByText("Latest achievable output")).toBeTruthy();
-    expect(screen.getByText("Maximum legal commitment")).toBeTruthy();
-    expect(screen.getByText(/50% of the market value/)).toBeTruthy();
+    expect(screen.getByText("Current contract capacity (per day)")).toBeTruthy();
+    expect(screen.getByText("Latest achievable output (per day)")).toBeTruthy();
+    expect(screen.getByText("Maximum legal commitment (per day)")).toBeTruthy();
+    expect(screen.getByText(/50% of the contract reference price/)).toBeTruthy();
+  });
+
+  it("names the billed input price, shows the market price, and defines the damage ceiling", async () => {
+    render(<SupplyAgreementsSection corpId="supplier" />);
+
+    await waitFor(() => expect(screen.getByText("As supplier")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Propose agreement" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "steel" } });
+    fireEvent.change(screen.getByPlaceholderText("e.g. 5000"), { target: { value: "2400" } });
+
+    expect(screen.getByText(/Billed input price \(contracts settle at this/)).toBeTruthy();
+    expect(screen.getByText(/Market price on the commodities table: A1700/)).toBeTruthy();
+    expect(screen.getByText(/Slider range: A689 to A1431/)).toBeTruthy();
+    expect(screen.getByText(/Per day at the full cap: 2,400/)).toBeTruthy();
+    expect(screen.getByText("Damage ceiling (per day)")).toBeTruthy();
   });
 
   it("asks for the fulfilling state when freight is selected", async () => {
@@ -218,7 +235,7 @@ describe("SupplyAgreementsSection delivery outcome", () => {
     expect(screen.getByText("Fulfilled from state")).toBeTruthy();
     expect(screen.getByRole("option", { name: "Texas (TX)" })).toBeTruthy();
     fireEvent.change(screen.getAllByRole("combobox")[1]!, { target: { value: "TX" } });
-    expect(screen.getByText("Current contract capacity")).toBeTruthy();
+    expect(screen.getByText("Current contract capacity (per day)")).toBeTruthy();
     expect(screen.getByText(/This service is supplied within one state/)).toBeTruthy();
   });
 

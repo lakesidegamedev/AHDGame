@@ -31,3 +31,31 @@ it("shows net proceeds and arrears, and hides stale amounts when the quantity ch
   expect(await screen.findByText("$1800")).toBeTruthy();
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+it("shows cost basis, gain and rate beside the tax withheld", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      Response.json({
+        grossProceeds: 528,
+        withheldTax: 122,
+        netProceeds: 406,
+        taxBreakdown: {
+          costBasis: 0,
+          shortTermGain: 0,
+          longTermGain: 528,
+          shortTermRatePct: 30,
+          longTermRatePct: 23,
+          shortTermTax: 0,
+          longTermTax: 122,
+        },
+        outstandingArrears: 0,
+        turn: 1,
+      })
+    )
+  );
+  render(<SaleTaxPreview corpId="test" shares={100} holdingTerm="long" />);
+  expect(await screen.findByText(/Long-term gain at 23%/)).toBeTruthy();
+  expect(screen.getByText("Cost basis of the shares sold")).toBeTruthy();
+  expect(screen.getByText("$528 gives $122")).toBeTruthy();
+});

@@ -158,6 +158,9 @@ export default function SupplyAgreementsSection({
   const [contractReferencePrices, setContractReferencePrices] = useState<
     Partial<Record<CommodityType, number>>
   >({});
+  const [contractMarketPrices, setContractMarketPrices] = useState<
+    Partial<Record<CommodityType, number>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -186,6 +189,7 @@ export default function SupplyAgreementsSection({
         const data = (await res.json()) as {
           agreements: SupplyAgreement[];
           contractReferencePrices?: Partial<Record<CommodityType, number>>;
+          contractMarketPrices?: Partial<Record<CommodityType, number>>;
           capacityByCommodity?: Partial<Record<CommodityType, CapacitySnapshot>>;
           capacityByState?: Partial<Record<CommodityType, Record<string, StateCapacitySnapshot>>>;
           buyerStatesByCommodity?: Partial<
@@ -194,6 +198,7 @@ export default function SupplyAgreementsSection({
         };
         setAgreements(data.agreements ?? []);
         setContractReferencePrices(data.contractReferencePrices ?? {});
+        setContractMarketPrices(data.contractMarketPrices ?? {});
         setCapacityByCommodity(data.capacityByCommodity ?? {});
         setCapacityByState(data.capacityByState ?? {});
         setBuyerStatesByCommodity(data.buyerStatesByCommodity);
@@ -1131,6 +1136,21 @@ export default function SupplyAgreementsSection({
                       unit,
                     })}
                   </li>
+                  {typeof contractMarketPrices[commodity] === "number" && (
+                    <li>
+                      {t("negotiation.moneyMarket", {
+                        price: formatAnchor(contractMarketPrices[commodity] ?? 0),
+                        unit,
+                      })}
+                    </li>
+                  )}
+                  <li>
+                    {t("negotiation.moneyRange", {
+                      low: formatAnchor(reference * (1 - BAND_PCT / 100)),
+                      high: formatAnchor(reference * (1 + BAND_PCT / 100)),
+                      unit,
+                    })}
+                  </li>
                   <li>
                     {t("negotiation.moneyUnitPrice", {
                       price: formatAnchor(money.unitPrice),
@@ -1139,10 +1159,10 @@ export default function SupplyAgreementsSection({
                   </li>
                   {money.unitsPerTurn > 0 && (
                     <li>
-                      {t("negotiation.moneyPerTurn", {
-                        units: formatUnits(money.unitsPerTurn),
+                      {t("negotiation.moneyPerDay", {
+                        units: formatUnits(Number.isFinite(cap) ? cap : 0),
                         unit,
-                        value: formatAnchor(money.valuePerTurn),
+                        value: formatAnchor(money.valuePerDay),
                       })}
                     </li>
                   )}

@@ -42,6 +42,24 @@ export function SupplyOfferBoard({
   const [revision, setRevision] = useState(0);
   const [takeVolumes, setTakeVolumes] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [confirming, setConfirming] = useState("");
+  const [dailyUse, setDailyUse] = useState<Partial<Record<string, number>>>({});
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`/api/corporations/${corpId}/commodities`, { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) return;
+        const data = (await r.json()) as {
+          commodities?: Array<{ commodity: string; consumptionUnits: number }>;
+        };
+        if (controller.signal.aborted || !Array.isArray(data.commodities)) return;
+        setDailyUse(
+          Object.fromEntries(data.commodities.map((c) => [c.commodity, c.consumptionUnits]))
+        );
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [corpId, revision]);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -109,6 +127,7 @@ export function SupplyOfferBoard({
       const data = await response.json();
       if (!response.ok) throw new Error(apiErrorText(data, t("failed")));
       setNotice(t("taken"));
+      setConfirming("");
       setRevision((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("failed"));
@@ -142,6 +161,117 @@ export function SupplyOfferBoard({
       setVolume("");
     }
   }
+  const sizeNote = (row: SupplyListingView): string | null => {
+    const use = dailyUse[row.commodity];
+    if (row.own || row.side !== "sell" || !use || use <= 0) return null;
+    const ratio = Math.round((row.volumeCap / use) * 10) / 10;
+    return ratio > 1 ? t("sizeNote", { ratio }) : null;
+  };
+  const isUsable = (row: SupplyListingView) => row.own || !row.unreachableReason;
+  const usable = listings.filter(isUsable);
+  const unusable = listings.filter((row) => !isUsable(row));
+  const renderCard = (row: SupplyListingView) => (
+    <article key={row.id} className="space-y-2 border-b border-card-border/60 py-2">
+      <h4 className="font-medium">
+        {t(row.side)}: {COMMODITY_LABELS[row.commodity]}
+      </h4>
+      <p className="text-sm">
+        {row.corporationName}
+        {row.ai ? ` (${t("npp")})` : ""}
+        {row.stateId ? ` (${row.stateId})` : ""}
+      </p>
+      {row.corporationCountryId && (
+        <p className="text-xs text-muted">
+          {row.creditRating
+            ? t("seller", {
+                country: row.corporationCountryId,
+                rating: row.creditRating,
+              })
+            : t("sellerCountry", { country: row.corporationCountryId })}
+        </p>
+      )}
+      <p className="text-xs">
+        {t("terms", {
+          volume: row.volumeCap.toLocaleString(),
+          unit: COMMODITY_UNITS[row.commodity],
+          premium: Math.round(row.pricePremium * 100),
+        })}
+      </p>
+      {sizeNote(row) && <p className="text-xs text-warning">{sizeNote(row)}</p>}
+      <p className="text-xs text-muted">
+        {row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded")} ·{" "}
+        {t("expires", { turn: row.expiresAtTurn })}
+      </p>
+      {!row.own && row.unreachableReason && (
+        <p className="text-xs text-warning" role="note">
+          {row.unreachableReason}
+        </p>
+      )}
+      {!row.own && !row.unreachableReason && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs">
+            {t("takeVolume")}
+            <input
+              className={`${control} w-28`}
+              type="number"
+              min="0.000001"
+              max={row.volumeCap}
+              step="any"
+              value={takeVolumes[row.id] ?? String(row.volumeCap)}
+              onChange={(e) => setTakeVolumes((prev) => ({ ...prev, [row.id]: e.target.value }))}
+              disabled={busy}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setConfirming(row.id)}
+            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+          >
+            {busy ? t("taking") : t("take")}
+          </button>
+          <button
+            type="button"
+            onClick={() => onRespond(row)}
+            className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+          >
+            {t("negotiate")}
+          </button>
+        </div>
+      )}
+      {confirming === row.id && !row.own && !row.unreachableReason && (
+        <div className="space-y-2 rounded-md border border-warning/60 p-2" role="group">
+          <p className="text-xs font-medium">{t("confirmTitle")}</p>
+          <p className="text-xs">
+            {t(row.side === "sell" ? "confirmBuy" : "confirmSell", {
+              volume: Number(takeVolumes[row.id] ?? row.volumeCap).toLocaleString(),
+              unit: COMMODITY_UNITS[row.commodity],
+              company: row.corporationName,
+              term: row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded"),
+            })}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void take(row)}
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {busy ? t("taking") : t("confirm")}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirming("")}
+              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
   const control =
     "h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none";
   return (
@@ -313,80 +443,16 @@ export function SupplyOfferBoard({
         !error && (
           <>
             {listings.length === 0 && <p className="py-1 text-xs text-muted">{t("empty")}</p>}
-            <div className="grid gap-3 md:grid-cols-2">
-              {listings.map((row) => (
-                <article key={row.id} className="space-y-2 border-b border-card-border/60 py-2">
-                  <h4 className="font-medium">
-                    {t(row.side)}: {COMMODITY_LABELS[row.commodity]}
-                  </h4>
-                  <p className="text-sm">
-                    {row.corporationName}
-                    {row.ai ? ` (${t("npp")})` : ""}
-                    {row.stateId ? ` (${row.stateId})` : ""}
-                  </p>
-                  {row.corporationCountryId && (
-                    <p className="text-xs text-muted">
-                      {row.creditRating
-                        ? t("seller", {
-                            country: row.corporationCountryId,
-                            rating: row.creditRating,
-                          })
-                        : t("sellerCountry", { country: row.corporationCountryId })}
-                    </p>
-                  )}
-                  <p className="text-xs">
-                    {t("terms", {
-                      volume: row.volumeCap.toLocaleString(),
-                      unit: COMMODITY_UNITS[row.commodity],
-                      premium: Math.round(row.pricePremium * 100),
-                    })}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded")} ·{" "}
-                    {t("expires", { turn: row.expiresAtTurn })}
-                  </p>
-                  {!row.own && row.unreachableReason && (
-                    <p className="text-xs text-warning" role="note">
-                      {row.unreachableReason}
-                    </p>
-                  )}
-                  {!row.own && !row.unreachableReason && (
-                    <div className="flex flex-wrap items-end gap-2">
-                      <label className="text-xs">
-                        {t("takeVolume")}
-                        <input
-                          className={`${control} w-28`}
-                          type="number"
-                          min="0.000001"
-                          max={row.volumeCap}
-                          step="any"
-                          value={takeVolumes[row.id] ?? String(row.volumeCap)}
-                          onChange={(e) =>
-                            setTakeVolumes((prev) => ({ ...prev, [row.id]: e.target.value }))
-                          }
-                          disabled={busy}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void take(row)}
-                        className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {busy ? t("taking") : t("take")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRespond(row)}
-                        className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
-                      >
-                        {t("negotiate")}
-                      </button>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
+            <div className="grid gap-3 md:grid-cols-2">{usable.map(renderCard)}</div>
+            {unusable.length > 0 && (
+              <details className="rounded-md border border-card-border/60 p-2">
+                <summary className="cursor-pointer text-sm">
+                  {t("cannotUse", { count: unusable.length })}
+                </summary>
+                <p className="mt-1 text-xs text-muted">{t("cannotUseHint")}</p>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">{unusable.map(renderCard)}</div>
+              </details>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
