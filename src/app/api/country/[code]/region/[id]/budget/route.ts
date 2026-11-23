@@ -231,6 +231,7 @@ async function serveStateBudget(
     budget: {
       ...stateBudget,
       spending,
+      balance: stateBudget.financing?.cash ?? stateBudget.balance,
       surplus: balance,
     },
     enactedLaws,
