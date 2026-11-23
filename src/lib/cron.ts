@@ -56,7 +56,8 @@ const TURN_CRON_MINUTE = resolveTurnCronMinute();
 const TURN_CRON_MONITOR_CONFIG = {
   schedule: { type: "crontab" as const, value: turnCronSchedule(TURN_CRON_MINUTE) },
   checkinMargin: 5,
-  maxRuntime: 5,
+  // Healthy turns take 5 to 8 minutes; 15 still flags a hung turn before the next.
+  maxRuntime: 15,
   timezone: "UTC",
 };
 

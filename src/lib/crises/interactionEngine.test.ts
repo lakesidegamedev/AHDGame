@@ -20,6 +20,19 @@ import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/typ
 import { YUGOSLAV_REFUGEE_RECEPTION } from "@/lib/livingConflict/rules/refugeeReception";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+const ledgerMocks = vi.hoisted(() => ({ fundedTreasury: false }));
+vi.mock("@/lib/nationalization/treasuryLedger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/nationalization/treasuryLedger")>();
+  return {
+    ...actual,
+    resolveTreasuryCashOptions: (
+      ...args: Parameters<typeof actual.resolveTreasuryCashOptions>
+    ): ReturnType<typeof actual.resolveTreasuryCashOptions> =>
+      ledgerMocks.fundedTreasury
+        ? Promise.resolve({ context: { treasuryCashLedgerEnabled: true } as never })
+        : actual.resolveTreasuryCashOptions(...args),
+  };
+});
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
 
 let db: MockDb;
@@ -543,6 +556,24 @@ describe("submitCrisisDecision", () => {
     await expect(
       submitCrisisDecision(mdb(), interaction._id, "contribute_5m", new ObjectId(), "US", ["any"])
     ).rejects.toThrow("Insufficient treasury");
+  });
+
+  it("checks spendable cash, not the signed balance, in a funded world", async () => {
+    const interaction = makeInteraction({ currentNodeId: "fund", collectiveTarget: 10_000_000 });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["federalBudget"]!.findOne.mockResolvedValue({
+      treasuryBalance: 900_000_000,
+      treasuryCashLocal: 1_000,
+    });
+    ledgerMocks.fundedTreasury = true;
+    try {
+      await expect(
+        submitCrisisDecision(mdb(), interaction._id, "contribute_5m", new ObjectId(), "US", ["any"])
+      ).rejects.toThrow("Insufficient treasury");
+    } finally {
+      ledgerMocks.fundedTreasury = false;
+    }
+    expect(db.collectionMocks["federalBudget"]!.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects a choice lacking approval before it charges the treasury", async () => {
