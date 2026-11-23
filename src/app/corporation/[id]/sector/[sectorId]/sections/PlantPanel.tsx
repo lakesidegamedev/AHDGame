@@ -479,7 +479,11 @@ export default function PlantPanel({
                         {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
-                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
+                            ? `${
+                                sitesPerTurn < 1
+                                  ? `1 ${vocab.singular} arriving every ${Math.max(2, Math.round(1 / sitesPerTurn))} turns`
+                                  : `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn`
+                              } · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
                             : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
                           : `arrives next turn · ${moneyWithAnchor(orderMoney.paid)} paid`}
                       </p>

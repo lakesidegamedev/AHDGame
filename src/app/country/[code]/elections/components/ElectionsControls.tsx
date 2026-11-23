@@ -111,6 +111,10 @@ export function ElectionsControls({
           </button>
         ))}
       </div>
+      {!mapAvailable && (
+        // The reason the Map view is off, on the page and not only on hover.
+        <span className="text-xs text-muted">Pick one office for the map</span>
+      )}
 
       <MobileSelect
         value={region}

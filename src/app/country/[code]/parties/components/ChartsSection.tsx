@@ -270,15 +270,28 @@ export function ChartsSection({
               <div>
                 <h3 className={`mb-4 ${PARTY_SUBHEADING_CLASS}`}>Organization</h3>
                 <DonutChartBase
-                  items={orgParties.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    abbreviation: p.abbreviation,
-                    color: p.color,
-                    value: p.totalOrg,
-                  }))}
-                  centerLabel="total org"
-                  formatValue={(v) => v.toLocaleString("en-US")}
+                  items={[
+                    ...orgParties.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      abbreviation: p.abbreviation,
+                      color: p.color,
+                      value: p.totalOrg,
+                    })),
+                    // Parties with no organization still belong in the legend, at
+                    // zero, so it lists the same parties as Membership beside it.
+                    ...parties
+                      .filter((p) => !orgParties.some((o) => o.id === p.id))
+                      .map((p) => ({
+                        id: p.id,
+                        name: p.name,
+                        abbreviation: p.abbreviation,
+                        color: p.color,
+                        value: 0,
+                      })),
+                  ]}
+                  centerLabel="total organization"
+                  formatValue={(v) => Math.round(v).toLocaleString("en-US")}
                 />
               </div>
             )}

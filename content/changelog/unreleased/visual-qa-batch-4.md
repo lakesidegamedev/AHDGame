@@ -22,3 +22,7 @@ areas: [frontend]
 - Crisis pages list every country by its full name, show Resolved in green and an active crisis in amber, hide an empty Effects box, and say "stayed at" when a campaign stage did not change. Responses from countries no player runs read "Government" instead of "Unknown leader". New crises keep their name's capitals in the closing message.
 - The House map explains that grey states have a tied delegation or no seated members.
 - Election deadlines are plain text unless they are close, and a primary with only one party's candidate says no other party has filed.
+- Company pages: region flags show for Canadian and French regions instead of "CA_" and "FR_", the revenue bar names regions as the table does, the Operations table no longer cuts its "Running / sold" header, a strategy switch reads "Switching · 7 turns", slow builds read "1 every 12 turns" instead of "about 0 a turn", the figures grid has no empty block, and a private company says Private once.
+- Party pages: recent activity names categories in plain words, the National Chair is listed first, an empty National Committee says so once, discipline rows always name an office, and the Organization chart lists every party with a whole-number total.
+- The executive cabinet preview says how many more positions the full list holds, and the confidence history no longer repeats itself before there is any history.
+- The elections page says why the Map view is off right next to it.
