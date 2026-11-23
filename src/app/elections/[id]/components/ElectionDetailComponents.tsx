@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { PRIMARY_ESTIMATE_NOTE } from "@/lib/elections/rules/primaryEstimateNote";
+import {
+  NPP_HALF_STRENGTH_NOTE,
+  nppCandidateIsHalved,
+  PRIMARY_ESTIMATE_NOTE,
+} from "@/lib/elections/rules/primaryEstimateNote";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { Card, CardSubLabel } from "@/components/ui";
@@ -240,6 +244,12 @@ export function PartySection({
                       />
                     </div>
                   )}
+
+                  {inPrimary &&
+                    group.primaryShareBasis === "estimate" &&
+                    nppCandidateIsHalved(c, group.candidates) && (
+                      <p className="mt-1 text-[11px] text-muted">{NPP_HALF_STRENGTH_NOTE}</p>
+                    )}
 
                   {inPrimary && c.primaryScoreBreakdown && (
                     <PrimaryScoreDetails breakdown={c.primaryScoreBreakdown} />
