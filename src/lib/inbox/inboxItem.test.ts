@@ -23,7 +23,7 @@ describe("notificationToInboxItem", () => {
     expect(item.action).toBe(true);
     expect(item.source?.href).toBe("/congress/bills/b1");
     expect(item.time).toBe("6m");
-    expect(item.label).toBe("Vote open");
+    expect(item.label).toBe("Vote open · Shared by all your characters");
     expect(item.urgency).toBe("decision");
     expect(item.createdAt).toBe("2026-06-20T12:04:00.000Z");
     expect(item.meta).toEqual([
@@ -52,5 +52,27 @@ describe("mailThreadToInboxItem", () => {
     expect(item.label).toBe("Direct mail");
     expect(item.urgency).toBe("decision");
     expect(item.createdAt).toBe("2026-06-20T12:00:00.000Z");
+  });
+});
+
+describe("account-wide alerts", () => {
+  const base = {
+    _id: "a1",
+    type: "system" as const,
+    title: "t",
+    message: "m",
+    read: false,
+    createdAt: "2026-11-23T00:00:00.000Z",
+  };
+  it("marks alerts with no recipient character as shared", () => {
+    const item = notificationToInboxItem(base, Date.parse("2026-11-23T01:00:00.000Z"));
+    expect(item.label).toContain("Shared by all your characters");
+  });
+  it("leaves character-addressed alerts unmarked", () => {
+    const item = notificationToInboxItem(
+      { ...base, metadata: { recipientCharacterId: "c1" } },
+      Date.parse("2026-11-23T01:00:00.000Z")
+    );
+    expect(item.label).not.toContain("Shared");
   });
 });
