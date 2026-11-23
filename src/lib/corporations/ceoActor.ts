@@ -17,8 +17,9 @@ function actorCharacterId(actor: CeoActor): string | null {
  * True when the acting character runs the corporation. The account must match
  * and, when the corporation records a CEO character, so must the active
  * character: a sibling character on the CEO's account is not the CEO. Imperial
- * CEOs and legacy corporations without a CEO character stay account-level, as
- * does a request whose active character is unknown.
+ * CEOs, legacy corporations without a CEO character and caretakers that record
+ * no underlying character stay account-level, as does a request whose active
+ * character is unknown.
  */
 export function isCeoActor(
   corporation: Pick<Corporation, "userId" | "ceoId" | "ceoType" | "ceoVacant" | "caretakerCeo">,
@@ -30,9 +31,10 @@ export function isCeoActor(
   if (!active) return true;
   const caretaker = corporation.caretakerCeo;
   if (caretaker) {
-    return (
-      !!caretaker.underlyingCharacterId && caretaker.underlyingCharacterId.toString() === active
-    );
+    // A caretaker appointed on a vacancy can record only the account; keep the
+    // account rule there rather than lock the owner out.
+    if (!caretaker.underlyingCharacterId) return true;
+    return caretaker.underlyingCharacterId.toString() === active;
   }
   if (corporation.ceoType === "imperial" || corporation.ceoType === "npp") return true;
   if (!corporation.ceoId) return true;

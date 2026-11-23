@@ -49,6 +49,15 @@ describe("isCeoActor", () => {
     expect(isCeoActor(caretaker, as(sibling))).toBe(false);
   });
 
+  it("keeps a vacancy caretaker with no underlying character at the account level", () => {
+    const caretaker = corp({
+      ceoType: "npp",
+      ceoId: new ObjectId(),
+      caretakerCeo: { underlyingUserId: account } as never,
+    });
+    expect(isCeoActor(caretaker, as(sibling))).toBe(true);
+  });
+
   it("keeps imperial CEOs at the account level", () => {
     expect(isCeoActor(corp({ ceoType: "imperial" }), as(sibling))).toBe(true);
   });
