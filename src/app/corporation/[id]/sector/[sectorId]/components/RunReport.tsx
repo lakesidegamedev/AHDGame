@@ -229,7 +229,7 @@ export default function RunReport({
       {price != null && unitCost > 0 && (
         <div data-testid="unit-economics">
           <p className="mb-1 text-body-xs font-medium text-muted">
-            Each unit sold to outside buyers last turn
+            Each unit sold to outside buyers last turn (materials, wages and site running only)
           </p>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-track">
             <div className="flex h-full">
@@ -257,7 +257,8 @@ export default function RunReport({
             .{" "}
             {margin != null && (
               <span className={`font-semibold ${margin >= 0 ? "text-success" : "text-error"}`}>
-                {margin >= 0 ? "Earns" : "Loses"} {formatAmount(Math.abs(margin))} a unit.
+                {margin >= 0 ? "Earns" : "Loses"} {formatAmount(Math.abs(margin))} a unit sold
+                outside.
               </span>
             )}
             {(report.unsoldShare ?? 0) >= 0.005

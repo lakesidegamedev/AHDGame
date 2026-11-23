@@ -38,6 +38,21 @@ describe("run report card", () => {
     expect(sold.container.textContent ?? "").not.toContain("did not sell");
   });
 
+  it("labels the per-unit earnings as per unit sold outside, on the three-cost basis", () => {
+    const props = {
+      capacityUnits: 1000,
+      producedUnits: 900,
+      idleCauses: [],
+      sectorType: "healthcare" as const,
+    };
+    const base = { ...losing, unitPrice: 600, unitMaterials: 300, unitWages: 100, unitSite: 50 };
+    const text =
+      render(<RunReport report={{ ...base, profitPerUnit: 150 }} {...props} />).container
+        .textContent ?? "";
+    expect(text).toContain("a unit sold outside");
+    expect(text).toContain("materials, wages and site running only");
+  });
+
   it("shows what your own sites charged this sector, and only when something was charged", () => {
     const props = {
       capacityUnits: 1000,
