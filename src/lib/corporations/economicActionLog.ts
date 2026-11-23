@@ -28,7 +28,9 @@ export type EconomicActionType =
   | "cancelCapacityBuild"
   | "mothballSector"
   | "reactivateSector"
-  | "resizeSectorCapacity";
+  | "resizeSectorCapacity"
+  // Supply priority (own sites first or open market first) changes what inputs cost.
+  | "setInternalSupplyPolicy";
 
 export interface EconomicActionLogParams {
   /** ObjectId or its hex string — conversion + validation happen inside. */
