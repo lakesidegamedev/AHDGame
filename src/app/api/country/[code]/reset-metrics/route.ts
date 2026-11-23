@@ -1,3 +1,5 @@
+import { metricDisplayUnit } from "@/lib/resetMetrics/presentation";
+import { metricPolicyPressure } from "@/lib/resetMetrics/rules/policyPressure";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
@@ -29,7 +31,7 @@ import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
-import { deliveredLawFactor, deliveredMetricEffects } from "@/lib/resetMetrics/rules/lawDelivery";
+import { deliveredLawFactor, metricLawApplies } from "@/lib/resetMetrics/rules/lawDelivery";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
@@ -189,32 +191,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       countryIds: [countryId],
       regions: board.board.regionId ? [{ _id: board.board.regionId, countryId }] : [],
     });
-    const applicable = laws.programs.filter(
-      (p) =>
-        p.country === countryId && (p.scope === "national" || p.regionId === board.board.regionId)
+    const applicable = [...laws.programs, ...laws.opening].filter((p) =>
+      metricLawApplies(p, board.board)
     );
-    const legislativeEffects = new Map(
-      Object.entries(
-        deliveredMetricEffects(applicable, laws.settlements, board.board.asOfTurn)
-      ).map(([metricId, favorableNormalizedPoints]) => [
-        metricId,
-        {
-          metricId,
-          favorableNormalizedPoints,
-          contributingPrograms: [
-            ...new Set(
-              applicable
-                .filter(
-                  (p) =>
-                    deliveredLawFactor(p, laws.settlements.get(p._id), board.board.asOfTurn) > 0 &&
-                    p.primaryMetricEffects.some((e) => e.metricId === metricId)
-                )
-                .map((p) => p.familyId)
-            ),
-          ],
-        },
-      ])
-    );
+    const pressure = metricPolicyPressure({
+      board: board.board,
+      ...laws,
+      turn: board.board.asOfTurn,
+      temporary: [...temporaryEffects].map(([id, effect]) => ({
+        target: `M${id}`,
+        favorableNormalizedPoints: effect.favorableNormalizedPoints,
+      })),
+    });
     const standingLaws = openingLawBoard
       ? buildMetricLawStatuses({
           country: countryId,
@@ -233,11 +221,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       .filter((metric) => board.board.scope === "national" || metric.aggregation !== "national")
       .map((definition) => {
         const temporary = temporaryEffects.get(definition.id);
-        const legislative = legislativeEffects.get(definition.id);
+        const policyPressure = pressure[definition.id];
         const observation = observations[definition.id];
         return {
           ...definition,
-          ...(observation?.unit ? { unit: observation.unit } : {}),
+          unit: metricDisplayUnit(observation?.unit ?? definition.unit),
           observation,
           conditionScore:
             observation?.definitionVersion === 2 && ["02", "24"].includes(definition.id)
@@ -256,12 +244,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                 ),
               }
             : null,
-          legislativeEffect: legislative
+          policyPressure: policyPressure ?? null,
+          legislativeEffect: policyPressure
             ? {
-                ...legislative,
-                contributingPrograms: legislative.contributingPrograms.map(
-                  (familyId) => resetLawFamilyById(familyId)?.title ?? "Legislative program"
-                ),
+                favorableNormalizedPoints: policyPressure.netLaw,
+                contributingPrograms: [
+                  ...new Set(
+                    applicable
+                      .filter((p) =>
+                        p.primaryMetricEffects.some((e) => e.metricId === definition.id)
+                      )
+                      .map((p) => resetLawFamilyById(p.familyId)?.title ?? "Legislative program")
+                  ),
+                ],
               }
             : null,
           standingLaws: standingLaws[definition.id] ?? [],

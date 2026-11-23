@@ -1,3 +1,4 @@
+import { appendMetricHistory } from "./rules/history";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -371,4 +372,81 @@ describe("v2 metric turn persistence shell", () => {
       $slice: -120,
     });
   });
+});
+
+it("keeps sampled weights immutable across a partial bulk failure and retry", async () => {
+  const db = createMockDb();
+  const previous = boards.map((board) => ({ ...board, asOfTurn: 12 }));
+  const firstReadings = ownerReadings(previous, 13);
+  const completed = previous.map((board) => {
+    const next = refreshResetMetricBoard({
+      board,
+      turn: 13,
+      ...firstReadings[board._id]!,
+      allowCatchUp: true,
+    }).board;
+    return {
+      ...next,
+      history: appendMetricHistory(
+        next.history!,
+        next.observations,
+        13,
+        Object.fromEntries(Object.keys(next.observations).map((id) => [id, 100]))
+      ),
+    };
+  });
+  const partial = completed.map((board, i) => (i < 10 ? board : previous[i]!));
+  const readings = Object.fromEntries(
+    Object.entries(ownerReadings(partial, 13)).map(([id, bundle]) => [
+      id,
+      {
+        ...bundle,
+        historyWeights: Object.fromEntries(
+          Object.keys(partial.find((board) => board._id === id)!.observations).map((metricId) => [
+            metricId,
+            200,
+          ])
+        ),
+      },
+    ])
+  );
+  db.collection("resetMetricSnapshots").find.mockReturnValue({
+    toArray: vi.fn().mockResolvedValue(partial),
+  });
+  db.collection("resetMetricSnapshots").bulkWrite.mockResolvedValue({
+    matchedCount: boards.length - 10,
+  });
+  const input = {
+    db: db as unknown as Db,
+    gameState: { ...state, currentTurn: 12 },
+    turn: 13,
+    ownerReadings: readings,
+    ready,
+  };
+  expect(await refreshResetMetricSnapshotsTurn(input)).toMatchObject({
+    advanced: boards.length - 10,
+    replayed: 10,
+  });
+  const operations = db.collection("resetMetricSnapshots").bulkWrite.mock.calls[0][0];
+  expect(operations).toHaveLength(boards.length - 10);
+  expect(
+    operations.some(
+      (op: { updateOne: { filter: { _id: string } } }) =>
+        op.updateOne.filter._id === partial[0]!._id
+    )
+  ).toBe(false);
+  expect(
+    partial[0]!.history![Object.keys(partial[0]!.observations)[0]!]!.at(-1)!.aggregationWeight
+  ).toBe(100);
+  const push = Object.values(operations[0].updateOne.update.$push)[0] as {
+    $each: { aggregationWeight: number }[];
+  };
+  expect(push.$each[0].aggregationWeight).toBe(200);
+  db.collection("resetMetricSnapshots").find.mockReturnValue({
+    toArray: vi.fn().mockResolvedValue(completed),
+  });
+  expect(
+    await refreshResetMetricSnapshotsTurn({ ...input, ownerReadings: ownerReadings(completed, 13) })
+  ).toMatchObject({ advanced: 0, replayed: boards.length });
+  expect(db.collection("resetMetricSnapshots").bulkWrite).toHaveBeenCalledTimes(1);
 });

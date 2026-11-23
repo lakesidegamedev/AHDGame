@@ -1,4 +1,5 @@
 "use client";
+import { metricHasPolicyPressure } from "@/lib/resetMetrics/presentation";
 import type {
   ResetMetricCountry,
   ResetMetricRow,
@@ -221,7 +222,7 @@ function RegistrySummary({
           value={board.asOfTurn.toLocaleString("en-US")}
           sub="current world"
         />
-        <SummaryTile label="Sourced" value={String(sourced)} sub="observed or derived" />
+        <SummaryTile label="Recorded / derived" value={String(sourced)} sub="observed or derived" />
         <SummaryTile label="Provisional" value={String(provisional)} sub="game-calibrated" />
         <SummaryTile label="Active pressure" value={String(influenced)} sub="law or Cabinet" />
       </div>
@@ -306,7 +307,7 @@ function CategoryOverview({
               <div className="grid grid-cols-3 gap-2 text-body-sm">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                    Sourced
+                    Recorded / derived
                   </div>
                   <div className="mt-1 font-bold tabular-nums text-foreground">{sourced}</div>
                 </div>
@@ -370,9 +371,7 @@ export function ResetMetricBoard({
         name: readableCategory(id),
         metrics,
         provisional: metrics.filter((metric) => metric.observation.status === "proxy").length,
-        influenced: metrics.filter(
-          (metric) => metric.temporaryActionEffect || metric.legislativeEffect
-        ).length,
+        influenced: metrics.filter(metricHasPolicyPressure).length,
         conditionScore:
           scores.length > 0
             ? scores.reduce((total, score) => total + score, 0) / scores.length

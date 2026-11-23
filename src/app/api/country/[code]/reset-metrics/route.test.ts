@@ -223,3 +223,47 @@ describe("v2 metrics API", () => {
     expect((await response.json()).reason).toBe("regional_rollup");
   });
 });
+
+it("reports zero net change for fully delivered opening laws and normalizes legacy unit labels", async () => {
+  const { getDb } = await import("@/lib/mongodb");
+  const { readResetMetricBoard } = await import("@/lib/resetMetrics/readBoard");
+  const delivery = await import("@/lib/resetMetrics/loadLawDelivery");
+  const { GET } = await import("./route");
+  const db = createMockDb();
+  vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+  const board = buildOpeningMetricSnapshots1991("world", 1).find((b) => b._id === "US:CA")!;
+  board.asOfTurn = 10;
+  board.observations["18"]!.unit = "treatment-delay index, later median days";
+  vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board, year: 2027 });
+  const law = {
+    _id: "opening",
+    country: "US",
+    scope: "national" as const,
+    familyId: "L16",
+    fundingAccountId: "health",
+    effectiveTurn: 1,
+    primaryMetricEffects: [{ metricId: "16", favorableNormalizedPoints: 1.31 }],
+  };
+  const spy = vi.spyOn(delivery, "loadMetricLawDelivery").mockResolvedValue({
+    programs: [law],
+    opening: [law],
+    settlements: new Map([[law._id, { implementationFactor: 1, lastSettledTurn: 10 }]]),
+  });
+  try {
+    const response = await GET(
+      new Request("http://localhost/api/country/us/reset-metrics?region=CA"),
+      { params: Promise.resolve({ code: "us" }) }
+    );
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.metrics.find((m: { id: string }) => m.id === "16")).toMatchObject({
+      legislativeEffect: { favorableNormalizedPoints: 0 },
+      policyPressure: { grossLaw: 1.31, openingLaw: 1.31, netLaw: 0, cabinet: 0, combined: 0 },
+    });
+    expect(payload.metrics.find((m: { id: string }) => m.id === "18").unit).toBe(
+      "treatment-delay index"
+    );
+  } finally {
+    spy.mockRestore();
+  }
+});

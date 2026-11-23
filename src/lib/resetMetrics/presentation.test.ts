@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { primaryMetrics } from "./catalog";
 import {
   metricAggregationLabel,
+  metricDisplayUnit,
+  metricHasPolicyPressure,
   metricOwnerLabel,
   metricRefreshLabel,
   metricFreshnessLabel,
@@ -35,4 +37,33 @@ describe("reset metric player presentation", () => {
       "underlying people or events"
     );
   });
+});
+
+it("does not label a modeled index as days or an unrelated opening era", () => {
+  expect(metricDisplayUnit("treatment-delay index, later median days")).toBe(
+    "treatment-delay index"
+  );
+  expect(metricDisplayUnit("1991 country housing-burden index")).toBe(
+    "country-relative housing-burden index"
+  );
+  expect(metricDisplayUnit("median days")).toBe("median days");
+  expect(metricDisplayUnit("% disposable income spent on housing")).toBe(
+    "% disposable income spent on housing"
+  );
+});
+
+it("does not count inherited zero-net laws as active pressure", () => {
+  expect(
+    metricHasPolicyPressure({
+      policyPressure: { combined: 0 },
+      legislativeEffect: { favorableNormalizedPoints: 1.31 },
+    })
+  ).toBe(false);
+  expect(metricHasPolicyPressure({ policyPressure: { combined: -0.2 } })).toBe(true);
+  expect(
+    metricHasPolicyPressure({
+      temporaryActionEffect: { favorableNormalizedPoints: 0.2 },
+      legislativeEffect: { favorableNormalizedPoints: -0.2 },
+    })
+  ).toBe(false);
 });

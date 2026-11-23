@@ -1,12 +1,7 @@
 import { isLegacyIncomeTax } from "@/lib/budget/incomeTaxCatalog";
 import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTaxTiers";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  StatePolicyRecord,
-  LegislationType,
-  LegislationPolicyOption,
-  GovernorExecutiveOrder,
-} from "@/lib/db/types";
+import type { StatePolicyRecord, LegislationType, LegislationPolicyOption } from "@/lib/db/types";
 import { NATIONAL_POLICY_STATE_IDS } from "@/lib/policy/nationalStateId";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { FederalBudget, FederalTaxRates } from "@/lib/db/types/budget";
@@ -280,12 +275,12 @@ export function buildPolicyResponse(
     policyOptionIndex: record.policyOptionIndex,
     options: legislationType.policyOptions ?? [],
   });
-  const retainedOption =
-    effectOptionId !== record.policyOptionId
-      ? legislationType.policyOptions?.find((option) => option.id === effectOptionId)
-      : undefined;
   const matchedOption =
-    retainedOption ?? findMatchedOption(legislationType.policyOptions, economic, social);
+    legislationType.policyOptions?.find((option) => option.id === effectOptionId) ??
+    (Number.isSafeInteger(record.policyOptionIndex) && record.policyOptionIndex! >= 0
+      ? legislationType.policyOptions?.[record.policyOptionIndex!]
+      : undefined) ??
+    findMatchedOption(legislationType.policyOptions, economic, social);
   const encodedSliderRate =
     legislationType.taxSlider || legislationType.taxRateChange
       ? readTaxPolicyRate(record.policyOptionId)
