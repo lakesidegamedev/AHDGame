@@ -3,6 +3,12 @@
  * sector detail query. Extracted verbatim from sectorDetail.ts (pure code
  * motion; no behavior change).
  */
+import type { FundedBuyerDemandRow } from "@/lib/market/producerMarket/fundedBuyerDemandRules";
+import {
+  outsideBuyerRows,
+  outsidePriceReading,
+  type OutsideBuyerReading,
+} from "@/lib/corporations/rules/outsideBuyerReading";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { settledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
@@ -247,6 +253,8 @@ export async function buildSectorCommoditySections(args: {
    * for saying why an output went unsold. Absent: no reason shown.
    */
   laneClearingPrices?: Readonly<Record<string, number | undefined>>;
+  /** Last settled turn's market-wide orders by buyer kind, for naming who bought. */
+  buyerDemand?: readonly FundedBuyerDemandRow[];
 }) {
   const {
     sector,
@@ -376,6 +384,9 @@ export async function buildSectorCommoditySections(args: {
   );
   const hasRevenueSplit = Object.keys(revenueShareByCommodity).length > 0;
 
+  const outsideAsks = fundedRecord
+    ? pricingAsks(fundedRecord.products, args.laneClearingPrices)
+    : [];
   const supplies = supplyFlows.map((f) => {
     const sale = receiptSales?.get(f.commodity);
     const soldFraction = receiptSales
@@ -455,6 +466,23 @@ export async function buildSectorCommoditySections(args: {
           }
         : {}),
       ...(isCeo && sale ? { settledSales: sale } : {}),
+      ...(isCeo && sale && sale.sold > 0
+        ? (() => {
+            const ask = outsideAsks.find((a) => a.commodity === f.commodity);
+            const regional = buildPriceFields(f.commodity).regionalPrice;
+            return {
+              outsideBuyers: {
+                buyers: outsideBuyerRows(args.buyerDemand, f.commodity),
+                price: outsidePriceReading({
+                  askUnitPrice: ask?.askingUnitPrice,
+                  paidUnitPrice: sale.revenue / sale.sold,
+                  bookUnitPrice: ask?.marketUnitPrice,
+                  regionalUnitPrice: regional,
+                }),
+              } satisfies OutsideBuyerReading,
+            };
+          })()
+        : {}),
       ...(sale && sale.sold > 0 ? { settledUnitPrice: sale.revenue / sale.sold } : {}),
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }

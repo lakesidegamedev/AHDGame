@@ -173,6 +173,8 @@ export interface CommodityFlow {
   soldFractionBasis?: "settlement" | "estimate";
   /** CEO-only physical settlement, per turn. */
   settledSales?: SettledProductSales;
+  /** CEO-only: who bought outside sales (market-wide) and why the price sat where it did. */
+  outsideBuyers?: import("@/lib/corporations/rules/outsideBuyerReading").OutsideBuyerReading;
   /**
    * Supply rows, CEO only: output this plant handed to the company's own other
    * sites last turn. Not a sale, so no revenue; `valueAnchor` is the units at

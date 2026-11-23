@@ -463,6 +463,63 @@ describe("sold share beside own-site use", () => {
     expect(screen.getByText("0 sold outside · $0 sales")).toBeTruthy();
   });
 
+  it("names who bought an outside sale and why the price sat under the regional price", () => {
+    render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            {
+              ...commodities.supplies[0],
+              commodity: "energy",
+              label: "Electricity",
+              icon: "kW",
+              unit: "kWh",
+              units: 100,
+              marketPrice: 117,
+              settledSales: {
+                produced: 10,
+                offered: 10,
+                sold: 10,
+                ownSites: 0,
+                unsold: 0,
+                revenue: 1067.8,
+              },
+              outsideBuyers: {
+                buyers: [
+                  { kind: "households", name: "Households", delivered: 70, requested: 80 },
+                  {
+                    kind: "publicBuyer",
+                    name: "Government procurement",
+                    delivered: 5,
+                    requested: 5,
+                  },
+                ],
+                price: {
+                  askUnitPrice: 100,
+                  paidUnitPrice: 106.78,
+                  bookUnitPrice: 106,
+                  regionalUnitPrice: 117,
+                  gapShare: -0.0873,
+                  belowRegional: "ask_below_regional",
+                },
+              },
+            },
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    fireEvent.click(screen.getByText("100% of offers sold"));
+    expect(screen.getByText(/Households: 70(\.0)? a day/)).toBeTruthy();
+    expect(screen.getByText(/Government procurement: 5(\.0)? a day/)).toBeTruthy();
+    expect(screen.getByText(/Your ask was under the regional price/)).toBeTruthy();
+  });
+
   it("shows the own-site value next to the sold share", () => {
     render(
       <InputsOutputsPanel
