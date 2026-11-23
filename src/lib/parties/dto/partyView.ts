@@ -69,6 +69,8 @@ export interface PartyData {
   /** Voter-registration drive budget. */
   registrationBudgetPercent: number;
   registrationEstimatedSpend: number;
+  /** Treasury the turn will spend buying Political Strength, after the budget, treasury and cap limits. */
+  psInvestmentEstimatedSpend: number;
   transferReserveAmount: number;
   memberSupportReserveAmount: number;
   nppRecruitmentReserveAmount: number;

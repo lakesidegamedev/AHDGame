@@ -22,6 +22,7 @@ import {
   OwnerToggle,
   ChartPill,
   StatCard,
+  incomeTone,
   IconOverview,
   IconCash,
   IconStocks,
@@ -793,8 +794,8 @@ function OverviewPane({
         <StatCard label="Bond holdings" value={formatAmount(totalBondValue)} />
         <StatCard
           label="Bond income"
-          value={`+${formatAmount(totalBondIncomePerTurn)}/turn`}
-          accent="success"
+          value={`${totalBondIncomePerTurn > 0 ? "+" : ""}${formatAmount(totalBondIncomePerTurn)}/turn`}
+          tone={incomeTone(totalBondIncomePerTurn)}
         />
       </div>
       {isGarnished && (

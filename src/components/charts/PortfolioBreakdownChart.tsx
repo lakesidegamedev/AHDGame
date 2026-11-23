@@ -5,6 +5,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatFundsCompact } from "@/lib/utils/formattersCore";
 import { YAxisGrid } from "./YAxisGrid";
+import { axisTickFormatter } from "./axisTicks";
 
 interface HistoryPoint {
   turn: number;
@@ -91,6 +92,8 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
   const minVal = Math.min(...allValues);
   const maxVal = Math.max(...allValues);
   const range = maxVal - minVal || 1;
+  const axisValues = Array.from({ length: 5 }, (_, i) => minVal + (range * i) / 4);
+  const axisFmt = axisTickFormatter(axisValues, lastSymbol);
 
   function toX(i: number): number {
     if (history.length <= 1) return PAD_LEFT + INNER_W / 2;
@@ -204,11 +207,11 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
       >
         {/* Y-axis grid + labels */}
         <YAxisGrid
-          values={Array.from({ length: 5 }, (_, i) => minVal + (range * i) / 4)}
+          values={axisValues}
           toY={toY}
           left={PAD_LEFT}
           right={WIDTH - PAD_RIGHT}
-          format={fmt}
+          format={axisFmt}
         />
 
         {/* Stock line */}

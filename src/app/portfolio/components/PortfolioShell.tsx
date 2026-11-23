@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { toneForDelta, toneText, type Tone } from "@/lib/ui/tone";
 
 export interface PortfolioRailItem<K extends string> {
   key: K;
@@ -430,21 +431,29 @@ export function ChartPill({
   );
 }
 
+/** Tone for a per-turn income figure: zero is neutral, never green. */
+export function incomeTone(amount: number | null | undefined): Tone {
+  return toneForDelta(amount);
+}
+
 export function StatCard({
   label,
   value,
   accent,
+  tone,
 }: {
   label: string;
   value: string;
   accent?: "success";
+  /** Overrides `accent`; colours the value by the shared tone contract. */
+  tone?: Tone;
 }) {
   return (
     <div className="rounded-xl border border-card-border bg-card px-4 py-4 shadow-sm">
       <span className="block text-body-sm font-medium text-muted mb-1">{label}</span>
       <span
         className={`block text-lg sm:text-xl font-bold tabular-nums ${
-          accent === "success" ? "text-success" : "text-foreground"
+          tone ? toneText(tone) : accent === "success" ? "text-success" : "text-foreground"
         }`}
       >
         {value}

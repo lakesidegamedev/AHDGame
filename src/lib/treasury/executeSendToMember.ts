@@ -24,6 +24,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
+import { emitPartyCampaignFunds } from "@/lib/financialTxLog/partyCampaignFunds";
 import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 // Imported from the values module, not the re-export on `payoutCap`: it is a
 // pure helper with no database dependency, and tests that mock the
@@ -264,6 +265,17 @@ export async function executeSendToMember(
       })
     );
   }
+
+  await emitPartyCampaignFunds(db, {
+    characterId: targetCharacter._id,
+    characterName: targetCharacter.name,
+    amount,
+    currencyCode: txCurrency,
+    turn: args.currentTurn,
+    partyId: partyIdStr,
+    partyName: party.name,
+    flow: "payout",
+  });
 
   try {
     await emitTreasuryTransaction({
