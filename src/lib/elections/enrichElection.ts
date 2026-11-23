@@ -801,7 +801,10 @@ export async function fetchDepsForElection(
   const candidates = await electionCandidatesCollection(db).find(candidateQuery).toArray();
 
   const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
-  const runningMateIds = candidates.filter((c) => c.runningMateId).map((c) => c.runningMateId!);
+  const runningMateIds = candidates.flatMap((c) => [
+    ...(c.runningMateId ? [c.runningMateId] : []),
+    ...(c.pendingRunningMateId ? [c.pendingRunningMateId] : []),
+  ]);
   const allCharIds = [
     ...new Set([...characterIds, ...runningMateIds].map((id) => id.toString())),
   ].map((s) => new ObjectId(s));

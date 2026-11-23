@@ -65,6 +65,10 @@ export interface PoliticalApprovalBases {
   /** Owner-derived named conditions when Metrics v2 is active. */
   modifiersByRegion?: Map<string, ActiveModifier[]>;
   regionalModifiersByRegion?: Map<string, ActiveModifier[]>;
+  /**
+   * National treasury fiscal conditions (deficit, debt) under Metrics v2. They
+   * judge national approval only; governors answer for their own budgets.
+   */
   nationalModifiers?: ActiveModifier[];
   /** Population-weighted national base (same rounding). */
   national: number;

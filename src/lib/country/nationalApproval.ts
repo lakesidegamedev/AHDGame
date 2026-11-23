@@ -94,7 +94,7 @@ export async function loadNationalApproval(
       : null;
   const nationalModifiers = approvalDoc
     ? (approvalDoc.activeNationalModifiers ?? [])
-    : [PUBLIC_EXPECTATIONS_MODIFIER];
+    : [PUBLIC_EXPECTATIONS_MODIFIER, ...(bases?.nationalModifiers ?? [])];
   const modifiers = [
     ...(approvalDoc?.activeRegionalModifiers ??
       live?.regionalModifiers ??

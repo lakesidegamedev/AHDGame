@@ -42,6 +42,7 @@ export const CATEGORY_OF: Record<NotificationType, InboxCategory> = {
   primary_win: "election",
   primary_loss: "election",
   general_win: "election",
+  running_mate_invite: "election",
   general_loss: "election",
   impeachment_filed: "legislation",
   impeachment_convicted: "crisis",

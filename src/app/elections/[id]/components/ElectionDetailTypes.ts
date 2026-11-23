@@ -47,6 +47,10 @@ export interface CandidateDetail {
   runningMateCharacterId?: string | null;
   /** President: running mate name */
   runningMateName?: string | null;
+  /** President: character invited as running mate who has not accepted yet */
+  pendingRunningMateCharacterId?: string | null;
+  /** President: name of the invited running mate */
+  pendingRunningMateName?: string | null;
   /** Campaign ID if a campaign exists for this candidate */
   campaignId?: string | null;
   /** Campaign cash on hand (funds) */

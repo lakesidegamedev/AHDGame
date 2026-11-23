@@ -46,6 +46,9 @@ export function resolveSourceLink(
 
   // ── Election ──────────────────────────────────────────────────────────────
   const electionId = asString(m.electionId);
+  if (type === "running_mate_invite" && electionId) {
+    return { label: "Answer invitation", href: `/elections/${encodeURIComponent(electionId)}` };
+  }
   if (electionId) {
     return { label: "View election", href: campaignManagerHref({ race: electionId }) };
   }

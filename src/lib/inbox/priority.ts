@@ -21,6 +21,7 @@ export const ACTION_TYPES: ReadonlySet<NotificationType> = new Set([
   "corp_supply_agreement_offer",
   "corp_product_event",
   "election_opened",
+  "running_mate_invite",
   "leadership_election_opened",
   "national_leadership_election_opened",
   "committee_election_opened",

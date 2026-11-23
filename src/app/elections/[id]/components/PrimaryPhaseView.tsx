@@ -144,6 +144,7 @@ export function PrimaryPhaseView({
               electionId={electionId}
               currentRunningMateCharacterId={mine.runningMateCharacterId ?? null}
               currentRunningMateName={mine.runningMateName ?? null}
+              pendingRunningMateName={mine.pendingRunningMateName ?? null}
               onSuccess={onRemoveSuccess}
             />
           ) : null;

@@ -206,11 +206,19 @@ export async function getCampaignDetail(
   // tickets only, so down-ballot races skip both lookups entirely.
   let runningMateName: string | null = null;
   let runningMateCharacterId: string | null = null;
+  let pendingRunningMateName: string | null = null;
   if (election?.electionType === "president") {
     const ticketRow = await electionCandidatesCollection(db).findOne(
       { electionId: campaign.electionId, characterId: campaign.candidateId },
-      { projection: { runningMateId: 1 } }
+      { projection: { runningMateId: 1, pendingRunningMateId: 1 } }
     );
+    if (ticketRow?.pendingRunningMateId) {
+      const invited = await charactersCollection<{ name?: string }>(db).findOne(
+        { _id: ticketRow.pendingRunningMateId },
+        { projection: { name: 1 } }
+      );
+      pendingRunningMateName = invited?.name ?? null;
+    }
     if (ticketRow?.runningMateId) {
       const mate = await charactersCollection<{ name?: string }>(db).findOne(
         { _id: ticketRow.runningMateId },
@@ -282,6 +290,7 @@ export async function getCampaignDetail(
     runningMateName,
     statePresence,
     runningMateCharacterId,
+    pendingRunningMateName,
     oppositionTargetId: canSeeExact ? campaign.oppositionTargetId?.toString() || null : null,
     oppositionTargetName: canSeeExact ? campaign.oppositionTargetName : null,
     ...(canSeeExact && election
