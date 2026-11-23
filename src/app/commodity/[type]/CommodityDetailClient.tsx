@@ -346,6 +346,9 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
             forexEnabled={forexEnabled}
             exchangeRates={exchangeRates}
             unit={data.unit}
+            nationalSupply={marketScope.activeCountry ? undefined : data.nationalSupply}
+            nationalDemand={marketScope.activeCountry ? undefined : data.nationalDemand}
+            nationalPrices={marketScope.activeCountry ? undefined : data.nationalPrices}
           />
         ) : (
           <Skeleton className="mb-6 h-[320px] w-full rounded-xl" />
