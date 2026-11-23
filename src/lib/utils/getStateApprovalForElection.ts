@@ -32,8 +32,13 @@ import { statesCollection } from "@/lib/db/repositories/states";
  * Used by the election engine to apply party strength modifier.
  * Returns BASE_APPROVAL (50) when state metrics or national averages are unavailable.
  */
-export async function getStateApprovalForElection(stateId: string): Promise<number> {
-  const map = await getAllStateApprovalsForElection();
+export async function getStateApprovalForElection(
+  stateId: string,
+  countryId?: CountryId
+): Promise<number> {
+  const map = await getAllStateApprovalsForElection(
+    countryId ? { countryIds: [countryId] } : undefined
+  );
   return map.get(stateId.toUpperCase()) ?? BASE_APPROVAL;
 }
 
@@ -62,6 +67,17 @@ export async function getAllStateApprovalsForElection(
     .find(stateFilter, { projection: { _id: 1, countryId: 1 } })
     .toArray();
 
+  const owners = new Map<string, Set<string>>();
+  for (const state of allStates) {
+    const id = String(state._id).toUpperCase();
+    const countries = owners.get(id) ?? new Set<string>();
+    countries.add(state.countryId);
+    owners.set(id, countries);
+  }
+  const outputKey = (countryId: string, stateId: string) =>
+    owners.get(stateId.toUpperCase())!.size > 1
+      ? `${countryId}:${stateId.toUpperCase()}`
+      : stateId.toUpperCase();
   const snapshots = await stateApprovalHistoryCollection(db)
     .find(stateFilter, {
       projection: { stateId: 1, countryId: 1, approvalRating: 1, lastSnapshotTurn: 1 },
@@ -75,7 +91,9 @@ export async function getAllStateApprovalsForElection(
   const recorded = new Map(
     allStates.flatMap((state) => {
       const approval = stored.get(`${state.countryId}:${state._id}`);
-      return approval === undefined ? [] : [[String(state._id).toUpperCase(), approval] as const];
+      return approval === undefined
+        ? []
+        : [[outputKey(state.countryId, String(state._id)), approval] as const];
     })
   );
   if (recorded.size === allStates.length) return recorded;
@@ -92,14 +110,16 @@ export async function getAllStateApprovalsForElection(
   // Exclude national-scope derived docs — they must not inflate country averages
   const stateOnlyMetrics = allRawMetrics.filter((m) => !NATIONAL_SCOPE_IDS.has(String(m._id)));
 
-  // Map stateId → countryId
-  const stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
+  // Metric membership includes the country because region codes can collide.
+  const stateCountryMap = new Set(allStates.map((s) => `${s.countryId}:${s._id}`));
 
   // Group state metrics by country
   const metricsByCountry = new Map<string, StateMetrics[]>();
   for (const m of stateOnlyMetrics) {
-    const cid = stateCountryMap.get(String(m._id));
-    if (!cid) continue;
+    const candidates = owners.get(String(m._id).toUpperCase());
+    const cid =
+      m.countryId ?? (candidates?.size === 1 ? candidates.values().next().value : undefined);
+    if (!cid || !stateCountryMap.has(`${cid}:${m._id}`)) continue;
     const arr = metricsByCountry.get(cid) ?? [];
     arr.push(m);
     metricsByCountry.set(cid, arr);
@@ -143,7 +163,7 @@ export async function getAllStateApprovalsForElection(
     for (const m of countryMetrics) {
       const id = (typeof m._id === "string" ? m._id : String(m._id)).toUpperCase();
       result.set(
-        id,
+        outputKey(cid, id),
         stored.get(`${cid}:${m._id}`) ??
           calculateStateApproval(
             m,

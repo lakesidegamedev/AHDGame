@@ -810,7 +810,10 @@ export async function accumulatePresidentVoteTurn(
       ? rawTurnPool
       : scalePoolToRegistered(rawTurnPool, registrationPoolMap.get(stateId)?.unregistered);
 
-    const approvalPct = approvalMap.get(stateId.toUpperCase()) ?? BASE_APPROVAL;
+    const approvalPct =
+      approvalMap.get(`${electionCountryId}:${stateId.toUpperCase()}`) ??
+      approvalMap.get(stateId.toUpperCase()) ??
+      BASE_APPROVAL;
     const approvalDecimal = approvalPct / 100;
     const officeStrength = PARTY_STRENGTH_BY_OFFICE.president ?? 1;
     // State-performance approval reweights this state's turnout MAGNITUDE

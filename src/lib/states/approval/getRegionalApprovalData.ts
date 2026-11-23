@@ -1,3 +1,5 @@
+import { approvalModifiersForDisplay } from "@/lib/approval/rules/adjustment";
+import { regionalApprovalFilter } from "@/lib/approval/rules/regionalIdentity";
 import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 import { getActiveFairnessGapModifiers } from "@/lib/redistricting/fairnessApproval";
 import { loadElectorateGroups, weightingFor } from "@/lib/utils/governmentApproval";
@@ -41,12 +43,22 @@ export async function getRegionalApprovalData(
   countryId: CountryId,
   stateId: string
 ): Promise<RegionalApprovalData | null> {
-  const stored = await stateApprovalHistoryCollection(db).findOne({ _id: stateId, countryId });
+  const stored = await stateApprovalHistoryCollection(db).findOne(
+    regionalApprovalFilter(countryId, stateId)
+  );
   if (stored?.lastSnapshotTurn != null && Number.isFinite(stored.approvalRating))
     return {
       approval: stored.approvalRating,
       baseApproval: stored.baseApproval ?? 50,
-      modifiers: stored.activeModifiers ?? [],
+      modifiers:
+        stored.baseApproval !== undefined && stored.activeModifiers !== undefined
+          ? approvalModifiersForDisplay(
+              stored.baseApproval,
+              stored.approvalRawRating ?? stored.approvalRating,
+              stored.approvalRating,
+              stored.activeModifiers
+            )
+          : (stored.activeModifiers ?? []),
     };
   // SP5: merged two-store view.
   const metrics = await findMergedRegionMetrics(db, { _id: stateId, countryId });

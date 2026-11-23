@@ -278,7 +278,10 @@ export async function loadStateApprovals(
   if (stateIds.length === 0) return new Map();
   const [approvals, states] = await Promise.all([
     stateApprovalHistoryCollection(db)
-      .find({ _id: { $in: stateIds } }, { projection: { _id: 1, countryId: 1, approvalRating: 1 } })
+      .find(
+        { $or: [{ stateId: { $in: stateIds } }, { _id: { $in: stateIds } }] },
+        { projection: { _id: 1, stateId: 1, countryId: 1, approvalRating: 1 } }
+      )
       .toArray(),
     statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
@@ -286,11 +289,19 @@ export async function loadStateApprovals(
   ]);
   const names = new Map(states.map((st) => [st._id, st.name]));
   const out = new Map<string, { approval: number; name: string }>();
+  const seen = new Set<string>();
   for (const a of approvals) {
     if (!Number.isFinite(a.approvalRating)) continue;
-    out.set(a._id, {
+    const stateId = a.stateId ?? a._id;
+    // Legacy contest subjects lack a country; ambiguous subjects cannot be ranked safely.
+    if (seen.has(stateId)) {
+      out.delete(stateId);
+      continue;
+    }
+    seen.add(stateId);
+    out.set(stateId, {
       approval: a.approvalRating,
-      name: names.get(a._id) || getStateDisplayName(a.countryId, a._id),
+      name: names.get(stateId) || getStateDisplayName(a.countryId, stateId),
     });
   }
   return out;

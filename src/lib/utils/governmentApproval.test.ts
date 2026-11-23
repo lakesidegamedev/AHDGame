@@ -198,7 +198,7 @@ describe("buildStateApprovalBulkOps", () => {
     );
     expect(ops).toHaveLength(2);
     const ca = ops[0].updateOne;
-    expect(ca.filter).toEqual({ _id: "CA" });
+    expect(ca.filter).toEqual({ _id: "US:CA" });
     expect(ca.upsert).toBe(true);
     expect(ca.update.$set).toMatchObject({
       stateId: "CA",

@@ -170,7 +170,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const storedById = new Map(
       storedApprovals
         .filter((doc) => doc.lastSnapshotTurn != null)
-        .map((doc) => [doc._id, doc.approvalRating])
+        .map((doc) => [doc.stateId ?? doc._id, doc.approvalRating])
     );
     const addresses = await getActiveAddressModifiersByState(
       db,
