@@ -3,6 +3,7 @@ import {
   closingProducerCash,
   ProducerCashChanges,
   producerCashChangeMap,
+  producerCashSnapshotTolerance,
 } from "./cashChangesRules";
 
 describe("producer cash movement accounting", () => {
@@ -77,5 +78,21 @@ describe("producer cash movement accounting", () => {
         ]
       )
     ).toThrow("overdraw");
+  });
+});
+
+describe("producerCashSnapshotTolerance", () => {
+  it("absorbs summed rounding drift on a large balance (turn 151)", () => {
+    const opening = 41005915.83564983;
+    const change = 1276847.1418696789;
+    const closing = 42282762.977519624;
+    const gap = Math.abs(opening + change - closing);
+    expect(gap).toBeGreaterThan(1e-7);
+    expect(gap).toBeLessThanOrEqual(producerCashSnapshotTolerance(opening + change, closing));
+  });
+
+  it("still rejects a real cent of difference", () => {
+    expect(0.01).toBeGreaterThan(producerCashSnapshotTolerance(42282762.98, 42282762.99));
+    expect(0.01).toBeGreaterThan(producerCashSnapshotTolerance(6e12, 6e12 + 0.01));
   });
 });
