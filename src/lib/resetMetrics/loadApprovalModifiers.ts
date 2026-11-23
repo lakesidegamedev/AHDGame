@@ -6,6 +6,7 @@
 import { primaryMetrics } from "./catalog";
 import type { TemporaryTargetEffect } from "@/lib/resetCabinet/rules/actions";
 import type { Db } from "mongodb";
+import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -24,6 +25,15 @@ import {
   cabinetEffectsForRegion,
 } from "@/lib/resetCabinet/rules/gameplay";
 import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { statesCollection } from "@/lib/db/repositories/states";
+import {
+  onlyLedgerFiscal,
+  regionalFiscalObservations,
+  withoutLedgerFiscal,
+  type RegionalFiscalPosition,
+} from "./rules/regionalFiscal";
 
 /** Approval needs current observations, never their notes or retained history. */
 export const RESET_APPROVAL_BOARD_PROJECTION = {
@@ -54,6 +64,45 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
  */
 export const APPROVAL_BOARD_MAX_LAG_TURNS = 6;
 
+/**
+ * Each region's own budget position. A regional budget is authoritative over a
+ * state budget with the same id, matching regional debt settlement. Region GDP
+ * is stored in millions.
+ */
+export async function loadRegionalFiscalPositions(
+  db: Db,
+  countryId: string,
+  regionIds: readonly string[]
+): Promise<Map<string, RegionalFiscalPosition>> {
+  const filter = { countryId: countryId as CountryId, _id: { $in: [...regionIds] } };
+  const projection = { _id: 1, surplus: 1, financing: 1 };
+  const [regions, stateBudgets, regionalBudgets] = await Promise.all([
+    statesCollection(db)
+      .find(filter, { projection: { _id: 1, gdp: 1 } })
+      .toArray(),
+    stateBudgetsCollection(db).find(filter, { projection }).toArray(),
+    regionalBudgetsCollection(db).find(filter, { projection }).toArray(),
+  ]);
+  const budgets = new Map<string, { surplus?: number; financing?: { principal?: number } }>();
+  for (const budget of [...stateBudgets, ...regionalBudgets])
+    budgets.set(String(budget._id), budget);
+  return new Map(
+    regions.map((region) => {
+      const budget = budgets.get(String(region._id));
+      return [
+        String(region._id),
+        budget
+          ? {
+              surplus: budget.surplus,
+              principal: budget.financing?.principal ?? 0,
+              gdp: region.gdp == null ? null : region.gdp * 1_000_000,
+            }
+          : {},
+      ];
+    })
+  );
+}
+
 export async function loadResetApprovalModifiers(
   db: Db,
   countryId: string,
@@ -61,8 +110,14 @@ export async function loadResetApprovalModifiers(
   gameState: GameState | null,
   turn?: number,
   prefetchedBoards?: readonly ResetMetricSnapshot[],
-  prefetchedCabinetEffects?: readonly TemporaryTargetEffect[]
-): Promise<{ modifiersByRegion: Map<string, ActiveModifier[]>; metrics: StateMetrics[] } | null> {
+  prefetchedCabinetEffects?: readonly TemporaryTargetEffect[],
+  prefetchedFiscal?: ReadonlyMap<string, RegionalFiscalPosition>
+): Promise<{
+  modifiersByRegion: Map<string, ActiveModifier[]>;
+  /** Treasury fiscal conditions, which judge national approval only. */
+  nationalModifiers: ActiveModifier[];
+  metrics: StateMetrics[];
+} | null> {
   if (
     !isResetV2Country(countryId) ||
     resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).metrics !== "v2"
@@ -137,8 +192,16 @@ export async function loadResetApprovalModifiers(
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =
     prefetchedCabinetEffects ?? (await loadCabinetGameplayEffects(db, gameState, turn));
+  // A governor answers for the region's own budget, never the national treasury.
+  const fiscal = prefetchedFiscal ?? (await loadRegionalFiscalPositions(db, countryId, stateIds));
+  const nationalShared = withoutLedgerFiscal(national);
+  const nationalModifiers = evaluateResetApprovalModifiers(onlyLedgerFiscal(national), context);
   const metrics = stateIds.map((id) => {
-    const observations = { ...read(id), ...national };
+    const observations = {
+      ...read(id),
+      ...nationalShared,
+      ...regionalFiscalObservations(fiscal.get(id)),
+    };
     const modifiers = evaluateResetApprovalModifiers(observations, context);
     const response = cabinetApprovalResponse(
       cabinetEffectsForRegion(cabinetEffects, countryId, id)
@@ -158,5 +221,5 @@ export async function loadResetApprovalModifiers(
       countryId,
     } as unknown as StateMetrics;
   });
-  return { modifiersByRegion, metrics };
+  return { modifiersByRegion, nationalModifiers, metrics };
 }
