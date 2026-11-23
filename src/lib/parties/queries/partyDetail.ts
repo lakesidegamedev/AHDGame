@@ -99,27 +99,6 @@ export async function loadPartyLeaders(
 }
 
 export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<PartyData> {
-  // Leadership lookup and the turn number are independent reads; issuing them
-  // together removes a round trip from every party hub load (7.3k views/30d).
-  const [leaderById, currentTurn] = await Promise.all([
-    loadPartyLeaders(db, [
-      party.chairId,
-      party.viceChairId,
-      party.treasurerId,
-      ...(party.campaignerIds ?? []),
-    ]),
-    getCurrentTurn(db),
-  ]);
-  const leader = (id: ObjectId | null | undefined) =>
-    id ? (leaderById.get(id.toString()) ?? null) : null;
-  const chair = leader(party.chairId);
-  const viceChair = leader(party.viceChairId);
-  const treasurer = leader(party.treasurerId);
-
-  const campaigners = (party.campaignerIds ?? [])
-    .map((id) => leader(id))
-    .filter((c): c is NonNullable<typeof c> => c !== null);
-
   const partyCountry = party.countryId ?? "US";
   // Party rosters were read as whole documents: `Character` and `NPP` both
   // carry fat policy/audit arrays that this page never renders, so a
@@ -127,7 +106,32 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   // roster, influence math and generation estimate actually consume, and read
   // the roster, the NPP list, the game config and the turnout divisor together
   // instead of one after another.
-  const [allMembers, npps, gameConfig, regionCount] = await Promise.all([
+  // Nothing below depends on the roster except the member user rows and the
+  // member home states, so every other read is issued in this same batch; the
+  // request then pays for two dependent round trips instead of a long chain.
+  const budgetCollectionPromise = getPartyBudgetCollection();
+  const [
+    leaderById,
+    currentTurn,
+    allMembers,
+    npps,
+    gameConfig,
+    regionCount,
+    stateOrgs,
+    preset,
+    campaignRates,
+    priceLevel,
+    nationalBudget,
+    nationalGdpPerCapita,
+    { presence, frontier },
+  ] = await Promise.all([
+    loadPartyLeaders(db, [
+      party.chairId,
+      party.viceChairId,
+      party.treasurerId,
+      ...(party.campaignerIds ?? []),
+    ]),
+    getCurrentTurn(db),
     charactersCollection(db)
       .find(
         { party: String(party.sequentialId), countryId: partyCountry },
@@ -178,11 +182,44 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
           }
         : { countryId: partyCountry }
     ),
+    statePartyOrgCollection(db)
+      .find(
+        { countryId: partyCountry, partyId: String(party.sequentialId) },
+        { projection: { stateId: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+      )
+      .toArray(),
+    getGameStatePresetOrDefault(db),
+    loadCampaignCurrencyRates(db),
+    loadCampaignPriceLevel(db),
+    budgetCollectionPromise.then((collection) =>
+      findPartyBudgetForScope(collection, {
+        countryId: party.countryId,
+        partyId: String(party.sequentialId),
+        scope: "national",
+      })
+    ),
+    loadNationalGdpPerCapita(db, partyCountry),
+    getPartyFrontier(db, partyCountry, String(party.sequentialId)),
   ]);
 
-  const memberUsers =
+  const leader = (id: ObjectId | null | undefined) =>
+    id ? (leaderById.get(id.toString()) ?? null) : null;
+  const chair = leader(party.chairId);
+  const viceChair = leader(party.viceChairId);
+  const treasurer = leader(party.treasurerId);
+  const campaigners = (party.campaignerIds ?? [])
+    .map((id) => leader(id))
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+
+  const uniqueStates = [
+    ...new Set([
+      ...allMembers.map((member) => member.homeState),
+      ...npps.map((npp) => npp.homeState),
+    ]),
+  ];
+  const [memberUsers, states] = await Promise.all([
     allMembers.length > 0
-      ? await usersCollection(db)
+      ? usersCollection(db)
           .find({ _id: { $in: allMembers.map((member) => member.userId) } })
           .project<{ _id: ObjectId; isBanned?: boolean; lastActivity?: Date; createdAt?: Date }>({
             _id: 1,
@@ -191,7 +228,13 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
             createdAt: 1,
           })
           .toArray()
-      : [];
+      : Promise.resolve([]),
+    uniqueStates.length > 0
+      ? statesCollection(db)
+          .find({ _id: { $in: uniqueStates } }, { projection: { population: 1, gdp: 1 } })
+          .toArray()
+      : Promise.resolve([]),
+  ]);
   const allowedMemberUserIds = new Set(
     memberUsers.filter((user) => user.isBanned !== true).map((user) => user._id.toString())
   );
@@ -210,12 +253,6 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     activeMemberUserIds.has(member.userId.toString())
   );
 
-  const stateOrgs = await statePartyOrgCollection(db)
-    .find(
-      { countryId: partyCountry, partyId: String(party.sequentialId) },
-      { projection: { stateId: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
-    )
-    .toArray();
   const stateRoles = stateRolesByPerson(stateOrgs);
 
   const characterMembers: PartyMember[] = displayMembers.map((member) => ({
@@ -241,26 +278,6 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
 
   const memberList: PartyMember[] = [...characterMembers, ...nppMembers];
 
-  const uniqueStates = [
-    ...new Set([...members.map((member) => member.homeState), ...npps.map((npp) => npp.homeState)]),
-  ];
-  const budgetCollection = await getPartyBudgetCollection();
-  const [states, preset, campaignRates, priceLevel, nationalBudget] = await Promise.all([
-    uniqueStates.length > 0
-      ? statesCollection(db)
-          .find({ _id: { $in: uniqueStates } }, { projection: { population: 1, gdp: 1 } })
-          .toArray()
-      : Promise.resolve([]),
-    getGameStatePresetOrDefault(db),
-    loadCampaignCurrencyRates(db),
-    loadCampaignPriceLevel(db),
-    findPartyBudgetForScope(budgetCollection, {
-      countryId: party.countryId,
-      partyId: String(party.sequentialId),
-      scope: "national",
-    }),
-  ]);
-  const nationalGdpPerCapita = await loadNationalGdpPerCapita(db, partyCountry);
   const statePopMap = new Map(states.map((state) => [state._id, state.population]));
   // Pass raw state.gdp (undefined when absent → country-average scalar 1.0,
   // matching the turn processor; do NOT coalesce to 0, which clamps to 0.9).
@@ -415,11 +432,6 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   // it. That mirrors `isInFrontier`'s fail-open branch exactly, so the client
   // does not have to re-derive the rule. Public data either way, since member
   // lists, NPP rosters and elected officials are all already visible.
-  const { presence, frontier } = await getPartyFrontier(
-    db,
-    partyCountry,
-    String(party.sequentialId)
-  );
   const frontierRegions = presence.size === 0 ? null : [...frontier].sort();
 
   return {
