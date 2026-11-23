@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MetricCategoryId } from "@/lib/db/types";
 import {
   MAX_COMPARE_NATIONS,
+  humanizeMetricId,
   compareAcrossMetrics,
   rankNations,
   toggleCompared,
@@ -36,6 +37,13 @@ const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
 const METRIC_DEFINITIONS = new Map<string, MetricDefinition>(
   metricCategories.flatMap((category) => category.metrics.map((metric) => [metric.id, metric]))
 );
+
+/** A metric id with no definition still gets words: "realizedMigrationRate" reads "Realized migration rate". */
+function metricLabel(id: string): string {
+  const name = METRIC_DEFINITIONS.get(id)?.name;
+  if (name) return name;
+  return humanizeMetricId(id);
+}
 
 const KNOWN_COUNTRIES = new Set(Object.keys(COUNTRY_CLIENT_CONFIGS));
 
@@ -65,7 +73,7 @@ function selectionLabel(selection: RankingSelection): string {
   if (selection.kind === "category") {
     return `${CATEGORY_LABELS[selection.category] ?? selection.category} score`;
   }
-  return METRIC_DEFINITIONS.get(selection.metric)?.name ?? selection.metric;
+  return metricLabel(selection.metric);
 }
 
 const TH = "border-b border-card-border pb-2 pr-4 text-left text-body-sm font-medium text-muted";
@@ -179,7 +187,7 @@ export default function WorldRankingsClient() {
                     </option>
                     {metrics.map((metric) => (
                       <option key={metric} value={`metric:${category}:${metric}`}>
-                        {METRIC_DEFINITIONS.get(metric)?.name ?? metric}
+                        {metricLabel(metric)}
                       </option>
                     ))}
                   </optgroup>
@@ -187,7 +195,7 @@ export default function WorldRankingsClient() {
               </select>
             </label>
             <p className="pb-2 text-body-sm text-muted">
-              {rankedCount} {rankedCount === 1 ? "nation" : "nations"} ranked on{" "}
+              {rankedCount} of {countries.length} nations ranked on{" "}
               {selectionLabel(selection).toLowerCase()}.
             </p>
           </div>
@@ -267,8 +275,12 @@ export default function WorldRankingsClient() {
               </tbody>
             </table>
             <p className="mt-2 text-body-sm text-muted">
-              Only nations with a national metrics document are listed. Nations still being brought
-              into the world appear here as their figures land.
+              Every nation with national figures is listed, {countries.length} in all. A dash means
+              the nation has no score for this statistic yet, so it is unranked rather than last.
+              The overall score is the average of a nation&apos;s category scores, and a category
+              score is the average of its scored statistics. It is not a plain average of every
+              statistic, and a score can change when the era&apos;s scoring bands move even if the
+              figure itself has not.
             </p>
           </section>
 
@@ -350,7 +362,7 @@ export default function WorldRankingsClient() {
                     {compareRows.map((row) => (
                       <tr key={row.metric} className="transition-colors hover:bg-card-elevated/40">
                         <td className={`${TD} text-muted`}>
-                          {METRIC_DEFINITIONS.get(row.metric)?.name ?? row.metric}
+                          {metricLabel(row.metric)}
                         </td>
                         {row.cells.map((cell) => (
                           <td
