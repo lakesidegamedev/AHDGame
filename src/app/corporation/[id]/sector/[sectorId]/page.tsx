@@ -17,6 +17,8 @@ import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
 import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import { useToast } from "@/contexts/ToastContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";
 import FinancialVisibilityNotice from "./components/FinancialVisibilityNotice";
@@ -370,6 +372,21 @@ export default function SectorDetailPage() {
       dispatch({ type: "SET_POLICY_SAVING", value: false });
     }
   };
+
+  const { formatAmount, toInternalFrom } = useCurrency();
+  const liquidCode = (corporation?.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
+  // Wage bill per turn: plants carry it in anchor money, the older panel in the
+  // company's own currency. Both are stored per financial day.
+  const wageBillPerTurn =
+    plants?.pnl?.labourAnchor != null
+      ? plants.pnl.labourAnchor / TURNS_PER_DAY
+      : financials?.laborCost != null
+        ? financials.laborCost / TURNS_PER_DAY
+        : null;
+  const formatWageBill = (perTurn: number) =>
+    plants?.pnl?.labourAnchor != null
+      ? formatAmount(perTurn)
+      : formatAmount(liquidCode ? toInternalFrom(perTurn, liquidCode) : perTurn, liquidCode);
 
   const handleSaveWage = async () => {
     dispatch({ type: "SET_WAGE_SAVING", value: true });
@@ -1079,6 +1096,8 @@ export default function SectorDetailPage() {
                 wageError={wageError}
                 onWageChange={(v) => dispatch({ type: "SET_WAGE_DRAFT", value: v })}
                 onSave={handleSaveWage}
+                labourCostPerTurn={wageBillPerTurn}
+                formatCost={formatWageBill}
               />
             )}
             {labourFullEnabled && sector.undergroundUnrest && (

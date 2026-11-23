@@ -128,6 +128,7 @@ export default function MarketMoneyPanel({
   const hasPolicy = policyAnchor !== 0;
 
   const statement = pnl.statement;
+  const otherSplit = pnl.otherBreakdown ?? null;
   const costLines: { key: string; label: string; value: number; help: string }[] = [
     ...(statement
       ? [
@@ -212,14 +213,48 @@ export default function MarketMoneyPanel({
           },
         ]
       : []),
-    {
-      key: "other",
-      label: "Other running costs",
-      value: pnl.otherOperatingAnchor,
-      help: hasPolicy
-        ? "Overheads, distribution, insurance and rent, plus any disaster losses. Everything the lines above do not name. It shows as a credit when the sector's own calibrated overhead sits below its named physical costs."
-        : "Overheads, distribution, insurance and rent, less anything policy or subsidy hands back. Everything the lines above do not name. It shows as a credit when the money coming back outweighs those overheads.",
-    },
+    ...(otherSplit
+      ? [
+          {
+            key: "overhead",
+            label: otherSplit.overheadAnchor < 0 ? "Overhead credit" : "Overheads and distribution",
+            value: otherSplit.overheadAnchor,
+            help:
+              otherSplit.overheadAnchor < 0
+                ? "The sector's own overhead came out below the named costs this turn, so it paid nothing for overheads and the difference is a credit."
+                : "Overheads, distribution, insurance and rent.",
+          },
+          {
+            key: "stock-carry",
+            label: "Stock carrying cost",
+            value: otherSplit.inventoryCarryAnchor,
+            help: "The cost of holding unsold output in stock.",
+          },
+          {
+            key: "events",
+            label:
+              otherSplit.eventsAnchor < 0
+                ? "Crisis and disaster credit"
+                : "Crisis and disaster losses",
+            value: otherSplit.eventsAnchor,
+            help: "Losses from disasters and live crises, net of any own-site transfer credit.",
+          },
+        ].filter((line) => Math.round(line.value) !== 0)
+      : []),
+    ...(!otherSplit || Math.round(otherSplit.remainderAnchor) !== 0
+      ? [
+          {
+            key: "other",
+            label: otherSplit ? "Other running costs, not itemised" : "Other running costs",
+            value: otherSplit ? otherSplit.remainderAnchor : pnl.otherOperatingAnchor,
+            help: otherSplit
+              ? "What the lines above do not explain, so the lines add up to the profit the turn booked. A positive amount here is a credit."
+              : hasPolicy
+                ? "Overheads, distribution, insurance and rent, plus any disaster losses. Everything the lines above do not name. It shows as a credit when the sector's own calibrated overhead sits below its named physical costs."
+                : "Overheads, distribution, insurance and rent, less anything policy or subsidy hands back. Everything the lines above do not name. It shows as a credit when the money coming back outweighs those overheads.",
+          },
+        ]
+      : []),
     {
       key: "growth",
       label: "Growth and building (excludes construction paid when ordered)",
@@ -586,8 +621,8 @@ export default function MarketMoneyPanel({
           )}
         </dl>
         <p className="mt-2 text-body-xs text-muted">
-          &quot;Other running costs&quot; is whatever the named lines do not explain, so the lines
-          above always add up to the profit the turn actually booked.
+          Any line shown with a plus sign is a credit. The lines above always add up to the profit
+          the turn actually booked.
         </p>
       </DetailsDisclosure>
     </div>

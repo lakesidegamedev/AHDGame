@@ -65,12 +65,26 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
           </p>
         )}
         {statement.tax > 0 && <StatementLine indent label="Tax" amount={cost(statement.tax)} />}
-        {round(statement.otherNet) !== 0 && (
+        {statement.otherParts.map((part) => (
+          <StatementLine
+            key={part.key}
+            indent
+            label={part.label}
+            amount={fmtSigned(round(part.amount))}
+            amountClass={signTone(part.amount)}
+          />
+        ))}
+        {round(statement.otherUnitemised) !== 0 && (
           <StatementLine
             indent
-            label="Interest, investments and other"
-            amount={fmtSigned(round(statement.otherNet))}
-            amountClass={signTone(statement.otherNet)}
+            label={
+              statement.otherParts.length > 0
+                ? "Other items, not itemised"
+                : "Interest, investments and other"
+            }
+            amount={fmtSigned(round(statement.otherUnitemised))}
+            amountClass={signTone(statement.otherUnitemised)}
+            title="The gap between the operating result after tax and the retained income the turn recorded. Revenue less costs, tax and dividends, plus this line, equals retained income."
           />
         )}
         {statement.dividendPaid > 0 && (
@@ -109,10 +123,10 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
         {cash.unitemised != null && round(cash.unitemised) !== 0 && (
           <StatementLine
             indent
-            label="Other movements, not itemised"
+            label="Cash change with no ledger record"
             amount={fmtSigned(round(cash.unitemised))}
             amountClass={signTone(cash.unitemised)}
-            title="Cash change left after retained income and the lines above, such as a payout or adjustment that is not in the lines above."
+            title="Cash change left after retained income and the lines above. Nothing in the ledger explains it."
           />
         )}
         <StatementLine
@@ -121,6 +135,13 @@ export function LastTurnReconciliation({ data, fmt, fmtSigned }: Props) {
           amount={fmt(round(cash.after))}
           note={cash.change != null ? `${fmtSigned(round(cash.change))} on the turn` : undefined}
         />
+        {cash.now != null && (
+          <StatementLine
+            label="Cash now, after actions since"
+            amount={fmt(round(cash.now))}
+            title="Spending or income since the turn was recorded, such as a research unlock bought after it, appears in the next turn's walk."
+          />
+        )}
       </StatementTable>
     </DenseSection>
   );

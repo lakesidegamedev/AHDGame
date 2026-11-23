@@ -409,6 +409,20 @@ function SectorTable({
   );
 }
 
+/** Where the last visible quality move came from, and what quality is built from. */
+function qualityChangeHint(change: CorporationDetail["averageQualityChange"]) {
+  if (!change) return undefined;
+  return (
+    <span
+      className={signTone(change.delta)}
+      title="Quality blends R&D, the quality of the inputs you buy, wages and operations strength. The turn does not record which of them moved it."
+    >
+      {change.delta >= 0 ? "up" : "down"} {Math.abs(change.delta)} from {Math.round(change.from)} at
+      turn {change.fromTurn}
+    </span>
+  );
+}
+
 /**
  * Signed per-turn change for an operations metric. Absent when the route
  * redacts a private corporation's books for an outside viewer, which is
@@ -778,6 +792,7 @@ export default function OverviewTab({
                     label="Average quality"
                     mark={<Meter pct={corporation.averageQuality} className="w-10" />}
                     value={`${Math.round(corporation.averageQuality)} / 100`}
+                    hint={qualityChangeHint(corporation.averageQualityChange)}
                   />
                 )}
                 {physical && (

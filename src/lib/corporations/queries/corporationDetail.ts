@@ -3,6 +3,7 @@ import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
 import type { Corporation, GameState, ShareListing, ShareOrder } from "@/lib/db/types";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   indexFundOwnershipFraction,
   qualifiesForIndexInclusionBenefit,
@@ -41,6 +42,10 @@ import { loadPortfolioHoldings } from "./corporationDetail/portfolioHoldings";
 import { computeIncomeStatement } from "./corporationDetail/incomeStatement";
 import { loadSubsidiaryContext } from "./corporationDetail/subsidiaryContext";
 import { buildFinancials } from "./corporationDetail/financials";
+import { withoutOwnedTechAdvisory } from "@/lib/corporations/autopilot";
+import { getTreeForType } from "@/lib/constants/techTree";
+import { lastQualityChange } from "@/lib/corporations/rules/qualityChange";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { loadLastTurnReconciliation } from "./corporationDetail/lastTurnReconciliation";
 import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
@@ -50,6 +55,18 @@ import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+
+/** Names of the technologies the corporation already owns, for stale-advisory filtering. */
+function ownedTechNames(
+  corporation: Pick<Corporation, "type" | "unlockedTechNodeIds">
+): Set<string> {
+  const owned = new Set(corporation.unlockedTechNodeIds ?? []);
+  return new Set(
+    getTreeForType(corporation.type as OperatingSectorType)
+      .filter((node) => owned.has(node.id))
+      .map((node) => node.name)
+  );
+}
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -70,6 +87,15 @@ export async function loadCorporationDetailView(args: {
     );
   const equityQuotePromise = loadEquityQuote(db, corporation);
   const sellPacingPromise = loadPoolSellPacing(db, corporation._id);
+  const qualityHistoryPromise =
+    corporation.averageQuality != null
+      ? corporationHistoryCollection<{ turn: number; averageQuality?: number }>(db)
+          .find(
+            { corporationId: corporation._id, averageQuality: { $type: "number" } },
+            { sort: { turn: -1 }, limit: 12, projection: { turn: 1, averageQuality: 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]);
   const viewerOwnsCorporation = !!viewerUserId && corporation.userId?.toString() === viewerUserId;
   const bankingPolicyPromise =
     corporation.bankCharter || viewerOwnsCorporation
@@ -266,6 +292,16 @@ export async function loadCorporationDetailView(args: {
         corporation.averageQuality != null
           ? Math.round(corporation.averageQuality * 10) / 10
           : undefined,
+      averageQualityChange:
+        corporation.averageQuality != null
+          ? (lastQualityChange(
+              corporation.averageQuality,
+              (await qualityHistoryPromise).map((row) => ({
+                turn: row.turn,
+                value: row.averageQuality ?? Number.NaN,
+              }))
+            ) ?? undefined)
+          : undefined,
       ceoShareWindow,
       _id: corporation._id.toString(),
       sequentialId: corporation.sequentialId,
@@ -399,7 +435,10 @@ export async function loadCorporationDetailView(args: {
         viewerOwnsCorporation && corporation.autopilot
           ? {
               enabledTurn: corporation.autopilot.enabledTurn,
-              advisories: corporation.autopilot.advisories ?? [],
+              advisories: withoutOwnedTechAdvisory(
+                corporation.autopilot.advisories ?? [],
+                ownedTechNames(corporation)
+              ),
             }
           : null,
       // Turns left on the post-reclaim cooldown before a new caretaker may be installed.

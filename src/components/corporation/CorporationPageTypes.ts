@@ -213,6 +213,8 @@ export interface CorporationDetail {
   brandPostureNorm?: number;
   /** Average product quality (0–100) — shown as a number to everyone when present. */
   averageQuality?: number;
+  /** The last visible move in average quality, from the turn snapshots. Absent when it has not moved. */
+  averageQualityChange?: import("@/lib/corporations/rules/qualityChange").QualityChange;
   logisticsBudget: number;
   logisticsStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
