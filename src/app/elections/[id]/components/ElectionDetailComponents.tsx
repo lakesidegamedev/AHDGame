@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PRIMARY_ESTIMATE_NOTE } from "@/lib/elections/rules/primaryEstimateNote";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { Card, CardSubLabel } from "@/components/ui";
@@ -145,7 +146,7 @@ export function PartySection({
           <p className="mb-3 text-xs text-muted">
             {group.primaryShareBasis === "counted"
               ? "Share of primary votes counted so far"
-              : "Estimated share before votes are counted"}
+              : `Estimated share before votes are counted. ${PRIMARY_ESTIMATE_NOTE}`}
           </p>
         )}
         {group.candidates.length === 0 ? (

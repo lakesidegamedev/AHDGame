@@ -16,6 +16,7 @@ import { buildElectionHref } from "@/app/elections/electionsHelpers";
 import { resolveEntryAction } from "@/lib/elections/entryEligibility";
 import type { OfficeSection as OfficeSectionModel } from "../electionsSelectors";
 import { DeadlineCell, FieldCell, PhaseCell, RaceActions, RegionCell } from "./ElectionRowCells";
+import { PRIMARY_ESTIMATE_NOTE } from "@/lib/elections/rules/primaryEstimateNote";
 import { CLOSE_RACE_RULE_TEXT } from "@/lib/elections/rules/closeRace";
 
 interface OfficeSectionProps {
@@ -173,6 +174,9 @@ export function OfficeSection({
             emptyMessage="No races here right now."
             renderActions={renderActions}
           />
+          {section.elections.some((e) => e.polling?.source === "primary") && (
+            <p className="text-xs text-muted">{PRIMARY_ESTIMATE_NOTE}</p>
+          )}
           {footer}
         </div>
       )}
