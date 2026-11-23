@@ -11,6 +11,7 @@
  * gated surface (SCOTUS, Command Economy, Conflicts) drops out of the list
  * entirely rather than linking to a redirect.
  */
+import { regionCountLabel } from "@/lib/countries/us/rules/districtGovernment";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   COUNTRY_CLIENT_CONFIGS,
@@ -266,9 +267,7 @@ function nationRows(input: DirectoryInput, config: CountryClientConfig): Directo
       href: config.mapPath,
       available: true,
       figure: counts?.regions
-        ? countryId === "US" && counts.regions === 51
-          ? "50 states and DC"
-          : `${counts.regions} ${config.regionLabelPlural.toLowerCase()}`
+        ? regionCountLabel(countryId, counts.regions, config.regionLabelPlural)
         : null,
     },
     // SP6: playables have one metrics product; non-playables keep the legacy

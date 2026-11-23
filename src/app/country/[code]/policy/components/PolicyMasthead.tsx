@@ -70,8 +70,7 @@ export function PolicyMasthead({
             {tariffSubsidyCount > 0
               ? ` + ${tariffSubsidyCount} ${tariffSubsidyCount === 1 ? "tariff or subsidy" : "tariffs and subsidies"}`
               : ""}{" "}
-            · {titleCount}{" "}
-            {titleCount === 1 ? "title" : "titles"}
+            · {titleCount} {titleCount === 1 ? "title" : "titles"}
           </MastheadChip>
           {lastEnactedStamp && (
             <MastheadChip tone="mono">last enacted {lastEnactedStamp}</MastheadChip>
