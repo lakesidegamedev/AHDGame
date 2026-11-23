@@ -29,6 +29,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
+import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -199,6 +200,21 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     );
     if (write.matchedCount !== 1)
       return errorResponse(409, "CEO authority changed; reload before saving");
+    // Support needs to see when a company switched supply priority: it moves input costs.
+    if (corporation.ceoId)
+      void logEconomicAction(db, {
+        characterId: corporation.ceoId,
+        userId: auth.user.userId,
+        actionType: "setInternalSupplyPolicy",
+        turn: world?.currentTurn ?? 0,
+        countryId: corporation.countryId,
+        result: {
+          success: true,
+          message: `${corporation._id.toHexString()} supply priority ${
+            corporation.internalSupplyPolicy?.priority ?? "unset"
+          } -> ${parsed.data.priority}`,
+        },
+      });
     return NextResponse.json(
       { success: true, policy: parsed.data },
       { headers: { "Cache-Control": "private, no-store" } }
