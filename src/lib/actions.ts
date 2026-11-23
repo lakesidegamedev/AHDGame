@@ -1003,10 +1003,25 @@ export function getBatchAffordability(
     );
     const haveFunds = character.currencyBalances?.campaign ?? character.funds ?? 0;
     const currency = getHomeCurrency(character);
+    const first =
+      count > 1
+        ? projectBatchRequirement(
+            character,
+            state,
+            actionType,
+            1,
+            forexEnabled,
+            homeFxRate,
+            pricing
+          )
+        : null;
+    const escalates =
+      first != null && need != null && need.fundsLocal > first.fundsLocal * count * 1.001;
+    const escalation = escalates ? " Later runs cost more as your stats move." : "";
     if (need)
       detail =
         full.code === "not_enough_funds"
-          ? ` All ${count} runs cost ${formatLocalFunds(need.fundsLocal, currency)}; you have ${formatLocalFunds(haveFunds, currency)}.`
+          ? ` All ${count} runs cost ${formatLocalFunds(need.fundsLocal, currency)}; you have ${formatLocalFunds(haveFunds, currency)}.${escalation}`
           : ` All ${count} runs cost ${need.actionPoints} action points; you have ${character.actions ?? 0}.`;
   }
   const title =

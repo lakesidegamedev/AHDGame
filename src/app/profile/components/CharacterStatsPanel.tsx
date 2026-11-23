@@ -61,7 +61,8 @@ export function CharacterStatsPanel({
           const pct = (value / STAT_MAX) * 100;
           const { label, blurb } = STAT_META[key];
           const { Icon, icon, bar } = STAT_STYLE[key];
-          const bonus = statBonus(key, value);
+          // Energy limits come from the unrounded stat, the value the turn engine uses.
+          const bonus = statBonus(key, key === "energy" ? (stats[key] ?? 1) : value);
           return (
             <li
               key={key}
