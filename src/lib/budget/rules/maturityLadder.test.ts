@@ -9,10 +9,11 @@ const bond = (principal: number, couponRatePct: number, maturityTurn: number) =>
 
 describe("sovereignMaturityLadder", () => {
   it("totals coupons across every rung and the later bucket so they equal the interest charged", () => {
-    const ladder = sovereignMaturityLadder(
-      [bond(1_000, 2, 110), bond(1_000, 6, 100 + 48 * 9)],
-      { currentTurn: 100, todayRatePct: 5, horizonYears: 6 }
-    );
+    const ladder = sovereignMaturityLadder([bond(1_000, 2, 110), bond(1_000, 6, 100 + 48 * 9)], {
+      currentTurn: 100,
+      todayRatePct: 5,
+      horizonYears: 6,
+    });
     expect(ladder.beyondCouponCost).toBeCloseTo(60, 10);
     expect(ladder.totalCouponCost).toBeCloseTo(80, 10);
     const rungs = ladder.years.reduce((sum, year) => sum + year.couponCost, 0);

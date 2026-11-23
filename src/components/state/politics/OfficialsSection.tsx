@@ -1,5 +1,6 @@
 "use client";
 
+import { regionHasNoLocalGovernment } from "@/lib/countries/us/rules/districtGovernment";
 import { useState } from "react";
 
 import type { State } from "@/lib/db/types";
@@ -184,7 +185,7 @@ export function HouseSection({
 
 /** DC has no governor or state legislature in the game; the seeds carry none. */
 function isDistrictWithoutLocalGovernment(state: State): boolean {
-  return state._id === "DC" && state.countryId === "US";
+  return regionHasNoLocalGovernment(String(state.countryId), String(state._id));
 }
 
 const NO_LOCAL_GOVERNMENT_NOTE =

@@ -31,7 +31,10 @@ describe("spendingAreaForLaw", () => {
       })
     ).toBe("housing");
     expect(
-      spendingAreaForLaw({ legislationTypeId: "ca.sec.urbanRenewal", policyDomain: "infrastructure" })
+      spendingAreaForLaw({
+        legislationTypeId: "ca.sec.urbanRenewal",
+        policyDomain: "infrastructure",
+      })
     ).toBe("housing");
   });
 });

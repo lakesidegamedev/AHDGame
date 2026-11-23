@@ -12,23 +12,27 @@
 
 export type SpendingAreaId = "environment" | "justice" | "housing";
 
-export const SPENDING_AREA_LABELS: Record<SpendingAreaId, { label: string; description: string }> = {
-  environment: {
-    label: "Environment and energy",
-    description:
-      "Environment, water, parks, energy and resources laws, run by the environment and interior departments.",
-  },
-  justice: {
-    label: "Justice and public safety",
-    description: "Courts, policing, corrections and legal aid laws, run by the justice departments.",
-  },
-  housing: {
-    label: "Housing",
-    description: "Public housing, home ownership and urban renewal laws, run by the housing department.",
-  },
-};
+export const SPENDING_AREA_LABELS: Record<SpendingAreaId, { label: string; description: string }> =
+  {
+    environment: {
+      label: "Environment and energy",
+      description:
+        "Environment, water, parks, energy and resources laws, run by the environment and interior departments.",
+    },
+    justice: {
+      label: "Justice and public safety",
+      description:
+        "Courts, policing, corrections and legal aid laws, run by the justice departments.",
+    },
+    housing: {
+      label: "Housing",
+      description:
+        "Public housing, home ownership and urban renewal laws, run by the housing department.",
+    },
+  };
 
-const HOUSING_TYPE_ID = /housing|homeownership|urbanrenewal|newcommunities|\.infrastructure\.ownership\./i;
+const HOUSING_TYPE_ID =
+  /housing|homeownership|urbanrenewal|newcommunities|\.infrastructure\.ownership\./i;
 
 /**
  * The spending area a law belongs to, or undefined when it stays in Other.

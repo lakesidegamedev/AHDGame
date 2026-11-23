@@ -107,8 +107,8 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
         </span>
       </div>
       <p className="mt-1 text-[11px] text-muted">
-        These coupons, rows above plus later maturities, are the debt interest the budget charges.
-        A thin row is simply a bond that happens to mature that year, not a gap in the data.
+        These coupons, rows above plus later maturities, are the debt interest the budget charges. A
+        thin row is simply a bond that happens to mature that year, not a gap in the data.
       </p>
 
       <p className="mt-2 text-[11px] text-muted">

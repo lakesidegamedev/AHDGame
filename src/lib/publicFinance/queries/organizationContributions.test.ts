@@ -43,8 +43,22 @@ describe("loadOrganizationContributions", () => {
     expect(result).toEqual({
       perTurn: 120,
       lines: [
-        { organizationId: "UN", organizationName: "UN", kind: "dues", perTurn: 60 },
-        { organizationId: "COMECON", organizationName: "COMECON", kind: "dues", perTurn: 60 },
+        {
+          organizationId: "UN",
+          organizationName: "UN",
+          kind: "dues",
+          perTurn: 60,
+          rateAnnual: 0.00006,
+          isDefaultRate: false,
+        },
+        {
+          organizationId: "COMECON",
+          organizationName: "COMECON",
+          kind: "dues",
+          perTurn: 60,
+          rateAnnual: 0.00006,
+          isDefaultRate: false,
+        },
       ],
     });
   });
@@ -61,7 +75,16 @@ describe("loadOrganizationContributions", () => {
     // 48M USD GDP × 0.75% / 48 turns = 7,500 USD for the Warsaw Pact.
     expect(result).toEqual({
       perTurn: 7_500,
-      lines: [{ organizationId: "WARSAW_PACT", organizationName: "Warsaw Pact", kind: "tribute", perTurn: 7_500 }],
+      lines: [
+        {
+          organizationId: "WARSAW_PACT",
+          organizationName: "Warsaw Pact",
+          kind: "tribute",
+          perTurn: 7_500,
+          rateAnnual: 0.0075,
+          isDefaultRate: false,
+        },
+      ],
     });
   });
 
@@ -76,7 +99,16 @@ describe("loadOrganizationContributions", () => {
 
     expect(result).toEqual({
       perTurn: 60,
-      lines: [{ organizationId: "COMECON", organizationName: "COMECON", kind: "dues", perTurn: 60 }],
+      lines: [
+        {
+          organizationId: "COMECON",
+          organizationName: "COMECON",
+          kind: "dues",
+          perTurn: 60,
+          rateAnnual: 0.00006,
+          isDefaultRate: true,
+        },
+      ],
     });
   });
 
