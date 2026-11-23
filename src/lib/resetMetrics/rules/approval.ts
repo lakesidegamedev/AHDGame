@@ -7,7 +7,9 @@ import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { evaluateModifiers, type EvaluateModifiersOptions } from "@/lib/utils/approvalModifiers";
 
-function observedMetricValues(observations: Readonly<Record<string, OpeningMetricObservation>>) {
+export function observedMetricValues(
+  observations: Readonly<Record<string, OpeningMetricObservation>>
+) {
   const metrics: Record<string, Record<string, number>> = {};
   for (const metric of primaryMetrics) {
     const observation = observations[metric.id];
