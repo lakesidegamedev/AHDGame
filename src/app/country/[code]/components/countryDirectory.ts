@@ -46,7 +46,7 @@ export interface DirectoryInput {
   /** Era preset, so an era that renames or removes an office is respected. */
   preset?: string | null;
   counts: OverviewCounts | null;
-  /** National law count from the ideology band, reused as the Policy figure. */
+  /** National policy positions from the ideology band, reused as the Policy figure. */
   lawCount?: number | null;
   /** Government approval, already loaded for the hero, reused as the Approval figure. */
   approval?: number | null;
@@ -195,7 +195,7 @@ function governmentRows(input: DirectoryInput, config: CountryClientConfig): Dir
       label: "National policy",
       href: policyUrl(countryId),
       available: true,
-      figure: countFigure(input.lawCount, "law"),
+      figure: countFigure(input.lawCount, "policy area"),
     },
     // SCOTUS is a US-only mechanic (#3581).
     ...(isUS ? [{ label: "Supreme Court", href: scotusUrl(countryId), available: true }] : []),
