@@ -8,11 +8,9 @@ import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
  * severity), Canadian Institute for Health Information, Environment and Climate
  * Change Canada (greenhouse gas inventory), Canada Mortgage and Housing
  * Corporation, OECD (PISA, health and inequality), Elections Canada (turnout).
- * Values are rounded; incomes are in Canadian dollars. Provincial differences
- * come from the SOURCED table where a statistic exists.
- *
- * Units follow the other country seeds: percentages, indexes where 100 is the
- * national mean, per-100k rates, and years.
+ * Values are rounded; incomes are in Canadian dollars. Units follow the other
+ * country seeds: percentages, indexes where 100 is the national mean, per-100k
+ * rates, and years.
  */
 
 function mv(value: number, trend?: number) {
@@ -107,37 +105,16 @@ const BASELINE: Omit<StateMetrics, "_id" | "lastUpdated"> = {
 type MetricPath = `${Exclude<keyof typeof BASELINE, never>}.${string}`;
 
 /**
- * Sourced provincial values, merged before the hand-tuned OVERRIDES below so a
- * region differs from the national baseline only where a statistic says so.
- *
- * - Violent and property crime per 100k: Statistics Canada table 35-10-0177-01,
- *   2025. Violent counts only the categories the FBI uses (homicide, attempted
- *   murder, sexual assault levels 1-3, assault levels 2-3, robbery), so it is
- *   comparable with the US seed; the broader StatCan "total violent" (1,443 per
- *   100k) also counts level 1 assault and threats. crimeRate is violent plus
- *   property (break and enter, motor vehicle theft, theft, arson).
- * - Incarceration: StatCan 35-10-0154-01 provincial custody rate per 100k
- *   adults, 2023, scaled to the 90 national total that includes federal prisons.
- * - Food insecurity: StatCan 13-10-0834-01, 2024, moderate or severe (persons),
- *   the definition closest to USDA's.
- * - Turnout: Elections Canada, 45th general election (2025), official results.
- * - Renewable share of in-province generation: Canada Energy Regulator, 2023.
- * - Carbon: StatCan 38-10-0097-01 (2023 GHG, industries and households) over
- *   StatCan 17-10-0009-01 population, scaled so the national figure stays on
- *   the energy-CO2 basis of the US seed (14.2 against 17.5 all-GHG).
- * - Protected land: ECCC Canadian Environmental Sustainability Indicators,
- *   terrestrial area conserved, 2025.
- * - Air quality: ECCC regional annual PM2.5 (NAPS), 2021-2023 mean (2023 was a
- *   record wildfire year), mapped to the shared scale 100 - 6 x (PM2.5 - 2):
- *   100 at clean background, 82 at the WHO guideline. Provinces take their
- *   ECCC region (Atlantic, southern Quebec, southern Ontario, Prairies,
- *   British Columbia, northern territories).
- * - Physicians: CIHI Supply, Distribution and Migration of Physicians, 2025
- *   data tables, per 100k, scaled to the 2.8 per 1,000 baseline against CIHI's
- *   243 national rate. CIHI's 2025 tables exclude Ontario, which keeps the
- *   national figure.
- * Corruption, transparency, trust and other governance indexes have no
- * provincial source and stay at the national value.
+ * Sourced provincial values, merged before OVERRIDES. Crime per 100k: StatCan
+ * 35-10-0177-01 (2025), violent limited to the FBI categories so it compares
+ * with the US seed; crimeRate is violent plus property. Incarceration: StatCan
+ * 35-10-0154-01 (2023) scaled to the 90 national total. Food insecurity: StatCan
+ * 13-10-0834-01 (2024, moderate or severe). Turnout: Elections Canada 2025.
+ * Renewables: CER 2023. Carbon: StatCan 38-10-0097-01 over 17-10-0009-01, scaled
+ * to the energy-CO2 basis (14.2). Protected land: ECCC conserved areas 2025. Air:
+ * ECCC regional PM2.5 2021-2023 on airQualityIndexFromPm25. Physicians: CIHI 2025
+ * (excludes Ontario, which keeps the baseline). Governance indexes have no
+ * provincial source and stay national.
  */
 const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
   CA_NL: {

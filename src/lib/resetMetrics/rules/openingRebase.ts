@@ -1,15 +1,9 @@
 /**
- * Rebase a live regional metric board onto corrected opening data.
- *
- * When a seed's opening value was wrong (a templated figure, or a broader
- * definition than other countries use), the live world keeps drifting from
- * that wrong start. A rebase swaps in the corrected opening and moves the
- * current value and history by the same relation, so every movement since the
- * opening is preserved and only the starting point changes.
- *
- * Rates and per-person amounts rebase proportionally; indexes and shares
- * rebase additively within their bounds. Owner-measured, economy-owned,
- * election and v2-definition metrics are never touched.
+ * Rebase a live regional board onto corrected opening data: swap the opening
+ * and move the current value and history by the same relation, so movement
+ * since the opening is kept. Rates rebase proportionally; indexes and shares
+ * additively within bounds. Owner-measured, economy-owned, election and
+ * v2-definition metrics are never touched.
  */
 import { primaryMetricById } from "../catalog";
 import type { ResetMetricSnapshot } from "./snapshot";

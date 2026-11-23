@@ -1,18 +1,10 @@
 /**
- * Migration: rebase a live 2027-world's regional metric boards onto corrected
- * opening seed data (sourced US state and Canadian provincial tables).
+ * Migration: rebase the live 2027 world's regional metric boards onto the
+ * corrected opening seeds (rules in src/lib/resetMetrics/rules/openingRebase.ts).
+ * Rebuilds each opening from seed values only, snapshots every board it writes
+ * to heal_snapshot_metric_rebase_<turn>, and writes only if the board is
+ * unchanged since read. Run between turns after the deploy; idempotent.
  *
- * Rebuilds each region's opening exactly as the reset does (seed values only,
- * no live macro drift), then for each estimated metric whose opening changed,
- * swaps the opening and moves the current value, prior value and history by the
- * same relation (see src/lib/resetMetrics/rules/openingRebase.ts). Every board
- * it writes is first copied to `heal_snapshot_metric_rebase_<turn>`, and each
- * write only applies if the board is unchanged since it was read.
- *
- * Run between turns, after the deploy that carries the corrected seeds.
- * Idempotent: a second run plans zero changes.
- *
- * Usage:
  *   npx tsx scripts/migrations/rebase2027RegionalMetricOpenings.ts --dry-run
  *   npx tsx scripts/migrations/rebase2027RegionalMetricOpenings.ts --apply
  */
