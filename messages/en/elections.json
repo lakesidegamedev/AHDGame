@@ -633,6 +633,7 @@
         "legendToss": "Toss-up",
         "legendTitle": "{party}: toss-up, lean, likely, safe",
         "legendScale": "Light to dark: toss-up, lean, likely, safe. Parties in the selected race.",
+        "legendScalePrimary": "A primary is inside one party, so only its colour shows. Light to dark: toss-up, lean, likely, safe for the leading candidate.",
         "callHold": "{leader} hold · {tier}",
         "callGain": "{leader} gain from {holder} · {tier}",
         "call": "{leader} · {tier}",

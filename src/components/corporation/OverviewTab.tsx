@@ -331,7 +331,14 @@ function SectorTable({
                     )}
                     {plantsMode ? (
                       <>
-                        <Td align="right" className="hidden md:table-cell">
+                        {/* The build-queue note under the count ("+12 building · done
+                            turn 175") wraps inside a fixed width instead of widening
+                            the whole table past the overview column. */}
+                        <Td
+                          align="right"
+                          wrap
+                          className="hidden w-[9.5rem] max-w-[9.5rem] md:table-cell"
+                        >
                           <PlantCount sector={s} className="block" />
                           <BuildQueueBadge
                             queue={s.buildQueueSummary}
