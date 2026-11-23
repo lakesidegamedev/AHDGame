@@ -131,9 +131,9 @@ describe("household production owner integration", () => {
     });
     expect(aggregateNationalMetricValue("03", readings)).toBe(0);
     const samples = aggregateNationalMetricHistory("02", readings);
-    expect(samples[1]!.value).toBe(100);
-    expect(samples[1]!.definitionVersion).toBe(2);
-    expect(samples[0]!.definitionVersion).toBeUndefined();
+    expect(samples).toHaveLength(1);
+    expect(samples[0]!.value).toBe(100);
+    expect(samples[0]!.definitionVersion).toBe(2);
     const laterReadings = readings.map((reading) => ({
       ...reading,
       observations: Object.fromEntries(

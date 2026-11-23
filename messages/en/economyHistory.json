@@ -18,6 +18,8 @@
     "empty": "Not enough recorded history yet. One point is stored per completed turn, so this chart fills in as the world runs.",
     "chartLabel": "{metric} across {turns} recorded turns",
     "turn": "Turn {turn}",
-    "turnAxis": "T{turn}"
+    "turnAxis": "T{turn}",
+    "span": "Turn {from} to {to}",
+    "range": "Low {low} · High {high}"
   }
 }

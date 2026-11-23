@@ -3,6 +3,7 @@ import type { OpeningMetricObservation } from "./openingObservation";
 export interface ResetMetricHistoryPoint {
   turn: number;
   value: number;
+  aggregationWeight?: number;
   ratioBasis?: { numerator: number; denominator: number };
   growthBasis?: OpeningMetricObservation["growthBasis"];
   demographicBasis?: OpeningMetricObservation["demographicBasis"];
@@ -39,6 +40,8 @@ export function validateMetricHistory(
         (point, index) =>
           !Number.isSafeInteger(point.turn) ||
           !Number.isFinite(point.value) ||
+          (point.aggregationWeight !== undefined &&
+            (!Number.isFinite(point.aggregationWeight) || point.aggregationWeight <= 0)) ||
           (index > 0 && point.turn <= series[index - 1]!.turn)
       )
     ) {
@@ -78,11 +81,14 @@ export function openingMetricHistory(
 export function appendMetricHistory(
   history: Readonly<ResetMetricHistory>,
   observations: Readonly<Record<string, OpeningMetricObservation>>,
-  turn: number
+  turn: number,
+  aggregationWeights: Readonly<Record<string, number>> = {}
 ): ResetMetricHistory {
   if (!Number.isSafeInteger(turn) || turn < 1) {
     throw new Error("Metric history requires a positive turn");
   }
+  if (Object.values(aggregationWeights).some((weight) => !Number.isFinite(weight) || weight <= 0))
+    throw new Error("Metric history requires positive aggregation weights");
   validateMetricHistory(
     history,
     observations,
@@ -102,6 +108,8 @@ export function appendMetricHistory(
       if (last?.turn === turn) {
         if (
           last.value !== observation.value ||
+          (aggregationWeights[id] !== undefined &&
+            last.aggregationWeight !== aggregationWeights[id]) ||
           JSON.stringify(last.ratioBasis) !== JSON.stringify(observation.ratioBasis) ||
           JSON.stringify(last.growthBasis) !== JSON.stringify(observation.growthBasis) ||
           JSON.stringify(last.demographicBasis) !== JSON.stringify(observation.demographicBasis) ||
@@ -122,6 +130,9 @@ export function appendMetricHistory(
           {
             turn,
             value: observation.value,
+            ...(Number.isFinite(aggregationWeights[id]) && aggregationWeights[id]! > 0
+              ? { aggregationWeight: aggregationWeights[id] }
+              : {}),
             ...(observation.ratioBasis ? { ratioBasis: observation.ratioBasis } : {}),
             ...(observation.growthBasis ? { growthBasis: observation.growthBasis } : {}),
             ...(observation.demographicBasis

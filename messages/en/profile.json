@@ -97,7 +97,7 @@
       "moneyHistory": {
         "title": "Money in and out",
         "subtitle": "Your own personal and campaign money over the last 30 days. Only you can see this.",
-        "show": "Show history",
+        "show": "Show the last 30 days",
         "hide": "Hide history",
         "all": "All",
         "personal": "Personal",

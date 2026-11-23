@@ -21,7 +21,7 @@ const GDP_WEIGHTED_IDS = new Set(["05", "06", "08", "15"]);
 const WORKING_AGE_WEIGHTED_IDS = new Set(["01", "13"]);
 const ELIGIBLE_WEIGHTED_IDS = new Set(["51"]);
 
-function preferredNationalMetricWeight(
+export function preferredNationalMetricWeight(
   metricId: string,
   region: NationalMetricRegionReading
 ): { value: number; kind: WeightKind; fallback: boolean } {
@@ -323,7 +323,7 @@ export function aggregateNationalMetricHistory(
   ) {
     throw new Error(`National metric history is not aligned for ${metricId}`);
   }
-  return turns.map((turn, index) => {
+  return turns.flatMap((turn, index) => {
     if (
       regions.some((region) => {
         const basis = region.history[metricId]![index]!.countryBasis;
@@ -351,25 +351,34 @@ export function aggregateNationalMetricHistory(
       regions.map((r) => r.regionId)
     );
     if (exactRatio !== null)
-      return {
-        turn,
-        value: exactRatio,
-        ...(observations[0]!.definitionVersion
-          ? {
-              definitionVersion: observations[0]!.definitionVersion,
-              unit: observations[0]!.unit,
-              countryBasis: observations[0]!.countryBasis,
-            }
-          : {}),
-      };
+      return [
+        {
+          turn,
+          value: exactRatio,
+          ...(observations[0]!.definitionVersion
+            ? {
+                definitionVersion: observations[0]!.definitionVersion,
+                unit: observations[0]!.unit,
+                countryBasis: observations[0]!.countryBasis,
+              }
+            : {}),
+        },
+      ];
+    if (
+      regions.some((region) => {
+        const weight = region.history[metricId]![index]!.aggregationWeight;
+        return weight === undefined || !Number.isFinite(weight) || weight <= 0;
+      })
+    )
+      return [];
     let weightedValue = 0;
     let totalWeight = 0;
     for (const region of regions) {
       const point = region.history[metricId]![index]!;
-      const weight = preferredNationalMetricWeight(metricId, region).value;
+      const weight = point.aggregationWeight!;
       weightedValue += point.value * weight;
       totalWeight += weight;
     }
-    return { turn, value: weightedValue / totalWeight };
+    return [{ turn, value: weightedValue / totalWeight }];
   });
 }

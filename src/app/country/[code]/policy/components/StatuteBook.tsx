@@ -96,6 +96,7 @@ export function StatuteBook({
   domains,
   record,
   homeStateMetricBase,
+  openDomain = null,
 }: {
   countryId: string;
   domains: { domain: string; records: PolicyRecordResponse[]; axes: NationalAxes }[];
@@ -103,11 +104,24 @@ export function StatuteBook({
   record: RecordPayload | null | undefined;
   /** Base URL for metric-pill deep links (viewer's home state), or null. */
   homeStateMetricBase: string | null;
+  /** A title picked in the side rail: it opens when chosen. */
+  openDomain?: string | null;
 }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // A country carries well over a hundred statutes, so the book opens on its
+  // first title only; the rest open from their heading or the side rail.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(domains[0] ? [domains[0].domain] : [])
+  );
+  const [seenOpenDomain, setSeenOpenDomain] = useState(openDomain);
+  if (openDomain !== seenOpenDomain) {
+    setSeenOpenDomain(openDomain);
+    if (openDomain && !expanded.has(openDomain)) {
+      setExpanded((previous) => new Set(previous).add(openDomain));
+    }
+  }
 
   const toggle = (domain: string) =>
-    setCollapsed((previous) => {
+    setExpanded((previous) => {
       const next = new Set(previous);
       if (next.has(domain)) next.delete(domain);
       else next.add(domain);
@@ -119,7 +133,7 @@ export function StatuteBook({
       {domains.map(({ domain, records, axes }, index) => {
         const lean = dominantAxis(axes.economic, axes.social);
         const european = lean?.axis === "economic" && EUROPEAN_COLOUR_COUNTRIES.has(countryId);
-        const isCollapsed = collapsed.has(domain);
+        const isCollapsed = !expanded.has(domain);
         return (
           <section
             key={domain}

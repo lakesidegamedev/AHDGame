@@ -1,4 +1,9 @@
 "use client";
+import { metricHasPolicyPressure } from "@/lib/resetMetrics/presentation";
+import {
+  MAX_POLICY_PRESSURE,
+  type MetricPolicyPressure,
+} from "@/lib/resetMetrics/rules/policyPressure";
 import { useEffect, useMemo, useState } from "react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
@@ -34,6 +39,7 @@ export type ResetMetricCountry = ResetV2Country;
 export type ResetMetricRow = PrimaryMetricDefinition & {
   observation: OpeningMetricObservation;
   conditionScore: number | null;
+  policyPressure?: MetricPolicyPressure | null;
   temporaryActionEffect: {
     favorableNormalizedPoints: number;
     contributingActions: string[];
@@ -323,8 +329,8 @@ export function lawStatePresentation(
     label,
     className: favorable ? "text-success" : "text-error",
     explanation: favorable
-      ? "Funded implementation is applying favorable modeled pressure toward the law's policy settlement."
-      : "Funded implementation is applying unfavorable modeled pressure while the new policy settlement takes hold.",
+      ? "This funded law contributes favorable modeled effects. Its net policy driver also subtracts the opening-law baseline."
+      : "This funded law contributes unfavorable modeled effects. Its net policy driver also subtracts the opening-law baseline.",
   };
 }
 
@@ -363,14 +369,36 @@ export function StandingLawDetail({
         law.state !== "awaiting_first_funding" && (
           <div className={`mt-2 text-body-xs font-semibold ${presentation.className}`}>
             {law.favorableNormalizedPoints >= 0 ? "+" : ""}
-            {law.favorableNormalizedPoints.toFixed(2)} favorable modeled pressure
+            {law.favorableNormalizedPoints.toFixed(2)} gross law contribution before opening
+            baseline
           </div>
         )}
     </div>
   );
 }
 
-/** The 0-100 condition score each domain average is built from. */
+function PolicyPressureSummary({ pressure }: { pressure: MetricPolicyPressure }) {
+  const signed = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
+  return (
+    <div className="mt-2 text-body-xs text-muted">
+      <p>
+        Current law contribution {signed(pressure.grossLaw)}; opening-law baseline{" "}
+        {signed(pressure.openingLaw)}; law change {signed(pressure.netLaw)}; Cabinet{" "}
+        {signed(pressure.cabinet)}.
+      </p>
+      <p>
+        Combined policy driver: {signed(pressure.combined)} after the ±
+        {MAX_POLICY_PRESSURE.toFixed(2)} limit. Favorable pressure is positive. This is not a change
+        per turn; market conditions, other gameplay drivers and the responsible simulation also
+        affect the result. Directly measured outcomes can differ from this modeled driver. National
+        figures can also reflect regional policies. Existing infrastructure and opening conditions
+        do not disappear when a policy driver is zero. Opening statutes without a booked spending
+        obligation remain in force without requiring a funding receipt.
+      </p>
+    </div>
+  );
+}
+
 export function ConditionScoreLabel({ score }: { score: number | null }) {
   if (score === null || !Number.isFinite(score)) return <>Not scored</>;
   return (
@@ -439,23 +467,36 @@ export function MetricRow({
               )}
               {metric.legislativeEffect && (
                 <EffectLine
-                  label="Enacted-law pressure"
+                  label="Law change from opening"
                   points={metric.legislativeEffect.favorableNormalizedPoints}
                   sources={metric.legislativeEffect.contributingPrograms}
                 />
               )}
             </div>
           )}
+          {metric.policyPressure && (
+            <p className="mt-1 text-body-xs text-muted">
+              Combined policy driver: {metric.policyPressure.combined >= 0 ? "+" : ""}
+              {metric.policyPressure.combined.toFixed(2)} after the policy limit. Open for the
+              baseline and funding breakdown.
+            </p>
+          )}
         </div>
         <div className="w-72 max-w-[35%] flex-shrink-0 text-right">
           <div className="text-heading font-extrabold leading-tight tabular-nums text-foreground">
             {valueLabel(metric, countryId)}
           </div>
-          <div className="mt-0.5 text-body-xs text-muted">
-            {interpretationLabel(metric.interpretation)}
+          <div
+            className="mt-0.5 text-body-xs text-muted"
+            title="Game-calibrated condition score. Higher is better; this is not the raw metric value."
+          >
+            Condition score:{" "}
+            {metric.conditionScore === null
+              ? "Not scored"
+              : `${metric.conditionScore.toFixed(1)} / 100`}
           </div>
           <div className="mt-0.5 text-body-xs text-muted">
-            <ConditionScoreLabel score={metric.conditionScore} />
+            {interpretationLabel(metric.interpretation)}
           </div>
           <div className="mt-0.5 text-body-xs text-muted">
             {metricFreshnessLabel(
@@ -516,7 +557,7 @@ export function CategoryDetail({
         <div className="min-w-[200px] flex-1">
           <h2 className="text-heading-lg font-bold text-foreground">{category.name}</h2>
           <div className="mt-0.5 text-body-sm text-muted">
-            {displayName} · {category.metrics.length} primary observations in real-world units
+            {displayName} · {category.metrics.length} simulation metrics in the units shown
           </div>
         </div>
         <div className="text-right">
@@ -537,7 +578,7 @@ export function CategoryDetail({
         <div className="text-body-sm text-muted">
           <div className="font-mono text-body-xs uppercase tracking-wider">Observation quality</div>
           <div className="mt-0.5">
-            {sourced} sourced · {category.provisional} provisional
+            {sourced} recorded or derived · {category.provisional} provisional
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={onCompareCategory}>
@@ -549,7 +590,7 @@ export function CategoryDetail({
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-body-xs uppercase tracking-widest text-muted">
-              Primary metrics · observed units
+              Primary metrics · reported units
             </span>
             <label className="flex items-center gap-2 text-body-sm text-muted">
               Sort
@@ -603,23 +644,22 @@ export function CategoryDetail({
             </div>
             {category.influenced > 0 ? (
               <div className="flex flex-col gap-1.5 text-body-sm text-foreground">
-                {category.metrics
-                  .filter((metric) => metric.temporaryActionEffect || metric.legislativeEffect)
-                  .map((metric) => (
-                    <button
-                      key={metric.id}
-                      type="button"
-                      className="flex justify-between gap-3 text-left hover:text-primary"
-                      onClick={() => onOpenMetric(metric)}
-                    >
-                      <span>{metric.name}</span>
-                      <span className="shrink-0 text-muted">view →</span>
-                    </button>
-                  ))}
+                {category.metrics.filter(metricHasPolicyPressure).map((metric) => (
+                  <button
+                    key={metric.id}
+                    type="button"
+                    className="flex justify-between gap-3 text-left hover:text-primary"
+                    onClick={() => onOpenMetric(metric)}
+                  >
+                    <span>{metric.name}</span>
+                    <span className="shrink-0 text-muted">view →</span>
+                  </button>
+                ))}
               </div>
             ) : (
               <p className="text-body-sm italic text-muted">
-                No active laws or Cabinet actions are currently moving this category.
+                No nonzero policy driver is recorded for this category. Standing laws can maintain
+                its opening baseline; other simulation drivers may still change its values.
               </p>
             )}
           </div>
@@ -628,7 +668,7 @@ export function CategoryDetail({
               Observation quality
             </div>
             <p className="text-body-sm leading-relaxed text-muted">
-              {sourced} metrics use sourced or derived observations. {category.provisional} use
+              {sourced} metrics use recorded or derived observations. {category.provisional} use
               clearly labeled game-calibrated estimates until a stronger source is available.
             </p>
           </div>
@@ -748,6 +788,9 @@ export function MetricDetail({
               <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
                 Historical series
               </h3>
+              {detail.historyNotice && (
+                <p className="mb-2 text-body-xs text-muted">{detail.historyNotice}</p>
+              )}
               <ResetMetricHistoryChart
                 countryId={board.countryId}
                 metric={metric}
@@ -788,6 +831,18 @@ export function MetricDetail({
             )}
           </div>
           <aside className="flex flex-col gap-4">
+            <div className="rounded-lg border border-card-border bg-card p-4 text-body-xs">
+              <p>
+                Condition score:{" "}
+                {metric.conditionScore === null
+                  ? "Not scored"
+                  : `${metric.conditionScore.toFixed(1)} / 100`}
+                . Higher is better. This game-calibrated score differs from the raw value. Domain
+                scores average their scored metrics; the overall score averages all scored metrics,
+                so domains with more metrics carry more weight.
+              </p>
+              {metric.policyPressure && <PolicyPressureSummary pressure={metric.policyPressure} />}
+            </div>
             <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
               <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
                 How this measure works
@@ -813,7 +868,12 @@ export function MetricDetail({
                   )}
                 </dd>
                 <dt className="text-muted">National figure</dt>
-                <dd className="text-foreground">{metricAggregationLabel(metric.aggregation)}</dd>
+                <dd className="text-foreground">
+                  {metric.observation.status === "proxy" &&
+                  metric.observation.source.includes("rollup")
+                    ? "Provisional regional aggregation. The data note states the actual basis; owner-specific national weights may be unavailable."
+                    : metricAggregationLabel(metric.aggregation)}
+                </dd>
                 <dt className="text-muted">Data quality</dt>
                 <dd className="text-foreground">{metricQualityLabel(metric.observation.status)}</dd>
               </dl>
@@ -843,7 +903,7 @@ export function MetricDetail({
                 )}
                 {metric.legislativeEffect && (
                   <EffectDetail
-                    label="Enacted-law pressure"
+                    label="Law change from opening"
                     points={metric.legislativeEffect.favorableNormalizedPoints}
                     sources={metric.legislativeEffect.contributingPrograms}
                   />
