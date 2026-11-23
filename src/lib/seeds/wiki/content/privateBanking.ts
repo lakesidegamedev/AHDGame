@@ -9,7 +9,7 @@ A corporation that owns a financial sector can charter one bank. The bank attrac
 | Rule | Value |
 | --- | --- |
 | Charters per corporation | 1, posting about 5 times the corporation founding cost (a third of that for investment charters) |
-| Branch share of financial capacity | 10% to 90%, default 50% |
+| Branch share of financial capacity | 10% to 90%, default 50%; sizes the deposit ceiling only |
 | Deposit ceiling | The smaller of branch capacity and 12 times book equity |
 | Reserve requirement | Set by the central bank (modern default 10%, historical default 20%, range 5% to 95%) |
 | Named loan principal | Capped by bank cash, deposit headroom, and 35% of demonstrated per-turn income |
@@ -37,12 +37,7 @@ You can also change charter type yourself from the bank console, without re-char
 
 The central bank chair can revoke a charter. A revoke is not a delete: it runs the same wind-up every other ending runs. Household deposits go back into circulation out of the bank's own cash, player savings pointers return to the central bank with their balances untouched, and only what is genuinely left over, capped at book equity, is paid up to the owner.
 
-A chartered financial sector's capacity does one job or the other, which is why chartering does not dominate every other use of the sector. The CEO sets the branch share between 10% and 90% (default 50%):
-
-- **Branch share** runs the deposit network and sets the deposit ceiling.
-- **Commodity share** produces financial services for the commodity market.
-
-Without this split, the same capacity would earn twice.
+The CEO sets the branch share between 10% and 90% (default 50%). It sets how much of the financial sector's capacity backs the deposit network, and so how large the deposit ceiling is. It does not reduce the financial services the sector makes and sells: taking deposits never costs a bank its sales.
 
 ## Rates and the corridor
 

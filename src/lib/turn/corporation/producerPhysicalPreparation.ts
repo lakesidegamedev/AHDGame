@@ -39,7 +39,6 @@ import {
 } from "@/lib/corporations/plantCosts/rules";
 import { retoolOperatingCapacityRatio } from "@/lib/corporations/retooling/rules";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { computeSoeEfficiencyPenalty } from "@/lib/nationalization/soeEfficiency";
@@ -113,7 +112,6 @@ export type ProducerPhysicalEnv = Pick<
   | "pendingStrikeEvents"
   | "labourDemandByState"
   | "labourDemandWageIndexByState"
-  | "privateBankingEnabled"
 > & {
   /** Funded producer turns and the shadow: advertising as a paid input. */
   advertisingInput?: boolean;
@@ -709,9 +707,6 @@ export function prepareProducerPhysicalSector(input: {
     (outputYield / baseRecipe.unitsPerNominalAnchor) *
     extraction *
     plantThroughputMultiplier(sector, currentTurn, lookups.preset) *
-    (sector.sectorType === "financial"
-      ? commodityProductionCapacityScale(corp.bankCharter, env.privateBankingEnabled === true)
-      : 1) *
     (isStateOwned(corp)
       ? nationalizationProductivityFactor(
           sector.nationalizedAtTurn,
