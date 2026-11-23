@@ -330,10 +330,10 @@ export function LegislatureCompositionSection({
             </h2>
             {isBlocList && (
               <p className="mt-1 text-xs text-muted">
-                This chamber is modelled as party blocs, not individual legislators. Each row is
-                one bloc and its leader, and the seat count is how many of the chamber&apos;s seats
-                the bloc holds. A party can appear more than once when it holds seats through
-                separate blocs.
+                This chamber is modelled as party blocs, not individual legislators. Each row is one
+                bloc and its leader, and the seat count is how many of the chamber&apos;s seats the
+                bloc holds. A party can appear more than once when it holds seats through separate
+                blocs.
               </p>
             )}
           </div>
