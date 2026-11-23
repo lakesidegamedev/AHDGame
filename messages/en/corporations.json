@@ -419,6 +419,8 @@
       "cannotUse": "Offers you cannot use ({count})",
       "cannotUseHint": "None of these can deliver to your plants. They stay listed so you can see why.",
       "sizeNote": "About {ratio}x your daily use of this input",
+      "sizingUnmetOutput": "Quantity: sized from the seller's total unmet output, the same for each good it buys.",
+      "sizingSpareCapacity": "Quantity: half of the seller's spare capacity for this good.",
       "confirmTitle": "Confirm a binding agreement",
       "confirmBuy": "You are about to start a binding agreement to buy {volume} {unit} per day from {company}. Term: {term}.",
       "confirmSell": "You are about to start a binding agreement to sell {volume} {unit} per day to {company}. Term: {term}.",

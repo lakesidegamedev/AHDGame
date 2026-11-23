@@ -25,6 +25,8 @@
       "cannotUse": "Angebote, die du nicht nutzen kannst ({count})",
       "cannotUseHint": "Keines davon kann an deine Anlagen liefern. Sie bleiben gelistet, damit du den Grund siehst.",
       "sizeNote": "Etwa das {ratio}-Fache deines täglichen Verbrauchs dieses Einsatzguts",
+      "sizingUnmetOutput": "Menge: aus der gesamten ungedeckten Produktion des Verkäufers bemessen, für jedes eingekaufte Gut gleich.",
+      "sizingSpareCapacity": "Menge: die Hälfte der freien Kapazität des Verkäufers für dieses Gut.",
       "confirmTitle": "Verbindliche Vereinbarung bestätigen",
       "confirmBuy": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag von {company} zu kaufen. Laufzeit: {term}.",
       "confirmSell": "Du startest eine verbindliche Vereinbarung, {volume} {unit} pro Tag an {company} zu verkaufen. Laufzeit: {term}.",
