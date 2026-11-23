@@ -27,6 +27,7 @@ import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
 import { getInflationTarget, getNeutralPrimeRate } from "@/lib/budget/inflation";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
+import { loadBudgetDisplayAccounts } from "@/lib/publicFinance/queries/budgetDisplayAccounts";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { populationWeightedAverage } from "@/lib/metrics/populationWeightedAverage";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
@@ -196,22 +197,32 @@ export async function buildCountryEconomyOutlook(
       aggregateCountrySectorMix(db, countryId),
       gameConfigCollection(db).findOne(
         { _id: "default" },
-        { projection: { commandEconomyEnabled: 1 } }
+        { projection: { commandEconomyEnabled: 1, interstateMoneyWiringEnabled: 1 } }
       ),
     ]);
 
-  const stateMetrics = await macroMetricsCollection(db)
-    .find({ _id: { $in: states.map((s) => s._id) } })
-    .project<{
-      _id: string;
-      economic?: {
-        unemploymentRate?: { value?: number; trend?: number };
-        medianIncome?: { value?: number; trend?: number };
-      };
-    }>({ "economic.unemploymentRate": 1, "economic.medianIncome": 1 })
-    .toArray();
-
   const currentTurn = gameState?.currentTurn ?? 0;
+  const [stateMetrics, budgetAccounts] = await Promise.all([
+    macroMetricsCollection(db)
+      .find({ _id: { $in: states.map((s) => s._id) } })
+      .project<{
+        _id: string;
+        economic?: {
+          unemploymentRate?: { value?: number; trend?: number };
+          medianIncome?: { value?: number; trend?: number };
+        };
+      }>({ "economic.unemploymentRate": 1, "economic.medianIncome": 1 })
+      .toArray(),
+    budget
+      ? loadBudgetDisplayAccounts(
+          db,
+          budget,
+          countryId,
+          currentTurn,
+          gameConfig?.interstateMoneyWiringEnabled === true
+        )
+      : null,
+  ]);
   const currentYear = gameState?.currentYear ?? null;
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   const plannedEconomy = presentPlannedEconomy(
@@ -256,10 +267,7 @@ export async function buildCountryEconomyOutlook(
   // See lib/stockExchange/aggregate.
   const stockMarketCap = snapshot ? aggregateExchangeTotals(listings).marketCap : null;
 
-  // Derived, not read: `budget.surplus` is a cache that drifts intra-year, and
-  // `federalBudgetDetail` already recomputes the same expression for the Budget
-  // page. See lib/budget/federalSurplus.
-  const surplus = budget ? federalSurplus(budget) : null;
+  const surplus = budgetAccounts ? federalSurplus(budgetAccounts) : null;
   const ratioGdp = budget ? resolveRatioGdp(budget) : 0;
   // Display only, but on the rollover's own bases: the same helper the budget
   // page's rate card and debt chart read, priced off the ladder rate before
@@ -315,7 +323,10 @@ export async function buildCountryEconomyOutlook(
         debtToGdpRatio: budget?.debtToGdpRatio ?? null,
         debtTrajectory: debtPath?.trajectory ?? null,
         ratioGdpMillions: ratioGdp > 0 ? round2(ratioGdp / 1_000_000) : null,
-        primaryBalancePct: debtInputs ? round2(debtInputs.primaryBalanceToGdp * 100) : null,
+        primaryBalancePct:
+          surplus != null && budgetAccounts && ratioGdp > 0
+            ? round2(((surplus + budgetAccounts.spending.debtInterest) / ratioGdp) * 100)
+            : null,
         stabilisingPrimaryBalancePct:
           debtPath === null ? null : round2(debtPath.stabilisingPrimaryBalanceToGdp * 100),
         debtPathBasisPct: debtRate === null ? null : round2(debtRate.afterImfCapRate * 100),

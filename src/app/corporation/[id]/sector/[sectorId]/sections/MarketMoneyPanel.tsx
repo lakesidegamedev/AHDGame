@@ -1,5 +1,7 @@
 "use client";
 
+import { largestRemainderAllocate } from "@/lib/redistricting/budget";
+
 import { outputPlacement } from "@/lib/corporations/rules/outputPlacement";
 import {
   listOutputs,
@@ -88,6 +90,10 @@ export default function MarketMoneyPanel({
     : (truth?.soldFraction ?? null);
   const split = outputSalesSplit(outputs);
   const ownSite = settlement?.ownSites ?? plants.ownSiteUnits ?? 0;
+  const reconciledSplit = settlement && Math.abs(offered - sold - ownSite - unsold) < 1e-6;
+  const [shownSold, shownOwnSite, shownUnsold] = reconciledSplit
+    ? largestRemainderAllocate(Math.round(offered), [sold, ownSite, unsold])
+    : [sold, ownSite, unsold];
   // Internal deliveries are never counted as unsold.
   const placement = outputPlacement({
     sold: sellingShare,
@@ -325,13 +331,13 @@ export default function MarketMoneyPanel({
           value={fmtUnits(offered)}
           help={
             settlement
-              ? "Units offered from new production and existing stock."
+              ? "Units offered from new production and existing stock. This split is rounded together to whole units."
               : `Units your ${sites} made and put on the market today.`
           }
         />
         <UnitTile
           label={settlement ? "Sold outside" : "Sold"}
-          value={fmtUnits(sold)}
+          value={fmtUnits(shownSold)}
           tone="success"
           chip={
             !settlement && plants.fillRate != null ? `${fmtPct(plants.fillRate)} sold` : undefined
@@ -341,13 +347,13 @@ export default function MarketMoneyPanel({
         {settlement && (
           <UnitTile
             label="Sent to own sites"
-            value={fmtUnits(ownSite)}
+            value={fmtUnits(shownOwnSite)}
             help="Units delivered within your company. These do not count as outside sales."
           />
         )}
         <UnitTile
           label="Unsold"
-          value={fmtUnits(unsold)}
+          value={fmtUnits(shownUnsold)}
           tone={unsold > 0 ? "warning" : "muted"}
           help={
             unsold > 0 && deliveryLimitedShown
