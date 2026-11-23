@@ -9,8 +9,8 @@ function budget(overrides: Partial<SovereignBudgetFields> = {}): SovereignBudget
   return {
     revenue: { total: 120 },
     // `spending.total` carries the interest bill, so the primary balance adds
-    // it back: 120 - 110 + 500 * 0.05 = 35.
-    spending: { total: 110 },
+    // it back: 120 - 110 + 25 = 35.
+    spending: { total: 110, debtInterest: 25 },
     gdp: 1_000,
     debt: { principal: 500, interestRate: 0.05 },
     economicFactors: { gdpGrowth: 2, inflationRate: 3 },
@@ -25,6 +25,18 @@ describe("sovereignInputsFromBudget", () => {
     const inputs = sovereignInputsFromBudget(budget());
 
     expect(inputs.primaryBalanceToGdp).toBeCloseTo(0.035, 10);
+  });
+
+  it("adds the booked coupon service rather than repricing the entire stock", () => {
+    const b = budget({
+      spending: { total: 110, debtInterest: 10 },
+      debt: { principal: 500, interestRate: 0.09 },
+    });
+    expect(sovereignInputsFromBudget(b).primaryBalanceToGdp).toBeCloseTo(0.02);
+    expect(
+      sovereignInputsFromBudget({ ...b, spending: { total: 110, debtInterest: 0 } })
+        .primaryBalanceToGdp
+    ).toBeCloseTo(0.01);
   });
 
   it("keeps the stored ratio the debt panel shows", () => {
@@ -74,10 +86,10 @@ describe("sovereignInputsFromBudget", () => {
     expect(inputs.imfBailoutActive).toBe(true);
   });
 
-  it("treats a missing interest rate as no interest bill", () => {
+  it("keeps the recorded bill even when the marginal interest rate is missing", () => {
     const inputs = sovereignInputsFromBudget(budget({ debt: { principal: 500 } }));
 
-    expect(inputs.primaryBalanceToGdp).toBeCloseTo(0.01, 10);
+    expect(inputs.primaryBalanceToGdp).toBeCloseTo(0.035, 10);
   });
 });
 
@@ -89,6 +101,7 @@ describe("sovereignInputsFromFiscalClose", () => {
     debtToGdp: 0.9,
     debtPrincipal: 800,
     debtRate: 0.06,
+    debtInterest: 48,
     gdpGrowth: 2,
     inflationRate: 3,
   };
@@ -101,9 +114,9 @@ describe("sovereignInputsFromFiscalClose", () => {
     expect(inputs?.realGrowthPct).toBe(2);
   });
 
-  it("returns null when the close did not record its rate or growth", () => {
+  it("returns null when the close did not record actual interest or growth", () => {
     expect(sovereignInputsFromFiscalClose(null)).toBeNull();
-    expect(sovereignInputsFromFiscalClose({ ...close, debtRate: undefined })).toBeNull();
+    expect(sovereignInputsFromFiscalClose({ ...close, debtInterest: undefined })).toBeNull();
     expect(sovereignInputsFromFiscalClose({ ...close, gdpGrowth: undefined })).toBeNull();
     expect(sovereignInputsFromFiscalClose({ ...close, inflationRate: undefined })).toBeNull();
     expect(sovereignInputsFromFiscalClose({ ...close, gdp: 0 })).toBeNull();

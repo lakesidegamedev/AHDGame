@@ -38,6 +38,7 @@ export interface RecordedTurnInput {
   dividendReceivedTax?: number | null;
   /** Conversion fee skimmed from foreign operating income before retained income. */
   sectorFxSpread?: number | null;
+  dividendIncomeReceived?: number;
   /** Cash on hand now, when it should be compared with the recorded figure. */
   cashNow?: number | null;
   /** Cash on hand when the previous turn was recorded, when known. */
@@ -68,6 +69,8 @@ export interface LedgerReadNotes {
 
 export interface LastTurnReconciliation {
   turn: number;
+  /** Null identifies an anchor-denominated legacy receipt. */
+  reportingCurrency?: string | null;
   statement: {
     revenue: number;
     costs: number;
@@ -96,6 +99,7 @@ export interface LastTurnReconciliation {
     retained: number;
   };
   cash: {
+    evidence?: { boundary: "recorded" | "estimated" | "turn"; unconvertedMovements: number };
     before: number | null;
     after: number;
     /** Cash on hand now, when it has moved since the turn was recorded; otherwise null. */
@@ -120,6 +124,7 @@ const IN_INCOME_STATEMENT = new Set<string>([
   "corp_operating_loss",
   "corp_tax_paid",
   "corp_salary",
+  "corp_dividend",
   "bond_coupon",
   "pension_contribution",
   "pension_benefit",
@@ -165,24 +170,8 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   corp_dissolution_distribution: { key: "dissolution", label: "Dissolution payout" },
   corp_group_relief: { key: "group_relief", label: "Group tax relief" },
   defence_contract_payment: { key: "defence", label: "Defence contract payments" },
-  corp_dividend: { key: "dividends_received", label: "Dividends received on shares held" },
   corp_supply_agreement: { key: "supply_agreement", label: "Supply agreement settlements" },
 };
-
-/**
- * Stored per-turn income is operating profit after tax, dividends and fees. It
- * leaves out bond coupons and issuer interest, which settle in the bond phase
- * and move cash. The walk treats retained income as including them (they are
- * listed beside it and their ledger rows are not a cash line), so add them here
- * once, from the same stored figures the Financials net income uses.
- */
-export function retainedWithBondFlows(
-  income: number,
-  bondCouponIncome: number | null | undefined,
-  bondInterestPaid: number | null | undefined
-): number {
-  return income + Math.max(0, bondCouponIncome ?? 0) - Math.max(0, bondInterestPaid ?? 0);
-}
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -198,10 +187,6 @@ export function groupCashFlowLines(flows: readonly CashFlowInput[]): CashFlowLin
   for (const flow of flows) {
     if (!Number.isFinite(flow.amount) || flow.amount === 0) continue;
     if (IN_INCOME_STATEMENT.has(flow.type)) continue;
-    // A corporation's own dividend payout sits in retained income. A credit on
-    // its ledger is a dividend it received on shares it holds, which retained
-    // income does not include.
-    if (flow.type === "corp_dividend" && flow.amount < 0) continue;
     const group = LINE_GROUPS[flow.type] ?? {
       key: "other_logged",
       label: "Other logged movements",
@@ -274,6 +259,11 @@ export function reconcileLastTurn(
       key: "fx_spread",
       label: "Currency conversion fee on foreign income",
       amount: -Math.max(0, recorded.sectorFxSpread ?? 0),
+    },
+    {
+      key: "dividends_received",
+      label: "Dividends received on shares held",
+      amount: Math.max(0, recorded.dividendIncomeReceived ?? 0),
     },
   ]
     .map((l) => ({ ...l, amount: round2(l.amount) }))

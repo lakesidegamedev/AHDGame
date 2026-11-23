@@ -31,14 +31,15 @@ export default async function ElectionDetailPage({ params, searchParams }: PageP
 
   // Down-ballot races live in Campaign Manager; only the presidency renders
   // here. Outside the try below: `redirect` throws to do its work.
-  const elsewhere = await downBallotRedirectTarget(await getDb(), id, cycle);
+  const db = await getDb();
+  const [elsewhere, user] = await Promise.all([
+    downBallotRedirectTarget(db, id, cycle),
+    getAuthUser().catch(() => null),
+  ]);
   if (elsewhere) redirect(elsewhere);
 
   let initialElection: ElectionDetail | null = null;
   try {
-    const db = await getDb();
-    const user = await getAuthUser();
-
     const result = await resolveElection(
       db,
       id,

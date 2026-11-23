@@ -53,7 +53,19 @@ export function commodityColor(value: number, maxValue: number, mode: "supply" |
  * Price color: green below base, red above base, neutral at base.
  * `maxDeviation` is the maximum absolute percentage deviation used to normalize the scale.
  */
-export function priceColor(price: number, basePrice: number, maxDeviation: number): string {
+export function priceColor(
+  price: number | null,
+  basePrice: number | null,
+  maxDeviation: number
+): string {
+  if (
+    price == null ||
+    basePrice == null ||
+    !Number.isFinite(price) ||
+    !Number.isFinite(basePrice)
+  ) {
+    return "rgba(148, 163, 184, 0.15)";
+  }
   if (basePrice <= 0) return "rgba(148, 163, 184, 0.15)";
   const deviation = ((price - basePrice) / basePrice) * 100;
   const span = Math.max(1, maxDeviation);

@@ -3,7 +3,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Crisis } from "@/lib/db/types/crisis";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { forecastDoNothing, severityTrend, type SeverityTrend } from "@/lib/crises/v2/forecast";
 import { ROLE_LABEL, ledgerView, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
@@ -147,7 +147,7 @@ export async function loadCrisisV2Summaries(
   if (live.length === 0) return result;
 
   const [turn, available, corporations] = await Promise.all([
-    getGameState(db).then((state) => state?.currentTurn ?? 0),
+    getGameStateCore(db).then((state) => state?.currentTurn ?? 0),
     viewerId ? getAvailableLevers(db, viewerId) : Promise.resolve([]),
     viewerId ? viewerCorporations(db, viewerId) : Promise.resolve([]),
   ]);
@@ -205,7 +205,7 @@ export async function loadCrisisV2Detail(
 ): Promise<CrisisV2Detail | null> {
   if (!crisis.v2) return null;
   const def = resolveCrisisDefinition(crisis.v2.definitionId);
-  const turn = (await getGameState(db))?.currentTurn ?? 0;
+  const turn = (await getGameStateCore(db))?.currentTurn ?? 0;
   const live = hasLiveV2(crisis);
   const summary = live
     ? ((await loadCrisisV2Summaries(db, [crisis], viewerId)).get(crisis._id.toString()) ?? null)

@@ -21,7 +21,7 @@ interface SharePurchaseLimitViewProps {
   setQuantityDraft: (v: string | null) => void;
   setLimitPrice: (v: number) => void;
   resetQuantity: (q: number) => void;
-  parseQtyDigits: (raw: string, max?: number) => number;
+  parseShareQuantity: (raw: string) => number;
   onSwitchToOrders: () => void;
   onSuccess: () => void;
   myCorporation: {
@@ -70,7 +70,7 @@ export function SharePurchaseLimitView({
   setQuantityDraft,
   setLimitPrice,
   resetQuantity,
-  parseQtyDigits,
+  parseShareQuantity,
   onSwitchToOrders,
   onSuccess,
   myCorporation,
@@ -120,6 +120,13 @@ export function SharePurchaseLimitView({
       setCancellingId(null);
     }
   }
+
+  const quantityAllowed =
+    quantity > 0 &&
+    !ratesNeededButMissing &&
+    (orderSide === "sell"
+      ? !limitSellInsufficient
+      : !limitBuyFundsShort && quantity <= maxLimitBuyShares);
 
   return (
     <div className="space-y-4">
@@ -253,18 +260,26 @@ export function SharePurchaseLimitView({
             onChange={(e) => {
               const raw = e.target.value;
               setQuantityDraft(raw);
-              const cap =
-                orderSide === "sell"
-                  ? limitSellSharesAvail
-                  : Number.isFinite(maxLimitBuyShares)
-                    ? maxLimitBuyShares
-                    : undefined;
-              setQuantity(parseQtyDigits(raw, cap));
+              setQuantity(parseShareQuantity(raw));
             }}
-            onBlur={() => setQuantityDraft(null)}
             placeholder="Quantity"
             className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
           />
+          {quantityDraft !== null && quantityDraft.trim() !== "" && quantity === 0 && (
+            <p className="mt-1 text-xs text-error" role="alert">
+              Enter a whole number of shares greater than zero.
+            </p>
+          )}
+          {orderSide === "buy" && quantity > maxLimitBuyShares && (
+            <p className="mt-1 text-xs text-error" role="alert">
+              This order is limited to {maxLimitBuyShares.toLocaleString("en-US")} shares.
+            </p>
+          )}
+          {orderSide === "buy" && limitBuyFundsShort && (
+            <p className="mt-1 text-xs text-error" role="alert">
+              Insufficient funds for this order.
+            </p>
+          )}
           {limitSellInsufficient && (
             <p className="mt-1 text-xs text-error">
               {limitAsCorp
@@ -291,7 +306,7 @@ export function SharePurchaseLimitView({
       </div>
 
       {/* Immediate fill indicator */}
-      {quantity > 0 && limitPrice > 0 && (
+      {quantityAllowed && limitPrice > 0 && (
         <div
           className={`rounded-lg border px-3 py-2 text-xs ${
             (orderSide === "buy" && limitBuyFillsNow) || (orderSide === "sell" && limitSellFillsNow)
@@ -327,7 +342,7 @@ export function SharePurchaseLimitView({
       )}
 
       {/* Cost / proceeds summary */}
-      {quantity > 0 && (
+      {quantityAllowed && limitPrice > 0 && (
         <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
           {orderSide === "buy" ? (
             <>

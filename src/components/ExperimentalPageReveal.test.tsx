@@ -111,6 +111,26 @@ describe("ExperimentalPageReveal", () => {
     expect(calls).toEqual([]);
   });
 
+  it("does not hide a server-rendered page that still has a loading panel", () => {
+    pathname = "/market";
+    render(
+      <Page
+        enabled
+        content={
+          <div>
+            <p>Stocks, bonds and funds</p>
+            <div className="animate-pulse" aria-hidden />
+          </div>
+        }
+      />
+    );
+    expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(MAX_WAIT_MS * 2);
+    });
+    expect(calls).toEqual([]);
+  });
+
   it("covers a server-rendered skeleton and decodes once real content lands", () => {
     pathname = "/profile";
     const { rerender } = render(

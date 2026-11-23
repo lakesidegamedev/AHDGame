@@ -59,7 +59,7 @@ export const KEIR_STATES = {
 
 export type KeirMood = keyof typeof KEIR_STATES;
 
-const SHEET = "/ask/keir-M.png";
+const SHEET = "/ask/keir-M.webp";
 const CELL = 40;
 const SHEET_W = 400;
 const SHEET_H = 1800;

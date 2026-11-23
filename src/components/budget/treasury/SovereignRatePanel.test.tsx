@@ -19,7 +19,7 @@ const current: SovereignRateInputs = {
   imfBailoutActive: false,
 };
 
-/** A close recorded before the snapshot carried a rate. */
+/** A close without booked interest cannot establish the primary balance. */
 const partialClose: SovereignFiscalClose = {
   revenue: 105,
   spending: 100,
@@ -50,7 +50,11 @@ describe("SovereignRatePanel", () => {
   });
 
   it("compares against a prior close that did carry the snapshot fields", () => {
-    const previous = sovereignInputsFromFiscalClose({ ...partialClose, debtRate: 0.05 });
+    const previous = sovereignInputsFromFiscalClose({
+      ...partialClose,
+      debtRate: 0.05,
+      debtInterest: 30,
+    });
     expect(previous).not.toBeNull();
 
     render(<SovereignRatePanel current={current} previous={previous} />);

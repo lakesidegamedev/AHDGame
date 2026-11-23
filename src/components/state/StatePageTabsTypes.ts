@@ -81,13 +81,18 @@ export interface SerializedOfficial extends Omit<ElectedOfficial, "_id" | "chara
   partyAbbreviation?: string | null;
 }
 
-export interface SerializedPlayer extends Omit<Character, "_id" | "userId" | "factionId"> {
+export interface SerializedPlayer extends Pick<
+  Character,
+  | "sequentialId"
+  | "name"
+  | "avatarUrl"
+  | "countryId"
+  | "homeState"
+  | "currentOffice"
+  | "party"
+  | "politicalInfluence"
+> {
   _id: string;
-  userId: string;
-  /** Stringified ObjectId (or null). The raw ObjectId cannot cross the
-   *  server / client boundary because Next.js rejects objects with
-   *  `toJSON()` methods passed to Client Components. */
-  factionId?: string | null;
   borderKey?: string | null;
   tintColor?: string | null;
   isAdmin?: boolean;
