@@ -162,8 +162,8 @@
       "helpInformation": "Hilfe/Informationen"
     },
     "characterSwitch": {
-      "message": "Du hast in einem anderen Tab den Charakter gewechselt. Dieser Tab zeigt noch den alten.",
-      "messageNamed": "Du bist in einem anderen Tab zu {name} gewechselt. Dieser Tab zeigt noch den alten Charakter.",
+      "message": "Dein Charakter wurde in einer anderen Sitzung gewechselt. Diese Seite zeigt noch den alten.",
+      "messageNamed": "Du handelst jetzt als {name}, gewechselt in einer anderen Sitzung. Zum Fortfahren neu laden.",
       "reload": "Neu laden"
     },
     "userMenu": {

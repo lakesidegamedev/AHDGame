@@ -13,6 +13,7 @@ import {
   playerContextFromAuthUser,
   setClientPlayerContext,
 } from "@/lib/observability/clientPlayerContext";
+import { noteRenderedCharacter, noteServerCharacter } from "@/lib/activeCharacterGuard";
 import type { ReactNode } from "react";
 
 // Shape matches the `user` object from GET /api/auth/me — kept loose so consumers
@@ -188,6 +189,10 @@ export function AuthDataProvider({
         }
       } else {
         retriesRef.current = 0;
+        const navCharacter = result.payload.user?.character as
+          { id?: string; name?: string } | null | undefined;
+        noteRenderedCharacter(navCharacter?.id);
+        noteServerCharacter(navCharacter?.id, navCharacter?.name);
         setNavData(result.payload);
         setUser(result.payload.user ?? null);
         setAuthFetchError("none");
