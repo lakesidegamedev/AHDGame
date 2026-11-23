@@ -770,7 +770,10 @@ export async function settleMetricStates(context: RunMetricEngineStageContext): 
           // Dropping below plants returns the stored one-turn baseline to the
           // legacy unit. Remove the host tag and trend state so a later flip
           // starts a fresh host-only EMA and snapshot log on that exact turn.
-          ...(!context.sectorTax.plantsEnabled || outputEmaNow === undefined
+          // A partial observation this turn (a sector with no production figure
+          // yet) skips the output update but keeps the history, so a transient
+          // gap does not restart the year of baseline the physical signal needs.
+          ...(!context.sectorTax.plantsEnabled
             ? {
                 $unset: {
                   sectorOutputEma: "" as const,

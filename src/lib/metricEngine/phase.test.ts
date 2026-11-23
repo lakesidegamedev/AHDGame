@@ -1066,7 +1066,7 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
     expect(fields.sectorRevenueEma).toBe(970);
   });
 
-  it("discards an incomplete physical history instead of treating missing data as zero output", async () => {
+  it("keeps the physical history through a partial observation without treating it as zero output", async () => {
     seedWorld({
       mode: "plants",
       revenue: 1000,
@@ -1076,11 +1076,11 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
     });
     const { stateOps } = captureOps();
     await runMetricEngine(db as unknown as Db, 10);
-    expect(stateOps[0].updateOne.update.$set.sectorOutputEma).toBeUndefined();
-    expect(stateOps[0].updateOne.update.$unset).toMatchObject({
-      sectorOutputEma: "",
-      sectorOutputSnapshots: "",
-    });
+    const update = stateOps[0].updateOne.update;
+    expect(update.$set.sectorOutputEma).toBeUndefined();
+    expect(update.$set.sectorOutputSnapshots).toBeUndefined();
+    expect(update.$unset?.sectorOutputEma).toBeUndefined();
+    expect(update.$unset?.sectorOutputSnapshots).toBeUndefined();
   });
 
   it("seeds a fresh host trend on the legacy-to-host flip", async () => {
