@@ -7,13 +7,12 @@ import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
 // A private copy would drift and disagree across surfaces.
-import { crisisSeverity } from "@/lib/crises/severity";
 import { crisisImageUrl } from "@/lib/crises/crisisImages";
 import { crisisKind } from "@/lib/crises/rules/boardView";
 import {
   compareCrisisRows,
   crisisSection,
-  crisisSeverityScore,
+  crisisScoreFor,
   severityBandFromScore,
   SEVERITY_BAND_LABEL,
 } from "@/lib/crises/rules/crisisRow";
@@ -53,10 +52,7 @@ function rowFor(
   data: ActiveCrisisData
 ): CrisisListRow & { section: ReturnType<typeof crisisSection>; startTurn: number } {
   const { crisis, v2 } = data;
-  const score = crisisSeverityScore({
-    v2Severity: v2?.severity,
-    legacyBand: crisisSeverity(crisis),
-  });
+  const score = crisisScoreFor(crisis, v2?.severity);
   return {
     id: crisis._id.toString(),
     title: crisis.name,
@@ -277,7 +273,7 @@ export default function CrisisActionCard() {
           v2,
         } = data;
         const severity = severityBandFromScore(
-          crisisSeverityScore({ v2Severity: v2?.severity, legacyBand: crisisSeverity(crisis) })
+          crisisScoreFor(crisis, v2?.severity)
         );
         const styles = SEVERITY_STYLES[severity];
         const crisisId = crisis._id.toString();

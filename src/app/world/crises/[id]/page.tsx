@@ -11,11 +11,11 @@ import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { rawTurnToLarpDate } from "@/lib/utils/formatters";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
-import { crisisSeverity, effectImpact } from "@/lib/crises/severity";
+import { effectImpact } from "@/lib/crises/severity";
 import { describeCrisisEffect } from "@/lib/crises/effectDisplay";
 import { crisisImageUrl } from "@/lib/crises/crisisImages";
 import { crisisKind } from "@/lib/crises/rules/boardView";
-import { crisisSeverityScore, severityBandFromScore } from "@/lib/crises/rules/crisisRow";
+import { crisisScoreFor, severityBandFromScore } from "@/lib/crises/rules/crisisRow";
 import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/crisisLocation";
 import { CRISIS_TOOLTIPS, tooltipForEffect } from "@/lib/crises/tooltipCopy";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -235,7 +235,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   // Largest single-effect impact, to scale the per-effect strength bars.
   const maxEffectImpact = crisis.effects.reduce((m, e) => Math.max(m, effectImpact(e)), 0);
   const severity = severityBandFromScore(
-    crisisSeverityScore({ v2Severity: v2Detail?.severity, legacyBand: crisisSeverity(crisis) })
+    crisisScoreFor(crisis, v2Detail?.severity)
   );
   const heroSrc = crisisImageUrl(
     { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
