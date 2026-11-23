@@ -6,7 +6,7 @@ summary: >-
   and Campaign Manager recognises your own race.
 tags: [actions, campaigns, elections]
 badges: [patch]
-areas: [ui]
+areas: [fullstack]
 ---
 
 ## What changed
