@@ -8,8 +8,8 @@
  * or the controlling parent's CEO for a managed subsidiary. Errors: 401, 403, 400, 409.
  */
 
+import { isCeoActor, type CeoActor } from "@/lib/corporations/ceoActor";
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -30,11 +30,10 @@ interface RouteParams {
 async function authorize(
   db: Awaited<ReturnType<typeof getDb>>,
   corporation: Corporation,
-  userId: string
+  actor: CeoActor
 ) {
-  const isCeo = corporation.ceoVacant !== true && corporation.userId?.toString() === userId;
-  if (isCeo) return true;
-  return canActOnCorporationAsParent(db, new ObjectId(userId), corporation);
+  if (isCeoActor(corporation, actor)) return true;
+  return canActOnCorporationAsParent(db, actor, corporation);
 }
 
 function view(corporation: Corporation) {
@@ -72,7 +71,7 @@ async function load(params: RouteParams["params"]): Promise<Loaded> {
       response: errorResponse(400, "State-owned corporations have no operator policy."),
     };
   }
-  if (!(await authorize(db, corporation, auth.user.userId))) {
+  if (!(await authorize(db, corporation, auth.user))) {
     return {
       response: errorResponse(403, "Only the CEO or the parent corporation's CEO can do this"),
     };

@@ -64,7 +64,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, (await params).id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
     const charter = corporation.bankCharter;
     if (charter?.status !== "active") {

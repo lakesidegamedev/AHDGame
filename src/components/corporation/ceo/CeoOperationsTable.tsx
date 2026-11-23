@@ -1029,6 +1029,7 @@ export default function CeoOperationsTable({
           />
           {plantsMode && (
             <BulkBuildCapacityDialog
+              corpId={corpId}
               open={bulkBuildOpen}
               onClose={() => setBulkBuildOpen(false)}
               sectors={sectors}

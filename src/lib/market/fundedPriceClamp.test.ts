@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampFundedPrice } from "./fundedPriceClamp";
+import { clampFundedPrice, fundedPriceCeiling } from "./fundedPriceClamp";
 import { softCeiling } from "./rules/softCeiling";
 
 const PACE = { maxMove: 0.02, maxMultiplier: 3 };
@@ -23,6 +23,21 @@ describe("clampFundedPrice", () => {
 
   it("applies only the ceiling when there is no prior price", () => {
     expect(clampFundedPrice(900, undefined, 100, PACE)).toBe(300);
+  });
+});
+
+describe("fundedPriceCeiling", () => {
+  it("is the value the clamp pins a runaway price to, nominal index included", () => {
+    const nominalBase = 100 * 1.199;
+    const ceiling = fundedPriceCeiling(nominalBase, PACE);
+    expect(ceiling).toBeCloseTo(359.7, 6);
+    expect(clampFundedPrice(1e9, undefined, nominalBase, PACE)).toBe(
+      Math.round(ceiling * 100) / 100
+    );
+  });
+
+  it("falls back to the default multiplier when none is configured", () => {
+    expect(fundedPriceCeiling(10)).toBe(100);
   });
 });
 

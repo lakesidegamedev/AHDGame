@@ -8,6 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { CORP_LANE_EFFECT_SCALE } from "@/lib/constants/techTree/effects";
 import { useTranslations } from "next-intl";
+import { estimateQualityAfterTechScore } from "@/lib/market/brandQuality";
 import { DenseSection, InlineStatus, KVList, KVRow, SmallButton } from "./dense/DenseKit";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -42,6 +43,8 @@ interface TechNode {
   valuePerTurn?: number | null;
   /** Turns the cash price takes to earn back; null if the node has no running value. */
   paybackTurns?: number | null;
+  /** Every effect is an input reduction and the input cap is already reached. */
+  noRemainingBenefit?: boolean;
   effects: TechEffectView[];
   inputEfficiencyContributionPct?: number | null;
   unlocksStrategy: string | null;
@@ -72,6 +75,8 @@ interface TechResponse {
   isCeo?: boolean;
   redacted?: boolean;
   rdScore?: number | null;
+  rdScoreExact?: number | null;
+  averageQuality?: number | null;
   rdBudget?: number | null;
   rdGainPerTurn?: number | null;
   rdDecayPerTurn?: number | null;
@@ -83,6 +88,7 @@ interface TechResponse {
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
     minimumCashCost?: number;
+    valuedMinimumCashCost?: number;
   } | null;
   plantOutputPct?: number | null;
   plantOutputCapPct?: number | null;
@@ -275,6 +281,17 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   // Node prices in the tables: compact, the exact figure is in the unlock dialog.
   const fmtCashShort = (n: number | null | undefined) =>
     n == null ? "n/a" : formatAmount(toInternalFrom(n, code as CurrencyCode), code as CurrencyCode);
+  const qualityEstimate =
+    confirmNode && data.averageQuality != null && data.rdScoreExact != null
+      ? {
+          before: data.averageQuality,
+          after: estimateQualityAfterTechScore(
+            data.averageQuality,
+            data.rdScoreExact,
+            Math.max(0, data.rdScoreExact - confirmNode.node.cost)
+          ),
+        }
+      : null;
   const previous = reached.find((d) => d.id === previousDecadeId);
   const methods = data.unlockedStrategyNames ?? [];
   const chancePct = Math.round((data.breakthroughChance ?? 0) * 100);
@@ -311,10 +328,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                 <span className="font-medium text-foreground">How cash prices work</span>{" "}
                 <span>
                   When a technology has an estimated running benefit, its price targets one game
-                  year of savings or extra operating profit, subject to a minimum. Other
-                  technologies start at {Math.round(data.cashPricing.defaultRevenueFraction * 100)}%
-                  of the corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)}{" "}
-                  daily gross operating scale
+                  year of savings or extra operating profit, subject to a minimum
+                  {data.cashPricing.valuedMinimumCashCost != null
+                    ? ` of ${fmtCash(data.cashPricing.valuedMinimumCashCost)}`
+                    : ""}
+                  . Other technologies start at{" "}
+                  {Math.round(data.cashPricing.defaultRevenueFraction * 100)}% of the
+                  corporation&apos;s {fmtCash(data.cashPricing.dailyGrossOperatingScale)} daily
+                  gross operating scale
                   {data.cashPricing.minimumCashCost != null
                     ? `, with a minimum of ${fmtCash(data.cashPricing.minimumCashCost)}`
                     : ", subject to a minimum"}
@@ -563,6 +584,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               </strong>
               .
             </p>
+            {qualityEstimate && (
+              <p className="text-sm text-muted">
+                {t("qualityEstimate", {
+                  before: qualityEstimate.before,
+                  after: qualityEstimate.after,
+                })}
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <Button
                 variant="secondary"
@@ -750,6 +779,16 @@ function LaneTree({
                 : !decade.reached
                   ? t("availableFrom", { decade: decade.id })
                   : t("unlockPrerequisite", { technology: prerequisiteNames(node, bySlot) })}
+        </span>
+      );
+    }
+    if (node.noRemainingBenefit) {
+      return (
+        <span className="flex flex-col items-center gap-1">
+          <SmallButton tone="primary" disabled onClick={() => undefined}>
+            {t("unlock")}
+          </SmallButton>
+          <span className="text-warning">{t("noRemainingBenefit")}</span>
         </span>
       );
     }
@@ -989,7 +1028,9 @@ function TechNodeCard({
         <p className="mt-1.5 text-[10px] font-medium text-warning">
           {remainingInputEfficiency === 0
             ? `This input reduction adds nothing because the ${inputEfficiencyCapPct}% cap is reached.`
-            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap.`}
+            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap. Only ${
+                Math.round((remainingInputEfficiency ?? 0) * 10) / 10
+              } points of it still apply.`}
         </p>
       )}
       {node.effects.length > 0 && (

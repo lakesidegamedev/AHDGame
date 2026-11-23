@@ -25,6 +25,15 @@ export interface FundedPricePace {
   softCeiling?: boolean;
 }
 
+/** The multiplier band's upper bound the clamp enforces, in the base's own unit. */
+export function fundedPriceCeiling(nominalBase: number, pace: FundedPricePace = {}): number {
+  const ceiling =
+    typeof pace.maxMultiplier === "number" && pace.maxMultiplier >= 1
+      ? pace.maxMultiplier
+      : FUNDED_SCARCITY_MAX;
+  return nominalBase * ceiling;
+}
+
 export function clampFundedPrice(
   next: number,
   previous: number | null | undefined,
@@ -51,6 +60,9 @@ export function clampFundedPrice(
   if (typeof previous === "number" && Number.isFinite(previous) && previous > 0)
     price = Math.min(previous * (1 + maxMove), Math.max(previous * (1 - maxMove), price));
   if (Number.isFinite(nominalBase) && nominalBase > 0)
-    price = Math.min(nominalBase * ceiling, Math.max(nominalBase * FUNDED_SCARCITY_MIN, price));
+    price = Math.min(
+      fundedPriceCeiling(nominalBase, pace),
+      Math.max(nominalBase * FUNDED_SCARCITY_MIN, price)
+    );
   return Math.round(price * 100) / 100;
 }

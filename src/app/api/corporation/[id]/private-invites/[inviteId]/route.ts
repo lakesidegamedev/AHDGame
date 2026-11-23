@@ -87,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (action === "cancel") {
-      const ceoCheck = requireCeo(corporation, auth.user.userId);
+      const ceoCheck = requireCeo(corporation, auth.user);
       if (ceoCheck) return ceoCheck;
       await corporationShareInvitesCollection(db).updateOne(
         { _id: inviteOid, status: "pending" },

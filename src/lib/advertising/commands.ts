@@ -83,7 +83,7 @@ export async function listAdvertisingAgreements(corpId: string) {
     const resolved = await resolveCorporation(db, corpId);
     if (!resolved.ok) return resolved.response;
     const corp = resolved.corporation;
-    const ceoCheck = requireCeo(corp, auth.user.userId);
+    const ceoCheck = requireCeo(corp, auth.user);
     if (ceoCheck) return ceoCheck;
     if (!(await isAdvertisingAgreementsEnabled(db))) {
       return errorResponse(403, "Advertising agreements are not enabled in this world");
@@ -158,7 +158,7 @@ export async function proposeAdvertisingAgreement(request: Request, initiatingCo
     const resolved = await resolveCorporation(db, initiatingCorpId);
     if (!resolved.ok) return resolved.response;
     const initiator = resolved.corporation;
-    const ceoCheck = requireCeo(initiator, auth.user.userId);
+    const ceoCheck = requireCeo(initiator, auth.user);
     if (ceoCheck) return ceoCheck;
     if (!(await isAdvertisingAgreementsEnabled(db))) {
       return errorResponse(403, "Advertising agreements are not enabled in this world");
@@ -248,7 +248,7 @@ export async function updateAdvertisingAgreement(
     const resolved = await resolveCorporation(db, corpId);
     if (!resolved.ok) return resolved.response;
     const corp = resolved.corporation;
-    const ceoCheck = requireCeo(corp, auth.user.userId);
+    const ceoCheck = requireCeo(corp, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (!(await isAdvertisingAgreementsEnabled(db))) {

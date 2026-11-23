@@ -116,6 +116,10 @@ export default function SectorDetailPage() {
   const searchParams = useSearchParams();
   const [buildOpen, setBuildOpen] = useState(searchParams.get("build") === "1");
   const [capacityBusy, setCapacityBusy] = useState(false);
+  const [listQuote, setListQuote] = useState<{ priceAnchor: number; npvAnchor: number } | null>(
+    null
+  );
+  const [listQuoteError, setListQuoteError] = useState<string | null>(null);
   const [reviewStrategyId, setReviewStrategyId] = useState<string | null>(null);
   const [capacityMessage, setCapacityMessage] = useState("");
   // The build the operating reserve refused, ready to resend with the override.
@@ -596,6 +600,19 @@ export default function SectorDetailPage() {
     }
   };
 
+  const handleRequestListQuote = async () => {
+    setListQuote(null);
+    setListQuoteError(null);
+    try {
+      const res = await fetch(`/api/corporations/${corpId}/sectors/${sectorId}/list`);
+      const result = await res.json();
+      if (res.ok) setListQuote({ priceAnchor: result.priceAnchor, npvAnchor: result.npvAnchor });
+      else setListQuoteError(apiErrorText(result, "Could not work out the listing price"));
+    } catch {
+      setListQuoteError("Network error");
+    }
+  };
+
   const handleListForSale = async () => {
     dispatch({ type: "SET_LISTING_FOR_SALE", value: true });
     dispatch({ type: "SET_FOR_SALE_MESSAGE", value: null });
@@ -1069,6 +1086,8 @@ export default function SectorDetailPage() {
                   isExtraction={sector.sectorType === "extraction"}
                   forexEnabled={forexEnabled}
                   exchangeRates={exchangeRates}
+                  stateId={sector.stateId}
+                  stateName={sector.stateName}
                 />
               ) : (
                 <CommoditiesPanel
@@ -1177,6 +1196,9 @@ export default function SectorDetailPage() {
                 unlisting={unlistingForSale}
                 buying={false}
                 message={forSaleMessage}
+                listQuote={listQuote}
+                listQuoteError={listQuoteError}
+                onRequestListQuote={handleRequestListQuote}
                 onList={handleListForSale}
                 onUnlist={handleUnlistForSale}
                 onBuy={handleBuySector}

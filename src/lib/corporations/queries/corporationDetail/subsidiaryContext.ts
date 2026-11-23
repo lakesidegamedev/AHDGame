@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import {
@@ -137,7 +138,8 @@ export async function loadSubsidiaryContext(
   corporationForControl: Corporation,
   corporation: Corporation,
   viewerUserId: string | null | undefined,
-  currentTurn: number
+  currentTurn: number,
+  viewerCharacterId?: string | null
 ): Promise<SubsidiaryContextResult> {
   const controllingParent = getControllingCorporateParent(corporationForControl);
   // The parent-corp lookup, the subsidiary-candidates query, and the hostile-
@@ -265,10 +267,7 @@ export async function loadSubsidiaryContext(
   // strength the leader transfers to subsidiaries. Flag the incomplete figure
   // so a rising forecast is not read against a falling total. Only the group
   // leader pays, so only its CEO needs this note.
-  const viewerIsCeoOfThisCorp =
-    !!viewerUserId &&
-    corporation.ceoVacant !== true &&
-    corporation.userId?.toString() === viewerUserId;
+  const viewerIsCeoOfThisCorp = viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId);
   const groupStrengthTransfer =
     viewerIsCeoOfThisCorp &&
     !isFormalizedSub &&
@@ -286,11 +285,7 @@ export async function loadSubsidiaryContext(
   let canFormalizeAsSubsidiary = false;
   // Viewer (as CEO of this corp) may spin off a subsidiary when the corp is
   // eligible to act as a parent. The command re-checks cooldown + sector count.
-  const canSpinOff =
-    !!viewerUserId &&
-    corporation.ceoVacant !== true &&
-    corporation.userId?.toString() === viewerUserId &&
-    isEligibleAsSubsidiaryParent(corporation);
+  const canSpinOff = viewerIsCeoOfThisCorp && isEligibleAsSubsidiaryParent(corporation);
   // The command enforces this cooldown, so the page counts it down from the
   // same helper instead of showing a button that is guaranteed to fail.
   const spinOffCooldownRemaining = spinOffCooldownTurnsRemaining(
@@ -300,7 +295,7 @@ export async function loadSubsidiaryContext(
   if (viewerUserId) {
     canManageAsParent = await canActOnCorporationAsParent(
       db,
-      new ObjectId(viewerUserId),
+      { userId: viewerUserId, activeCharacterId: viewerCharacterId },
       corporation
     );
     // Viewer may formalize iff they are CEO of the corp controlling >50% of this
@@ -318,6 +313,9 @@ export async function loadSubsidiaryContext(
         {
           projection: {
             userId: 1,
+            ceoId: 1,
+            ceoType: 1,
+            caretakerCeo: 1,
             ceoVacant: 1,
             countryOwnerId: 1,
             subsidiaryFormalizedAtTurn: 1,
@@ -326,8 +324,7 @@ export async function loadSubsidiaryContext(
       );
       canFormalizeAsSubsidiary =
         parentDoc != null &&
-        parentDoc.ceoVacant !== true &&
-        parentDoc.userId?.toString() === viewerUserId &&
+        viewerRunsCorporation(parentDoc, viewerUserId, viewerCharacterId) &&
         isEligibleAsSubsidiaryParent(parentDoc);
     }
   }

@@ -21,6 +21,7 @@ import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
+import { unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
 import { SOLD_SHARE_POOL_NOTE } from "@/lib/corporations/rules/soldShareReading";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
@@ -83,11 +84,7 @@ export default function MarketMoneyPanel({
   const offered = settlement?.offered ?? plants.producedUnits ?? 0;
   const sold = settlement?.sold ?? plants.soldUnits ?? 0;
   const unsold = settlement?.unsold ?? plants.unsoldUnits ?? 0;
-  const sellingShare = settlement
-    ? offered > 0
-      ? Math.min(1, sold / offered)
-      : null
-    : (truth?.soldFraction ?? null);
+  const sellingShare = settlement ? unitsSoldShare(offered, sold) : (truth?.soldFraction ?? null);
   const split = outputSalesSplit(outputs);
   const ownSite = settlement?.ownSites ?? plants.ownSiteUnits ?? 0;
   const reconciledSplit = settlement && Math.abs(offered - sold - ownSite - unsold) < 1e-6;

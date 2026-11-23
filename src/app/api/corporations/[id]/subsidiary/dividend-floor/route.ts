@@ -44,6 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await setParentDividendFloor(db, {
       sub: subResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       floorPct: parsed.data.floorPct,
       now: new Date(),
     });

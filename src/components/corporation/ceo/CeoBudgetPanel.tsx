@@ -33,6 +33,13 @@ import {
   productDevelopmentDailyAnchor,
   remainingDevelopmentAnchor,
 } from "@/lib/corporations/strengthProjection";
+import { AUTOPILOT_MODIFIERS } from "@/lib/corporations/autopilot";
+import {
+  AUTOPILOT_BUDGET_MARGIN_STRONG,
+  AUTOPILOT_BUDGET_MARGIN_THIN,
+  AUTOPILOT_BUDGET_SHARES,
+  type AutopilotBudgetBand,
+} from "@/lib/corporations/rules/autopilotBudgetRule";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import {
@@ -62,6 +69,21 @@ export function parseDisplayDigits(text: string): number {
   } catch {
     return 0;
   }
+}
+
+const AUTOPILOT_LEVERS = [
+  ["marketing", "Marketing"],
+  ["logistics", "Logistics"],
+  ["rd", "R&D"],
+] as const;
+
+function pctText(share: number): string {
+  return `${Math.round(share * 1000) / 10}%`;
+}
+
+function sharesText(band: AutopilotBudgetBand): string {
+  const s = AUTOPILOT_BUDGET_SHARES[band];
+  return `marketing ${pctText(s.marketing * AUTOPILOT_MODIFIERS.marketingMult)}, logistics ${pctText(s.logistics)}, R&D ${pctText(s.rd * AUTOPILOT_MODIFIERS.rdMult)}`;
 }
 
 type BudgetKey = "marketing" | "logistics" | "rd" | "ceo";
@@ -294,10 +316,36 @@ export default function CeoBudgetPanel({
       }
     >
       {corporation.autopilot != null && (
-        <p className="pb-2 text-xs text-muted" data-testid="budget-autopilot-note">
-          Autopilot sets these budgets every turn, so changes you save here are reset on the next
-          turn. Turn autopilot off to set them yourself.
-        </p>
+        <div className="space-y-1 pb-2 text-xs text-muted" data-testid="budget-autopilot-note">
+          <p>
+            Autopilot sets these budgets every turn, so changes you save here are reset on the next
+            turn. Turn autopilot off to set them yourself.
+          </p>
+          <p data-testid="budget-autopilot-rule">
+            The rule: autopilot sizes each budget as a share of revenue after overhead, by margin.
+            Under {AUTOPILOT_BUDGET_MARGIN_THIN}%: {sharesText("thin")}. From{" "}
+            {AUTOPILOT_BUDGET_MARGIN_THIN}% to {AUTOPILOT_BUDGET_MARGIN_STRONG}%:{" "}
+            {sharesText("healthy")}. {AUTOPILOT_BUDGET_MARGIN_STRONG}% and over:{" "}
+            {sharesText("strong")}. Losing money or short of cash: {sharesText("distress")}.
+            Marketing and R&D are scaled by {AUTOPILOT_MODIFIERS.marketingMult} and{" "}
+            {AUTOPILOT_MODIFIERS.rdMult} for the cautious style.
+          </p>
+          <p>
+            Current targets: marketing {money.fmt(scale(corporation.marketingBudget ?? 0))},
+            logistics {money.fmt(scale(corporation.logisticsBudget ?? 0))}, R&amp;D{" "}
+            {money.fmt(scale(corporation.rdBudget ?? 0))} {suffix}.
+          </p>
+          {AUTOPILOT_LEVERS.map(([lever, label]) => {
+            const change = corporation.autopilot?.budgetChanges?.[lever];
+            if (!change) return null;
+            return (
+              <p key={lever} data-testid={`budget-autopilot-change-${lever}`}>
+                Autopilot set {label} to {money.fmt(scale(change.to))} {suffix} (
+                {(change.pctOfRevenue * 100).toFixed(1)}% of revenue) on turn {change.turn}.
+              </p>
+            );
+          })}
+        </div>
       )}
       <StatementTable>
         <StatementLine

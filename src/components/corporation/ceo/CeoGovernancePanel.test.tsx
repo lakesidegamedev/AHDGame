@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import CeoGovernancePanel from "./CeoGovernancePanel";
 import type { CorporationDetail } from "../CorporationPageTypes";
 
@@ -53,5 +53,43 @@ describe("CeoGovernancePanel", () => {
     expect(
       within(group).getByText("Wind up the corporation and pay out shareholders. Cannot be undone.")
     ).toBeTruthy();
+  });
+
+  it("disables the dissolve button with the reason and shows one rate behind the payout", async () => {
+    const preview = {
+      outstandingBonds: 1,
+      canQuickDissolve: false,
+      dissolutionAgeTurnsRemaining: 0,
+      returnedCapitalCorp: 1000,
+      returnedCapitalHome: 1000,
+      ceoShareHome: 800,
+      ceoShareAnchor: 800,
+      ceoIsSoleShareholder: false,
+      homeCurrency: "USD",
+      forexEnabled: false,
+      characterRows: [{ characterId: "a", name: "Holder", shares: 80, payout: 800 }],
+      corporateRows: [],
+      publicFloatRow: { shares: 20, payout: 200 },
+      fundRows: [],
+      nppRows: [],
+      totalShares: 100,
+      perShareCorp: 10,
+      corpPerAnchor: 1,
+      poolParts: { cash: 600, heldBonds: 0, sectorSalvage: 400, buybackEscrow: 0 },
+      sectorSalvageFraction: 0.2,
+      commodityGlobalDeltas: [],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, preview }) })
+    );
+    render(<CeoGovernancePanel corporation={corporation} corpId="7" onRefresh={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Dissolve: Dissolve" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview payout" }));
+    await waitFor(() => expect(screen.getByText("Paid per share")).toBeTruthy());
+    expect(screen.getByText(/not the book value/)).toBeTruthy();
+    const yes = screen.getByRole("button", { name: "Yes, dissolve" });
+    expect((yes as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Blocked while 1 bond is outstanding/)).toBeTruthy();
   });
 });

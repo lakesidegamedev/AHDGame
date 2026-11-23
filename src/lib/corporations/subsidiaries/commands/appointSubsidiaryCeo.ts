@@ -23,6 +23,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 export interface AppointSubsidiaryCeoInput {
   sub: Corporation;
   callerUserId: ObjectId;
+  /** The character the caller is playing as; a sibling character is not the parent CEO. */
+  callerCharacterId?: string | null;
   ceoType: "character" | "npp";
   characterId?: ObjectId;
   forcedNppId?: string;
@@ -41,7 +43,13 @@ export async function appointSubsidiaryCeo(
 ): Promise<SubsidiaryCommandResult<{ ceoType: "character" | "npp"; nppName?: string }>> {
   const { sub, callerUserId, ceoType, characterId, forcedNppId, turn, now } = input;
 
-  if (!(await canActOnCorporationAsParent(db, callerUserId, sub))) {
+  if (
+    !(await canActOnCorporationAsParent(
+      db,
+      { userId: callerUserId.toString(), activeCharacterId: input.callerCharacterId },
+      sub
+    ))
+  ) {
     return fail("You are not authorized to manage this subsidiary.", 403);
   }
 

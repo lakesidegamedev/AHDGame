@@ -412,3 +412,18 @@ describe("CommoditiesTab inputs and outputs", () => {
     expect(within(outputs).queryByRole("link", { name: "Supply deal" })).toBeNull();
   });
 });
+
+describe("CommoditiesTab keyed data", () => {
+  it("never shows another corporation's figures while a new one loads", async () => {
+    const { rerender } = render(<CommoditiesTab corpId="first" isCeo />);
+    await waitFor(() => expect(screen.getByText("Energy")).toBeTruthy());
+
+    let release: (value: unknown) => void = () => {};
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise((resolve) => (release = resolve))));
+    rerender(<CommoditiesTab corpId="second" isCeo />);
+    expect(screen.queryByText("Energy")).toBeNull();
+
+    release({ ok: true, json: async () => ({ commodities: [], regions: [], marketShare: [] }) });
+    await waitFor(() => expect(screen.getByText(/isn't producing or consuming/)).toBeTruthy());
+  });
+});

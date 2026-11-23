@@ -253,7 +253,9 @@ describe("TechTab input efficiency cap warnings", () => {
   it("warns when part of the node contribution is clipped", async () => {
     await renderWithEfficiency(26, 6);
     expect(
-      await screen.findByText("Some of this input reduction exceeds the 30% cap.")
+      await screen.findByText(
+        "Some of this input reduction exceeds the 30% cap. Only 4 points of it still apply."
+      )
     ).toBeTruthy();
   });
 
@@ -264,6 +266,26 @@ describe("TechTab input efficiency cap warnings", () => {
     ).toBeTruthy();
     expect(screen.getByText("−3% growth costs")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Unlock" }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("TechTab node with no remaining benefit", () => {
+  it("disables Unlock and states why", async () => {
+    const tree = responseWithTree();
+    tree.inputEfficiencyPct = 30;
+    tree.inputEfficiencyCapPct = 30;
+    Object.assign(tree.decades[1].lanes.generic[0], {
+      inputEfficiencyContributionPct: 6,
+      noRemainingBenefit: true,
+      affordable: false,
+      effects: [{ category: "input", label: "−12% plant inputs" }],
+    });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+    renderTechTab();
+    await screen.findByRole("heading", { name: "Corporate track" });
+    expect(screen.getByText(/already at the cap, so it would add nothing/)).toBeTruthy();
+    const buttons = screen.getAllByRole("button", { name: "Unlock" }) as HTMLButtonElement[];
+    expect(buttons.some((b) => b.disabled)).toBe(true);
   });
 });
 

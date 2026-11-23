@@ -41,12 +41,12 @@ export async function validateBid(
 ) {
   const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(bid.corporationId) });
   if (!corp) throw new ContractError("Corporation not found.", 404);
-  if (user && requireCeo(corp, user.userId))
+  if (user && requireCeo(corp, user))
     throw new ContractError("Only this corporation's CEO may bid.", 403);
   if (
     !user &&
     !(bid.system && (isStateOwned(corp) || isNppOwned(corp))) &&
-    requireCeo(corp, bid.userId)
+    requireCeo(corp, { userId: bid.userId })
   )
     throw new ContractError("The bid is no longer authorized by this corporation's CEO.");
   if (t.terms.type === "extraction") {

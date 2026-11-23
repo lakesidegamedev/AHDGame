@@ -221,7 +221,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
     const resolved = await resolveCorporation(db, initiatingCorpId);
     if (!resolved.ok) return resolved.response;
     const initiator = resolved.corporation;
-    const ceoCheck = requireCeo(initiator, auth.user.userId);
+    const ceoCheck = requireCeo(initiator, auth.user);
     if (ceoCheck) return ceoCheck;
     const transferRestriction = await controllerTransferBarrierError(
       db,
@@ -407,7 +407,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
     const resolved = await resolveCorporation(db, corpId);
     if (!resolved.ok) return resolved.response;
     const corp = resolved.corporation;
-    const ceoCheck = requireCeo(corp, auth.user.userId);
+    const ceoCheck = requireCeo(corp, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const agreement = await supplyAgreementsCollection(db).findOne({

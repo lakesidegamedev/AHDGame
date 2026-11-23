@@ -45,6 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await capitalInjection(db, {
       sub: subResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       amount: parsed.data.amount,
       turn,
       now: new Date(),

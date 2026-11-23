@@ -48,7 +48,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoCheck = requireCeo(resolved.corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const deals = await listDealsForCorp(db, resolved.corporation._id);
@@ -75,7 +75,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const myCorp = resolved.corporation;
-    const ceoCheck = requireCeo(myCorp, auth.user.userId);
+    const ceoCheck = requireCeo(myCorp, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const parsed = await parseJsonBody(request, dealsBodySchema);

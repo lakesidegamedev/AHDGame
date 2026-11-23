@@ -149,7 +149,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
 
     // Check if requesting user is CEO
     const user = await getAuthUser().catch(() => null);
-    const isCeo = !!user && requireCeo(corporation, user.userId) === null;
+    const isCeo = !!user && requireCeo(corporation, user) === null;
     const {
       allTariffs,
       allSectorsRaw,
@@ -305,7 +305,13 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       sector.transitionStartTurn,
       currentTurn,
       sectorDetailPreset,
-      gameState?.hardwareInputReliefStartTurn
+      gameState?.hardwareInputReliefStartTurn,
+      // The funded turn buys advertising as a paid input; list it like the engine does.
+      {
+        advertisingInput:
+          gameState?.producerOpening != null &&
+          gameState.producerOpening.worldEpoch === gameState.worldEpochId,
+      }
     );
 
     // Extraction-only: resource capacity and per-resource multipliers ,
@@ -560,7 +566,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     });
     if (forSaleInfo) {
       const outerBlock =
-        !user || !viewerCorporation || requireCeo(viewerCorporation, user.userId) !== null
+        !user || !viewerCorporation || requireCeo(viewerCorporation, user) !== null
           ? ("not_ceo" as const)
           : gameState?.corporationActionsPaused
             ? ("actions_paused" as const)

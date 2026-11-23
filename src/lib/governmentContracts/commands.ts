@@ -319,7 +319,7 @@ export async function submitBid(
   const withdrawingCorp = input.withdraw
     ? await corporationsCollection(db).findOne({ _id: new ObjectId(input.corporationId) })
     : null;
-  if (input.withdraw && (!withdrawingCorp || requireCeo(withdrawingCorp, user.userId)))
+  if (input.withdraw && (!withdrawingCorp || requireCeo(withdrawingCorp, user)))
     throw new ContractError("Only the CEO may withdraw this bid.", 403);
   const validated =
     input.withdraw && withdrawingCorp

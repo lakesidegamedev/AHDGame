@@ -9,6 +9,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export interface SetParentDividendFloorInput {
   sub: Corporation;
   callerUserId: ObjectId;
+  /** The character the caller is playing as; a sibling character is not the parent CEO. */
+  callerCharacterId?: string | null;
   floorPct: number;
   now: Date;
 }
@@ -25,7 +27,13 @@ export async function setParentDividendFloor(
 ): Promise<SubsidiaryCommandResult<{ parentDividendFloorPct: number }>> {
   const { sub, callerUserId, floorPct, now } = input;
 
-  if (!(await canActOnCorporationAsParent(db, callerUserId, sub))) {
+  if (
+    !(await canActOnCorporationAsParent(
+      db,
+      { userId: callerUserId.toString(), activeCharacterId: input.callerCharacterId },
+      sub
+    ))
+  ) {
     return fail("You are not authorized to manage this subsidiary.", 403);
   }
 

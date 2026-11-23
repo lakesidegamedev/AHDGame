@@ -12,8 +12,8 @@ vi.mock("@/lib/api/requireAuth", () => ({
 }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({
   resolveCorporation: vi.fn(),
-  requireCeo: vi.fn((corporation, userId) =>
-    corporation.userId?.toString() === userId ? null : new Response(null, { status: 403 })
+  requireCeo: vi.fn((corporation, actor) =>
+    corporation.userId?.toString() === actor.userId ? null : new Response(null, { status: 403 })
   ),
 }));
 vi.mock("@/lib/api/rateLimit", () => ({

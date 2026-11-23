@@ -6,6 +6,9 @@ import { errorResponse } from "@/lib/api/errors";
 import { directingParentCorporationId } from "@/lib/corporations/subsidiaries/authorization";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { isCeoActor, type CeoActor } from "@/lib/corporations/ceoActor";
+
+export { isCeoActor, type CeoActor };
 
 /**
  * Returns the canonical URL path segment for a corporation document.
@@ -76,15 +79,11 @@ export async function resolveCorporation(
 }
 
 /**
- * Check that the given userId matches the corporation CEO.
+ * Check that the acting character is the corporation CEO.
  * Returns a 403 NextResponse if not authorized, or null if OK.
  */
-export function requireCeo(corporation: Corporation, userId: string): NextResponse | null {
-  if (
-    corporation.ceoVacant === true ||
-    !corporation.userId ||
-    corporation.userId.toString() !== userId
-  ) {
+export function requireCeo(corporation: Corporation, actor: CeoActor): NextResponse | null {
+  if (!isCeoActor(corporation, actor)) {
     return errorResponse(403, "Only the CEO can perform this action");
   }
   return null;
@@ -101,12 +100,13 @@ export type CeoOrParentAuthorization =
 export async function requireCeoOrDirectingParent(
   db: Db,
   corporation: Corporation,
-  userId: string
+  actor: CeoActor
 ): Promise<CeoOrParentAuthorization> {
-  const ceoCheck = requireCeo(corporation, userId);
+  const { userId } = actor;
+  const ceoCheck = requireCeo(corporation, actor);
   if (!ceoCheck) return { ok: true, directingParentId: null };
   if (!ObjectId.isValid(userId)) return { ok: false, response: ceoCheck };
-  const parentId = await directingParentCorporationId(db, new ObjectId(userId), corporation);
+  const parentId = await directingParentCorporationId(db, actor, corporation);
   if (!parentId) return { ok: false, response: ceoCheck };
   return { ok: true, directingParentId: parentId };
 }
