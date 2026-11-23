@@ -19,6 +19,9 @@ const COMMON: Partial<PostHogConfig> = {
   capture_dead_clicks: false,
   capture_pageleave: false,
   capture_pageview: "history_change",
+  // Real-player page speed (LCP, CLS, INP, FCP), so slow pages can be ranked
+  // from field data instead of one-off lab runs.
+  capture_performance: { web_vitals: true },
   disable_surveys: true,
   property_denylist: ["$ip", "ip", "email"],
 };

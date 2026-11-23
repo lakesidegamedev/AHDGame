@@ -38,6 +38,10 @@ describe("anonymous config", () => {
     expect(config.capture_pageview).toBe("history_change");
   });
 
+  it("records real-player page speed", () => {
+    expect(config.capture_performance).toEqual({ web_vitals: true });
+  });
+
   it("does not drop the page address or referrer", () => {
     for (const key of ["$current_url", "$pathname", "$referrer"]) {
       expect(config.property_denylist).not.toContain(key);

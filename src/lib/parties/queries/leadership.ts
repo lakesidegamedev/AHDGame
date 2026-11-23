@@ -53,19 +53,26 @@ export async function getNationalPartyElectionState(
   db: Db,
   party: PoliticalParty
 ): Promise<NationalElectionsState> {
-  const authUser = await getOptionalViewer();
   const partyId = String(party.sequentialId);
   const partyCountryId = party.countryId ?? "US";
+  // The viewer, the voting races, the banned-seat check and the banned-voter set
+  // do not depend on each other, so they are read together.
+  const [authUser, activeElections, , bannedCharacterIds] = await Promise.all([
+    getOptionalViewer(),
+    nationalPartyElectionsCollection(db)
+      .find({
+        partyId,
+        countryId: partyCountryId,
+        position: { $in: NATIONAL_ALL_POSITIONS },
+        status: "voting",
+      })
+      .toArray(),
+    // A banned account no longer holds its seat.
+    vacateBannedOfficerSeats(db, party),
+    getBannedCharacterIds(db),
+  ]);
   const isMember =
     authUser?.character?.party === partyId && authUser?.character?.countryId === partyCountryId;
-  const activeElections = await nationalPartyElectionsCollection(db)
-    .find({
-      partyId,
-      countryId: partyCountryId,
-      position: { $in: NATIONAL_ALL_POSITIONS },
-      status: "voting",
-    })
-    .toArray();
   // Founding elections (the accelerated 12-turn chair race at iteration start)
   // waive the 24h new-character cooldown and the party-tenure gate — the
   // enter/vote routes enforce the same waiver server-side.
@@ -124,8 +131,6 @@ export async function getNationalPartyElectionState(
     }
   }
 
-  // A banned account no longer holds its seat.
-  await vacateBannedOfficerSeats(db, party);
   const holderMap: Record<NationalPartyElectionPosition, string | null> = {
     chair: party.chairId?.toString() ?? null,
     viceChair: party.viceChairId?.toString() ?? null,
@@ -185,7 +190,6 @@ export async function getNationalPartyElectionState(
   }
 
   const activeElectionIds = canonicalActiveElections.map((election) => election._id);
-  const bannedCharacterIds = await getBannedCharacterIds(db);
   const voteMatch: Record<string, unknown> = { electionId: { $in: electionIds } };
   const bannedVoterObjectIds = [...bannedCharacterIds].map((id) => new ObjectId(id));
   if (bannedVoterObjectIds.length > 0) {
