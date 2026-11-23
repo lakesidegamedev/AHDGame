@@ -34,9 +34,9 @@ const SEATS = {
     US: "secretary_of_commerce",
     UK: "business_secretary",
     JP: "economy_minister",
-    IE: "minister_for_enterprise",
-    SCO: "economySecretary",
-    WAL: "economySecretary",
+    IE: "minister_for_public_expenditure",
+    SCO: "deputyFirstMinister",
+    WAL: "deputyFirstMinister",
   },
   EDU: {
     CA: "minister_of_education_and_skills",
@@ -146,6 +146,53 @@ const SEATS = {
     SCO: "deputyFirstMinister",
     WAL: "deputyFirstMinister",
   },
+  INT: {
+    CA: "director_of_intelligence",
+    US: "director_of_intelligence",
+    UK: "director_of_intelligence",
+    JP: "chief_cabinet_secretary",
+    // Ireland and the devolved nations have no intelligence service; never offered there.
+    IE: "minister_for_defence",
+    SCO: "defenceSecretary",
+    WAL: "defenceSecretary",
+  },
+  // Ireland and the devolved nations are never offered these four families.
+  FOR: {
+    CA: "minister_of_foreign_affairs",
+    US: "secretary_of_state",
+    UK: "foreign_secretary",
+    JP: "foreign_affairs_minister",
+    IE: "minister_for_justice",
+    SCO: "deputyFirstMinister",
+    WAL: "deputyFirstMinister",
+  },
+  HSC: {
+    CA: "minister_of_public_safety",
+    US: "secretary_of_homeland",
+    UK: "home_secretary",
+    JP: "internal_affairs_minister",
+    IE: "minister_for_justice",
+    SCO: "justiceSecretary",
+    WAL: "justiceSecretary",
+  },
+  TRD: {
+    CA: "minister_of_international_trade",
+    US: "secretary_of_commerce",
+    UK: "business_secretary",
+    JP: "economy_minister",
+    IE: "minister_for_public_expenditure",
+    SCO: "deputyFirstMinister",
+    WAL: "deputyFirstMinister",
+  },
+  VET: {
+    CA: "minister_of_national_defence",
+    US: "secretary_of_veterans",
+    UK: "defence_secretary",
+    JP: "defense_minister",
+    IE: "minister_for_defence",
+    SCO: "defenceSecretary",
+    WAL: "defenceSecretary",
+  },
   DEF: {
     CA: "minister_of_national_defence",
     US: "secretary_of_defense",
@@ -169,6 +216,8 @@ export function fundingSeatForLaw(
   const code = law.ownerCode as ResetOwnerCode;
   if (countryHasFeature("usSeeds", country)) {
     if (law.id === "L50") return year >= 2003 ? "attorney_general" : "secretary_of_treasury";
+    // Homeland Security was created in 2003; before that national safety sat with Justice.
+    if (code === "HSC" && year < 2003) return "attorney_general";
     if (code === "EDU" && enabledSeats.has("secretary_of_education")) {
       return "secretary_of_education";
     }
