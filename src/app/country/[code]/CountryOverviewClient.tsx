@@ -1,5 +1,6 @@
 "use client";
 
+import { heroObjectPosition } from "@/lib/images/heroFocus";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -463,7 +464,8 @@ export default function CountryOverviewClient({
                   src={bannerImage}
                   alt={name}
                   fill
-                  className="object-cover object-center"
+                  className="object-cover"
+                  style={{ objectPosition: heroObjectPosition(bannerImage) }}
                   sizes="(max-width: 1280px) 100vw, 1280px"
                   priority
                 />
