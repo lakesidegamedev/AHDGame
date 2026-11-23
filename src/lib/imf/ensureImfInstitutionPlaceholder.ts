@@ -14,6 +14,7 @@
  * still reference imfCorp._id; trade/news consumers gracefully handle empty
  * shareholders) until an admin assigns Board.
  */
+import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -46,8 +47,7 @@ export async function ensureImfInstitutionPlaceholder(db: Db): Promise<EnsureImf
   // shareholders gracefully — they just see "no Board" until repair.
   const doc = {
     name: "International Monetary Fund",
-    description:
-      "IMF institution. Admin must assign Board members via System → Post Reset Checklist.",
+    description: IMF_INSTITUTION_PLAYER_DESCRIPTION,
     type: "financial" as const,
     countryId: "US",
     headquartersState: "DC",

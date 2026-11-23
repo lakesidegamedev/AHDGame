@@ -1,3 +1,4 @@
+import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
 import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
@@ -308,7 +309,9 @@ export async function loadCorporationDetailView(args: {
       sequentialId: corporation.sequentialId,
       name: corporation.name,
       tickerSymbol: corporation.tickerSymbol ?? undefined,
-      description: corporation.description,
+      description: corporation.imfInstitution
+        ? IMF_INSTITUTION_PLAYER_DESCRIPTION
+        : corporation.description,
       type: corporation.type,
       countryId: corporation.countryId,
       secondaryType: corporation.secondaryType ?? null,
