@@ -152,7 +152,8 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
         <h2 className="text-sm font-semibold mb-1">Active candidate endorsements</h2>
         <p className="mb-2 text-xs text-muted">
           Endorsements you have given to election candidates. Endorsements an international
-          organisation gives your country are joint statements, listed on that organisation&apos;s page.
+          organisation gives your country are joint statements, listed on that organisation&apos;s
+          page.
         </p>
         <InlineError error={error} className="text-sm text-error mb-2" />
         {data.activeEndorsements.length === 0 ? (
