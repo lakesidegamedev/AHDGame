@@ -73,6 +73,22 @@ beforeEach(() => {
 });
 
 describe("PresidentialCabinetClient acting appointments", () => {
+  it("shows why a vacant seat is vacant: the last nominee's outcome", async () => {
+    mockFetch({
+      positions: [
+        {
+          ...TREASURY,
+          member: null,
+          nomination: null,
+          lastNominationNote:
+            "Last nominee Carlos Shaw rejected by the Senate 42 to 53, turn 118. 3 earlier nominations were withdrawn when a new one was filed.",
+        },
+      ],
+    });
+    render(<PresidentialCabinetClient countryId="US" />);
+    expect(await screen.findByText(/Last nominee Carlos Shaw rejected by the Senate 42 to 53/)).toBeTruthy();
+  });
+
   it("offers the President an acting appointment on a vacant seat", async () => {
     mockFetch({
       positions: [{ ...TREASURY, member: null, nomination: null, actingChargeSpent: false }],

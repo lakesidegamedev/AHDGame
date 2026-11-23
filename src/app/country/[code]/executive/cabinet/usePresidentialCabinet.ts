@@ -49,6 +49,8 @@ export interface Position {
   outsideSuccession?: boolean;
   member: PositionMember | null;
   nomination: PositionNomination | null;
+  /** Latest closed nomination, shown on a vacant seat. */
+  lastNominationNote?: string | null;
   /** True once this President has used their one acting appointment here. */
   actingChargeSpent?: boolean;
 }

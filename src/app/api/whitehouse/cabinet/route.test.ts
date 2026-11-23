@@ -30,7 +30,7 @@ function seatMember(member: Record<string, unknown>) {
 }
 
 function emptyCursor() {
-  return { toArray: vi.fn().mockResolvedValue([]), sort: vi.fn().mockReturnThis() };
+  return { toArray: vi.fn().mockResolvedValue([]), sort: vi.fn().mockReturnThis(), project: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis() };
 }
 
 beforeEach(async () => {
