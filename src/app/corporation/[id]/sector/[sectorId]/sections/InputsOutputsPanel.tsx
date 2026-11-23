@@ -23,7 +23,7 @@ import UnsoldNote from "../components/UnsoldNote";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { inputBoughtScale } from "@/lib/corporations/rules/inputBoughtUnits";
-import { inputBlockerText } from "@/lib/corporations/rules/inputShortageReading";
+import { inputBlockerText, inputSourceSplit } from "@/lib/corporations/rules/inputShortageReading";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
 interface InputsOutputsPanelProps {
@@ -187,9 +187,7 @@ export default function InputsOutputsPanel({
             ? " and what each thing you make sold for"
             : " and what your sales averaged"
           : ""}
-        . Goods your own sites send here are transfers inside the company, not purchases: with a
-        free transfer price no cash moves for them, and any price shown for them is a market value
-        estimate.{" "}
+        .{" "}
         {hasPerOutput && "Each thing you make sells at its own rate, the rows are not one number."}
       </p>
 
@@ -647,6 +645,7 @@ function FlowRow({
   /** Input rows only: link to the sellers of a short input. */
   offers?: React.ReactNode;
 }) {
+  const split = inputSourceSplit(flow.units, flow.inputReceipt?.ownSitePerDay);
   return (
     <li
       data-short-input={short ? flow.commodity : undefined}
@@ -698,10 +697,32 @@ function FlowRow({
       )}
       {badge && <span className="shrink-0">{badge}</span>}
       <span className="shrink-0 text-body-sm tabular-nums text-muted">
-        <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span>{" "}
-        {flow.unit ? `${flow.unit}/day` : "per day"} · {marketReference ? "Market " : ""}
-        {priceText}/unit
+        {split ? (
+          <>
+            <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span>{" "}
+            {flow.unit ? `${flow.unit}/day` : "per day"}
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span>{" "}
+            {flow.unit ? `${flow.unit}/day` : "per day"} · {marketReference ? "Market " : ""}
+            {priceText}/unit
+          </>
+        )}
       </span>
+      {split && (
+        <span data-own-site-split className="w-full text-body-xs text-muted">
+          From your own sites: {fmtUnits(split.ownSitePerDay, 1)} a day, no charge
+          {split.allOwnSite ? (
+            <> · worth about {priceText} each at market</>
+          ) : (
+            <>
+              {" "}
+              · Bought: {fmtUnits(split.boughtPerDay, 1)} a day at {priceText} each
+            </>
+          )}
+        </span>
+      )}
       {right && <span className="shrink-0">{right}</span>}
       {offers && <span className="shrink-0">{offers}</span>}
       {shortDetail}

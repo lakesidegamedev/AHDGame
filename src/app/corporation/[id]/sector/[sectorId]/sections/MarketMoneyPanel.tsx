@@ -158,9 +158,9 @@ export default function MarketMoneyPanel({
       : []),
     {
       key: "inputs",
-      label: "Things you bought",
+      label: "Cash paid for inputs",
       value: pnl.inputsAnchor,
-      help: `What your ${sites} paid for the materials and services they consumed, at today's market prices. When a price moves, this line moves.`,
+      help: `What your ${sites} paid for the materials and services they consumed, at today's market prices. When a price moves, this line moves. Goods your own sites sent here are not in it: they are transfers inside the company.`,
     },
     {
       key: "labour",
