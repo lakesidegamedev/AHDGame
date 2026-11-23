@@ -14,7 +14,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
   usePathname: () => "/corporation/bad-id",
 }));
-vi.mock("@/hooks/useGameEvents", () => ({ useGameEvents: vi.fn() }));
+vi.mock("@/hooks/useGameEvents", () => ({
+  useGameEvents: vi.fn(),
+  useGameTurnStatus: () => null,
+}));
 vi.mock("@/hooks/useFeatureSeen", () => ({
   useFeatureSeen: () => ({ isNew: false, markSeen: vi.fn() }),
 }));
@@ -380,5 +383,44 @@ describe("corporation load errors", () => {
       "error"
     );
     expect(toast).not.toHaveBeenCalledWith(expect.stringContaining("(CLIENT_ERROR)"), "error");
+  });
+});
+
+describe("corporation stale responses", () => {
+  it("ignores a slow earlier response that lands after a newer one", async () => {
+    const body = (name: string) =>
+      JSON.stringify({
+        corporation: { _id: "corp-1", name, isPrivate: true, type: "manufacturing" },
+        ceo: null,
+        financials: null,
+        sectors: [],
+        balanceSheet: null,
+      });
+    let detailRequests = 0;
+    let releaseSlow: () => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) !== "/api/corporations/bad-id")
+          return new Response("{}", { status: 200 });
+        detailRequests += 1;
+        if (detailRequests === 1) return new Response(body("Alder Works"), { status: 200 });
+        if (detailRequests === 2) {
+          await new Promise<void>((resolve) => (releaseSlow = resolve));
+          return new Response(body("Stale Works"), { status: 200 });
+        }
+        return new Response(body("Fresh Works"), { status: 200 });
+      })
+    );
+    render(<CorporationDetailPage />);
+    await screen.findAllByText("Alder Works");
+    const refresh = screen.getByRole("button", { name: "Refresh corporation" });
+    fireEvent.click(refresh);
+    fireEvent.click(refresh);
+    await screen.findAllByText("Fresh Works");
+    releaseSlow();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByText("Stale Works")).toBeNull();
+    expect(screen.getAllByText("Fresh Works").length).toBeGreaterThan(0);
   });
 });
