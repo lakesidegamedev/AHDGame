@@ -6,6 +6,8 @@ export const NOTIFICATION_TYPES = [
   "primary_loss",
   "general_win",
   "general_loss",
+  /** Invited to join a presidential ticket as running mate; must accept or decline. */
+  "running_mate_invite",
   "impeachment_filed",
   "impeachment_convicted",
   "player_attack",

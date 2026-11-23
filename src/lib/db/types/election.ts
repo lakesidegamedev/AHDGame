@@ -250,8 +250,16 @@ export interface ElectionCandidate {
    * withdrawals (inactivity, party switch, retirement) leave this unset.
    */
   withdrawnBy?: "candidate";
-  /** For president: running mate character ID. Cannot be current President. */
+  /**
+   * For president: running mate character ID. Cannot be current President.
+   * Only set once the named character has accepted the invitation (ticket
+   * 1889): resolution reads this field, so nobody reaches the ticket unasked.
+   */
   runningMateId?: ObjectId;
+  /** Character invited to be this ticket's running mate who has not answered yet. */
+  pendingRunningMateId?: ObjectId;
+  /** When the pending running-mate invitation was sent. */
+  pendingRunningMateInvitedAt?: Date;
   /** Bound Russian tickets can pair a player or NPC nominee with an NPC vice-president. */
   russianRunningMateNppId?: ObjectId;
   /** Native Russian paired ballot is immutable once counting starts. */

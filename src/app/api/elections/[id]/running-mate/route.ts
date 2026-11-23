@@ -1,7 +1,9 @@
 /**
  * POST /api/elections/[id]/running-mate
- * Set running mate (VP) for a presidential candidate. Only the candidate can set their own running mate.
+ * Invite a running mate (VP) for a presidential candidate. Only the candidate can name their own running mate.
  * Running mates must be eligible player characters from the same country and cannot be the current President.
+ * Naming a player sends an invitation; they join the ticket only once they accept (ticket 1889).
+ * Clearing removes both the running mate and any open invitation.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -24,6 +26,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { inviteRunningMate } from "@/lib/elections/runningMateInvitations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -126,7 +129,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           _id: myCandidate._id,
           ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),
         },
-        { $unset: { runningMateId: "" }, $set: { updatedAt: new Date() } }
+        {
+          $unset: { runningMateId: "", pendingRunningMateId: "", pendingRunningMateInvitedAt: "" },
+          $set: { updatedAt: new Date() },
+        }
       );
       if (election.russianPresidentialRound && changed.matchedCount !== 1)
         return errorResponse(409, "The Russian ticket was locked while you were editing it.");
@@ -200,19 +206,34 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That character is already a candidate in this election");
     }
 
-    const changed = await electionCandidatesCollection(db).updateOne(
-      {
-        _id: myCandidate._id,
-        ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),
-      },
-      { $set: { runningMateId: runningMateObjectId, updatedAt: new Date() } }
-    );
+    if (myCandidate.runningMateId?.equals(runningMateObjectId)) {
+      return NextResponse.json({
+        success: true,
+        message: `${runningMateChar.name} is already your running mate.`,
+        electionType: election.electionType,
+        phase: "general",
+      });
+    }
 
-    if (election.russianPresidentialRound && changed.matchedCount !== 1)
+    // Nobody joins a ticket unasked: record an invitation the player must accept.
+    const invited = await inviteRunningMate(db, {
+      electionId: election._id,
+      nomineeCandidateId: myCandidate._id,
+      nomineeName: character.name,
+      invitee: {
+        _id: runningMateChar._id,
+        userId: runningMateChar.userId,
+        name: runningMateChar.name,
+      },
+      guard: election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : undefined,
+    });
+
+    if (election.russianPresidentialRound && !invited)
       return errorResponse(409, "The Russian ticket was locked while you were editing it.");
     return NextResponse.json({
       success: true,
-      message: `${runningMateChar.name} is now your running mate.`,
+      pending: true,
+      message: `Invitation sent. ${runningMateChar.name} joins your ticket once they accept.`,
       electionType: election.electionType,
       phase: "general",
     });

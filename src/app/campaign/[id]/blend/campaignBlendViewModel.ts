@@ -329,7 +329,7 @@ export interface CampaignBlendVM {
     atCap: boolean;
     canAppoint: boolean;
   };
-  ticket: { runningMateName: string | null };
+  ticket: { runningMateName: string | null; pendingRunningMateName: string | null };
 }
 
 const PANE_TITLES: Record<CampaignRail, string> = {
@@ -796,6 +796,6 @@ export function buildCampaignBlendViewModel(inp: CampaignBlendInput): CampaignBl
       atCap: campaign.managers.length >= MAX_MANAGERS,
       canAppoint: campaign.canAppointManagers && campaign.managers.length < MAX_MANAGERS,
     },
-    ticket: { runningMateName },
+    ticket: { runningMateName, pendingRunningMateName: campaign.pendingRunningMateName ?? null },
   };
 }

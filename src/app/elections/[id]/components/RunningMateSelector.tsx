@@ -21,6 +21,8 @@ interface RunningMateSelectorProps {
   electionId: string;
   currentRunningMateCharacterId: string | null;
   currentRunningMateName: string | null;
+  /** Invited but not yet accepted (ticket 1889). */
+  pendingRunningMateName?: string | null;
   onSuccess: () => void;
 }
 
@@ -45,6 +47,7 @@ export function RunningMateSelector({
   electionId,
   currentRunningMateCharacterId,
   currentRunningMateName,
+  pendingRunningMateName = null,
   onSuccess,
 }: RunningMateSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -160,15 +163,21 @@ export function RunningMateSelector({
           {currentRunningMateName || "None selected"}
         </span>
       </span>
+      {pendingRunningMateName && (
+        <span className="text-xs text-muted">
+          Invited {pendingRunningMateName}, waiting for them to accept
+        </span>
+      )}
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        {currentRunningMateCharacterId ? "Change" : "Select"}
+        {currentRunningMateCharacterId || pendingRunningMateName ? "Change" : "Invite"}
       </Button>
 
-      <Modal open={open} title="Select running mate" onClose={() => setOpen(false)}>
+      <Modal open={open} title="Invite a running mate" onClose={() => setOpen(false)}>
         <div className="space-y-4">
           <div className="rounded-lg border border-info/30 bg-info/10 p-3 text-sm text-info">
             Choose any eligible player from your country, regardless of party. Search by player name
-            or filter by party to narrow the list.
+            or filter by party to narrow the list. They get an invitation and join your ticket only
+            once they accept.
           </div>
 
           {errorMessage && (
@@ -387,7 +396,7 @@ export function RunningMateSelector({
               Clear selection
             </Button>
             <Button onClick={handleSave} isLoading={saving} disabled={!hasSelectionChanged}>
-              Save running mate
+              {selectedCharacterId ? "Send invitation" : "Save"}
             </Button>
           </div>
         </div>

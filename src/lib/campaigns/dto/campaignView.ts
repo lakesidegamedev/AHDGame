@@ -111,6 +111,8 @@ export interface CampaignData {
    */
   runningMateName?: string | null;
   runningMateCharacterId?: string | null;
+  /** Character invited as running mate who has not accepted yet (ticket 1889). */
+  pendingRunningMateName?: string | null;
 
   oppositionTargetId: string | null;
   oppositionTargetName: string | null;
