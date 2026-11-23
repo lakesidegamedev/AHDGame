@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Character } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { ElectionComparisonPanel } from "./ElectionComparisonPanel";
 import type { StoredPoll, PollData } from "../types";
 import { StatCards } from "./pollResults/StatCards";

@@ -1,5 +1,5 @@
 "use client";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
 

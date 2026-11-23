@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
 import { bucketLabel, dimensionLabelFor } from "@/lib/demographics/bucketLabels";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";

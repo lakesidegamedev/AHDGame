@@ -1,7 +1,7 @@
 "use client";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { formatRaceRegion } from "@/lib/utils/raceLocationLabel";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 import { formatNum, appealColor, partyHex } from "../pollHelpers";
 import { EconomicPositionPip, SocialPositionPip } from "./PollCharts";
