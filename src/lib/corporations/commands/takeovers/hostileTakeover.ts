@@ -203,7 +203,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       return errorResponse(404, "Parent corporation not found");
     }
 
-    const ceoCheck = requireCeo(parent, auth.user.userId);
+    const ceoCheck = requireCeo(parent, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (parent._id.equals(target._id)) {

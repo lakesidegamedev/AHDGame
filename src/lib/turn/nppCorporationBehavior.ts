@@ -1036,6 +1036,16 @@ export async function processNppCorporationDecisions(
         corp.autopilot.advisories,
         turn
       );
+      const budgetSet: Record<string, unknown> = {};
+      for (const [lever, change] of Object.entries(decision.autopilotBudgetChanges ?? {})) {
+        budgetSet[`autopilot.budgetChanges.${lever}`] = change;
+      }
+      if (Object.keys(budgetSet).length > 0) {
+        corpUpdates.push({
+          filter: { _id: corp._id },
+          update: { $set: { ...budgetSet, updatedAt: now } },
+        });
+      }
       if (advisoriesChanged(corp.autopilot.advisories, advisories)) {
         const notify = advisoriesToNotify(
           corp.autopilot.advisories,

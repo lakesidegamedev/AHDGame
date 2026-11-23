@@ -1,4 +1,5 @@
 import { assertSameOrigin } from "@/lib/api/assertSameOrigin";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -63,22 +64,28 @@ export async function POST(request: Request) {
     if (typeof corporationId === "string" && corporationId.length > 0) {
       const resolved = await resolveCorporation(db, corporationId);
       if (!resolved.ok) return resolved.response;
-      const authorized = await requireCeoOrDirectingParent(
-        db,
-        resolved.corporation,
-        authUser.userId
-      );
+      const authorized = await requireCeoOrDirectingParent(db, resolved.corporation, authUser);
       if (!authorized.ok) return authorized.response;
       directingParentId = authorized.directingParentId;
       corporation = resolved.corporation;
     } else {
-      // Legacy callers that send no target. Use userId directly — consistent
-      // with requireCeo, avoids wrong-character lookup for users who have
-      // multiple characters.
-      corporation = await corporationsCollection(db).findOne({
+      // Legacy callers that send no target: the corporation this character runs.
+      const activeId = authUser.activeCharacterId;
+      const found = await corporationsCollection(db).findOne({
         userId: new ObjectId(authUser.userId),
         ceoVacant: { $ne: true },
+        ...(activeId && ObjectId.isValid(activeId)
+          ? {
+              $or: [
+                { ceoId: new ObjectId(activeId) },
+                { "caretakerCeo.underlyingCharacterId": new ObjectId(activeId) },
+                { ceoType: "imperial" as const },
+                { ceoId: { $exists: false } },
+              ],
+            }
+          : {}),
       });
+      corporation = found && isCeoActor(found, authUser) ? found : null;
     }
 
     if (!corporation) {
@@ -99,7 +106,7 @@ export async function POST(request: Request) {
     if (groupTarget) {
       const origin = assertSameOrigin(request);
       if (origin) return origin;
-      const context = await loadGroupManagement(db, corporation, authUser.userId);
+      const context = await loadGroupManagement(db, corporation, authUser);
       if (!context?.parent || !context.root._id.equals(corporation._id)) {
         return errorResponse(403, "Only the parent CEO can change the group logo.");
       }

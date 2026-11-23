@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { id } = await params;
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const ceoError = requireCeo(resolved.corporation, auth.user.userId);
+    const ceoError = requireCeo(resolved.corporation, auth.user);
     if (ceoError) return ceoError;
     const corporationId = resolved.corporation._id;
     const [campaigns, agreements, currentTurn] = await Promise.all([

@@ -67,6 +67,25 @@ import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateReso
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
+type RegionCorporationRow = Pick<
+  Corporation,
+  | "_id"
+  | "name"
+  | "ceoId"
+  | "ceoType"
+  | "ceoVacant"
+  | "sequentialId"
+  | "brandColor"
+  | "logoUrl"
+  | "marketingStrength"
+  | "countryOwnerId"
+  | "countryId"
+  | "liquidCurrencyCode"
+  | "isPrivate"
+  | "userId"
+  | "caretakerCeo"
+>;
+
 export interface RegionEconomyArgs {
   countryId: CountryId;
   stateId: string;
@@ -207,7 +226,7 @@ export async function buildRegionEconomyResponse({
     corpIds.length > 0
       ? await corporationsCollection(db)
           .find({ _id: { $in: corpIds } })
-          .project({
+          .project<RegionCorporationRow>({
             _id: 1,
             name: 1,
             ceoId: 1,
@@ -222,6 +241,7 @@ export async function buildRegionEconomyResponse({
             liquidCurrencyCode: 1,
             isPrivate: 1,
             userId: 1,
+            caretakerCeo: 1,
           })
           .toArray()
       : [];
@@ -472,10 +492,11 @@ export async function buildRegionEconomyResponse({
       const redact =
         !!corp &&
         shouldRedactCorporation(
-          { isPrivate: corp.isPrivate, userId: corp.userId },
+          corp,
           viewerUserId,
           viewerIsAdmin,
-          modViewEnabled
+          modViewEnabled,
+          user?.activeCharacterId
         );
       if (!redact) return o;
       return {

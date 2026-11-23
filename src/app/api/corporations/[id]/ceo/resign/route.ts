@@ -38,7 +38,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     // Only the current CEO can resign
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (corporation.ceoVacant) {

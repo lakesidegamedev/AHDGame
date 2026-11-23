@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
-import { corporationPathIdFromDoc, resolveCorporation } from "./resolveQuery";
+import {
+  corporationPathIdFromDoc,
+  requireCeo,
+  requireCeoOrDirectingParent,
+  resolveCorporation,
+} from "./resolveQuery";
 
 describe("corporationPathIdFromDoc", () => {
   it("uses sequential id when defined, including zero", () => {
@@ -49,5 +54,30 @@ describe("corporation error references", () => {
     expect(body.code).toBe(id === "new" ? "BAD_REQUEST" : "NOT_FOUND");
     expect(body.ref).toEqual(expect.any(String));
     expect(body.ref.length).toBeGreaterThan(0);
+  });
+});
+
+describe("requireCeo is character-scoped", () => {
+  const userId = new ObjectId();
+  const ceoId = new ObjectId();
+  const corporation = { userId, ceoId } as never;
+
+  it("passes the CEO character and returns 403 for a sibling on the same account", async () => {
+    expect(
+      requireCeo(corporation, { userId: userId.toString(), activeCharacterId: ceoId.toString() })
+    ).toBeNull();
+    const denied = requireCeo(corporation, {
+      userId: userId.toString(),
+      activeCharacterId: new ObjectId().toString(),
+    });
+    expect(denied?.status).toBe(403);
+  });
+
+  it("requireCeoOrDirectingParent refuses a sibling character", async () => {
+    const result = await requireCeoOrDirectingParent({} as never, corporation, {
+      userId: userId.toString(),
+      activeCharacterId: new ObjectId().toString(),
+    });
+    expect(result.ok).toBe(false);
   });
 });

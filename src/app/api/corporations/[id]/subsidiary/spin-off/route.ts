@@ -57,6 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await spinOff(db, {
       parent: parentResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       sectorType: parsed.data.sectorType,
       name: parsed.data.name,
       tickerSymbol: parsed.data.tickerSymbol,

@@ -14,6 +14,7 @@ describe("contract money", () => {
     expect(m.unitPrice).toBeCloseTo(120);
     expect(m.unitsPerTurn).toBeCloseTo(100);
     expect(m.valuePerTurn).toBeCloseTo(12_000);
+    expect(m.valuePerDay).toBeCloseTo(288_000);
     expect(m.valueOverTerm).toBeCloseTo(120_000);
   });
 
@@ -21,6 +22,14 @@ describe("contract money", () => {
     expect(
       contractMoney({ volumeCapPerDay: 24, pricePremium: 0, referenceUnitPrice: 5 }).valueOverTerm
     ).toBeNull();
+  });
+
+  it("reference sits under the board price when the board is far above base", () => {
+    const base = COMMODITY_BASE_PRICES.steel;
+    const reference = contractReferenceUnitPrice("steel", base * 1.6);
+    expect(reference).toBeGreaterThan(base);
+    expect(reference).toBeLessThan(base * 1.6);
+    expect(reference).toBeCloseTo(base * Math.sqrt(1.6));
   });
 
   it("reference price equals base at a base-level board price", () => {

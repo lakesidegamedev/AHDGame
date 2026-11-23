@@ -169,7 +169,7 @@ export async function convertSectorIndustry(request: Request, { params }: RouteP
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const busy = await rejectDuringTurn(db);

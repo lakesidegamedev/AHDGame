@@ -18,6 +18,10 @@ interface ForSalePanelProps {
   onList: () => void;
   onUnlist: () => void;
   onBuy: () => void;
+  /** Quote for the listing confirmation, loaded by the page when it opens. */
+  listQuote?: { priceAnchor: number; npvAnchor: number } | null;
+  listQuoteError?: string | null;
+  onRequestListQuote?: () => void;
 }
 
 const DISCOUNT_PCT = Math.round((1 - SECTOR_FOR_SALE_PRICE_FRACTION) * 100);
@@ -49,6 +53,9 @@ export default function ForSalePanel({
   onList,
   onUnlist,
   onBuy,
+  listQuote,
+  listQuoteError,
+  onRequestListQuote,
 }: ForSalePanelProps) {
   const { formatAmount, toInternalFrom } = useCurrency();
   const [confirmList, setConfirmList] = useState(false);
@@ -292,7 +299,10 @@ export default function ForSalePanel({
         {!confirmList && (
           <button
             type="button"
-            onClick={() => setConfirmList(true)}
+            onClick={() => {
+              setConfirmList(true);
+              onRequestListQuote?.();
+            }}
             disabled={listing}
             className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -315,7 +325,32 @@ export default function ForSalePanel({
         <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
           <p className="text-sm text-foreground">
             List this sector at <strong>{PRICE_PCT}%</strong> of its estimated worth, a{" "}
-            {DISCOUNT_PCT}% discount? You can unlist at any time.
+            {DISCOUNT_PCT}% discount?
+          </p>
+          {listQuote ? (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <div className="text-muted">Estimated worth now</div>
+                <div className="text-sm tabular-nums text-foreground">
+                  {formatAmount(listQuote.npvAnchor, sellerCurrency)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted">You would receive</div>
+                <div className="text-base font-bold tabular-nums text-foreground">
+                  {formatAmount(listQuote.priceAnchor, sellerCurrency)}
+                </div>
+              </div>
+            </div>
+          ) : listQuoteError ? (
+            <p className="text-xs text-error">{listQuoteError}</p>
+          ) : (
+            <p className="text-xs text-muted">Working out the price…</p>
+          )}
+          <p className="text-xs text-muted">
+            No fee comes out of the price, and the buyer pays any acquisition costs on top. The
+            price is fixed when you list. The sale completes when another CEO buys it, and the money
+            goes straight to your corporation treasury. You can unlist at any time until then.
           </p>
           <div className="flex gap-2">
             <button
@@ -324,7 +359,7 @@ export default function ForSalePanel({
                 setConfirmList(false);
                 onList();
               }}
-              disabled={listing}
+              disabled={listing || !listQuote}
               className="flex-1 rounded-lg border border-primary/40 bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {listing ? "Listing…" : "Confirm listing"}

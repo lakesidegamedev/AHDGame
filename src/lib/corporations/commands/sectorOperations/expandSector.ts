@@ -124,7 +124,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     const cashBlock = requireSpendableCorporateCash(corporation);
     if (cashBlock) return cashBlock;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");

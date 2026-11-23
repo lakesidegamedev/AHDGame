@@ -24,6 +24,8 @@ import {
 import {
   allocateShareholderPool,
   type CorporateShareholderPayoutRow,
+  type FundShareholderPayoutRow,
+  type NppShareholderPayoutRow,
   type PublicFloatPayoutRow,
   type ShareholderPayoutRow,
 } from "@/lib/bonds/corporateBondDefault";
@@ -31,6 +33,8 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { computeDissolutionSectorSalvageAnchor } from "@/lib/corporations/dissolutionSectorSalvage";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { bondPoolCurrency, readBondPoolCash } from "@/lib/bonds/marketPool";
+import { DISSOLUTION_SECTOR_SALVAGE_FRACTION } from "@/lib/constants/corporationsTables";
 import {
   COMMODITY_BASE_PRICES,
   COMMODITY_LABELS,
@@ -84,6 +88,25 @@ export type QuickDissolvePreview = {
   corporateRows: CorporateShareholderPayoutRow[];
   /** publicFloat allocation (anchor; routed to country central bank reserve). */
   publicFloatRow: PublicFloatPayoutRow | null;
+  /** Index-fund shareholder allocations (anchor units). Paid on dissolution, so listed. */
+  fundRows: FundShareholderPayoutRow[];
+  /** Shareholder allocations held by national policy parties (anchor units). */
+  nppRows: NppShareholderPayoutRow[];
+  /** Every share on the register; each share is paid the same. */
+  totalShares: number;
+  /** Corp currency paid per share, the one rate behind every row and the headline. */
+  perShareCorp: number;
+  /** Corp currency per anchor unit; converts the anchor-denominated rows. */
+  corpPerAnchor: number;
+  /** What the liquidation pool is made of, in corp currency. */
+  poolParts: {
+    cash: number;
+    heldBonds: number;
+    sectorSalvage: number;
+    buybackEscrow: number;
+  };
+  /** Share of the sectors' book value the pool realizes. */
+  sectorSalvageFraction: number;
   /** Global equilibrium snapshot; next turn also applies drift and regional blend. */
   commodityGlobalDeltas: CommodityGlobalDeltaPreview[];
 };
@@ -128,6 +151,9 @@ export async function previewQuickDissolve(
   const corpFxRateForAssets = await getCorpFxRate(db, corporation);
   let assetValueInCorpCapital = 0;
 
+  // Held bonds are sold to the bond market pool at the quoted price, for what
+  // the pool can pay, exactly as the dissolve route does it.
+  const poolCashLeft = new Map<CurrencyCode, number>();
   for (const bond of heldBonds) {
     const h = bond.holders.find(
       (holder) => holder.corporationId?.toString() === corporation._id.toString()
@@ -135,9 +161,14 @@ export async function previewQuickDissolve(
     if (!h || h.units <= 0) continue;
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
-    const faceAnchor = corpCapitalToAnchor(h.units * BOND_UNIT_FACE_VALUE, bondCcy, bondRate);
+    const poolCcy = bondPoolCurrency(bond);
+    if (!poolCashLeft.has(poolCcy)) poolCashLeft.set(poolCcy, await readBondPoolCash(db, poolCcy));
+    const wanted = h.units * BOND_UNIT_FACE_VALUE * (bond.marketPrice ?? 1);
+    const paidLocal = Math.max(0, Math.min(wanted, poolCashLeft.get(poolCcy) ?? 0));
+    poolCashLeft.set(poolCcy, (poolCashLeft.get(poolCcy) ?? 0) - paidLocal);
+    const paidAnchor = corpCapitalToAnchor(paidLocal, bondCcy, bondRate);
     assetValueInCorpCapital += anchorToCorpLiquidCapital(
-      faceAnchor,
+      paidAnchor,
       corporation,
       corpFxRateForAssets
     );
@@ -427,6 +458,13 @@ export async function previewQuickDissolve(
 
   commodityGlobalDeltas.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
 
+  // Same denominator allocateShareholderPool divides by.
+  const registerShares = Math.max(
+    corporation.totalShares ?? 0,
+    (corporation.shareholders ?? []).reduce((sum, sh) => sum + Math.max(0, sh.shares), 0) +
+      Math.max(0, corporation.publicFloat ?? 0)
+  );
+
   const ageBlock = corporationDissolutionAgeBlock(corporation.foundedAtTurn, currentTurn);
 
   return {
@@ -438,6 +476,18 @@ export async function previewQuickDissolve(
     ceoShareHome,
     ceoShareAnchor,
     ceoIsSoleShareholder,
+    fundRows: allocation.fundRows,
+    nppRows: allocation.nppRows,
+    totalShares: registerShares,
+    perShareCorp: registerShares > 0 ? returnedCapitalCorp / registerShares : 0,
+    corpPerAnchor: shareholderPoolAnchor > 0 ? returnedCapitalCorp / shareholderPoolAnchor : 1,
+    poolParts: {
+      cash: corporation.liquidCapital,
+      heldBonds: assetValueInCorpCapital,
+      sectorSalvage: sectorSalvageInCorpCapital,
+      buybackEscrow: corporation.shareEscrowBalance ?? 0,
+    },
+    sectorSalvageFraction: DISSOLUTION_SECTOR_SALVAGE_FRACTION,
     homeCurrency,
     forexEnabled,
     characterRows: allocation.characterRows,
