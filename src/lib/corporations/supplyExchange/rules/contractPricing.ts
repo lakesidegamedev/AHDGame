@@ -29,6 +29,8 @@ export interface ContractMoney {
   unitsPerTurn: number;
   /** Money moved per turn at the full cap. */
   valuePerTurn: number;
+  /** Money moved per day (24 turns) at the full cap. */
+  valuePerDay: number;
   /** Money over the whole fixed term at the full cap, null when open ended. */
   valueOverTerm: number | null;
 }
@@ -53,6 +55,7 @@ export function contractMoney(args: {
     unitPrice,
     unitsPerTurn,
     valuePerTurn,
+    valuePerDay: Math.max(0, args.volumeCapPerDay) * unitPrice,
     valueOverTerm: term === null ? null : valuePerTurn * term,
   };
 }

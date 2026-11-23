@@ -208,7 +208,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .find({}, { projection: { commodity: 1, globalPrice: 1 } })
       .toArray();
     const contractReferencePrices: Partial<Record<CommodityType, number>> = {};
+    const contractMarketPrices: Partial<Record<CommodityType, number>> = {};
     for (const row of priceRows) {
+      if (typeof row.globalPrice === "number" && row.globalPrice > 0) {
+        contractMarketPrices[row.commodity as CommodityType] = row.globalPrice;
+      }
       contractReferencePrices[row.commodity as CommodityType] = contractReferenceUnitPrice(
         row.commodity as CommodityType,
         row.globalPrice
@@ -216,6 +220,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     return NextResponse.json({
       contractReferencePrices,
+      contractMarketPrices,
       agreements: agreements.map((a) => ({
         supplierCorpName:
           counterpartyById.get(a.supplierCorpId.toString())?.name ?? "Unknown corporation",
