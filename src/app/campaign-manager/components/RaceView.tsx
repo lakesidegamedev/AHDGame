@@ -54,14 +54,20 @@ const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 export function RaceView(props: RaceViewProps) {
   const t = useTranslations("elections.campaignManager");
   const { race, full } = props;
-  const series = useMemo(() => (race && full ? pollingSeries(full, race) : []), [race, full]);
+  // `full` can still be the previously selected race's election while the new
+  // one loads; only read its snapshots once it belongs to this race.
+  const fullIsThisRace = race != null && full?.id === race.electionId;
+  const series = useMemo(
+    () => (race && full && fullIsThisRace ? pollingSeries(full, race) : []),
+    [race, full, fullIsThisRace]
+  );
 
   if (!race) {
     return <p style={{ margin: 0, padding: "18px 0", color: BLEND.muted }}>{t("race.pick")}</p>;
   }
 
   if (race.stage === "upcoming") return <UpcomingBody {...props} race={race} />;
-  return <RaceBody {...props} race={race} series={series} />;
+  return <RaceBody {...props} race={race} series={series} seriesLoaded={fullIsThisRace} />;
 }
 
 /** A race that has not opened: when it opens, and who has filed so far, by party. */
@@ -143,7 +149,11 @@ function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
 }
 
 function RaceBody(
-  props: RaceViewProps & { race: CmRace; series: ReturnType<typeof pollingSeries> }
+  props: RaceViewProps & {
+    race: CmRace;
+    series: ReturnType<typeof pollingSeries>;
+    seriesLoaded: boolean;
+  }
 ) {
   const t = useTranslations("elections.campaignManager");
   const { race, full, series } = props;
@@ -520,19 +530,28 @@ function RaceBody(
             {t("race.tableNote")}
           </p>
         ) : null}
+        {race.stage === "primary" ? (
+          <p style={{ margin: "8px 12px 0", fontSize: 12, color: BLEND.muted }}>
+            {t("race.primaryShareNote")}
+          </p>
+        ) : null}
       </section>
 
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <h3 style={{ ...EYEBROW, margin: 0 }}>{t("chart.title")}</h3>
-        <PollingChart
-          series={series}
-          lines={lines.map((l) => ({
-            id: l.id,
-            name: race.multiSeat ? l.abbr : l.name,
-            color: l.color,
-          }))}
-          turnLabel={race.stage === "primary" || isFinishedPrimary(race) ? "count" : "turn"}
-        />
+        {props.seriesLoaded ? (
+          <PollingChart
+            series={series}
+            lines={lines.map((l) => ({
+              id: l.id,
+              name: race.multiSeat ? l.abbr : l.name,
+              color: l.color,
+            }))}
+            turnLabel={race.stage === "primary" || isFinishedPrimary(race) ? "count" : "turn"}
+          />
+        ) : (
+          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("chart.loading")}</p>
+        )}
       </section>
 
       {full?.id === race.electionId ? <RaceSchedule election={full} /> : null}

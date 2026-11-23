@@ -505,6 +505,7 @@
         "seatMajority": "{abbr} wins a majority ({seats}). Projected from the current vote.",
         "seatShort": "{abbr} is the largest party, {short} short of a majority. Projected from the current vote.",
         "tableNote": "Poll is the party's regional share. Seats go down each slate in order, so lifting any slate member lifts the whole party.",
+        "primaryShareNote": "Primary poll share comes from a score built on party and state alignment, favorability and influence. Alignment counts most, so a candidate with lower favorability can still poll ahead, and gaps in score show up larger in the share.",
         "colCandidate": "Candidate",
         "colCandidateSlate": "Candidate · slate",
         "colPoll": "Poll",
@@ -555,6 +556,7 @@
       "chart": {
         "title": "Polling by turn",
         "empty": "No polling history yet.",
+        "loading": "Loading polling history.",
         "turn": "Turn {n}",
         "count": "Count {n}",
         "value": "{name} {pct}",
