@@ -37,7 +37,8 @@ interface InputsOutputsPanelProps {
   exchangeRates: Partial<Record<CurrencyCode, number>>;
 }
 
-function fmtPrice(v: number): string {
+function fmtPrice(v: number | null): string {
+  if (v == null) return "Unavailable";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
     Math.round(v * 100) / 100
   );
@@ -73,7 +74,11 @@ export default function InputsOutputsPanel({
   const price = (v: number) =>
     fmtPrice(convertCommodityPrice(v, currencyCode, forexEnabled, exchangeRates));
   const symbol = CURRENCY_SYMBOLS[currencyCode];
-  const flowPrice = (v: number) => `${symbol}${currencySymbolSep(symbol)}${price(v)}`;
+  const flowPrice = (v: number) => {
+    if (convertCommodityPrice(v, currencyCode, forexEnabled, exchangeRates) == null)
+      return "Price unavailable";
+    return `${symbol}${currencySymbolSep(symbol)}${price(v)}`;
+  };
 
   // Per-output clear rate, NOT the sector-wide blend. `plants.fillRate` is
   // soldUnits/producedUnits summed across the whole mix, so painting it on every

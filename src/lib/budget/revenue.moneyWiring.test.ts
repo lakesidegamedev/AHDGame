@@ -66,6 +66,36 @@ describe("money wiring (interstate-logistics plan step 5, phase B): tariff flow 
     db.collection.mockImplementation((name: string) => db.collectionMocks[name]);
   }
 
+  it.each(["CA", "UK"])("uses %s GDP when tax bases have not been seeded", async (countryId) => {
+    const budget = { ...ukBudget(), _id: countryId, countryId, taxBases: undefined };
+    wire(budget);
+    db.collectionMocks.federalBudget.updateOne = vi.fn();
+    db.collectionMocks.federalBudget.findOne.mockImplementation(async (query: { _id: string }) =>
+      query._id === countryId ? budget : { ...budget, countryId: "US", gdp: 100 * UK_GDP }
+    );
+    const find = vi.fn().mockImplementation((query: { countryId: string }) => ({
+      toArray: async () => [
+        {
+          _id: "region",
+          countryId: query.countryId,
+          gdp: query.countryId === countryId ? 100 : 10000,
+        },
+      ],
+    }));
+    db.collectionMocks.states = {
+      ...db.collectionMocks.states,
+      find,
+    } as typeof db.collectionMocks.states;
+    const rates = { ...UK_RATES, incomeTax: 10, tariffs: 0 };
+    const first = await calculateFederalRevenue(db as unknown as Db, rates, countryId);
+    const second = await calculateFederalRevenue(db as unknown as Db, rates, countryId);
+    expect(find).toHaveBeenCalledWith({ countryId });
+    expect(first.incomeTax).toBeGreaterThan(0);
+    expect(first.incomeTax).toBeLessThan(100_000_000);
+    expect(second).toEqual(first);
+    expect(db.collectionMocks.federalBudget.updateOne).not.toHaveBeenCalled();
+  });
+
   it("sourcedImports omitted: unchanged GDP-proxy tariffs (byte-identical to pre-wiring behavior)", async () => {
     wire(ukBudget());
     const revenue = await calculateFederalRevenue(db as unknown as Db, UK_RATES, "UK");

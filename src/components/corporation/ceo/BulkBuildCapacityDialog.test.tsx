@@ -180,3 +180,29 @@ it("warns how much of next turn's run the build would cut before the confirm but
     ).toBeTruthy()
   );
 });
+
+it.each(["-5", "1.5", "1e2", "9999"])(
+  "keeps invalid facilities %s without changing the build request",
+  (raw) => {
+    const onRequest = vi.fn<BulkBuildRequestFn>();
+    render(
+      <BulkBuildCapacityDialog
+        open
+        onClose={() => {}}
+        sectors={sectors}
+        homeCountry="US"
+        countryLabel={(c) => c}
+        fmt={(n) => String(n)}
+        cashLocal={10000}
+        onRequest={onRequest}
+        onApplied={() => {}}
+      />
+    );
+    const input = screen.getByLabelText("Facilities per sector");
+    fireEvent.change(input, { target: { value: raw } });
+    expect(input).toHaveProperty("value", raw);
+    expect(screen.getByText("Preview 3 sectors").closest("button")?.disabled).toBe(true);
+    fireEvent.click(screen.getByText("Preview 3 sectors"));
+    expect(onRequest).not.toHaveBeenCalled();
+  }
+);

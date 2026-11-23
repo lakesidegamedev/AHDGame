@@ -322,7 +322,7 @@ export default function BulkBuildCapacityDialog({
               disabled={busy}
               onFocus={() => setRuleKind("facilities")}
               onChange={(e) => {
-                setFacilities(e.target.value.replace(/[^0-9]/g, "").slice(0, 3));
+                setFacilities(e.target.value);
                 setRuleKind("facilities");
                 invalidate();
               }}
@@ -349,7 +349,7 @@ export default function BulkBuildCapacityDialog({
               disabled={busy}
               onFocus={() => setRuleKind("percent")}
               onChange={(e) => {
-                setPercent(e.target.value.replace(/[^0-9]/g, "").slice(0, 3));
+                setPercent(e.target.value);
                 setRuleKind("percent");
                 invalidate();
               }}
