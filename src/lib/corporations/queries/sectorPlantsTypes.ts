@@ -195,6 +195,8 @@ export interface SectorPlantsSection {
    */
   activeCapacityPercent?: number;
   capacityRecovery?: { coldUpkeepFraction: number; coldUpkeepDailyAnchor: number };
+  /** Names the missing input when no investment forecast could be built. */
+  investmentWithheld?: import("@/lib/corporations/investment/rules").InvestmentWithheldReason;
   investment?: {
     overheadDailyAnchor: number;
     /** One turn of company running costs; null when liabilities or current costs are unknown. */

@@ -36,6 +36,36 @@ export function hasSettledOperatingHistory(input: {
   );
 }
 
+/** Why a sector has no investment forecast inputs; absent when it has them. */
+export type InvestmentWithheldReason = "upkeepBasis" | "transition" | "stale" | "ramp";
+
+/**
+ * The first missing input behind a withheld forecast, or null when none is.
+ * `plantsStartTurn` and `clearingStartTurn` are the governor-anchored starts,
+ * the same ones the market support ramp itself counts from. A sector with no
+ * clearing stamp has no clearing ramp, so it is judged on its plants start.
+ */
+export function investmentWithheldReason(input: {
+  hasUpkeepBasis: boolean;
+  transitioning: boolean;
+  observedTurn: number | null | undefined;
+  currentTurn: number;
+  plantsStartTurn?: number | null;
+  clearingStartTurn?: number | null;
+  rampTurns: number;
+}): InvestmentWithheldReason | null {
+  if (!input.hasUpkeepBasis) return "upkeepBasis";
+  if (input.transitioning) return "transition";
+  if (input.observedTurn !== input.currentTurn) return "stale";
+  const settled = hasSettledOperatingHistory({
+    plantsStartTurn: input.plantsStartTurn,
+    clearingStartTurn: input.clearingStartTurn ?? input.plantsStartTurn,
+    observedTurn: input.currentTurn,
+    rampTurns: input.rampTurns,
+  });
+  return settled ? null : "ramp";
+}
+
 export interface SectorInvestmentPolicy {
   expansionCostMultiplier: number;
   heavyBuildTimeMultiplier: number;

@@ -27,7 +27,7 @@ import { strandedWarning } from "@/lib/corporations/rules/strandedWarning";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   activeCapacityFraction,
-  hasSettledOperatingHistory,
+  investmentWithheldReason,
 } from "@/lib/corporations/investment/rules";
 import { STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
 import { unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
@@ -378,12 +378,20 @@ export function buildSectorPlantsSection(args: {
     Number.isFinite(args.fxSpreadRate) && args.fxSpreadRate > 0 ? args.fxSpreadRate : 0;
   const perUnitChargedAnchor = perUnitAnchor * (1 + safeFxSpreadRate);
 
-  const upkeepBasis = sector.plantsUpkeepMarginBasisAnchor;
+  // The anchor is stamped on a sector's first plants turn; until then the live
+  // margin is the basis the turn itself would stamp.
+  const storedMargin = sector.effectiveProfitMargin;
+  const upkeepBasis =
+    typeof sector.plantsUpkeepMarginBasisAnchor === "number" &&
+    Number.isFinite(sector.plantsUpkeepMarginBasisAnchor)
+      ? sector.plantsUpkeepMarginBasisAnchor
+      : typeof storedMargin === "number" && Number.isFinite(storedMargin)
+        ? Math.max(0, 1 - storedMargin / 100)
+        : undefined;
   const upkeepUnitDailyAnchor =
     capacityUnits != null &&
     capacityUnits > 0 &&
     typeof upkeepBasis === "number" &&
-    Number.isFinite(upkeepBasis) &&
     typeof money.nameplateRevenueAnchor === "number"
       ? idleUpkeepUnitPrice({
           mixPrice: money.nameplateRevenueAnchor / capacityUnits,
@@ -593,6 +601,23 @@ export function buildSectorPlantsSection(args: {
         ? { status: "profitable_now", turns: null }
         : { status: "not_at_current_fills", turns: null };
 
+  // The recurring-return forecast waits on the same ramp the governor shows,
+  // counted from the anchored starts rather than the sector's own birthday.
+  const clearingStart = governorAnchorTurn(
+    num(sector.clearingStartTurn),
+    args.worldGovernorAnchorTurn,
+    args.governorGlide
+  );
+  const withheldReason = investmentWithheldReason({
+    hasUpkeepBasis: upkeepUnitDailyAnchor != null,
+    transitioning: !!sector.transitionFromStrategyId,
+    observedTurn: sector.plantsPnl?.turn,
+    currentTurn: args.currentTurn,
+    plantsStartTurn: plantsStartTurn,
+    clearingStartTurn: clearingStart ?? null,
+    rampTurns: governorRampTurns,
+  });
+
   return {
     plantCount,
     strategyId: sector.strategyId ?? null,
@@ -620,15 +645,7 @@ export function buildSectorPlantsSection(args: {
             coldUpkeepDailyAnchor:
               upkeepUnitDailyAnchor * (capacityUnits ?? 0) * MOTHBALL_UPKEEP_FRACTION,
           },
-          ...(args.investment &&
-          !sector.transitionFromStrategyId &&
-          sector.plantsPnl?.turn === args.currentTurn &&
-          hasSettledOperatingHistory({
-            plantsStartTurn: sector.plantsStartTurn,
-            clearingStartTurn: sector.clearingStartTurn,
-            observedTurn: sector.plantsPnl.turn,
-            rampTurns: governorRampTurns,
-          })
+          ...(args.investment && withheldReason === null
             ? {
                 investment: {
                   ...args.investment,
@@ -637,6 +654,7 @@ export function buildSectorPlantsSection(args: {
             : {}),
         }
       : {}),
+    ...(args.investment && withheldReason !== null ? { investmentWithheld: withheldReason } : {}),
     buildQueue,
     constructionInProgressAnchor: cipAnchor,
     depreciationPerTurn: CAPITAL_DEPRECIATION_PER_TURN,
