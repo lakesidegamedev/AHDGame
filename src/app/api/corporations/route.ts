@@ -145,12 +145,16 @@ export async function GET(request: Request) {
     const stateNameMap = new Map(hqStates.map((s) => [s._id, s.name]));
 
     const viewerUserId = authUser?.userId;
+    const viewerCharacterId = authUser?.activeCharacterId;
     const viewerIsAdmin = authUser?.isAdmin === true;
 
     const parentVisibleIds = await parentCeoVisibleCorporationIds(
       db,
-      corporations.filter((corp) => shouldRedactCorporation(corp, viewerUserId, viewerIsAdmin)),
-      viewerUserId
+      corporations.filter((corp) =>
+        shouldRedactCorporation(corp, viewerUserId, viewerIsAdmin, false, viewerCharacterId)
+      ),
+      viewerUserId,
+      viewerCharacterId
     );
     const result = corporations.map((corp) => {
       const ceo = corp.ceoId && !corp.ceoVacant ? ceoMap.get(corp.ceoId.toString()) : undefined;
@@ -191,7 +195,7 @@ export async function GET(request: Request) {
         ceoIsInactive,
       };
       if (
-        shouldRedactCorporation(corp, viewerUserId, viewerIsAdmin) &&
+        shouldRedactCorporation(corp, viewerUserId, viewerIsAdmin, false, viewerCharacterId) &&
         !parentVisibleIds.has(corp._id.toString())
       ) {
         const redacted = redactPrivateCorporation(fullRow as Record<string, unknown>);

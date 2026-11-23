@@ -6,6 +6,7 @@
 // not a better deal.
 //
 // Errors: 400, 401, 403, 404, 409
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -58,7 +59,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const corp = resolved.corporation;
 
-    const isCeo = corp.userId && corp.userId.toString() === auth.user.userId.toString();
+    const isCeo = isCeoActor(corp, auth.user);
     if (!isCeo && !auth.user.isAdmin) {
       return errorResponse(
         403,

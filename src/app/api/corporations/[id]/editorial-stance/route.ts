@@ -52,7 +52,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const denied = requireCeo(corporation, auth.user.userId);
+    const denied = requireCeo(corporation, auth.user);
     if (denied) return denied;
 
     const mediaSector = await corporateSectorsCollection<Document>(db).findOne(

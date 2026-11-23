@@ -35,7 +35,7 @@ export async function unlistSectorForSale(_request: Request, { params }: RoutePa
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     if (!ObjectId.isValid(sectorId)) {

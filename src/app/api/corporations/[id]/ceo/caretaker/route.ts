@@ -77,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     // Only the owning CEO may install a caretaker.
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     // Feature gate: NPP autonomy must be active for this corp's country.
@@ -120,7 +120,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     // `userId` is preserved while a caretaker sits, so the appointing owner still
     // passes requireCeo and can reclaim.
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const turn = await getCurrentTurn(db);
@@ -158,7 +158,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, (await params).id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
     if (!corporation.caretakerCeo) {
       return errorResponse(400, "This corporation does not have a caretaker CEO.");

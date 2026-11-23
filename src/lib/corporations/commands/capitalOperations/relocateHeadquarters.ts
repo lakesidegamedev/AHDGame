@@ -136,7 +136,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       );
     }
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const resolvedTargetCountryId = (targetCountryId ??

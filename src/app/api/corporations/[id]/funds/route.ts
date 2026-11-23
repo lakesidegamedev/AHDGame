@@ -27,7 +27,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const auth = await getAuthUser();
     const sponsor = resolved.corporation;
     const canCreate =
-      !!auth && !requireCeo(sponsor, auth.userId) && !(await fundCreationEligibility(db, sponsor));
+      !!auth && !requireCeo(sponsor, auth) && !(await fundCreationEligibility(db, sponsor));
     const stockChoices =
       canCreate && fundBankCharter(sponsor.bankCharter)
         ? await corporationsCollection(db)

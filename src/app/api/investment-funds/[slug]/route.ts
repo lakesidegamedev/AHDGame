@@ -1,4 +1,5 @@
 import { fundTradeCapabilities } from "@/lib/indexFunds/tradeCapabilities";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import type { BankSubscription } from "@/lib/indexFunds/subscriptions";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { NextResponse } from "next/server";
@@ -118,10 +119,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     // mirroring the check the wind-up route enforces.
     let viewerIsSponsorCeo = false;
     if (fund.sponsorCorporationId && auth) {
-      const sponsor = await corporationsCollection<{ _id: ObjectId; userId?: ObjectId }>(
-        db
-      ).findOne({ _id: fund.sponsorCorporationId }, { projection: { userId: 1 } });
-      viewerIsSponsorCeo = !!sponsor?.userId && sponsor.userId.toString() === auth.userId;
+      const sponsor = await corporationsCollection(db).findOne(
+        { _id: fund.sponsorCorporationId },
+        { projection: { userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 } }
+      );
+      viewerIsSponsorCeo = !!sponsor && isCeoActor(sponsor, auth);
     }
 
     let myPosition: {

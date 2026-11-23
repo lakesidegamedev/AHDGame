@@ -62,7 +62,8 @@ export async function GET(request: Request, { params }: RouteParams) {
         corporation,
         authUser?.userId,
         authUser?.isAdmin === true,
-        modViewEnabled
+        modViewEnabled,
+        authUser?.activeCharacterId
       )
     ) {
       return NextResponse.json({

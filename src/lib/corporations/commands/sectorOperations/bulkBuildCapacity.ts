@@ -141,7 +141,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     if (!resolved.ok) return resolved.response;
     let corporation: Corporation = resolved.corporation;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
+    const ceoCheck = requireCeo(corporation, auth.user);
     if (ceoCheck) return ceoCheck;
     if (corporation.ceoType === "npp") {
       return errorResponse(

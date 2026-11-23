@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const denied = requireCeo(corporation, auth.user.userId);
+    const denied = requireCeo(corporation, auth.user);
     if (denied) return denied;
 
     const collection = productVenturesCollection<ProductVenture>(db);

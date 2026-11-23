@@ -45,6 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await releaseSubsidiary(db, {
       sub: subResolved.corporation,
       callerUserId: new ObjectId(auth.user.userId),
+      callerCharacterId: auth.user.activeCharacterId,
       dismissCaretaker: parsed.data.dismissCaretaker,
       turn,
       now: new Date(),

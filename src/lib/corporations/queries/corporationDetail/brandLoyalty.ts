@@ -1,4 +1,5 @@
 import type { Corporation } from "@/lib/db/types";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 
 /**
@@ -20,15 +21,25 @@ export interface BrandLoyaltyFields {
 }
 
 export function buildBrandLoyaltyFields(
-  corporation: Pick<Corporation, "brandLoyalty" | "brandPostureNorm" | "userId" | "countryOwnerId">,
-  viewerUserId: string | null | undefined
+  corporation: Pick<
+    Corporation,
+    | "brandLoyalty"
+    | "brandPostureNorm"
+    | "userId"
+    | "countryOwnerId"
+    | "ceoId"
+    | "ceoType"
+    | "ceoVacant"
+    | "caretakerCeo"
+  >,
+  viewerUserId: string | null | undefined,
+  viewerCharacterId?: string | null
 ): BrandLoyaltyFields {
   const value = corporation.brandLoyalty;
   if (value == null) return {};
 
   const viewerIsOwner =
-    !!viewerUserId &&
-    corporation.userId?.toString() === viewerUserId &&
+    viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId) &&
     !corporation.countryOwnerId;
 
   return {

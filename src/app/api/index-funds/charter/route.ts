@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const sponsor = await corporationsCollection(db).findOne(query);
     if (!sponsor) return errorResponse(404, "Corporation not found");
 
-    const ceoCheck = requireCeo(sponsor, auth.user.userId);
+    const ceoCheck = requireCeo(sponsor, auth.user);
     if (ceoCheck) return ceoCheck;
 
     const result = await charterFund(db, {

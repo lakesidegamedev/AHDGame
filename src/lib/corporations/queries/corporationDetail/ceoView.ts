@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import type { Corporation, User } from "@/lib/db/types";
 import {
   INACTIVE_CEO_TURN_THRESHOLD,
@@ -40,14 +41,13 @@ export async function loadCeoViewFlags(
   corporation: Corporation,
   viewerUserId: string | null | undefined,
   isImperialCeo: boolean,
-  currentTurn: number
+  currentTurn: number,
+  viewerCharacterId?: string | null
 ): Promise<CeoViewFlags> {
   let ceoShareWindow: CeoShareWindow | null = null;
   if (
-    viewerUserId &&
-    corporation.userId?.toString() === viewerUserId &&
+    viewerRunsCorporation(corporation, viewerUserId, viewerCharacterId) &&
     corporation.isPrivate !== true &&
-    corporation.ceoVacant !== true &&
     corporation.ceoId
   ) {
     const w = await ceoSelfAcquisitionWindow(

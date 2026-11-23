@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
+import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
 import {
@@ -100,10 +101,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     const authUser = await getAuthUser().catch(() => null);
-    const isCeo =
-      !corporation.ceoVacant &&
-      !!authUser?.userId &&
-      corporation.userId?.toString() === authUser.userId;
+    const isCeo = !!authUser && isCeoActor(corporation, authUser);
     // The CEO of the controlling parent is an insider of a private subsidiary,
     // the same rule the corporation page and sector detail apply. This only
     // lifts the read redaction: `isCeo` stays false, so unlock/abandon actions
@@ -114,19 +112,18 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (authUser?.userId && controllingParent) {
       const parentCorp = await corporationsCollection(db).findOne(
         { _id: controllingParent.corporationId },
-        { projection: { userId: 1, ceoVacant: 1 } }
+        { projection: { userId: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1, ceoVacant: 1 } }
       );
-      viewerIsControllingParentCeo =
-        !!parentCorp &&
-        parentCorp.ceoVacant !== true &&
-        parentCorp.userId?.toString() === authUser.userId;
+      viewerIsControllingParentCeo = !!parentCorp && isCeoActor(parentCorp, authUser);
     }
     const redact =
       !viewerIsControllingParentCeo &&
       shouldRedactCorporation(
         corporation,
         authUser?.userId ?? undefined,
-        authUser?.isAdmin === true
+        authUser?.isAdmin === true,
+        false,
+        authUser?.activeCharacterId
       );
 
     const currentTurn = gameState?.currentTurn ?? 1;

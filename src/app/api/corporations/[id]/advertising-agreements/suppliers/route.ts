@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
-    const denied = requireCeo(resolved.corporation, auth.user.userId);
+    const denied = requireCeo(resolved.corporation, auth.user);
     if (denied) return denied;
     if (!(await isAdvertisingAgreementsEnabled(db))) {
       return errorResponse(403, "Advertising agreements are not enabled in this world");
