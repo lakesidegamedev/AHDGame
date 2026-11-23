@@ -217,7 +217,8 @@ describe("processSubsidyBudget", () => {
     expect(update.$set.spending.byCategory.sectorSubsidies).toBe(expectedCost);
     expect(update.$set.spending.total).toBe(1_000_000 + expectedCost);
     expect(update.$set.surplus).toBe(3_000_000 - (1_000_000 + expectedCost));
-    expect(update.$set.balance).toBe(3_000_000 - (1_000_000 + expectedCost));
+    // Cash is settled by the regional debt phase, never replaced by the annual surplus.
+    expect(update.$set).not.toHaveProperty("balance");
   });
 
   it("skips subsidies with zero qualifying revenue", async () => {

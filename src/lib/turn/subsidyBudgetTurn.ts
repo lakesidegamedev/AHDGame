@@ -88,23 +88,22 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
         [SECTOR_SUBSIDIES_SPENDING_KEY]: cost,
       },
     });
-    const balance = budget.revenue.total - spending.total;
+    // `surplus` is the annual flow. `balance` is cash, settled per turn by the
+    // regional debt phase; writing the annual surplus into it made that phase
+    // borrow (or bank) a whole year's deficit every turn.
+    const surplus = budget.revenue.total - spending.total;
     const currentCost = budget.spending?.byCategory?.[SECTOR_SUBSIDIES_SPENDING_KEY] ?? 0;
     if (
       currentCost === spending.byCategory[SECTOR_SUBSIDIES_SPENDING_KEY] &&
       budget.spending?.total === spending.total &&
-      budget.surplus === balance &&
-      budget.balance === balance
+      budget.surplus === surplus
     ) {
       continue;
     }
 
     writes.push(
       stateBudgetsCollection(db)
-        .updateOne(
-          { _id: budget._id },
-          { $set: { spending, surplus: balance, balance, updatedAt: now } }
-        )
+        .updateOne({ _id: budget._id }, { $set: { spending, surplus, updatedAt: now } })
         .then(() => {
           updatedCount++;
         })
