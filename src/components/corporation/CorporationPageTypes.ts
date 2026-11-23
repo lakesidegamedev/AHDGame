@@ -875,6 +875,8 @@ export interface SectorDetail {
   buildQueueSummary?: BuildQueueSummary | null;
   /** Capacity paid for but not yet productive, ₳. */
   constructionInProgressAnchor?: number | null;
+  /** Paid for builds ordered on the latest recorded turn, ₳. */
+  constructionOrderedAnchor?: number | null;
 }
 
 export interface HeldBondSummary {

@@ -111,6 +111,10 @@ export default function FinancialsTab({
     (sum, s) => sum + Math.max(0, s.constructionInProgressAnchor ?? 0),
     0
   );
+  const constructionOrderedAnchor = sectors.reduce(
+    (sum, s) => sum + Math.max(0, s.constructionOrderedAnchor ?? 0),
+    0
+  );
   const tArrears = useTranslations("corporations.arrears");
   const [view, setView] = useState<StatementView>("income");
   // "all" or a country id. A country the corporation has left falls back to All.
@@ -404,16 +408,22 @@ export default function FinancialsTab({
                       title="Cost of growing sector revenue. Scales with revenue and growth rate."
                     />
                   )}
-                  {constructionPaidAnchor > 0 && (
-                    <StatementLine
-                      indent
-                      label="Construction paid, still to arrive"
-                      amount={formatAnchor(constructionPaidAnchor)}
-                      amountClass="text-muted"
-                      note="Not in the costs above"
-                      title="The unfinished share of builds you have already paid for. It was charged in full when each build was ordered, so it is not part of this period's growth cost or profit."
-                    />
-                  )}
+                  <StatementLine
+                    indent
+                    label="Construction ordered on the latest turn"
+                    amount={formatAnchor(constructionOrderedAnchor)}
+                    amountClass="text-muted"
+                    note="Paid up front, not in the costs above"
+                    title="Cash paid in full when builds were ordered on the latest recorded turn. It is spent on capacity, so it is not part of this period's growth cost or profit. It reads 0 on a turn with no new orders."
+                  />
+                  <StatementLine
+                    indent
+                    label="Construction in progress (paid, still to arrive)"
+                    amount={formatAnchor(constructionPaidAnchor)}
+                    amountClass="text-muted"
+                    note="Memo, not in the costs above"
+                    title="The unfinished share of builds you have already paid for. It was charged in full when each build was ordered. It reads 0 when nothing is under way."
+                  />
                   <StatementLine
                     strong
                     label="Gross profit"

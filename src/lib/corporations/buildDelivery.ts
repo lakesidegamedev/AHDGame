@@ -187,6 +187,17 @@ export function queueUndeliveredCost(queue: SectorBuildOrder[], currentTurn: num
   return queue.reduce((sum, o) => sum + undeliveredCost(o, currentTurn), 0);
 }
 
+/** ₳ paid for orders placed on `turn`, whether or not they have started arriving. */
+export function orderedOnTurnCost(queue: SectorBuildOrder[], turn: number): number {
+  return queue.reduce(
+    (sum, o) =>
+      o.startTurn === turn && Number.isFinite(o.costPaidAnchor)
+        ? sum + Math.max(0, o.costPaidAnchor)
+        : sum,
+    0
+  );
+}
+
 /**
  * When a new order would deliver, in turns from the turn it is placed. The
  * first slice lands next turn and the last on `lastInTurns` (the full window).
