@@ -34,7 +34,12 @@ describe("marketCapInAnchor", () => {
   it("reads each currency's rate once when valuing a pool", async () => {
     rateReads.count = 0;
     const shared = new Map<string, Promise<number>>();
-    const corp = { sharePrice: 1210, totalShares: 1000, liquidCurrencyCode: "JPY", countryId: "JP" };
+    const corp = {
+      sharePrice: 1210,
+      totalShares: 1000,
+      liquidCurrencyCode: "JPY",
+      countryId: "JP",
+    };
     const caps = await Promise.all(
       [corp, corp, corp].map((c) => marketCapInAnchor(db, c as never, shared))
     );
