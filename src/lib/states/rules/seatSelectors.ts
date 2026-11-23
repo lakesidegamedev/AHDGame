@@ -68,7 +68,7 @@ export function subNationalChamberSeats(
   if (countryHasFeature("cnLib", countryId)) {
     return getCnPeoplesCongressSeats(preset)[state._id] ?? state.stateSenateSeats ?? 0;
   }
-  if (countryId === "CA") {
+  if (countryHasFeature("caLib", countryId)) {
     return CA_PROVINCIAL_SEATS[state._id] ?? state.stateSenateSeats ?? 0;
   }
   return state.stateSenateSeats ?? 0;

@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 export const LIB_FEATURES = {
   bgLib: ["BG"],
   brLib: ["BR"],
+  caLib: ["CA"],
   cnLib: ["CN"],
   ddLib: ["DD"],
   deLib: ["DE"],
