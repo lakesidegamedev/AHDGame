@@ -375,6 +375,7 @@ export function StatusBar({
   // Corp history arrays for sparklines
   const corpHistory: CorpHistoryPoint[] = stats?.corp?.history ?? [];
   const sharePriceHistory = corpHistory.map((h) => h.sharePrice);
+  const latestSettledTurn = corpHistory.at(-1)?.turn ?? null;
   const msHistory = corpHistory.map((h) => h.marketingStrength);
   const cashHistory = corpHistory.map((h) => h.liquidCapital);
 
@@ -1081,6 +1082,9 @@ export function StatusBar({
                     label={`Live share price${ceoCorpCurrency ? ` (${ceoCorpCurrency})` : ""}`}
                     value={formatListingPrice(stats.corp.sharePrice, ceoCorpCurrency)}
                   />
+                  {latestSettledTurn != null && (
+                    <BreakdownRow label="Last settled close" value={`Turn ${latestSettledTurn}`} />
+                  )}
                   <BreakdownRow
                     label="Change (1 turn)"
                     value={`${(stats.corp.priceChange1h ?? 0) >= 0 ? "+" : ""}${(stats.corp.priceChange1h ?? 0).toFixed(2)}%`}
