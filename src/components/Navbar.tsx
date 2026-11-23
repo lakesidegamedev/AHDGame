@@ -23,7 +23,7 @@ import { NavMailLink } from "@/components/navbar/NavMailLink";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
-import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
+import { SHELL_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname } from "next/navigation";
 import { StateDropdown } from "./StateDropdown";
 import { SingleplayerEndTurnButton } from "@/components/singleplayer/SingleplayerEndTurnButton";
@@ -367,7 +367,7 @@ export const Navbar = React.memo(function Navbar({
               carries the aria-label so the label survives below `sm`, where the
               wordmark is hidden. */}
           <Image
-            src={CDN_LOGO_URL}
+            src={SHELL_LOGO_URL}
             priority
             unoptimized
             alt=""
