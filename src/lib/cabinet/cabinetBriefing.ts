@@ -340,13 +340,17 @@ export async function buildCabinetBriefing(
   // macro metrics cannot be read from stateMetrics.
   const nationalMetrics: Record<string, number> = {};
   for (const metric of mechanics.nationalMetrics) {
-    nationalMetrics[`${metric.category}.${metric.metricId}`] = resolveNationalMetricValue({
+    const value = resolveNationalMetricValue({
       metric,
       nationalMetricsDoc,
       stateMetrics,
       budget,
       bank,
     });
+    // Absent stays absent so the stat strip shows a dash, not a fake 0.0.
+    if (value !== undefined) {
+      nationalMetrics[`${metric.category}.${metric.metricId}`] = value;
+    }
   }
 
   // Build per-region data. Only stateMetrics-sourced metrics have per-region
