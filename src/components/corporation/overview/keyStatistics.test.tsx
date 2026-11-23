@@ -84,6 +84,32 @@ describe("revenueSplit", () => {
   });
 });
 
+describe("KeyStatistics leverage row", () => {
+  it("says loading while the bond request is pending", () => {
+    render(<KeyStatistics {...props({ bondInfo: null, leverageRating: null })} />);
+    expect(screen.getByText("Loading")).toBeTruthy();
+    expect(screen.queryByText("Retry")).toBeNull();
+  });
+
+  it("stops saying loading when the request failed and offers a retry", () => {
+    const retry = vi.fn();
+    render(
+      <KeyStatistics
+        {...props({
+          bondInfo: null,
+          leverageRating: null,
+          bondInfoFailed: true,
+          onRetryBondInfo: retry,
+        })}
+      />
+    );
+    expect(screen.queryByText("Loading")).toBeNull();
+    expect(screen.getByText("Could not load")).toBeTruthy();
+    screen.getByText("Retry").click();
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("KeyStatistics", () => {
   it("draws the three ledger columns with their charts", () => {
     render(<KeyStatistics {...props()} />);

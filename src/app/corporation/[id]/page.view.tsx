@@ -70,6 +70,7 @@ export function renderCorporationDetailPageView(
     balanceSheet,
     bondDefaultModalOpen,
     bondInfo,
+    bondInfoFailed,
     canTrade,
     cancelTransitionSectorId,
     ceo,
@@ -490,6 +491,8 @@ export function renderCorporationDetailPageView(
                         financials={financials}
                         balanceSheet={balanceSheet}
                         bondInfo={bondInfo}
+                        bondInfoFailed={bondInfoFailed}
+                        onRetryBondInfo={() => void fetchBondInfo({ force: true })}
                         sectors={sectors}
                         corpId={id}
                         periodView={periodView}
@@ -638,7 +641,7 @@ export function renderCorporationDetailPageView(
                       const creditPanel = (
                         <CreditRatingTab
                           bondInfo={bondInfo}
-                          bondLoading={!bondInfo && tab === "credit"}
+                          bondLoading={!bondInfo && !bondInfoFailed && tab === "credit"}
                           corporation={corporation}
                           corpId={id}
                           modViewEnabled={modViewEnabled}
@@ -649,7 +652,7 @@ export function renderCorporationDetailPageView(
                         <div id="corp-bonds" className="scroll-mt-24">
                           <BondsTab
                             bondInfo={bondInfo}
-                            bondLoading={!bondInfo && tab === "credit"}
+                            bondLoading={!bondInfo && !bondInfoFailed && tab === "credit"}
                             corpId={id}
                             corporation={corporation}
                             financials={financials}
