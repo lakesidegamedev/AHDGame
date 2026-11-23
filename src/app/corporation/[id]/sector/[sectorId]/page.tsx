@@ -1069,6 +1069,8 @@ export default function SectorDetailPage() {
                   isExtraction={sector.sectorType === "extraction"}
                   forexEnabled={forexEnabled}
                   exchangeRates={exchangeRates}
+                  stateId={sector.stateId}
+                  stateName={sector.stateName}
                 />
               ) : (
                 <CommoditiesPanel

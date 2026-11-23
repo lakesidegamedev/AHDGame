@@ -305,7 +305,13 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       sector.transitionStartTurn,
       currentTurn,
       sectorDetailPreset,
-      gameState?.hardwareInputReliefStartTurn
+      gameState?.hardwareInputReliefStartTurn,
+      // The funded turn buys advertising as a paid input; list it like the engine does.
+      {
+        advertisingInput:
+          gameState?.producerOpening != null &&
+          gameState.producerOpening.worldEpoch === gameState.worldEpochId,
+      }
     );
 
     // Extraction-only: resource capacity and per-resource multipliers ,

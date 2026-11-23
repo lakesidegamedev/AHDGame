@@ -35,6 +35,8 @@ interface InputsOutputsPanelProps {
   isExtraction: boolean;
   forexEnabled: boolean;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
+  stateId?: string;
+  stateName?: string;
 }
 
 function fmtPrice(v: number): string {
@@ -67,6 +69,8 @@ export default function InputsOutputsPanel({
   isExtraction,
   forexEnabled,
   exchangeRates,
+  stateId,
+  stateName,
 }: InputsOutputsPanelProps) {
   const costliest = costliestInput(commodities.demands);
   const currencyCode = getCommodityDisplayCurrency(countryId);
@@ -227,7 +231,12 @@ export default function InputsOutputsPanel({
                   }
                   offers={
                     shortInputs.has(f.commodity) ? (
-                      <InputOffersHint flow={f} variant="short" />
+                      <InputOffersHint
+                        flow={f}
+                        variant="short"
+                        stateId={stateId}
+                        stateName={stateName}
+                      />
                     ) : null
                   }
                   right={
