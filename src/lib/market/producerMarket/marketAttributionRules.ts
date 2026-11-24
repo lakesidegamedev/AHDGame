@@ -1,15 +1,9 @@
 /**
- * Who every unit of a country's funded book came from and went to.
- *
- * The funded book (rules.ts, settleProducerOrders.ts) counts supply, demand,
- * requested and filled units per country and good. This rebuilds the same
- * counts from the same settled orders and offers, split by the kind of
- * account behind each unit, so every screen can show rows that add up to the
- * totals it shows. `marketAttributionGaps` checks the split against the book:
- * a counting path that adds volume without an attributed account shows up
- * there instead of as an unexplained total.
- *
- * Pure: settled orders, offers and results in, attributed rows out.
+ * Who every unit of a country's funded book came from and went to: the same
+ * counts as the book (rules.ts, settleProducerOrders.ts), rebuilt from the
+ * settled orders and offers and split by kind of account, so screens can show
+ * rows that add up to their totals. `marketAttributionGaps` flags any volume
+ * counted without an attributed account. Pure.
  */
 import type { ProducerOffer, PurchaseOrder } from "./producerQuotes";
 import type { FundedCountryBookRow } from "./fundedBookRules";
