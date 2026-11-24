@@ -47,7 +47,12 @@ interface ApprovalApiResponse {
   nationalAdjustments?: ActiveModifier[];
 }
 
-export function historyTitle(h: { turn: number; approval: number; stateAverage?: number; note?: string }) {
+export function historyTitle(h: {
+  turn: number;
+  approval: number;
+  stateAverage?: number;
+  note?: string;
+}) {
   const base = `Turn ${h.turn}: ${h.approval.toFixed(1)}%`;
   const detail =
     h.stateAverage == null
