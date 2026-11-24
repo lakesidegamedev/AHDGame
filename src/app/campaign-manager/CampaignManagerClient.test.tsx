@@ -79,6 +79,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("renders the phone tabs at the desktop server snapshot with responsive visibility", () => {
+  renderWithElectionsMessages(<CampaignManagerClient {...props} />);
+  expect(
+    screen.getByRole("tablist", { name: "Campaign Manager sections" }).parentElement?.className
+  ).toBe("lg:hidden");
+});
+
 it("explains an empty Canadian race list instead of leaving an unexplained blank page", () => {
   mocks.races = [];
   renderWithElectionsMessages(
