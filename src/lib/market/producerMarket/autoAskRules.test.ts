@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ASK_BRACKET_MAX_TURNS,
+  type AskBracket,
+  type AskBracketReading,
+  bracketAsk,
   AUTO_ASK_DEFAULT_STEP,
   AUTO_ASK_MAX_STEP,
   nextAutoAsk,
@@ -264,5 +268,176 @@ describe("sellThroughRatio", () => {
 
   it("is capped at one", () => {
     expect(sellThroughRatio(20, 10)).toBe(1);
+  });
+});
+
+describe("ask bracket", () => {
+  /**
+   * One seller in a book whose buyers take everything at or below `clearing`
+   * and almost nothing above it. The ordinary rules alternate between a high
+   * candidate and a marked-down low one, depending on whether stock was left.
+   */
+  function run(input: {
+    clearing: (turn: number) => number;
+    reference?: (turn: number) => number;
+    high: (turn: number) => number;
+    low: (turn: number) => number;
+    turns: number;
+  }) {
+    const asks: number[] = [];
+    let last: AskBracketReading | null = null;
+    let leftover = false;
+    for (let turn = 0; turn < input.turns; turn++) {
+      const candidate = leftover ? input.low(turn) : input.high(turn);
+      const decided = bracketAsk({
+        candidate,
+        last,
+        referenceUnitPrice: input.reference?.(turn) ?? 1000,
+      });
+      const sold = decided.ask <= input.clearing(turn) ? 100 : 5;
+      leftover = sold < 100;
+      asks.push(decided.ask);
+      last = { ask: decided.ask, soldUnits: sold, offeredUnits: 100, bracket: decided.bracket };
+    }
+    return asks;
+  }
+
+  /** Three turns running within 0.5% under the clearing, at or after `from`. */
+  const settlesNear = (asks: number[], from: number, clearing: number) =>
+    asks.some(
+      (_, i) =>
+        i >= from &&
+        i + 3 <= asks.length &&
+        asks.slice(i, i + 3).every((ask) => ask <= clearing && ask > clearing * (1 - 0.005))
+    );
+
+  it("settles a two-price flip within 0.5% of the clearing in a few turns", () => {
+    // Clearing 1020 sits between a 1000 ask that sells out and a 1050 ask that does not.
+    const asks = run({ clearing: () => 1020, high: () => 1050, low: () => 1000, turns: 10 });
+    expect(asks.slice(0, 2)).toEqual([1050, 1000]);
+    const settled = asks.slice(6);
+    for (const ask of settled) {
+      expect(ask).toBeLessThanOrEqual(1020);
+      expect(ask).toBeGreaterThan(1020 * (1 - 0.005));
+    }
+    // It holds once converged instead of moving every turn.
+    expect(new Set(settled).size).toBe(1);
+  });
+
+  it("narrows a wide markdown swing instead of repeating it", () => {
+    const asks = run({ clearing: () => 9000, high: () => 12000, low: () => 6000, turns: 9 });
+    const moves = asks.slice(1).map((ask, i) => Math.abs(ask / asks[i] - 1));
+    // The swing halves each turn after the bracket is known.
+    for (let i = 3; i < moves.length; i++) expect(moves[i]).toBeLessThan(moves[i - 1] + 1e-12);
+    expect(Math.abs(asks[asks.length - 1] / 9000 - 1)).toBeLessThan(0.02);
+  });
+
+  it("follows a market that moves up after it settles", () => {
+    const clearing = (turn: number) => (turn < 8 ? 1020 : 1200);
+    const asks = run({
+      clearing,
+      high: (turn) => (turn < 8 ? 1050 : 1250),
+      low: () => 1000,
+      turns: 24,
+    });
+    expect(settlesNear(asks, 8, 1200)).toBe(true);
+  });
+
+  it("follows a market that moves down after it settles", () => {
+    const clearing = (turn: number) => (turn < 8 ? 1020 : 850);
+    const asks = run({
+      clearing,
+      high: (turn) => (turn < 8 ? 1050 : 900),
+      low: (turn) => (turn < 8 ? 1000 : 800),
+      turns: 24,
+    });
+    expect(settlesNear(asks, 8, 850)).toBe(true);
+  });
+
+  it("lets go when the reference price moves", () => {
+    const last: AskBracketReading = {
+      ask: 1000,
+      soldUnits: 100,
+      offeredUnits: 100,
+      bracket: { lowerAsk: 990, rejectedAsk: 1050, referenceUnitPrice: 1000, turns: 0 },
+    };
+    const moved = bracketAsk({ candidate: 1200, last, referenceUnitPrice: 1100 });
+    expect(moved.action).toBe("candidate");
+    expect(moved.ask).toBe(1200);
+    expect(moved.bracket).toEqual({ lowerAsk: 1000, referenceUnitPrice: 1100, turns: 0 });
+    const steady = bracketAsk({ candidate: 1200, last, referenceUnitPrice: 1010 });
+    expect(steady).toEqual({
+      ask: 1025,
+      action: "bisect",
+      bracket: { lowerAsk: 1000, rejectedAsk: 1050, referenceUnitPrice: 1010, turns: 0 },
+    });
+  });
+
+  it("lets go after holding for the maximum number of turns", () => {
+    const bracket: AskBracket = {
+      lowerAsk: 1000,
+      rejectedAsk: 1004,
+      referenceUnitPrice: 1000,
+      turns: ASK_BRACKET_MAX_TURNS - 2,
+    };
+    const held = bracketAsk({
+      candidate: 1100,
+      last: { ask: 1000, soldUnits: 100, offeredUnits: 100, bracket },
+      referenceUnitPrice: 1000,
+    });
+    expect(held.action).toBe("hold");
+    expect(held.ask).toBe(1000);
+    const expired = bracketAsk({
+      candidate: 1100,
+      last: { ask: 1000, soldUnits: 100, offeredUnits: 100, bracket: held.bracket },
+      referenceUnitPrice: 1000,
+    });
+    expect(expired.action).toBe("candidate");
+    expect(expired.ask).toBe(1100);
+  });
+
+  it("posts the candidate without memory or on an older receipt", () => {
+    expect(bracketAsk({ candidate: 900, last: null, referenceUnitPrice: 1000 })).toEqual({
+      ask: 900,
+      bracket: null,
+      action: "candidate",
+    });
+    const old = bracketAsk({
+      candidate: 900,
+      last: { ask: 1000, soldUnits: 100, offeredUnits: 100 },
+      referenceUnitPrice: 1000,
+    });
+    expect(old.ask).toBe(900);
+    expect(old.bracket).toEqual({ lowerAsk: 1000, referenceUnitPrice: 1000, turns: 0 });
+  });
+
+  it("treats silence as no signal", () => {
+    const bracket: AskBracket = {
+      lowerAsk: 1000,
+      rejectedAsk: 1100,
+      referenceUnitPrice: 1000,
+      turns: 0,
+    };
+    const silent = bracketAsk({
+      candidate: 1200,
+      last: { ask: 1050, soldUnits: 0, offeredUnits: 0, bracket },
+      referenceUnitPrice: 1000,
+    });
+    expect(silent).toEqual({ ask: 1200, action: "candidate", bracket: { ...bracket, turns: 1 } });
+  });
+
+  it("ignores a malformed stored bracket", () => {
+    const decided = bracketAsk({
+      candidate: 1200,
+      last: {
+        ask: 1000,
+        soldUnits: 100,
+        offeredUnits: 100,
+        bracket: { lowerAsk: 1100, rejectedAsk: 1050, referenceUnitPrice: 1000, turns: 0 },
+      },
+      referenceUnitPrice: 1000,
+    });
+    expect(decided.action).toBe("candidate");
+    expect(decided.bracket).toEqual({ lowerAsk: 1000, referenceUnitPrice: 1000, turns: 0 });
   });
 });

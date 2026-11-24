@@ -54,6 +54,8 @@ This makes your **pricing posture** a real decision. Posture steps from -20% to 
 
 In a shortage, everyone sells out and premium pricing pays. In a glut, the undercutters clear and the skimmers are left holding unsold output, which drags down their revenue, valuation, and share price. Want volume and market share? Undercut. Want margin in a genuine shortage? Go premium.
 
+Whatever posture you pick, the asking price settles over a few turns. Stock left unsold is marked down the next turn. When one price sells out and a higher one does not, the next price lands halfway between them, and the gap keeps halving until the price holds at the best level buyers will pay. If the market moves, the price starts searching again.
+
 \`\`\`clearing-posture
 \`\`\`
 

@@ -1,4 +1,5 @@
 /** Producer plan and operating result shapes, with the small helpers shared across the production steps. */
+import type { AskBracket, AskBracketReading } from "./autoAskRules";
 import type { InternalTransferPricing } from "./internalTransferPricingRules";
 import type { ProducerQuotePolicy } from "./rules";
 import { laneKeyOf } from "./laneKey";
@@ -79,6 +80,11 @@ export interface ProductionPlan {
   recentOfferedByOutput?: Readonly<Record<string, number>>;
   /** Own ask per output last turn, keyed like recentSoldByOutput (producerShortageAskStage >= 2). */
   recentAskByOutput?: Readonly<Record<string, number>>;
+  /**
+   * Last turn's posted ask, its sales and its ask bracket per output, keyed like
+   * recentSoldByOutput (autoAskRules bracketAsk). Absent = no bracket.
+   */
+  askBracketByOutput?: Readonly<Record<string, AskBracketReading>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
   /** Consecutive glut turns before this one (producerRunPlanStage); echoed on the receipt. */
@@ -261,6 +267,8 @@ export interface ProducerOperatingResult {
     soldTo?: Partial<Record<string, number>>;
     unsoldUnits: number;
     lostUnits: number;
+    /** Ask bracket this ask was posted under (autoAskRules); absent = none. */
+    askBracket?: AskBracket;
   }>;
 }
 

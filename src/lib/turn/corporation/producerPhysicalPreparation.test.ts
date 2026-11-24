@@ -128,6 +128,33 @@ describe("physical producer preparation", () => {
     expect(plan.recentAskByOutput).toEqual({ "advertising|world": 10 });
   });
 
+  it("carries last turn's posted ask, sales and ask bracket into the plan", () => {
+    const { input, sector } = fixture();
+    sector.sectorType = "media";
+    const bracket = { lowerAsk: 9, rejectedAsk: 11, referenceUnitPrice: 10, turns: 1 };
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: 0,
+      soldUnits: 20,
+      products: [
+        {
+          commodity: "advertising",
+          book: "world",
+          offeredUnits: 20,
+          soldUnits: 20,
+          askingUnitPrice: 10,
+          askBracket: bracket,
+        },
+        // An older receipt line without a bracket still carries its ask.
+        { commodity: "software", book: "world", offeredUnits: 5, soldUnits: 1, askingUnitPrice: 7 },
+      ],
+    };
+    const { plan } = prepareProducerPhysicalSector(input).prepared;
+    expect(plan.askBracketByOutput).toEqual({
+      "advertising|world": { ask: 10, soldUnits: 20, offeredUnits: 20, bracket },
+      "software|world": { ask: 7, soldUnits: 1, offeredUnits: 5 },
+    });
+  });
+
   it("funds the extra 2027 Standard retail throughput with proportional input purchases", () => {
     const { input, sector, env } = fixture();
     sector.sectorType = "retail";
