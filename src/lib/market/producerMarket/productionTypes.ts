@@ -43,6 +43,13 @@ export type ProducerEconomyInput = {
    * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
    */
   spilloverShare?: number;
+  /**
+   * The wider economy, traded after the market clears (wideEconomyRules): its
+   * buyer takes only output plants did not sell on each lane, and its seller
+   * fills only orders real buyers did not get. Absent = off.
+   */
+  residualOrders?: readonly PurchaseOrder[];
+  residualOffers?: readonly ProducerOffer[];
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
   /** Seller preference curve for free-choice orders (demandCurveRules). Absent = cheapest first. */

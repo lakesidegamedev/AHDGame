@@ -137,3 +137,12 @@ describe("producer stage env own-site valuation credit", () => {
     );
   });
 });
+
+describe("producer stage env wider economy", () => {
+  it("runs the wider economy unless a world switches it off", () => {
+    expect(producerStageEnv(null).wideEconomyStage).toBe(1);
+    expect(producerStageEnv({}).wideEconomyStage).toBe(1);
+    expect(producerStageEnv({ wideEconomyStage: 0 }).wideEconomyStage).toBe(0);
+    expect(producerStageEnv({ wideEconomyStage: 2 }).wideEconomyStage).toBe(2);
+  });
+});

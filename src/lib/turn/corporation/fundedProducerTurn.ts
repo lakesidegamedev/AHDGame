@@ -550,8 +550,13 @@ async function prepareRunFundedProducerTurn(
       { upsert: true }
     );
   const wideEconomyFunding = backgroundFundingByAccount(demand.wideEconomyOrders);
+  // One wallet per country with a wider-economy buyer or seller line.
   const wideEconomyScopes = [
-    ...new Set(demand.wideEconomyOrders.map((o) => o.countryId ?? "")),
+    ...new Set(
+      [...demand.wideEconomyOrders, ...(demand.wideEconomyOffers ?? [])].map(
+        (o) => o.countryId ?? ""
+      )
+    ),
   ].map(wideEconomyScope);
   // One collection account per importing or levying country; none when both are off.
   const levyByPlant = plantLevies(demand.planSector, lookups, turn);

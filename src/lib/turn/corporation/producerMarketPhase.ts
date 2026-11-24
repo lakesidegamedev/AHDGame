@@ -105,6 +105,8 @@ export async function runCorporationProducerMarket(
       | "households"
       | "externalOrders"
       | "externalOffers"
+      | "residualOrders"
+      | "residualOffers"
       | "inputReservations"
       | "eligibleOffersByOrder"
       | "spilloverShare"

@@ -98,8 +98,15 @@ export async function settleFundedProducerTurn(
         ...context.demand.publicBuyerOrders,
         ...context.demand.investmentBuyerOrders,
         ...context.demand.backgroundOrders,
-        ...context.demand.wideEconomyOrders,
       ],
+      ...((context.demand.wideEconomyOrders?.length ?? 0) +
+        (context.demand.wideEconomyOffers?.length ?? 0) >
+      0
+        ? {
+            residualOrders: context.demand.wideEconomyOrders ?? [],
+            residualOffers: context.demand.wideEconomyOffers ?? [],
+          }
+        : {}),
       ...(context.demand.backgroundOffers.length > 0
         ? { externalOffers: context.demand.backgroundOffers }
         : {}),
@@ -804,7 +811,8 @@ export async function publishFundedProducerTurn(
 
   // A background wallet ends the turn empty: its unspent budget and its export
   // receipts leave the world economy, as its budget came in. The wider
-  // economy's wallet closes the same way (it only buys, so only budget is left).
+  // economy's wallet closes the same way: its unspent budget plus what its
+  // seller was paid leave through this declared return, never kept or minted.
   await (0, context.apply)(
     batchProducerMoves(
       context.worldEpoch,
