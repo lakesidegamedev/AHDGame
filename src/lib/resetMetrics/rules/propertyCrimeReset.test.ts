@@ -17,4 +17,10 @@ describe("property crime on the era scale", () => {
     expect(propertyCrimeOnEraScale(1716, 3057, "UK", 2030)).toBeNull();
     expect(propertyCrimeOnEraScale(1858, 3000, "CA", 2030)).not.toBeNull();
   });
+
+  it("never pulls a region that opened beyond the scale under its own opening", () => {
+    const value = propertyCrimeOnEraScale(3739.3, 5936.2, "US", 2030)!;
+    expect(value).toBeGreaterThan(3739.3);
+    expect(value).toBeLessThan(5936.2);
+  });
 });
