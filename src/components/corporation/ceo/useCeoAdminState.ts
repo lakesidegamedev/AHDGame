@@ -26,6 +26,17 @@ export interface DissolvePublicFloatRow {
 export interface DissolvePreviewData {
   outstandingBonds: number;
   canQuickDissolve: boolean;
+  /** Owes bonds, none in default: may dissolve by paying bondholders first. */
+  canDissolveSettlingBonds?: boolean;
+  /** Bond settlement in corp currency when bonds are outstanding; rows then show the post-bond payout. */
+  bondSettlement?: {
+    bondCount: number;
+    anyDefaulted: boolean;
+    bondTotalCorp: number;
+    bondholdersGetCorp: number;
+    bondRecoveryPct: number;
+    shareholdersGetCorp: number;
+  } | null;
   /** Turns left before the corp is old enough to dissolve (0 when eligible). */
   dissolutionAgeTurnsRemaining: number;
   /** Total liquidation proceeds (post asset liquidation) in corp local currency. */
