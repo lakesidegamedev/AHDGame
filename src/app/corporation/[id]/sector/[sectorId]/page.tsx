@@ -22,6 +22,7 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";
 import FinancialVisibilityNotice from "./components/FinancialVisibilityNotice";
+import AdminViewLabel from "@/components/corporation/AdminViewLabel";
 import FinancialsPanel from "./sections/FinancialsPanel";
 import MarketPositionPanel from "./sections/MarketPositionPanel";
 import AttackPanel from "./sections/AttackPanel";
@@ -796,6 +797,7 @@ export default function SectorDetailPage() {
                   leaving an unexplained gap that reads as "this sector is
                   broken". This notice fills that gap with the reason. Never
                   shown to the owner or an admin (hidden === false for them). */}
+              <AdminViewLabel show={financialVisibility.adminView} />
               {financialVisibility.hidden && (
                 <FinancialVisibilityNotice reason={financialVisibility.reason} />
               )}

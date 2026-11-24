@@ -175,6 +175,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       allCorpSectors,
       shouldRedact,
       publicFinancialFog,
+      adminView,
       ceo,
       corporationFxRate,
       viewerCorpFxRate,
@@ -885,7 +886,11 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // owning CEO fall through with `hidden: false`, they are never fogged (see
     // `isInsider`); this object exists to explain the OTHER cases, not to add a
     // gate.
-    payload.financialVisibility = { hidden: false, reason: "visible" };
+    payload.financialVisibility = {
+      hidden: false,
+      reason: "visible",
+      ...(adminView ? { adminView: true } : {}),
+    };
 
     // Private corps: redact sensitive financial data but keep attack/split/market
     // info visible so the viewer can still interact with the sector.

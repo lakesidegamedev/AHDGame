@@ -14,6 +14,7 @@ import { loadCorporationDefenceContracts } from "@/lib/corporations/queries/corp
 import { resolveGameYear } from "@/lib/era/era";
 import {
   shouldRedactCorporation,
+  isAdminOnlyView,
   redactPrivateCorporation,
   redactPrivateSectorRow,
 } from "@/lib/corporations/redaction";
@@ -438,6 +439,15 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       corporation._id,
       resolveGameYear(gameState ?? {}) ?? 0
     );
+
+    if (
+      isAdminOnlyView(corporation, authUser ?? null, {
+        isParentCeo: viewerIsControllingParentCeo,
+        booksExposed,
+      })
+    ) {
+      (detail.corporation as Record<string, unknown>).adminView = true;
+    }
 
     return NextResponse.json({
       ...detail,
