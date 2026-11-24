@@ -2,6 +2,12 @@
 import { estimateCorpWalletSpend } from "@/lib/currency/corpWalletSpend";
 
 import { apiErrorText } from "@/lib/errors/catalog";
+import { isOperatingReserveRefusal } from "@/lib/corporations/rules/operatingReserve";
+import {
+  OperatingReserveConfirmDialog,
+  operatingReserveRefusalText,
+  useOperatingReserveConfirm,
+} from "@/components/corporation/shares/OperatingReserveConfirm";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -92,7 +98,9 @@ export function FundTradePanel({
     units: number;
     payCurrency?: CurrencyCode;
     corporationId?: string;
+    overrideOperatingReserve?: true;
   } | null>(null);
+  const reserveConfirm = useOperatingReserveConfirm();
   const submitting = useRef(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -468,6 +476,7 @@ export function FundTradePanel({
           ...(order.corporationId ? { corporationId: order.corporationId } : {}),
           units: order.units,
           ...(order.payCurrency ? { payCurrency: order.payCurrency } : {}),
+          ...(order.overrideOperatingReserve ? { overrideOperatingReserve: true } : {}),
         }),
       });
       const data = (await res.json()) as {
@@ -484,6 +493,21 @@ export function FundTradePanel({
         if (!data.pending && res.status < 500 && res.status !== 429) {
           command.current = null;
           setPendingOrder(null);
+        }
+        if (
+          order.corporationId &&
+          !order.overrideOperatingReserve &&
+          isOperatingReserveRefusal(data)
+        ) {
+          reserveConfirm.ask(operatingReserveRefusalText(data), () => {
+            command.current = {
+              ...order,
+              operationId: crypto.randomUUID(),
+              overrideOperatingReserve: true,
+            };
+            return handleSubmit();
+          });
+          return;
         }
         setError(apiErrorText(data, "Request failed"));
         return;
@@ -530,6 +554,7 @@ export function FundTradePanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm space-y-4">
+      <OperatingReserveConfirmDialog state={reserveConfirm} />
       {pendingOrder && (
         <p role="status" className="text-xs text-muted">
           Order {pendingOrder} is unconfirmed. Cash or units may already have moved. Retry this same
