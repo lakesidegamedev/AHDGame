@@ -493,17 +493,23 @@ export function advanceProducerEconomy(
   // Each segment ends when one owned input is exhausted. Its marginal input
   // requirement is constant. This retains partial batches without ever treating
   // private purchased stock as a shared commodity endowment.
-  const { inputOrders, orderIdsForInput, internalAccountingAccounts, minorByPlan, proposedById } =
-    buildProducerInputOrders({
-      plans,
-      plannedById,
-      input,
-      countryOfProducer,
-      orders,
-      cash,
-      inputCredit,
-      offers,
-    });
+  const {
+    inputOrders,
+    orderIdsForInput,
+    internalAccountingAccounts,
+    minorByPlan,
+    proposedById,
+    askBrackets,
+  } = buildProducerInputOrders({
+    plans,
+    plannedById,
+    input,
+    countryOfProducer,
+    orders,
+    cash,
+    inputCredit,
+    offers,
+  });
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
   // Posted prices are fixed from here, so one landed-price gate serves every pass.
   const landedGate = input.importTariffs ? landedPriceGate(offers, input.importTariffs) : null;
@@ -857,6 +863,7 @@ export function advanceProducerEconomy(
     market,
     input,
     postedOffers,
+    askBrackets,
     plans,
     internalAccountingAccounts,
     physicalMaximum,

@@ -6,6 +6,7 @@ import { feasibleProduction } from "./productionFeasibilityRules";
 import { laneKeyOf } from "./laneKey";
 import { shortageAsk } from "./shortageAskRules";
 import { stockCover, markdownFactor, markedDownAsk } from "./stockCoverRules";
+import { type AskBracket, type AskBracketReading, bracketAsk } from "./autoAskRules";
 import { internalTransferUnitPrice } from "./internalTransferPricingRules";
 import {
   type ProducerInputReservation,
@@ -246,7 +247,10 @@ export function buildProducerInputOrders({
     internalPricing?: ProductionPlan["internalTransferPricing"];
     quote: Parameters<typeof quoteProducer>[0];
     markdown: { factor: number; reference: number };
+    bracket?: { last: AskBracketReading | null };
   }> = [];
+  /** Ask bracket each automatic offer was posted under, by offer id. */
+  const askBrackets = new Map<string, AskBracket>();
   const requestedSpend = new Map<string, number>();
   const groupedSpend = new Map<string, { accountId: string; maximumSpend: number }>();
   for (const order of orders) {
@@ -385,6 +389,10 @@ export function buildProducerInputOrders({
       const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
         ...(p.internalTransferPricing ? { internalPricing: p.internalTransferPricing } : {}),
+        // Automatic asks carry their bracket memory; a fixed price is the seller's own.
+        ...(output.policy.kind === "automatic"
+          ? { bracket: { last: p.askBracketByOutput?.[lane] ?? null } }
+          : {}),
         markdown: {
           factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
           reference: output.referenceUnitPrice,
@@ -418,11 +426,22 @@ export function buildProducerInputOrders({
         pending.offer.id
       ),
     });
-    const postedPrice = markedDownAsk(
+    const candidatePrice = markedDownAsk(
       quote.unitPrice,
       pending.markdown.reference,
       pending.markdown.factor
     );
+    // An automatic ask whose market sits between two of the levels above
+    // narrows toward it instead of flipping between them (autoAskRules).
+    const bracketed = pending.bracket
+      ? bracketAsk({
+          candidate: candidatePrice,
+          last: pending.bracket.last,
+          referenceUnitPrice: pending.markdown.reference,
+        })
+      : null;
+    if (bracketed?.bracket) askBrackets.set(pending.offer.id, bracketed.bracket);
+    const postedPrice = bracketed ? bracketed.ask : candidatePrice;
     const internalPrice = internalTransferUnitPrice({
       mode: pending.internalPricing?.mode,
       discount: pending.internalPricing?.discount,
@@ -435,5 +454,12 @@ export function buildProducerInputOrders({
       unitPrice: postedPrice,
     });
   }
-  return { inputOrders, orderIdsForInput, internalAccountingAccounts, minorByPlan, proposedById };
+  return {
+    inputOrders,
+    orderIdsForInput,
+    internalAccountingAccounts,
+    minorByPlan,
+    proposedById,
+    askBrackets,
+  };
 }

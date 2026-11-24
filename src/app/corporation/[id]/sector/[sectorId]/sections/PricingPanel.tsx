@@ -160,7 +160,7 @@ export default function PricingPanel({
       <p className="text-xs text-muted mb-4">
         {pricingMode === "costPlus"
           ? costPlusText("explanation")
-          : "Automatic asks last turn's market price. A set posture is measured from a steadier market price that moves at most 6% a turn, so undercutting cannot drag it down 20% a turn. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
+          : "Automatic asks a steady market price that moves at most 6% a turn, and a set posture is measured from the same price, so undercutting cannot drag it down 20% a turn. Unsold stock is marked down the next turn. When one price sells out and a higher one does not, the next ask lands halfway between them, so the price narrows in on the best level instead of swinging every other turn. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
       </p>
 
       {pricing.asks && pricing.asks.length > 0 && (

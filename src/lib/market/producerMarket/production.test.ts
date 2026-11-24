@@ -1387,6 +1387,56 @@ describe("receipt-backed production", () => {
     ).toBeCloseTo(3.3);
   });
 
+  it("posts the midpoint of a known ask bracket and stores the bracket on the receipt", () => {
+    const lane = "advertising|world";
+    const output = {
+      commodity: "advertising",
+      book: "world",
+      unitsPerOutput: 1,
+      policy: { kind: "automatic", targetMarkup: 0 } as const,
+      referenceUnitPrice: 10,
+      storable: false,
+    };
+    const bracket = { rejectedAsk: 10.5, referenceUnitPrice: 10, turns: 0 };
+    const run = (policy: (typeof output)["policy"] | { kind: "manual"; unitPrice: number }) =>
+      advanceProducerEconomy({
+        turn: 2,
+        accounts,
+        producers: [
+          plant({
+            inputs: [],
+            outputs: [{ ...output, policy }],
+            capacityUnits: 20,
+            // Last turn's 10 sold out under a bracket that had already refused 10.5.
+            askBracketByOutput: { [lane]: { ask: 10, soldUnits: 20, offeredUnits: 20, bracket } },
+          }),
+        ],
+        clearingPriceByLane: { [lane]: 10 },
+        externalOrders: [
+          {
+            id: "buyer",
+            accountId: "households",
+            commodity: "advertising",
+            book: "world",
+            units: 20,
+            maximumUnitPrice: 11,
+          },
+        ],
+      });
+    const product = run(output.policy).producers[0].products[0];
+    expect(product.askingUnitPrice).toBeCloseTo(10.25);
+    expect(product.askBracket).toEqual({
+      lowerAsk: 10,
+      rejectedAsk: 10.5,
+      referenceUnitPrice: 10,
+      turns: 0,
+    });
+    // A fixed price is the seller's own: no bracket moves it.
+    const manual = run({ kind: "manual", unitPrice: 9 }).producers[0].products[0];
+    expect(manual.askingUnitPrice).toBeCloseTo(9);
+    expect(manual.askBracket).toBeUndefined();
+  });
+
   it("keeps a shortage raise above the clearing even when the steady anchor is lower", () => {
     const lane = "advertising|world";
     const producer = plant({
