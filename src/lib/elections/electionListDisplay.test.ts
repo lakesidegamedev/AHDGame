@@ -39,15 +39,73 @@ describe("toElectionListDisplay", () => {
     expect(out.candidates[0]).toEqual({
       id: "c1",
       characterId: "ch1",
-      characterName: "A",
-      party: "1",
-      partyName: "Party",
-      partyColor: "#fff",
-      isNPP: false,
+      characterName: "",
+      party: "",
     });
     expect(out.primaryVotes).toBeUndefined();
     expect(out.polling?.candidateNames).toEqual({});
     expect(out.polling?.leaderId).toBe("c1");
     expect(out.polling?.sharesPct).toEqual({ c1: 100 });
+  });
+
+  const race = (electionType: string) =>
+    ({
+      id: "e2",
+      electionType,
+      state: "UK",
+      cycle: 1,
+      status: "active",
+      startTime: "2026-01-01T00:00:00.000Z",
+      endTime: "2026-01-02T00:00:00.000Z",
+      primaryEndTime: "2026-01-01T12:00:00.000Z",
+      candidates: [
+        {
+          id: "c1",
+          characterId: "ch1",
+          characterName: "A",
+          party: "1",
+          partyName: "P1",
+          partyColor: "#111",
+          isNPP: false,
+        },
+        {
+          id: "c2",
+          characterId: "npp-owner",
+          characterName: "B",
+          party: "2",
+          partyName: "P2",
+          partyColor: "#222",
+          isNPP: true,
+        },
+      ],
+      polling: {
+        leaderId: "c2",
+        leaderName: "B",
+        leaderParty: "2",
+        sharesPct: { c1: 40, c2: 60 },
+        candidateNames: { c1: "A", c2: "B" },
+        candidateParties: { c1: "1", c2: "2" },
+        candidatePartyNames: { c1: "P1", c2: "P2" },
+        candidatePartyColors: { c1: "#111", c2: "#222" },
+        source: "general",
+      },
+    }) as unknown as ElectionResponse;
+
+  it("keeps only the leader's party entries and the viewer's own-race key", () => {
+    const out = toElectionListDisplay(race("senate"));
+    expect(out.polling?.candidateParties).toEqual({ c2: "2" });
+    expect(out.polling?.candidatePartyNames).toEqual({ c2: "P2" });
+    expect(out.polling?.candidatePartyColors).toEqual({ c2: "#222" });
+    expect(out.polling?.sharesPct).toEqual({ c1: 40, c2: 60 });
+    expect(out.candidates.map((c) => c.characterId)).toEqual(["ch1", ""]);
+    expect(out.startTime).toBeUndefined();
+    expect(out.endTime).toBeUndefined();
+    expect(out.primaryEndTime).toBe("2026-01-01T12:00:00.000Z");
+  });
+
+  it("keeps Commons party data for the seat carve-up", () => {
+    const out = toElectionListDisplay(race("commons"));
+    expect(out.polling?.candidatePartyColors).toEqual({ c1: "#111", c2: "#222" });
+    expect(out.candidates[1]).toMatchObject({ partyName: "P2", partyColor: "#222" });
   });
 });

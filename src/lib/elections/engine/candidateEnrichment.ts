@@ -270,7 +270,8 @@ export async function fetchEnrichedCandidates(
         )
       : characterIds.length > 0
         ? charactersCollection(db)
-            .find({ _id: { $in: characterIds } })
+            // The settlement ledger is banking bookkeeping no election reads.
+            .find({ _id: { $in: characterIds } }, { projection: { settledKeys: 0 } })
             .toArray()
         : Promise.resolve([] as Character[]),
     options?.preload
@@ -282,8 +283,11 @@ export async function fetchEnrichedCandidates(
         )
       : nppIds.length > 0
         ? nppsCollection(db)
-            // Enrichment reads the ideology pair, never the 30KB stance map.
-            .find({ _id: { $in: nppIds } }, { projection: { "policies.domainPositions": 0 } })
+            // Enrichment reads the ideology pair, never the 30KB stance map or ledger.
+            .find(
+              { _id: { $in: nppIds } },
+              { projection: { "policies.domainPositions": 0, settledKeys: 0 } }
+            )
             .toArray()
         : Promise.resolve([] as NPP[]),
     options?.preload

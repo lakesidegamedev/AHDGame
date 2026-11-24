@@ -6,7 +6,8 @@
  * deserializes ~31KB of NPP `policies.domainPositions` per candidate (~1.5MB for
  * a 50-candidate country page) that no summary consumer reads.
  *
- * NPP: excludes only `policies.domainPositions`; every other field still loads.
+ * NPP: excludes `policies.domainPositions` and the banking `settledKeys` ledger
+ * (about 9KB per NPP); every other field still loads.
  *
  * Character: the inclusion list below is the closed set summary enrichment
  * reads. ADD new fields here (not a wider fetch) when summary enrichment starts
@@ -20,9 +21,10 @@
  */
 import type { Document } from "mongodb";
 
-/** Excludes the ~30KB stance map; every other NPP field still loads. */
+/** Excludes the ~30KB stance map and the settlement ledger; nothing else. */
 export const ELECTION_SUMMARY_NPP_PROJECTION: Document = {
   "policies.domainPositions": 0,
+  settledKeys: 0,
 };
 
 /** Closed inclusion set from the audit above. */
