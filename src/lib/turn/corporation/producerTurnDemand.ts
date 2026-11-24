@@ -52,6 +52,7 @@ import type { ProductionPlan } from "@/lib/market/producerMarket/production";
 import { fundedFreightDispatchMultiplier } from "@/lib/market/producerMarket/fundedFreightDispatchRules";
 import {
   OVERSUPPLY_CUT_COMMODITIES,
+  buyerPressureOf,
   cashCoverShare,
   oversupplyScale,
 } from "@/lib/market/producerMarket/oversupplyCutRules";
@@ -125,6 +126,8 @@ export async function buildProducerTurnDemand(
     backgroundEconomies?: readonly BackgroundEconomy[];
     /** Per-turn freight work left unfilled by funded orders in the previous country books. */
     freightGapsByCountry?: ReadonlyMap<string, number>;
+    /** Last turn's buyer pressure per lane (`commodity|book`: requested / delivered). */
+    lastBookPressure?: Readonly<Record<string, number>>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -194,7 +197,7 @@ export async function buildProducerTurnDemand(
   const legacyRevenueByCountry = new Map<string, number>();
   const ownerKindByCompany = new Map<string, ProfitOwnerKind>();
   const skipReasons: Record<string, number> = {};
-  const oversupplyLast = new Map<string, { offered: number; sold: number }>();
+  const oversupplyLast = new Map<string, { offered: number; taken: number }>();
   const oversupplyPlans: ProductionPlan[] = [];
   const skippedSectors: { sectorId: string; reason: string }[] = [];
   for (const corp of lookups.corporations) {
@@ -254,9 +257,11 @@ export async function buildProducerTurnDemand(
         if (settled && settled.worldEpoch === worldEpoch && settled.turn === openingTurn)
           for (const line of settled.products ?? [])
             if (OVERSUPPLY_CUT_COMMODITIES.has(line.commodity)) {
-              const t = oversupplyLast.get(line.commodity) ?? { offered: 0, sold: 0 };
+              const t = oversupplyLast.get(line.commodity) ?? { offered: 0, taken: 0 };
               t.offered += Math.max(0, line.offeredUnits ?? 0);
-              t.sold += Math.max(0, line.soldUnits ?? 0);
+              // Own-site deliveries are offered but never sold: they were taken, not left over.
+              t.taken +=
+                Math.max(0, line.soldUnits ?? 0) + Math.max(0, line.internalDeliveredUnits ?? 0);
               oversupplyLast.set(line.commodity, t);
             }
         if (
@@ -336,7 +341,12 @@ export async function buildProducerTurnDemand(
     const planned = plannedFreightByCountry.get(countryId) ?? 0;
     plan.outputMultiplier *= fundedFreightDispatchMultiplier(gap, planned);
   }
-  const oversupplyScales = applyOversupplyCut(oversupplyPlans, oversupplyLast, cashByCorp);
+  const oversupplyScales = applyOversupplyCut(
+    oversupplyPlans,
+    oversupplyLast,
+    cashByCorp,
+    input.lastBookPressure
+  );
   input.stage?.("demand.plants");
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
@@ -1075,8 +1085,9 @@ export function shadowOpeningSector(
  */
 export function applyOversupplyCut(
   plans: readonly ProductionPlan[],
-  last: ReadonlyMap<string, { offered: number; sold: number }>,
-  cashByAccount: ReadonlyMap<string, number>
+  last: ReadonlyMap<string, { offered: number; taken: number }>,
+  cashByAccount: ReadonlyMap<string, number>,
+  lastBookPressure?: Readonly<Record<string, number>>
 ): Map<string, number> {
   const scales = new Map<string, number>();
   if (plans.length === 0) return scales;
@@ -1107,10 +1118,12 @@ export function applyOversupplyCut(
             p.outputMultiplier *
             o.unitsPerOutput *
             coverOf(p.accountId);
+    const lastBuyerPressure = buyerPressureOf(lastBookPressure, commodity);
     const scale = oversupplyScale({
       lastOffered: seen.offered,
-      lastSold: seen.sold,
+      lastTaken: seen.taken,
       plannedSupply: planned,
+      ...(lastBuyerPressure != null ? { lastBuyerPressure } : {}),
     });
     scales.set(commodity, scale);
     if (!(scale < 1)) continue;

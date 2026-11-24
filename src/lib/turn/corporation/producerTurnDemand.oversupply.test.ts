@@ -34,13 +34,13 @@ function plan(
   } as unknown as ProductionPlan;
 }
 
-/** A Gangrel-like fintech plant (financial services and software) and a pure branch bank. */
+/** A fintech plant (financial services and software) and a pure branch bank. */
 function glutWorld() {
-  const fintech = plan("fintech", "gangrel", 1000, [
+  const fintech = plan("fintech", "fintechCo", 1000, [
     output("financial_services", 0.6),
     output("software", 0.4),
   ]);
-  const bank = plan("bank", "nwf", 600, [output("financial_services", 1)]);
+  const bank = plan("bank", "bankCo", 600, [output("financial_services", 1)]);
   return { fintech, bank };
 }
 
@@ -58,8 +58,8 @@ const supplyOf = (plans: ProductionPlan[]) =>
   );
 
 const rich = new Map([
-  ["gangrel", 1e9],
-  ["nwf", 1e9],
+  ["fintechCo", 1e9],
+  ["bankCo", 1e9],
 ]);
 
 describe("applyOversupplyCut", () => {
@@ -68,7 +68,7 @@ describe("applyOversupplyCut", () => {
     // Planned 600 + 600 = 1200; last turn 1200 offered, 700 sold.
     const scales = applyOversupplyCut(
       [fintech, bank],
-      new Map([["financial_services", { offered: 1200, sold: 700 }]]),
+      new Map([["financial_services", { offered: 1200, taken: 700 }]]),
       rich
     );
     expect(scales.get("financial_services")).toBeCloseTo(735 / 1200, 6);
@@ -79,7 +79,7 @@ describe("applyOversupplyCut", () => {
     const { fintech, bank } = glutWorld();
     applyOversupplyCut(
       [fintech, bank],
-      new Map([["financial_services", { offered: 1200, sold: 700 }]]),
+      new Map([["financial_services", { offered: 1200, taken: 700 }]]),
       rich
     );
     expect(fintech.outputMultiplier).toBe(1);
@@ -93,7 +93,7 @@ describe("applyOversupplyCut", () => {
     const { fintech, bank } = glutWorld();
     const scales = applyOversupplyCut(
       [fintech, bank],
-      new Map([["financial_services", { offered: 1200, sold: 1195 }]]),
+      new Map([["financial_services", { offered: 1200, taken: 1195 }]]),
       rich
     );
     expect(scales.get("financial_services")).toBe(1);
@@ -105,15 +105,46 @@ describe("applyOversupplyCut", () => {
     // Last turn was glutted by the bank; this turn it has no cash and will make nothing.
     const scales = applyOversupplyCut(
       [fintech, bank],
-      new Map([["financial_services", { offered: 1200, sold: 700 }]]),
+      new Map([["financial_services", { offered: 1200, taken: 700 }]]),
       new Map([
-        ["gangrel", 1e9],
-        ["nwf", 0],
+        ["fintechCo", 1e9],
+        ["bankCo", 0],
       ])
     );
-    // Only Gangrel's 600 counts, under the 735 target: no cut, so buyers are not left short.
+    // Only the fintech plant's 600 counts, under the 735 target: no cut, so buyers are not left short.
     expect(scales.get("financial_services")).toBe(1);
     expect(fintech.outputs[0].unitsPerOutput).toBe(0.6);
+  });
+
+  it("does not halve a returning producer when nothing was left unsold last turn", () => {
+    const { fintech, bank } = glutWorld();
+    // The fintech plant skipped last turn: the rest offered 108.7, sold 106.4 and
+    // delivered 2.3 to their own sites. Its full return is not a glut.
+    const scales = applyOversupplyCut(
+      [fintech, bank],
+      new Map([["financial_services", { offered: 108.7, taken: 106.4 + 2.3 }]]),
+      rich,
+      { "financial_services|world": 2 }
+    );
+    expect(scales.get("financial_services")).toBe(1);
+    expect(fintech.outputs[0].unitsPerOutput).toBe(0.6);
+    expect(supplyOf([fintech, bank])).toBe(1200);
+  });
+
+  it("does not cut while buyers were left short, even with unsold output", () => {
+    const { fintech, bank } = glutWorld();
+    const last = new Map([["financial_services", { offered: 1200, taken: 700 }]]);
+    const scales = applyOversupplyCut([fintech, bank], last, rich, {
+      "financial_services|world": 1.5,
+    });
+    expect(scales.get("financial_services")).toBe(1);
+    expect(supplyOf([fintech, bank])).toBe(1200);
+    // Fully served buyers: the same numbers still cut.
+    const served = glutWorld();
+    applyOversupplyCut([served.fintech, served.bank], last, rich, {
+      "financial_services|world": 1,
+    });
+    expect(supplyOf([served.fintech, served.bank])).toBeCloseTo(735, 6);
   });
 
   it("leaves other goods and markets with no history alone", () => {
