@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
-import { leadershipVoterFilter, leadershipEligibilityFilters } from "./leadershipVoterFilter";
+import {
+  committeeBallotClause,
+  committeeElectorate,
+  leadershipVoterFilter,
+  leadershipEligibilityFilters,
+} from "./leadershipVoterFilter";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 
 describe("leadership electorate at resolution", () => {
@@ -67,5 +72,52 @@ describe("leadership electorate at resolution", () => {
       expect.objectContaining({ retiredAt: { $exists: false } }),
       { projection: { _id: 1, party: 1, countryId: 1 } }
     );
+  });
+});
+
+describe("committeeElectorate", () => {
+  it("is the committee plus seated officers under the committee method", () => {
+    const member = new ObjectId();
+    const chair = new ObjectId();
+    const ids = committeeElectorate({
+      leadershipElectionMethod: "committee",
+      committeeIds: [member, chair],
+      chairId: chair,
+      viceChairId: null,
+      treasurerId: null,
+    });
+    expect(ids?.map(String).sort()).toEqual([member, chair].map(String).sort());
+  });
+
+  it("is null for the party and influence methods", () => {
+    expect(committeeElectorate({ leadershipElectionMethod: "party" })).toBeNull();
+    expect(committeeElectorate({ leadershipElectionMethod: "influence" })).toBeNull();
+    expect(committeeElectorate(undefined)).toBeNull();
+  });
+});
+
+describe("committeeBallotClause", () => {
+  it("restricts committee-method elections and leaves the others open", () => {
+    const committeeElection = { _id: new ObjectId(), partyId: "1", countryId: "US" };
+    const openElection = { _id: new ObjectId(), partyId: "2", countryId: "US" };
+    const member = new ObjectId();
+    const clause = committeeBallotClause([committeeElection, openElection], (partyId) =>
+      partyId === "1"
+        ? { leadershipElectionMethod: "committee", committeeIds: [member] }
+        : { leadershipElectionMethod: "party" }
+    );
+    expect(clause).toEqual({
+      $or: [
+        { electionId: { $in: [openElection._id] } },
+        { electionId: committeeElection._id, voterId: { $in: [member] } },
+      ],
+    });
+  });
+
+  it("is null when no election uses the committee method", () => {
+    const election = { _id: new ObjectId(), partyId: "2", countryId: "US" };
+    expect(
+      committeeBallotClause([election], () => ({ leadershipElectionMethod: "party" }))
+    ).toBeNull();
   });
 });

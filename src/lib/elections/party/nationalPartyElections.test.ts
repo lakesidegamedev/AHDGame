@@ -1,4 +1,5 @@
-vi.mock("./leadershipVoterFilter", () => ({
+vi.mock("./leadershipVoterFilter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./leadershipVoterFilter")>()),
   leadershipEligibilityFilters: async () => ({ voterFilter: {}, candidateFilter: {} }),
 }));
 vi.mock("@/lib/db/sessionDb", () => ({
@@ -361,6 +362,91 @@ describe("processCompletedNationalElections", () => {
     const voterFilter = matchFilter.voterId as { $nin: ObjectId[] };
     expect(voterFilter).toBeDefined();
     expect(voterFilter.$nin.map((id) => id.toString())).toEqual([bannedCharId.toString()]);
+  });
+
+  it("counts only committee and officer ballots when the party uses the committee method", async () => {
+    const election = makeElection(US_ELECTION_ID, "US");
+    const committeeMember = new ObjectId();
+    const viceChair = new ObjectId();
+    const candidateId = new ObjectId();
+    const committeeParty = {
+      ...usParty,
+      leadershipElectionMethod: "committee" as const,
+      committeeIds: [committeeMember],
+      viceChairId: viceChair,
+    };
+
+    setMockCollection("nationalPartyElections", {
+      find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([election]) }),
+      bulkWrite: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+    setMockCollection("nationalPartyCandidates", {
+      find: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([makeCandidate(US_ELECTION_ID, candidateId, "Cand")]),
+      }),
+    });
+    const aggregateMock = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ electionId: US_ELECTION_ID, candidateId, count: 1 }]),
+    });
+    setMockCollection("nationalPartyVotes", { aggregate: aggregateMock });
+    setMockCollection("politicalParties", {
+      find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([committeeParty]) }),
+      bulkWrite: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+
+    const { processCompletedNationalElections } = await import("./nationalPartyElections");
+    await processCompletedNationalElections(10);
+
+    const match = (
+      aggregateMock.mock.calls[0][0].find(
+        (stage: Record<string, unknown>) => "$match" in stage
+      ) as {
+        $match: { $and?: Array<Record<string, unknown>> };
+      }
+    ).$match;
+    expect(match.$and).toBeDefined();
+    const clause = match.$and![1] as {
+      $or: Array<{ electionId: ObjectId; voterId: { $in: ObjectId[] } }>;
+    };
+    expect(clause.$or).toHaveLength(1);
+    expect(clause.$or[0].electionId.equals(US_ELECTION_ID)).toBe(true);
+    expect(clause.$or[0].voterId.$in.map(String).sort()).toEqual(
+      [committeeMember, viceChair].map(String).sort()
+    );
+  });
+
+  it("leaves the tally unrestricted when the party votes as a whole", async () => {
+    const election = makeElection(US_ELECTION_ID, "US");
+    const candidateId = new ObjectId();
+    setMockCollection("nationalPartyElections", {
+      find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([election]) }),
+      bulkWrite: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+    setMockCollection("nationalPartyCandidates", {
+      find: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([makeCandidate(US_ELECTION_ID, candidateId, "Cand")]),
+      }),
+    });
+    const aggregateMock = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ electionId: US_ELECTION_ID, candidateId, count: 1 }]),
+    });
+    setMockCollection("nationalPartyVotes", { aggregate: aggregateMock });
+    setMockCollection("politicalParties", {
+      find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([usParty]) }),
+      bulkWrite: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+
+    const { processCompletedNationalElections } = await import("./nationalPartyElections");
+    await processCompletedNationalElections(10);
+
+    const match = (
+      aggregateMock.mock.calls[0][0].find(
+        (stage: Record<string, unknown>) => "$match" in stage
+      ) as {
+        $match: Record<string, unknown>;
+      }
+    ).$match;
+    expect(match.$and).toBeUndefined();
   });
 
   it("auto-vacates a winner's existing office in the same party when they win a different one", async () => {
@@ -847,6 +933,55 @@ describe("applyQuorumAcceleration", () => {
     // Remaining = 196 - 120 = 76 → ceil(76/2) = 38 → new endTurn = 120 + 38 = 158
     expect(ops[0].updateOne.update.$set.endTurn).toBe(158);
     expect(ops[0].updateOne.update.$set.quorumAcceleratedAtTurn).toBe(120);
+  });
+
+  it("counts only committee and officer voters toward quorum under the committee method", async () => {
+    const electionId = new ObjectId();
+    const member = new ObjectId();
+    const election = {
+      _id: electionId,
+      partyId: "1",
+      countryId: "US" as const,
+      position: "chair" as const,
+      status: "voting" as const,
+      startTurn: 100,
+      endTurn: 196,
+      durationTurns: 96,
+      winnerId: null,
+    };
+    mockNationalElectionFinds([election]);
+    setMockCollection("politicalParties", {
+      find: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          {
+            _id: new ObjectId(),
+            sequentialId: 1,
+            countryId: "US" as const,
+            chairId: null,
+            viceChairId: null,
+            treasurerId: null,
+            committeeIds: [member],
+            leadershipElectionMethod: "committee" as const,
+          },
+        ]),
+      }),
+    });
+    setMockCollection("characters", {
+      aggregate: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([{ _id: { party: "1", countryId: "US" }, count: 10 }]),
+      }),
+    });
+    const votesAggregate = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    setMockCollection("nationalPartyVotes", { aggregate: votesAggregate });
+
+    const { applyQuorumAcceleration } = await import("./nationalPartyElections");
+    await applyQuorumAcceleration(120);
+
+    const match = votesAggregate.mock.calls[0][0][0].$match as {
+      $and: Array<Record<string, unknown>>;
+    };
+    const clause = match.$and[1] as { $or: Array<{ voterId: { $in: ObjectId[] } }> };
+    expect(clause.$or[0].voterId.$in.map(String)).toEqual([member.toString()]);
   });
 
   it("records originalEndTurn so the next election can defer to the natural cycle end", async () => {

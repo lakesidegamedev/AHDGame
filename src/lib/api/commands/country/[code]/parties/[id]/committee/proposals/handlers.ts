@@ -17,10 +17,7 @@ import {
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
 import { requiredYesVotes } from "@/lib/parties/proposalConstants";
-import {
-  removalVoteEarliestPassMs,
-  removalVoteMayPass,
-} from "@/lib/parties/rules/removalVoteWindow";
+import { proposalEarliestPassMs, proposalMayPass } from "@/lib/parties/rules/proposalOpenWindow";
 import { canRenameParty, DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
 import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
@@ -40,30 +37,45 @@ import {
 } from "@/lib/parties/removalCooldownLookup";
 import { removalCooldownMessage } from "@/lib/parties/rules/removalVoteCooldown";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
+import { countEligibleVotes } from "@/lib/parties/rules/eligibleVoteCount";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
 }
 
+/**
+ * Open proposals count only votes from the current voter set, as resolution
+ * does. A resolved proposal is summarised from its stored votes against a
+ * committee size, because today's committee is not the one that decided it.
+ */
 function buildVoteSummary(
   votes: CommitteeProposal["proposingVotes"],
-  committeeSize: number
+  voters: ReadonlySet<string> | number
 ): ProposalVoteSummary {
+  if (typeof voters !== "number") {
+    const count = countEligibleVotes(votes, voters);
+    return {
+      yes: count.yes,
+      no: count.no,
+      notVoted: count.notVoted,
+      yesNeeded: requiredYesVotes(count.eligible),
+    };
+  }
   const yes = votes.filter((v) => v.vote === "yes").length;
   const no = votes.filter((v) => v.vote === "no").length;
   return {
     yes,
     no,
-    notVoted: Math.max(0, committeeSize - yes - no),
-    yesNeeded: requiredYesVotes(committeeSize),
+    notVoted: Math.max(0, voters - yes - no),
+    yesNeeded: requiredYesVotes(voters),
   };
 }
 
 async function toProposalView(
   db: Db,
   proposal: CommitteeProposal,
-  proposingCommitteeSize: number,
-  targetCommitteeSize: number | undefined,
+  proposingVoters: ReadonlySet<string> | number,
+  targetVoters: ReadonlySet<string> | number | undefined,
   myCharacterId: ObjectId,
   now: Date
 ): Promise<ProposalView> {
@@ -131,13 +143,13 @@ async function toProposalView(
     electionMethod: proposal.electionMethod,
     electionDuration: proposal.electionDuration,
     removeOfficeHolder: removeOfficeHolderField,
-    ...removalWindowFields(proposal, now),
+    ...openWindowFields(proposal, now),
     campaignerAppointment: campaignerAppointmentField,
     transactionApprovalMode: proposal.transactionApprovalMode,
-    proposingVoteSummary: buildVoteSummary(proposal.proposingVotes, proposingCommitteeSize),
+    proposingVoteSummary: buildVoteSummary(proposal.proposingVotes, proposingVoters),
     targetVoteSummary:
-      proposal.type === "merge" && targetCommitteeSize !== undefined
-        ? buildVoteSummary(proposal.targetVotes ?? [], targetCommitteeSize)
+      proposal.type === "merge" && targetVoters !== undefined
+        ? buildVoteSummary(proposal.targetVotes ?? [], targetVoters)
         : undefined,
     myProposingVote,
     myTargetVote,
@@ -181,39 +193,42 @@ async function removalLocksFor(db: Db, party: PoliticalParty): Promise<RemovalLo
   return locks;
 }
 
-function removalWindowFields(
+function openWindowFields(
   proposal: CommitteeProposal,
   now: Date
 ): Pick<ProposalView, "earliestPassAt" | "canPassNow"> {
-  if (proposal.type !== "removeOfficeHolder" || !proposal.createdAt) return {};
+  if (!proposal.createdAt) return {};
   const createdAtMs = new Date(proposal.createdAt).getTime();
   if (!Number.isFinite(createdAtMs)) return {};
   return {
-    earliestPassAt: new Date(removalVoteEarliestPassMs(createdAtMs)).toISOString(),
-    canPassNow: removalVoteMayPass(createdAtMs, now.getTime()),
+    earliestPassAt: new Date(proposalEarliestPassMs(createdAtMs)).toISOString(),
+    canPassNow: proposalMayPass(createdAtMs, now.getTime()),
   };
 }
 
 /** Resolution leaves the target of a removal or nomination out of the voter set. */
-function proposingVoterCount(proposal: CommitteeProposal, eligibleVoterSet: Set<string>): number {
-  const targetId =
-    proposal.removeOfficeHolder?.targetCharacterId ??
-    proposal.campaignerAppointment?.targetCharacterId;
-  const excludesTarget =
-    (proposal.type === "removeOfficeHolder" || proposal.type === "campaignerAppointment") &&
-    targetId != null &&
-    eligibleVoterSet.has(targetId.toString());
-  return eligibleVoterSet.size - (excludesTarget ? 1 : 0);
+function proposingVoterSet(
+  proposal: CommitteeProposal,
+  eligibleVoterSet: ReadonlySet<string>
+): Set<string> {
+  const voters = new Set(eligibleVoterSet);
+  if (proposal.type === "removeOfficeHolder" && proposal.removeOfficeHolder) {
+    voters.delete(proposal.removeOfficeHolder.targetCharacterId.toString());
+  }
+  if (proposal.type === "campaignerAppointment" && proposal.campaignerAppointment) {
+    voters.delete(proposal.campaignerAppointment.targetCharacterId.toString());
+  }
+  return voters;
 }
 
-async function getTargetEligibleSize(db: Db, proposal: CommitteeProposal): Promise<number> {
-  if (proposal.type !== "merge" || !proposal.merge) return 0;
+async function getTargetEligibleSet(db: Db, proposal: CommitteeProposal): Promise<Set<string>> {
+  if (proposal.type !== "merge" || !proposal.merge) return new Set();
   const target = await politicalPartiesCollection(db).findOne(
     { _id: proposal.merge.targetPartyId },
     { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
   );
-  if (!target) return 0;
-  return getEligibleVoterSet(target).size;
+  if (!target) return new Set();
+  return getEligibleVoterSet(target);
 }
 
 // GET /api/country/[code]/parties/[id]/committee/proposals
@@ -238,7 +253,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!party) return errorResponse(404, "Party not found");
 
     const eligibleVoterSet = getEligibleVoterSet(party);
-    const eligibleSize = eligibleVoterSet.size;
     const now = new Date();
     const myCharStr = myCharacterId.toString();
     const isEligibleVoter = eligibleVoterSet.has(myCharStr);
@@ -280,22 +294,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
             }>({ committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 })
             .toArray()
         : [];
-    const proposingSizeMap = new Map(
+    const proposingSetMap = new Map(
       proposingPartiesForIncoming.map((p) => [
         p._id.toString(),
-        getEligibleVoterSet(p as PoliticalParty).size,
+        getEligibleVoterSet(p as PoliticalParty),
       ])
     );
 
     const [openProposals, incomingMergeProposals, pastProposals] = await Promise.all([
       Promise.all(
         rawOpen.map(async (p) => {
-          const targetSize = p.type === "merge" ? await getTargetEligibleSize(db, p) : undefined;
+          const targetVoters = p.type === "merge" ? await getTargetEligibleSet(db, p) : undefined;
           return toProposalView(
             db,
             p,
-            proposingVoterCount(p, eligibleVoterSet),
-            targetSize,
+            proposingVoterSet(p, eligibleVoterSet),
+            targetVoters,
             myCharacterId,
             now
           );
@@ -306,8 +320,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
           toProposalView(
             db,
             p,
-            proposingSizeMap.get(p.partyId.toString()) ?? 0,
-            eligibleSize,
+            proposingSetMap.get(p.partyId.toString()) ?? new Set<string>(),
+            eligibleVoterSet,
             myCharacterId,
             now
           )
@@ -318,7 +332,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           toProposalView(
             db,
             p,
-            proposingVoterCount(p, eligibleVoterSet),
+            proposingVoterSet(p, eligibleVoterSet).size,
             undefined,
             myCharacterId,
             now
