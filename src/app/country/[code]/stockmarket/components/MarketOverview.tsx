@@ -855,37 +855,6 @@ export function MarketOverview({
             </>
           )}
         </p>
-        {(meta?.invalidVolumeTrades ?? 0) > 0 && (
-          <p className="mb-2 text-xs text-warning">
-            Turnover incomplete: {meta?.invalidVolumeTrades} invalid trade records excluded.
-          </p>
-        )}
-        {(meta?.missingTurns ?? 0) + (meta?.invalidPriceTurns ?? 0) > 0 && (
-          <p className="mb-2 text-xs text-warning">
-            History coverage: {meta?.missingTurns ?? 0} missing turns;{" "}
-            {meta?.invalidPriceTurns ?? 0} invalid valuations excluded.
-          </p>
-        )}
-        {candles.some((c) => c.notes?.length) && (
-          <details className="mb-2 text-xs text-muted">
-            <summary className="cursor-pointer">
-              Valuation and coverage events ({candles.filter((c) => c.notes?.length).length})
-            </summary>
-            <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
-              {candles
-                .filter((c) => c.notes?.length)
-                .map((c) => (
-                  <li key={c.turn}>
-                    {marketTurnLabel(c.turn, meta?.calendar ?? null, true)}
-                    {c.endTurn !== c.turn && c.endTurn
-                      ? ` through ${marketTurnLabel(c.endTurn, meta?.calendar ?? null, true)}`
-                      : ""}
-                    : {c.notes?.join("; ")}
-                  </li>
-                ))}
-            </ul>
-          </details>
-        )}
         <div className="relative h-60 sm:h-80">
           <div ref={containerRef} className={`h-full w-full ${noChart ? "invisible" : ""}`} />
           <div
@@ -906,6 +875,38 @@ export function MarketOverview({
             </p>
           )}
         </div>
+        {/* Below the chart: these arrive with the data and would push it down. */}
+        {(meta?.invalidVolumeTrades ?? 0) > 0 && (
+          <p className="mt-2 text-xs text-warning">
+            Turnover incomplete: {meta?.invalidVolumeTrades} invalid trade records excluded.
+          </p>
+        )}
+        {(meta?.missingTurns ?? 0) + (meta?.invalidPriceTurns ?? 0) > 0 && (
+          <p className="mt-2 text-xs text-warning">
+            History coverage: {meta?.missingTurns ?? 0} missing turns;{" "}
+            {meta?.invalidPriceTurns ?? 0} invalid valuations excluded.
+          </p>
+        )}
+        {candles.some((c) => c.notes?.length) && (
+          <details className="mt-2 text-xs text-muted">
+            <summary className="cursor-pointer">
+              Valuation and coverage events ({candles.filter((c) => c.notes?.length).length})
+            </summary>
+            <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
+              {candles
+                .filter((c) => c.notes?.length)
+                .map((c) => (
+                  <li key={c.turn}>
+                    {marketTurnLabel(c.turn, meta?.calendar ?? null, true)}
+                    {c.endTurn !== c.turn && c.endTurn
+                      ? ` through ${marketTurnLabel(c.endTurn, meta?.calendar ?? null, true)}`
+                      : ""}
+                    : {c.notes?.join("; ")}
+                  </li>
+                ))}
+            </ul>
+          </details>
+        )}
       </div>
       <div className="px-4 py-2 text-[11px] text-muted border-t border-card-border mt-3">
         Game-calendar ranges: 4 turns per month, 48 per year. Raw listed capitalization in anchor
