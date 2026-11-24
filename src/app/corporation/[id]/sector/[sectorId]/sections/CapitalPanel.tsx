@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { CapitalData } from "../types";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 function fmt(n: number | null | undefined, digits = 2): string {
   if (n == null || !Number.isFinite(n)) return "n/a";
@@ -119,7 +120,8 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
         </div>
       </div>
 
-      <div className="text-body-sm font-medium text-muted mb-2">Profit and loss on one unit</div>
+      <div className="text-body-sm font-medium text-muted mb-1">Profit and loss on one unit</div>
+      <AnchorUnitNote className="mb-2" />
       <div className="space-y-1 text-sm">
         <div className="flex justify-between tabular-nums">
           <span className="text-muted">Market price / unit</span>

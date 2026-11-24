@@ -105,6 +105,13 @@ describe("Canada regions", () => {
   it("seeds one metrics document per region", () => {
     expect(caStateMetrics.map((m) => m._id).sort()).toEqual(caRegions2027.map((r) => r._id).sort());
   });
+
+  it("seeds surveyed provincial trust and keeps unsurveyed territories national", () => {
+    const trust = (id: string) =>
+      caStateMetrics.find((m) => m._id === id)!.governance.publicTrust.value;
+    expect(trust("CA_QC")).toBeGreaterThan(trust("CA_BC") + 10);
+    expect(trust("CA_YT")).toBe(55);
+  });
 });
 
 describe("Canada parties", () => {

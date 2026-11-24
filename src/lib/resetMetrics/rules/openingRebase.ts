@@ -23,7 +23,6 @@ const NEVER_REBASE = new Set([
   "20",
   "24",
   "25",
-  "41",
   "51",
   "54",
   "55",
@@ -33,7 +32,7 @@ const NEVER_REBASE = new Set([
 ]);
 
 /** Rates and per-person amounts: a corrected opening rescales the whole series. */
-const PROPORTIONAL = new Set(["19", "31", "32", "33", "36", "42"]);
+const PROPORTIONAL = new Set(["19", "31", "32", "33", "36", "41", "42"]);
 
 export interface MetricRebase {
   metricId: string;

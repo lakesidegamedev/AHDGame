@@ -18,6 +18,7 @@ import {
 } from "@/lib/corporations/groups/rules/financialComparison";
 import type { GroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
 import type { GroupManagementView } from "./useGroupManagement";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 const button =
   "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-info";
 const tones = ["text-gold", "text-info", "text-secondary", "text-success"];
@@ -123,6 +124,7 @@ export function GroupFinancialComparison({
           </select>
         </label>
       </div>
+      {currency === "anchor" && <AnchorUnitNote />}
       {data.members.some((m) => m.history === null) && (
         <p className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm text-muted">
           {t("comparisonPrivate")}

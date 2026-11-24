@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 import { Skeleton } from "@/components/ui";
 
 interface CountryHolding {
@@ -96,6 +97,7 @@ export function SovereignBondHoldingsPanel({ characterId }: Props) {
       <p className="mt-1 text-xs text-zinc-500">
         Your contribution to each country&apos;s bond market demand signal.
       </p>
+      <AnchorUnitNote className="mt-1" />
       <table className="mt-3 w-full text-xs">
         <thead className="text-left text-zinc-500">
           <tr>

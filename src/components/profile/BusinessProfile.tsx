@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import type { BusinessProfileView } from "@/lib/character/businessProfileView";
 import { SectionHeader } from "@/app/profile/components/ProfileMeters";
 import { PROFILE_LINK_CLASS } from "@/app/profile/components/profileStyles";
+import { AnchorAmount, AnchorUnitNote } from "@/components/currency/AnchorUnit";
 export function BusinessProfile({ data }: { data: BusinessProfileView }) {
   const t = useTranslations("profile.views");
   const money = (n: number) => `₳${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -36,11 +37,12 @@ export function BusinessProfile({ data }: { data: BusinessProfileView }) {
               <div key={String(label)}>
                 <dt className="text-body-sm text-muted">{label}</dt>
                 <dd className="text-heading-sm font-semibold tabular-nums text-foreground">
-                  {money(Number(value))}
+                  <AnchorAmount>{money(Number(value))}</AnchorAmount>
                 </dd>
               </div>
             ))}
           </dl>
+          <AnchorUnitNote />
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-body text-muted">
             <span>{t("stocks", { count: data.finances.equityHoldingCount })}</span>
             <span>{t("bonds", { count: data.finances.bondHoldingCount })}</span>

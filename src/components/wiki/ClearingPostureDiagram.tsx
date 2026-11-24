@@ -1,4 +1,5 @@
 "use client";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 /**
  * Visual diagram of cheapest-first clearing.
@@ -81,6 +82,7 @@ export function ClearingPostureDiagram() {
         <span className="font-semibold text-foreground">&ldquo;% sold last turn&rdquo;</span> badge
         on the sector page shows how much of your output actually cleared.
       </p>
+      <AnchorUnitNote className="mt-2" />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import type { SingleplayerGuide as GuideState } from "@/lib/singleplayerGuide";
 import { reportSingleplayerGuideOffered } from "@/lib/singleplayerGuideClient";
+import { ANCHOR_UNIT_NOTE } from "@/lib/currency/anchorUnitNote";
 
 const POLL_MS = 8_000;
 
@@ -157,7 +158,7 @@ export function SingleplayerGuide() {
 
           {next ? (
             <div className="mt-3 rounded border border-card-border bg-card-muted p-2">
-              <p className="text-xs">
+              <p className="text-xs" title={ANCHOR_UNIT_NOTE}>
                 {t(`steps.${next.id}.body`, {
                   funds: `₳${Math.round(guide.funds ?? 0).toLocaleString()}`,
                   actions: guide.actions ?? 0,

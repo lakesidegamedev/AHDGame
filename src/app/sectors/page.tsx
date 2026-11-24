@@ -10,6 +10,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { regionUrl } from "@/lib/urls";
+import { AnchorAmount, AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 type SectorView = "owned" | "forSale";
 type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -163,6 +164,7 @@ export default function SectorsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Sectors</h1>
         <p className="mt-1 text-sm text-muted">Browse all economic sectors across every nation.</p>
+        <AnchorUnitNote className="mt-1" />
       </div>
 
       {/* View tabs + counts */}
@@ -333,7 +335,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
           </div>
           <div className="text-right shrink-0 ml-3">
             <div className="text-lg font-bold tabular-nums leading-none text-foreground">
-              ₳{formatNumber(sector.revenueAnchor)}
+              <AnchorAmount>₳{formatNumber(sector.revenueAnchor)}</AnchorAmount>
             </div>
             <div className="text-body-sm font-medium text-muted mt-0.5">/day</div>
           </div>
@@ -385,7 +387,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
           <div className="flex flex-col px-4 py-2.5">
             <span className="text-body-sm font-medium text-muted mb-1">Price</span>
             <span className="text-xs font-semibold text-success tabular-nums leading-tight">
-              ₳{formatNumber(sector.forSalePrice)}
+              <AnchorAmount>₳{formatNumber(sector.forSalePrice)}</AnchorAmount>
             </span>
           </div>
         )}

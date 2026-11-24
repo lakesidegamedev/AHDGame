@@ -10,6 +10,14 @@ import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states2027 } from "./usStates2027";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 import { airQualityIndexFromPm25 } from "@/lib/seeds/shared/airQualityIndex";
+import {
+  CORRUPTION_CONVICTIONS_2014_2023,
+  HOMELESSNESS_2024,
+  HOMELESSNESS_NATIONAL_2024,
+  PROPERTY_CRIME_2024,
+  PROPERTY_CRIME_NATIONAL_2024,
+  corruptionIndexFromConvictions,
+} from "./usStateSocialSources2027";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -609,8 +617,7 @@ const MEDIAN_AGE_2027: Record<string, number> = {
  * FBI UCR Summary Reporting System violent crime rate per 100k residents, 2024.
  * Source: https://cde.ucr.cjis.gov/LATEST/webapp/#/pages/downloads (SRS dataset);
  * transcribed by state from https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_violent_crime_rate
- * National rate: 359.1. The FBI publishes no equivalent state property crime table that
- * could be retrieved, so publicSafety.crimeRate (property) is not sourced from a table.
+ * National rate: 359.1. crimeRate adds the property rate from usStateSocialSources2027.
  */
 const VIOLENT_CRIME_2027: Record<string, number> = {
   AK: 724.1,
@@ -1312,10 +1319,10 @@ const BASELINE_2027 = {
   socialMediaSentiment: -5,
 
   // Public Safety (national averages)
-  // FBI UCR 2023: ~2,300 property crimes per 100k (lower than 2019)
-  crimeRate: 2300,
-  // FBI UCR 2023: ~380 violent crimes per 100k
-  violentCrimeRate: 380,
+  // FBI 2024: violent 359.1 plus property 1,772 per 100k (all offenses counted here)
+  crimeRate: Math.round(359.1 + PROPERTY_CRIME_NATIONAL_2024),
+  // FBI 2024: 359.1 violent crimes per 100k
+  violentCrimeRate: 359.1,
   // BJS 2023: ~2.2 officers per 1k residents
   policePerCapita: 2.2,
   // BJS 2023: ~450 per 100k (slight decline from peak)
@@ -1378,8 +1385,8 @@ const BASELINE_2027 = {
   socialMobility: 54,
   // Census ACS 2023: Gini ≈ 0.482; mapped to game's 0-100 scale (higher = more unequal)
   incomeInequality: 46,
-  // HUD 2023: ~0.17% population experiencing homelessness on PIT count
-  homelessnessRate: 8,
+  // HUD 2024 point-in-time count: 22.6 per 10,000 residents
+  homelessnessRate: HOMELESSNESS_NATIONAL_2024,
   // USDA 2023: 13.5% food insecurity
   foodInsecurity: 13.5,
   // NCSL 2023: civic participation index ≈ 55
@@ -1413,19 +1420,6 @@ const UNIFORM_2027 = {
 };
 
 // ---------------------------------------------------------------------------
-// Income tier (1-5) from median income. Used only by the property crime rate,
-// which has no retrievable per-state table.
-// ---------------------------------------------------------------------------
-function econTier(stateId: string): 1 | 2 | 3 | 4 | 5 {
-  const income = MEDIAN_INCOME_2027[stateId] ?? 72000;
-  if (income >= 88000) return 5;
-  if (income >= 76000) return 4;
-  if (income >= 65000) return 3;
-  if (income >= 55000) return 2;
-  return 1;
-}
-
-// ---------------------------------------------------------------------------
 // Builder
 // ---------------------------------------------------------------------------
 
@@ -1446,7 +1440,6 @@ const SECESSION_MOOD_2027: Record<string, number> = {
 };
 
 function build2023Metrics(stateId: string): StateMetrics {
-  const et = econTier(stateId) - 1; // 0..4
   const urban = URBANIZATION_2027[stateId] ?? 70;
   const popGrowth = POP_GROWTH_2027[stateId] ?? 0.5;
   const medAge = MEDIAN_AGE_2027[stateId] ?? 38.5;
@@ -1457,9 +1450,6 @@ function build2023Metrics(stateId: string): StateMetrics {
   const lifeExp = LIFE_EXPECTANCY_2027[stateId] ?? 78.4;
   const broadband = BROADBAND_2027[stateId] ?? 82.6;
   const col = COST_OF_LIVING_2027[stateId] ?? 100;
-
-  // Property crime only: no per-state table was retrievable, so it still leans on income tier.
-  const leanMod = (et - 2) * 2; // -4 to +4
 
   return withUniformMetricSet({
     _id: stateId,
@@ -1514,7 +1504,12 @@ function build2023Metrics(stateId: string): StateMetrics {
     },
 
     publicSafety: {
-      crimeRate: mv(BASELINE_2027.crimeRate + (urban - 70) * 8 - leanMod * 40),
+      crimeRate: mv(
+        round1(
+          (VIOLENT_CRIME_2027[stateId] ?? BASELINE_2027.violentCrimeRate) +
+            (PROPERTY_CRIME_2024[stateId] ?? PROPERTY_CRIME_NATIONAL_2024)
+        )
+      ),
       violentCrimeRate: mv(VIOLENT_CRIME_2027[stateId] ?? BASELINE_2027.violentCrimeRate),
       policePerCapita: mv(BASELINE_2027.policePerCapita),
       // BJS counts state prisons only; scale to the prison-plus-jail national total so the
@@ -1546,9 +1541,7 @@ function build2023Metrics(stateId: string): StateMetrics {
     social: {
       socialMobility: mv(BASELINE_2027.socialMobility),
       incomeInequality: mv(BASELINE_2027.incomeInequality),
-      homelessnessRate: mv(
-        Math.max(1, BASELINE_2027.homelessnessRate + (col - 100) * 0.06 + urban * 0.04)
-      ),
+      homelessnessRate: mv(HOMELESSNESS_2024[stateId] ?? BASELINE_2027.homelessnessRate),
       foodInsecurity: mv(FOOD_INSECURITY_2027[stateId] ?? BASELINE_2027.foodInsecurity),
       civicParticipation: mv(BASELINE_2027.civicParticipation),
       socialCohesion: mv(BASELINE_2027.socialCohesion),
@@ -1559,8 +1552,14 @@ function build2023Metrics(stateId: string): StateMetrics {
       governmentTransparency: mv(BASELINE_2027.governmentTransparency),
       budgetBalance: mv(BASELINE_2027.budgetBalance),
       debtToGdp: mv(BASELINE_2027.debtToGdp),
-      // No state-level corruption series with a defensible source was retrievable.
-      corruptionIndex: mv(BASELINE_2027.corruptionIndex),
+      corruptionIndex: mv(
+        CORRUPTION_CONVICTIONS_2014_2023[stateId] === undefined
+          ? BASELINE_2027.corruptionIndex
+          : corruptionIndexFromConvictions(
+              CORRUPTION_CONVICTIONS_2014_2023[stateId],
+              BASELINE_2027.corruptionIndex
+            )
+      ),
       voterTurnout: mv(VOTER_TURNOUT_2027[stateId] ?? BASELINE_2027.voterTurnout),
       publicTrust: mv(BASELINE_2027.publicTrust),
       coDeterminationQuality: mv(BASELINE_2027.coDeterminationQuality),

@@ -284,10 +284,26 @@ const NATO_MODERN_1999: OrgMemberId[] = [
   "IS",
   "PL",
   "HU",
+  "CZ2",
 ];
 
-/** Adds the 2004 accessions (BG, RO) and the 2009 accession (AL). */
-const NATO_MODERN_2009: OrgMemberId[] = [...NATO_MODERN_1999, "BG", "RO", "AL"];
+/** Adds the seven 2004 accessions. */
+const NATO_MODERN_2004: OrgMemberId[] = [
+  ...NATO_MODERN_1999,
+  "BG",
+  "RO",
+  "EE",
+  "LV",
+  "LT",
+  "SK",
+  "SI",
+];
+
+/** Adds the 2009 accessions (AL, HR). */
+const NATO_MODERN_2009: OrgMemberId[] = [...NATO_MODERN_2004, "AL", "HR"];
+
+/** Adds Montenegro (2017); North Macedonia follows in 2020. */
+const NATO_MODERN_2017: OrgMemberId[] = [...NATO_MODERN_2009, "ME"];
 
 /**
  * The Non-Aligned Movement's chair passes to the host of each summit, which
@@ -333,8 +349,9 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
     // as background entities (CA/NL/BE/LU/NO/DK/PT/IS/AL) beside the simulated
     // countries; background members carry no economy, pay no tribute and hold
     // no vote.
-    // Accessions: GR/TR 1952, DE 1955, ES 1982, PL/HU 1999, BG/RO 2004,
-    // AL 2009, FI 2023, SE 2024. AT, IE, JP, CN, BR and NG never joined.
+    // Accessions: GR/TR 1952, DE 1955, ES 1982, PL/HU/CZ 1999, BG/RO/EE/LV/
+    // LT/SK/SI 2004, AL/HR 2009, ME 2017, MK 2020, FI 2023, SE 2024. AT, IE,
+    // JP, CN, BR and NG never joined.
     foundingMembersByEra: {
       "1953-default": [
         "US",
@@ -388,10 +405,10 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
         "IS",
       ],
       "1999-default": NATO_MODERN_1999,
-      "2007-default": [...NATO_MODERN_1999, "BG", "RO"],
-      "2019-default": NATO_MODERN_2009,
-      "2023-default": NATO_MODERN_2009,
-      "2027-default": [...NATO_MODERN_2009, "FI", "SE"],
+      "2007-default": NATO_MODERN_2004,
+      "2019-default": NATO_MODERN_2017,
+      "2023-default": [...NATO_MODERN_2017, "MK"],
+      "2027-default": [...NATO_MODERN_2017, "MK", "FI", "SE"],
     },
     leadership: {
       title: "Secretary-General",

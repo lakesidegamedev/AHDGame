@@ -106,15 +106,14 @@ type MetricPath = `${Exclude<keyof typeof BASELINE, never>}.${string}`;
 
 /**
  * Sourced provincial values, merged before OVERRIDES. Crime per 100k: StatCan
- * 35-10-0177-01 (2025), violent limited to the FBI categories so it compares
- * with the US seed; crimeRate is violent plus property. Incarceration: StatCan
- * 35-10-0154-01 (2023) scaled to the 90 national total. Food insecurity: StatCan
- * 13-10-0834-01 (2024, moderate or severe). Turnout: Elections Canada 2025.
- * Renewables: CER 2023. Carbon: StatCan 38-10-0097-01 over 17-10-0009-01, scaled
- * to the energy-CO2 basis (14.2). Protected land: ECCC conserved areas 2025. Air:
- * ECCC regional PM2.5 2021-2023 on airQualityIndexFromPm25. Physicians: CIHI 2025
- * (excludes Ontario, which keeps the baseline). Governance indexes have no
- * provincial source and stay national.
+ * 35-10-0177-01 (2025), violent in FBI categories; crimeRate adds property.
+ * Incarceration: 35-10-0154-01 (2023) scaled to 90. Food insecurity:
+ * 13-10-0834-01 (2024). Turnout: Elections Canada 2025. Renewables: CER 2023.
+ * Carbon: 38-10-0097-01 over 17-10-0009-01, energy-CO2 basis. Protected land:
+ * ECCC 2025. Air: ECCC PM2.5 2021-2023. Physicians: CIHI 2025 (not Ontario).
+ * Public trust: 45-10-0073-01 (2024) high confidence in police, courts and
+ * Parliament, scaled to 55; territories unsurveyed. Transparency and corruption
+ * have no provincial source and stay national.
  */
 const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
   CA_NL: {
@@ -128,6 +127,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 7.0,
     "environment.airQuality": 80.8,
     "healthcare.physicianRate": 3.14,
+    "governance.publicTrust": 49.5,
   },
   CA_PE: {
     "publicSafety.violentCrimeRate": 225.6,
@@ -140,6 +140,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 5.6,
     "environment.airQuality": 80.8,
     "healthcare.physicianRate": 2.47,
+    "governance.publicTrust": 55.3,
   },
   CA_NS: {
     "publicSafety.violentCrimeRate": 301.7,
@@ -152,6 +153,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 14.4,
     "environment.airQuality": 80.8,
     "healthcare.physicianRate": 3.21,
+    "governance.publicTrust": 51.4,
   },
   CA_NB: {
     "publicSafety.violentCrimeRate": 355.8,
@@ -164,6 +166,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 10.4,
     "environment.airQuality": 80.8,
     "healthcare.physicianRate": 2.94,
+    "governance.publicTrust": 56.3,
   },
   CA_QC: {
     "publicSafety.violentCrimeRate": 365.6,
@@ -176,6 +179,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 17.0,
     "environment.airQuality": 69.2,
     "healthcare.physicianRate": 3.01,
+    "governance.publicTrust": 68.0,
   },
   CA_ON: {
     "publicSafety.violentCrimeRate": 293.9,
@@ -187,6 +191,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.carbonEmissions": 8.0,
     "environment.protectedLand": 11.2,
     "environment.airQuality": 67.8,
+    "governance.publicTrust": 51.9,
   },
   CA_MB: {
     "publicSafety.violentCrimeRate": 838.0,
@@ -199,6 +204,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 11.1,
     "environment.airQuality": 52.6,
     "healthcare.physicianRate": 2.7,
+    "governance.publicTrust": 52.8,
   },
   CA_SK: {
     "publicSafety.violentCrimeRate": 829.8,
@@ -211,6 +217,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 9.8,
     "environment.airQuality": 52.6,
     "healthcare.physicianRate": 2.45,
+    "governance.publicTrust": 51.1,
   },
   CA_AB: {
     "publicSafety.violentCrimeRate": 419.2,
@@ -223,6 +230,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 15.6,
     "environment.airQuality": 52.6,
     "healthcare.physicianRate": 2.82,
+    "governance.publicTrust": 50.8,
   },
   CA_BC: {
     "publicSafety.violentCrimeRate": 320.5,
@@ -235,6 +243,7 @@ const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.protectedLand": 20.0,
     "environment.airQuality": 71.4,
     "healthcare.physicianRate": 3.32,
+    "governance.publicTrust": 49.0,
   },
   CA_YT: {
     "publicSafety.violentCrimeRate": 919.7,

@@ -14,6 +14,7 @@ import {
 } from "@/lib/db/types/treasuryTransaction";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { TREASURY_CATEGORY_LABEL as CATEGORY_LABEL } from "@/lib/parties/treasuryCategoryLabels";
+import { AnchorAmount } from "@/components/currency/AnchorUnit";
 
 /**
  * Append-only audit log of treasury inflows and outflows for a party. Reads
@@ -231,8 +232,11 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
                 }`}
               >
                 {row.direction === "credit" ? "+" : "-"}
-                {row.currencyCode ? CURRENCY_SYMBOLS[row.currencyCode] : "₳"}
-                {row.amount.toLocaleString("en-US")}
+                {row.currencyCode ? (
+                  `${CURRENCY_SYMBOLS[row.currencyCode]}${row.amount.toLocaleString("en-US")}`
+                ) : (
+                  <AnchorAmount>₳{row.amount.toLocaleString("en-US")}</AnchorAmount>
+                )}
               </div>
             </li>
           ))}
