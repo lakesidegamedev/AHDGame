@@ -24,6 +24,7 @@ import {
 import { canRenameParty, DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
 import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
+  RemovalLockView,
   ProposalView,
   ProposalVoteSummary,
   ProposalsResponse,
@@ -32,6 +33,13 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 import { notifyRemovalVoteOpened } from "@/lib/parties/officeRemovalNotifications";
+import {
+  loadRemovalCooldowns,
+  removalTargetKey,
+  type RemovalTarget,
+} from "@/lib/parties/removalCooldownLookup";
+import { removalCooldownMessage } from "@/lib/parties/rules/removalVoteCooldown";
+import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -134,6 +142,43 @@ async function toProposalView(
     myProposingVote,
     myTargetVote,
   };
+}
+
+function removalRoleLabel(
+  party: Pick<PoliticalParty, "countryId" | "leadershipTitles">,
+  role: "chair" | "viceChair" | "treasurer" | "committeeMember" | "campaigner"
+): string {
+  if (role === "campaigner") return "Campaigner";
+  if (role === "committeeMember") return getPartyRoleLabel(party.countryId, "committee");
+  return getPartyRoleLabel(party.countryId, role, party.leadershipTitles);
+}
+
+async function removalLocksFor(db: Db, party: PoliticalParty): Promise<RemovalLockView[]> {
+  const { currentTurn } = await getGameTime();
+  const targets: RemovalTarget[] = [];
+  if (party.chairId) targets.push({ role: "chair", characterId: party.chairId });
+  if (party.viceChairId) targets.push({ role: "viceChair", characterId: party.viceChairId });
+  if (party.treasurerId) targets.push({ role: "treasurer", characterId: party.treasurerId });
+  for (const id of party.committeeIds ?? []) {
+    targets.push({ role: "committeeMember", characterId: id });
+  }
+  for (const id of party.campaignerIds ?? []) targets.push({ role: "campaigner", characterId: id });
+  const cooldowns = await loadRemovalCooldowns(db, party, targets, currentTurn);
+  const locks: RemovalLockView[] = [];
+  for (const { role, characterId } of targets) {
+    const lock = cooldowns.get(removalTargetKey(role, characterId));
+    if (!lock?.locked || lock.reason == null || lock.sinceTurn == null) continue;
+    if (lock.unlocksAtTurn == null) continue;
+    locks.push({
+      characterId: characterId.toString(),
+      role,
+      reason: lock.reason,
+      sinceTurn: lock.sinceTurn,
+      unlocksAtTurn: lock.unlocksAtTurn,
+      message: removalCooldownMessage(lock, removalRoleLabel(party, role)),
+    });
+  }
+  return locks;
 }
 
 function removalWindowFields(
@@ -282,6 +327,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ),
     ]);
 
+    const removalLocks = canProposeAny ? await removalLocksFor(db, party) : [];
+
     const response: ProposalsResponse = {
       openProposals,
       incomingMergeProposals,
@@ -297,6 +344,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // Surface the current mode so the modal can grey out the active option.
       // No-op proposals are server-side rejected anyway.
       currentTransactionApprovalMode: party.transactionApprovalMode ?? "double",
+      removalLocks,
     };
 
     return NextResponse.json(response);
@@ -487,6 +535,22 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
       if (!inRole) {
         return errorResponse(400, `Target character is not currently the ${body.role}`);
+      }
+      const cooldowns = await loadRemovalCooldowns(
+        db,
+        party,
+        [{ role: body.role, characterId: targetOid }],
+        nowTurn
+      );
+      const lock = cooldowns.get(removalTargetKey(body.role, targetOid));
+      if (lock?.locked) {
+        return errorResponse(
+          400,
+          removalCooldownMessage(lock, removalRoleLabel(party, body.role)),
+          {
+            extra: { reason: lock.reason, unlocksAtTurn: lock.unlocksAtTurn },
+          }
+        );
       }
     }
 

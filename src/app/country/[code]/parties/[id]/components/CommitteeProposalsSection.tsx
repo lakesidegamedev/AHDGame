@@ -69,6 +69,7 @@ export function CommitteeProposalsSection({
             isChair={canProposeMerge}
             isDefaultParty={isDefaultParty}
             currentTransactionApprovalMode={data?.currentTransactionApprovalMode ?? "double"}
+            removalLocks={data?.removalLocks ?? []}
             onCreated={fetchProposals}
           />
         )}
