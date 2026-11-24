@@ -40,7 +40,14 @@ export function nearMatchScore(query: string, name: string): number | null {
     const tolerance = qw.length < 3 ? 0 : allowedTypos(qw);
     let best = tolerance + 1;
     for (const nw of nameWords) best = Math.min(best, editDistance(qw, nw, tolerance));
-    if (best > tolerance) return null;
+    // A typo in the start of a longer word ("margn" for "marginal") still counts,
+    // ranked just behind a whole-word match.
+    if (best > tolerance && qw.length >= 4)
+      for (const nw of nameWords)
+        for (const size of [qw.length - 1, qw.length, qw.length + 1])
+          if (nw.length > size)
+            best = Math.min(best, editDistance(qw, nw.slice(0, size), tolerance) + 0.5);
+    if (best > tolerance + 0.5) return null;
     total += best;
   }
   return total;
