@@ -9,13 +9,13 @@
  * owed as an ordinary producer payable, so no money is created.
  *
  * A plant probes only when the probe pays for itself at market prices (inputs
- * at expectedInputUnitPrice) and some other buyer has funded demand for its
- * output. A plant whose probes keep failing stops after
+ * at expectedInputUnitPrice, with no margin held back, so a thin but positive
+ * margin probes) and some other buyer has funded demand for its output. A plant whose probes keep failing stops after
  * RESTART_PROBE_MAX_FAILURES turns in a row.
  *
  * Pure: plain data in, plain data out. Anchor units throughout.
  */
-import { expectedInputUnitPrice, SALES_ADVANCE_REVENUE_SHARE } from "./salesAdvanceRules";
+import { expectedInputUnitPrice } from "./salesAdvanceRules";
 
 /** Share of a plant's full physical run a probe makes. */
 export const RESTART_PROBE_RUN_SHARE = 0.05;
@@ -54,7 +54,7 @@ export interface RestartProbePlant {
 export interface RestartProbe {
   /** Share of the full run the probe makes. */
   runShare: number;
-  /** Probe revenue at market price after the margin for a weaker market. */
+  /** Probe revenue at market price. */
   expectedRevenue: number;
   /** Probe running cost with inputs at their expected price. */
   expectedCost: number;
@@ -72,7 +72,7 @@ const positive = (x: number | undefined) =>
  */
 export function restartProbe(
   plant: RestartProbePlant,
-  options: { runShare?: number; revenueShare?: number } = {}
+  options: { runShare?: number } = {}
 ): RestartProbe | null {
   if ((plant.priorFailures ?? 0) >= RESTART_PROBE_MAX_FAILURES) return null;
   const share = Math.min(
@@ -86,8 +86,7 @@ export function restartProbe(
     if (output.fundedBuyers)
       unitRevenue += positive(output.unitsPerOutput) * positive(output.marketUnitPrice);
   if (!(unitRevenue > 0)) return null;
-  const haircut = Math.min(1, Math.max(0, options.revenueShare ?? SALES_ADVANCE_REVENUE_SHARE));
-  const expectedRevenue = units * unitRevenue * haircut;
+  const expectedRevenue = units * unitRevenue;
   const running = share * (positive(plant.labourCost) + positive(plant.runningSiteCost));
   let expectedCost = running,
     ceilingCost = running;
