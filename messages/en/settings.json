@@ -622,6 +622,7 @@
         "national_leadership_lost": "National leadership lost",
         "national_leadership_appointed": "National leadership appointed",
         "national_leadership_removed": "National leadership removed",
+        "office_removal_vote_opened": "Vote to remove you from a party office",
         "national_leadership_candidacy": "National leadership candidacy",
         "national_leadership_election_opened": "National leadership election opened",
         "committee_election_opened": "Committee election opened",
