@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type {
+  Character,
   State,
   StateDemographics,
   StatePartyOrg,
@@ -275,11 +276,60 @@ export async function getRegionGovernmentApproval(
   }
 }
 
+const REGION_PLAYER_PROJECTION = {
+  _id: 1,
+  userId: 1,
+  sequentialId: 1,
+  name: 1,
+  avatarUrl: 1,
+  countryId: 1,
+  homeState: 1,
+  currentOffice: 1,
+  party: 1,
+  politicalInfluence: 1,
+} as const;
+
+type RegionPlayerRow = Pick<
+  Character,
+  | "_id"
+  | "userId"
+  | "sequentialId"
+  | "name"
+  | "avatarUrl"
+  | "countryId"
+  | "homeState"
+  | "currentOffice"
+  | "party"
+  | "politicalInfluence"
+>;
+
+/** Only the fields the region players list and admin picker render. */
+export function serializeRegionPlayers(players: Awaited<ReturnType<typeof getRegionPlayers>>) {
+  return [...players]
+    .sort((a, b) => (b.politicalInfluence || 0) - (a.politicalInfluence || 0))
+    .map((p) => ({
+      _id: p._id.toString(),
+      sequentialId: p.sequentialId,
+      name: p.name,
+      avatarUrl: p.avatarUrl,
+      countryId: p.countryId,
+      homeState: p.homeState,
+      currentOffice: p.currentOffice,
+      party: p.party,
+      politicalInfluence: p.politicalInfluence || 0,
+      borderKey: p.borderKey,
+      tintColor: p.tintColor,
+      isAdmin: p.isAdmin,
+      isModerator: p.isModerator,
+    }));
+}
+
 export async function getRegionPlayers(stateId: string) {
   try {
     const db = await getDb();
     const players = await charactersCollection(db)
       .find({ homeState: stateId })
+      .project<RegionPlayerRow>(REGION_PLAYER_PROJECTION)
       .sort({ name: 1 })
       .toArray();
 
@@ -335,6 +385,27 @@ export async function getRegionNPPs(stateId: string, countryId: CountryId) {
     const db = await getDb();
     const npps = await nppsCollection(db)
       .find({ homeState: stateId, retiredAt: null })
+      .project<
+        Pick<
+          NPP,
+          | "_id"
+          | "name"
+          | "party"
+          | "homeState"
+          | "politicalInfluence"
+          | "currentOffice"
+          | "avatarUrl"
+          | "sequentialId"
+        >
+      >({
+        name: 1,
+        party: 1,
+        homeState: 1,
+        politicalInfluence: 1,
+        currentOffice: 1,
+        avatarUrl: 1,
+        sequentialId: 1,
+      })
       .sort({ name: 1 })
       .toArray();
 
@@ -379,9 +450,19 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
     const [characters, npps, parties] = await Promise.all([
       charactersCollection(db)
         .find({ _id: { $in: characterIds } })
+        .project<Pick<Character, "_id" | "userId" | "avatarUrl" | "sequentialId">>({
+          userId: 1,
+          avatarUrl: 1,
+          sequentialId: 1,
+        })
         .toArray(),
       nppsCollection(db)
         .find({ _id: { $in: nppIds } })
+        .project<Pick<NPP, "_id" | "name" | "avatarUrl" | "sequentialId">>({
+          name: 1,
+          avatarUrl: 1,
+          sequentialId: 1,
+        })
         .toArray(),
       partySeqIds.length
         ? politicalPartiesCollection(db)

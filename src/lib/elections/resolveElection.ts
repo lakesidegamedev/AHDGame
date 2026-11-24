@@ -162,7 +162,7 @@ export async function resolveElection(
   // Fetch game state and game time in parallel with election deps.
   // Summary views only consume preset/currentYear, so
   // project the read; full view keeps the whole document.
-  const [gameState, gameTime, deps] = await Promise.all([
+  const [gameState, gameTime, deps, adjacentElections] = await Promise.all([
     isFull
       ? gameStateCollection(db).findOne({ _id: "current" })
       : gameStateCollection(db).findOne(
@@ -171,22 +171,19 @@ export async function resolveElection(
         ),
     getGameTime(),
     fetchDepsForElection(db, election, options.view),
+    // Adjacent elections for prev/next navigation (full view only)
+    isFull
+      ? electionsCollection(db)
+          .find(adjacentElectionsQuery(election))
+          .sort({ cycle: 1 })
+          .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
+            _id: 1,
+            cycle: 1,
+            seatId: 1,
+          })
+          .toArray()
+      : Promise.resolve(null),
   ]);
-
-  // Adjacent elections for prev/next navigation (full view only)
-  let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
-    null;
-  if (isFull) {
-    adjacentElections = await electionsCollection(db)
-      .find(adjacentElectionsQuery(election))
-      .sort({ cycle: 1 })
-      .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
-        _id: 1,
-        cycle: 1,
-        seatId: 1,
-      })
-      .toArray();
-  }
 
   const [response, withdrew] = await Promise.all([
     _enrichElection(election, deps, options, gameTime, gameState, db, adjacentElections),
