@@ -1655,9 +1655,9 @@ describe("castVote — one entry per voter", () => {
  * any effect or status write.
  */
 describe("attemptResolution — atomic resolution claim", () => {
-  function passingRenameProposal(partyId: ObjectId) {
-    const yesVotes = Array.from({ length: 6 }, () => ({
-      voterId: new ObjectId(),
+  function passingRenameProposal(partyId: ObjectId, voters: ObjectId[]) {
+    const yesVotes = voters.slice(0, 6).map((voterId) => ({
+      voterId,
       vote: "yes",
       votedAt: new Date(),
     }));
@@ -1687,7 +1687,10 @@ describe("attemptResolution — atomic resolution claim", () => {
    * proposalFirstMatched controls the FIRST committeeProposals.updateOne
    * result — the resolution claim. Later calls (markResolved) always match.
    */
-  function makeResolutionDb(partyId: ObjectId, opts: { proposalFirstMatched: number }) {
+  function makeResolutionDb(
+    party: ReturnType<typeof nineVoterParty>,
+    opts: { proposalFirstMatched: number }
+  ) {
     const calls: Array<{ collection: string; kind: string; filter: Record<string, unknown> }> = [];
     let proposalUpdateCall = 0;
     const collection = vi.fn().mockImplementation((name: string) => {
@@ -1705,7 +1708,7 @@ describe("attemptResolution — atomic resolution claim", () => {
       }
       if (name === "politicalParties") {
         return {
-          findOne: vi.fn().mockResolvedValue(nineVoterParty(partyId)),
+          findOne: vi.fn().mockResolvedValue(party),
           updateOne: vi.fn().mockImplementation((filter: Record<string, unknown>) => {
             calls.push({ collection: name, kind: "effect", filter });
             return Promise.resolve({ matchedCount: 1, modifiedCount: 1 });
@@ -1719,8 +1722,9 @@ describe("attemptResolution — atomic resolution claim", () => {
 
   it("claims the open proposal before applying any effect", async () => {
     const partyId = makePartyId();
-    const proposal = passingRenameProposal(partyId);
-    const { db, calls } = makeResolutionDb(partyId, { proposalFirstMatched: 1 });
+    const party = nineVoterParty(partyId);
+    const proposal = passingRenameProposal(partyId, party.committeeIds);
+    const { db, calls } = makeResolutionDb(party, { proposalFirstMatched: 1 });
 
     await attemptResolution(db, proposal, 100);
 
@@ -1736,8 +1740,9 @@ describe("attemptResolution — atomic resolution claim", () => {
 
   it("applies nothing when the claim is already taken", async () => {
     const partyId = makePartyId();
-    const proposal = passingRenameProposal(partyId);
-    const { db, calls } = makeResolutionDb(partyId, { proposalFirstMatched: 0 });
+    const party = nineVoterParty(partyId);
+    const proposal = passingRenameProposal(partyId, party.committeeIds);
+    const { db, calls } = makeResolutionDb(party, { proposalFirstMatched: 0 });
 
     await attemptResolution(db, proposal, 100);
 
@@ -1763,26 +1768,31 @@ describe("removal votes stay open at least 24 hours", () => {
     };
   }
 
+  /** The eight voters left once the treasurer (the target) is excluded. */
+  function votersOf(party: ReturnType<typeof partyWithTreasurer>): ObjectId[] {
+    return [...party.committeeIds, party.chairId, party.viceChairId];
+  }
+
   /** Eight voters once the target is excluded, so five yes votes pass. */
   function removalProposal(
-    partyId: ObjectId,
+    party: ReturnType<typeof partyWithTreasurer>,
     targetId: ObjectId,
     votes: { yes: number; no?: number },
     extra: Record<string, unknown> = {}
   ) {
-    const ballot = (vote: "yes" | "no") => ({ voterId: new ObjectId(), vote, votedAt: CREATED });
+    const voters = votersOf(party);
+    const yes = voters.slice(0, votes.yes);
+    const no = voters.slice(votes.yes, votes.yes + (votes.no ?? 0));
+    const ballot = (voterId: ObjectId, vote: "yes" | "no") => ({ voterId, vote, votedAt: CREATED });
     return {
       _id: new ObjectId(),
       type: "removeOfficeHolder",
       status: "open",
-      partyId,
+      partyId: party._id,
       createdAt: CREATED,
       createdAtTurn: 171,
       expiresAtTurn: 195,
-      proposingVotes: [
-        ...Array.from({ length: votes.yes }, () => ballot("yes")),
-        ...Array.from({ length: votes.no ?? 0 }, () => ballot("no")),
-      ],
+      proposingVotes: [...yes.map((id) => ballot(id, "yes")), ...no.map((id) => ballot(id, "no"))],
       removeOfficeHolder: { role: "treasurer", targetCharacterId: targetId },
       ...extra,
     } as unknown as CommitteeProposal;
@@ -1828,8 +1838,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("does not pass at the threshold before 24 hours, on a vote", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
-    const proposal = removalProposal(partyId, target, { yes: 5 });
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+    const proposal = removalProposal(party, target, { yes: 5 });
 
     await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
 
@@ -1840,8 +1851,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("does not pass at expiry when the expiry turn comes before 24 hours", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
-    const proposal = removalProposal(partyId, target, { yes: 5 });
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+    const proposal = removalProposal(party, target, { yes: 5 });
 
     await attemptResolution(db, proposal, 195, {
       expired: true,
@@ -1855,8 +1867,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("passes at the threshold once 24 hours have passed and removes the holder", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
-    const proposal = removalProposal(partyId, target, { yes: 5 });
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+    const proposal = removalProposal(party, target, { yes: 5 });
 
     await attemptResolution(db, proposal, 196, { now: new Date(CREATED.getTime() + 24 * HOUR) });
 
@@ -1867,8 +1880,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("still rejects at expiry when the votes fall short, as before", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
-    const proposal = removalProposal(partyId, target, { yes: 4 });
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+    const proposal = removalProposal(party, target, { yes: 4 });
 
     await attemptResolution(db, proposal, 196, {
       expired: true,
@@ -1882,8 +1896,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("rejects at once inside the window when yes can no longer reach the threshold", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
-    const proposal = removalProposal(partyId, target, { yes: 1, no: 4 });
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+    const proposal = removalProposal(party, target, { yes: 1, no: 4 });
 
     await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
 
@@ -1891,24 +1906,58 @@ describe("removal votes stay open at least 24 hours", () => {
     expect(partyUpdates).toHaveLength(0);
   });
 
-  it("does not hold other proposal types", async () => {
-    const partyId = makePartyId();
-    const { db, proposalUpdates } = makeDb(partyWithTreasurer(partyId, new ObjectId()));
-    const proposal = {
-      _id: new ObjectId(),
-      type: "electionMethod",
-      status: "open",
-      partyId,
-      createdAt: CREATED,
-      proposingVotes: Array.from({ length: 6 }, () => ({
-        voterId: new ObjectId(),
-        vote: "yes",
-        votedAt: CREATED,
-      })),
-      electionMethod: { method: "committee" },
-    } as unknown as CommitteeProposal;
+  const ALL_TYPES = [
+    ["electionMethod", { electionMethod: { method: "committee" } }],
+    ["electionDuration", { electionDuration: { durationTurns: 200 } }],
+    ["transactionApprovalMode", { transactionApprovalMode: { mode: "single" } }],
+    ["positionShift", { positionShift: { axis: "economic", direction: 1 } }],
+    ["rename", { rename: { newName: "Renamed", newAbbreviation: "RNM" } }],
+    ["merge", { merge: { targetPartyId: new ObjectId() }, targetVotes: [] }],
+    ["campaignerAppointment", { campaignerAppointment: { targetCharacterId: new ObjectId() } }],
+  ] as const;
 
-    await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
+  function yesProposal(
+    party: ReturnType<typeof partyWithTreasurer>,
+    type: string,
+    fields: Record<string, unknown>
+  ) {
+    const voters = [...party.committeeIds, party.chairId, party.viceChairId, party.treasurerId];
+    return {
+      _id: new ObjectId(),
+      type,
+      status: "open",
+      partyId: party._id,
+      createdAt: CREATED,
+      proposingVotes: voters
+        .slice(0, 7)
+        .map((voterId) => ({ voterId, vote: "yes", votedAt: CREATED })),
+      ...fields,
+    } as unknown as CommitteeProposal;
+  }
+
+  it.each(ALL_TYPES)("holds a %s proposal open inside 24 hours", async (type, fields) => {
+    const party = partyWithTreasurer(makePartyId(), new ObjectId());
+    const { db, proposalUpdates, partyUpdates } = makeDb(party);
+
+    await attemptResolution(db, yesProposal(party, type, fields), 172, {
+      now: new Date(CREATED.getTime() + 23 * HOUR),
+    });
+
+    expect(proposalUpdates).toHaveLength(0);
+    expect(partyUpdates).toHaveLength(0);
+  });
+
+  it.each(
+    ALL_TYPES.filter(([type]) =>
+      ["electionMethod", "transactionApprovalMode", "positionShift", "rename"].includes(type)
+    )
+  )("passes a %s proposal once 24 hours have passed", async (type, fields) => {
+    const party = partyWithTreasurer(makePartyId(), new ObjectId());
+    const { db, proposalUpdates } = makeDb(party);
+
+    await attemptResolution(db, yesProposal(party, type, fields), 196, {
+      now: new Date(CREATED.getTime() + 24 * HOUR),
+    });
 
     expect(statusWrites(proposalUpdates)).toEqual(["passed"]);
   });
@@ -1916,10 +1965,9 @@ describe("removal votes stay open at least 24 hours", () => {
   it("the turn sweep picks up removal votes whose window has ended and passes them", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const proposal = removalProposal(partyId, target, { yes: 5 });
-    const { db, proposalUpdates, findFilters } = makeDb(partyWithTreasurer(partyId, target), [
-      proposal,
-    ]);
+    const party = partyWithTreasurer(partyId, target);
+    const proposal = removalProposal(party, target, { yes: 5 });
+    const { db, proposalUpdates, findFilters } = makeDb(party, [proposal]);
     const now = new Date(CREATED.getTime() + 24 * HOUR + 5 * 60_000);
 
     await expireOpenProposals(db, 180, now);
@@ -1928,7 +1976,6 @@ describe("removal votes stay open at least 24 hours", () => {
     expect(filter.status).toBe("open");
     expect(filter.$or).toContainEqual({ expiresAtTurn: { $lte: 180 } });
     expect(filter.$or).toContainEqual({
-      type: "removeOfficeHolder",
       createdAt: { $lte: new Date(now.getTime() - 24 * HOUR) },
     });
     // Not expired yet (turn 180 < 195), so it passes on the threshold, not on abstentions.
@@ -1938,10 +1985,11 @@ describe("removal votes stay open at least 24 hours", () => {
   it("counts the window from the proposal's createdAt, so a reopened vote keeps its clock", async () => {
     const partyId = makePartyId();
     const target = new ObjectId();
-    const { db, proposalUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const party = partyWithTreasurer(partyId, target);
+    const { db, proposalUpdates } = makeDb(party);
     // Reopened long after it was resolved: updatedAt is recent, createdAt is not.
     const proposal = removalProposal(
-      partyId,
+      party,
       target,
       { yes: 5 },
       {
@@ -1984,5 +2032,91 @@ describe("withdrawVote", () => {
 
     await expect(withdrawVote(db, new ObjectId(), new ObjectId(), "target")).resolves.toBe(false);
     expect(updateOne.mock.calls[0]![0]).toHaveProperty("targetVotes.voterId");
+  });
+});
+
+describe("only voters still eligible at resolution count", () => {
+  const HOUR = 60 * 60 * 1000;
+  const CREATED = new Date("2026-01-10T03:00:00.000Z");
+  const AFTER_WINDOW = new Date(CREATED.getTime() + 25 * HOUR);
+
+  function nineSeatParty(partyId: ObjectId) {
+    return {
+      _id: partyId,
+      sequentialId: 1,
+      countryId: "US",
+      committeeIds: Array.from({ length: 6 }, () => new ObjectId()),
+      chairId: new ObjectId(),
+      viceChairId: new ObjectId(),
+      treasurerId: new ObjectId(),
+    };
+  }
+
+  function dbFor(party: Record<string, unknown>) {
+    const statuses: string[] = [];
+    const collection = vi.fn().mockImplementation((name: string) => {
+      if (name === "committeeProposals") {
+        return {
+          findOne: vi.fn().mockResolvedValue(null),
+          updateOne: vi.fn().mockImplementation((_filter: unknown, update) => {
+            const status = (update as { $set?: { status?: string } }).$set?.status;
+            if (status) statuses.push(status);
+            return Promise.resolve({ matchedCount: 1, modifiedCount: 1 });
+          }),
+        };
+      }
+      return {
+        findOne: vi.fn().mockResolvedValue(party),
+        updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+      };
+    });
+    return { db: { collection } as unknown as Db, statuses };
+  }
+
+  function methodProposal(partyId: ObjectId, yesVoters: ObjectId[]) {
+    return {
+      _id: new ObjectId(),
+      type: "electionMethod",
+      status: "open",
+      partyId,
+      createdAt: CREATED,
+      proposingVotes: yesVoters.map((voterId) => ({ voterId, vote: "yes", votedAt: CREATED })),
+      electionMethod: { method: "committee" },
+    } as unknown as CommitteeProposal;
+  }
+
+  it("drops the vote of a member who left the committee before resolution", async () => {
+    const partyId = makePartyId();
+    const party = nineSeatParty(partyId);
+    const departed = new ObjectId();
+    // Five current members plus one who has left: 5 of 9 is short of the 6 needed.
+    const proposal = methodProposal(partyId, [...party.committeeIds.slice(0, 5), departed]);
+    const { db, statuses } = dbFor(party);
+
+    await attemptResolution(db, proposal, 200, { now: AFTER_WINDOW });
+
+    expect(statuses).toEqual([]);
+  });
+
+  it("counts the same six votes once all six voters are still seated", async () => {
+    const partyId = makePartyId();
+    const party = nineSeatParty(partyId);
+    const proposal = methodProposal(partyId, party.committeeIds.slice(0, 6));
+    const { db, statuses } = dbFor(party);
+
+    await attemptResolution(db, proposal, 200, { now: AFTER_WINDOW });
+
+    expect(statuses).toEqual(["passed"]);
+  });
+
+  it("at expiry a departed member's yes does not save the proposal", async () => {
+    const partyId = makePartyId();
+    const party = nineSeatParty(partyId);
+    const proposal = methodProposal(partyId, [...party.committeeIds.slice(0, 5), new ObjectId()]);
+    const { db, statuses } = dbFor(party);
+
+    await attemptResolution(db, proposal, 200, { expired: true, now: AFTER_WINDOW });
+
+    expect(statuses).toEqual(["rejected"]);
   });
 });

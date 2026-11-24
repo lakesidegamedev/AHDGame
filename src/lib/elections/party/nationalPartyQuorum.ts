@@ -1,3 +1,4 @@
+import { committeeBallotClause } from "./leadershipVoterFilter";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getEligibleVoterSet } from "@/lib/parties/proposals";
@@ -101,12 +102,18 @@ export async function applyQuorumAcceleration(
 
   // Count distinct voters per chair election
   const electionIds = candidateElections.map((e) => e._id);
+  const committeeClause = committeeBallotClause(candidateElections, (partyId, country) =>
+    partyMap.get(`${country}:${partyId}`)
+  );
+  const quorumMatch = committeeClause
+    ? { $and: [{ electionId: { $in: electionIds } }, committeeClause] }
+    : { electionId: { $in: electionIds } };
   const voteCountsRaw = await nationalPartyVotesCollection(db)
     .aggregate<{
       electionId: ObjectId;
       distinctVoters: number;
     }>([
-      { $match: { electionId: { $in: electionIds } } },
+      { $match: quorumMatch },
       { $group: { _id: "$voterId", electionId: { $first: "$electionId" } } },
       {
         $group: {
