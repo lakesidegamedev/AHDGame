@@ -788,6 +788,9 @@ export function MetricDetail({
               <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
                 Historical series
               </h3>
+              {detail.openingNotice && (
+                <p className="mb-2 text-body-xs text-muted">{detail.openingNotice}</p>
+              )}
               {detail.historyNotice && (
                 <p className="mb-2 text-body-xs text-muted">{detail.historyNotice}</p>
               )}

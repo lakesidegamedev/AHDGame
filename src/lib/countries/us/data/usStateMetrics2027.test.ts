@@ -75,7 +75,7 @@ describe("US 2027 state metrics use sourced per-state data", () => {
     const corruption = new Set(
       stateMetrics2027.map((m) => val(m._id, "governance", "corruptionIndex"))
     );
-    expect(corruption.size).toBe(1);
+    expect(corruption.size).toBeGreaterThan(30);
   });
 
   it("pins real values from the cited tables", () => {
@@ -89,6 +89,13 @@ describe("US 2027 state metrics use sourced per-state data", () => {
     expect(val("AK", "environment", "protectedLand")).toBeGreaterThan(30);
     expect(val("AR", "social", "foodInsecurity")).toBeGreaterThan(19);
     expect(val("WV", "education", "highSchoolGradRate")).toBeGreaterThan(90);
+    expect(val("NY", "social", "homelessnessRate")).toBeGreaterThan(70);
+    expect(val("MS", "social", "homelessnessRate")).toBeLessThan(5);
+    expect(val("DC", "publicSafety", "crimeRate")).toBeGreaterThan(4000);
+    expect(val("ID", "publicSafety", "crimeRate")).toBeLessThan(1100);
+    expect(val("DC", "governance", "corruptionIndex")).toBeGreaterThan(
+      val("WY", "governance", "corruptionIndex")
+    );
   });
 
   it("does not make violent crime a function of urbanization", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { states1991 } from "@/lib/countries/us/data/usStates1991";
 import { createMockDb } from "@/lib/test-utils/mockDb";
-import { readResetMetricDetail } from "./readMetricDetail";
+import { SHARED_OPENING_NOTICE, readResetMetricDetail } from "./readMetricDetail";
 import { buildOpeningMetricSnapshots1991 } from "./seedOpening1991";
 import { householdFixture } from "./testing/householdFixture";
 import { regionalCoverageKey } from "./rules/householdPublication";
@@ -87,6 +87,27 @@ describe("v2 metric detail read", () => {
     expect(result?.history).toHaveLength(1);
     expect(result?.history[0]?.value).toBe(result?.nationalValue);
     expect(result?.regions.some((region) => region.name === "Pennsylvania")).toBe(true);
+  });
+
+  it("says so when every region opened at the same figure", async () => {
+    const db = createMockDb();
+    const boards = buildOpeningMetricSnapshots1991("world-detail", 1);
+    const national = boards.find((board) => board._id === "US:national")!;
+    const regional = boards
+      .filter((board) => board.countryId === "US" && board.scope === "regional")
+      .map((board) => ({ ...board, openingValues: { ...board.openingValues, "02": 50 } }));
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(regional),
+    });
+    db.collection("states").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(states1991),
+    });
+    const shared = await readResetMetricDetail(db as unknown as Db, national, "02");
+    expect(shared?.openingNotice).toBe(SHARED_OPENING_NOTICE);
+
+    regional[0]!.openingValues = { ...regional[0]!.openingValues, "02": 51 };
+    const varied = await readResetMetricDetail(db as unknown as Db, national, "02");
+    expect(varied?.openingNotice).toBeUndefined();
   });
 
   it("returns the selected region's own history on a regional metric page", async () => {

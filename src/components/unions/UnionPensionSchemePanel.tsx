@@ -7,6 +7,7 @@
  * bargained a pension has not got an empty fund, it has not got a fund, and a
  * panel full of zeroes would suggest otherwise.
  */
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 export interface UnionPensionScheme {
   /** Cash only. `totalAssetsAnchor` is the number the funding ratio is built on. */
@@ -107,6 +108,7 @@ export function UnionPensionSchemePanel({ scheme }: { scheme: UnionPensionScheme
       </div>
 
       <p className="text-body text-muted">{scheme.explanation}</p>
+      <AnchorUnitNote />
 
       {benefitCut && (
         <p

@@ -16,6 +16,7 @@ import {
   backgroundCountryLinks,
   type BackgroundCountryView,
 } from "@/lib/country/background/rules/backgroundCountryView";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 interface Props {
   view: BackgroundCountryView;
@@ -271,6 +272,7 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                   <Stat label="US tariff on its goods" value={percent(trade.partnerTariff)} />
                   <Stat label="Its tariff on US goods" value={percent(trade.ownTariff)} />
                 </div>
+                <AnchorUnitNote />
                 <p className="text-body-sm text-muted">
                   Latest cleared market turn.{" "}
                   <Link

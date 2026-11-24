@@ -30,6 +30,7 @@ import { ChevronRight } from "lucide-react";
 import { ContestEntry } from "./ContestEntry";
 import { ReferralInviteLink } from "./ReferralInviteLink";
 import { RoundCountdown } from "./RoundCountdown";
+import { AnchorAmount, AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Contests | A House Divided",
@@ -172,7 +173,7 @@ function ContestRow({
           </span>
         )}
         <span className="w-28 shrink-0 text-right font-semibold tabular-nums text-gold">
-          {formatAnchor(locale, contest.prizeAnchor)}
+          <AnchorAmount>{formatAnchor(locale, contest.prizeAnchor)}</AnchorAmount>
         </span>
       </summary>
 
@@ -206,7 +207,9 @@ function ContestRow({
                       {formatScore(t, locale, contest.kind, s.score)}
                     </span>
                     <span className="block text-xs tabular-nums text-gold">
-                      {formatAnchor(locale, Math.round(contest.prizeAnchor * shares[s.rank - 1]))}
+                      <AnchorAmount>
+                        {formatAnchor(locale, Math.round(contest.prizeAnchor * shares[s.rank - 1]))}
+                      </AnchorAmount>
                     </span>
                   </span>
                 </li>
@@ -754,6 +757,7 @@ export default async function ContestsPage({
             <p className="mt-3 text-sm text-muted">
               {view === "rankings" ? t("career.intro") : t("intro")}
             </p>
+            <AnchorUnitNote className="mt-2" />
           </div>
           {round && view !== "rankings" && (
             <div className="w-full md:w-80">

@@ -1,4 +1,5 @@
 "use client";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 
 /**
  * Visual diagram of the capital loop: growth budget -> investment -> capacity,
@@ -92,6 +93,7 @@ export function CapitalLoopDiagram() {
           The sector page shows this breakdown so you can see the true economics of every unit, the
           capital charge is the cost of the capacity that unit was produced on.
         </p>
+        <AnchorUnitNote className="mt-2" />
       </div>
     </div>
   );
