@@ -698,8 +698,9 @@ function OutsideBuyers({
             </p>
           ))}
           <p className="text-muted">
-            Market-wide, from last turn&apos;s settlement, not only your plant. Companies are not in
-            this split. Your own customers are not tracked one by one.
+            {reading.basis === "plant"
+              ? "Your plant's own sales last turn, by who bought them."
+              : "Market-wide, from last turn's settlement, not only your plant. Companies are not in this split. This plant's own buyers were not recorded for that turn."}
           </p>
         </>
       )}

@@ -254,6 +254,11 @@ export interface ProducerOperatingResult {
      * same book, by why this ask did not reach them. Absent on older receipts.
      */
     unservedBy?: Partial<Record<OfferMissReason, number>>;
+    /**
+     * Units of this offer's outside sales by who bought them (see
+     * fundedBuyerKind; `companies` for company accounts). Absent on older receipts.
+     */
+    soldTo?: Partial<Record<string, number>>;
     unsoldUnits: number;
     lostUnits: number;
   }>;

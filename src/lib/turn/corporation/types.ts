@@ -522,6 +522,8 @@ export interface CorpSnapshot {
   perTurnBondInterestExpense: number;
   /** Bond interest expense this turn — zero for national enterprises (₳/turn). */
   perTurnBondDragOnNetIncome: number;
+  /** Conversion fee skimmed from foreign operating income this turn (₳). */
+  sectorFxSpreadAnchor?: number;
   /** liquidCapital normalized to ₳ at turn start plus per-turn `income` (also ₳). Used for iterative cross-holding pricing. */
   liquidCapitalAnchorAfterIncome: number;
   /** Total dividend paid to all shareholders this turn. */

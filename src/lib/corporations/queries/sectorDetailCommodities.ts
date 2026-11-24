@@ -6,6 +6,7 @@
 import type { FundedBuyerDemandRow } from "@/lib/market/producerMarket/fundedBuyerDemandRules";
 import {
   outsideBuyerRows,
+  plantBuyerRows,
   outsidePriceReading,
   type OutsideBuyerReading,
 } from "@/lib/corporations/rules/outsideBuyerReading";
@@ -470,9 +471,15 @@ export async function buildSectorCommoditySections(args: {
         ? (() => {
             const ask = outsideAsks.find((a) => a.commodity === f.commodity);
             const regional = buildPriceFields(f.commodity).regionalPrice;
+            const plantBuyers = plantBuyerRows(sale.soldTo, TURNS_PER_DAY);
             return {
               outsideBuyers: {
-                buyers: outsideBuyerRows(args.buyerDemand, f.commodity),
+                ...(plantBuyers
+                  ? { buyers: plantBuyers, basis: "plant" as const }
+                  : {
+                      buyers: outsideBuyerRows(args.buyerDemand, f.commodity),
+                      basis: "market" as const,
+                    }),
                 price: outsidePriceReading({
                   askUnitPrice: ask?.askingUnitPrice,
                   paidUnitPrice: sale.revenue / sale.sold,

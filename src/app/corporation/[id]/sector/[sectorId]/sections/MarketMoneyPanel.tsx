@@ -236,16 +236,46 @@ export default function MarketMoneyPanel({
             value: otherSplit.eventsAnchor,
             help: "Losses from disasters and live crises, net of any own-site transfer credit.",
           },
+          {
+            key: "site-running",
+            label: "Site running costs",
+            value: otherSplit.siteRunningAnchor ?? 0,
+            help: "The running bill for the sites themselves (rent, maintenance, upkeep on the running part), excluding the idle upkeep shown above.",
+          },
+          {
+            key: "minor-input-premium",
+            label: "Premium for missing minor inputs",
+            value: otherSplit.minorInputPremiumAnchor ?? 0,
+            help: "Extra paid for small inputs the plant had to run without.",
+          },
+          {
+            key: "inventory-write-off",
+            label: "Unused inputs written off",
+            value: otherSplit.inventoryWriteOffAnchor ?? 0,
+            help: "Bought inputs that went unused and lost their value this turn.",
+          },
+          {
+            key: "management-overhead",
+            label: "Management overhead (company size cost)",
+            value: otherSplit.managementOverheadAnchor ?? 0,
+            help: "A share of this site's sales charged for the size of the whole company. It is separate from the corporation overhead row in the details below, which is head office cost used for the tax estimate.",
+          },
         ].filter((line) => Math.round(line.value) !== 0)
       : []),
     ...(!otherSplit || Math.round(otherSplit.remainderAnchor) !== 0
       ? [
           {
             key: "other",
-            label: otherSplit ? "Other running costs, not itemised" : "Other running costs",
+            label: otherSplit
+              ? otherSplit.managementOverheadRecorded === false
+                ? "Management overhead and growth spend difference"
+                : "Rounding and other small items"
+              : "Other running costs",
             value: otherSplit ? otherSplit.remainderAnchor : pnl.otherOperatingAnchor,
             help: otherSplit
-              ? "What the lines above do not explain, so the lines add up to the profit the turn booked. A positive amount here is a credit."
+              ? otherSplit.managementOverheadRecorded === false
+                ? "This turn was recorded before management overhead was stored separately. This line is that overhead plus any gap in growth spend. The next turn itemises it."
+                : "What the lines above leave over, so they add up to the profit the turn booked. A positive amount here is a credit."
               : hasPolicy
                 ? "Overheads, distribution, insurance and rent, plus any disaster losses. Everything the lines above do not name. It shows as a credit when the sector's own calibrated overhead sits below its named physical costs."
                 : "Overheads, distribution, insurance and rent, less anything policy or subsidy hands back. Everything the lines above do not name. It shows as a credit when the money coming back outweighs those overheads.",

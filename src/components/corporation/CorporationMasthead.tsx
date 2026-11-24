@@ -127,7 +127,11 @@ export function CorporationMasthead({
   const priceVisible =
     !corporation.isPrivate || isCeo || !!corporation.viewerIsControllingParentCeo;
   const quoteShown = priceVisible && corporation.isPrivate !== true;
-  const { series, dayChange, loading: historyLoading } = useSharePriceHistory(corpId, quoteShown);
+  const {
+    series,
+    dayChange,
+    loading: historyLoading,
+  } = useSharePriceHistory(corpId, quoteShown, corporation.currentTurn);
 
   const fogged = financialFogOfWar != null;
   const fogTitle = fogged

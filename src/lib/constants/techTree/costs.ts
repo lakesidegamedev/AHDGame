@@ -16,6 +16,7 @@
 import type { TechTreeNode } from "./nodes";
 import type { TechEffect } from "./effects";
 import { CORP_LANE_EFFECT_SCALE } from "./effects";
+import { inputEfficiencyHeadroom } from "@/lib/techTree/rules/inputEfficiencyHeadroom";
 import { TURNS_PER_YEAR } from "../turnTime";
 
 /**
@@ -79,12 +80,30 @@ function effectValuePerTurn(effect: TechEffect, slice: TechPlantBasisSlice): num
  * saving or extra contribution its running effects produce on the plants they
  * apply to. 0 for nodes whose effects have no running value.
  */
-export function techNodeValuePerTurn(node: TechTreeNode, basis: TechPlantBasis): number {
+export function techNodeValuePerTurn(
+  node: TechTreeNode,
+  basis: TechPlantBasis,
+  researchedInputBonus?: number
+): number {
   const generic = node.lane === "generic";
   const slice = generic ? basis.all : basis.primary;
   const scale = generic ? CORP_LANE_EFFECT_SCALE : 1;
+  // Input reduction beyond the aggregate cap does nothing, so only the part
+  // that fits under it is worth money.
+  let inputKeep = 1;
+  if (researchedInputBonus !== undefined && Number.isFinite(researchedInputBonus)) {
+    const { contribution, applied } = inputEfficiencyHeadroom(
+      node.effects,
+      node.lane,
+      researchedInputBonus
+    );
+    inputKeep = contribution > 0 ? applied / contribution : 1;
+  }
   let value = 0;
-  for (const effect of node.effects) value += effectValuePerTurn(effect, slice) * scale;
+  for (const effect of node.effects) {
+    const keep = effect.kind === "inputEfficiency" ? inputKeep : 1;
+    value += effectValuePerTurn(effect, slice) * scale * keep;
+  }
   return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
@@ -122,10 +141,11 @@ export function techNodeCashCost(
   node: TechTreeNode,
   dailyGrossRevenueLocal: number,
   cashFloorLocal = 0,
-  plantBasis?: TechPlantBasis | null
+  plantBasis?: TechPlantBasis | null,
+  researchedInputBonus?: number
 ): number {
   const floor = Number.isFinite(cashFloorLocal) ? Math.max(0, cashFloorLocal) : 0;
-  const value = plantBasis ? techNodeValuePerTurn(node, plantBasis) : 0;
+  const value = plantBasis ? techNodeValuePerTurn(node, plantBasis, researchedInputBonus) : 0;
   if (value > 0) {
     return Math.round(
       Math.max(value * TECH_NODE_PAYBACK_TURNS, floor * TECH_NODE_VALUED_FLOOR_FRACTION)

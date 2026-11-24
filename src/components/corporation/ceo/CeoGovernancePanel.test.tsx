@@ -7,13 +7,17 @@ import CeoGovernancePanel from "./CeoGovernancePanel";
 import type { CorporationDetail } from "../CorporationPageTypes";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
-vi.mock("@/contexts/CurrencyContext", () => ({
-  useCurrency: () => ({
-    formatAmount: (n: number) => `$${n}`,
-    formatFull: (n: number) => `$${n}`,
-    toInternalFrom: (n: number) => n,
-  }),
-}));
+vi.mock("@/contexts/CurrencyContext", async () => {
+  const { formatSharePriceFine } = await import("@/lib/utils/formattersCore");
+  return {
+    useCurrency: () => ({
+      formatPriceFine: (n: number) => formatSharePriceFine(n, "$"),
+      formatAmount: (n: number) => `$${n}`,
+      formatFull: (n: number) => `$${n}`,
+      toInternalFrom: (n: number) => n,
+    }),
+  };
+});
 vi.mock("@/contexts/RegisteredCountriesContext", () => ({
   useCountryDisplayName: () => (id: string) => id,
   useEnabledCountries: () => [],
@@ -73,7 +77,7 @@ describe("CeoGovernancePanel", () => {
       fundRows: [],
       nppRows: [],
       totalShares: 100,
-      perShareCorp: 10,
+      perShareCorp: 0.7005,
       corpPerAnchor: 1,
       poolParts: { cash: 600, heldBonds: 0, sectorSalvage: 400, buybackEscrow: 0 },
       sectorSalvageFraction: 0.2,
@@ -87,6 +91,7 @@ describe("CeoGovernancePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dissolve: Dissolve" }));
     fireEvent.click(screen.getByRole("button", { name: "Preview payout" }));
     await waitFor(() => expect(screen.getByText("Paid per share")).toBeTruthy());
+    expect(screen.getByText("$0.7005")).toBeTruthy();
     expect(screen.getByText(/not the book value/)).toBeTruthy();
     const yes = screen.getByRole("button", { name: "Yes, dissolve" });
     expect((yes as HTMLButtonElement).disabled).toBe(true);

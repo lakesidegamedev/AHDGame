@@ -549,6 +549,57 @@ describe("getCorporationSectorDetail", () => {
     expect(data.sector.unionName).toBe("United Steelworkers");
     expect(data.sector.unionWageDemand).toBeNull();
   });
+  it.each([
+    ["a sibling character on the CEO's account", false],
+    ["the CEO character", true],
+  ])("sector financials for %s of a public corp", async (_label, asCeo) => {
+    const { getAuthUser } = await import("@/lib/auth");
+    const corporationId = new ObjectId();
+    const ownerUserId = new ObjectId();
+    const ceoCharacterId = new ObjectId();
+    const siblingCharacterId = new ObjectId();
+    const sectorId = new ObjectId();
+    vi.mocked(getAuthUser).mockResolvedValueOnce({
+      userId: ownerUserId.toHexString(),
+      activeCharacterId: (asCeo ? ceoCharacterId : siblingCharacterId).toHexString(),
+      isAdmin: false,
+      isModerator: false,
+    } as Awaited<ReturnType<typeof getAuthUser>>);
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corporationId,
+      sequentialId: 10,
+      name: "Public Corp",
+      userId: ownerUserId,
+      ceoId: ceoCharacterId,
+      isPrivate: false,
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+    });
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
+      _id: sectorId,
+      corporationId,
+      stateId: "CA",
+      countryId: "US",
+      sectorType: "technology",
+      revenue: 1_000_000,
+    });
+    const response = await getCorporationSectorDetail(
+      new Request(`http://localhost/api/corporations/10/sectors/${sectorId.toHexString()}`),
+      { params: Promise.resolve({ id: "10", sectorId: sectorId.toHexString() }) }
+    );
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.isCeo).toBe(asCeo);
+    if (asCeo) {
+      expect(data.sector.revenue).not.toBeNull();
+      expect(data.financials).not.toBeNull();
+    } else {
+      expect(data.sector.revenue).toBeNull();
+      expect(data.financials).toBeNull();
+      expect(data.margins).toBeNull();
+      expect(data.financialVisibility.hidden).toBe(true);
+    }
+  });
   it.each([0, 100, 200])(
     "uses the saved internal price in the header and plants statement, income %s",
     async (income) => {

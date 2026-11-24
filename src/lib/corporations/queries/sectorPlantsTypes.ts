@@ -195,6 +195,8 @@ export interface SectorPlantsSection {
    */
   activeCapacityPercent?: number;
   capacityRecovery?: { coldUpkeepFraction: number; coldUpkeepDailyAnchor: number };
+  /** Names the missing input when no investment forecast could be built. */
+  investmentWithheld?: import("@/lib/corporations/investment/rules").InvestmentWithheldReason;
   investment?: {
     overheadDailyAnchor: number;
     /** One turn of company running costs; null when liabilities or current costs are unknown. */
@@ -302,6 +304,16 @@ export interface SectorPlantsSection {
       inventoryCarryAnchor: number;
       eventsAnchor: number;
       remainderAnchor: number;
+      /** Funded turns: the site running bill net of idle upkeep. */
+      siteRunningAnchor?: number;
+      /** Funded turns: premium paid for minor inputs the plant ran without. */
+      minorInputPremiumAnchor?: number;
+      /** Funded turns: bought inputs that went unused and were written off. */
+      inventoryWriteOffAnchor?: number;
+      /** Funded turns: management overhead on the revenue sold. */
+      managementOverheadAnchor?: number;
+      /** False when the turn was recorded before management overhead was stored. */
+      managementOverheadRecorded?: boolean;
     };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;

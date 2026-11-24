@@ -2,8 +2,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
-vi.mock("@/lib/observability/fetchJson", () => ({
-  fetchJson: vi.fn().mockRejectedValue(new Error("network")),
+vi.mock("@/lib/maps/mapLoad", () => ({
+  fetchMapJson: vi.fn().mockRejectedValue(new Error("network")),
+  reportMapLoadFailure: vi.fn(),
 }));
 
 import { RegionMapPaths } from "./RegionMapPaths";

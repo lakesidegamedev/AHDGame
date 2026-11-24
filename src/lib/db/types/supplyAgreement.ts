@@ -2,8 +2,25 @@ import type { ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
+/**
+ * How a new agreement prices its deliveries. `"fixed"` settles the gap between
+ * an agreed per-unit price and the turn's market price. `"indexed"` settles an
+ * agreed percentage of the turn's market price. An agreement with no mode is a
+ * legacy one: it adds a bonus or discount on the billed input price.
+ */
+export type SupplyAgreementPriceMode = "fixed" | "indexed";
+
+/** Pricing fields an offer and an accepted agreement carry for the two newer modes. */
+export interface SupplyAgreementPricing {
+  priceMode?: SupplyAgreementPriceMode;
+  /** Fixed mode: agreed per-unit price P. */
+  fixedUnitPrice?: number;
+  /** Fixed mode: market price M0 the agreed price was bounded against. */
+  signingMarketPrice?: number;
+}
+
 /** One revision in a bilateral supply-agreement negotiation. */
-export interface SupplyAgreementOffer {
+export interface SupplyAgreementOffer extends SupplyAgreementPricing {
   /** Monotonic within one agreement, starting at 1. */
   revision: number;
   /** Corporation that authored this offer. */
@@ -32,7 +49,7 @@ export interface SupplyAgreementOffer {
  *
  * Gated by gameConfig.supplyAgreementsEnabled.
  */
-export interface SupplyAgreement {
+export interface SupplyAgreement extends SupplyAgreementPricing {
   _id?: ObjectId;
   supplierCorpId: ObjectId;
   buyerCorpId: ObjectId;
@@ -74,7 +91,9 @@ export interface SupplyAgreement {
   volumeCapBasis?: "scaledCapacity";
   /**
    * Agreed price as a fraction offset from market: 0 = at market, +0.2 = 20%
-   * above, −0.2 = 20% below. Bounded to ±SUPPLY_AGREEMENT_PRICE_BAND.
+   * above, −0.2 = 20% below. Bounded to ±SUPPLY_AGREEMENT_PRICE_BAND. In fixed
+   * mode it is the agreed price's offset from the signing market price, kept
+   * for sorting and display; settlement reads `fixedUnitPrice`.
    */
   pricePremium: number;
   /** Exclusive = the supplier sells this commodity ONLY to the buyer (no market sales). */
@@ -106,6 +125,12 @@ export interface SupplyAgreement {
    */
   transferPricingExposureAnchor?: number;
   lastTransferPricingAuditTurn?: number;
+  /** Newer modes: market price the latest settlement used, per unit. */
+  lastMarketUnitPrice?: number;
+  /** Newer modes: "realised" when it is the supplier's sale price that turn, else "published". */
+  lastMarketPriceSource?: "realised" | "published";
+  /** Newer modes: contract price per unit on the latest settlement. */
+  lastContractUnitPrice?: number;
   /** Latest turn this agreement was evaluated for physical delivery. */
   lastDeliveryTurn?: number;
   /** Units this agreement delivered to its named buyer on lastDeliveryTurn. */

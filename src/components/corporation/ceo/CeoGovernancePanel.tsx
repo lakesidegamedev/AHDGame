@@ -88,7 +88,7 @@ export default function CeoGovernancePanel({
     legalStructureSuccess,
     shareholderAddressOpen,
   } = state;
-  const { formatFull, toInternalFrom } = useCurrency();
+  const { formatFull, formatPriceFine, toInternalFrom } = useCurrency();
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
 
   const relocationMarketCapBasis = Math.round(corporation.sharePrice * corporation.totalShares);
@@ -713,6 +713,9 @@ export default function CeoGovernancePanel({
                     isPrivate={!!corporation.isPrivate}
                     corpCode={corpCode}
                     formatFull={(amount, code) => formatFull(toInternalFrom(amount, code), code)}
+                    formatRate={(amount, code) =>
+                      formatPriceFine(toInternalFrom(amount, code), code)
+                    }
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -769,11 +772,13 @@ function DissolvePreview({
   isPrivate,
   corpCode,
   formatFull,
+  formatRate,
 }: {
   preview: DissolvePreviewData;
   isPrivate: boolean;
   corpCode: CurrencyCode;
   formatFull: (amount: number, code: CurrencyCode) => string;
+  formatRate: (amount: number, code: CurrencyCode) => string;
 }) {
   const showBreakdown =
     preview.corporateRows.length > 0 ||
@@ -803,7 +808,7 @@ function DissolvePreview({
         {preview.totalShares > 0 && (
           <KVRow
             label="Paid per share"
-            value={formatFull(preview.perShareCorp, corpCode)}
+            value={formatRate(preview.perShareCorp, corpCode)}
             hint="every share is paid the same"
           />
         )}

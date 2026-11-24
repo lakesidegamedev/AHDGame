@@ -78,6 +78,7 @@ describe("BondsTab issuance", () => {
     const all = document.querySelector(`[title*="25% of annual revenue"]`)?.getAttribute("title");
     expect(tip + (all ?? "")).toContain("25% of annual revenue");
     expect(all).toContain(`A${MIN_BOND_ISSUANCE_PER_ISSUE}`);
+    expect(all).toContain("₳500M, about");
   });
 
   it("leads with the amount that can be issued now and names the binding limit", () => {
@@ -92,6 +93,8 @@ describe("BondsTab issuance", () => {
     const button = screen.getByRole("button", { name: "Issue bonds" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(screen.getByText(/Minimum/).textContent).toContain("A40000");
+    expect(screen.getByText(/Minimum/).textContent).toContain("₳40K, about A40000 at today's rate");
+    expect(screen.getByText(/Minimum/).textContent).toContain("moves with the exchange rate");
   });
 
   it("enables the issue button at a valid amount and clears a stale refusal", async () => {

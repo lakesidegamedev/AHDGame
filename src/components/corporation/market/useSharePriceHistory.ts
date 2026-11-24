@@ -20,7 +20,11 @@ export interface SharePriceHistoryState {
  * market masthead. Reuses the same `/history` route the Charts tab consumes.
  * Degrades gracefully (empty series, null dayChange) on error or thin history.
  */
-export function useSharePriceHistory(corpId: string, enabled: boolean): SharePriceHistoryState {
+export function useSharePriceHistory(
+  corpId: string,
+  enabled: boolean,
+  turn?: number | null
+): SharePriceHistoryState {
   // Loading from the first render when the fetch will run, so the masthead can
   // hold the sparkline's space instead of growing when the history lands.
   const [state, setState] = useState<SharePriceHistoryState>({
@@ -40,7 +44,11 @@ export function useSharePriceHistory(corpId: string, enabled: boolean): SharePri
         // 20 points of (turn, sharePrice) — the sparkline and the day change
         // need the last two. `/history` without this flag returns 500 rows of
         // ~30 fields (~430 KB) for the Charts tab.
-        const res = await fetch(`/api/corporations/${corpId}/history?sparkline=1`);
+        // The turn keys the request so a shared cache cannot answer with the
+        // previous turn's series, which would leave the change stuck on an
+        // old close while the live price moves.
+        const turnKey = turn != null && Number.isFinite(turn) ? `&turn=${turn}` : "";
+        const res = await fetch(`/api/corporations/${corpId}/history?sparkline=1${turnKey}`);
         if (!res.ok) {
           if (!cancelled) setState({ series: [], dayChange: null, loading: false });
           return;
@@ -64,7 +72,7 @@ export function useSharePriceHistory(corpId: string, enabled: boolean): SharePri
     return () => {
       cancelled = true;
     };
-  }, [corpId, enabled]);
+  }, [corpId, enabled, turn]);
 
   return state;
 }

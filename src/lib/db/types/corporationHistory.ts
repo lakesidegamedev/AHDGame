@@ -134,6 +134,10 @@ export interface CorporationHistory {
   perTurnBondDragOnNetIncome?: number;
   /** Total corporate tax paid this turn, federal + state/regional combined plus tax on dividends received, in liquidCurrencyCode units. The ledger `corp_tax_paid` row covers operating tax only, so it is lower by the dividend-received tax. */
   corporateTaxPaid?: number;
+  /** Part of `corporateTaxPaid` that is tax on dividends received, which the net dividend credit already carries (reporting currency). */
+  dividendReceivedTax?: number;
+  /** Currency conversion fee skimmed from foreign operating income before it reached retained income (reporting currency). */
+  sectorFxSpread?: number;
   /** Federal corporate tax paid this turn, summed across all countries (currencyCode/turn). */
   federalTaxPaid?: number;
   /** State/regional corporate tax paid this turn, summed across all states/regions (currencyCode/turn). */

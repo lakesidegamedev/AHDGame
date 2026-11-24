@@ -43,7 +43,11 @@ import {
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { settledOfferedUnits, soldShareForList } from "@/lib/corporations/fundedClearingReading";
 import { summarizeBuildQueue } from "@/lib/corporations/sectorBuildQueue";
-import { queueUndeliveredCost, resolveBuildSettledTurn } from "@/lib/corporations/buildDelivery";
+import {
+  orderedOnTurnCost,
+  queueUndeliveredCost,
+  resolveBuildSettledTurn,
+} from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
 import { sectorDailyRevenueBasis } from "@/lib/corporations/dailyRevenueBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
@@ -759,6 +763,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
           )
         )
       : null;
+    const constructionOrderedAnchor = plantsMode
+      ? orderedOnTurnCost(Array.isArray(sector.buildQueue) ? sector.buildQueue : [], currentTurn)
+      : null;
     const buildQueueSummary = plantsMode
       ? summarizeBuildQueue(
           sector.buildQueue,
@@ -956,6 +963,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       mothballed,
       buildQueueSummary,
       constructionInProgressAnchor,
+      constructionOrderedAnchor,
     };
   });
 

@@ -267,7 +267,8 @@ export default function SupplyChainTab({
           ))}
           <p className="text-xs text-muted">
             Trade values exclude tariffs, taxes and other operating costs. Internal deliveries move
-            goods between your sites without a company cash payment.
+            goods between your sites without a company cash payment. Units and totals here are for
+            this one turn. Sector pages show the same flows as a daily rate, which is 24 turns.
           </p>
         </>
       )}

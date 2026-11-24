@@ -2,6 +2,7 @@
 import type { Feature, FeatureCollection, Geometry, MultiLineString } from "geojson";
 import type { Topology, GeometryCollection } from "topojson-specification";
 import type { RegionOverlayShard } from "@/lib/maps/regionOverlay";
+import { fetchMapJson, reportMapLoadFailure } from "@/lib/maps/mapLoad";
 import { useWorldMapState } from "@/app/world/components/useWorldMapState";
 
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
@@ -303,13 +304,20 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
     setLoadFailed(false);
 
     async function load() {
-      const [d3, topojson] = await Promise.all([import("d3-geo"), import("topojson-client")]);
+      const [d3, topojson] = await Promise.all([import("d3-geo"), import("topojson-client")]).catch(
+        (err) => {
+          reportMapLoadFailure("chunk", "d3-geo,topojson-client", err);
+          throw err;
+        }
+      );
       if (cancelled) return;
       d3Ref.current = d3;
 
-      const resp = await fetch(WORLD_GEO_URL);
-      if (!resp.ok) throw new Error(`World map data failed to load (${resp.status})`);
-      const topo: Topology<{ countries: GeometryCollection }> = await resp.json();
+      const topo = await fetchMapJson<Topology<{ countries: GeometryCollection }>>(
+        WORLD_GEO_URL,
+        undefined,
+        "world-topology"
+      );
       if (cancelled) return;
 
       const geojson: FeatureCollection<Geometry> = topojson.feature(topo, topo.objects.countries);
@@ -320,9 +328,12 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       // not exist in 1953, and leaving it would draw an uncoloured background
       // country underneath both halves.
       try {
-        const vnResp = await fetch(VIETNAM_GEO_URL, { cache: "no-store" });
-        if (vnResp.ok) {
-          const vn = await vnResp.json();
+        {
+          const vn = await fetchMapJson<FeatureCollection<Geometry>>(
+            VIETNAM_GEO_URL,
+            { cache: "no-store" },
+            "world-vietnam"
+          );
           if (vn?.features?.length) {
             geojson.features = geojson.features.filter(
               (f: { id?: unknown }) => String(f.id) !== VIETNAM_BASE_FEATURE_ID
@@ -367,14 +378,20 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
         const candidateShards = REGION_SHARDS.filter((s) => s.worldOverlay !== false);
         const [pcMod, ownResp] = await Promise.all([
           import("polygon-clipping"),
-          fetch("/api/maps/region-ownership", { cache: "no-store" }).then((r) => r.json()),
+          fetchMapJson<{ ownership?: Record<string, string> }>(
+            "/api/maps/region-ownership",
+            { cache: "no-store" },
+            "world-ownership"
+          ),
         ]);
         const ownership: Record<string, string> = ownResp?.ownership ?? {};
         const overlayShards = selectStructuralOverlayShards(candidateShards, ownership);
         const shardGeos = cancelled
           ? []
           : await Promise.all(
-              overlayShards.map((s) => fetch(s.url, { cache: "no-store" }).then((r) => r.json()))
+              overlayShards.map((s) =>
+                fetchMapJson<RegionOverlayShard>(s.url, { cache: "no-store" }, "world-shard")
+              )
             );
         const sources: Pick<RegionOverlayShard, "features">[] = shardGeos;
         if (!cancelled && sources.some((s) => s?.features?.length)) {
@@ -465,9 +482,12 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       // Only visible in HEATMAP modes; in structural modes they are
       // background-tier and merged into a silhouette.
       try {
-        const histResp = await fetch(HISTORICAL_GEO_URL, { cache: "no-store" });
-        if (histResp.ok) {
-          const hist = await histResp.json();
+        {
+          const hist = await fetchMapJson<FeatureCollection<Geometry>>(
+            HISTORICAL_GEO_URL,
+            { cache: "no-store" },
+            "world-historical"
+          );
           for (const f of hist?.features ?? []) {
             geojson.features.push(f);
             // The centroid pass ran before these existed, so each one is set here —
@@ -505,8 +525,10 @@ export default function WorldMapSVG(...args: Parameters<typeof useWorldMapState>
       setIsLoaded(true);
     }
 
-    load().catch(() => {
-      if (!cancelled) setLoadFailed(true);
+    load().catch((err) => {
+      if (cancelled) return;
+      reportMapLoadFailure("world-load", WORLD_GEO_URL, err);
+      setLoadFailed(true);
     });
 
     return () => {

@@ -562,6 +562,14 @@ function CorpStocksTable({
                   </td>
                   <td className="px-4 py-3 text-right font-mono tabular-nums hidden md:table-cell">
                     {sp(norm(h.sharePrice, h.currencyCode), h.currencyCode)}
+                    {h.isPrivate && (
+                      <span
+                        className="block text-[10px] opacity-75"
+                        title="Private shares have no market price. This is an estimated valuation."
+                      >
+                        valuation
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-bold tabular-nums">
                     {formatAmount(norm(h.totalValue, h.currencyCode), h.currencyCode)}

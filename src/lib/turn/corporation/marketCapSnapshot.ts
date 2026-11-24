@@ -492,6 +492,20 @@ export async function snapshotMarketCap(
         corporateTaxPaid: Math.round(
           writeCorpEconomicLocal(s.federalTaxPaid + s.stateTaxPaid + divTaxTotalAnchor, code, rate)
         ),
+        ...(divTaxTotalAnchor > 0
+          ? {
+              dividendReceivedTax: Math.round(
+                writeCorpEconomicLocal(divTaxTotalAnchor, code, rate)
+              ),
+            }
+          : {}),
+        ...(s.sectorFxSpreadAnchor
+          ? {
+              sectorFxSpread: Math.round(
+                writeCorpEconomicLocal(s.sectorFxSpreadAnchor, code, rate)
+              ),
+            }
+          : {}),
         federalTaxPaid: Math.round(
           writeCorpEconomicLocal(s.federalTaxPaid + divTaxTotalAnchor, code, rate)
         ),

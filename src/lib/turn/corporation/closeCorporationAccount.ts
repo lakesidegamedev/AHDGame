@@ -228,6 +228,7 @@ export function closeCorporationAccount(context: ProcessCorporationAccountStageC
   // credits liquidCapital / feeds credit + snapshots, so a corp can never be
   // pushed negative and downstream metrics stay consistent. Fees (in each
   // source currency) are routed to the CB system in index.ts.
+  let skimmedSectorSpreadAnchor = 0;
   if (income > 0 && totalOpIncomeForCorp > 0 && context.resolvedHomeCurrency) {
     let sectorSpreadAnchor = 0;
     for (const [srcCcy, opAnchor] of opIncomeByCcy) {
@@ -247,6 +248,7 @@ export function closeCorporationAccount(context: ProcessCorporationAccountStageC
       }
     }
     income -= sectorSpreadAnchor;
+    skimmedSectorSpreadAnchor = sectorSpreadAnchor;
   }
 
   context.context.totalRevenueGenerated += context.corpRevenue;
@@ -512,6 +514,7 @@ export function closeCorporationAccount(context: ProcessCorporationAccountStageC
     perTurnBondCouponIncome: context.perTurnBondCouponIncome,
     perTurnBondInterestExpense: context.perTurnBondInterestExpense,
     perTurnBondDragOnNetIncome: context.perTurnBondDragOnNetIncome,
+    ...(skimmedSectorSpreadAnchor > 0 ? { sectorFxSpreadAnchor: skimmedSectorSpreadAnchor } : {}),
     liquidCapitalAnchorAfterIncome: endLiquidAnchor,
     dividendPaidPerTurn: context.hourlyDividendPayout,
     federalTaxPaid: context.totalFederalTax,

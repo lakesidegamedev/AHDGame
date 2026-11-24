@@ -88,6 +88,8 @@
         "moneyMarket": "Market price on the commodities table: {price} per {unit}. The billed input price follows it but is damped and bounded, so the two differ.",
         "moneyRange": "Slider range: {low} to {high} per {unit}",
         "moneyUnitPrice": "Contract price: {price} per {unit}",
+        "moneyBuyerSide": "As buyer you pay about {market} per {unit} on the market. This contract costs {contract}.",
+        "moneySellerSide": "As seller you receive about {market} per {unit} selling on the market. This contract pays about {contract}: that market sale plus the premium.",
         "moneyPerDay": "Per day at the full cap: {units} {unit}, worth {value}. Each hourly turn settles one twenty-fourth.",
         "moneyOverTerm": "Over the {turns}-turn term at the full cap: {value}",
         "moneyNoReference": "No reference price is available for this commodity yet.",
@@ -119,6 +121,26 @@
           "buyerUsedLess": "The buyer's plants used only {used} of {cap} {unit} last turn, so the rest was not delivered.",
           "marketDeliveredLess": "The market delivered {delivered} of {cap} {unit} of your output to this buyer last turn. The contract price applies only to units actually delivered."
         }
+      },
+      "priceModes": {
+        "title": "How the price works",
+        "fixed": "Set price",
+        "indexed": "Market price plus or minus",
+        "fixedLabel": "Agreed price per {unit}",
+        "fixedHelp": "Within {band}% of the market price when the agreement is signed: {low} to {high} per {unit}. The market is {market} per {unit} now.",
+        "indexedLabel": "Percentage of market price",
+        "indexedHelp": "Up to {band}% above or below each turn's market price. Positive favours the seller; negative favours the buyer.",
+        "settlesDifference": "Each turn the contract settles the difference against that turn's market price, paid between the two companies. The sale itself still clears at the market price.",
+        "sellerFixed": "Seller receives exactly {price} per {unit} delivered, whatever the market does.",
+        "sellerIndexed": "Seller receives the market price plus {percent}: about {price} per {unit} at today's market.",
+        "buyerNet": "Buyer pays the market input bill of {bill} per {unit} plus a transfer of {transfer} per {unit} at today's market: about {net} per {unit} net.",
+        "noMarket": "There is no market price for this commodity yet, so a set price is not available.",
+        "legacyNote": "Older agreements add a bonus or discount on the input price; they do not fix a price.",
+        "modeLabel": "Price option",
+        "needMarket": "A set price needs a market price. Try again later or use market price plus or minus.",
+        "fixedRange": "Set price must be between {low} and {high}.",
+        "fixedSummary": "Set price {price} per {unit}",
+        "indexedSummary": "Market price {percent}"
       }
     },
     "sectorInvestment": {
@@ -158,6 +180,7 @@
       "freightStateTurn": " in turn {turn}",
       "freightCongested": "Freight here is over capacity ({share}% used). Shipments past capacity still move but pay {surcharge}% more for shipping, and nothing more leaves the state past {limit} TEU. Local sales use no freight.",
       "freightBlocked": "Freight here is at its limit ({share}% of capacity). Out-of-state shipments past {limit} TEU did not move, so some output could not reach buyers in other states. Local sales use no freight.",
+      "freightNoneEstimate": "This sector's output moves by wire or pipe, not by freight, so it needs no TEU of its own.",
       "freightOneHopEstimate": "If this sector ran at full capacity and shipped all output one state away, it would need about {estimate} TEU per day of its own. Local sales use no freight; longer routes use more.",
       "expansionDiscount": "Expansion cost adjustment",
       "expansionDiscountHelp": "New ordinary expansion receives this build-cost reduction. Founder pricing is separate.",
@@ -183,6 +206,8 @@
         "notRun": "No profit or payback yet: this sector made nothing last turn, so there is no result to project from. It appears after its next turn that produces output.",
         "mothballed": "No profit or payback while the plants are mothballed. It appears after they reopen and run a turn.",
         "ramping": "No profit or payback yet: this sector is still in its market support ramp, so last turn's results are not typical. It appears in {turns, plural, one {# turn} other {# turns}}.",
+        "transition": "No profit or payback yet: this sector is changing strategy, so last turn's results do not match what it will run. It appears after the change finishes.",
+        "upkeepBasis": "No profit or payback yet: this sector's standing running cost has not been recorded yet. It appears after its next settled turn.",
         "other": "No profit or payback yet: last turn's results for this sector are incomplete. It appears after this sector's next settled turn."
       },
       "noExtraBuyersNote": "No unmet demand is measured for this output, so the extra capacity is modelled with no extra sales, only its running cost. Sectors of the same type with similar costs show the same figure.",
@@ -415,6 +440,8 @@
       "cannotUse": "Offers you cannot use ({count})",
       "cannotUseHint": "None of these can deliver to your plants. They stay listed so you can see why.",
       "sizeNote": "About {ratio}x your daily use of this input",
+      "sizingUnmetOutput": "Quantity: sized from the seller's total unmet output, the same for each good it buys.",
+      "sizingSpareCapacity": "Quantity: half of the seller's spare capacity for this good.",
       "confirmTitle": "Confirm a binding agreement",
       "confirmBuy": "You are about to start a binding agreement to buy {volume} {unit} per day from {company}. Term: {term}.",
       "confirmSell": "You are about to start a binding agreement to sell {volume} {unit} per day to {company}. Term: {term}.",

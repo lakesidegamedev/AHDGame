@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outsideBuyerRows, outsidePriceReading } from "./outsideBuyerReading";
+import { outsideBuyerRows, outsidePriceReading, plantBuyerRows } from "./outsideBuyerReading";
 
 describe("outsideBuyerRows", () => {
   it("keeps the commodity's buyers, largest delivery first", () => {
@@ -64,5 +64,22 @@ describe("outsidePriceReading", () => {
         regionalUnitPrice: 1,
       })
     ).toBeNull();
+  });
+});
+
+describe("plantBuyerRows", () => {
+  it("scales per-turn units to a day and orders the largest first", () => {
+    const rows = plantBuyerRows({ publicBuyer: 2, households: 5, companies: 1 }, 24);
+    expect(rows!.map((r) => [r.kind, r.delivered])).toEqual([
+      ["households", 120],
+      ["publicBuyer", 48],
+      ["companies", 24],
+    ]);
+    expect(rows![2].name).toBe("Other companies");
+  });
+  it("returns null when nothing was recorded so the market-wide split is used", () => {
+    expect(plantBuyerRows(undefined, 24)).toBeNull();
+    expect(plantBuyerRows({}, 24)).toBeNull();
+    expect(plantBuyerRows({ households: 0 }, 24)).toBeNull();
   });
 });

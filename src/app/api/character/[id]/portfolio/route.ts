@@ -43,6 +43,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
         sequentialId: holding.sequentialId,
         shares: holding.shares,
         sharePrice: holding.sharePrice,
+        isPrivate: holding.isPrivate,
         totalValue: holding.totalValue,
         logoUrl: holding.logoUrl,
         brandColor: holding.brandColor,

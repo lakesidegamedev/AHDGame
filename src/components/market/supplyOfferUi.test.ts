@@ -8,10 +8,10 @@ import {
 
 describe("offer premium wording", () => {
   it("reads a positive premium as above market, not a fraction of it", () => {
-    expect(offerPremiumLabel(0.2)).toBe("+20%");
-    expect(offerPremiumDescription(0.2)).toBe("20% above the reference price");
-    expect(offerPremiumDescription(-0.15)).toBe("15% below the reference price");
-    expect(offerPremiumDescription(0)).toBe("At the reference price");
+    expect(offerPremiumLabel(0.2)).toBe("Market +20%");
+    expect(offerPremiumDescription(0.2)).toBe("Market price plus 20%");
+    expect(offerPremiumDescription(-0.15)).toBe("Market price minus 15%");
+    expect(offerPremiumDescription(0)).toBe("Market price");
   });
 
   it("prices one unit from the market price and premium", () => {
