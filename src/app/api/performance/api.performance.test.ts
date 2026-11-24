@@ -400,7 +400,10 @@ describe("API Performance: Elections List", () => {
           };
           cursor.sort.mockReturnValue(cursor);
           cursor.limit.mockReturnValue(cursor);
-          return { find: vi.fn().mockReturnValue(cursor) };
+          return {
+            find: vi.fn().mockReturnValue(cursor),
+            aggregate: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
+          };
         }
         if (name === "gameState")
           return {
