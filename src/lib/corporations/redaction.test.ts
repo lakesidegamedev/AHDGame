@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
 import {
   shouldRedactCorporation,
+  isAdminOnlyView,
   redactPrivateCorporation,
   redactPrivateSectorRow,
   redactPrivateBondRow,
@@ -247,4 +248,28 @@ it("strips the complete site statement from private outsider rows", () => {
     siteStatement: { revenue: 100, totalCost: 80, profit: 20 },
   });
   expect(redacted).not.toHaveProperty("siteStatement");
+});
+
+describe("isAdminOnlyView", () => {
+  const owner = new ObjectId();
+  const admin = { userId: "admin", isAdmin: true };
+  it("flags an admin viewing a private corporation they do not run", () => {
+    expect(isAdminOnlyView({ isPrivate: true, userId: owner } as never, admin)).toBe(true);
+  });
+  it("flags an admin viewing a public corporation's live figures", () => {
+    expect(isAdminOnlyView({ isPrivate: false, userId: owner } as never, admin)).toBe(true);
+  });
+  it("does not flag the CEO, a parent CEO, exposed books, natcorps or non-admins", () => {
+    const corp = { isPrivate: true, userId: owner };
+    expect(isAdminOnlyView(corp as never, { userId: owner.toString(), isAdmin: true })).toBe(false);
+    expect(isAdminOnlyView(corp as never, admin, { isParentCeo: true })).toBe(false);
+    expect(
+      isAdminOnlyView({ isPrivate: false, userId: owner } as never, admin, { booksExposed: true })
+    ).toBe(false);
+    expect(
+      isAdminOnlyView({ isPrivate: false, userId: owner, countryOwnerId: "x" } as never, admin)
+    ).toBe(false);
+    expect(isAdminOnlyView(corp as never, { userId: "p", isAdmin: false })).toBe(false);
+    expect(isAdminOnlyView(corp as never, null)).toBe(false);
+  });
 });

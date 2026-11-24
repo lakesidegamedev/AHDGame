@@ -4,6 +4,8 @@
  */
 
 import type { PriceCapBasis } from "./priceCapBasis";
+import type { CommodityPriceAttribution } from "./priceAttribution";
+import { cappedGoodTarget } from "./cappedGoodTarget";
 
 export const MAX_PREVIEW_ROWS = 20;
 export const MARKET_OVERVIEW_ROWS = 5;
@@ -15,6 +17,9 @@ export interface CommodityMover {
   globalPrice: number;
   priceCeiling?: number;
   priceCapBasis?: PriceCapBasis;
+  globalSupply?: number;
+  globalDemand?: number;
+  priceAttribution?: CommodityPriceAttribution | null;
 }
 
 export function vsBasePct({
@@ -35,10 +40,20 @@ export function atPriceCap({
   return typeof priceCeiling === "number" && priceCeiling > 0 && globalPrice >= priceCeiling * 0.99;
 }
 
+/**
+ * Larger first by distance from base. Goods held at the cap share one figure,
+ * so ties go to the one whose market target sits furthest above the cap.
+ */
+export function compareByDistanceFromBase<T extends CommodityMover>(a: T, b: T): number {
+  const diff = Math.abs(vsBasePct(b) ?? 0) - Math.abs(vsBasePct(a) ?? 0);
+  if (Math.abs(diff) > 0.05) return diff;
+  const ta = atPriceCap(a) ? (cappedGoodTarget(a)?.targetVsBasePct ?? 0) : 0;
+  const tb = atPriceCap(b) ? (cappedGoodTarget(b)?.targetVsBasePct ?? 0) : 0;
+  return tb - ta;
+}
+
 export function topCommodityMovers<T extends CommodityMover>(commodities: readonly T[]): T[] {
-  return [...commodities]
-    .sort((a, b) => Math.abs(vsBasePct(b) ?? 0) - Math.abs(vsBasePct(a) ?? 0))
-    .slice(0, MARKET_OVERVIEW_ROWS);
+  return [...commodities].sort(compareByDistanceFromBase).slice(0, MARKET_OVERVIEW_ROWS);
 }
 
 /** `?preview=N` as a row count, or null when absent or invalid. */

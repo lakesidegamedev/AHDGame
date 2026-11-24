@@ -22,6 +22,7 @@ import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
 import { atPriceCap } from "@/lib/market/overviewPreview";
 import { priceCapBasisText } from "@/lib/market/priceCapBasis";
+import { cappedGoodNote, cappedGoodTarget } from "@/lib/market/cappedGoodTarget";
 import { useTranslations } from "next-intl";
 import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
@@ -68,6 +69,16 @@ export default function HeroPanel({
       priceCeiling: data.basePrice * capBasis.multiplier * capBasis.nominalIndex,
     });
   const capNote = atCap ? priceCapBasisText(capBasis) : null;
+  const capTarget =
+    atCap && !activeCountry
+      ? cappedGoodTarget({
+          basePrice: data.basePrice,
+          globalPrice: data.globalPrice,
+          globalSupply: data.globalSupply,
+          globalDemand: data.globalDemand,
+          priceAttribution: data.priceAttribution,
+        })
+      : null;
   const heroSlug = COMMODITY_HERO_SLUGS[data.commodity as CommodityType];
   const heroAlt = COMMODITY_HERO_ALTS[data.commodity as CommodityType] ?? data.label;
   const selectedCurrency = activeCountry ? getCommodityDisplayCurrency(activeCountry) : null;
@@ -185,6 +196,9 @@ export default function HeroPanel({
             {marketScope.priceChange}% vs original base
           </span>
           {capNote && <span className="text-[10px] text-muted">At cap: {capNote}</span>}
+          {capTarget && (
+            <span className="text-[10px] text-muted">At cap: {cappedGoodNote(capTarget)}</span>
+          )}
           <span className="mt-1 text-[10px] text-muted">{marketScope.marketCaption}</span>
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">

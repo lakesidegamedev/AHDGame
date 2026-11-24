@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
-import { atPriceCap } from "@/lib/market/overviewPreview";
+import { atPriceCap, compareByDistanceFromBase } from "@/lib/market/overviewPreview";
+import { cappedGoodNote, cappedGoodTarget } from "@/lib/market/cappedGoodTarget";
 import {
   balancePressure,
   premiumTrendSentence,
@@ -64,7 +65,7 @@ export function CommoditiesPanel({
     const needle = filter.trim().toLowerCase();
     return [...(commodities ?? [])]
       .filter((c) => !needle || c.label.toLowerCase().includes(needle))
-      .sort((a, b) => Math.abs(vsBasePct(b) ?? 0) - Math.abs(vsBasePct(a) ?? 0));
+      .sort(compareByDistanceFromBase);
   }, [commodities, filter]);
 
   return (
@@ -118,6 +119,7 @@ export function CommoditiesPanel({
               {rows.map((c) => {
                 const base = vsBasePct(c);
                 const bal = balance(c);
+                const capTarget = atPriceCap(c) ? cappedGoodTarget(c) : null;
                 return (
                   <tr key={c.commodity} className="border-b border-card-border/50 last:border-b-0">
                     <td className="px-3 py-2 font-medium text-foreground">{c.label}</td>
@@ -139,6 +141,7 @@ export function CommoditiesPanel({
                           {priceCapBasisText(c.priceCapBasis) && (
                             <span className="block">{priceCapBasisText(c.priceCapBasis)}</span>
                           )}
+                          {capTarget && <span className="block">{cappedGoodNote(capTarget)}</span>}
                         </span>
                       )}
                     </td>

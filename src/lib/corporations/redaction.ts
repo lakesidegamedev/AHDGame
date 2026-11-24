@@ -139,6 +139,38 @@ export function shouldRedactCorporation(
   return true;
 }
 
+/**
+ * True when the viewer sees this corporation's private or live figures only
+ * because the account is an admin: a CEO, a parent CEO and a viewer who would
+ * see the figures anyway never get the label.
+ */
+export function isAdminOnlyView(
+  corp: Pick<
+    Corporation,
+    "isPrivate" | "userId" | "ceoId" | "ceoType" | "ceoVacant" | "caretakerCeo" | "countryOwnerId"
+  >,
+  viewer: { userId?: string | null; activeCharacterId?: string | null; isAdmin?: boolean } | null,
+  opts: { isParentCeo?: boolean; booksExposed?: boolean } = {}
+): boolean {
+  if (!viewer || viewer.isAdmin !== true || opts.isParentCeo) return false;
+  if (
+    viewer.userId &&
+    isCeoActor(corp, { userId: viewer.userId, activeCharacterId: viewer.activeCharacterId })
+  ) {
+    return false;
+  }
+  if (corp.isPrivate) {
+    return shouldRedactCorporation(
+      corp,
+      viewer.userId ?? undefined,
+      false,
+      false,
+      viewer.activeCharacterId ?? null
+    );
+  }
+  return !corp.countryOwnerId && !opts.booksExposed;
+}
+
 function omit<T extends object>(obj: T, keys: readonly string[]): T {
   const out = { ...obj } as Record<string, unknown>;
   for (const k of keys) delete out[k];
