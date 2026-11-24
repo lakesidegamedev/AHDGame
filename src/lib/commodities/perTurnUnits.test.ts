@@ -45,7 +45,6 @@ describe("market figures per turn", () => {
         surplusUnitsPooled: 0,
         stockUnits: null,
       },
-      scarcityBreakdown: { supply: book(9000), demand: book(10_000) },
       history: [{ supply: book(8800), demand: book(9900) }],
       syntheticDemandSources: [{ units: book(300), receivedUnits: book(250) }],
       demandDriver: { sourceUnits: book(40) },
@@ -68,7 +67,6 @@ describe("market figures per turn", () => {
     });
     expect(detail.flows!.unmetDemandUnits).toBe(2000);
     expect(detail.flows!.stockUnits).toBeNull();
-    expect(detail.scarcityBreakdown).toEqual({ supply: 9000, demand: 10_000 });
     expect(detail.history).toEqual([{ supply: 8800, demand: 9900 }]);
     expect(detail.syntheticDemandSources).toEqual([{ units: 300, receivedUnits: 250 }]);
     expect(detail.demandDriver).toEqual({ sourceUnits: 40 });

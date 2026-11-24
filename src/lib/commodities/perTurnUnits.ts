@@ -51,7 +51,6 @@ interface BookFields {
     surplusUnitsPooled: number;
     stockUnits: number | null;
   };
-  scarcityBreakdown?: { supply: number; demand: number } | null;
   history: { supply: number; demand: number }[];
   syntheticDemandSources: { units: number; receivedUnits?: number }[];
   demandDriver: { sourceUnits?: number } | null;
@@ -138,15 +137,6 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
             surplusUnits: bookPerTurn(detail.flows.surplusUnits),
             surplusUnitsPooled: bookPerTurn(detail.flows.surplusUnitsPooled),
             stockUnits: bookPerTurn(detail.flows.stockUnits),
-          },
-        }
-      : {}),
-    ...(detail.scarcityBreakdown
-      ? {
-          scarcityBreakdown: {
-            ...detail.scarcityBreakdown,
-            supply: bookPerTurn(detail.scarcityBreakdown.supply),
-            demand: bookPerTurn(detail.scarcityBreakdown.demand),
           },
         }
       : {}),

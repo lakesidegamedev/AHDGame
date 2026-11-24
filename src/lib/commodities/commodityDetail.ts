@@ -931,8 +931,7 @@ export async function getCommodityDetailData(
       }
     }
 
-    // Shown per turn, the unit company production is measured in (perTurnUnits).
-    return commodityDetailPerTurn({
+    const detail = {
       commodity,
       flows,
       label: COMMODITY_LABELS[commodity],
@@ -1044,7 +1043,9 @@ export async function getCommodityDetailData(
       syntheticDemandSources: fundedBuyerSources ?? syntheticDemandSources,
       capacityByState,
       totalCapacity,
-    });
+    };
+    // Shown per turn, the unit company production is measured in (perTurnUnits).
+    return commodityDetailPerTurn(detail);
   } catch (error) {
     throw error;
   }
