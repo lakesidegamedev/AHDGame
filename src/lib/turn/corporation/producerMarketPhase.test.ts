@@ -274,6 +274,67 @@ describe("corporation producer market phase", () => {
   });
 });
 
+describe("opening overdraft and a run that pays for itself", () => {
+  it.each([0, -11_000])(
+    "runs a paying plant in full at opening cash %d and creates no money",
+    async (opening) => {
+      const { memory, corp, input, db, household, operating } = fixture();
+      memory.collection("corporations").docs[0].liquidCapital = opening;
+      memory.seed("producerEconomyAccounts", [
+        {
+          _id: household,
+          worldEpoch: "world",
+          kind: "households",
+          countryId: "US",
+          stateId: "US_CA",
+          currency: "USD",
+          cash: 1000,
+        },
+      ]);
+      // Bills of 15 a full run (wages 10, site 5, all with the run) against
+      // sales of 15.015: a 0.1% margin, every unit sold last turn.
+      const prepared = input.prepare();
+      const plan = prepared[0].plan;
+      plan.idleOperatingCost = 0;
+      const units = plan.capacityUnits * plan.activeFraction * plan.outputMultiplier;
+      const unitPrice = 15.015 / units;
+      plan.expectedUnitRevenue = unitPrice;
+      plan.outputs = plan.outputs.map((o) => ({
+        ...o,
+        policy: { kind: "manual" as const, unitPrice },
+      }));
+      input.demand!.households![0].products[0].maximumUnitPrice = unitPrice;
+      input.prepare = () => prepared;
+      const moneyBefore = opening + 1000;
+      const settled = await runCorporationProducerMarket(db, input);
+      const receipt = memory.collection("corporateSectors").docs[0].producerSettlement as {
+        producedUnits: number;
+        activeUnits: number;
+        runCutBy?: string[];
+      };
+      expect(receipt.producedUnits).toBeGreaterThan(0);
+      expect(receipt.producedUnits).toBeCloseTo(receipt.activeUnits, 9);
+      expect(receipt.runCutBy).toBeUndefined();
+      const flow = settled.operatingByCorporation.get(corp._id.toHexString())!;
+      expect(flow.profit).toBeGreaterThan(0);
+      // The overdraft is carried, not forgiven: closing cash is opening plus the run's cash flow.
+      const stored = await db.collection("corporations").findOne({ _id: corp._id });
+      const corpCash = Number(stored?.liquidCapital) + Number(stored?.pendingOperatingCash ?? 0);
+      expect(corpCash).toBeCloseTo(opening + flow.cashFlow * 2, 6);
+      const wallets = memory.collection("producerEconomyAccounts").docs;
+      expect(wallets.find((w) => w._id === operating)).toBeDefined();
+      const walletCash = wallets.reduce((sum, wallet) => sum + Number(wallet.cash), 0);
+      expect(corpCash + walletCash).toBeCloseTo(moneyBefore, 6);
+      expect(
+        (stored?.producerPayables?.claims ?? []).reduce(
+          (sum: number, claim: { amount: number }) => sum + claim.amount,
+          0
+        )
+      ).toBe(0);
+    }
+  );
+});
+
 it("holds positive operating receipts out of spendable cash and replays the frozen hold", async () => {
   const { memory, corp, input, db, household } = fixture();
   memory.seed("producerEconomyAccounts", [
