@@ -51,12 +51,13 @@ import { safeDistributeConversionSpread } from "@/lib/currency/marketMaker";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import {
-  OPERATING_RESERVE_TURNS,
   operatingReserveCheck,
-  runningFlowsPerTurn,
   operatingReserveMessage,
-  type ReserveReceipt,
 } from "@/lib/corporations/rules/operatingReserve";
+import {
+  loadOperatingReserve,
+  type OperatingReserveQuote,
+} from "@/lib/corporations/operatingReserveGuard";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import {
@@ -646,61 +647,8 @@ function capacityBuildResponse(outcome: CapacityBuildOutcome) {
     : errorResponse(outcome.status, outcome.error);
 }
 
-/** The operating reserve a cash build is held to, in the corporation's currency. */
-export interface OperatingReserveQuote {
-  reserveTurns: number;
-  operatingReserveLocal: number;
-  maxAffordableLocal: number;
-}
-
-/**
- * Turns of running bills a cash build must leave (gameConfig
- * capacityBuildReserveTurns; absent = OPERATING_RESERVE_TURNS, 0 = off) and
- * the company's running bills per turn in anchor, read from each plant's last
- * settled receipt. Projected: only the receipt lines the reserve reads.
- */
-export async function loadOperatingReserve(
-  db: Db,
-  corporationId: ObjectId,
-  currentTurn: number
-): Promise<{ turns: number; billsPerTurnAnchor: number; revenuePerTurnAnchor: number }> {
-  const config = await gameConfigCollection(db).findOne(
-    { _id: "default" },
-    { projection: { capacityBuildReserveTurns: 1 } }
-  );
-  const configured = config?.capacityBuildReserveTurns;
-  const turns =
-    typeof configured === "number" && Number.isFinite(configured) && configured >= 0
-      ? configured
-      : OPERATING_RESERVE_TURNS;
-  if (!(turns > 0)) return { turns: 0, billsPerTurnAnchor: 0, revenuePerTurnAnchor: 0 };
-  const sectors = await corporateSectorsCollection(db)
-    .find(
-      { corporationId },
-      {
-        projection: {
-          "producerSettlement.turn": 1,
-          "producerSettlement.labourPaid": 1,
-          "producerSettlement.labourArrears": 1,
-          "producerSettlement.otherOperatingPaid": 1,
-          "producerSettlement.otherOperatingArrears": 1,
-          "producerSettlement.purchases": 1,
-          "producerSettlement.revenue": 1,
-          "producerSettlement.internalSupplyIncome": 1,
-          "producerSettlement.activeUnits": 1,
-          "producerSettlement.producedUnits": 1,
-          "producerSettlement.plannedRunShare": 1,
-          "producerSettlement.runCutBy": 1,
-        },
-      }
-    )
-    .toArray();
-  const receipts: ReserveReceipt[] = sectors.flatMap((s) =>
-    s.producerSettlement ? [s.producerSettlement] : []
-  );
-  const flows = runningFlowsPerTurn(receipts, currentTurn);
-  return { turns, billsPerTurnAnchor: flows.bills, revenuePerTurnAnchor: flows.revenue };
-}
+export type { OperatingReserveQuote };
+export { loadOperatingReserve };
 
 export interface PlaceCapacityBuildInput {
   /** The resolved corporation. The caller has already proven the user is its CEO. */

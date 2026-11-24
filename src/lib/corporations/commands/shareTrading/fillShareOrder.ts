@@ -75,6 +75,10 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
@@ -480,6 +484,12 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
             to: targetCurrency,
           };
         }
+        const reserveCheck = await checkCorpPurchaseReserve(db, {
+          corporation: buyingCorpForSellFill,
+          costLocal: corpFillCostInBuyerCapital,
+          confirmed: parsed.data.overrideOperatingReserve === true,
+        });
+        if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
       }
     } else if (!order.placerFundId && !order.placerCorporationId) {
       pinnedBuyerName = await resolveCharName(db, orderCharacterId!, false);

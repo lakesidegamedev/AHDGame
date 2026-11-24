@@ -72,6 +72,10 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { recordAudit } from "@/lib/audit/recordAudit";
 
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
@@ -178,6 +182,12 @@ export async function placeShareOrder(...args: Parameters<typeof prepareShareOrd
             placerCurrency !== targetCurrency
               ? corpPurchaseEstimate.spendAmount
               : anchorToCorpLiquidCapital(cost, placerCorp, placerFxRate);
+          const reserveCheck = await checkCorpPurchaseReserve(db, {
+            corporation: placerCorp,
+            costLocal: costInPlacerCapital,
+            confirmed: parsed.data.overrideOperatingReserve === true,
+          });
+          if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
           // Atomic balance-gated debit on the placer corp's liquidCapital.
           // Same race-fix as bond-buy/share-buy: read-then-write check on
           // placerCapitalAnchor would let concurrent buys both pass the
@@ -336,6 +346,14 @@ export async function placeShareOrder(...args: Parameters<typeof prepareShareOrd
           placerCurrency !== targetCurrency
             ? escrowEstimate.spendAmount
             : anchorToCorpLiquidCapital(escrowAnchor, placerCorp, placerFxRate);
+        // A resting order takes its cash now, as escrow, so the reserve is held
+        // here. A confirmed order is marked so the turn does not trim it later.
+        const escrowReserveCheck = await checkCorpPurchaseReserve(db, {
+          corporation: placerCorp,
+          costLocal: escrowInPlacerCapital,
+          confirmed: parsed.data.overrideOperatingReserve === true,
+        });
+        if (!escrowReserveCheck.ok) return corpPurchaseReserveResponse(escrowReserveCheck);
         const escrowDebit = await atomicallyDebitCorpLiquidCapital(
           db,
           placerCorp._id,
@@ -356,6 +374,9 @@ export async function placeShareOrder(...args: Parameters<typeof prepareShareOrd
             pricePerShare,
             escrowAmount,
             status: "open",
+            ...(parsed.data.overrideOperatingReserve === true
+              ? { operatingReserveOverride: true }
+              : {}),
             createdAt: now,
             updatedAt: now,
           });

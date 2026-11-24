@@ -1,4 +1,8 @@
 import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
@@ -417,6 +421,18 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         `Insufficient liquid capital on the parent corporation to fund the squeeze-out (need ${Math.round(totalInParentCapital).toLocaleString()} in the parent’s operating currency).`
       );
     }
+
+    // Operating reserve: the parent pays the squeeze-out, takes in the target's
+    // cash, and takes on the target's plants, so their bills join the reserve.
+    // Below the reserve needs the CEO's confirm.
+    const reserveCheck = await checkCorpPurchaseReserve(db, {
+      corporation: parent,
+      costLocal: totalInParentCapital,
+      cashInLocal: cashToParentLocal,
+      extraCorporationIds: [target._id],
+      confirmed: parsed.data.overrideOperatingReserve === true,
+    });
+    if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
 
     // Serialize the whole squeeze-debit to cash-transfer sequence against other
     // same-corp money ops on the parent (e.g. concurrent bond issuance) so a
