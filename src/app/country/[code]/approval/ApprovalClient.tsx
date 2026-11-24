@@ -42,17 +42,26 @@ interface MetricsApiResponse {
 interface ApprovalApiResponse {
   governmentApprovalBase?: number;
   governmentApproval?: number;
-  history?: { turn: number; approval: number; stateAverage?: number }[];
+  history?: { turn: number; approval: number; stateAverage?: number; note?: string }[];
   modifiers?: ActiveModifier[];
   stateAverage?: number;
   nationalAdjustments?: ActiveModifier[];
 }
 
-function historyTitle(h: { turn: number; approval: number; stateAverage?: number }) {
+export function historyTitle(h: {
+  turn: number;
+  approval: number;
+  stateAverage?: number;
+  note?: string;
+}) {
   const base = `Turn ${h.turn}: ${h.approval.toFixed(1)}%`;
-  if (h.stateAverage == null) return base;
-  const adjustments = Math.round((h.approval - h.stateAverage) * 10) / 10;
-  return `${base} (average ${h.stateAverage.toFixed(1)}%, national adjustments ${adjustments > 0 ? "+" : ""}${adjustments.toFixed(1)})`;
+  const detail =
+    h.stateAverage == null
+      ? ""
+      : ` (average ${h.stateAverage.toFixed(1)}%, national adjustments ${
+          Math.round((h.approval - h.stateAverage) * 10) / 10 > 0 ? "+" : ""
+        }${(Math.round((h.approval - h.stateAverage) * 10) / 10).toFixed(1)})`;
+  return h.note ? `${base}${detail}. ${h.note}` : `${base}${detail}`;
 }
 
 function approvalColor(v: number) {
@@ -356,7 +365,9 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                       <div
                         key={i}
                         title={historyTitle(h)}
-                        className={`flex-1 rounded-sm ${color} opacity-80 hover:opacity-100 transition-opacity`}
+                        className={`flex-1 rounded-sm ${color} opacity-80 hover:opacity-100 transition-opacity ${
+                          h.note ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : ""
+                        }`}
                         style={{ height: `${pct}%` }}
                       />
                     );
@@ -366,6 +377,18 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                   <span>Turn {history[0]?.turn}</span>
                   <span>Turn {history[history.length - 1]?.turn}</span>
                 </div>
+                {history.some((h) => h.note) && (
+                  <ul className="mt-3 space-y-1 text-xs text-muted">
+                    {history
+                      .filter((h) => h.note)
+                      .map((h) => (
+                        <li key={`note-${h.turn}`}>
+                          <span className="font-semibold text-foreground">Turn {h.turn}:</span>{" "}
+                          {h.note}
+                        </li>
+                      ))}
+                  </ul>
+                )}
               </div>
             )}
 
