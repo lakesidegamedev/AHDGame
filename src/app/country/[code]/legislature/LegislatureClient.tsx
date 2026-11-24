@@ -18,10 +18,6 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const LegislatureFallback = (_props: { name?: string }) => <LegislatureSkeleton />;
 
-const USCongressPage = dynamic(
-  () => import("@/app/congress/CongressClient").then((m) => ({ default: m.USCongressPage })),
-  { ssr: false }
-);
 const UKParliamentPage = dynamic(
   () => import("./UKParliamentPage").then((m) => ({ default: m.UKParliamentPage })),
   { ssr: false }
@@ -63,7 +59,6 @@ const NGAssemblyPage = dynamic(
 /** Registry of legislature page components keyed by country ID. */
 const LEGISLATURE_COMPONENTS: Partial<Record<CountryId, ComponentType<{ countryId: CountryId }>>> =
   {
-    US: USCongressPage,
     UK: UKParliamentPage,
     DE: DEBundestagPage,
     JP: JPDietPage,
