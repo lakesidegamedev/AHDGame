@@ -48,4 +48,11 @@ describe("entityFlag", () => {
     expect(entityFlag("DD")).toBe("🇩🇩");
     expect(entityFlag("DE")).toBe("🇩🇪");
   });
+
+  it("names and flags successor polities seated without a country config", () => {
+    expect(entityName("CZ2")).toBe("Czechia");
+    expect(entityName("EE")).toBe("Estonia");
+    expect(entityName("MK")).toBe("North Macedonia");
+    expect(entityFlag("CZ2")).toBe("🇨🇿");
+  });
 });
