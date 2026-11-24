@@ -920,7 +920,13 @@ export async function runReceipt(
   if (!receipt.primary) await ensurePoolExists(db, receipt.currency, receipt.createdAt);
   const overviewFloor = exactActive
     ? await bankCashFloor(db, charter!, savingsReadsAuthoritative(policy, receipt.currency), bankId)
-    : { floorLocal: 0, requiredReserves: 0, withdrawalBufferLocal: 0, nextTurnDueInterest: 0 };
+    : {
+        floorLocal: 0,
+        requiredReserves: 0,
+        withdrawalBufferLocal: 0,
+        nextTurnDueInterest: 0,
+        liquidityAdvanceHeldLocal: 0,
+      };
   const transition = cashTransition(receipt, bond, overviewFloor.floorLocal);
   const moved = await finishTransition(db, transition);
   if (moved.status === "rejected") {
