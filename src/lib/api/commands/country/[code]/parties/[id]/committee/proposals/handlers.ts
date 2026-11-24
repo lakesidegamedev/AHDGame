@@ -27,6 +27,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
+import { notifyRemovalVoteOpened } from "@/lib/parties/officeRemovalNotifications";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -479,6 +480,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await committeeProposalsCollection(db).insertOne(
       proposalDoc as CommitteeProposal
     );
+
+    if (proposalDoc.removeOfficeHolder) {
+      const { role, targetCharacterId } = proposalDoc.removeOfficeHolder;
+      const voters = getEligibleVoterSet(party);
+      voters.delete(targetCharacterId.toString());
+      await notifyRemovalVoteOpened({
+        party,
+        proposalId: result.insertedId,
+        role,
+        targetCharacterId,
+        yesNeeded: requiredYesVotes(voters.size),
+        eligibleVoters: voters.size,
+        expiresAtTurn: proposalDoc.expiresAtTurn,
+      });
+    }
 
     return NextResponse.json({ success: true, proposalId: result.insertedId.toString() });
   } catch (error) {
