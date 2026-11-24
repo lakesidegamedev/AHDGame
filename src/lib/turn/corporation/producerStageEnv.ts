@@ -123,7 +123,8 @@ export function producerStageEnv(
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),
     fiscalScaleStage: config?.fiscalScaleStage,
-    wideEconomyStage: config?.wideEconomyStage,
+    // Ships on: absent means stage 1; set 0 to switch it off.
+    wideEconomyStage: config?.wideEconomyStage ?? 1,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)

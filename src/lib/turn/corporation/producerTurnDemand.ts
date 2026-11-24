@@ -810,9 +810,17 @@ export async function buildProducerTurnDemand(
         restrict(o, listFor(o.commodity, investmentCountry.get(o.accountId) ?? ""));
     for (const o of marketingOrders)
       restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
-    // Unlike a background country, the wider economy buys its own country's output.
+    // Unlike a background country, the wider economy buys its own country's
+    // output, and only plant output: never a background country's offer.
+    const backgroundOfferIds = new Set(backgroundOffers.map((o) => o.id));
     for (const o of wideEconomyOrders)
-      if (o.book === "world") restrict(o, listFor(o.commodity, o.countryId ?? ""));
+      if (o.book === "world") {
+        const list = listFor(o.commodity, o.countryId ?? "");
+        restrict(
+          o,
+          list?.filter((id) => !backgroundOfferIds.has(id))
+        );
+      }
   }
 
   // Import tariffs (producerTariffStage): one rate per open route that can

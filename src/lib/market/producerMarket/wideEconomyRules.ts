@@ -3,11 +3,13 @@
  * state. Sized once from a market baseline (a share of each good's demand),
  * split by real GDP share and grown only with real GDP. It trades only after
  * the market has cleared: the buyer takes output no real buyer bought, the
- * seller fills orders no plant could fill (see residualWideEconomyLines).
+ * seller fills orders no plant could fill (withWideEconomyFallback).
  *
  * Pure: market baseline, states, prices and book mapping in, orders out.
  */
 import type { ProducerOffer, PurchaseOrder } from "./producerQuotes";
+import type { ProducerMarketResult } from "./rules";
+import { sortFundedCountryBookRows } from "./fundedBookRules";
 
 /** The background economy's size: this share of each good's baseline demand. */
 export const WIDE_ECONOMY_DEMAND_SHARE = 0.1;
@@ -195,45 +197,132 @@ export function wideEconomyOffers(
   }));
 }
 
+/** Book the wider economy's seller offers on, apart from the real market. */
+export function wideEconomyFillBook(book: string): string {
+  return `wide:${book}`;
+}
+
 /**
- * The after-market pass. The background buyer may take only what plants offered
- * and did not sell on each lane, and the background seller may fill only what
- * real buyers ordered and did not get, so neither competes with a real trade.
- * Each line is scaled down to its lane's room; lanes with no room drop out.
+ * The seller's offers for this turn, moved onto their own book so no real
+ * buyer meets them in the ordinary passes. Goods in `skip` are left out.
  */
-export function residualWideEconomyLines(input: {
-  orders: readonly PurchaseOrder[];
-  offers: readonly ProducerOffer[];
-  unsoldByLane: ReadonlyMap<string, number>;
-  unmetByLane: ReadonlyMap<string, number>;
-  laneKey: (commodity: string, book: string) => string;
-}): { orders: PurchaseOrder[]; offers: ProducerOffer[] } {
-  const scale = <T extends { commodity: string; book: string; units: number }>(
-    lines: readonly T[],
-    room: ReadonlyMap<string, number>
-  ) => {
-    const want = new Map<string, number>();
-    for (const l of lines) {
-      const k = input.laneKey(l.commodity, l.book);
-      want.set(k, (want.get(k) ?? 0) + finitePositive(l.units));
-    }
-    return lines.flatMap((l) => {
-      const k = input.laneKey(l.commodity, l.book);
-      const total = want.get(k) ?? 0;
-      const free = finitePositive(room.get(k) ?? 0);
-      if (!(total > 0) || !(free > 0)) return [];
-      const share = Math.min(1, free / total);
-      return [{ line: l, share }];
+export function wideEconomyFallbackOffers(
+  lines: readonly ProducerOffer[],
+  skip: (commodity: string) => boolean = () => false
+): ProducerOffer[] {
+  return lines
+    .filter((o) => !skip(o.commodity) && !!o.countryId && finitePositive(o.units) > 0)
+    .map((o) => ({ ...o, book: wideEconomyFillBook(o.book) }));
+}
+
+/**
+ * Real orders with the wider economy's seller as their last resort. An order
+ * may fall back on its own country's seller for its own lane, when it bids at
+ * least the seller's ask. Named-supplier and contract orders keep their
+ * supplier, and the wider economy never buys from itself.
+ */
+export function withWideEconomyFallback(
+  orders: readonly PurchaseOrder[],
+  offers: readonly ProducerOffer[],
+  laneKey: (commodity: string, book: string) => string
+): PurchaseOrder[] {
+  if (offers.length === 0) return [...orders];
+  const prefix = wideEconomyFillBook("");
+  const byLane = new Map<string, { offer: ProducerOffer; ids: readonly string[] }>();
+  const sellers = new Set<string>();
+  for (const offer of offers) {
+    sellers.add(offer.accountId);
+    const book = offer.book.slice(prefix.length);
+    byLane.set(JSON.stringify([laneKey(offer.commodity, book), offer.countryId]), {
+      offer,
+      ids: [offer.id],
     });
-  };
-  const orders = scale(input.orders, input.unsoldByLane).map(({ line, share }) => ({
-    ...line,
-    units: line.units * share,
-    maximumSpend: line.maximumSpend * share,
-  }));
-  const offers = scale(input.offers, input.unmetByLane).map(({ line, share }) => ({
-    ...line,
-    units: line.units * share,
-  }));
-  return { orders, offers };
+  }
+  return orders.map((o) => {
+    if (!o.countryId || o.afterMarket || sellers.has(o.accountId)) return o;
+    if (o.supplierOfferId || o.contractUnitPrice != null) return o;
+    const line = byLane.get(JSON.stringify([laneKey(o.commodity, o.book), o.countryId]));
+    if (!line || !(o.maximumUnitPrice >= line.offer.unitPrice)) return o;
+    return { ...o, fallbackOfferIds: line.ids };
+  });
+}
+
+interface SettledOffer {
+  offeredUnits: number;
+  deliveredUnits: number;
+}
+
+/**
+ * The buyer's after-market orders: each line scaled to the plant output left
+ * unsold on its lane at or below its bid, clearing after every other order
+ * (afterMarket), so it never takes a unit a real buyer would have bought.
+ */
+export function residualWideEconomyBuyers(input: {
+  buyerLines: readonly PurchaseOrder[];
+  /** Real plant offers as posted, and how much of each sold. */
+  plantOffers: readonly ProducerOffer[];
+  offerResults: ReadonlyMap<string, SettledOffer>;
+  laneKey: (commodity: string, book: string) => string;
+  skip?: (commodity: string) => boolean;
+}): PurchaseOrder[] {
+  const skip = input.skip ?? (() => false);
+  const lane = (x: { commodity: string; book: string }) => input.laneKey(x.commodity, x.book);
+  const lines = input.buyerLines.filter((o) => !skip(o.commodity));
+  const bidByLane = new Map<string, number>();
+  const wantByLane = new Map<string, number>();
+  for (const o of lines) {
+    const k = lane(o);
+    bidByLane.set(k, Math.max(bidByLane.get(k) ?? 0, finitePositive(o.maximumUnitPrice)));
+    wantByLane.set(k, (wantByLane.get(k) ?? 0) + finitePositive(o.units));
+  }
+  const unsoldByLane = new Map<string, number>();
+  for (const offer of input.plantOffers) {
+    const k = lane(offer);
+    const bid = bidByLane.get(k);
+    if (bid == null || !(offer.unitPrice <= bid)) continue;
+    const r = input.offerResults.get(offer.id);
+    const left = r ? Math.max(0, r.offeredUnits - r.deliveredUnits) : 0;
+    if (left > 0) unsoldByLane.set(k, (unsoldByLane.get(k) ?? 0) + left);
+  }
+  return lines.flatMap((o) => {
+    const want = wantByLane.get(lane(o)) ?? 0;
+    const free = unsoldByLane.get(lane(o)) ?? 0;
+    if (!(want > 0) || !(free > 0)) return [];
+    const share = Math.min(1, free / want);
+    return [
+      {
+        ...o,
+        units: o.units * share,
+        ...(o.maximumSpend != null ? { maximumSpend: o.maximumSpend * share } : {}),
+        afterMarket: true,
+      },
+    ];
+  });
+}
+
+/**
+ * The settled market as the rest of the turn reads it. The wider economy's
+ * seller counts as supply in its country only for what it sold, and its own
+ * book carries no clearing price, so it never moves a real lane's price or
+ * the next turn's asks.
+ */
+export function withWideEconomyFills(
+  market: ProducerMarketResult,
+  sellerOffers: readonly ProducerOffer[]
+): ProducerMarketResult {
+  if (sellerOffers.length === 0) return market;
+  const prefix = wideEconomyFillBook("");
+  const prices = market.prices.filter((p) => !p.book.startsWith(prefix));
+  if (!market.countryBooks) return { ...market, prices };
+  const settled = new Map(market.offers.map((o) => [o.id, o]));
+  const rows = new Map(
+    market.countryBooks.map((r) => [JSON.stringify([r.countryId, r.commodity]), { ...r }])
+  );
+  for (const offer of sellerOffers) {
+    const r = settled.get(offer.id);
+    const row = rows.get(JSON.stringify([offer.countryId, offer.commodity]));
+    if (!r || !row) continue;
+    row.supply = Math.max(0, row.supply - Math.max(0, r.offeredUnits - r.deliveredUnits));
+  }
+  return { ...market, prices, countryBooks: sortFundedCountryBookRows([...rows.values()]) };
 }

@@ -82,29 +82,74 @@ export function buildProducerInputOrders({
       ),
     ])
   );
+  // The wider economy's seller is a last resort on its lane, for buyers in its
+  // own country only (withWideEconomyFallback). Plants there may plan on it;
+  // every other plant is held to real supply by a second row without it.
+  const wideCountries = new Map<string, Set<string>>();
+  for (const offer of input.residualOffers ?? []) {
+    if (input.electricityNetwork && offer.commodity === "energy") continue;
+    if (!offer.countryId || !(offer.units > 0)) continue;
+    const key = JSON.stringify([offer.commodity, offer.book]);
+    const set = wideCountries.get(key) ?? new Set<string>();
+    set.add(offer.countryId);
+    wideCountries.set(key, set);
+  }
+  const realOnly = new Map<string, { available: number; coefficients: number[] }>();
+  const realOnlyRow = (commodity: string, book: string) => {
+    const key = JSON.stringify([commodity, book]);
+    if (!wideCountries.has(key)) return undefined;
+    let row = realOnly.get(key);
+    if (!row) {
+      row = { available: 0, coefficients: Array(segments.length).fill(0) };
+      realOnly.set(key, row);
+    }
+    return row;
+  };
   for (const [j, segment] of segments.entries()) {
     const minor = minorByPlan.get(segment.plan.id)!;
+    const country = countryOfProducer?.(segment.plan.id);
     for (const [k, recipe] of segment.plan.inputs.entries()) {
       if (minor[k]) continue;
       const owned = segment.owned.get(recipe.commodity) ?? 0;
-      resource(recipe.commodity, recipe.book).coefficients[j] +=
+      const need =
         Math.max(0, segment.to * recipe.unitsPerOutput - owned) -
         Math.max(0, segment.from * recipe.unitsPerOutput - owned);
+      resource(recipe.commodity, recipe.book).coefficients[j] += need;
+      const own = wideCountries.get(JSON.stringify([recipe.commodity, recipe.book]));
+      const row =
+        country && own?.has(country) ? undefined : realOnlyRow(recipe.commodity, recipe.book);
+      if (row) row.coefficients[j] += need;
     }
-    for (const output of segment.plan.outputs)
-      resource(output.commodity, output.book).coefficients[j] -=
-        segment.units * output.unitsPerOutput;
+    for (const output of segment.plan.outputs) {
+      const made = segment.units * output.unitsPerOutput;
+      resource(output.commodity, output.book).coefficients[j] -= made;
+      const row = realOnlyRow(output.commodity, output.book);
+      if (row) row.coefficients[j] -= made;
+    }
   }
+  const addAvailable = (commodity: string, book: string, units: number) => {
+    resource(commodity, book).available += units;
+    const row = realOnlyRow(commodity, book);
+    if (row) row.available += units;
+  };
   for (const p of plans)
     for (const output of p.outputs)
-      resource(output.commodity, output.book).available += p.outputStock
-        .filter((s) => s.commodity === output.commodity && s.book === output.book)
-        .reduce((sum, s) => sum + s.units, 0);
+      addAvailable(
+        output.commodity,
+        output.book,
+        p.outputStock
+          .filter((s) => s.commodity === output.commodity && s.book === output.book)
+          .reduce((sum, s) => sum + s.units, 0)
+      );
   for (const offer of input.externalOffers ?? [])
-    resource(offer.commodity, offer.book).available += Math.min(
-      offer.units,
-      offer.deliverableUnits ?? offer.units
+    addAvailable(
+      offer.commodity,
+      offer.book,
+      Math.min(offer.units, offer.deliverableUnits ?? offer.units)
     );
+  for (const offer of input.residualOffers ?? [])
+    if (wideCountries.get(JSON.stringify([offer.commodity, offer.book]))?.has(offer.countryId!))
+      resource(offer.commodity, offer.book).available += offer.units;
   const feasible = feasibleProduction({
     activities: segments.map((s) => ({
       id: s.id,
@@ -112,7 +157,7 @@ export function buildProducerInputOrders({
         s.units *
         s.plan.outputs.reduce((sum, o) => sum + o.unitsPerOutput * o.referenceUnitPrice, 0),
     })),
-    constraints: [...resources.values()],
+    constraints: [...resources.values(), ...realOnly.values()],
   });
   for (const p of plans) plannedById.set(p.id, 0);
   for (const [j, segment] of segments.entries())

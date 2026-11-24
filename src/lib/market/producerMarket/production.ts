@@ -18,7 +18,12 @@ import {
   type ProducerPlanningDiagnostics,
 } from "./planningRules";
 import { spilloverOrders } from "./spilloverRules";
-import { residualWideEconomyLines } from "./wideEconomyRules";
+import {
+  residualWideEconomyBuyers,
+  wideEconomyFallbackOffers,
+  withWideEconomyFallback,
+  withWideEconomyFills,
+} from "./wideEconomyRules";
 import { laneKeyOf } from "./laneKey";
 import { householdSpendBase } from "./householdSpendRules";
 import { expectedInputUnitPrice, salesFundedPlantShares } from "./salesAdvanceRules";
@@ -504,11 +509,13 @@ export function advanceProducerEconomy(
   // Units each household order gained from spillover; measurement only.
   let spilloverUnits = new Map<string, number>();
   let trialRuns = 0; // timing only
-  // Background seller lines added by the after-market pass; empty before it.
-  let residualOffers: ProducerOffer[] = [];
+  // The wider economy's seller: on its own book, a last resort for what real
+  // sellers left unmet in every trial, so plants plan with it (wideEconomyRules).
+  const skipWide = input.electricityNetwork ? (c: string) => c === "energy" : undefined;
+  const wideOffers = wideEconomyFallbackOffers(input.residualOffers ?? [], skipWide);
   const trial = (track = false) => {
     trialRuns++;
-    const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? []), ...residualOffers];
+    const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? []), ...wideOffers];
     for (const p of plans)
       for (const output of p.outputs) {
         const id = JSON.stringify([p.id, "output", output.commodity]);
@@ -526,10 +533,14 @@ export function advanceProducerEconomy(
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
-      orders: buying(
-        landedGate
-          ? landedGate([...consumerOrders, ...inputOrders()])
-          : [...consumerOrders, ...inputOrders()]
+      orders: withWideEconomyFallback(
+        buying(
+          landedGate
+            ? landedGate([...consumerOrders, ...inputOrders()])
+            : [...consumerOrders, ...inputOrders()]
+        ),
+        wideOffers,
+        laneKeyOf
       ),
       ...(track ? { trackCountryBooks: true } : {}),
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
@@ -778,46 +789,23 @@ export function advanceProducerEconomy(
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
-  if ((input.residualOrders?.length ?? 0) + (input.residualOffers?.length ?? 0) > 0) {
-    const plantOfferIds = new Set(offers.map((o) => o.id));
-    const offerLane = new Map(offers.map((o) => [o.id, laneKeyOf(o.commodity, o.book)]));
-    const unsoldByLane = new Map<string, number>();
-    for (const o of market.offers) {
-      if (!plantOfferIds.has(o.id)) continue;
-      const lane = offerLane.get(o.id)!;
-      unsoldByLane.set(
-        lane,
-        (unsoldByLane.get(lane) ?? 0) + Math.max(0, o.offeredUnits - o.deliveredUnits)
-      );
-    }
-    const realOrders = new Map(
-      [...consumerOrders, ...inputOrders()].map((o) => [o.id, laneKeyOf(o.commodity, o.book)])
-    );
-    const unmetByLane = new Map<string, number>();
-    for (const o of market.orders) {
-      const lane = realOrders.get(o.id);
-      if (!lane) continue;
-      unmetByLane.set(
-        lane,
-        (unmetByLane.get(lane) ?? 0) + Math.max(0, o.requestedUnits - o.deliveredUnits)
-      );
-    }
-    const residual = residualWideEconomyLines({
-      orders: input.residualOrders ?? [],
-      offers: input.residualOffers ?? [],
-      unsoldByLane,
-      unmetByLane,
-      laneKey: laneKeyOf,
-    });
-    if (residual.orders.length + residual.offers.length > 0) {
-      consumerOrders = [...consumerOrders, ...residual.orders];
-      residualOffers = residual.offers;
-      const trialsBeforeResidual = trialRuns;
-      market = settleWithinCredit(input.trackCountryBooks === true);
-      clock.lap("residualClearingMs");
-      addStageTiming(timings, "residualTrialRuns", trialRuns - trialsBeforeResidual);
-    }
+  // The wider economy's buyer trades after the market has cleared, on plant
+  // output nobody bought (residualWideEconomyBuyers). Real trades are unchanged.
+  const wideBuyers = residualWideEconomyBuyers({
+    buyerLines: input.residualOrders ?? [],
+    plantOffers: offers,
+    offerResults: new Map(market.offers.map((o) => [o.id, o])),
+    laneKey: laneKeyOf,
+    ...(skipWide ? { skip: skipWide } : {}),
+  });
+  if (wideBuyers.length > 0) {
+    consumerOrders = [...consumerOrders, ...wideBuyers];
+    const trialsBeforeResidual = trialRuns;
+    market = settleWithinCredit(input.trackCountryBooks === true);
+    clock.lap("residualClearingMs");
+    addStageTiming(timings, "residualTrialRuns", trialRuns - trialsBeforeResidual);
   }
+  market = withWideEconomyFills(market, wideOffers);
   const results: ProducerOperatingResult[] = [];
   const cashChanges = new ProducerCashChanges(input.accounts.map((account) => account.id));
   for (const payment of prior.payments)

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  WIDE_ECONOMY_DEMAND_SHARE,
+  WIDE_ECONOMY_SELLER_MARKUP,
   WIDE_ECONOMY_SUPPLY_HEADROOM,
   wideEconomyBaseline,
+  wideEconomyOffers,
   wideEconomyOrderId,
   wideEconomyOrders,
   type WideEconomyBaseline,
@@ -14,7 +17,7 @@ const states = [
 ];
 
 describe("wideEconomyBaseline", () => {
-  it("buys the room between demand and 1.1x supply, averaged over turns", () => {
+  it("sizes each good at a share of its demand, averaged over turns", () => {
     const b = wideEconomyBaseline({
       turns: [
         [
@@ -25,24 +28,24 @@ describe("wideEconomyBaseline", () => {
       ],
       states,
     });
-    // Supply (120 + 100) / 2 = 110, demand (80 + 100) / 2 = 90.
-    expect(b.units.steel).toBeCloseTo(WIDE_ECONOMY_SUPPLY_HEADROOM * 110 - 90, 9);
+    // Demand (80 + 100) / 2 = 90 per turn.
+    expect(b.units.steel).toBeCloseTo(WIDE_ECONOMY_DEMAND_SHARE * 90, 9);
     expect(b.realGdp).toEqual({ CA_ON: 100, US_CA: 300, US_NY: 100 });
     expect(b.countryOfState.CA_ON).toBe("CA");
   });
 
-  it("gives nothing to a good already short at baseline", () => {
+  it("covers short goods too, and never ordnance", () => {
     const b = wideEconomyBaseline({
       turns: [
         [
-          { commodity: "healthcare_services", supply: 100, demand: 153 },
-          { commodity: "oil", supply: 100, demand: 110 },
+          { commodity: "advertising", supply: 100, demand: 160 },
+          { commodity: "ordnance", supply: 100, demand: 50 },
         ],
       ],
       states,
     });
-    expect(b.units.healthcare_services).toBeUndefined();
-    expect(b.units.oil).toBeUndefined();
+    expect(b.units.advertising).toBeCloseTo(16, 9);
+    expect(b.units.ordnance).toBeUndefined();
   });
 
   it("builds an empty baseline from no turns", () => {
@@ -56,25 +59,27 @@ const baseline: WideEconomyBaseline = {
   countryOfState: { US_CA: "US", US_NY: "US", CA_ON: "CA" },
 };
 
+const lineInput = (realGdpNow: Map<string, number>, price: number | null = 10) => ({
+  baseline,
+  realGdpNow,
+  accountId: (c: string) => `wide:${c}`,
+  referencePrice: () => price,
+  isStateScoped: (c: string) => c === "healthcare_services",
+  mapBook: (book: string) => book,
+});
 const build = (realGdpNow: Map<string, number>, price: number | null = 10) =>
-  wideEconomyOrders({
-    baseline,
-    realGdpNow,
-    accountId: (c) => `wide:${c}`,
-    referencePrice: () => price,
-    isStateScoped: (c) => c === "healthcare_services",
-    mapBook: (book) => book,
-  });
+  wideEconomyOrders(lineInput(realGdpNow, price));
 
 const atBaseline = new Map(Object.entries(baseline.realGdp));
+const H = WIDE_ECONOMY_SUPPLY_HEADROOM;
 
 describe("wideEconomyOrders", () => {
   it("splits each good by baseline real GDP share, one world order per country", () => {
     const steel = build(atBaseline).filter((o) => o.commodity === "steel");
     const us = steel.find((o) => o.countryId === "US")!;
     const ca = steel.find((o) => o.countryId === "CA")!;
-    expect(us.units).toBeCloseTo(40, 9);
-    expect(ca.units).toBeCloseTo(10, 9);
+    expect(us.units).toBeCloseTo(40 * H, 9);
+    expect(ca.units).toBeCloseTo(10 * H, 9);
     expect(us.book).toBe("world");
     expect(us.id).toBe(wideEconomyOrderId("US", "steel", "world"));
   });
@@ -90,7 +95,7 @@ describe("wideEconomyOrders", () => {
   it("orders state-scoped goods on each state's own book", () => {
     const hc = build(atBaseline).filter((o) => o.commodity === "healthcare_services");
     expect(hc.map((o) => o.book).sort()).toEqual(["state:CA_ON", "state:US_CA", "state:US_NY"]);
-    expect(hc.find((o) => o.book === "state:US_CA")!.units).toBeCloseTo(6, 9);
+    expect(hc.find((o) => o.book === "state:US_CA")!.units).toBeCloseTo(6 * H, 9);
   });
 
   it("grows each state only with its own real GDP", () => {
@@ -98,8 +103,8 @@ describe("wideEconomyOrders", () => {
     const us = grown.find((o) => o.commodity === "steel" && o.countryId === "US")!;
     const ca = grown.find((o) => o.commodity === "steel" && o.countryId === "CA")!;
     // US_CA grew 10%: 50 x 330 / 500 + 50 x 100 / 500 = 43.
-    expect(us.units).toBeCloseTo(43, 9);
-    expect(ca.units).toBeCloseTo(10, 9);
+    expect(us.units).toBeCloseTo(43 * H, 9);
+    expect(ca.units).toBeCloseTo(10 * H, 9);
   });
 
   it("orders nothing without a reference price or for states not in the baseline", () => {
@@ -107,9 +112,22 @@ describe("wideEconomyOrders", () => {
     const extra = build(new Map([...atBaseline, ["US_TX", 1000]]));
     expect(extra.some((o) => o.book === "state:US_TX")).toBe(false);
     expect(extra.find((o) => o.commodity === "steel" && o.countryId === "US")!.units).toBeCloseTo(
-      40,
+      40 * H,
       9
     );
+  });
+});
+
+describe("wideEconomyOffers", () => {
+  it("offers the baseline share a little above the reference price, so demand sits above supply", () => {
+    const offers = wideEconomyOffers(lineInput(atBaseline));
+    const us = offers.find((o) => o.commodity === "steel" && o.countryId === "US")!;
+    expect(us.units).toBeCloseTo(40, 9);
+    expect(us.unitPrice).toBeCloseTo(10 * WIDE_ECONOMY_SELLER_MARKUP, 9);
+    expect(us.book).toBe("world");
+    const orders = build(atBaseline);
+    const sum = (xs: { units: number }[]) => xs.reduce((n, x) => n + x.units, 0);
+    expect(sum(orders) / sum(offers)).toBeCloseTo(H, 9);
   });
 });
 

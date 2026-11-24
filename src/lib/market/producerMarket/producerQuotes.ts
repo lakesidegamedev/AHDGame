@@ -57,6 +57,18 @@ export interface PurchaseOrder {
    */
   demandStep?: number;
   /**
+   * Clears after every other order, including deferred buyers and the spill
+   * pass, so it can take only what the rest of the market left (the wider
+   * economy, wideEconomyRules).
+   */
+  afterMarket?: boolean;
+  /**
+   * Offers it may buy from only after every other order and pass has cleared
+   * (the wider economy's seller, on its own book): what it still wants, at its
+   * own limit. A real seller always sells first.
+   */
+  fallbackOfferIds?: readonly string[];
+  /**
    * Orders sharing a spend group draw on one budget: together they never spend more than `maximumSpend`, at any mix of fill prices. Every order in a group must carry the same limit.
    */
   spendGroup?: { id: string; maximumSpend: number };
@@ -267,7 +279,7 @@ export function* producerTrades(
       (offer.accountId === order.accountId) === internal &&
       (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
       (!suppliers || suppliers.has(offer.id)) &&
-      (!eligible || eligible.has(offer.id)) &&
+      (!eligible || eligible.has(offer.id) || !!order.fallbackOfferIds?.includes(offer.id)) &&
       (!fill.sellerState || offer.stateId === fill.sellerState) &&
       (!fill.homeCountry || offer.countryId === order.countryId) &&
       (!fill.spillBook || offer.countryId === order.countryId) &&
