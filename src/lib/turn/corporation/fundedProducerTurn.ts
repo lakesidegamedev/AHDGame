@@ -495,6 +495,9 @@ async function prepareRunFundedProducerTurn(
     ...(freightDispatchOn && lastOutcome?.books
       ? { freightGapsByCountry: fundedFreightGaps(lastOutcome.books) }
       : {}),
+    // Read whatever pressure was recorded, whatever the shortage stages: the
+    // oversupply cut must never treat a market whose buyers went short as a glut.
+    ...(lastOutcome?.bookPressure ? { lastBookPressure: lastOutcome.bookPressure } : {}),
     carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
