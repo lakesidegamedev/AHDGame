@@ -20,6 +20,8 @@ import {
   SENTRY_TRACE_LIFECYCLE,
 } from "@/lib/observability/sentryPrivacy";
 
+export { addBreadcrumb, captureException } from "@sentry/nextjs";
+
 /**
  * Attach the signed-in player's opaque ids so staff can find a player's own
  * errors from a player report. Applied at send time, after the SDK has loaded.

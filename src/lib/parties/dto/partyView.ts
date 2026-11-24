@@ -408,6 +408,17 @@ export interface ProposalsResponse {
    * active option (the server also rejects no-op proposals defensively).
    */
   currentTransactionApprovalMode: "single" | "double";
+  /** Office holders a removal vote cannot be opened against yet, with why and until when. */
+  removalLocks?: RemovalLockView[];
+}
+
+export interface RemovalLockView {
+  characterId: string;
+  role: "chair" | "viceChair" | "treasurer" | "committeeMember" | "campaigner";
+  reason: "recently_seated" | "recent_failed_removal";
+  sinceTurn: number;
+  unlocksAtTurn: number;
+  message: string;
 }
 
 export interface NationalPartyInfluenceResponse {
