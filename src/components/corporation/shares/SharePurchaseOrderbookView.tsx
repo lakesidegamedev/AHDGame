@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  OperatingReserveConfirmDialog,
+  operatingReserveRefusalText,
+  useOperatingReserveConfirm,
+} from "./OperatingReserveConfirm";
+import { isOperatingReserveRefusal } from "@/lib/corporations/rules/operatingReserve";
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { wholeNumberInput } from "@/lib/utils/rules/wholeNumberInput";
@@ -61,12 +67,14 @@ export function SharePurchaseOrderbookView({
       : requestedTerm;
 
   const orderbookCount = orderbookAsks.length + orderbookBids.length;
+  const reserveConfirm = useOperatingReserveConfirm();
 
   async function handleFillLocal(
     orderId: string,
     orderType: "buy" | "sell",
-    shares: number | undefined
-  ) {
+    shares: number | undefined,
+    confirmReserve = false
+  ): Promise<void> {
     if (!shares || shares < 1) {
       setError("Enter a quantity to fill");
       return;
@@ -82,10 +90,17 @@ export function SharePurchaseOrderbookView({
           shares,
           ...(orderType === "buy" ? { holdingTerm } : {}),
           fillAsCorporation: orderType === "sell" && !!myCorporation && fillOrderbookAsCorp,
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
         }),
       });
       const data = (await res.json()) as { error?: string; sharesFilled: number; total: number };
       if (!res.ok) {
+        if (!confirmReserve && isOperatingReserveRefusal(data)) {
+          reserveConfirm.ask(operatingReserveRefusalText(data), () =>
+            handleFillLocal(orderId, orderType, shares, true)
+          );
+          return;
+        }
         setError(apiErrorText(data, "Fill failed"));
         return;
       }
@@ -114,6 +129,7 @@ export function SharePurchaseOrderbookView({
 
   return (
     <div className="space-y-5">
+      <OperatingReserveConfirmDialog state={reserveConfirm} />
       {holdingTerms && orderbookBids.length > 0 && (
         <HoldingTermSelector
           terms={holdingTerms}

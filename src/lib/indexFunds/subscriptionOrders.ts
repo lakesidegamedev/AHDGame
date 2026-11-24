@@ -12,6 +12,8 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
+  anchorToCorpLiquidCapital,
+  getCorpFxRate,
   loadFxRatesRecord,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
@@ -19,6 +21,10 @@ import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/au
 import { quoteIndexFundSubscription } from "./unitAccounting";
 import { witnessSubscription, type BankSubscription } from "./subscriptions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
@@ -34,6 +40,7 @@ export async function queueBankFundSubscription(
     units: number;
     payCurrency?: CurrencyCode;
     corporationId?: string;
+    overrideOperatingReserve?: true;
   }
 ): Promise<Response> {
   const key = `fund:${input.characterId}:${input.operationId}`;
@@ -56,6 +63,25 @@ export async function queueBankFundSubscription(
   if (previous) return previous;
   const rejection = await rejectDuringTurn(db);
   if (rejection) return rejection;
+  if (input.corporationId && ObjectId.isValid(input.corporationId)) {
+    // Company cash reserved for a fund is held to the operating reserve.
+    const corporation = await corporationsCollection(db).findOne({
+      _id: new ObjectId(input.corporationId),
+    });
+    if (corporation) {
+      const costAnchor = quoteIndexFundSubscription(input.fund.quotedNav, input.units).costAnchor;
+      const reserveCheck = await checkCorpPurchaseReserve(db, {
+        corporation,
+        costLocal: anchorToCorpLiquidCapital(
+          costAnchor,
+          corporation,
+          await getCorpFxRate(db, corporation)
+        ),
+        confirmed: input.overrideOperatingReserve === true,
+      });
+      if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
+    }
+  }
   try {
     return await withSessionDb(db, async (tx) => {
       const prior = await replay(tx);

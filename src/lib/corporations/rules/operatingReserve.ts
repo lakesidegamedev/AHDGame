@@ -154,6 +154,12 @@ export const OPERATING_RESERVE_COPY = {
   refused:
     "This build would leave {cashAfter} in cash, less than the {reserve} your plants need to run for {turns} turns (wages, site bills and inputs from last turn). The most you can build and keep that reserve is {maxAffordable}. Confirm the override to build anyway.",
   bulkSkipped: "Would leave less than {turns} turns of running costs in cash",
+  purchaseRefused:
+    "This purchase would leave {cashAfter} in cash, less than the {reserve} your plants need to run for {turns} turns (wages, site bills and inputs from last turn). The most you can spend and keep that reserve is {maxAffordable}. Confirm the override to buy anyway.",
+  purchaseOverCash:
+    "This purchase costs {cost}, more than the {cash} the company has. A company cannot spend into debt on the share market.",
+  restingTrimmed:
+    "Released {released} of escrow so the company keeps {turns} turns of running costs in cash",
 } as const;
 
 /** Fill a copy template's {placeholders}. */
@@ -169,15 +175,115 @@ export function operatingReserveMessage(input: {
   maxAffordableLocal: number;
   turns: number;
   currencyCode: CurrencyCode | string | null | undefined;
+  /** What the cash is for; a build unless told otherwise. */
+  spend?: "build" | "purchase";
 }): string {
-  const sym = (input.currencyCode && CURRENCY_SYMBOLS[input.currencyCode as CurrencyCode]) || "$";
-  const money = (x: number) => `${sym}${Math.round(Math.max(0, x)).toLocaleString("en-US")}`;
-  return fill(OPERATING_RESERVE_COPY.refused, {
+  const money = moneyFormatter(input.currencyCode);
+  const template =
+    input.spend === "purchase"
+      ? OPERATING_RESERVE_COPY.purchaseRefused
+      : OPERATING_RESERVE_COPY.refused;
+  return fill(template, {
     cashAfter: money(input.cashLocal - input.costLocal),
     reserve: money(input.reserveLocal),
     turns: String(input.turns),
     maxAffordable: money(input.maxAffordableLocal),
   });
+}
+
+function moneyFormatter(currencyCode: CurrencyCode | string | null | undefined) {
+  const sym = (currencyCode && CURRENCY_SYMBOLS[currencyCode as CurrencyCode]) || "$";
+  return (x: number) => `${sym}${Math.round(Math.max(0, x)).toLocaleString("en-US")}`;
+}
+
+/** The hard refusal when a purchase costs more than the company's cash. */
+export function purchaseOverCashMessage(input: {
+  costLocal: number;
+  cashLocal: number;
+  currencyCode: CurrencyCode | string | null | undefined;
+}): string {
+  const money = moneyFormatter(input.currencyCode);
+  return fill(OPERATING_RESERVE_COPY.purchaseOverCash, {
+    cost: money(input.costLocal),
+    cash: money(input.cashLocal),
+  });
+}
+
+/** Why a resting buy order gave back escrow at turn time. */
+export function restingOrderTrimReason(input: {
+  releasedLocal: number;
+  turns: number;
+  currencyCode: CurrencyCode | string | null | undefined;
+}): string {
+  return fill(OPERATING_RESERVE_COPY.restingTrimmed, {
+    released: moneyFormatter(input.currencyCode)(input.releasedLocal),
+    turns: String(input.turns),
+  });
+}
+
+/** Outcome of checking one corporate share-market purchase against its cash. */
+export type PurchaseReserveVerdict =
+  { kind: "ok" } | { kind: "over_cash" } | { kind: "below_reserve"; check: OperatingReserveCheck };
+
+/**
+ * A corporate purchase on the share market. Spending more than the cash on
+ * hand is always refused. Spending into the operating reserve is refused
+ * unless the CEO confirmed it. All amounts in one unit.
+ */
+export function purchaseReserveVerdict(input: {
+  cash: number;
+  cost: number;
+  billsPerTurn: number;
+  turns: number;
+  confirmed: boolean;
+}): PurchaseReserveVerdict {
+  const cash = Number.isFinite(input.cash) ? input.cash : 0;
+  const cost = amount(input.cost);
+  if (cost > cash + 1e-6) return { kind: "over_cash" };
+  const check = operatingReserveCheck({
+    cash,
+    cost,
+    billsPerTurn: input.billsPerTurn,
+    turns: input.turns,
+  });
+  if (check.ok || input.confirmed) return { kind: "ok" };
+  return { kind: "below_reserve", check };
+}
+
+/** One resting corporate buy order the turn may trim, newest first. */
+export interface TrimmableBuyOrder {
+  id: string;
+  sharesRemaining: number;
+  /** Escrow held for the unfilled shares, in the buyer's cash unit. */
+  escrowInBuyerUnits: number;
+}
+
+/**
+ * Escrow to give back from a company's resting buy orders so its cash is
+ * restored to the operating reserve before they fill. Orders are trimmed in
+ * the order given (callers pass newest first) by whole shares; an order that
+ * would keep no shares is released in full. Returns only orders that change.
+ */
+export function restingOrderReserveTrim(input: {
+  cash: number;
+  reserve: number;
+  orders: readonly TrimmableBuyOrder[];
+}): Array<{ id: string; sharesReleased: number; releasedInBuyerUnits: number }> {
+  const cash = Number.isFinite(input.cash) ? input.cash : 0;
+  let shortfall = amount(input.reserve) - cash;
+  const out: Array<{ id: string; sharesReleased: number; releasedInBuyerUnits: number }> = [];
+  for (const o of input.orders) {
+    if (!(shortfall > 1e-6)) break;
+    const shares = Math.floor(amount(o.sharesRemaining));
+    const escrow = amount(o.escrowInBuyerUnits);
+    if (shares <= 0 || escrow <= 0) continue;
+    const perShare = escrow / shares;
+    const sharesReleased = Math.min(shares, Math.ceil(shortfall / perShare - 1e-9));
+    const releasedInBuyerUnits = sharesReleased === shares ? escrow : sharesReleased * perShare;
+    out.push({ id: o.id, sharesReleased, releasedInBuyerUnits });
+    shortfall -= releasedInBuyerUnits;
+  }
+  return out;
 }
 
 /** The bulk skip reason. */
@@ -196,4 +302,16 @@ export function runAfterBuildMessage(input: {
   if (input.belowReserve)
     return `After this build your cash is ${input.cashAfterText}, below your running reserve. Your plants' sales still cover next turn's run, so it would not be cut.`;
   return `After this build your cash is ${input.cashAfterText}; next turn's run would be kept.`;
+}
+
+/** Error code the API returns when a company spend would break the operating reserve. */
+export const OPERATING_RESERVE_REFUSAL_CODE = "OPERATING_RESERVE_SHORT";
+
+/** True when an API error body is the operating-reserve refusal the CEO may confirm past. */
+export function isOperatingReserveRefusal(body: unknown): boolean {
+  return (
+    !!body &&
+    typeof body === "object" &&
+    (body as { code?: unknown }).code === OPERATING_RESERVE_REFUSAL_CODE
+  );
 }

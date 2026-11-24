@@ -9,6 +9,11 @@ import {
 } from "@/lib/constants/corporations";
 import type { MarketOrder, UseShareTradingProps, UseShareTradingReturn } from "../types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { isOperatingReserveRefusal } from "@/lib/corporations/rules/operatingReserve";
+import {
+  operatingReserveRefusalText,
+  useOperatingReserveConfirm,
+} from "../OperatingReserveConfirm";
 
 export function useShareTrading({
   corporation,
@@ -53,6 +58,7 @@ export function useShareTrading({
       : requestedTerm;
   const [buySharesAmount, setBuySharesAmount] = useState(0);
   const [buyAsCorp, setBuyAsCorp] = useState(false);
+  const reserveConfirm = useOperatingReserveConfirm();
   const [fillAskAsCorp, setFillAskAsCorp] = useState(false);
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy");
   const [orderShares, setOrderShares] = useState(0);
@@ -193,7 +199,7 @@ export function useShareTrading({
     }
   }
 
-  async function handleBuyFromFloat() {
+  async function handleBuyFromFloat(confirmReserve = false) {
     if (buySharesAmount <= 0) return;
     setLoading(true);
     setActionError("");
@@ -202,9 +208,17 @@ export function useShareTrading({
       const res = await fetch(`/api/corporations/${corpId}/shares/buy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shares: buySharesAmount, buyAsCorporation: buyAsCorp }),
+        body: JSON.stringify({
+          shares: buySharesAmount,
+          buyAsCorporation: buyAsCorp,
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
+        }),
       });
       const data = await res.json();
+      if (!res.ok && buyAsCorp && !confirmReserve && isOperatingReserveRefusal(data)) {
+        reserveConfirm.ask(operatingReserveRefusalText(data), () => handleBuyFromFloat(true));
+        return;
+      }
       if (res.ok) {
         setActionSuccess(
           `Bought ${buySharesAmount.toLocaleString()} shares for ${formatFull(data.cost)}`
@@ -306,7 +320,12 @@ export function useShareTrading({
     }
   }
 
-  async function handleFillOrder(orderId: string, fillType: "buy" | "sell", shares?: number) {
+  async function handleFillOrder(
+    orderId: string,
+    fillType: "buy" | "sell",
+    shares?: number,
+    confirmReserve = false
+  ): Promise<void> {
     if (!shares || shares < 1) {
       setActionError("Enter the number of shares to fill");
       return;
@@ -322,9 +341,16 @@ export function useShareTrading({
           shares,
           ...(fillType === "buy" ? { holdingTerm } : {}),
           fillAsCorporation: fillType === "sell" && !!myCorporation && fillAskAsCorp,
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
         }),
       });
       const data = await res.json();
+      if (!res.ok && !confirmReserve && isOperatingReserveRefusal(data)) {
+        reserveConfirm.ask(operatingReserveRefusalText(data), () =>
+          handleFillOrder(orderId, fillType, shares, true)
+        );
+        return;
+      }
       if (res.ok) {
         const verb = fillType === "sell" ? "Bought" : "Sold";
         setActionSuccess(
@@ -490,6 +516,7 @@ export function useShareTrading({
     handlePlaceOrder,
     handleCancelOrder,
     handleFillOrder,
+    reserveConfirm,
     handlePublicIssuance,
     handleConsolidateShares,
     handleSelfIssuance,

@@ -6,6 +6,7 @@ import { InlineError } from "@/components/ui/InlineError";
 
 import { HoldingTermSelector } from "./HoldingTermSelector";
 import { Button } from "@/components/ui";
+import { OperatingReserveConfirmDialog } from "./OperatingReserveConfirm";
 
 import PrivateSalePanel from "./PrivateSalePanel";
 
@@ -28,6 +29,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
     ceoLimitReached,
     ceoShareWindow,
     ceoVacateConfirm,
+    reserveConfirm,
     corpAtMarketAfterPurchase,
     corpCurrency,
     corpCurrencyCode,
@@ -437,7 +439,9 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
             {mode === "float" && (
               <Button
                 variant="primary"
-                onClick={atMarketSide === "buy" ? handleBuyAtMarket : () => handleSellAtMarket()}
+                onClick={
+                  atMarketSide === "buy" ? () => handleBuyAtMarket() : () => handleSellAtMarket()
+                }
                 disabled={!canSubmitFloat || loading}
                 isLoading={loading}
                 className={`text-sm shadow-none ${
@@ -452,7 +456,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
             {mode === "limit" && (
               <Button
                 variant="primary"
-                onClick={handlePlaceLimitOrder}
+                onClick={() => handlePlaceLimitOrder()}
                 disabled={!canSubmitLimit || loading}
                 isLoading={loading}
                 className={`text-sm shadow-none ${
@@ -467,6 +471,9 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
           </div>
         </div>
       </div>
+
+      {/* ─── Operating reserve confirm (server-enforced 409 gate) ─────────── */}
+      <OperatingReserveConfirmDialog state={reserveConfirm} />
 
       {/* ─── CEO divest confirm dialog (server-enforced 409 gate) ──────────── */}
       {ceoVacateConfirm && (

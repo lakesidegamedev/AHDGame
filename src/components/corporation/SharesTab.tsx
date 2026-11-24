@@ -1,5 +1,6 @@
 "use client";
 
+import { OperatingReserveConfirmDialog } from "@/components/corporation/shares/OperatingReserveConfirm";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Toast } from "@/components/ui";
@@ -154,6 +155,7 @@ export default function SharesTab({
 
   return (
     <div className="space-y-6">
+      <OperatingReserveConfirmDialog state={trading.reserveConfirm} />
       {toast && (
         <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
       )}
