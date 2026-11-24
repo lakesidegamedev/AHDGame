@@ -50,6 +50,18 @@ export type ProducerEconomyInput = {
    */
   residualOrders?: readonly PurchaseOrder[];
   residualOffers?: readonly ProducerOffer[];
+  /**
+   * Accounts whose import orders may fall back on any plant country's wider-
+   * economy seller on their world lane, after home buyers (background
+   * countries' import buyers). Absent = none.
+   */
+  residualExportBuyers?: readonly string[];
+  /**
+   * Extra wider-economy seller units for persistently short lanes
+   * (wideEconomyBoostOffers): final buyers and export buyers may fall back on
+   * them, plant inputs may not, and plants never plan on them. Absent = none.
+   */
+  residualBoostOffers?: readonly ProducerOffer[];
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
   /** Seller preference curve for free-choice orders (demandCurveRules). Absent = cheapest first. */
