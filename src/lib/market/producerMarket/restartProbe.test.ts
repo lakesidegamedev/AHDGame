@@ -84,7 +84,7 @@ const settle = (
     ...(input.restartProbes != null ? { restartProbes: input.restartProbes } : {}),
   });
 
-// The rules on the same mill: a probe of 5 units earns 5 x 8 x 0.9 = 36 and
+// The rules on the same mill: a probe of 5 units earns 5 x 8 = 40 and
 // costs 5% of the 26 running bills (1.3) plus 5 ore at 1 = 6.3.
 const plant = (changes: Partial<RestartProbePlant> = {}): RestartProbePlant => ({
   fullUnits: 100,
@@ -99,7 +99,7 @@ describe("restart probe rules", () => {
   it("probes 5% of capacity, financed up to its ceiling cost and capped by its revenue", () => {
     const probe = restartProbe(plant())!;
     expect(probe.runShare).toBe(0.05);
-    expect(probe.expectedRevenue).toBeCloseTo(36);
+    expect(probe.expectedRevenue).toBeCloseTo(40);
     expect(probe.expectedCost).toBeCloseTo(6.3);
     // Ceiling cost: 1.3 + 5 ore at 2 = 11.3, under the revenue.
     expect(probe.advance).toBeCloseTo(11.3);
@@ -109,7 +109,23 @@ describe("restart probe rules", () => {
         inputs: [{ unitsPerOutput: 1, maximumUnitPrice: 50, clearingUnitPrice: 1, stockUnits: 0 }],
       })
     )!;
-    expect(dear.advance).toBeCloseTo(36);
+    expect(dear.advance).toBeCloseTo(40);
+  });
+
+  it("probes a thin but positive margin at market prices, with no margin held back", () => {
+    // 5 units at 1.3 earn 6.5 against a cost of 6.3: about 3% margin.
+    const thin = restartProbe(
+      plant({ outputs: [{ unitsPerOutput: 1, marketUnitPrice: 1.3, fundedBuyers: true }] })
+    );
+    expect(thin).not.toBeNull();
+    expect(thin!.expectedRevenue).toBeCloseTo(6.5);
+    expect(thin!.advance).toBeCloseTo(6.5);
+    // At 1.25 it earns 6.25 against 6.3: it loses money and does not probe.
+    expect(
+      restartProbe(
+        plant({ outputs: [{ unitsPerOutput: 1, marketUnitPrice: 1.25, fundedBuyers: true }] })
+      )
+    ).toBeNull();
   });
 
   it("never probes more than 10% of capacity", () => {
