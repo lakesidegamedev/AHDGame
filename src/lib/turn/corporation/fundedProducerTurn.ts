@@ -447,12 +447,16 @@ async function prepareRunFundedProducerTurn(
   if ((input.env.wideEconomyStage ?? 0) >= 1) {
     const stored = await producerWideEconomyBaselineCollection<
       { _id: string } & WideEconomyBaseline
-    >(db).findOne({ _id: worldEpoch }, { projection: { units: 1, realGdp: 1, countryOfState: 1 } });
+    >(db).findOne(
+      { _id: worldEpoch },
+      { projection: { units: 1, realGdp: 1, countryOfState: 1, weight: 1 } }
+    );
     if (stored) {
       wideEconomyBaseline = {
         units: stored.units ?? {},
         realGdp: stored.realGdp ?? {},
         countryOfState: stored.countryOfState ?? {},
+        ...(stored.weight ? { weight: stored.weight } : {}),
       };
     } else {
       const recent = await producerMarketOutcomesCollection<{
@@ -548,6 +552,12 @@ async function prepareRunFundedProducerTurn(
         },
       },
       { upsert: true }
+    );
+  // An older baseline gets its anchor-currency weights once, and keeps them.
+  if (demand.wideEconomyBaselineWeights)
+    await producerWideEconomyBaselineCollection<{ _id: string }>(db).updateOne(
+      { _id: worldEpoch, weight: { $exists: false } },
+      { $set: { weight: demand.wideEconomyBaselineWeights } }
     );
   const wideEconomyFunding = backgroundFundingByAccount(demand.wideEconomyOrders);
   // One wallet per country with a wider-economy buyer or seller line.
