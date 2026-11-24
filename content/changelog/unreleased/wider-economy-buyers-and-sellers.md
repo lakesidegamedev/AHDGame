@@ -12,8 +12,9 @@ areas: [engine]
 
 Every state in a country with company plants now has a small "rest of the
 economy" that trades each good except ordnance. Its size is about a tenth of
-normal demand, split by each state's share of real economic output, and it grows
-only with real growth.
+normal demand, split by each state's share of real economic output measured in
+one common currency, so a country whose currency has many units to the dollar
+no longer gets an outsized share. It grows only with each state's real growth.
 
 It never competes with a company:
 

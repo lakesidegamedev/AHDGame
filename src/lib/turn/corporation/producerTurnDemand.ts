@@ -82,6 +82,7 @@ import {
   wideEconomyBaseline as buildWideEconomyBaseline,
   wideEconomyOrders as buildWideEconomyOrders,
   wideEconomyOffers as buildWideEconomyOffers,
+  wideEconomyWeights as buildWideEconomyWeights,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -552,16 +553,29 @@ export async function buildProducerTurnDemand(
   const priceIndexByCountry = new Map(
     lookups.federalBudgets.map((b) => [String(b.countryId), resolvePriceIndex(b.priceIndex)])
   );
+  // State GDP is in local currency: shares between countries use the anchor.
+  const localPerAnchorByCountry = new Map(
+    lookups.federalBudgets.flatMap((b) => {
+      const code = resolveCountryCurrencyCode(b);
+      const rate = code ? lookups.exchangeRatesByCurrency.get(code) : undefined;
+      return rate != null && Number.isFinite(rate) && rate > 0
+        ? [[String(b.countryId), rate] as const]
+        : [];
+    })
+  );
   const wideStates = wideOn
     ? states.flatMap((s) => {
         const countryId = s.countryId ?? "";
         if (!budgetCountries.has(countryId) || backgroundCountries.has(countryId)) return [];
         if (!stateWeightsByCountry.has(countryId)) return [];
+        const realGdp = toRealOutput(Math.max(0, s.gdp ?? 0), priceIndexByCountry.get(countryId));
+        const rate = localPerAnchorByCountry.get(countryId);
         return [
           {
             stateId: String(s._id),
             countryId,
-            realGdp: toRealOutput(Math.max(0, s.gdp ?? 0), priceIndexByCountry.get(countryId)),
+            realGdp,
+            ...(rate ? { anchorGdp: realGdp / rate } : {}),
           },
         ];
       })
@@ -570,7 +584,23 @@ export async function buildProducerTurnDemand(
     wideOn && !input.wideEconomyBaseline && (input.wideEconomyBaselineTurns?.length ?? 0) > 0
       ? buildWideEconomyBaseline({ turns: input.wideEconomyBaselineTurns!, states: wideStates })
       : null;
-  const wideBaseline = input.wideEconomyBaseline ?? wideEconomyBaselineCreated;
+  // A stored baseline from before the anchor-currency split gets its weights
+  // now, at this turn's rates; the turn stores them so they never move again.
+  const backfilledWeights =
+    wideOn && input.wideEconomyBaseline && !input.wideEconomyBaseline.weight
+      ? buildWideEconomyWeights(
+          input.wideEconomyBaseline.realGdp,
+          input.wideEconomyBaseline.countryOfState,
+          (c) => localPerAnchorByCountry.get(c)
+        )
+      : null;
+  // No rates, no weights: keep the stored split rather than zeroing every line.
+  const wideEconomyBaselineWeights =
+    backfilledWeights && Object.keys(backfilledWeights).length > 0 ? backfilledWeights : null;
+  const wideBaseline =
+    input.wideEconomyBaseline && wideEconomyBaselineWeights
+      ? { ...input.wideEconomyBaseline, weight: wideEconomyBaselineWeights }
+      : (input.wideEconomyBaseline ?? wideEconomyBaselineCreated);
   const wideLineInput = wideBaseline
     ? {
         baseline: wideBaseline,
@@ -905,6 +935,7 @@ export async function buildProducerTurnDemand(
     wideEconomyOrders,
     wideEconomyOffers,
     wideEconomyBaselineCreated,
+    wideEconomyBaselineWeights,
     newCompanyCash,
     openingById,
     ownerKindByCompany,

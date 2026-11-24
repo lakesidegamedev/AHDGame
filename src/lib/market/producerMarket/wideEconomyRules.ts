@@ -29,8 +29,10 @@ export const WIDE_ECONOMY_BASELINE_TURNS = 3;
 export interface WideEconomyState {
   stateId: string;
   countryId: string;
-  /** Annual state GDP deflated by its country's price index. */
+  /** Annual state GDP deflated by its country's price index, in local currency. */
   realGdp: number;
+  /** The same real GDP in the anchor currency, so states of different countries compare. */
+  anchorGdp?: number;
 }
 
 /** One settled turn's world supply and demand of a good, in settlement units per turn. */
@@ -43,10 +45,33 @@ export interface WideEconomyMarketRow {
 export interface WideEconomyBaseline {
   /** Units per turn the background seller offers of each good at baseline real GDP. */
   units: Record<string, number>;
-  /** Baseline real GDP of each plant-country state. */
+  /** Baseline real GDP of each plant-country state, in its own currency. */
   realGdp: Record<string, number>;
   /** Country of each baseline state. */
   countryOfState: Record<string, string>;
+  /**
+   * Each state's share of the baseline, from real GDP in the anchor currency.
+   * A baseline without it split by local-currency GDP, which gave countries
+   * with many units to the anchor almost everything (wideEconomyWeights).
+   */
+  weight?: Record<string, number>;
+}
+
+/** Each state's share of the baseline: its real GDP in the anchor currency over the total. */
+export function wideEconomyWeights(
+  realGdp: Readonly<Record<string, number>>,
+  countryOfState: Readonly<Record<string, string>>,
+  localPerAnchor: (countryId: string) => number | null | undefined
+): Record<string, number> {
+  const anchor: [string, number][] = [];
+  for (const stateId of Object.keys(realGdp).sort()) {
+    const rate = localPerAnchor(countryOfState[stateId] ?? "");
+    const gdp = finitePositive(realGdp[stateId]!);
+    if (rate == null || !(finitePositive(rate) > 0) || !(gdp > 0)) continue;
+    anchor.push([stateId, gdp / rate]);
+  }
+  const total = anchor.reduce((sum, [, v]) => sum + v, 0);
+  return total > 0 ? Object.fromEntries(anchor.map(([id, v]) => [id, v / total])) : {};
 }
 
 const finitePositive = (x: number) => (Number.isFinite(x) && x > 0 ? x : 0);
@@ -73,13 +98,22 @@ export function wideEconomyBaseline(input: {
     }
   const realGdp: Record<string, number> = {};
   const countryOfState: Record<string, string> = {};
+  const anchorGdp: Record<string, number> = {};
   for (const s of [...input.states].sort((a, b) => (a.stateId < b.stateId ? -1 : 1))) {
     const gdp = finitePositive(s.realGdp);
     if (!(gdp > 0) || !s.countryId) continue;
     realGdp[s.stateId] = gdp;
     countryOfState[s.stateId] = s.countryId;
+    const anchor = finitePositive(s.anchorGdp ?? 0);
+    if (anchor > 0) anchorGdp[s.stateId] = anchor;
   }
-  return { units, realGdp, countryOfState };
+  const anchorTotal = Object.values(anchorGdp).reduce((sum, v) => sum + v, 0);
+  // Shares need one currency; without anchor GDP for every state, split as before.
+  const weight =
+    anchorTotal > 0 && Object.keys(anchorGdp).length === Object.keys(realGdp).length
+      ? Object.fromEntries(Object.entries(anchorGdp).map(([id, v]) => [id, v / anchorTotal]))
+      : undefined;
+  return { units, realGdp, countryOfState, ...(weight ? { weight } : {}) };
 }
 
 export function wideEconomyOrderId(countryId: string, commodity: string, book: string): string {
@@ -109,8 +143,10 @@ interface WideEconomyLineInput {
 }
 
 /**
- * A state's share of a good is the baseline units times its baseline share of
- * real GDP, grown by its own real GDP since the baseline. State-scoped goods
+ * A state's share of a good is the baseline units times its baseline weight
+ * (its share of real GDP in the anchor currency), grown by its own real GDP
+ * in its own currency since the baseline, so exchange rates never read as
+ * growth. State-scoped goods
  * trade on the state's book (then `mapBook`, as public orders do); every other
  * good trades once per country on the world book. A shared book takes the
  * lowest of its states' prices.
@@ -135,7 +171,10 @@ function wideEconomyLines(input: WideEconomyLineInput): WideEconomyLine[] {
     const worldUnits = new Map<string, number>();
     for (const stateId of states) {
       const now = finitePositive(input.realGdpNow.get(stateId) ?? 0);
-      const units = (units0 * now) / totalGdp0;
+      const weight = input.baseline.weight;
+      const units = weight
+        ? (units0 * finitePositive(weight[stateId] ?? 0) * now) / input.baseline.realGdp[stateId]!
+        : (units0 * now) / totalGdp0;
       if (!(units > 0)) continue;
       const countryId = input.baseline.countryOfState[stateId]!;
       if (!scoped) {
