@@ -374,6 +374,10 @@ export interface ProposalView {
     targetCharacterId: string;
     targetCharacterName: string;
   };
+  /** Removal votes only: ISO time before which the vote cannot pass. */
+  earliestPassAt?: string;
+  /** Removal votes only: the minimum open window has elapsed. */
+  canPassNow?: boolean;
   campaignerAppointment?: { targetCharacterId: string; targetCharacterName: string };
   transactionApprovalMode?: { mode: "single" | "double" };
 

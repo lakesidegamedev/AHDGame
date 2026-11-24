@@ -6,6 +6,7 @@ import type { ProposalView } from "@/lib/parties/dto/partyView";
 import { MergerNppWarning } from "./MergerNppWarning";
 import { REQUIRED_YES_FRACTION } from "@/lib/parties/proposalConstants";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { LocalTime } from "@/components/time/LocalTime";
 
 function VoteBar({
   yes,
@@ -139,6 +140,29 @@ function ProposalTitle({ proposal }: { proposal: ProposalView }) {
   return <span>Proposal</span>;
 }
 
+function RemovalWindowNote({
+  earliestPassAt,
+  canPassNow,
+}: {
+  earliestPassAt: string;
+  canPassNow: boolean;
+}) {
+  if (canPassNow) {
+    return (
+      <div className="text-xs text-muted">
+        The 24 hour minimum is over. This vote passes as soon as enough members vote yes.
+      </div>
+    );
+  }
+  return (
+    <div className="text-xs text-muted">
+      Removal votes stay open at least 24 hours. This vote cannot pass before{" "}
+      <LocalTime value={earliestPassAt} options={{ dateStyle: "medium", timeStyle: "short" }} />,
+      even if enough members vote yes sooner.
+    </div>
+  );
+}
+
 const STATUS_STYLES: Record<ProposalView["status"], string> = {
   open: "bg-blue-900/40 text-blue-300",
   passed: "bg-green-900/40 text-green-300",
@@ -167,22 +191,25 @@ export function ProposalCard({
   const myVote =
     votingSide === "proposing" ? proposal.myProposingVote : (proposal.myTargetVote ?? undefined);
 
-  const handleVote = async (vote: "yes" | "no") => {
+  const handleVote = async (vote: "yes" | "no" | "withdraw") => {
     if (!votingSide) return;
     setLoading(true);
     setMsg("");
     try {
-      const res = await fetch(
-        `${partyApiUrl(country, partyId)}/committee/proposals/${proposal.id}/vote`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ vote }),
-        }
-      );
+      const url = `${partyApiUrl(country, partyId)}/committee/proposals/${proposal.id}/vote`;
+      const res =
+        vote === "withdraw"
+          ? await fetch(url, { method: "DELETE" })
+          : await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ vote }),
+            });
       const data = await res.json();
       if (!res.ok) {
-        setMsg(apiErrorText(data, "Failed to vote"));
+        setMsg(
+          apiErrorText(data, vote === "withdraw" ? "Failed to withdraw vote" : "Failed to vote")
+        );
       } else {
         setMsg("");
         onVoted();
@@ -214,6 +241,13 @@ export function ProposalCard({
         {isOpen && ` · expires turn ${proposal.expiresAtTurn}`}
         {!isOpen && proposal.resolvedAtTurn && ` · resolved turn ${proposal.resolvedAtTurn}`}
       </div>
+
+      {isOpen && proposal.earliestPassAt && (
+        <RemovalWindowNote
+          earliestPassAt={proposal.earliestPassAt}
+          canPassNow={proposal.canPassNow === true}
+        />
+      )}
 
       {isOpen && proposal.type === "merge" && <MergerNppWarning />}
 
@@ -257,7 +291,18 @@ export function ProposalCard({
           >
             No
           </button>
-          {myVote && <span className="text-xs text-muted">Your vote: {myVote}</span>}
+          {myVote && (
+            <>
+              <span className="text-xs text-muted">Your vote: {myVote}</span>
+              <button
+                onClick={() => handleVote("withdraw")}
+                disabled={loading}
+                className="px-3 py-1 rounded text-xs font-medium bg-card border border-card-border text-muted hover:text-foreground"
+              >
+                Withdraw vote
+              </button>
+            </>
+          )}
           {msg && <span className="text-xs text-red-400">{msg}</span>}
         </div>
       )}
