@@ -43,10 +43,16 @@ export interface MetricRebase {
   newCurrent: number;
 }
 
+/** Only percentages and 0-100 scores have a ceiling; relative indexes can run above 100. */
 function bounded(metricId: string, value: number): number {
   const unit = primaryMetricById(metricId)?.unit ?? "";
-  const upper = unit.includes("%") || unit.includes("index") ? 100 : Infinity;
+  const upper = unit.includes("%") || unit.includes("0-100") ? 100 : Infinity;
   return Number(Math.max(0, Math.min(upper, value)).toFixed(6));
+}
+
+/** Openings rebuilt from the same seed can differ by rounding; that is not a correction. */
+function isRoundingDifference(oldOpening: number, newOpening: number): boolean {
+  return Math.abs(newOpening - oldOpening) <= Math.max(0.05, Math.abs(oldOpening) * 0.001);
 }
 
 export function planOpeningRebase(
@@ -66,7 +72,7 @@ export function planOpeningRebase(
       !Number.isFinite(observation.value) ||
       typeof oldOpening !== "number" ||
       !Number.isFinite(oldOpening) ||
-      Math.abs(newOpening - oldOpening) < 1e-6
+      isRoundingDifference(oldOpening, newOpening)
     )
       continue;
     const proportional = PROPORTIONAL.has(metricId) && oldOpening > 0;
