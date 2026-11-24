@@ -106,17 +106,14 @@ type MetricPath = `${Exclude<keyof typeof BASELINE, never>}.${string}`;
 
 /**
  * Sourced provincial values, merged before OVERRIDES. Crime per 100k: StatCan
- * 35-10-0177-01 (2025), violent limited to the FBI categories so it compares
- * with the US seed; crimeRate is violent plus property. Incarceration: StatCan
- * 35-10-0154-01 (2023) scaled to the 90 national total. Food insecurity: StatCan
- * 13-10-0834-01 (2024, moderate or severe). Turnout: Elections Canada 2025.
- * Renewables: CER 2023. Carbon: StatCan 38-10-0097-01 over 17-10-0009-01, scaled
- * to the energy-CO2 basis (14.2). Protected land: ECCC conserved areas 2025. Air:
- * ECCC regional PM2.5 2021-2023 on airQualityIndexFromPm25. Physicians: CIHI 2025
- * (excludes Ontario, which keeps the baseline). Public trust: StatCan 45-10-0073-01
- * (2024), share with high confidence in police, courts and Parliament, scaled to
- * the national 55; territories are not surveyed. Transparency and corruption have
- * no provincial source and stay national.
+ * 35-10-0177-01 (2025), violent in FBI categories; crimeRate adds property.
+ * Incarceration: 35-10-0154-01 (2023) scaled to 90. Food insecurity:
+ * 13-10-0834-01 (2024). Turnout: Elections Canada 2025. Renewables: CER 2023.
+ * Carbon: 38-10-0097-01 over 17-10-0009-01, energy-CO2 basis. Protected land:
+ * ECCC 2025. Air: ECCC PM2.5 2021-2023. Physicians: CIHI 2025 (not Ontario).
+ * Public trust: 45-10-0073-01 (2024) high confidence in police, courts and
+ * Parliament, scaled to 55; territories unsurveyed. Transparency and corruption
+ * have no provincial source and stay national.
  */
 const SOURCED: Record<string, Partial<Record<MetricPath, number>>> = {
   CA_NL: {
