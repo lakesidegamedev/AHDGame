@@ -236,6 +236,27 @@ export function wideEconomyOffers(
   }));
 }
 
+/**
+ * The extra seller units a persistently short lane gets on top of its base
+ * line (wideEconomyShortageBoost), as separate offers at the same ask. Only
+ * final buyers and background countries' imports may fall back on them, never
+ * a plant's inputs, so plants keep planning on the base share alone and the
+ * extra never reshapes real production.
+ */
+export function wideEconomyBoostOffers(
+  base: readonly ProducerOffer[],
+  boostByLane: ReadonlyMap<string, number>,
+  laneKey: (commodity: string, book: string) => string
+): ProducerOffer[] {
+  return base.flatMap((o) => {
+    const factor = boostByLane.get(laneKey(o.commodity, o.book)) ?? 1;
+    const extra = o.units * (factor - 1);
+    return extra > 0
+      ? [{ ...o, id: JSON.stringify([...JSON.parse(o.id), "boost"]), units: extra }]
+      : [];
+  });
+}
+
 /** Book the wider economy's seller offers on, apart from the real market. */
 export function wideEconomyFillBook(book: string): string {
   return `wide:${book}`;
@@ -257,33 +278,128 @@ export function wideEconomyFallbackOffers(
 /**
  * Real orders with the wider economy's seller as their last resort. An order
  * may fall back on its own country's seller for its own lane, when it bids at
- * least the seller's ask. Named-supplier and contract orders keep their
+ * least the seller's ask. A background country's import order (`exportTo`)
+ * may fall back on any plant country's seller on its world lane, after home
+ * buyers (settleProducerOrders). Named-supplier and contract orders keep their
  * supplier, and the wider economy never buys from itself.
  */
 export function withWideEconomyFallback(
   orders: readonly PurchaseOrder[],
   offers: readonly ProducerOffer[],
-  laneKey: (commodity: string, book: string) => string
+  laneKey: (commodity: string, book: string) => string,
+  exportTo: ReadonlySet<string> = new Set()
 ): PurchaseOrder[] {
   if (offers.length === 0) return [...orders];
   const prefix = wideEconomyFillBook("");
-  const byLane = new Map<string, { offer: ProducerOffer; ids: readonly string[] }>();
+  const byLane = new Map<string, ProducerOffer[]>();
+  const worldByLane = new Map<string, ProducerOffer[]>();
   const sellers = new Set<string>();
   for (const offer of offers) {
     sellers.add(offer.accountId);
     const book = offer.book.slice(prefix.length);
-    byLane.set(JSON.stringify([laneKey(offer.commodity, book), offer.countryId]), {
-      offer,
-      ids: [offer.id],
-    });
+    const lane = laneKey(offer.commodity, book);
+    const key = JSON.stringify([lane, offer.countryId]);
+    byLane.set(key, [...(byLane.get(key) ?? []), offer]);
+    if (book === "world") worldByLane.set(lane, [...(worldByLane.get(lane) ?? []), offer]);
   }
   return orders.map((o) => {
     if (!o.countryId || o.afterMarket || sellers.has(o.accountId)) return o;
     if (o.supplierOfferId || o.contractUnitPrice != null) return o;
-    const line = byLane.get(JSON.stringify([laneKey(o.commodity, o.book), o.countryId]));
-    if (!line || !(o.maximumUnitPrice >= line.offer.unitPrice)) return o;
-    return { ...o, fallbackOfferIds: line.ids };
+    const lane = laneKey(o.commodity, o.book);
+    if (exportTo.has(o.accountId)) {
+      const ids = (worldByLane.get(lane) ?? [])
+        .filter((offer) => offer.countryId !== o.countryId && o.maximumUnitPrice >= offer.unitPrice)
+        .map((offer) => offer.id);
+      return ids.length > 0 ? { ...o, fallbackOfferIds: ids } : o;
+    }
+    const ids = (byLane.get(JSON.stringify([lane, o.countryId])) ?? [])
+      .filter((offer) => o.maximumUnitPrice >= offer.unitPrice)
+      .map((offer) => offer.id);
+    return ids.length > 0 ? { ...o, fallbackOfferIds: ids } : o;
   });
+}
+
+/** A lane is short when its real unmet share is above this... */
+export const WIDE_ECONOMY_SHORT_THRESHOLD = 0.15;
+/** ...in each of this many recent settled turns. */
+export const WIDE_ECONOMY_SHORT_TURNS = 3;
+/** A short lane's seller grows to leave about this share of demand unmet... */
+export const WIDE_ECONOMY_TARGET_SHORTAGE = 0.1;
+/** ...but never beyond this share of demand. */
+export const WIDE_ECONOMY_MAX_SHARE = 0.4;
+
+/**
+ * Each lane's real unmet share for one settled turn: what real buyers ordered
+ * and did not get from real sellers, over what they ordered. What the wider
+ * economy's seller filled counts as unmet here, so a lane it props up still
+ * reads as short until real supply grows. The wider economy's own buyer is
+ * not a real buyer.
+ */
+export function wideEconomyLaneShortage(input: {
+  outcomes: readonly {
+    accountId: string;
+    commodity: string;
+    book: string;
+    requestedUnits: number;
+    deliveredUnits: number;
+  }[];
+  orders: readonly Pick<PurchaseOrder, "id" | "commodity" | "book">[];
+  fills: readonly { orderId: string; units: number; spillBook?: string }[];
+  isWideAccount: (accountId: string) => boolean;
+  laneKey: (commodity: string, book: string) => string;
+}): Record<string, number> {
+  const prefix = wideEconomyFillBook("");
+  const orderById = new Map(input.orders.map((o) => [o.id, o]));
+  const seeded = new Map<string, number>();
+  for (const f of input.fills) {
+    if (!f.spillBook?.startsWith(prefix)) continue;
+    const o = orderById.get(f.orderId);
+    if (!o) continue;
+    const lane = input.laneKey(o.commodity, o.book);
+    seeded.set(lane, (seeded.get(lane) ?? 0) + finitePositive(f.units));
+  }
+  const asked = new Map<string, number>();
+  const got = new Map<string, number>();
+  for (const o of input.outcomes) {
+    if (input.isWideAccount(o.accountId)) continue;
+    const lane = input.laneKey(o.commodity, o.book);
+    asked.set(lane, (asked.get(lane) ?? 0) + finitePositive(o.requestedUnits));
+    got.set(lane, (got.get(lane) ?? 0) + finitePositive(o.deliveredUnits));
+  }
+  const out: Record<string, number> = {};
+  for (const lane of [...asked.keys()].sort()) {
+    const a = asked.get(lane)!;
+    if (!(a > 0)) continue;
+    const real = Math.max(0, (got.get(lane) ?? 0) - (seeded.get(lane) ?? 0));
+    out[lane] = Math.min(1, Math.max(0, (a - real) / a));
+  }
+  return out;
+}
+
+/**
+ * How much bigger each persistently short lane's seller is than the base
+ * share. A lane short by more than the threshold in each of the recent turns
+ * gets a seller of its smallest recent shortage less the target, between the
+ * base share and the cap; any other lane stays at the base share. It shrinks
+ * by itself as real supply grows.
+ */
+export function wideEconomyShortageBoost(
+  history: readonly Readonly<Record<string, number>>[]
+): Map<string, number> {
+  const boost = new Map<string, number>();
+  if (history.length < WIDE_ECONOMY_SHORT_TURNS) return boost;
+  const recent = history.slice(0, WIDE_ECONOMY_SHORT_TURNS);
+  for (const lane of Object.keys(recent[0]!).sort()) {
+    const shortages = recent.map((turn) => turn[lane]);
+    if (shortages.some((u) => u == null || !(u > WIDE_ECONOMY_SHORT_THRESHOLD))) continue;
+    const u = Math.min(...(shortages as number[]));
+    const share = Math.min(
+      WIDE_ECONOMY_MAX_SHARE,
+      Math.max(WIDE_ECONOMY_DEMAND_SHARE, u - WIDE_ECONOMY_TARGET_SHORTAGE)
+    );
+    if (share > WIDE_ECONOMY_DEMAND_SHARE) boost.set(lane, share / WIDE_ECONOMY_DEMAND_SHARE);
+  }
+  return boost;
 }
 
 interface SettledOffer {
@@ -364,4 +480,20 @@ export function withWideEconomyFills(
     row.supply = Math.max(0, row.supply - Math.max(0, r.offeredUnits - r.deliveredUnits));
   }
   return { ...market, prices, countryBooks: sortFundedCountryBookRows([...rows.values()]) };
+}
+
+/** Units and spend each order got from the wider economy's seller this clearing. */
+export function wideEconomySeededFills(
+  fills: readonly { orderId: string; units: number; unitPrice: number; spillBook?: string }[]
+): Map<string, { units: number; cost: number }> {
+  const prefix = wideEconomyFillBook("");
+  const out = new Map<string, { units: number; cost: number }>();
+  for (const f of fills) {
+    if (!f.spillBook?.startsWith(prefix)) continue;
+    const row = out.get(f.orderId) ?? { units: 0, cost: 0 };
+    row.units += f.units;
+    row.cost += f.units * f.unitPrice;
+    out.set(f.orderId, row);
+  }
+  return out;
 }

@@ -7,23 +7,30 @@
  *     npx tsx scripts/sim/wideEconomySupplyReplay.ts
  *
  * STATES is a list of { id, countryId, gdpAnchor } for the plant countries.
+ * With BOOST=1 the request must already carry the live wider economy; see boostMain.
  * The baseline is this turn's world demand (the live turn averages the last
  * three). Reads two local files; touches no database.
  */
 import fs from "node:fs";
 import { advanceProducerEconomy } from "@/lib/market/producerMarket/production";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
+import { bookPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
 import {
   wideEconomyBaseline,
+  wideEconomyBoostOffers,
+  wideEconomyLaneShortage,
   wideEconomyOffers,
   wideEconomyOrders,
+  wideEconomyShortageBoost,
 } from "@/lib/market/producerMarket/wideEconomyRules";
 
 type Request = Parameters<typeof advanceProducerEconomy>[0];
 type Result = ReturnType<typeof advanceProducerEconomy>;
 
 const request = JSON.parse(fs.readFileSync(process.env.REQUEST!, "utf8")) as Request;
-const states = JSON.parse(fs.readFileSync(process.env.STATES!, "utf8")) as {
+const states = (
+  process.env.STATES ? JSON.parse(fs.readFileSync(process.env.STATES, "utf8")) : []
+) as {
   id: string;
   countryId: string;
   gdpAnchor: number;
@@ -42,6 +49,10 @@ const plantCountry = new Map(
   })
 );
 request.countryOfProducer = (id: string) => plantCountry.get(id) || undefined;
+const clone = (q: Request): Request => ({
+  ...(JSON.parse(JSON.stringify(q)) as Request),
+  countryOfProducer: request.countryOfProducer,
+});
 const wideAccount = (countryId: string) => `wide:${countryId}`;
 const isWide = (id: string) => id.startsWith("wide:") || id.startsWith('["wide"');
 
@@ -187,11 +198,127 @@ const scarcityMove = (supply: number, demand: number) => {
   return Math.max(-0.06, Math.min(0.06, 0.5 * ((demand - supply) / larger)));
 };
 
-function main() {
-  const clone = (q: Request): Request => ({
-    ...(JSON.parse(JSON.stringify(q)) as Request),
-    countryOfProducer: request.countryOfProducer,
+/**
+ * BOOST=1 on a request that already carries the live wider economy: compare it
+ * with the same request plus the short-lane boost (from this turn's measured
+ * real shortage, as if it held for the whole window) and background
+ * countries' imports allowed to fall back on it.
+ */
+function boostMain() {
+  // Background countries hold their import budget (their orders' spend limits),
+  // as the live turn funds them; FUND_BACKGROUND=0 keeps the request's cash.
+  if (process.env.FUND_BACKGROUND !== "0") {
+    const budget = new Map<string, number>();
+    for (const o of request.externalOrders ?? [])
+      if (o.accountId.includes('"backgroundEconomy"'))
+        budget.set(o.accountId, (budget.get(o.accountId) ?? 0) + (o.maximumSpend ?? 0));
+    request.accounts = request.accounts.map((a) =>
+      budget.has(a.id) ? { ...a, cash: Math.max(a.cash, budget.get(a.id)!) } : a
+    );
+  }
+  const before = advanceProducerEconomy(clone(request));
+  const isWide = (id: string) => id.includes('"wideEconomy"');
+  const shortage = wideEconomyLaneShortage({
+    outcomes: before.orderOutcomes ?? [],
+    orders: before.tradeReceipt.orders,
+    fills: before.tradeReceipt.fills as { orderId: string; units: number; spillBook?: string }[],
+    isWideAccount: isWide,
+    laneKey: laneKeyOf,
   });
+  const boost = wideEconomyShortageBoost([shortage, shortage, shortage]);
+  const req: Request = {
+    ...request,
+    residualBoostOffers: wideEconomyBoostOffers(request.residualOffers ?? [], boost, laneKeyOf),
+    residualExportBuyers: request.accounts
+      .map((a) => a.id)
+      .filter((id) => id.includes('"backgroundEconomy"')),
+  };
+  const after = advanceProducerEconomy(clone(req));
+  const pb = bookPressure(before.orderOutcomes ?? []);
+  const pa = bookPressure(after.orderOutcomes ?? []);
+  const shortageAfter = wideEconomyLaneShortage({
+    outcomes: after.orderOutcomes ?? [],
+    orders: after.tradeReceipt.orders,
+    fills: after.tradeReceipt.fills as { orderId: string; units: number; spillBook?: string }[],
+    isWideAccount: isWide,
+    laneKey: laneKeyOf,
+  });
+  const per = (r: Result) => {
+    const out: Record<string, Record<string, number>> = {};
+    const g = (c: string) =>
+      (out[c] ||= {
+        plantSold: 0,
+        plantRevenue: 0,
+        homeGot: 0,
+        homeAsked: 0,
+        bgGot: 0,
+        bgAsked: 0,
+        seededHome: 0,
+        seededExport: 0,
+        seededLine: 0,
+      });
+    for (const p of r.producers)
+      for (const x of p.products) {
+        g(x.commodity).plantSold += x.soldUnits ?? 0;
+        g(x.commodity).plantRevenue += x.revenue ?? 0;
+      }
+    for (const o of r.orderOutcomes ?? []) {
+      if (isWide(o.accountId)) continue;
+      const bg = o.accountId.includes('"backgroundEconomy"');
+      g(o.commodity)[bg ? "bgAsked" : "homeAsked"] += o.requestedUnits;
+      g(o.commodity)[bg ? "bgGot" : "homeGot"] += o.deliveredUnits;
+    }
+    const orderById = new Map(r.tradeReceipt.orders.map((o) => [o.id, o]));
+    for (const f of r.tradeReceipt.fills as {
+      orderId: string;
+      units: number;
+      spillBook?: string;
+    }[]) {
+      if (!f.spillBook?.startsWith("wide:")) continue;
+      const o = orderById.get(f.orderId)!;
+      g(o.commodity)[o.accountId.includes('"backgroundEconomy"') ? "seededExport" : "seededHome"] +=
+        f.units;
+    }
+    return out;
+  };
+  const b = per(before);
+  const a = per(after);
+  for (const o of request.residualOffers ?? [])
+    if (b[o.commodity]) b[o.commodity]!.seededLine += o.units;
+  for (const o of req.residualOffers ?? [])
+    if (a[o.commodity]) a[o.commodity]!.seededLine += o.units;
+  const rows = Object.keys(a)
+    .sort()
+    .map((c) => ({
+      commodity: c,
+      boost: boost.get(laneKeyOf(c, "world")) ?? 1,
+      before: b[c],
+      after: a[c],
+      worldShortageBefore: shortage[laneKeyOf(c, "world")],
+      worldShortageAfter: shortageAfter[laneKeyOf(c, "world")],
+      pressureBefore: pb[laneKeyOf(c, "world")],
+      pressureAfter: pa[laneKeyOf(c, "world")],
+    }));
+  const total = (r: Result) => r.accounts.reduce((sum, x) => sum + x.cash, 0);
+  const opening = (q: Request) => q.accounts.reduce((sum, x) => sum + x.cash, 0);
+  process.stdout.write(
+    JSON.stringify(
+      {
+        turn: request.turn,
+        boostedLanes: Object.fromEntries(boost),
+        marketCash: {
+          before: { opening: opening(request), closing: total(before) },
+          after: { opening: opening(req), closing: total(after) },
+        },
+        rows,
+      },
+      null,
+      1
+    )
+  );
+}
+
+function main() {
   const base = advanceProducerEconomy(clone(request));
   const req = withWideEconomy(base);
   if (process.env.DUMP) fs.writeFileSync(process.env.DUMP, JSON.stringify(req));
@@ -289,4 +416,5 @@ function main() {
   );
 }
 
-main();
+if (process.env.BOOST) boostMain();
+else main();

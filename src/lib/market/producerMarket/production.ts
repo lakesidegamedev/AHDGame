@@ -22,6 +22,7 @@ import {
   residualWideEconomyBuyers,
   wideEconomyFallbackOffers,
   withWideEconomyFallback,
+  wideEconomySeededFills,
   withWideEconomyFills,
 } from "./wideEconomyRules";
 import { laneKeyOf } from "./laneKey";
@@ -513,9 +514,32 @@ export function advanceProducerEconomy(
   // sellers left unmet in every trial, so plants plan with it (wideEconomyRules).
   const skipWide = input.electricityNetwork ? (c: string) => c === "energy" : undefined;
   const wideOffers = wideEconomyFallbackOffers(input.residualOffers ?? [], skipWide);
+  const wideBoostOffers = wideEconomyFallbackOffers(input.residualBoostOffers ?? [], skipWide);
+  const wideExportTo = new Set(input.residualExportBuyers ?? []);
+  // Plant inputs fall back on the base share only; final buyers and exports
+  // may also take a short lane's extra units.
+  const withWideFallback = (orders: readonly PurchaseOrder[]) => {
+    if (wideOffers.length + wideBoostOffers.length === 0) return [...orders];
+    const inputIds = new Set(inputOrders().map((o) => o.id));
+    const plantInputs = orders.filter((o) => inputIds.has(o.id));
+    const others = orders.filter((o) => !inputIds.has(o.id));
+    return [
+      ...withWideEconomyFallback(
+        others,
+        [...wideOffers, ...wideBoostOffers],
+        laneKeyOf,
+        wideExportTo
+      ).map((o) => (o.fallbackOfferIds ? { ...o, fallbackCashOnly: true } : o)),
+      ...withWideEconomyFallback(plantInputs, wideOffers, laneKeyOf),
+    ];
+  };
   const trial = (track = false) => {
     trialRuns++;
-    const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? []), ...wideOffers];
+    const proposedOffers: ProducerOffer[] = [
+      ...(input.externalOffers ?? []),
+      ...wideOffers,
+      ...wideBoostOffers,
+    ];
     for (const p of plans)
       for (const output of p.outputs) {
         const id = JSON.stringify([p.id, "output", output.commodity]);
@@ -533,14 +557,12 @@ export function advanceProducerEconomy(
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
-      orders: withWideEconomyFallback(
+      orders: withWideFallback(
         buying(
           landedGate
             ? landedGate([...consumerOrders, ...inputOrders()])
             : [...consumerOrders, ...inputOrders()]
-        ),
-        wideOffers,
-        laneKeyOf
+        )
       ),
       ...(track ? { trackCountryBooks: true } : {}),
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
@@ -760,8 +782,21 @@ export function advanceProducerEconomy(
       if (lane)
         unsoldUnits.set(lane, (unsoldUnits.get(lane) ?? 0) + (o.offeredUnits - o.deliveredUnits));
     }
+    // What the wider economy's seller filled still counts as stranded here,
+    // so spillover moves that spend to real stock first and the seller only
+    // gets what is left (its fallback clears after the spillover orders).
+    const seeded = wideEconomySeededFills(market.tradeReceipt.fills);
     const first = new Map(
-      market.orders.map((o) => [o.id, { cost: o.cost, deliveredUnits: o.deliveredUnits }])
+      market.orders.map((o) => {
+        const s = seeded.get(o.id);
+        return [
+          o.id,
+          {
+            cost: o.cost - (s?.cost ?? 0),
+            deliveredUnits: o.deliveredUnits - (s?.units ?? 0),
+          },
+        ];
+      })
     );
     const next = spilloverOrders({
       orders: consumerOrders,
@@ -805,7 +840,7 @@ export function advanceProducerEconomy(
     clock.lap("residualClearingMs");
     addStageTiming(timings, "residualTrialRuns", trialRuns - trialsBeforeResidual);
   }
-  market = withWideEconomyFills(market, wideOffers);
+  market = withWideEconomyFills(market, [...wideOffers, ...wideBoostOffers]);
   const results: ProducerOperatingResult[] = [];
   const cashChanges = new ProducerCashChanges(input.accounts.map((account) => account.id));
   for (const payment of prior.payments)

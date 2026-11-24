@@ -122,6 +122,7 @@ import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producer
 import { producerWideEconomyBaselineCollection } from "@/lib/db/repositories/producerWideEconomyBaseline";
 import {
   WIDE_ECONOMY_BASELINE_TURNS,
+  WIDE_ECONOMY_SHORT_TURNS,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -487,10 +488,33 @@ async function prepareRunFundedProducerTurn(
         .filter((rows) => rows.length > 0);
     }
   }
+  // Recent real shortage per lane, newest first, for the seller's short-lane
+  // boost; a turn without the record ends the run of turns.
+  let wideEconomyShortageHistory: Record<string, number>[] | undefined;
+  if ((input.env.wideEconomyStage ?? 0) >= 1) {
+    const ids = Array.from(
+      { length: WIDE_ECONOMY_SHORT_TURNS },
+      (_, i) => `${worldEpoch}:${openingTurn - i}`
+    );
+    const docs = await producerMarketOutcomesCollection<{
+      _id: string;
+      wideShortage?: Record<string, number>;
+    }>(db)
+      .find({ _id: { $in: ids } }, { projection: { wideShortage: 1 } })
+      .toArray();
+    const byId = new Map(docs.map((d) => [d._id, d.wideShortage]));
+    wideEconomyShortageHistory = [];
+    for (const id of ids) {
+      const shortage = byId.get(id);
+      if (!shortage) break;
+      wideEconomyShortageHistory.push(shortage);
+    }
+  }
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
+    ...(wideEconomyShortageHistory ? { wideEconomyShortageHistory } : {}),
     env: demandEnv,
     sectorOps: [],
     publicCarryIn,
