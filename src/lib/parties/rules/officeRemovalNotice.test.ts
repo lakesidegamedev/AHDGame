@@ -20,7 +20,7 @@ describe("removalVoteOpenedNotice", () => {
     expect(notice.title).toBe("Vote to remove you as National Chair");
     expect(notice.message).toContain("Democratic Party National Committee");
     expect(notice.message).toContain("5 yes votes from 8 eligible voters");
-    expect(notice.message).toContain("turn 195");
+    expect(notice.message).toContain("until turn 195 and stays open at least 24 hours");
     expect(notice.message).not.toMatch(DASHES);
   });
 
@@ -33,7 +33,7 @@ describe("removalVoteOpenedNotice", () => {
       eligibleVoters: 1,
       expiresAtTurn: 10,
     });
-    expect(notice.message).toContain("1 yes vote from 1 eligible voter ");
+    expect(notice.message).toContain("1 yes vote from 1 eligible voter.");
   });
 });
 

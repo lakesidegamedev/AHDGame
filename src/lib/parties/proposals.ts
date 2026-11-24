@@ -11,6 +11,7 @@ import type {
 import type { PoliticalParty } from "@/lib/db/types";
 import { MAX_NATIONAL_CAMPAIGNERS } from "./access";
 import { canRenameParty } from "./rules/defaultIdentity";
+import { holdRemovalUntilWindow, REMOVAL_VOTE_MIN_OPEN_MS } from "./rules/removalVoteWindow";
 import { notifyRemovedByCommittee } from "./officeRemovalNotifications";
 import { MergeEligibilityError } from "./mergeEligibility";
 
@@ -601,11 +602,17 @@ async function markProposalTerminal(
   );
 }
 
+export interface ResolutionOptions {
+  expired?: boolean;
+  /** Wall clock for the removal-vote minimum window; defaults to now. */
+  now?: Date;
+}
+
 export async function attemptResolution(
   db: Db,
   proposal: CommitteeProposal,
   currentTurn: number,
-  options?: { expired?: boolean }
+  options?: ResolutionOptions
 ): Promise<void> {
   return withSessionDb(db, (tx) =>
     attemptResolutionInTransaction(tx, proposal, currentTurn, options)
@@ -616,7 +623,7 @@ async function attemptResolutionInTransaction(
   db: Db,
   proposal: CommitteeProposal,
   currentTurn: number,
-  options?: { expired?: boolean }
+  options?: ResolutionOptions
 ): Promise<void> {
   proposal = (await committeeProposalsCollection(db).findOne({ _id: proposal._id })) ?? proposal;
   if (proposal.status !== "open") return;
@@ -685,6 +692,10 @@ async function attemptResolutionInTransaction(
           ? "passed"
           : "open";
     // still open — both committees haven't reached threshold yet
+  }
+  const createdAtMs = proposal.createdAt ? new Date(proposal.createdAt).getTime() : NaN;
+  if (proposal.type === "removeOfficeHolder" && Number.isFinite(createdAtMs)) {
+    outcome = holdRemovalUntilWindow(outcome, createdAtMs, (options?.now ?? new Date()).getTime());
   }
   if (outcome === "open") return;
 
@@ -819,6 +830,34 @@ export async function castVote(
   return updated;
 }
 
+/**
+ * Removes voterId's vote while the proposal is open and not yet being
+ * resolved. Withdrawing never lifts the yes count, so it cannot make a
+ * proposal pass and needs no resolution attempt. Returns whether a vote was
+ * removed.
+ */
+export async function withdrawVote(
+  db: Db,
+  proposalId: ObjectId,
+  voterId: ObjectId,
+  side: "proposing" | "target"
+): Promise<boolean> {
+  const voteArray = side === "proposing" ? "proposingVotes" : "targetVotes";
+  const result = await committeeProposalsCollection(db).updateOne(
+    {
+      _id: proposalId,
+      status: "open",
+      resolutionInProgressAt: { $exists: false },
+      [`${voteArray}.voterId`]: voterId,
+    } as Record<string, unknown>,
+    {
+      $pull: { [voteArray]: { voterId } } as Record<string, unknown>,
+      $set: { updatedAt: new Date() },
+    }
+  );
+  return result.modifiedCount > 0;
+}
+
 // ─── Turn system ──────────────────────────────────────────────────────────────
 
 /**
@@ -831,13 +870,27 @@ export async function castVote(
  *
  * Returns count resolved (regardless of pass / reject).
  */
-export async function expireOpenProposals(db: Db, currentTurn: number): Promise<number> {
-  const expired = await committeeProposalsCollection(db)
-    .find({ status: "open", expiresAtTurn: { $lte: currentTurn } })
+export async function expireOpenProposals(
+  db: Db,
+  currentTurn: number,
+  now: Date = new Date()
+): Promise<number> {
+  // A removal vote that reached its threshold early is held open until its
+  // minimum window ends; pick it up on the first sweep after that.
+  const windowEndedBefore = new Date(now.getTime() - REMOVAL_VOTE_MIN_OPEN_MS);
+  const due = await committeeProposalsCollection(db)
+    .find({
+      status: "open",
+      $or: [
+        { expiresAtTurn: { $lte: currentTurn } },
+        { type: "removeOfficeHolder", createdAt: { $lte: windowEndedBefore } },
+      ],
+    })
     .toArray();
   let resolved = 0;
-  for (const proposal of expired) {
-    await attemptResolution(db, proposal, currentTurn, { expired: true });
+  for (const proposal of due) {
+    const expired = proposal.expiresAtTurn <= currentTurn;
+    await attemptResolution(db, proposal, currentTurn, { expired, now });
     resolved += 1;
   }
   return resolved;

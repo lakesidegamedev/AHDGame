@@ -17,6 +17,10 @@ import {
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
 import { requiredYesVotes } from "@/lib/parties/proposalConstants";
+import {
+  removalVoteEarliestPassMs,
+  removalVoteMayPass,
+} from "@/lib/parties/rules/removalVoteWindow";
 import { canRenameParty, DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
 import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
@@ -52,7 +56,8 @@ async function toProposalView(
   proposal: CommitteeProposal,
   proposingCommitteeSize: number,
   targetCommitteeSize: number | undefined,
-  myCharacterId: ObjectId
+  myCharacterId: ObjectId,
+  now: Date
 ): Promise<ProposalView> {
   const proposer = await charactersCollection(db).findOne(
     { _id: proposal.proposedBy },
@@ -118,6 +123,7 @@ async function toProposalView(
     electionMethod: proposal.electionMethod,
     electionDuration: proposal.electionDuration,
     removeOfficeHolder: removeOfficeHolderField,
+    ...removalWindowFields(proposal, now),
     campaignerAppointment: campaignerAppointmentField,
     transactionApprovalMode: proposal.transactionApprovalMode,
     proposingVoteSummary: buildVoteSummary(proposal.proposingVotes, proposingCommitteeSize),
@@ -128,6 +134,31 @@ async function toProposalView(
     myProposingVote,
     myTargetVote,
   };
+}
+
+function removalWindowFields(
+  proposal: CommitteeProposal,
+  now: Date
+): Pick<ProposalView, "earliestPassAt" | "canPassNow"> {
+  if (proposal.type !== "removeOfficeHolder" || !proposal.createdAt) return {};
+  const createdAtMs = new Date(proposal.createdAt).getTime();
+  if (!Number.isFinite(createdAtMs)) return {};
+  return {
+    earliestPassAt: new Date(removalVoteEarliestPassMs(createdAtMs)).toISOString(),
+    canPassNow: removalVoteMayPass(createdAtMs, now.getTime()),
+  };
+}
+
+/** Resolution leaves the target of a removal or nomination out of the voter set. */
+function proposingVoterCount(proposal: CommitteeProposal, eligibleVoterSet: Set<string>): number {
+  const targetId =
+    proposal.removeOfficeHolder?.targetCharacterId ??
+    proposal.campaignerAppointment?.targetCharacterId;
+  const excludesTarget =
+    (proposal.type === "removeOfficeHolder" || proposal.type === "campaignerAppointment") &&
+    targetId != null &&
+    eligibleVoterSet.has(targetId.toString());
+  return eligibleVoterSet.size - (excludesTarget ? 1 : 0);
 }
 
 async function getTargetEligibleSize(db: Db, proposal: CommitteeProposal): Promise<number> {
@@ -163,6 +194,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const eligibleVoterSet = getEligibleVoterSet(party);
     const eligibleSize = eligibleVoterSet.size;
+    const now = new Date();
     const myCharStr = myCharacterId.toString();
     const isEligibleVoter = eligibleVoterSet.has(myCharStr);
     const isChair = party.chairId?.toString() === myCharStr;
@@ -214,7 +246,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
       Promise.all(
         rawOpen.map(async (p) => {
           const targetSize = p.type === "merge" ? await getTargetEligibleSize(db, p) : undefined;
-          return toProposalView(db, p, eligibleSize, targetSize, myCharacterId);
+          return toProposalView(
+            db,
+            p,
+            proposingVoterCount(p, eligibleVoterSet),
+            targetSize,
+            myCharacterId,
+            now
+          );
         })
       ),
       Promise.all(
@@ -224,12 +263,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
             p,
             proposingSizeMap.get(p.partyId.toString()) ?? 0,
             eligibleSize,
-            myCharacterId
+            myCharacterId,
+            now
           )
         )
       ),
       Promise.all(
-        rawPast.map((p) => toProposalView(db, p, eligibleSize, undefined, myCharacterId))
+        rawPast.map((p) =>
+          toProposalView(
+            db,
+            p,
+            proposingVoterCount(p, eligibleVoterSet),
+            undefined,
+            myCharacterId,
+            now
+          )
+        )
       ),
     ]);
 
