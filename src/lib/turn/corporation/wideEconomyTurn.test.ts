@@ -402,7 +402,8 @@ describe("wider-economy funding", () => {
     expect(legs.find((l) => l.kind === "burn")!.amount).toBeCloseTo(5 * sellerAsk * RATE, 6);
     // The turn records each lane's real shortage for the next turns' boost.
     const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
-    expect(outcome.wideShortage["financial_services|world"]).toBeGreaterThan(0.9);
+    const shortage = outcome.wideShortage as Record<string, number>;
+    expect(shortage["financial_services|world"]).toBeGreaterThan(0.9);
   });
 
   it("keeps the anchor-currency weights it worked out for an older baseline", async () => {

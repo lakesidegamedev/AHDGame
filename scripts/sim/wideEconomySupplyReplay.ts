@@ -1,15 +1,11 @@
 /**
- * Offline what-if for the wider economy: replays one settled turn's producer
- * market with and without the after-market wider-economy pass, using the same
- * builders and pass the live turn runs (wideEconomyRules), and compares them.
+ * Offline what-if for the wider economy on one settled turn's market, using
+ * the live builders and passes (wideEconomyRules). Reads local files only.
  *
- *   REQUEST=<request.json> STATES=<states.json> [COUNTRY=US] \
- *     npx tsx scripts/sim/wideEconomySupplyReplay.ts
+ *   REQUEST=<request.json> STATES=<states.json> [COUNTRY=US] npx tsx <this file>
+ *   BOOST=1 REQUEST=<request with the live wider economy> npx tsx <this file>
  *
- * STATES is a list of { id, countryId, gdpAnchor } for the plant countries.
- * With BOOST=1 the request must already carry the live wider economy; see boostMain.
- * The baseline is this turn's world demand (the live turn averages the last
- * three). Reads two local files; touches no database.
+ * STATES lists { id, countryId, gdpAnchor }; the baseline is this turn's demand.
  */
 import fs from "node:fs";
 import { advanceProducerEconomy } from "@/lib/market/producerMarket/production";
