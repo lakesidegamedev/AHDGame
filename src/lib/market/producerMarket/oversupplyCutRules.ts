@@ -1,15 +1,9 @@
 /**
  * Oversupply cut: when a good is glutted, trim planned output so world supply
- * sits just above what buyers took last turn. Sized afresh each turn; no cut
- * after a sold-out turn or a turn where buyers went short, and cash-starved
- * companies do not count as supply.
- *
- * Last turn's take is capped by last turn's supply, so it only measures demand
- * when supply was left over. Two guards keep a short market from reading as a
- * glut: own-site deliveries count as taken (they are offered but never sold),
- * and buyers who were left short last turn block the cut outright. Without
- * them a large producer that skipped one run looked like a glut on its return
- * and had its output halved while buyers were still short.
+ * sits just above what buyers took last turn (sold plus own-site deliveries).
+ * No cut after a sold-out turn or one where buyers went short: last turn's
+ * take is capped by its supply, so it only measures demand when supply was
+ * left over. Cash-starved companies do not count as supply.
  */
 
 import { offtakeUnits, type CaptiveProduct } from "./captiveDeliveryRules";
