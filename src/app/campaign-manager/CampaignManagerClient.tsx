@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BlendShell } from "@/components/blend/BlendShell";
@@ -23,7 +24,6 @@ import { useSeatHistory } from "./useSeatHistory";
 import { SeatNav } from "./components/SeatNav";
 import { PastRaces } from "./components/PastRaces";
 import { RaceEntryButtons } from "./components/RaceEntryButtons";
-import { RaceAdmin } from "./components/RaceAdmin";
 import { CountryPicker } from "./components/CountryPicker";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
@@ -46,6 +46,10 @@ import { CampaignMap } from "./map/CampaignMap";
 import { BottomSheet, MobileRaceStrip, MobileTabs } from "./components/MobileCampaignManager";
 import { useIsDesktop } from "./useIsDesktop";
 import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
+
+const RaceAdmin = dynamic(() =>
+  import("./components/RaceAdmin").then((module) => module.RaceAdmin)
+);
 
 export interface CampaignManagerClientProps {
   countryId: string;
@@ -432,8 +436,8 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
       >
         <section
           ref={centreRef}
+          className="p-4 lg:px-6 lg:py-5"
           style={{
-            padding: isDesktop ? "20px 24px" : "16px",
             display: "flex",
             flexDirection: "column",
             gap: 18,
@@ -442,7 +446,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           aria-busy={loading}
         >
           <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
-          {loading ? <LoadingBlock label={t("loading")} /> : null}
+          <div className="lg:hidden">
+            <MobileTabs tab={mobileTab} onTab={setMobileTab} />
+          </div>
           {!loading && error ? (
             <p role="alert" style={{ color: BLEND.negative, margin: 0 }}>
               {t("loadError")}{" "}
@@ -451,7 +457,6 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               </button>
             </p>
           ) : null}
-          {!isDesktop ? <MobileTabs tab={mobileTab} onTab={setMobileTab} /> : null}
           {!loading && !error && races.length === 0 ? (
             <div role="status" style={{ color: BLEND.muted }}>
               <p>{t("noRaces", { country: props.countryName })}</p>
@@ -498,7 +503,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
             }
           >
             {loading && (isDesktop || mobileTab === "races") ? (
-              <LoadingBlock label={t("map.loading")} minHeight={320} />
+              <LoadingBlock label={t("loading")} minHeight={320} />
             ) : null}
             {!loading && filter && (isDesktop || mobileTab === "races") ? (
               <CampaignMap
@@ -576,10 +581,10 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                   </>
                 }
                 admin={
-                  selected && detail.full?.id === selected.electionId ? (
+                  selected && detail.full?.isAdmin && detail.full.id === selected.electionId ? (
                     <RaceAdmin
                       electionId={selected.electionId}
-                      isAdmin={detail.full.isAdmin}
+                      isAdmin
                       inPrimary={detail.full.inPrimary}
                       isEnded={detail.full.isEnded}
                       candidates={detail.full.candidates.map((c) => ({
