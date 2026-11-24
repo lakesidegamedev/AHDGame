@@ -1,7 +1,7 @@
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { notFound } from "next/navigation";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { getDb } from "@/lib/mongodb";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import CountryMapClient from "./CountryMapClient";
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props) {
   const { code } = await params;
   const countryId = code.toUpperCase() as CountryId;
   if (!Object.hasOwn(COUNTRY_CONFIGS, countryId)) notFound();
-  const gameState = await getGameState();
+  const gameState = await getGameStateCore();
   const { name } = await resolveCountryIdentity(await getDb(), countryId, gameState?.preset);
 
   return {

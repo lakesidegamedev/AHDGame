@@ -89,6 +89,11 @@ export function EconomySummary({
                     )}
                   </li>
                 ))}
+                {!economy.topSectors.some((s) => s.specializationBonus) && (
+                  // Say so when none of these earns a bonus, so its absence is not
+                  // read as missing data next to states that show one.
+                  <li className="text-body-sm text-muted">No specialization margin bonus here.</li>
+                )}
               </ul>
             ) : (
               <span className="text-body text-muted">No sector data yet.</span>

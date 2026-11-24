@@ -196,7 +196,10 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
         </span>
       ) : null}
       <span className="text-muted/70 shrink-0">·</span>
-      <span className="text-muted truncate">{r.characterName}</span>
+      <span className="text-muted truncate">
+        {/* Older background responses were stored as "Unknown leader". */}
+        {r.characterName === "Unknown leader" ? "Government" : r.characterName}
+      </span>
       {r.refugeeReceptionResult ? (
         <span
           className="text-muted tabular-nums"
@@ -724,11 +727,13 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                 ) : null}
                 {interaction.globalResponseOutcome.campaignStageAfter ? (
                   <p className="mt-1 text-[11px] text-muted">
-                    Campaign stage:{" "}
-                    {campaignLabel(
-                      interaction.globalResponseOutcome.campaignStageBefore ?? "posture"
-                    )}{" "}
-                    to {campaignLabel(interaction.globalResponseOutcome.campaignStageAfter)}
+                    Campaign stage: {/* An unchanged stage reads "stayed at X", not "X to X". */}
+                    {(interaction.globalResponseOutcome.campaignStageBefore ?? "posture") ===
+                    interaction.globalResponseOutcome.campaignStageAfter
+                      ? `stayed at ${campaignLabel(interaction.globalResponseOutcome.campaignStageAfter)}`
+                      : `${campaignLabel(
+                          interaction.globalResponseOutcome.campaignStageBefore ?? "posture"
+                        )} to ${campaignLabel(interaction.globalResponseOutcome.campaignStageAfter)}`}
                   </p>
                 ) : null}
                 {Object.keys(interaction.globalResponseOutcome.scores).length > 0 ? (

@@ -199,7 +199,7 @@ function ProvisionFiscalRow({ fiscal }: { fiscal: NonNullable<BillProvisionView[
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md bg-background/60 px-2.5 py-1.5 text-xs">
       <span className="text-body-sm font-medium text-muted">Budget effect</span>
       <span className="tabular-nums text-muted">
-        Cost {fiscal.current ? `${money(fiscal.current.cost)} → ` : ""}
+        Cost {fiscal.current ? `${money(fiscal.current.cost)}/yr → ` : ""}
         {money(proposed.cost)}/yr
         {proposed.revenue > 0 ? ` · ${money(proposed.revenue)}/yr revenue` : ""}
       </span>

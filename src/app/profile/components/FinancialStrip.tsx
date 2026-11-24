@@ -451,7 +451,13 @@ export function FinancialStrip({
   const donorValue = (
     <span className="text-heading font-semibold tabular-nums text-foreground">
       {t("level", { level: donorLevel })}
-      <span className="ml-1 text-body font-normal text-muted">/ {maxDonorLevel}</span>
+      {/* The ceiling is the donor network's top level, not a 10-point stat. */}
+      <span
+        className="ml-1 text-body font-normal text-muted"
+        title={`Donor network levels run up to ${maxDonorLevel}.`}
+      >
+        / {maxDonorLevel} max
+      </span>
     </span>
   );
   // Same compact style as personal cash beside it; the exact amount is on hover.

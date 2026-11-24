@@ -27,7 +27,9 @@ export function windowChange(values: number[]): number | null {
 
 export function Change({ value }: { value: number | null }) {
   if (value === null) return <span className="text-muted">·</span>;
-  const up = value >= 0;
+  // A change that rounds to zero is neither a gain nor a loss.
+  if (Number(value.toFixed(1)) === 0) return <span className="tabular-nums text-muted">0.0%</span>;
+  const up = value > 0;
   return (
     <span className={`tabular-nums ${up ? "text-success" : "text-error"}`}>
       {up ? "▲" : "▼"}

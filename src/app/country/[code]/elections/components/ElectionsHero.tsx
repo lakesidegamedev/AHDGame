@@ -59,7 +59,9 @@ export function ElectionsHero({
       </div>
 
       {showStats && (
-        <HeroStatsStrip layout="grid">
+        // Three stats in the 5-column grid left an empty dark band; the strip
+        // layout lets them sit on the card surface instead.
+        <HeroStatsStrip>
           <Stat label="Races" value={String(summary.total)} />
           <Stat label="Contested" value={`${summary.contested} of ${summary.total}`} />
           <Stat label="Next to close" value={nextClose ?? "No deadline"} />

@@ -442,7 +442,8 @@ export function PoliticalStanding({
                     <div className="space-y-1 text-muted">{row.tooltip}</div>
                   </InfoTooltip>
                 ) : (
-                  row.perTurn
+                  // A stat with no per-turn change shows a dash, not an empty cell.
+                  (row.perTurn ?? <span className="text-muted">-</span>)
                 )}
               </td>
               <td

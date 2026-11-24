@@ -148,7 +148,7 @@ describe("GET /api/country/[code]/parties/[id]/activity-feed", () => {
     expect(json.items).toHaveLength(1);
     expect(json.items[0]).toMatchObject({
       type: "treasury",
-      detail: "recruitment",
+      detail: "Recruitment",
       summary: "-$2,000 | Recruitment drive",
     });
   });

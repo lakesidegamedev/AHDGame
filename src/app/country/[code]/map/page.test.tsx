@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CountryMapPage, { generateMetadata } from "./page";
 import { getDb } from "@/lib/mongodb";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
+vi.mock("@/lib/gameState", () => ({ getGameStateCore: vi.fn() }));
 vi.mock("@/lib/country/countryIdentity", () => ({ resolveCountryIdentity: vi.fn() }));
 vi.mock("./CountryMapClient", () => ({ default: vi.fn() }));
 
@@ -27,7 +27,7 @@ describe("country map country validation", () => {
         "NEXT_HTTP_ERROR_FALLBACK;404"
       );
       expect(getDb).not.toHaveBeenCalled();
-      expect(getGameState).not.toHaveBeenCalled();
+      expect(getGameStateCore).not.toHaveBeenCalled();
       expect(resolveCountryIdentity).not.toHaveBeenCalled();
     }
   );

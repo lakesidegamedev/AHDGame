@@ -102,8 +102,9 @@ function PartyButton({
           {p.leader ? `${p.leader} leads` : "No candidates filed"}
         </span>
       </span>
+      {/* A bare count beside "X leads" read as "leads 1": name what it counts. */}
       <span style={{ fontFamily: FONT.mono, fontSize: 10, color: BLEND.mutedDimmer }}>
-        {p.filed}
+        {p.filed} filed
       </span>
     </button>
   );
@@ -1127,7 +1128,13 @@ function primaryMapModelFromBoard(vm: PrimaryBlendVM, ground: string): PresMapMo
       },
       sinceTurn: null,
       turnsAgo: null,
-      caption: t.title,
+      // The tooltip already shows the state and the leader above the caption,
+      // so the caption keeps only the status ("Projected to win").
+      caption: captionWithoutNames(
+        t.title,
+        t.name || STATE_NAMES[t.stateId] || t.stateId,
+        t.leaderName
+      ),
       // Counting, with a leader but no call: hatched in the leader's colour,
       // the general election night's "not yet called" look.
       ...(t.night && !t.night.called && t.leaderColor
@@ -1173,4 +1180,15 @@ function calendarState(
     turnsAgo: null,
     caption,
   };
+}
+
+/** "Minnesota: Chuck Schumer projected to win" becomes "Projected to win". */
+function captionWithoutNames(
+  title: string,
+  stateName: string,
+  leaderName: string | null | undefined
+): string {
+  let rest = title.startsWith(`${stateName}: `) ? title.slice(stateName.length + 2) : title;
+  if (leaderName && rest.startsWith(`${leaderName} `)) rest = rest.slice(leaderName.length + 1);
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : rest;
 }

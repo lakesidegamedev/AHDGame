@@ -151,7 +151,8 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
         </div>
         <p className="text-body-sm text-muted">
           {displayCanadianRegionCode(item.homeState)}
-          {item.currentOffice ? ` · ${item.currentOffice}` : ""}
+          {/* Every row names an office, so a short row is not read as missing data. */}
+          {` · ${item.currentOffice || "No office"}`}
         </p>
       </div>
       <div className="flex items-center gap-2">

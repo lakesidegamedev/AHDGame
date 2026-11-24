@@ -3,7 +3,9 @@ import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles"
 import { getPositionLabels, POSITION_DESC } from "./helpers";
 import type { PartyData } from "./types";
 
-const officerOrder = ["viceChair", "chair", "treasurer"] as const;
+// Chair first: the cards look alike, so a centred chair read as out of order,
+// and on a phone it stacked second.
+const officerOrder = ["chair", "viceChair", "treasurer"] as const;
 
 export function NationalPartyOfficerRow({ party }: { party: PartyData }) {
   const labels = getPositionLabels(party.countryId, party.leadershipTitles);

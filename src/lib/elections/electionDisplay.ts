@@ -70,3 +70,26 @@ export function toElectionDisplay(e: ElectionResponse): ElectionDisplay {
     })),
   };
 }
+
+/**
+ * Trims a display election to what the country elections list renders. The
+ * list never reads avatars, endorsements, per-candidate names in polling or
+ * primary vote counts, and they are most of the seeded payload.
+ */
+export function toElectionListDisplay(e: ElectionResponse): ElectionDisplay {
+  const full = toElectionDisplay(e);
+  return {
+    ...full,
+    primaryVotes: undefined,
+    polling: full.polling ? { ...full.polling, candidateNames: {} } : undefined,
+    candidates: full.candidates.map((c) => ({
+      id: c.id,
+      characterId: c.characterId,
+      characterName: c.characterName,
+      party: c.party,
+      partyName: c.partyName,
+      partyColor: c.partyColor,
+      isNPP: c.isNPP,
+    })),
+  };
+}

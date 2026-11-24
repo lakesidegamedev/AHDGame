@@ -82,7 +82,9 @@ export function PoolBreakdown({
   children?: React.ReactNode;
 }) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const visible = slices.filter((s) => s.value > 0);
+  // Anything that would print as 0.0% is left out, so both pools follow one
+  // rule instead of one hiding zeros and the other listing "0.0%" rows.
+  const visible = slices.filter((s) => s.value >= 0.05);
   const total = visible.reduce((sum, s) => sum + s.value, 0);
   const centre =
     visible.find((s) => s.key === activeKey) ??
@@ -178,8 +180,10 @@ export function PoolBreakdown({
                         aria-hidden
                       />
                     )}
+                    {/* Full party names wrap to a second line in the narrow legend
+                        column instead of cutting off mid-word. */}
                     <span
-                      className="min-w-0 flex-1 truncate"
+                      className="line-clamp-2 min-w-0 flex-1 leading-tight"
                       title={s.abbr ? `${s.label} (${s.abbr})` : s.label}
                     >
                       {s.label}

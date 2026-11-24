@@ -766,6 +766,10 @@ export function USMapWithModes({
                           onZoomChange={setZoom}
                           resetKey={resetKey}
                           showLabels={showLabels}
+                          // Tiny north-east states drop their label until zoomed in
+                          // instead of piling codes on top of each other; hover still
+                          // names them.
+                          hideCrowdedLabels
                           splitMode={senateSplitMode}
                           splitData={splitData}
                           highlightColor="var(--primary)"

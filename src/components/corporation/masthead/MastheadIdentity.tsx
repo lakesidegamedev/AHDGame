@@ -55,7 +55,9 @@ export function MastheadIdentity({
     <div className="flex min-w-0 flex-col justify-between gap-4">
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
         <span className="rounded-[3px] border border-primary px-2 py-1 text-foreground">
-          {corporation.isPrivate ? `Private: ${ticker}` : `${exchangeLabel}: ${ticker}`}
+          {/* Private once only: the ticker badge carries just the symbol and the
+              status word is skipped when the legal form already says private. */}
+          {corporation.isPrivate ? ticker : `${exchangeLabel}: ${ticker}`}
         </span>
         {isCeo ? (
           // The CEO changes the sector type in Settings; the label is the
@@ -72,14 +74,16 @@ export function MastheadIdentity({
           <span>{typeLabel}</span>
         )}
         {corporation.legalStructureLabel && <span>{corporation.legalStructureLabel}</span>}
-        <span
-          className={corporation.isPrivate ? "" : "inline-flex items-center gap-1.5 text-success"}
-        >
-          {!corporation.isPrivate && (
-            <i aria-hidden className="inline-block h-[7px] w-[7px] rounded-full bg-success" />
-          )}
-          {corporation.isPrivate ? "Private" : "Public"}
-        </span>
+        {!(corporation.isPrivate && /private/i.test(corporation.legalStructureLabel ?? "")) && (
+          <span
+            className={corporation.isPrivate ? "" : "inline-flex items-center gap-1.5 text-success"}
+          >
+            {!corporation.isPrivate && (
+              <i aria-hidden className="inline-block h-[7px] w-[7px] rounded-full bg-success" />
+            )}
+            {corporation.isPrivate ? "Private" : "Public"}
+          </span>
+        )}
       </div>
 
       <div className="flex min-w-0 items-center gap-4">

@@ -68,7 +68,10 @@ export function PartyCard({
             {party.isDefault && <DefaultPartyBadge />}
           </div>
         </Link>
-        <DiscordInviteButton inviteUrl={party.discordInviteUrl} entityName={party.name} />
+        {/* No invite: no greyed icon that cannot be clicked. */}
+        {party.discordInviteUrl && (
+          <DiscordInviteButton inviteUrl={party.discordInviteUrl} entityName={party.name} />
+        )}
       </div>
 
       <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

@@ -59,6 +59,8 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
       </div>
 
       {(election.prevElectionId || election.nextElectionId) && (
+        // Only the directions that lead somewhere: a greyed "Next" with no later
+        // election read as plain text beside a real button.
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {election.prevElectionId ? (
             <Link
@@ -75,19 +77,7 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
               </svg>
               Previous
             </Link>
-          ) : (
-            <span className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted/50 cursor-not-allowed">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Previous
-            </span>
-          )}
+          ) : null}
           {election.nextElectionId ? (
             <Link
               href={buildElectionUrl(election.nextElectionId)}
@@ -103,19 +93,7 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
                 />
               </svg>
             </Link>
-          ) : (
-            <span className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted/50 cursor-not-allowed">
-              Next
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </span>
-          )}
+          ) : null}
         </div>
       )}
     </>

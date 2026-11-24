@@ -175,7 +175,7 @@ export function LeadershipPanel({
         {data.immunity.protected && (
           <p className="mt-2 text-body-sm text-warning">
             The leader survived a recent ballot and is immune for {data.immunity.turnsRemaining}{" "}
-            more turn(s).
+            more {data.immunity.turnsRemaining === 1 ? "turn" : "turns"}.
           </p>
         )}
         <dl className="mt-3 grid grid-cols-2 gap-2 text-body-sm sm:grid-cols-4">
@@ -251,7 +251,8 @@ export function LeadershipPanel({
             <h4 className="font-semibold">Amend removal rules</h4>
             {!data.amendment.canAmendNow && (
               <p className="text-body-sm text-warning">
-                Recently amended; available again in {data.amendment.turnsUntilAmendable} turn(s).
+                Recently amended; available again in {data.amendment.turnsUntilAmendable}{" "}
+                {data.amendment.turnsUntilAmendable === 1 ? "turn" : "turns"}.
               </p>
             )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -415,7 +416,8 @@ export function LeadershipPanel({
                 <p>
                   Ballot ({challenge.ballot.electorate === "mps" ? "MPs vote" : "members vote"}):{" "}
                   {challenge.ballot.votesFor} remove / {challenge.ballot.votesAgainst} retain,
-                  closes in {challenge.ballot.turnsRemaining} turn(s).
+                  closes in {challenge.ballot.turnsRemaining}{" "}
+                  {challenge.ballot.turnsRemaining === 1 ? "turn" : "turns"}.
                 </p>
                 <div className="mt-2 flex gap-2">
                   {(["aye", "nay"] as const).map((vote) => (

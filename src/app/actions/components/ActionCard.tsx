@@ -283,7 +283,12 @@ const ActionCard = memo(function ActionCard({
               href={card.href}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-card-muted"
             >
-              {card.href === "/actions/poll" ? "Open polling" : "Open action"}
+              {/* Two poll cards share one page; name which poll each opens. */}
+              {card.href === "/actions/poll"
+                ? card.type === "pollLarge"
+                  ? "Open full poll"
+                  : "Open quick poll"
+                : "Open action"}
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"

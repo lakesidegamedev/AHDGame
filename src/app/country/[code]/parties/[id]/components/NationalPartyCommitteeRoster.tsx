@@ -26,7 +26,14 @@ export function NationalPartyCommitteeRoster({
           {`The ${title} consists of up to 6 elected members who help guide party policy and strategy.`}
         </p>
       )}
-      {committeeResult && committeeResult !== "unavailable" ? (
+      {committeeResult &&
+      committeeResult !== "unavailable" &&
+      committeeResult.committeeMembers.length === 0 ? (
+        // Six identical "Vacant" boxes told a reader nothing; say it once.
+        <p className="mt-4 text-body-sm text-muted">
+          {`All ${committeeResult.committeeSize} seats are vacant. Committee elections fill them.`}
+        </p>
+      ) : committeeResult && committeeResult !== "unavailable" ? (
         <ol role="list" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {Array.from({
             length: Math.max(

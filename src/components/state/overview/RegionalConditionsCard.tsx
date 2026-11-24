@@ -25,7 +25,8 @@ function approvalColor(v: number) {
 }
 
 function signed(n: number, suffix = ""): string {
-  return `${n > 0 ? "+" : ""}${n}${suffix}`;
+  // One decimal everywhere, so "+6" and "-11.2" never sit side by side.
+  return `${n > 0 ? "+" : ""}${n.toFixed(1)}${suffix}`;
 }
 
 function toneClass(n: number, kind: "text" | "bg" | "fill"): string {
@@ -277,7 +278,7 @@ export function RegionalConditionsCard({
               </div>
               {marginCapped && (
                 <div className="text-body-sm text-muted">
-                  from {signed(rawMargin, "pp")}, capped at {REGIONAL_CONDITION_MARGIN_CAP}
+                  from {signed(rawMargin, "pp")}, capped at {REGIONAL_CONDITION_MARGIN_CAP}pp
                 </div>
               )}
             </div>

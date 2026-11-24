@@ -48,7 +48,10 @@ export function CoalitionCard({ coalition, effectiveCountry }: CoalitionCardProp
             </p>
           </div>
         </Link>
-        <DiscordInviteButton inviteUrl={coalition.discordInviteUrl} entityName={coalition.name} />
+        {/* No invite: no greyed icon that cannot be clicked. */}
+        {coalition.discordInviteUrl && (
+          <DiscordInviteButton inviteUrl={coalition.discordInviteUrl} entityName={coalition.name} />
+        )}
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

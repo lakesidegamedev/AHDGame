@@ -573,7 +573,8 @@ describe("getTimerUrgencyStyle", () => {
     expect(getTimerUrgencyStyle("critical")).toContain("red");
     expect(getTimerUrgencyStyle("warning")).toContain("yellow");
     expect(getTimerUrgencyStyle("ended")).toContain("gray");
-    expect(getTimerUrgencyStyle("normal")).toContain("green");
+    // A deadline that is not close renders as plain text, not green.
+    expect(getTimerUrgencyStyle("normal")).toBe("text-foreground");
   });
 });
 

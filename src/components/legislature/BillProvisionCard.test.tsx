@@ -120,7 +120,7 @@ describe("BillProvisionCard impacts", () => {
     );
 
     expect(screen.getByText("Budget effect")).toBeTruthy();
-    expect(screen.getByText(/Cost \$95M → \$125M\/yr/)).toBeTruthy();
+    expect(screen.getByText(/Cost \$95M\/yr → \$125M\/yr/)).toBeTruthy();
     expect(screen.getByText(/Net change −\$30M\/yr/)).toBeTruthy();
     expect(screen.getByText(/One-time transition cost \$4M/)).toBeTruthy();
     expect(screen.getByText("Metric effect")).toBeTruthy();
