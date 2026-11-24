@@ -140,6 +140,10 @@ export function RegionHeader(props: RegionHeaderProps) {
   const holderHref = executive ? executiveHref(executive) : null;
   const european = usesEuropeanLeanColours(countryId);
   const executiveName = executive && holderHref ? (executive.characterName ?? "Unknown") : null;
+  const mobileBannerSrc =
+    bannerSrc === "/heroes/illinois-chicago-river.webp"
+      ? "/heroes/illinois-chicago-river-mobile.webp"
+      : undefined;
 
   return (
     <header className="rounded-xl border border-card-border bg-card">
@@ -151,6 +155,7 @@ export function RegionHeader(props: RegionHeaderProps) {
           {bannerSrc && (
             <HeroImage
               src={bannerSrc}
+              mobileSrc={mobileBannerSrc}
               alt=""
               fill
               className="object-cover object-center"

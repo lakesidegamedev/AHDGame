@@ -1,4 +1,4 @@
-import { leadershipEligibilityFilters } from "./leadershipVoterFilter";
+import { committeeBallotClause, leadershipEligibilityFilters } from "./leadershipVoterFilter";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -465,7 +465,20 @@ async function processCompletedNationalElectionsInTransaction(
     voteMatch.voterId = { $nin: bannedVoterObjectIds };
   }
 
-  const [allCandidatesRaw, voteCountsByElection, parties] = await Promise.all([
+  // Parties first: the committee method decides which ballots the tally reads.
+  const parties =
+    sequentialPartyIds.length > 0
+      ? await politicalPartiesCollection(db)
+          .find({ sequentialId: { $in: sequentialPartyIds }, countryId: { $in: countryIds } })
+          .toArray()
+      : ([] as PoliticalParty[]);
+  const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
+  const committeeClause = committeeBallotClause(endedElections, (partyId, country) =>
+    partyMap.get(`${country}:${partyId}`)
+  );
+  const tallyMatch = committeeClause ? { $and: [voteMatch, committeeClause] } : voteMatch;
+
+  const [allCandidatesRaw, voteCountsByElection] = await Promise.all([
     nationalPartyCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active", ...candidateFilter })
       .toArray(),
@@ -476,7 +489,7 @@ async function processCompletedNationalElectionsInTransaction(
         count: number;
         partyInfluenceSum: number;
       }>([
-        { $match: voteMatch },
+        { $match: tallyMatch },
         { $sort: { votedAt: -1, _id: -1 } },
         {
           $group: {
@@ -503,11 +516,6 @@ async function processCompletedNationalElectionsInTransaction(
         },
       ])
       .toArray(),
-    sequentialPartyIds.length > 0
-      ? politicalPartiesCollection(db)
-          .find({ sequentialId: { $in: sequentialPartyIds }, countryId: { $in: countryIds } })
-          .toArray()
-      : Promise.resolve([] as PoliticalParty[]),
   ]);
 
   const allCandidates = allCandidatesRaw.filter(
@@ -535,8 +543,6 @@ async function processCompletedNationalElectionsInTransaction(
     }
     set.add(c.characterId.toString());
   }
-
-  const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
 
   // Build a map of electionId → whether to use partyInfluence-weighted scoring
   const useInfluenceByElection = new Map<string, boolean>();

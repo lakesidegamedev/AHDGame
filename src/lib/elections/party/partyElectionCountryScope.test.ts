@@ -1,4 +1,5 @@
-vi.mock("./leadershipVoterFilter", () => ({
+vi.mock("./leadershipVoterFilter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./leadershipVoterFilter")>()),
   leadershipEligibilityFilters: async () => ({ voterFilter: {}, candidateFilter: {} }),
 }));
 vi.mock("@/lib/db/sessionDb", () => ({

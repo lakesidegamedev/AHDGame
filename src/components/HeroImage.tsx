@@ -6,6 +6,8 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 
 interface HeroImageProps {
   src: string;
+  /** Pre-sized phone variant of a pre-sized desktop source. */
+  mobileSrc?: string;
   alt: string;
   fill?: boolean;
   className?: string;
@@ -21,6 +23,7 @@ interface HeroImageProps {
  */
 export function HeroImage({
   src,
+  mobileSrc,
   alt,
   fill = true,
   className = "",
@@ -40,18 +43,36 @@ export function HeroImage({
     );
   }
 
-  return (
+  const image = (
     <Image
       src={src}
       alt={alt}
       fill={fill}
-      priority={priority}
+      priority={priority && !mobileSrc}
+      loading={priority && mobileSrc ? "eager" : undefined}
       fetchPriority={fetchPriority}
       sizes={sizes}
       className={fill ? `object-cover ${className}` : className}
       style={fill ? { objectPosition: "center", ...style } : style}
       onError={() => setErrored(true)}
-      unoptimized={bypassNextImageOptimization(src)}
+      unoptimized={Boolean(mobileSrc) || bypassNextImageOptimization(src)}
     />
+  );
+  if (!mobileSrc) return image;
+
+  const phone = "(width < 640px)";
+  return (
+    <>
+      {priority && (
+        <>
+          <link rel="preload" as="image" href={mobileSrc} media={phone} fetchPriority="high" />
+          <link rel="preload" as="image" href={src} media="(width >= 640px)" fetchPriority="high" />
+        </>
+      )}
+      <picture>
+        <source media={phone} srcSet={mobileSrc} />
+        {image}
+      </picture>
+    </>
   );
 }

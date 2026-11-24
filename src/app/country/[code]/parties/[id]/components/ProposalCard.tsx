@@ -36,7 +36,8 @@ function VoteBar({
       </div>
       <div className="text-xs text-muted">
         {`${yesNeeded} yes ${yesNeeded === 1 ? "vote" : "votes"} needed to pass (${Math.round(REQUIRED_YES_FRACTION * 100)}% of ${total} seats).`}{" "}
-        Seats that have not voted when the window closes count as no.
+        Only votes from current committee members and officers count. Seats that have not voted when
+        the window closes count as no.
       </div>
     </div>
   );
@@ -140,7 +141,7 @@ function ProposalTitle({ proposal }: { proposal: ProposalView }) {
   return <span>Proposal</span>;
 }
 
-function RemovalWindowNote({
+function MinimumOpenNote({
   earliestPassAt,
   canPassNow,
 }: {
@@ -156,7 +157,7 @@ function RemovalWindowNote({
   }
   return (
     <div className="text-xs text-muted">
-      Removal votes stay open at least 24 hours. This vote cannot pass before{" "}
+      Committee proposals stay open at least 24 hours. This one cannot pass before{" "}
       <LocalTime value={earliestPassAt} options={{ dateStyle: "medium", timeStyle: "short" }} />,
       even if enough members vote yes sooner.
     </div>
@@ -243,7 +244,7 @@ export function ProposalCard({
       </div>
 
       {isOpen && proposal.earliestPassAt && (
-        <RemovalWindowNote
+        <MinimumOpenNote
           earliestPassAt={proposal.earliestPassAt}
           canPassNow={proposal.canPassNow === true}
         />

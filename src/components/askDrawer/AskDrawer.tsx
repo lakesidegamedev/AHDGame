@@ -9,7 +9,6 @@ import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/lay
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
 import { KeirAvatar, KeirSprite } from "@/components/askDrawer/KeirSprite";
 import { useNavBottom } from "@/components/askDrawer/useNavBottom";
-import { ExperimentalSideTray } from "@/components/sidebarWidgets/ExperimentalSideTray";
 
 // The Ask Keir drawer, docked to the left or right edge of most pages for every
 // signed-in player. On a phone it opens as a full-screen sheet over the whole
@@ -23,15 +22,14 @@ function isMobileViewport(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(MOBILE_QUERY).matches;
 }
 
-function useIsPhone(): boolean {
-  const [phone, setPhone] = useState(false);
+function useIsPhone(): boolean | null {
+  const [phone, setPhone] = useState<boolean | null>(null);
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia(MOBILE_QUERY);
-    const update = () => setPhone(query.matches);
+    const query = window.matchMedia?.(MOBILE_QUERY);
+    const update = () => setPhone(query?.matches ?? false);
     update();
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
+    query?.addEventListener?.("change", update);
+    return () => query?.removeEventListener?.("change", update);
   }, []);
   return phone;
 }
@@ -116,6 +114,12 @@ const AskDrawerPanel = dynamic(
   { ssr: false }
 );
 
+const ExperimentalSideTray = dynamic(
+  () =>
+    import("@/components/sidebarWidgets/ExperimentalSideTray").then((m) => m.ExperimentalSideTray),
+  { ssr: false }
+);
+
 export function AskDrawer() {
   const auth = useOptionalAuthMe();
   const refetchNav = useRefetchNav();
@@ -151,13 +155,13 @@ export function AskDrawer() {
   const phone = useIsPhone();
   const navBottom = useNavBottom(open && !phone);
   const keyboard = useKeyboardInset(open && !phone);
-  const area = useVisibleArea(open && phone);
+  const area = useVisibleArea(open && phone === true);
   useMobileScrollLock(open);
 
   if (!user) return null;
   if (isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) return null;
   // Experimental: on tablets and desktops Keir lives in the side tray as a tab.
-  if (user.experimentalFeatures === true && auth?.navData?.hasCharacter === true && !phone)
+  if (user.experimentalFeatures === true && auth?.navData?.hasCharacter === true && phone === false)
     return (
       <ExperimentalSideTray
         side={side}

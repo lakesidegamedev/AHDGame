@@ -13,20 +13,24 @@ vi.mock("next/navigation", () => ({
 // These tests cover when the page is covered, when it decodes, and that the
 // cover never sticks, not the drawing.
 const calls: string[] = [];
+let setupFails = false;
 vi.mock("ascii-reveal/core", () => ({
-  createAsciiReveal: () => ({
-    shimmer: (on: boolean) => calls.push(`shimmer:${on}`),
-    hide: (opts?: { instant?: boolean }) => {
-      calls.push(opts?.instant ? "hide:instant" : "hide");
-      return Promise.resolve();
-    },
-    reveal: () => {
-      calls.push("reveal");
-      return Promise.resolve();
-    },
-    update: () => undefined,
-    destroy: () => calls.push("destroy"),
-  }),
+  createAsciiReveal: () => {
+    if (setupFails) throw new Error("Animation unavailable");
+    return {
+      shimmer: (on: boolean) => calls.push(`shimmer:${on}`),
+      hide: (opts?: { instant?: boolean }) => {
+        calls.push(opts?.instant ? "hide:instant" : "hide");
+        return Promise.resolve();
+      },
+      reveal: () => {
+        calls.push("reveal");
+        return Promise.resolve();
+      },
+      update: () => undefined,
+      destroy: () => calls.push("destroy"),
+    };
+  },
 }));
 
 import {
@@ -45,8 +49,15 @@ function Page({ enabled, content }: { enabled: boolean; content: ReactNode }) {
 
 const host = () => document.querySelector(".ascii-reveal-host") as HTMLElement | null;
 
+async function finishLoadingEffect() {
+  await act(async () => {
+    await vi.dynamicImportSettled();
+  });
+}
+
 beforeEach(() => {
   calls.length = 0;
+  setupFails = false;
   resetRevealHydrationForTests();
   vi.useFakeTimers();
 });
@@ -131,12 +142,13 @@ describe("ExperimentalPageReveal", () => {
     expect(calls).toEqual([]);
   });
 
-  it("covers a server-rendered skeleton and decodes once real content lands", () => {
+  it("covers a server-rendered skeleton and decodes once real content lands", async () => {
     pathname = "/profile";
     const { rerender } = render(
       <Page enabled content={<div className="animate-pulse" aria-hidden />} />
     );
     expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(true);
+    await finishLoadingEffect();
     expect(calls).toEqual(["shimmer:true"]);
 
     rerender(<Page enabled content={<p>Your profile and holdings</p>} />);
@@ -147,7 +159,7 @@ describe("ExperimentalPageReveal", () => {
     expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
   });
 
-  it("covers an in-app navigation from its first paint, then decodes", () => {
+  it("covers an in-app navigation from its first paint, then decodes", async () => {
     pathname = "/profile";
     const { rerender } = render(<Page enabled content={<p>Your profile and holdings</p>} />);
     expect(calls).toEqual([]);
@@ -156,6 +168,7 @@ describe("ExperimentalPageReveal", () => {
     rerender(<Page enabled content={<div className="animate-pulse" aria-hidden />} />);
     const covered = host();
     expect(covered?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(true);
+    await finishLoadingEffect();
 
     rerender(<Page enabled content={<p>Corporation two overview</p>} />);
     act(() => {
@@ -166,14 +179,34 @@ describe("ExperimentalPageReveal", () => {
     expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
   });
 
-  it("lifts the cover at the cap even if the page never settles", () => {
+  it("lifts the cover at the cap even if the page never settles", async () => {
     pathname = "/profile";
     render(<Page enabled content={<div className="animate-pulse" aria-hidden />} />);
+    await finishLoadingEffect();
     act(() => {
       vi.advanceTimersByTime(MAX_WAIT_MS + 100);
     });
     expect(calls).toContain("reveal");
     expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
+  });
+
+  it("lifts the cover if effect setup fails", async () => {
+    pathname = "/profile";
+    setupFails = true;
+    render(<Page enabled content={<div className="animate-pulse" aria-hidden />} />);
+    await finishLoadingEffect();
+    expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
+  });
+
+  it("leaves the page visible when the module takes too long to load", async () => {
+    pathname = "/profile";
+    render(<Page enabled content={<div className="animate-pulse" aria-hidden />} />);
+    act(() => {
+      vi.advanceTimersByTime(MAX_WAIT_MS);
+    });
+    expect(host()?.hasAttribute(REVEAL_WAITING_ATTR)).toBe(false);
+    await finishLoadingEffect();
+    expect(calls).toEqual([]);
   });
 
   it("does not cover a page that is already showing when it re-renders", () => {
