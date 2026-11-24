@@ -128,8 +128,8 @@ describe("monetary stock boundaries", () => {
           status: "active",
           currency: "USD",
           cashReserves: 100,
-          totalDeposits: 0,
-          npcDeposits: 0,
+          totalDeposits: 1_000,
+          npcDeposits: 1_000,
         },
       },
     ]);

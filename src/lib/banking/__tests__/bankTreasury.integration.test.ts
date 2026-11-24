@@ -322,6 +322,32 @@ describe("funded bank treasury settlement", () => {
     expect(collection).not.toHaveBeenCalled();
   });
 
+  it("never sweeps an unrequested central bank advance into bills", async () => {
+    const db = world();
+    // Own cash covers the floor and nothing more; everything above it is advance.
+    await db.collection("corporations").updateOne(
+      { _id: BANK },
+      {
+        $set: {
+          "bankCharter.cashReserves": 600_000,
+          "bankCharter.cbMarginDebt": 500_000,
+          "bankCharter.cbLiquidityAdvanceDebt": 500_000,
+          "bankCharter.sovereignTreasuryAutoSweep": true,
+          "bankCharter.npcDeposits": 1_000_000,
+          "bankCharter.totalDeposits": 1_000_000,
+        },
+      }
+    );
+    // Positive carry, so the sweep would buy if the advance counted as spendable.
+    await db
+      .collection("bonds")
+      .updateOne({ _id: BOND }, { $set: { couponRate: 8, maturityTurn: TURN + 48 } });
+    const result = await sweepBankTreasury(db as unknown as Db, BANK, POLICY, TURN);
+    expect(result).toMatchObject({ trades: 0, completed: 0 });
+    expect(balance(db).cash).toBe(600_000);
+    expect((db.collection("bonds").docs[0] as unknown as Bond).holders).toEqual([]);
+  });
+
   it("buys the highest-yield bill first when automatic cash can fund only one", async () => {
     const db = world();
     const lowerYieldBondId = new ObjectId("cccccccccccccccccccccccc");

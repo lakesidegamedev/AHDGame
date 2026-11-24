@@ -13,6 +13,7 @@ const overview: BankTreasuryOverview = {
     floorLocal: 0,
     requiredReserves: 0,
     withdrawalBufferLocal: 0,
+    liquidityAdvanceHeldLocal: 0,
     nextTurnDueInterest: 0,
   },
   spendableCash: 10_000,
