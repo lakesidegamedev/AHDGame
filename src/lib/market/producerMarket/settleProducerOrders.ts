@@ -449,8 +449,10 @@ export function settleProducerOrders(
       : []
   );
   const deferred: PurchaseOrder[] = [];
+  const afterMarket: PurchaseOrder[] = [];
   for (const order of context.orders) {
-    if (context.marketFirst.has(order.accountId) || outsideFirstAccounts.has(order.accountId))
+    if (order.afterMarket) afterMarket.push(order);
+    else if (context.marketFirst.has(order.accountId) || outsideFirstAccounts.has(order.accountId))
       deferred.push(order);
     else clearOrder(order);
   }
@@ -459,7 +461,7 @@ export function settleProducerOrders(
   // wants is offered to leftover supply in its neighbouring states' books.
   for (const order of context.orders) {
     if (electricity && order.commodity === "energy") continue;
-    if (!order.spillBooks?.length) continue;
+    if (order.afterMarket || !order.spillBooks?.length) continue;
     if (order.supplierOfferId || order.contractUnitPrice != null) continue;
     if (order.quantityGroup || order.eligibleOfferIds) continue;
     let wanted = order.units - (context.orderResults.get(order.id)?.deliveredUnits ?? 0);
@@ -482,6 +484,52 @@ export function settleProducerOrders(
       }));
     }
   }
+  // Wider-economy seller: what an order still wants after every pass above may
+  // come from its fallback offers, which sit on their own book, so a real
+  // seller always sells first.
+  const fallbackOffers = new Map<string, ProducerOffer>();
+  {
+    const wanted = new Set<string>();
+    for (const order of context.orders)
+      for (const id of order.fallbackOfferIds ?? []) wanted.add(id);
+    if (wanted.size > 0)
+      for (const offer of context.input.offers)
+        if (wanted.has(offer.id)) fallbackOffers.set(offer.id, offer);
+  }
+  for (const order of fallbackOffers.size > 0 ? context.orders : []) {
+    if (order.afterMarket || !order.fallbackOfferIds?.length) continue;
+    if (electricity && order.commodity === "energy") continue;
+    const settled = context.orderResults.get(order.id)!;
+    const quantityGroup = order.quantityGroup && context.quantityGroups.get(order.quantityGroup.id);
+    const wanted = Math.min(
+      order.units - settled.deliveredUnits,
+      quantityGroup ? quantityGroup.remaining : Number.MAX_VALUE
+    );
+    // Rounding dust left on a filled order is not demand.
+    if (!(wanted > 1e-9 * Math.max(1, order.units))) continue;
+    const byPrice = new Map<number, ProducerOffer[]>();
+    let book: string | undefined;
+    for (const id of order.fallbackOfferIds) {
+      const offer = fallbackOffers.get(id);
+      if (!offer || offer.commodity !== order.commodity) continue;
+      if (offer.countryId !== order.countryId) continue;
+      book ??= offer.book;
+      if (offer.book !== book) continue;
+      const level = byPrice.get(offer.unitPrice) ?? [];
+      level.push(offer);
+      byPrice.set(offer.unitPrice, level);
+    }
+    if (!book) continue;
+    context.fillLocalOffers(
+      order,
+      wanted,
+      Math.max(0, (order.maximumSpend ?? Number.MAX_VALUE) - settled.cost),
+      byPrice,
+      { spillBook: book }
+    );
+  }
+  // After-market orders take only what every other buyer left.
+  for (const order of afterMarket) clearOrder(order);
   for (const offer of context.input.offers) {
     if (!context.poolByOffer.get(offer.id)!.hasPooledSales) continue;
     const seller = context.offerResults.get(offer.id)!;
