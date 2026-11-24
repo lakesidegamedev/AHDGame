@@ -98,8 +98,15 @@ export async function settleFundedProducerTurn(
         ...context.demand.publicBuyerOrders,
         ...context.demand.investmentBuyerOrders,
         ...context.demand.backgroundOrders,
-        ...context.demand.wideEconomyOrders,
       ],
+      ...((context.demand.wideEconomyOrders?.length ?? 0) +
+        (context.demand.wideEconomyOffers?.length ?? 0) >
+      0
+        ? {
+            residualOrders: context.demand.wideEconomyOrders ?? [],
+            residualOffers: context.demand.wideEconomyOffers ?? [],
+          }
+        : {}),
       ...(context.demand.backgroundOffers.length > 0
         ? { externalOffers: context.demand.backgroundOffers }
         : {}),
