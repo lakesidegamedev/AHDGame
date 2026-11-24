@@ -102,10 +102,14 @@ const MarketCorporationAction = dynamic(
 );
 
 /** Chart visibility, remembered per browser; expanded until the player hides it. */
-function useChartOpen(): [boolean, (open: boolean) => void] {
+function useChartOpen(): {
+  chartOpen: boolean;
+  chartReady: boolean;
+  setChartOpen: (open: boolean) => void;
+} {
   // Open by default, matching the stored default, so the server render already
   // holds the chart's space. Only a player who closed it sees it collapse.
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState<boolean | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       try {
@@ -116,9 +120,10 @@ function useChartOpen(): [boolean, (open: boolean) => void] {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
-  return [
-    open,
-    (next) => {
+  return {
+    chartOpen: open ?? true,
+    chartReady: open !== null,
+    setChartOpen: (next) => {
       setOpen(next);
       try {
         window.localStorage.setItem(CHART_KEY, next ? "1" : "0");
@@ -126,7 +131,7 @@ function useChartOpen(): [boolean, (open: boolean) => void] {
         // storage unavailable: the choice lasts for this visit
       }
     },
-  ];
+  };
 }
 
 export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | null } = {}) {
@@ -164,7 +169,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
   );
   const list = commodities.data?.commodities ?? null;
   const supplyEnabled = offers.data?.enabled === true;
-  const [chartOpen, setChartOpen] = useChartOpen();
+  const { chartOpen, chartReady, setChartOpen } = useChartOpen();
 
   useEffect(() => {
     if (!compareOpen || compareLoaded) return;
@@ -237,8 +242,9 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
             <button
               type="button"
               aria-expanded={chartOpen}
+              disabled={!chartReady}
               onClick={() => setChartOpen(!chartOpen)}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground enabled:hover:bg-card-elevated disabled:cursor-wait"
             >
               {chartOpen ? (
                 <ChevronUp className="h-3.5 w-3.5" />
