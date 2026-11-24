@@ -512,6 +512,26 @@ export function prepareProducerPhysicalSector(input: {
           .map((x) => [`${x.commodity}|${x.book}`, x.askingUnitPrice as number])
       );
   }
+  // Last turn's posted ask, its sales and its bracket let an automatic ask
+  // narrow toward the price buyers pay instead of flipping (autoAskRules).
+  {
+    const last = sector.producerSettlement;
+    const products = last && last.turn === openingTurn ? last.products : null;
+    if (products?.length)
+      plan.askBracketByOutput = Object.fromEntries(
+        products
+          .filter((x) => typeof x.askingUnitPrice === "number" && x.askingUnitPrice > 0)
+          .map((x) => [
+            `${x.commodity}|${x.book}`,
+            {
+              ask: x.askingUnitPrice,
+              soldUnits: x.deliveredUnits ?? x.soldUnits ?? 0,
+              offeredUnits: x.offeredUnits ?? 0,
+              ...(x.askBracket ? { bracket: x.askBracket } : {}),
+            },
+          ])
+      );
+  }
   const suspended =
     lookups.corporateEmbargoSuppression?.has(`${countryId}|${corp.countryId}`) === true &&
     lookups.embargoTradeExposureEnabled !== true;

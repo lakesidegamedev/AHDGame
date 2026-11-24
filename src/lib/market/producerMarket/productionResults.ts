@@ -1,6 +1,7 @@
 /** Turns a cleared producer market into per-producer operating results and closing accounts. */
 import type { ProducerEconomyInput } from "./productionTypes";
 import type { ProducerOffer, PurchaseOrder } from "./rules";
+import type { AskBracket } from "./autoAskRules";
 import { buildInputReceipt, type InputReceipt } from "./rules/inputReceipt";
 import {
   OFFER_MISS_PRIORITY,
@@ -36,6 +37,7 @@ export function buildProducerOperatingResults({
   market,
   input,
   postedOffers,
+  askBrackets,
   plans,
   internalAccountingAccounts,
   physicalMaximum,
@@ -64,6 +66,8 @@ export function buildProducerOperatingResults({
   market: ProducerMarketResult;
   input: ProducerEconomyInput;
   postedOffers: Map<string, ProducerOffer>;
+  /** Ask bracket each automatic offer was posted under (autoAskRules); stored on the receipt. */
+  askBrackets?: ReadonlyMap<string, AskBracket>;
   plans: ProductionPlan[];
   internalAccountingAccounts: Set<string>;
   physicalMaximum: Map<string, number>;
@@ -524,6 +528,8 @@ export function buildProducerOperatingResults({
       // The written-down units leave stock without a second charge: their
       // production cost was expensed in `consumed`, labour and site bills on the
       // turn they were made, and finished stock is not capitalized.
+      const offerId = JSON.stringify([p.id, "output", output.commodity]);
+      const askBracket = askBrackets?.get(offerId);
       products.push({
         commodity: output.commodity,
         book: output.book,
@@ -533,8 +539,8 @@ export function buildProducerOperatingResults({
         internalDeliveredUnits: sold.internalDeliveredUnits,
         deliveredUnits: sold.deliveredUnits,
         revenue: sold.revenue,
-        askingUnitPrice: postedOffers.get(JSON.stringify([p.id, "output", output.commodity]))!
-          .unitPrice,
+        askingUnitPrice: postedOffers.get(offerId)!.unitPrice,
+        ...(askBracket ? { askBracket } : {}),
         ...(marketValue > 0 && sold.internalDeliveredUnits > 0
           ? { captiveUnitValue: marketValue / sold.internalDeliveredUnits }
           : {}),
