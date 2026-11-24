@@ -138,7 +138,9 @@ describe("MarketHub", () => {
     expect(await screen.findByTestId("market-chart")).toBeTruthy();
     expect(screen.queryByText("Market index")).toBeNull();
     expect(screen.queryByText("Open supply offers")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Hide chart" }));
+    const toggle = screen.getByRole("button", { name: "Hide chart" });
+    await waitFor(() => expect(toggle.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(toggle);
     expect(screen.queryByTestId("market-chart")).toBeNull();
     expect(window.localStorage.getItem("market.chartOpen")).toBe("0");
     await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
@@ -158,8 +160,10 @@ describe("MarketHub", () => {
     search = "";
     window.localStorage.setItem("market.chartOpen", "0");
     render(<MarketHub />);
+    expect(screen.getByRole("button", { name: "Hide chart" }).hasAttribute("disabled")).toBe(true);
     await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
-    await screen.findByRole("button", { name: "Show chart" });
+    const toggle = await screen.findByRole("button", { name: "Show chart" });
+    expect(toggle.hasAttribute("disabled")).toBe(false);
     expect(screen.queryByTestId("market-chart")).toBeNull();
   });
 
