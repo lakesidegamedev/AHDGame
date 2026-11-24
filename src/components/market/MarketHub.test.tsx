@@ -159,8 +159,8 @@ describe("MarketHub", () => {
     window.localStorage.setItem("market.chartOpen", "0");
     render(<MarketHub />);
     await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
+    await screen.findByRole("button", { name: "Show chart" });
     expect(screen.queryByTestId("market-chart")).toBeNull();
-    expect(screen.getByRole("button", { name: "Show chart" })).toBeTruthy();
   });
 
   it("renders the server commodity preview without fetching full listings on hydration", async () => {

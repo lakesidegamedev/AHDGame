@@ -12,13 +12,8 @@ import {
   offerViewNarrows,
 } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { SupplyOfferHeader, SupplyOfferRow } from "./SupplyOfferRow";
-import {
-  ComputerRunOfferNote,
-  SUPPLY_PAGE_SIZE,
-  SupplyFilterBar,
-  offersQuery,
-  type SupplyOffersResponse,
-} from "./supplyOfferUi";
+import { offersQuery, SUPPLY_PAGE_SIZE, type SupplyOffersResponse } from "./marketEndpoints";
+import { ComputerRunOfferNote, SupplyFilterBar } from "./supplyOfferUi";
 import { useOfferView } from "./useOfferView";
 
 /**

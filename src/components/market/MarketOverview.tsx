@@ -9,8 +9,8 @@ import {
   type BondsResponse,
   type FundsResponse,
   type SectorsForSaleResponse,
+  type SupplyOffersResponse,
 } from "./marketEndpoints";
-import type { SupplyOffersResponse } from "./supplyOfferUi";
 import { atPriceCap } from "@/lib/market/overviewPreview";
 import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { PreviewCard, PreviewRow, pctText, toneClass, vsBasePct } from "./marketUi";

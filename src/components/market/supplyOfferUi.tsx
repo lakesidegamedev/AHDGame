@@ -10,7 +10,6 @@ import {
 } from "@/lib/constants/commoditiesCore";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
-  DEFAULT_OFFER_VIEW,
   OFFER_SORT_DEFAULT_DIR,
   OFFER_SORT_LABELS,
   offerSortDirLabels,
@@ -20,45 +19,8 @@ import {
   type OfferView,
 } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
-import type { OfferCorporation } from "./SupplyOfferRow";
 
 type OfferFilters = OfferView;
-
-export const DEFAULT_OFFER_FILTERS: OfferFilters = DEFAULT_OFFER_VIEW;
-
-/**
- * Offers per page. Lives here rather than in `SupplyDealsPanel` so the hub's
- * one-row preview query does not statically import the whole panel, the offer
- * rows and the commodity catalogue behind it.
- */
-export const SUPPLY_PAGE_SIZE = 20;
-
-/** GET /api/supply-offers, as both the hub preview and the deals panel read it. */
-export interface SupplyOffersResponse {
-  enabled: boolean;
-  offers: SupplyListingView[];
-  myCorporations: OfferCorporation[];
-  currentTurn: number;
-  page: number;
-  hasMore: boolean;
-  /** Offers matching the filters. */
-  total: number;
-  /** Every open offer in the commodity scope, before the source and side filters. */
-  totalAll?: number;
-}
-
-/** Query string for GET /api/supply-offers; omits anything left at its default. */
-export function offersQuery(filters: OfferFilters, page?: number, pageSize?: number): string {
-  const params = new URLSearchParams();
-  if (page) params.set("page", String(page));
-  if (pageSize) params.set("pageSize", String(pageSize));
-  params.set("kind", filters.kind);
-  if (filters.side !== "both") params.set("side", filters.side);
-  if (filters.commodity) params.set("commodity", filters.commodity);
-  params.set("sort", filters.sort);
-  if (filters.dir !== OFFER_SORT_DEFAULT_DIR[filters.sort]) params.set("dir", filters.dir);
-  return params.toString();
-}
 
 /** Whole numbers with separators; 10,000 and up shrink to 12.5K style. */
 export function formatVolume(value: number): string {
