@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { notifyRemovalVoteOpened } from "@/lib/parties/officeRemovalNotifications";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
@@ -164,5 +164,54 @@ describe("office removal proposal", () => {
     });
     expect((await request()).status).toBe(200);
     expect(notifyRemovalVoteOpened).not.toHaveBeenCalled();
+  });
+});
+
+describe("proposal page data for a removal vote", () => {
+  it("shows when the vote can pass and counts the target out of the voter set", async () => {
+    const targetChair = new ObjectId();
+    const committee = [new ObjectId(), new ObjectId(), new ObjectId(), new ObjectId()];
+    vi.mocked(findPartyBySequentialId).mockResolvedValue({
+      ...source,
+      chairId: targetChair,
+      viceChairId: null,
+      treasurerId: null,
+      committeeIds: committee,
+    } as never);
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: "test", character: { _id: committee[0], countryId: "US", party: "1" } },
+    } as never);
+    const createdAt = new Date(Date.now() - 60 * 60 * 1000);
+    const removal = {
+      _id: new ObjectId(),
+      type: "removeOfficeHolder",
+      status: "open",
+      partyId: source._id,
+      proposedBy: committee[0],
+      createdAt,
+      createdAtTurn: 9,
+      expiresAtTurn: 33,
+      proposingVotes: [],
+      removeOfficeHolder: { role: "chair", targetCharacterId: targetChair },
+    };
+    db.collection("committeeProposals")
+      .find.mockReturnValueOnce({ sort: () => ({ toArray: async () => [removal] }) })
+      .mockReturnValueOnce({ sort: () => ({ limit: () => ({ toArray: async () => [] }) }) })
+      .mockReturnValueOnce({ sort: () => ({ toArray: async () => [] }) });
+
+    const response = await GET(new Request("http://localhost/api/proposals"), {
+      params: Promise.resolve({ code: "us", id: "1" }),
+    });
+    const body = await response.json();
+    const view = body.openProposals[0];
+
+    expect(view.earliestPassAt).toBe(
+      new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString()
+    );
+    expect(view.canPassNow).toBe(false);
+    // Five seats on the party, four once the targeted chair is left out: three yes needed.
+    expect(view.proposingVoteSummary.notVoted).toBe(4);
+    expect(view.proposingVoteSummary.yesNeeded).toBe(3);
   });
 });

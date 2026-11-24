@@ -19,11 +19,13 @@ import {
   attemptResolution,
   castVote,
   checkResolution,
+  expireOpenProposals,
   clampPosition,
   isPositionShiftLocked,
   isProposalTypeLocked,
   processMergeProposal,
   setProposalCooldown,
+  withdrawVote,
 } from "./proposals";
 import type { PoliticalParty } from "@/lib/db/types";
 import { POSITION_SHIFT_COOLDOWN_TURNS, PROPOSAL_COOLDOWN_TURNS } from "./proposalConstants";
@@ -1742,5 +1744,245 @@ describe("attemptResolution — atomic resolution claim", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.collection).toBe("committeeProposals");
     expect(calls[0]!.filter.resolutionInProgressAt).toEqual({ $exists: false });
+  });
+});
+
+describe("removal votes stay open at least 24 hours", () => {
+  const HOUR = 60 * 60 * 1000;
+  const CREATED = new Date("2026-01-10T03:09:52.000Z");
+
+  function partyWithTreasurer(partyId: ObjectId, treasurerId: ObjectId) {
+    return {
+      _id: partyId,
+      sequentialId: 1,
+      countryId: "US",
+      committeeIds: Array.from({ length: 6 }, () => new ObjectId()),
+      chairId: new ObjectId(),
+      viceChairId: new ObjectId(),
+      treasurerId,
+    };
+  }
+
+  /** Eight voters once the target is excluded, so five yes votes pass. */
+  function removalProposal(
+    partyId: ObjectId,
+    targetId: ObjectId,
+    votes: { yes: number; no?: number },
+    extra: Record<string, unknown> = {}
+  ) {
+    const ballot = (vote: "yes" | "no") => ({ voterId: new ObjectId(), vote, votedAt: CREATED });
+    return {
+      _id: new ObjectId(),
+      type: "removeOfficeHolder",
+      status: "open",
+      partyId,
+      createdAt: CREATED,
+      createdAtTurn: 171,
+      expiresAtTurn: 195,
+      proposingVotes: [
+        ...Array.from({ length: votes.yes }, () => ballot("yes")),
+        ...Array.from({ length: votes.no ?? 0 }, () => ballot("no")),
+      ],
+      removeOfficeHolder: { role: "treasurer", targetCharacterId: targetId },
+      ...extra,
+    } as unknown as CommitteeProposal;
+  }
+
+  function makeDb(party: Record<string, unknown>, open: CommitteeProposal[] = []) {
+    const proposalUpdates: Array<{ filter: Record<string, unknown>; update: unknown }> = [];
+    const partyUpdates: Array<{ filter: Record<string, unknown>; update: unknown }> = [];
+    const findFilters: Array<Record<string, unknown>> = [];
+    const collection = vi.fn().mockImplementation((name: string) => {
+      if (name === "committeeProposals") {
+        return {
+          find: vi.fn().mockImplementation((filter: Record<string, unknown>) => {
+            findFilters.push(filter);
+            return { toArray: () => Promise.resolve(open) };
+          }),
+          findOne: vi.fn().mockResolvedValue(null),
+          updateOne: vi.fn().mockImplementation((filter: Record<string, unknown>, update) => {
+            proposalUpdates.push({ filter, update });
+            return Promise.resolve({ matchedCount: 1, modifiedCount: 1 });
+          }),
+        };
+      }
+      if (name === "politicalParties") {
+        return {
+          findOne: vi.fn().mockResolvedValue(party),
+          updateOne: vi.fn().mockImplementation((filter: Record<string, unknown>, update) => {
+            partyUpdates.push({ filter, update });
+            return Promise.resolve({ matchedCount: 1, modifiedCount: 1 });
+          }),
+        };
+      }
+      return {};
+    });
+    return { db: { collection } as unknown as Db, proposalUpdates, partyUpdates, findFilters };
+  }
+
+  const statusWrites = (updates: Array<{ update: unknown }>) =>
+    updates
+      .map((u) => (u.update as { $set?: { status?: string } }).$set?.status)
+      .filter((status): status is string => typeof status === "string");
+
+  it("does not pass at the threshold before 24 hours, on a vote", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const proposal = removalProposal(partyId, target, { yes: 5 });
+
+    await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
+
+    expect(proposalUpdates).toHaveLength(0);
+    expect(partyUpdates).toHaveLength(0);
+  });
+
+  it("does not pass at expiry when the expiry turn comes before 24 hours", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const proposal = removalProposal(partyId, target, { yes: 5 });
+
+    await attemptResolution(db, proposal, 195, {
+      expired: true,
+      now: new Date(CREATED.getTime() + 24 * HOUR - 60_000),
+    });
+
+    expect(proposalUpdates).toHaveLength(0);
+    expect(partyUpdates).toHaveLength(0);
+  });
+
+  it("passes at the threshold once 24 hours have passed and removes the holder", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const proposal = removalProposal(partyId, target, { yes: 5 });
+
+    await attemptResolution(db, proposal, 196, { now: new Date(CREATED.getTime() + 24 * HOUR) });
+
+    expect(statusWrites(proposalUpdates)).toEqual(["passed"]);
+    expect(partyUpdates[0]!.filter.treasurerId).toBe(target);
+  });
+
+  it("still rejects at expiry when the votes fall short, as before", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const proposal = removalProposal(partyId, target, { yes: 4 });
+
+    await attemptResolution(db, proposal, 196, {
+      expired: true,
+      now: new Date(CREATED.getTime() + 25 * HOUR),
+    });
+
+    expect(statusWrites(proposalUpdates)).toEqual(["rejected"]);
+    expect(partyUpdates).toHaveLength(0);
+  });
+
+  it("rejects at once inside the window when yes can no longer reach the threshold", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates, partyUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    const proposal = removalProposal(partyId, target, { yes: 1, no: 4 });
+
+    await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
+
+    expect(statusWrites(proposalUpdates)).toEqual(["rejected"]);
+    expect(partyUpdates).toHaveLength(0);
+  });
+
+  it("does not hold other proposal types", async () => {
+    const partyId = makePartyId();
+    const { db, proposalUpdates } = makeDb(partyWithTreasurer(partyId, new ObjectId()));
+    const proposal = {
+      _id: new ObjectId(),
+      type: "electionMethod",
+      status: "open",
+      partyId,
+      createdAt: CREATED,
+      proposingVotes: Array.from({ length: 6 }, () => ({
+        voterId: new ObjectId(),
+        vote: "yes",
+        votedAt: CREATED,
+      })),
+      electionMethod: { method: "committee" },
+    } as unknown as CommitteeProposal;
+
+    await attemptResolution(db, proposal, 172, { now: new Date(CREATED.getTime() + HOUR) });
+
+    expect(statusWrites(proposalUpdates)).toEqual(["passed"]);
+  });
+
+  it("the turn sweep picks up removal votes whose window has ended and passes them", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const proposal = removalProposal(partyId, target, { yes: 5 });
+    const { db, proposalUpdates, findFilters } = makeDb(partyWithTreasurer(partyId, target), [
+      proposal,
+    ]);
+    const now = new Date(CREATED.getTime() + 24 * HOUR + 5 * 60_000);
+
+    await expireOpenProposals(db, 180, now);
+
+    const filter = findFilters[0] as { status: string; $or: Array<Record<string, unknown>> };
+    expect(filter.status).toBe("open");
+    expect(filter.$or).toContainEqual({ expiresAtTurn: { $lte: 180 } });
+    expect(filter.$or).toContainEqual({
+      type: "removeOfficeHolder",
+      createdAt: { $lte: new Date(now.getTime() - 24 * HOUR) },
+    });
+    // Not expired yet (turn 180 < 195), so it passes on the threshold, not on abstentions.
+    expect(statusWrites(proposalUpdates)).toEqual(["passed"]);
+  });
+
+  it("counts the window from the proposal's createdAt, so a reopened vote keeps its clock", async () => {
+    const partyId = makePartyId();
+    const target = new ObjectId();
+    const { db, proposalUpdates } = makeDb(partyWithTreasurer(partyId, target));
+    // Reopened long after it was resolved: updatedAt is recent, createdAt is not.
+    const proposal = removalProposal(
+      partyId,
+      target,
+      { yes: 5 },
+      {
+        updatedAt: new Date(CREATED.getTime() + 20 * HOUR),
+      }
+    );
+
+    await attemptResolution(db, proposal, 190, {
+      now: new Date(CREATED.getTime() + 23 * HOUR + 59 * 60_000),
+    });
+    expect(proposalUpdates).toHaveLength(0);
+
+    await attemptResolution(db, proposal, 191, { now: new Date(CREATED.getTime() + 24 * HOUR) });
+    expect(statusWrites(proposalUpdates)).toEqual(["passed"]);
+  });
+});
+
+describe("withdrawVote", () => {
+  it("pulls only the caller's vote from an open proposal that is not being resolved", async () => {
+    const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    const db = { collection: vi.fn().mockReturnValue({ updateOne }) } as unknown as Db;
+    const proposalId = new ObjectId();
+    const voterId = new ObjectId();
+
+    await expect(withdrawVote(db, proposalId, voterId, "proposing")).resolves.toBe(true);
+
+    const [filter, update] = updateOne.mock.calls[0]!;
+    expect(filter).toMatchObject({
+      _id: proposalId,
+      status: "open",
+      resolutionInProgressAt: { $exists: false },
+      "proposingVotes.voterId": voterId,
+    });
+    expect(update.$pull).toEqual({ proposingVotes: { voterId } });
+  });
+
+  it("reports false when there was no vote to withdraw", async () => {
+    const updateOne = vi.fn().mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+    const db = { collection: vi.fn().mockReturnValue({ updateOne }) } as unknown as Db;
+
+    await expect(withdrawVote(db, new ObjectId(), new ObjectId(), "target")).resolves.toBe(false);
+    expect(updateOne.mock.calls[0]![0]).toHaveProperty("targetVotes.voterId");
   });
 });

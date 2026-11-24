@@ -27,9 +27,10 @@ export function removalVoteOpenedNotice(input: RemovalVoteOpenedInput): OfficeRe
     message:
       `The ${partyName} ${committeeLabel} has opened a vote to remove you as ${roleLabel}. ` +
       `It passes with ${yesNeeded} yes ${yesNeeded === 1 ? "vote" : "votes"} from ` +
-      `${eligibleVoters} eligible ${eligibleVoters === 1 ? "voter" : "voters"} and closes at turn ` +
-      `${expiresAtTurn}. You cannot vote on your own removal. Ask members of the committee ` +
-      `to vote no on the party page.`,
+      `${eligibleVoters} eligible ${eligibleVoters === 1 ? "voter" : "voters"}. Voting runs ` +
+      `until turn ${expiresAtTurn} and stays open at least 24 hours, so it cannot pass ` +
+      `sooner. You cannot vote on your own removal. Ask members of the committee to vote ` +
+      `no on the party page.`,
   };
 }
 
