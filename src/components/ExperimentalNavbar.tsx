@@ -115,7 +115,7 @@ const DesktopMegaMenu = dynamic(
 export interface ExperimentalNavbarProps {
   navigationVariant?: "a" | "b";
   desktopLayout?: DesktopNavigationLayout | null;
-  /** Phone layout for experimental users; null keeps the standard menu. */
+  /** Phone layout; null keeps the standard menu. */
   mobileLayout?: MobileNavigationLayout | null;
   /** Saved pins and group order; used by the grouped-cards layout only. */
   navCustomization?: unknown;
@@ -211,8 +211,9 @@ function useExperimentalNavbarContext({
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
 
   // Grouped cards is the layout that carries the customisable bar: wide
-  // container, gear menu, pinned destinations and per-group order.
-  const customizableNav = desktopLayout === "cards";
+  // container, gear menu, pinned destinations and per-group order. Pins and
+  // order save to the account, so signed-out visitors see the cards without them.
+  const customizableNav = desktopLayout === "cards" && !!user;
   const { showToast } = useToast();
   const refetchNav = useRefetchNav();
   const widgetSetup = useWidgetSetup();
