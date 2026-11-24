@@ -46,6 +46,40 @@ function Meter({ value, fillClass }: { value: number; fillClass: string }) {
   );
 }
 
+export function ActionsHeroBanner({
+  imageUrl,
+  eraLabel,
+}: Pick<ActionsHeroProps, "imageUrl" | "eraLabel">) {
+  return (
+    <div className="relative h-[175px] w-full sm:h-[220px]">
+      <HeroImage
+        src={imageUrl}
+        alt="Political campaign"
+        fill
+        className="object-cover object-[center_55%]"
+        sizes="(max-width: 1280px) 100vw, 1280px"
+        priority
+        fetchPriority="high"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10"
+        aria-hidden
+      />
+      <div className="absolute inset-0 flex flex-col justify-end px-5 pb-5 sm:px-8 sm:pb-7">
+        <h1 className="text-display font-bold leading-tight tracking-tight text-white sm:text-[2.25rem]">
+          Campaign operations
+          {eraLabel && (
+            <span className="ml-3 font-normal tabular-nums text-white/70">{eraLabel}</span>
+          )}
+        </h1>
+        <p className="mt-1.5 max-w-2xl text-body text-white/85 sm:text-body-lg">
+          Spend actions and campaign money on influence, favorability, fundraising and polls.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ActionsHero({
   character,
   imageUrl,
@@ -65,31 +99,7 @@ export default function ActionsHero({
 
   return (
     <header className="overflow-hidden rounded-xl border border-card-border bg-card">
-      <div className="relative h-[175px] w-full sm:h-[220px]">
-        <HeroImage
-          src={imageUrl}
-          alt="Political campaign"
-          fill
-          className="object-cover object-[center_55%]"
-          sizes="(max-width: 1280px) 100vw, 1280px"
-          priority
-        />
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10"
-          aria-hidden
-        />
-        <div className="absolute inset-0 flex flex-col justify-end px-5 pb-5 sm:px-8 sm:pb-7">
-          <h1 className="text-display font-bold leading-tight tracking-tight text-white sm:text-[2.25rem]">
-            Campaign operations
-            {eraLabel && (
-              <span className="ml-3 font-normal tabular-nums text-white/70">{eraLabel}</span>
-            )}
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-body text-white/85 sm:text-body-lg">
-            Spend actions and campaign money on influence, favorability, fundraising and polls.
-          </p>
-        </div>
-      </div>
+      <ActionsHeroBanner imageUrl={imageUrl} eraLabel={eraLabel} />
 
       <div className="grid gap-x-12 gap-y-5 border-t border-card-border px-5 py-4 sm:px-8 lg:grid-cols-[auto_minmax(16rem,1fr)] lg:items-start">
         <dl className="flex flex-wrap gap-x-10 gap-y-4">
