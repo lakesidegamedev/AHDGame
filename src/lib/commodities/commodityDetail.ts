@@ -1,3 +1,5 @@
+import { commodityDetailPerTurn } from "./perTurnUnits";
+import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { getDb } from "@/lib/mongodb";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
@@ -610,7 +612,10 @@ export async function getCommodityDetailData(
         topConsumersByCountry[countryId] = buildCorpVolumeRows(unitsByCorp.entries(), corpMap);
       }
 
-      totalCorporateDemand = [...corpDemand.values()].reduce((sum, units) => sum + units, 0);
+      // Company demand is per turn; the market totals it is netted against are
+      // on the price phase's basis, so scale it before subtracting.
+      totalCorporateDemand =
+        [...corpDemand.values()].reduce((sum, units) => sum + units, 0) * TURNS_PER_DAY;
       const nonCorporateDemand = Math.max(0, totalDemand - totalCorporateDemand);
       nonCorporateDemandShare =
         totalDemand > 0 ? Math.round((nonCorporateDemand / totalDemand) * 1000) / 10 : 0;
@@ -926,7 +931,8 @@ export async function getCommodityDetailData(
       }
     }
 
-    return {
+    // Shown per turn, the unit company production is measured in (perTurnUnits).
+    return commodityDetailPerTurn({
       commodity,
       flows,
       label: COMMODITY_LABELS[commodity],
@@ -1038,7 +1044,7 @@ export async function getCommodityDetailData(
       syntheticDemandSources: fundedBuyerSources ?? syntheticDemandSources,
       capacityByState,
       totalCapacity,
-    };
+    });
   } catch (error) {
     throw error;
   }

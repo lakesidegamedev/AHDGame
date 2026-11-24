@@ -247,7 +247,7 @@ function CardContent({
       <div className="grid grid-cols-2 gap-2 px-3 pt-3">
         <TradeTotal
           label={trade ? "Total supply" : "Estimated local supply"}
-          value={`${formatUnits(trade?.supply ?? data.supply, unit)}/day`}
+          value={`${formatUnits(trade?.supply ?? data.supply, unit)} per turn`}
           tone="supply"
           parts={
             market && [
@@ -258,7 +258,7 @@ function CardContent({
         />
         <TradeTotal
           label={trade ? "Total demand" : "Estimated domestic demand"}
-          value={`${formatUnits(trade?.demand ?? data.demand, unit)}/day`}
+          value={`${formatUnits(trade?.demand ?? data.demand, unit)} per turn`}
           tone="demand"
           parts={
             market && trade
@@ -281,7 +281,7 @@ function CardContent({
         )}
         <StatRow
           label="Local producer sales"
-          value={sold !== null ? `${formatUnits(sold, unit)}/day` : "Unavailable"}
+          value={sold !== null ? `${formatUnits(sold, unit)} per turn` : "Unavailable"}
           color={sold !== null ? "text-success" : "text-muted"}
           sub={percentSold}
         />

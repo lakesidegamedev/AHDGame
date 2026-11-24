@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { formatUnits } from "../lib/helpers";
+import { PER_TURN } from "@/lib/commodities/perTurnUnits";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
 import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
@@ -238,7 +239,7 @@ export default function TopProducersConsumers({
             {extractionBasis
               ? "Largest corporations by production capacity, not dug output, with their share of the capacity listed here. Not market share: it leaves out any other supply"
               : "Largest corporations by output volume, with their share of the corporate output listed here. Not market share: it leaves out stock and background supply, and buyer demand is a separate figure"}
-            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
+            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}. Figures are {PER_TURN}.
           </p>
           <div className="space-y-2">
             {pagedProducers.map((c, i) => (
@@ -290,7 +291,7 @@ export default function TopProducersConsumers({
           <p className="text-xs text-muted mb-3">
             Largest corporations by input demand
             {commodity === "advertising" && " (plant inputs only; excludes marketing budgets)"}
-            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
+            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}. Figures are {PER_TURN}.
           </p>
           {consumerNote && <p className="text-xs text-muted mb-3">{consumerNote}</p>}
           {governmentNote && <p className="text-xs text-muted mb-3">{governmentNote}</p>}

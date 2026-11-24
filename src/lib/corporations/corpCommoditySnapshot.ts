@@ -3,6 +3,7 @@
  * directly from the world supply ledger; global share is derived at read time
  * from `commodityFlows.supplyUnits` for the same turn.
  */
+import { bookPerTurn } from "@/lib/commodities/perTurnUnits";
 
 export type CommodityOutputBasis = "revenue-proxy-v1" | "plants-ledger-v1";
 
@@ -57,4 +58,27 @@ export function computeCommodityOutputSharePercent(
 ): number {
   if (!(outputUnits > 0) || !(globalSupplyUnits > 0)) return 0;
   return Math.round(Math.min(100, (outputUnits / globalSupplyUnits) * 100) * 100) / 100;
+}
+
+/**
+ * One point of a company's output history against the world, per turn. The
+ * flow ledger stores world supply and stock on the price phase's basis
+ * (perTurnUnits); company output is already per turn.
+ */
+export function commodityOutputPoint(
+  turn: number,
+  outputUnits: number,
+  flow: { supplyUnits?: number | null; stockUnits?: number | null } | undefined
+) {
+  const globalSupplyUnits = flow?.supplyUnits != null ? bookPerTurn(flow.supplyUnits) : null;
+  return {
+    turn,
+    outputUnits,
+    globalSupplyUnits,
+    sharePercent:
+      globalSupplyUnits != null
+        ? computeCommodityOutputSharePercent(outputUnits, globalSupplyUnits)
+        : null,
+    stockUnits: flow?.stockUnits != null ? bookPerTurn(flow.stockUnits) : null,
+  };
 }

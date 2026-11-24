@@ -110,7 +110,7 @@ export function CommoditiesPanel({
                 >
                   Yearly rate
                 </th>
-                <th className="px-3 py-2 text-right font-medium">Supply / demand</th>
+                <th className="px-3 py-2 text-right font-medium">Supply / demand per turn</th>
                 <th className="px-3 py-2 font-medium">Balance</th>
                 <th className="px-3 py-2 text-right font-medium">Links</th>
               </tr>

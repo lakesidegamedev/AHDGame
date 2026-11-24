@@ -50,18 +50,18 @@ describe("commodity country card", () => {
     renderCard(market);
 
     expect(screen.getAllByText("Total supply")).toHaveLength(2);
-    expect(screen.getAllByText("170.5K units/day")).toHaveLength(2);
+    expect(screen.getAllByText("170.5K units per turn")).toHaveLength(2);
     expect(screen.getAllByText("Local offers")).toHaveLength(2);
     expect(screen.getAllByText("164.7K units")).toHaveLength(2);
     expect(screen.getAllByText("Imports")).toHaveLength(2);
     expect(screen.getAllByText("5.8K units")).toHaveLength(2);
     expect(screen.getAllByText("Total demand")).toHaveLength(2);
-    expect(screen.getAllByText("167.7K units/day")).toHaveLength(2);
+    expect(screen.getAllByText("167.7K units per turn")).toHaveLength(2);
     expect(screen.getAllByText("Local orders")).toHaveLength(2);
     expect(screen.getAllByText("76.2K units")).toHaveLength(2);
     expect(screen.getAllByText("Exports")).toHaveLength(2);
     expect(screen.getAllByText("91.5K units")).toHaveLength(2);
-    expect(screen.getAllByText("161.9K units/day")).toHaveLength(2);
+    expect(screen.getAllByText("161.9K units per turn")).toHaveLength(2);
     expect(screen.getAllByText("98% of local offers sold")).toHaveLength(2);
     expect(screen.getAllByText(/most local offers sold/i)).toHaveLength(2);
     expect(screen.queryByText(/surplus/i)).toBeNull();

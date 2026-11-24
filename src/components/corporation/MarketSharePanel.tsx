@@ -122,14 +122,18 @@ export function MarketSharePanel({
   const lines: LineSeries[] = [
     {
       label:
-        mode === "share" ? "Your share" : mode === "stockpile" ? "Global stockpile" : "Your output",
+        mode === "share"
+          ? "Your share"
+          : mode === "stockpile"
+            ? "Global stockpile"
+            : "Your output per turn",
       values: points.map(getPrimary),
       tone: "text-foreground",
     },
   ];
   if (mode === "output") {
     lines.push({
-      label: "Global supply",
+      label: "Global supply per turn",
       values: points.map((p) => p.globalSupplyUnits ?? 0),
       tone: "text-muted",
       dashed: true,
@@ -159,8 +163,8 @@ export function MarketSharePanel({
     >
       <p className="py-1 text-xs text-muted">
         Your corporation&rsquo;s share of global commodity output over time, by physical units
-        produced, not industry revenue. Output compares your production with global supply;
-        stockpile is the global shadow inventory from the market ledger.
+        produced, not industry revenue. Output compares your production with global supply, both per
+        turn; stockpile is the global shadow inventory from the market ledger.
       </p>
 
       {basisChange && (
@@ -224,8 +228,8 @@ export function MarketSharePanel({
             <tr>
               <Th>Commodity</Th>
               <Th align="right">Share</Th>
-              <Th align="right">Your output</Th>
-              <Th align="right">Global supply</Th>
+              <Th align="right">Your output per turn</Th>
+              <Th align="right">Global supply per turn</Th>
             </tr>
           </thead>
           <tbody>

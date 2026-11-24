@@ -86,7 +86,7 @@ export default function SupplyDemandBar({
           <h3 className="text-body-sm font-medium text-foreground">Supply and demand</h3>
           {marketLabel && <div className="mt-0.5 text-[10px] text-muted">{marketLabel}</div>}
         </div>
-        <span className="text-[10px] text-muted">Per day, last turn</span>
+        <span className="text-[10px] text-muted">Per turn, last turn</span>
       </div>
 
       <div className="mt-3 space-y-3">
@@ -153,7 +153,7 @@ function BalanceRow({
             key={p.label}
             className={`h-full ${p.className}`}
             style={{ width: `${(100 * p.units) / scale}%` }}
-            title={`${p.label}: ${formatUnits(p.units, unit)}/day`}
+            title={`${p.label}: ${formatUnits(p.units, unit)} per turn`}
           />
         ))}
       </div>

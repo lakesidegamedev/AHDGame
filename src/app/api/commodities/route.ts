@@ -1,3 +1,4 @@
+import { commodityListRowPerTurn } from "@/lib/commodities/perTurnUnits";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
@@ -211,7 +212,8 @@ export async function GET(request: Request) {
         }
       }
 
-      return {
+      // Quantities per turn, the unit company production is measured in.
+      return commodityListRowPerTurn({
         commodity,
         label: COMMODITY_LABELS[commodity],
         icon: COMMODITY_ICONS[commodity],
@@ -287,7 +289,7 @@ export async function GET(request: Request) {
                 : reachableBooksFor(reachableBooks, commodity),
             }
           : {}),
-      };
+      });
     });
 
     // Per-user (enabled-country filtered) — ETag/304 keeps it live but skips the
