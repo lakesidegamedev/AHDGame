@@ -27,6 +27,8 @@ export const NOTIFICATION_TYPES = [
   "national_leadership_lost",
   "national_leadership_appointed",
   "national_leadership_removed",
+  /** A committee vote to remove the recipient from a party office has opened. */
+  "office_removal_vote_opened",
   "national_leadership_candidacy",
   "national_leadership_election_opened",
   "committee_election_opened",

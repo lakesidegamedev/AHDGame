@@ -90,6 +90,7 @@ export const CATEGORY_OF: Record<NotificationType, InboxCategory> = {
   national_leadership_lost: "standing",
   national_leadership_appointed: "standing",
   national_leadership_removed: "standing",
+  office_removal_vote_opened: "standing",
   committee_elected: "standing",
   committee_lost: "standing",
   committee_removed: "standing",

@@ -4,11 +4,15 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
+import { notifyRemovalVoteOpened } from "@/lib/parties/officeRemovalNotifications";
 import { POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
 vi.mock("@/lib/db/partyLookup", () => ({ findPartyBySequentialId: vi.fn() }));
+vi.mock("@/lib/parties/officeRemovalNotifications", () => ({
+  notifyRemovalVoteOpened: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/api/rateLimit", () => ({ checkRateLimit: () => ({ ok: true }) }));
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: async () => ({ currentTurn: 10 }) }));
 
@@ -100,4 +104,65 @@ it.each(["US", "CA"])("blocks default-party rename submission in %s", async (cou
   expect((await response.json()).error).toContain("Default parties cannot");
   expect(db.collection("committeeProposals").insertOne).not.toHaveBeenCalled();
   expect(db.collection("politicalParties").updateOne).not.toHaveBeenCalled();
+});
+
+describe("office removal proposal", () => {
+  it("tells the targeted office holder the vote is open, excluding them from the count", async () => {
+    const committeeMember = new ObjectId();
+    const targetChair = new ObjectId();
+    const viceChair = new ObjectId();
+    const party = {
+      ...source,
+      chairId: targetChair,
+      viceChairId: viceChair,
+      treasurerId: null,
+      committeeIds: [committeeMember, new ObjectId(), new ObjectId()],
+    };
+    vi.mocked(findPartyBySequentialId).mockResolvedValue(party as never);
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: "test", character: { _id: committeeMember, countryId: "US", party: "1" } },
+    } as never);
+    const insertedId = new ObjectId();
+    db.collection("committeeProposals").insertOne.mockResolvedValue({ insertedId });
+
+    const response = await POST(
+      new Request("http://localhost/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "removeOfficeHolder",
+          role: "chair",
+          targetCharacterId: targetChair.toString(),
+        }),
+      }),
+      { params: Promise.resolve({ code: "us", id: "1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    expect(notifyRemovalVoteOpened).toHaveBeenCalledOnce();
+    const arg = vi.mocked(notifyRemovalVoteOpened).mock.calls[0]![0];
+    expect(arg.proposalId).toBe(insertedId);
+    expect(arg.role).toBe("chair");
+    expect(arg.targetCharacterId.equals(targetChair)).toBe(true);
+    // Three committee members plus the vice chair; the targeted chair is excluded.
+    expect(arg.eligibleVoters).toBe(4);
+    expect(arg.yesNeeded).toBe(3);
+    expect(arg.expiresAtTurn).toBe(34);
+  });
+
+  it("sends no removal notice for other proposal types", async () => {
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: "test", character: { _id: chairId, countryId: "US", party: "1" } },
+    } as never);
+    db.collection("characters").find.mockReturnValue({
+      toArray: async () => [
+        { party: "1", homeState: "CA" },
+        { party: "2", homeState: "OR" },
+      ],
+    });
+    expect((await request()).status).toBe(200);
+    expect(notifyRemovalVoteOpened).not.toHaveBeenCalled();
+  });
 });
