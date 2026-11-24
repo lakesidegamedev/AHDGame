@@ -217,6 +217,40 @@ describe("running costs split into named lines", () => {
   });
 });
 
+describe("funded turn running costs", () => {
+  it("itemises the funded plug into named lines with no unexplained line left", () => {
+    const split = {
+      ...(plants as unknown as { pnl: object }).pnl,
+      otherOperatingAnchor: 17_200,
+      otherBreakdown: {
+        overheadAnchor: 0,
+        inventoryCarryAnchor: 0,
+        eventsAnchor: 0,
+        siteRunningAnchor: 9_000,
+        minorInputPremiumAnchor: 800,
+        inventoryWriteOffAnchor: 400,
+        managementOverheadAnchor: 7_000,
+        managementOverheadRecorded: true,
+        remainderAnchor: 0,
+      },
+    };
+    render(
+      <MarketMoneyPanel
+        plants={{ ...plants, pnl: split } as unknown as PlantsData}
+        sectorType="manufacturing"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Test Company" }}
+      />
+    );
+    expect(screen.getByText("Site running costs")).toBeTruthy();
+    expect(screen.getByText("Premium for missing minor inputs")).toBeTruthy();
+    expect(screen.getByText("Unused inputs written off")).toBeTruthy();
+    expect(screen.getByText("Management overhead (company size cost)")).toBeTruthy();
+    expect(screen.queryByText(/not itemised/)).toBeNull();
+    expect(screen.queryByText("Rounding and other small items")).toBeNull();
+  });
+});
+
 describe("freight class explanation (ticket 1159)", () => {
   it("names the limiting class and explains shared freight capacity", () => {
     const specialLimited = {

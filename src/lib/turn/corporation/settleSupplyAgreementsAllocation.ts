@@ -5,6 +5,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { supplyAgreementScopeKey } from "@/lib/market/commodityMarketScope";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { anchorToCorpCapital } from "@/lib/currency/corporationCapital";
+import type { SupplyAgreementPriceMode } from "@/lib/db/types/supplyAgreement";
 
 export interface SettleableSupplyAgreement {
   /**
@@ -27,6 +28,10 @@ export interface SettleableSupplyAgreement {
   volumeCap: number;
   /** Price offset vs market, already clamped to ±SUPPLY_AGREEMENT_PRICE_BAND. */
   pricePremium: number;
+  /** Absent on a legacy agreement, which settles exactly as it always has. */
+  priceMode?: SupplyAgreementPriceMode;
+  /** Fixed mode: the agreed per-unit price. */
+  fixedUnitPrice?: number;
   /**
    * Grandfather gate for the shortfall leg. `false` marks a contract signed
    * before the propose-time validator had any physical basis for `volumeCap`
@@ -138,6 +143,12 @@ export interface SupplyAgreementDelivery {
   achievableUnits?: number;
   creditedProductionUnits?: number;
   penaltyAnchor?: number;
+  /** Fixed and indexed modes: market price used, per unit. */
+  marketUnitPrice?: number;
+  /** Fixed and indexed modes: which price `marketUnitPrice` is. */
+  marketPriceSource?: "realised" | "published";
+  /** Fixed and indexed modes: contract price per unit this turn. */
+  contractUnitPrice?: number;
   supplierCashDeltaLocal?: number;
   supplierCurrencyCode?: CurrencyCode;
   buyerCashDeltaLocal?: number;

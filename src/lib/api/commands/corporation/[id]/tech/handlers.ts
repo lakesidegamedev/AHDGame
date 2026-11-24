@@ -207,7 +207,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
           node,
           dailyGrossRevenue ?? 0,
           techCashFloorLocal,
-          techPlantBasis
+          techPlantBasis,
+          breakdown?.researched.inputEfficiencyBonus ?? 0
         );
         // Per-turn value of this node to the corp, and turns of cash cost
         // to earn it back. Null when redacted, or when an owned node's
@@ -224,7 +225,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
         const noRemainingBenefit = !owned && !effectsOff && headroom.noRemainingBenefit;
         const valuePerTurn =
           techPlantBasis && !effectExpired && !effectsOff && !noRemainingBenefit
-            ? techNodeValuePerTurn(node, techPlantBasis)
+            ? techNodeValuePerTurn(
+                node,
+                techPlantBasis,
+                breakdown?.researched.inputEfficiencyBonus ?? 0
+              )
             : 0;
         const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
         // Past decades have both lanes auto-granted — no lane commitment applies.

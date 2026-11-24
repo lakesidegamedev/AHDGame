@@ -45,7 +45,8 @@ export function investmentForecastInput(
     : null;
 }
 
-export type ForecastBlocker = "noCapacity" | "mothballed" | "notRun" | "ramping" | "other";
+export type ForecastBlocker =
+  "noCapacity" | "mothballed" | "notRun" | "ramping" | "transition" | "upkeepBasis" | "other";
 
 /**
  * Why the dialog has no profit or payback figure. The projection needs an
@@ -56,7 +57,10 @@ export function forecastBlocker(plants: PlantsData): ForecastBlocker {
   if (!((plants.capacityUnits ?? 0) > 0)) return "noCapacity";
   if (!((plants.producedUnits ?? 0) > 0)) return "notRun";
   // Results from a sector still inside its market support ramp are withheld, not missing.
-  if (!plants.investment && plants.governor?.active) return "ramping";
+  if (!plants.investment && (plants.governor?.active || plants.investmentWithheld === "ramp"))
+    return "ramping";
+  if (plants.investmentWithheld === "transition") return "transition";
+  if (plants.investmentWithheld === "upkeepBasis") return "upkeepBasis";
   return "other";
 }
 

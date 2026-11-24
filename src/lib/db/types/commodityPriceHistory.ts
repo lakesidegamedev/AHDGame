@@ -18,5 +18,7 @@ export interface CommodityPriceHistory {
   statePrices?: Record<string, number>;
   /** Per-country aggregate prices snapshot: countryId -> price */
   nationalPrices?: Record<string, number>;
+  /** Scarcity multiplier applied this turn; absent on older rows. */
+  scarcityMult?: number;
   createdAt: Date;
 }

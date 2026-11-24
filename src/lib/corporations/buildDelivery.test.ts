@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import {
+  orderedOnTurnCost,
   firstDeliveryTurn,
   costReleasedSince,
   costReleasedThisTurn,
@@ -309,5 +310,15 @@ describe("firstDeliveryTurn", () => {
 
   it("is the online turn for a legacy lump order", () => {
     expect(firstDeliveryTurn(base)).toBe(18);
+  });
+});
+
+describe("orderedOnTurnCost", () => {
+  it("sums only what was paid for orders placed on that turn", () => {
+    const order = (startTurn: number, costPaidAnchor: number) =>
+      ({ startTurn, costPaidAnchor, unitsOrdered: 1, onlineTurn: startTurn + 5 }) as never;
+    expect(orderedOnTurnCost([order(10, 300), order(10, 200), order(9, 900)], 10)).toBe(500);
+    expect(orderedOnTurnCost([order(9, 900)], 10)).toBe(0);
+    expect(orderedOnTurnCost([], 10)).toBe(0);
   });
 });

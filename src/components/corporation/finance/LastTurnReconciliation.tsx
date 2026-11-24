@@ -49,6 +49,11 @@ export function LastTurnReconciliation({
       : `${amount < 0 ? "-" : "+"}${fmt(Math.abs(amount))}`;
   const round = (n: number) => Math.round(n);
   const cost = (n: number) => `(${fmt(round(n))})`;
+  // With incomplete evidence the remainder may hold logged movements this view
+  // could not place, so it must not be named as rounding or conversion only.
+  const evidenceIncomplete =
+    cash.evidence != null &&
+    (cash.evidence.boundary !== "recorded" || cash.evidence.unconvertedMovements > 0);
   return (
     <DenseSection title={`Turn ${data.turn}, recorded`} meta="per turn, local currency">
       <p className="py-2 text-xs text-muted">
@@ -92,14 +97,10 @@ export function LastTurnReconciliation({
         {round(statement.otherUnitemised) !== 0 && (
           <StatementLine
             indent
-            label={
-              statement.otherParts.length > 0
-                ? "Other items, not itemised"
-                : "Interest, investments and other"
-            }
+            label={statement.otherUnitemisedLabel}
             amount={fmtSigned(round(statement.otherUnitemised))}
             amountClass={signTone(statement.otherUnitemised)}
-            title="The gap between the operating result after tax and the retained income the turn recorded. Revenue less costs, tax and dividends, plus this line, equals retained income."
+            title="What is left between the operating result after tax and the retained income the turn recorded, after the lines above. Revenue less costs, tax and dividends, plus the lines above and this one, equals retained income."
           />
         )}
         {statement.dividendPaid > 0 && (
@@ -153,10 +154,16 @@ export function LastTurnReconciliation({
         {cash.unitemised != null && round(cash.unitemised) !== 0 && (
           <StatementLine
             indent
-            label="Cash change not reconciled by this view"
+            label={
+              evidenceIncomplete ? "Cash change not reconciled by this view" : cash.unitemisedLabel
+            }
             amount={fmtSigned(round(cash.unitemised))}
             amountClass={signTone(cash.unitemised)}
-            title="Difference remaining after the recorded earnings and cash movements shown here. Inventory, accruals or incomplete evidence can also cause a difference."
+            title={
+              evidenceIncomplete
+                ? "Difference remaining after the recorded earnings and cash movements shown here. Inventory, accruals or incomplete evidence can also cause a difference."
+                : cash.unitemisedNote
+            }
           />
         )}
         <StatementLine

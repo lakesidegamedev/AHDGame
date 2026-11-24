@@ -154,8 +154,9 @@ describe("OverviewTab", () => {
     renderOverview({
       corporation: { ...corporation, isPrivate: true, viewerIsControllingParentCeo: true },
     });
-    expect(screen.getByText("Share price")).toBeTruthy();
-    expect(screen.getByText("Market cap")).toBeTruthy();
+    expect(screen.queryByText("Share price")).toBeNull();
+    expect(screen.getByText("Valuation")).toBeTruthy();
+    expect(screen.queryByText("Market cap")).toBeNull();
     expect(screen.queryByText("Trade")).toBeNull();
     expect(screen.queryByText("Buy / sell")).toBeNull();
   });
@@ -310,6 +311,39 @@ describe("OverviewTab", () => {
     renderOverview({ corporation: withChange({ from: 79, fromTurn: 160, delta: -23 }) });
     expect(screen.getByText(/down 23 from 79 at\s+turn 160/)).toBeTruthy();
     expect(screen.queryByText(/mostly/)).toBeNull();
+  });
+
+  it("always shows the four quality pillars with weights, and links the term", () => {
+    renderOverview({
+      corporation: {
+        ...corporation,
+        averageQuality: 68,
+        averageQualityPillars: {
+          turn: 165,
+          pillars: { tech: 63.3, inputs: 56.3, wages: 54.8, operations: 100 },
+        },
+      },
+    });
+    expect(screen.getByText(/R&D 63.3 \(weight 0.4\)/)).toBeTruthy();
+    expect(screen.getByText(/operations strength 100 \(weight 0.2\)/)).toBeTruthy();
+    expect(screen.queryByText(/Biggest move/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Average quality" }).getAttribute("href")).toBe(
+      "/wiki/output-quality"
+    );
+    cleanup();
+    renderOverview({
+      corporation: {
+        ...corporation,
+        averageQuality: 68,
+        averageQualityPillars: {
+          turn: 165,
+          previousTurn: 164,
+          pillars: { tech: 63.3, inputs: 56.3, wages: 54.8, operations: 100 },
+          mover: { key: "inputs", delta: -4.2 },
+        },
+      },
+    });
+    expect(screen.getByText(/Biggest move since turn 164: input quality \(-4.2\)/)).toBeTruthy();
   });
 
   it("counts plants in the sectors table and labels running and sold", () => {

@@ -52,7 +52,7 @@ describe("proposeSupplyAgreement", () => {
         new Request("http://localhost/api/corporations/supplier/supply-agreements", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ priceMode: "indexed", ...body }),
         }),
         supplierId.toString()
       )
@@ -202,6 +202,7 @@ describe("proposeSupplyAgreement", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          priceMode: "indexed",
           supplierCorpId: supplierId.toString(),
           commodity: "steel",
           volumeCap: 100,
@@ -235,6 +236,103 @@ describe("proposeSupplyAgreement", () => {
         type: "corp_supply_agreement_offer",
       })
     );
+  });
+
+  describe("price options", () => {
+    async function proposeBuyerSide(body: Record<string, unknown>, market: number | null) {
+      const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+      vi.mocked(resolveCorporation).mockResolvedValue({
+        ok: true,
+        corporation: { _id: buyerId, userId: new ObjectId() },
+      } as never);
+      db.collection("corporateSectors").find.mockReturnValue(
+        createAsyncIterableCursor([
+          {
+            sectorType: "manufacturing",
+            capitalStock: 10_000,
+            strategyId: "standard",
+            productionPolicyLevel: 0,
+            stateId: "TX",
+          },
+          { sectorType: "construction", capitalStock: 0, strategyId: "standard", stateId: "TX" },
+        ])
+      );
+      db.collection("gameState").findOne.mockResolvedValue({ currentTurn: 12, currentYear: 1953 });
+      db.collection("gameConfig").findOne.mockResolvedValue({
+        commandEconomyEnabled: false,
+        supplyAgreementsEnabled: true,
+      });
+      db.collection("commodityPrices").findOne.mockResolvedValue(
+        market === null ? null : { globalPrice: market }
+      );
+      db.collection("corporations").findOne.mockResolvedValue({
+        _id: supplierId,
+        name: "Gridworks",
+        userId: new ObjectId(),
+      });
+      const { proposeSupplyAgreement } = await import("./supplyAgreements");
+      return proposeSupplyAgreement(
+        new Request("http://localhost/api/corporations/buyer/supply-agreements", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            supplierCorpId: supplierId.toString(),
+            commodity: "steel",
+            volumeCap: 100,
+            ...body,
+          }),
+        }),
+        buyerId.toString()
+      );
+    }
+
+    it("refuses a new proposal that picks no price option", async () => {
+      const response = await proposeBuyerSide({ pricePremium: 0.1 }, 100);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/set price, or market price plus or minus/);
+      expect(db.collectionMocks.supplyAgreements.insertOne).not.toHaveBeenCalled();
+    });
+
+    it("refuses a set price outside 25% of the market and says the allowed range", async () => {
+      const response = await proposeBuyerSide({ priceMode: "fixed", fixedUnitPrice: 130 }, 100);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/between 75\.00 and 125\.00/);
+      expect(db.collectionMocks.supplyAgreements.insertOne).not.toHaveBeenCalled();
+    });
+
+    it("refuses a set price when the commodity has no market price", async () => {
+      const response = await proposeBuyerSide({ priceMode: "fixed", fixedUnitPrice: 100 }, null);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/no market price/);
+    });
+
+    it("refuses market price plus or minus beyond 35%", async () => {
+      const response = await proposeBuyerSide({ priceMode: "indexed", pricePremium: 0.4 }, 100);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/within 35%/);
+    });
+
+    it("stores a set price with the market price it was bounded against", async () => {
+      const response = await proposeBuyerSide({ priceMode: "fixed", fixedUnitPrice: 110 }, 100);
+      expect(response.status).toBe(200);
+      expect(db.collectionMocks.supplyAgreements.insertOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          priceMode: "fixed",
+          fixedUnitPrice: 110,
+          signingMarketPrice: 100,
+          pricePremium: 0.1,
+          currentOffer: expect.objectContaining({ priceMode: "fixed", fixedUnitPrice: 110 }),
+        })
+      );
+    });
+
+    it("stores market price plus or minus without a set price", async () => {
+      const response = await proposeBuyerSide({ priceMode: "indexed", pricePremium: -0.2 }, 100);
+      expect(response.status).toBe(200);
+      const doc = db.collectionMocks.supplyAgreements.insertOne.mock.calls[0]![0];
+      expect(doc).toMatchObject({ priceMode: "indexed", pricePremium: -0.2 });
+      expect(doc).not.toHaveProperty("fixedUnitPrice");
+    });
   });
 
   it("ignores a state on a reachable commodity", async () => {
@@ -299,6 +397,7 @@ describe("proposeSupplyAgreement", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          priceMode: "indexed",
           supplierCorpId: supplierId.toString(),
           commodity: "real_estate_services",
           stateId: "DC",
@@ -325,6 +424,7 @@ describe("proposeSupplyAgreement", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          priceMode: "indexed",
           buyerCorpId: new ObjectId().toString(),
           commodity: "freight",
           volumeCap: 100,
@@ -355,7 +455,7 @@ describe("updateSupplyAgreement", () => {
             {
               method: "PATCH",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify(body),
+              body: JSON.stringify({ priceMode: "indexed", ...body }),
             }
           ),
           corpId.toString(),
@@ -519,6 +619,7 @@ it("blocks a negotiated supply commitment funded by a new character", async () =
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        priceMode: "indexed",
         buyerCorpId: buyerId.toString(),
         commodity: "freight",
         volumeCap: 100,

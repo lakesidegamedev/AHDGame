@@ -5,7 +5,8 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 
 export interface CorpHistoryPoint {
   turn: number;
-  sharePrice: number;
+  /** Absent for a private corporation, which has no market price. */
+  sharePrice?: number;
   marketingStrength: number;
   liquidCapital: number;
 }
@@ -14,8 +15,10 @@ export interface CorpStats {
   sequentialId: number;
   name: string;
   tickerSymbol?: string;
-  sharePrice: number;
-  priceChange1h: number;
+  /** True for a private corporation; its payload carries no quote or change. */
+  isPrivate?: boolean;
+  sharePrice?: number;
+  priceChange1h?: number;
   liquidCapital: number;
   liquidCurrencyCode?: string;
   marketingStrength: number;

@@ -6,6 +6,13 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
 import { atPriceCap } from "@/lib/market/overviewPreview";
+import {
+  balancePressure,
+  premiumTrendSentence,
+  scarcityMultFromAttribution,
+} from "@/lib/market/priceBreakdownRules";
+import { FUNDED_SCARCITY_MAX_MOVE } from "@/lib/market/scarcityDrift";
+import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { formatCount } from "@/lib/ui/numbers";
 
 function balance(c: CommodityData): { label: string; tone: string; title?: string } {
@@ -27,6 +34,17 @@ function balance(c: CommodityData): { label: string; tone: string; title?: strin
   if (ratio < 0.95) return { label: "Short", tone: "text-error" };
   if (ratio > 1.05) return { label: "Surplus", tone: "text-success" };
   return { label: "Balanced", tone: "text-muted" };
+}
+
+const CAP_TITLE =
+  "The price is at the highest level the market allows, so goods at the cap share the same figure.";
+
+/** Tooltip for the price-vs-base cell: the stored scarcity premium and which way it is moving. */
+export function premiumTitle(c: CommodityData): string | undefined {
+  const mult = scarcityMultFromAttribution(c.priceAttribution ?? null);
+  if (mult == null) return undefined;
+  const pressure = balancePressure(c.globalSupply, c.globalDemand);
+  return `Scarcity premium ${mult.toFixed(2)}x on the base price. It builds up while a good is short and eases back at a set pace after supply catches up. ${premiumTrendSentence(pressure, FUNDED_SCARCITY_MAX_MOVE)}`;
 }
 
 export function CommoditiesPanel({
@@ -78,7 +96,12 @@ export function CommoditiesPanel({
               <tr className="border-b border-card-border text-left text-body-sm text-muted">
                 <th className="px-3 py-2 font-medium">Commodity</th>
                 <th className="px-3 py-2 text-right font-medium">Price</th>
-                <th className="px-3 py-2 text-right font-medium">vs base</th>
+                <th
+                  className="px-3 py-2 text-right font-medium"
+                  title="Against the original base price, before the inflation adjustment."
+                >
+                  vs original base
+                </th>
                 <th className="px-3 py-2 text-right font-medium">Last turn</th>
                 <th
                   className="px-3 py-2 text-right font-medium"
@@ -102,14 +125,20 @@ export function CommoditiesPanel({
                       {formatPrice(c.globalPrice)}
                       <span className="text-xs text-muted"> /{c.unit}</span>
                     </td>
-                    <td className={`px-3 py-2 text-right tabular-nums ${toneClass(base)}`}>
+                    <td
+                      className={`px-3 py-2 text-right tabular-nums ${toneClass(base)}`}
+                      title={premiumTitle(c)}
+                    >
                       {pctText(base)}
                       {atPriceCap(c) && (
                         <span
                           className="ml-1 text-xs text-muted"
-                          title="The price is at the highest level the market allows, so goods at the cap share the same figure."
+                          title={[CAP_TITLE, premiumTitle(c)].filter(Boolean).join(" ")}
                         >
                           at price cap
+                          {priceCapBasisText(c.priceCapBasis) && (
+                            <span className="block">{priceCapBasisText(c.priceCapBasis)}</span>
+                          )}
                         </span>
                       )}
                     </td>

@@ -32,6 +32,8 @@ interface HistoryProjection {
   dividendIncomeReceived?: number;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
+  dividendReceivedTax?: number;
+  sectorFxSpread?: number;
 }
 
 interface TxProjection {
@@ -58,6 +60,8 @@ const HISTORY_PROJECTION = {
   dividendIncomeReceived: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
+  dividendReceivedTax: 1,
+  sectorFxSpread: 1,
 } as const;
 
 /**
@@ -145,6 +149,8 @@ export async function loadLastTurnReconciliation(
       bondCouponIncome: latest.perTurnBondCouponIncome,
       bondInterestPaid: latest.perTurnBondDragOnNetIncome,
       dividendIncomeReceived: latest.dividendIncomeReceived,
+      dividendReceivedTax: latest.dividendReceivedTax ?? null,
+      sectorFxSpread: latest.sectorFxSpread ?? null,
       cashAfter: latest.liquidCapital,
       cashNow:
         typeof corporation.liquidCapital === "number" && sameLiveCurrency
@@ -160,7 +166,8 @@ export async function loadLastTurnReconciliation(
       previousCostBreakdown: previous && sameCurrency ? (previous.costBreakdown ?? null) : null,
       previousHeadcount: previous && sameCurrency ? (previous.headcount ?? null) : null,
     },
-    flows
+    flows,
+    { unconverted: unconvertedMovements, truncated: false }
   );
   result.cash.evidence = { boundary: evidence.boundary, unconvertedMovements };
   result.reportingCurrency = latest.currencyCode ?? null;

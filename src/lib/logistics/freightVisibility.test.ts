@@ -46,6 +46,17 @@ describe("freight visibility estimates", () => {
     ).toEqual({ CA: 7.2, NY: 1 });
   });
 
+  it("is exactly zero for grid-delivered output so the screen can say so", () => {
+    expect(
+      estimateSectorFullCapacityOneHopFreightTeu({
+        stateId: "NH",
+        producedUnits: 40,
+        capacityUnits: 100,
+        outputByCommodity: { energy: 40 },
+      })
+    ).toBe(0);
+  });
+
   it("returns no owned estimate before a plant has measured a positive run", () => {
     expect(
       estimateSectorFullCapacityOneHopFreightTeu({

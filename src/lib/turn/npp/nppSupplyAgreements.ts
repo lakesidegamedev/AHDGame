@@ -57,7 +57,7 @@ import type { AnyBulkWriteOperation, Collection, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-import type { SupplyListing } from "@/lib/db/types/supplyListing";
+import type { SupplyListing, SupplyListingSizingBasis } from "@/lib/db/types/supplyListing";
 import { isCurtained, isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_LABELS } from "@/lib/constants/commodities";
@@ -106,6 +106,7 @@ export type AiListingSpec = {
   stateId?: string;
   volumeCap: number;
   pricePremium: number;
+  sizingBasis: SupplyListingSizingBasis;
 };
 
 /** Stable key an AI listing upserts on: (corporation, side, commodity[, state]). */
@@ -185,6 +186,7 @@ export function decideAiSupplyListings(args: {
           ...(stateId ? { stateId } : {}),
           volumeCap,
           pricePremium: listingPremium(priceRatioOf(c, party.countryId)),
+          sizingBasis: "spareCapacity",
         });
       }
       for (const c of commoditiesOf(
@@ -216,6 +218,7 @@ export function decideAiSupplyListings(args: {
           ...(stateId ? { stateId } : {}),
           volumeCap: Math.max(1, unmet),
           pricePremium: listingPremium(ratio),
+          sizingBasis: "unmetOutput",
         });
       }
     }
@@ -437,6 +440,7 @@ export async function syncAiSupplyListings(
       ...(spec.stateId ? { stateId: spec.stateId } : {}),
       volumeCap,
       pricePremium: spec.pricePremium,
+      sizingBasis: spec.sizingBasis,
       durationTurns: NPP_CONTRACT_TERM_TURNS,
       expiresAtTurn: turn + AI_LISTING_TTL_TURNS,
       updatedAt: now,
@@ -506,6 +510,10 @@ async function writeSupplierReplies(
             updatedAt: args.now,
           },
           $push: { offers: offer },
+          // An AI counter is a plain premium offer, so it drops any set price.
+          ...(raw.priceMode
+            ? { $unset: { priceMode: "", fixedUnitPrice: "", signingMarketPrice: "" } }
+            : {}),
         },
       },
     });

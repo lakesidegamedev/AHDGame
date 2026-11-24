@@ -374,7 +374,10 @@ export function StatusBar({
 
   // Corp history arrays for sparklines
   const corpHistory: CorpHistoryPoint[] = stats?.corp?.history ?? [];
-  const sharePriceHistory = corpHistory.map((h) => h.sharePrice);
+  const sharePriceHistory = corpHistory.flatMap((h) =>
+    h.sharePrice == null ? [] : [h.sharePrice]
+  );
+  const latestSettledTurn = corpHistory.at(-1)?.turn ?? null;
   const msHistory = corpHistory.map((h) => h.marketingStrength);
   const cashHistory = corpHistory.map((h) => h.liquidCapital);
 
@@ -1038,74 +1041,82 @@ export function StatusBar({
                 Corp
               </span>
 
-              {/* Stock price ticker — desktop only */}
-              <StatusChip
-                wrapperClassName="hidden sm:inline-flex"
-                colorClasses={
-                  Number((stats.corp.priceChange1h ?? 0).toFixed(1)) < 0
-                    ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                    : "bg-teal-500/10 text-teal-400 hover:bg-teal-500/20"
-                }
-                icon={
-                  <svg
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              {/* Stock price ticker, desktop only. A private corporation has no market quote. */}
+              {stats.corp.isPrivate !== true && (
+                <StatusChip
+                  wrapperClassName="hidden sm:inline-flex"
+                  colorClasses={
+                    Number((stats.corp.priceChange1h ?? 0).toFixed(1)) < 0
+                      ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                      : "bg-teal-500/10 text-teal-400 hover:bg-teal-500/20"
+                  }
+                  icon={
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                      />
+                    </svg>
+                  }
+                  value={
+                    <>
+                      <span className="text-muted/70 font-semibold" title={stats.corp.name}>
+                        {stats.corp.tickerSymbol || stats.corp.name}
+                      </span>
+                      <span>{formatListingPrice(stats.corp.sharePrice ?? 0, ceoCorpCurrency)}</span>
+                      <span className={signedChangeTone(stats.corp.priceChange1h ?? 0)}>
+                        {(stats.corp.priceChange1h ?? 0) > 0 ? "+" : ""}
+                        {(stats.corp.priceChange1h ?? 0).toFixed(1)}%
+                      </span>
+                    </>
+                  }
+                  ariaLabel={`${stats.corp.name} stock price`}
+                >
+                  <p className="font-semibold text-foreground mb-2">{stats.corp.name}</p>
+                  <div className="space-y-1 text-[11px] mb-2">
+                    <BreakdownRow
+                      label={`Live share price${ceoCorpCurrency ? ` (${ceoCorpCurrency})` : ""}`}
+                      value={formatListingPrice(stats.corp.sharePrice ?? 0, ceoCorpCurrency)}
                     />
-                  </svg>
-                }
-                value={
-                  <>
-                    <span className="text-muted/70 font-semibold" title={stats.corp.name}>
-                      {stats.corp.tickerSymbol || stats.corp.name}
-                    </span>
-                    <span>{formatListingPrice(stats.corp.sharePrice, ceoCorpCurrency)}</span>
-                    <span className={signedChangeTone(stats.corp.priceChange1h ?? 0)}>
-                      {(stats.corp.priceChange1h ?? 0) > 0 ? "+" : ""}
-                      {(stats.corp.priceChange1h ?? 0).toFixed(1)}%
-                    </span>
-                  </>
-                }
-                ariaLabel={`${stats.corp.name} stock price`}
-              >
-                <p className="font-semibold text-foreground mb-2">{stats.corp.name}</p>
-                <div className="space-y-1 text-[11px] mb-2">
-                  <BreakdownRow
-                    label={`Live share price${ceoCorpCurrency ? ` (${ceoCorpCurrency})` : ""}`}
-                    value={formatListingPrice(stats.corp.sharePrice, ceoCorpCurrency)}
-                  />
-                  <BreakdownRow
-                    label="Change (1 turn)"
-                    value={`${(stats.corp.priceChange1h ?? 0) >= 0 ? "+" : ""}${(stats.corp.priceChange1h ?? 0).toFixed(2)}%`}
-                    valueClass={
-                      (stats.corp.priceChange1h ?? 0) >= 0 ? "text-green-400" : "text-red-400"
-                    }
-                  />
-                </div>
-                {sharePriceHistory.length >= 2 && (
-                  <div className="mt-1 mb-2">
-                    <p className="text-[10px] text-muted mb-1">
-                      Share price (last {sharePriceHistory.length} turns)
-                    </p>
-                    <Sparkline
-                      data={sharePriceHistory}
-                      color={(stats.corp.priceChange1h ?? 0) >= 0 ? "#2dd4bf" : "#f87171"}
-                      width={188}
-                      height={30}
+                    {latestSettledTurn != null && (
+                      <BreakdownRow
+                        label="Last settled close"
+                        value={`Turn ${latestSettledTurn}`}
+                      />
+                    )}
+                    <BreakdownRow
+                      label="Change (1 turn)"
+                      value={`${(stats.corp.priceChange1h ?? 0) >= 0 ? "+" : ""}${(stats.corp.priceChange1h ?? 0).toFixed(2)}%`}
+                      valueClass={
+                        (stats.corp.priceChange1h ?? 0) >= 0 ? "text-green-400" : "text-red-400"
+                      }
                     />
                   </div>
-                )}
-                <TooltipLink href={`/corporation/${stats.corp.sequentialId}`}>
-                  View corporation
-                </TooltipLink>
-              </StatusChip>
+                  {sharePriceHistory.length >= 2 && (
+                    <div className="mt-1 mb-2">
+                      <p className="text-[10px] text-muted mb-1">
+                        Share price (last {sharePriceHistory.length} turns)
+                      </p>
+                      <Sparkline
+                        data={sharePriceHistory}
+                        color={(stats.corp.priceChange1h ?? 0) >= 0 ? "#2dd4bf" : "#f87171"}
+                        width={188}
+                        height={30}
+                      />
+                    </div>
+                  )}
+                  <TooltipLink href={`/corporation/${stats.corp.sequentialId}`}>
+                    View corporation
+                  </TooltipLink>
+                </StatusChip>
+              )}
 
               <CorpCashStatusChip
                 corp={stats.corp}

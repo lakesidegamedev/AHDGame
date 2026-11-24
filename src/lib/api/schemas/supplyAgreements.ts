@@ -12,9 +12,23 @@ const durationTurns = z
   .max(SUPPLY_AGREEMENT_DURATION_MAX_TURNS)
   .optional();
 
+/**
+ * How a new offer prices deliveries. The older bonus-or-discount on the input
+ * price is not offered on new proposals.
+ */
+const pricing = {
+  priceMode: z.enum(["fixed", "indexed"], {
+    error: "Choose how the price works: a set price, or market price plus or minus a percentage.",
+  }),
+  /** Market price plus or minus: the agreed fraction of market. */
+  pricePremium: z.number().finite().optional(),
+  /** Set price: the agreed price per unit. */
+  fixedUnitPrice: z.number().finite().positive().optional(),
+};
+
 const terms = {
   volumeCap: z.number().finite().positive(),
-  pricePremium: z.number().finite(),
+  ...pricing,
   exclusive: z.boolean().optional().default(false),
   durationTurns,
 };

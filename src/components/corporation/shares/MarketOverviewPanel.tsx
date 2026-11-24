@@ -5,6 +5,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CorporationDetail, ShareholderInfo, VoteTally } from "../CorporationPageTypes";
+import { holderIdentityTag } from "./holderIdentity";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import {
   insiderConcentrationMultiplier,
@@ -410,6 +411,11 @@ export default function MarketOverviewPanel({
                           </Link>
                         ) : (
                           <span className="text-foreground">{sh.name}</span>
+                        )}
+                        {holderIdentityTag(sh) && (
+                          <span className="ml-1.5 text-[11px] text-muted">
+                            {holderIdentityTag(sh)}
+                          </span>
                         )}
                         {sh.characterId != null && sh.characterId === myCharacterId && (
                           <span className="ml-1.5 text-[11px] text-muted">you</span>

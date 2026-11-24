@@ -34,6 +34,10 @@ export interface RecordedTurnInput {
   bondCouponIncome?: number | null;
   /** Bond interest paid on the company's own bonds this turn, in the company's currency. */
   bondInterestPaid?: number | null;
+  /** Tax on dividends received: inside `tax`, but already netted from the dividend credit. */
+  dividendReceivedTax?: number | null;
+  /** Conversion fee skimmed from foreign operating income before retained income. */
+  sectorFxSpread?: number | null;
   dividendIncomeReceived?: number;
   /** Cash on hand now, when it should be compared with the recorded figure. */
   cashNow?: number | null;
@@ -53,6 +57,14 @@ export interface CashFlowLine {
   label: string;
   /** Signed: negative leaves the company. */
   amount: number;
+}
+
+/** What the ledger read could not place, so the cash remainder can say what it holds. */
+export interface LedgerReadNotes {
+  /** Logged movements in another currency that could not be converted. */
+  unconverted?: number;
+  /** True when the ledger read hit its row limit. */
+  truncated?: boolean;
 }
 
 export interface LastTurnReconciliation {
@@ -81,6 +93,8 @@ export interface LastTurnReconciliation {
     /** The recorded parts of `otherNet`; `otherNet` minus these is `otherUnitemised`. */
     otherParts: CashFlowLine[];
     otherUnitemised: number;
+    /** Plain name for `otherUnitemised`: what it can hold, never "unexplained". */
+    otherUnitemisedLabel: string;
     dividendPaid: number;
     retained: number;
   };
@@ -96,6 +110,9 @@ export interface LastTurnReconciliation {
     lines: CashFlowLine[];
     /** Cash change not explained by retained income or a labelled line. Null when opening cash is unknown. */
     unitemised: number | null;
+    /** Plain name and explanation for `unitemised`. */
+    unitemisedLabel: string;
+    unitemisedNote: string;
   };
 }
 
@@ -184,6 +201,28 @@ export function groupCashFlowLines(flows: readonly CashFlowInput[]): CashFlowLin
     .sort((a, b) => a.amount - b.amount);
 }
 
+function unitemisedWording(ledger: LedgerReadNotes): {
+  unitemisedLabel: string;
+  unitemisedNote: string;
+} {
+  const causes: string[] = [];
+  if (ledger.unconverted) {
+    causes.push(
+      `${ledger.unconverted} logged movement${ledger.unconverted === 1 ? "" : "s"} in another currency, converted at the turn's rate`
+    );
+  }
+  if (ledger.truncated) causes.push("ledger rows beyond the first 500 for the turn");
+  causes.push("rounding of each recorded figure to whole units");
+  return {
+    unitemisedLabel: ledger.truncated
+      ? "Ledger rows not shown, and rounding"
+      : ledger.unconverted
+        ? "Currency conversion and rounding"
+        : "Rounding and currency conversion",
+    unitemisedNote: `Cash change left after retained income and the lines above. It can only hold: ${causes.join("; ")}.`,
+  };
+}
+
 /**
  * Tie the recorded income statement to the change in cash. The identity is
  * cash change = retained income + labelled lines + unitemised, and
@@ -192,7 +231,8 @@ export function groupCashFlowLines(flows: readonly CashFlowInput[]): CashFlowLin
  */
 export function reconcileLastTurn(
   recorded: RecordedTurnInput,
-  flows: readonly CashFlowInput[]
+  flows: readonly CashFlowInput[],
+  ledger: LedgerReadNotes = {}
 ): LastTurnReconciliation {
   const lines = groupCashFlowLines(flows);
   const otherNet = round2(
@@ -209,6 +249,16 @@ export function reconcileLastTurn(
       key: "bond_coupons",
       label: "Coupons received on bonds held",
       amount: Math.max(0, recorded.bondCouponIncome ?? 0),
+    },
+    {
+      key: "dividend_tax",
+      label: "Tax on dividends received (counted in tax above, not taken from retained income)",
+      amount: Math.max(0, recorded.dividendReceivedTax ?? 0),
+    },
+    {
+      key: "fx_spread",
+      label: "Currency conversion fee on foreign income",
+      amount: -Math.max(0, recorded.sectorFxSpread ?? 0),
     },
     {
       key: "dividends_received",
@@ -243,6 +293,7 @@ export function reconcileLastTurn(
           }
         )
       : [];
+  const splitRecorded = recorded.dividendReceivedTax != null || recorded.sectorFxSpread != null;
   const labelled = lines.reduce((sum, l) => sum + l.amount, 0);
   const unitemised = change == null ? null : round2(change - recorded.retained - labelled);
   return {
@@ -257,6 +308,9 @@ export function reconcileLastTurn(
       otherNet,
       otherParts,
       otherUnitemised,
+      otherUnitemisedLabel: splitRecorded
+        ? "Rounding of recorded figures"
+        : "Tax on dividends received, currency conversion and rounding",
       dividendPaid: recorded.dividendPaid,
       retained: recorded.retained,
     },
@@ -271,6 +325,7 @@ export function reconcileLastTurn(
       retained: recorded.retained,
       lines,
       unitemised,
+      ...unitemisedWording(ledger),
     },
   };
 }

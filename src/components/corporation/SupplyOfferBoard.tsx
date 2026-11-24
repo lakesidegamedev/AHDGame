@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/types/supplyAgreement";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { ComputerRunOfferNote } from "@/components/market/supplyOfferUi";
 
 export function SupplyOfferBoard({
   corpId,
@@ -197,6 +198,11 @@ export function SupplyOfferBoard({
           premium: Math.round(row.pricePremium * 100),
         })}
       </p>
+      {row.ai && row.sizingBasis && (
+        <p className="text-xs text-muted" data-testid="offer-sizing-basis">
+          {t(row.sizingBasis === "unmetOutput" ? "sizingUnmetOutput" : "sizingSpareCapacity")}
+        </p>
+      )}
       {sizeNote(row) && <p className="text-xs text-warning">{sizeNote(row)}</p>}
       <p className="text-xs text-muted">
         {row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded")} ·{" "}
@@ -280,6 +286,7 @@ export function SupplyOfferBoard({
         <div>
           <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
           <p className="mt-1 max-w-2xl text-xs text-muted">{t("intro")}</p>
+          {[...listings, ...own].some((row) => row.ai) && <ComputerRunOfferNote />}
         </div>
         <button
           type="button"

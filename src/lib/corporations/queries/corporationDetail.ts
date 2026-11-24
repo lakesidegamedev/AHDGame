@@ -48,6 +48,7 @@ import { withoutOwnedTechAdvisory } from "@/lib/corporations/autopilot";
 import { getTreeForType } from "@/lib/constants/techTree";
 import {
   lastQualityChangeFromHistory,
+  qualityPillarsView,
   type QualityHistoryRow,
 } from "@/lib/corporations/rules/qualityChange";
 import {
@@ -314,6 +315,10 @@ export async function loadCorporationDetailView(args: {
       averageQuality:
         corporation.averageQuality != null
           ? Math.round(corporation.averageQuality * 10) / 10
+          : undefined,
+      averageQualityPillars:
+        corporation.averageQuality != null
+          ? qualityPillarsView(await qualityHistoryPromise)
           : undefined,
       averageQualityChange:
         corporation.averageQuality != null

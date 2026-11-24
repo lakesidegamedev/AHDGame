@@ -120,8 +120,8 @@ describe("historical territory geometry", () => {
       // top of the file, so matching the bare name put the anchor above every line in
       // the function body and the comparison passed no matter where the append sat.
       const overlay = src.indexOf("computeRegionBlobs(");
-      const fetches = src.split("const histResp").length - 1;
-      const append = src.indexOf("const histResp");
+      const fetches = src.split("const hist = await fetchMapJson").length - 1;
+      const append = src.indexOf("const hist = await fetchMapJson");
       expect(overlay, "computeRegionBlobs call not found").toBeGreaterThan(-1);
       // Exactly one, or "the last one is late enough" would hide an earlier copy.
       expect(fetches, "expected exactly one historical fetch").toBe(1);

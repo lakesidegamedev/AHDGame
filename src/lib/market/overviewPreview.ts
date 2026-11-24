@@ -3,6 +3,8 @@
  * for just those rows instead of downloading every listing.
  */
 
+import type { PriceCapBasis } from "./priceCapBasis";
+
 export const MAX_PREVIEW_ROWS = 20;
 export const MARKET_OVERVIEW_ROWS = 5;
 
@@ -11,6 +13,8 @@ export interface CommodityMover {
   label: string;
   basePrice: number;
   globalPrice: number;
+  priceCeiling?: number;
+  priceCapBasis?: PriceCapBasis;
 }
 
 export function vsBasePct({

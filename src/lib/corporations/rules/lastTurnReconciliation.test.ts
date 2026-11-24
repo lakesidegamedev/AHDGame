@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { groupCashFlowLines, reconcileLastTurn } from "./lastTurnReconciliation";
+import { realizedNetIncomePerTurn } from "./historyFinancials";
+
+const retainedWithBondFlows = (income: number, coupons: number, interest: number) =>
+  realizedNetIncomePerTurn({
+    income,
+    perTurnBondCouponIncome: coupons,
+    perTurnBondDragOnNetIncome: interest,
+  });
 
 describe("groupCashFlowLines", () => {
   it("nets construction spending and refunds into one labelled line", () => {
@@ -92,6 +100,36 @@ describe("reconcileLastTurn", () => {
     expect(r.cash.unitemised).toBeNull();
   });
 
+  it("itemises dividend tax and the conversion fee, leaving only rounding", () => {
+    const r = reconcileLastTurn(
+      {
+        ...recorded,
+        retained: 8_241 + 737 - 120 + 1,
+        dividendReceivedTax: 737,
+        sectorFxSpread: 120,
+      },
+      []
+    );
+    expect(r.statement.otherParts.map((p) => p.amount)).toEqual([737, -120]);
+    expect(r.statement.otherUnitemised).toBe(1);
+    expect(r.statement.otherUnitemisedLabel).toBe("Rounding of recorded figures");
+  });
+
+  it("names what the unexplained cash and statement remainders can hold", () => {
+    const legacy = reconcileLastTurn({ ...recorded, retained: 9_000 }, [], {
+      unconverted: 2,
+      truncated: true,
+    });
+    expect(legacy.statement.otherUnitemisedLabel).toBe(
+      "Tax on dividends received, currency conversion and rounding"
+    );
+    expect(legacy.cash.unitemisedLabel).toBe("Ledger rows not shown, and rounding");
+    expect(legacy.cash.unitemisedNote).toContain("2 logged movements in another currency");
+    expect(legacy.cash.unitemisedNote).toContain("beyond the first 500");
+    const plain = reconcileLastTurn(recorded, []);
+    expect(plain.cash.unitemisedLabel).toBe("Rounding and currency conversion");
+  });
+
   it("signs the gap between operating result and retained income as it moves retained income", () => {
     const r = reconcileLastTurn(
       { ...recorded, retained: 7_041, bondInterestPaid: 900, bondCouponIncome: 100 },
@@ -113,5 +151,49 @@ describe("reconcileLastTurn", () => {
   it("reports cash now only when it differs from the recorded end cash", () => {
     expect(reconcileLastTurn({ ...recorded, cashNow: recorded.cashAfter }, []).cash.now).toBeNull();
     expect(reconcileLastTurn({ ...recorded, cashNow: 2_641_559 }, []).cash.now).toBe(2_641_559);
+  });
+});
+
+describe("bond flows in the cash walk", () => {
+  // Stored income is 500 - 300 - 80 - 20 = 100 and leaves bond flows out.
+  const base = {
+    turn: 10,
+    revenue: 500,
+    totalCosts: 300,
+    tax: 80,
+    dividendPaid: 20,
+    cashBefore: 1_000,
+  };
+
+  it("counts a coupon received once, in retained income, with nothing left over", () => {
+    const retained = retainedWithBondFlows(100, 20, 0);
+    const r = reconcileLastTurn({ ...base, retained, bondCouponIncome: 20, cashAfter: 1_120 }, [
+      { type: "bond_coupon", amount: 20 },
+    ]);
+    expect(r.statement.otherNet).toBe(20);
+    expect(r.statement.otherParts.map((p) => p.amount)).toEqual([20]);
+    expect(r.statement.otherUnitemised).toBe(0);
+    expect(r.cash.unitemised).toBe(0);
+  });
+
+  it("counts issuer interest once, with nothing left over", () => {
+    const retained = retainedWithBondFlows(100, 0, 30);
+    const r = reconcileLastTurn({ ...base, retained, bondInterestPaid: 30, cashAfter: 1_070 }, [
+      { type: "bond_coupon", amount: -30 },
+    ]);
+    expect(r.statement.otherNet).toBe(-30);
+    expect(r.statement.otherParts.map((p) => p.amount)).toEqual([-30]);
+    expect(r.statement.otherUnitemised).toBe(0);
+    expect(r.cash.unitemised).toBe(0);
+  });
+
+  it("reconciles a company that both holds and issued bonds", () => {
+    const retained = retainedWithBondFlows(100, 20, 30);
+    const r = reconcileLastTurn(
+      { ...base, retained, bondCouponIncome: 20, bondInterestPaid: 30, cashAfter: 1_090 },
+      []
+    );
+    expect(r.statement.otherUnitemised).toBe(0);
+    expect(r.cash.unitemised).toBe(0);
   });
 });
