@@ -156,6 +156,7 @@ export function RegionHeader(props: RegionHeaderProps) {
               className="object-cover object-center"
               sizes="(max-width: 1280px) 100vw, 1280px"
               priority
+              fetchPriority="high"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/30" />
