@@ -4,6 +4,7 @@
  * same supply/demand core as commodity turns but not drift, pegs, nudges, bonds, or healthcare
  * budgets.
  */
+import { previewBondSettlementDissolve } from "@/lib/corporations/previewBondSettlementDissolve";
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
@@ -70,6 +71,24 @@ export type CommodityGlobalDeltaPreview = {
 export type QuickDissolvePreview = {
   outstandingBonds: number;
   canQuickDissolve: boolean;
+  /**
+   * The company owes bonds, none in default, and may dissolve by paying
+   * bondholders first (POST with settleBonds). False when it owes none.
+   */
+  canDissolveSettlingBonds: boolean;
+  /**
+   * The bond settlement when the company owes bonds, in its own currency.
+   * `returnedCapitalCorp`, the rows and the per-share figure then show what
+   * shareholders get after bondholders are paid.
+   */
+  bondSettlement: {
+    bondCount: number;
+    anyDefaulted: boolean;
+    bondTotalCorp: number;
+    bondholdersGetCorp: number;
+    bondRecoveryPct: number;
+    shareholdersGetCorp: number;
+  } | null;
   /** Turns left before the corp is old enough to dissolve (0 when eligible). */
   dissolutionAgeTurnsRemaining: number;
   returnedCapitalCorp: number;
@@ -194,7 +213,7 @@ export async function previewQuickDissolve(
 
   // Mirror the dissolve route: share-buyback escrow nets into the payout pool
   // (positive reserve adds, negative debt subtracts), floored at 0.
-  const returnedCapitalCorp = Math.max(
+  const grossPoolCorp = Math.max(
     0,
     Math.floor(
       corporation.liquidCapital +
@@ -203,6 +222,25 @@ export async function previewQuickDissolve(
         (corporation.shareEscrowBalance ?? 0)
     )
   );
+
+  // With bonds outstanding the dissolve runs the bond settlement waterfall:
+  // bondholders are paid first, shareholders share what is left.
+  const bondSettlement =
+    outstandingBonds > 0
+      ? await previewBondSettlementDissolve(db, corporation, assetValueInCorpCapital)
+      : null;
+  const returnedCapitalCorp = bondSettlement
+    ? Math.max(
+        0,
+        Math.floor(
+          anchorToCorpLiquidCapital(
+            bondSettlement.shareholderPoolAnchor,
+            corporation,
+            corpFxRateForAssets
+          )
+        )
+      )
+    : grossPoolCorp;
 
   const ceoChar = await charactersCollection(db).findOne({ _id: corporation.ceoId });
   const forexEnabled = await isForexEnabled();
@@ -226,11 +264,9 @@ export async function previewQuickDissolve(
 
   // Compute the per-shareholder allocation so the preview surfaces what the CEO
   // actually receives (pro-rata share) rather than the total, plus corp and publicFloat slices.
-  const shareholderPoolAnchor = corpLiquidCapitalToAnchor(
-    returnedCapitalCorp,
-    corporation,
-    corpFxRateForAssets
-  );
+  const shareholderPoolAnchor = bondSettlement
+    ? bondSettlement.shareholderPoolAnchor
+    : corpLiquidCapitalToAnchor(returnedCapitalCorp, corporation, corpFxRateForAssets);
   const regularShareholderIds = (corporation.shareholders ?? [])
     .map((s) => s.characterId)
     .filter((id): id is ObjectId => id !== undefined);
@@ -470,6 +506,25 @@ export async function previewQuickDissolve(
   return {
     outstandingBonds,
     canQuickDissolve: outstandingBonds === 0 && !ageBlock.blocked,
+    canDissolveSettlingBonds: !!bondSettlement && !bondSettlement.anyDefaulted && !ageBlock.blocked,
+    bondSettlement: bondSettlement
+      ? {
+          bondCount: bondSettlement.bondCount,
+          anyDefaulted: bondSettlement.anyDefaulted,
+          bondTotalCorp: anchorToCorpLiquidCapital(
+            bondSettlement.totalBondClaimsAnchor,
+            corporation,
+            corpFxRateForAssets
+          ),
+          bondholdersGetCorp: anchorToCorpLiquidCapital(
+            bondSettlement.bondRecoveryPoolAnchor,
+            corporation,
+            corpFxRateForAssets
+          ),
+          bondRecoveryPct: bondSettlement.bondRecoveryPct,
+          shareholdersGetCorp: returnedCapitalCorp,
+        }
+      : null,
     dissolutionAgeTurnsRemaining: ageBlock.turnsRemaining,
     returnedCapitalCorp,
     returnedCapitalHome,

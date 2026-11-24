@@ -276,17 +276,22 @@ export default function CeoGovernancePanel({
     }
     if (dissolvePreview.dissolutionAgeTurnsRemaining > 0)
       return `Too new to dissolve: ${dissolvePreview.dissolutionAgeTurnsRemaining} turns to go.`;
-    if (corporation.isPrivate && dissolvePreview.outstandingBonds > 0)
-      return `Blocked while ${dissolvePreview.outstandingBonds} bond${dissolvePreview.outstandingBonds === 1 ? " is" : "s are"} outstanding. Settle them through the bond default flow first.`;
+    if (corporation.isPrivate && dissolvePreview.bondSettlement?.anyDefaulted)
+      return "A bond is in default. Settle it through the bond default screen first.";
     return null;
   })();
+
+  const settlesBonds = !!dissolvePreview?.canDissolveSettlingBonds;
 
   async function handleDissolve() {
     dispatch({ type: "SET_DISSOLVING", value: true });
     dispatch({ type: "SET_ACTION_ERROR", value: "" });
     try {
       if (corporation.isPrivate) {
-        const { ok, data } = await postJson(`/api/corporations/${corpId}/dissolve`);
+        const { ok, data } = await postJson(
+          `/api/corporations/${corpId}/dissolve`,
+          settlesBonds ? { settleBonds: true } : undefined
+        );
         if (ok) {
           router.push("/corporations");
           return;
@@ -710,7 +715,6 @@ export default function CeoGovernancePanel({
                 {dissolvePreview && !dissolvePreviewLoading && (
                   <DissolvePreview
                     preview={dissolvePreview}
-                    isPrivate={!!corporation.isPrivate}
                     corpCode={corpCode}
                     formatFull={(amount, code) => formatFull(toInternalFrom(amount, code), code)}
                     formatRate={(amount, code) =>
@@ -721,7 +725,9 @@ export default function CeoGovernancePanel({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs text-foreground">
                     {corporation.isPrivate
-                      ? `Permanently dissolve ${corporation.name}?`
+                      ? settlesBonds
+                        ? `Pay off the bondholders and permanently dissolve ${corporation.name}? This cannot be undone.`
+                        : `Permanently dissolve ${corporation.name}?`
                       : "Open a dissolution vote?"}
                   </span>
                   <SmallButton
@@ -733,7 +739,9 @@ export default function CeoGovernancePanel({
                     {dissolving
                       ? "Working"
                       : corporation.isPrivate
-                        ? "Yes, dissolve"
+                        ? settlesBonds
+                          ? "Yes, pay bondholders and dissolve"
+                          : "Yes, dissolve"
                         : "Open dissolution vote"}
                   </SmallButton>
                   <SmallButton
@@ -769,13 +777,11 @@ export default function CeoGovernancePanel({
 
 function DissolvePreview({
   preview,
-  isPrivate,
   corpCode,
   formatFull,
   formatRate,
 }: {
   preview: DissolvePreviewData;
-  isPrivate: boolean;
   corpCode: CurrencyCode;
   formatFull: (amount: number, code: CurrencyCode) => string;
   formatRate: (amount: number, code: CurrencyCode) => string;
@@ -792,8 +798,34 @@ function DissolvePreview({
     formatFull(Math.round(anchor * (preview.corpPerAnchor ?? 1)), corpCode);
   const homeDiffers = preview.homeCurrency !== corpCode;
   const parts = preview.poolParts;
+  const bonds = preview.bondSettlement;
   return (
     <div className="space-y-2">
+      {bonds && (
+        <div className="max-w-md space-y-1 rounded-md border border-warning/40 bg-warning/5 p-2">
+          <p className="text-xs font-semibold text-foreground">
+            {bonds.bondCount} bond{bonds.bondCount === 1 ? " is" : "s are"} outstanding. Bondholders
+            are paid first.
+          </p>
+          <dl>
+            <KVRow label="Owed to bondholders" value={formatFull(bonds.bondTotalCorp, corpCode)} />
+            <KVRow
+              label="Bondholders receive"
+              value={formatFull(bonds.bondholdersGetCorp, corpCode)}
+              hint={`${bonds.bondRecoveryPct}% of what they are owed`}
+            />
+            <KVRow
+              label="Shareholders share"
+              value={formatFull(bonds.shareholdersGetCorp, corpCode)}
+              hint="what is left after the bondholders"
+            />
+          </dl>
+          <p className="text-xs text-muted">
+            The bonds are paid off from the same pool as below, each bondholder in proportion to
+            what they are owed, up to the full amount. Dissolving cannot be undone.
+          </p>
+        </div>
+      )}
       <dl className="max-w-md">
         <KVRow
           label="You receive"
@@ -801,7 +833,7 @@ function DissolvePreview({
           hint={homeDiffers ? `in ${preview.homeCurrency}, your home currency` : undefined}
         />
         <KVRow
-          label="Liquidation pool"
+          label={bonds ? "Shareholder payout" : "Liquidation pool"}
           value={formatFull(preview.returnedCapitalCorp, corpCode)}
           hint={preview.ceoIsSoleShareholder ? "sole shareholder" : undefined}
         />
@@ -877,13 +909,6 @@ function DissolvePreview({
             </tbody>
           </table>
         </div>
-      )}
-      {!isPrivate && preview.outstandingBonds > 0 && preview.dissolutionAgeTurnsRemaining <= 0 && (
-        <p className="text-xs text-warning">
-          {preview.outstandingBonds} bond{preview.outstandingBonds === 1 ? " is" : "s are"}{" "}
-          outstanding. A passed vote settles them first, so shareholders receive less than the
-          figures above.
-        </p>
       )}
       <div>
         <p className="text-xs text-muted">
