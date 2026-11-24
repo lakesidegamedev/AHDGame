@@ -80,7 +80,10 @@ function makeSectorWorld() {
     globalCommodityBalances: new Map(),
     priceRatioByCommodity: new Map(),
     eraUnitScale: 1,
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([
+      ["USD", 1],
+      ["FRF", 1],
+    ]),
     stateResourceCapacityByState: new Map(),
     countryClearingBooks: undefined,
     rawStateBalances: new Map(),

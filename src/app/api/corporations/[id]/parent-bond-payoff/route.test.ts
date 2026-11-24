@@ -154,7 +154,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — ledger emission", (
     };
 
     db.collectionMocks["bonds"]!.find.mockReturnValue(makeCursor([outstandingBond]));
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
 
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
@@ -351,7 +353,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — ledger emission", (
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US", name: "Alice" }]),
@@ -418,7 +422,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — ledger emission", (
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([]),
@@ -518,7 +524,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US", name: "Alice" }]),
@@ -577,7 +585,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US", name: "Alice" }]),
@@ -641,7 +651,9 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     // Holder doc is missing — validation must fail before any money moves.
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),

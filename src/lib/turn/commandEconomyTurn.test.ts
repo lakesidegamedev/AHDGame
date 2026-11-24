@@ -418,7 +418,8 @@ function makeSoeDb(
       // Registered-country gate — nothing dissolved in these fixtures.
       if (name === "countryGameStates") return { find: () => ({ toArray: async () => [] }) };
       if (name === "commodityFlows") return { find: () => ({ toArray: async () => [] }) };
-      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "exchangeRates")
+        return { find: () => ({ toArray: async () => [{ currencyCode: "SUR", rate: 1 }] }) };
       if (name === "gameState") return { findOne: async () => null };
       throw new Error(`unexpected collection: ${name}`);
     },
@@ -536,7 +537,8 @@ function makeGovDb(
       // Registered-country gate — nothing dissolved in these fixtures.
       if (name === "countryGameStates") return { find: () => ({ toArray: async () => [] }) };
       if (name === "commodityFlows") return { find: () => ({ toArray: async () => [] }) };
-      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+      if (name === "exchangeRates")
+        return { find: () => ({ toArray: async () => [{ currencyCode: "SUR", rate: 1 }] }) };
       if (name === "gameState") return { findOne: async () => null };
       throw new Error(`unexpected collection: ${name}`);
     },

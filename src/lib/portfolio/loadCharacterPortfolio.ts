@@ -1,3 +1,4 @@
+import { recordedPersonalNetWorth } from "@/lib/portfolio/rules/netWorth";
 import { loadPlayerIncomeTaxSummary } from "@/lib/budget/playerIncomeTaxSummary";
 import {
   holdingCostBasis,
@@ -35,7 +36,6 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
@@ -381,17 +381,10 @@ export async function loadPortfolioForCharacter(
     exchangeRates
   );
   const currentLocDebt = computeLocDebtInternal(character, exchangeRates ?? {});
-  const historyWithDerivedNet = history.map((point) => ({
-    ...point,
-    netValue:
-      point.netValue ??
-      (point.turn === currentTurn
-        ? Math.max(0, point.totalValue - currentLocDebt - incomeTax.unpaidTaxAnchor)
-        : point.totalValue),
-    locDebtValue:
-      point.locDebtValue ??
-      (point.turn === currentTurn ? Math.round(currentLocDebt * 100) / 100 : 0),
-  }));
+  const historyWithDerivedNet = history.flatMap((point) => {
+    const netValue = recordedPersonalNetWorth(point);
+    return netValue == null ? [] : [{ ...point, netValue }];
+  });
   const funds = await loadCharacterFundPortfolio(db, charId);
   const combinedTotal = totalValue + totalBondValue + funds.valueAnchor + currentCashWealth;
   const baselineValue = earliestSnapshot?.totalValue ?? combinedTotal;

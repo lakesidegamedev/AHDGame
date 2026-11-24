@@ -1,3 +1,7 @@
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { corporateCashArrearsAnchor } from "@/lib/bonds/corporateCredit";
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { restateHistoryFinancials } from "@/lib/corporations/rules/historyCurrency";
 import { loadReservedPositionsPlacedBy } from "@/lib/corporations/reservedCorporateHoldings";
 import { loadCorporationFundPortfolio } from "@/lib/indexFunds/corporationPortfolio";
 import { ObjectId, type Db } from "mongodb";
@@ -26,7 +30,6 @@ import {
   sumImfLenderReceiptsAnchorPerTurnForReceivables,
 } from "@/lib/imf/imfFacilityFinancials";
 import { lastTurnSupplyAgreementCash } from "@/lib/corporations/supplyAgreementCash";
-import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
@@ -34,9 +37,16 @@ import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreemen
 
 export interface LatestCorpIncomeRow {
   income?: number;
+  revenue?: number;
+  bondCouponFxFees?: number;
+  settledBondCouponIncome?: number;
+  settledBondInterestPaid?: number;
+  currencyCode?: string;
+  fxRateAtWrite?: number;
   turn?: number;
   dividendIncomeReceived?: number;
   perTurnBondCouponIncome?: number;
+  perTurnBondInterestExpense?: number;
   perTurnBondDragOnNetIncome?: number;
   dividendPaidPerTurn?: number;
 }
@@ -69,11 +79,13 @@ export interface PortfolioHoldings {
   imfReceivablesPrincipal: number;
   imfLenderReceiptsAnchor: number;
   latestCorpIncomeRow: LatestCorpIncomeRow | null;
+  historicalIncomeUnavailable?: boolean;
   turnIncomeForImf: number;
   dividendIncomeReceivedDaily: number;
   imfFacilityPaymentDaily: number;
   imfFacilityReceiptsDaily: number;
   totalDebtAnchor: number;
+  debtBreakdownAnchor?: Record<string, number>;
   annualInterestAnchor: number;
   dailyInterestAnchor: number;
   supplyAgreementSettlementDaily: number;
@@ -189,16 +201,23 @@ export async function loadPortfolioHoldings(
 
   const { receivables: imfReceivableRows, totalPrincipal: imfReceivablesPrincipal } =
     await findImfFacilityReceivablesForLender(db, corporation._id);
-  const [latestCorpIncomeRow, imfLenderReceiptsAnchor] = await Promise.all([
+  const [rawCorpIncomeRow, imfLenderReceiptsAnchor] = await Promise.all([
     corporationHistoryCollection<LatestCorpIncomeRow>(db).findOne(
       { corporationId: corporation._id },
       {
         sort: { turn: -1 },
         projection: {
           income: 1,
+          revenue: 1,
+          bondCouponFxFees: 1,
+          settledBondCouponIncome: 1,
+          settledBondInterestPaid: 1,
+          currencyCode: 1,
+          fxRateAtWrite: 1,
           turn: 1,
           dividendIncomeReceived: 1,
           perTurnBondCouponIncome: 1,
+          perTurnBondInterestExpense: 1,
           perTurnBondDragOnNetIncome: 1,
           dividendPaidPerTurn: 1,
         },
@@ -208,6 +227,25 @@ export async function loadPortfolioHoldings(
       ? sumImfLenderReceiptsAnchorPerTurnForReceivables(db, imfReceivableRows)
       : Promise.resolve(0),
   ]);
+  const latestCorpIncomeRow = rawCorpIncomeRow
+    ? restateHistoryFinancials(
+        rawCorpIncomeRow,
+        resolveCorpLiquidCurrencyCode(corporation),
+        fxRateForCorpFromMap(corporation, fxByCurrency),
+        [
+          "income",
+          "revenue",
+          "dividendIncomeReceived",
+          "perTurnBondCouponIncome",
+          "perTurnBondInterestExpense",
+          "perTurnBondDragOnNetIncome",
+          "dividendPaidPerTurn",
+          "bondCouponFxFees",
+          "settledBondCouponIncome",
+          "settledBondInterestPaid",
+        ]
+      )
+    : null;
   const turnIncomeForImf =
     typeof latestCorpIncomeRow?.income === "number" ? latestCorpIncomeRow.income : 0;
   // Realized dividend income (local ccy) this corp received last turn, scaled
@@ -256,20 +294,64 @@ export async function loadPortfolioHoldings(
   const supplyAgreementSettlementDaily = Math.round(supplyAgreementCash.netLocal * TURNS_PER_DAY);
   const supplyAgreementUnpaidAnchor = Math.round(supplyAgreementCash.unpaidAnchor);
 
-  const totalDebtAnchor = outstandingBonds.reduce((sum, b) => {
+  const bondDebtAnchor = outstandingBonds.reduce((sum, b) => {
     const bondCcy = (b.currencyCode ??
       (b.countryId && b.countryId in COUNTRY_CURRENCY_MAP
         ? COUNTRY_CURRENCY_MAP[b.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
         : undefined)) as CurrencyCode | undefined;
-    const bondFxRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    const bondFxRate = bondCcy
+      ? fxRateForCorpFromMap({ liquidCurrencyCode: bondCcy }, fxByCurrency)
+      : 1;
     return sum + corpCapitalToAnchor(b.totalIssued, bondCcy, bondFxRate);
   }, 0);
+  const loans = await bankLoansCollection(db)
+    .find(
+      {
+        borrowerType: "corporation",
+        borrowerId: corporation._id,
+        status: { $in: ["current", "arrears", "defaulted"] },
+        outstanding: { $gt: 0 },
+      },
+      { projection: { outstanding: 1, currency: 1 } }
+    )
+    .toArray();
+  const loanDebtAnchor = loans.reduce(
+    (sum, loan) =>
+      sum +
+      corpCapitalToAnchor(
+        loan.outstanding,
+        loan.currency,
+        fxRateForCorpFromMap({ liquidCurrencyCode: loan.currency }, fxByCurrency)
+      ),
+    0
+  );
+  const arrearsAnchor = corporateCashArrearsAnchor({
+    operatingByCurrency: corporation.operatingCashArrearsByCurrency,
+    federalTaxByCountryAnchor: corporation.federalTaxArrearsAnchorByCountry,
+    fxByCurrency,
+  });
+  const imfDebtAnchor = corporation.imfBailoutActive
+    ? corpCapitalToAnchor(
+        corporation.imfFacilityPrincipalOutstanding ?? 0,
+        resolveCorpLiquidCurrencyCode(corporation),
+        fxRateForCorpFromMap(corporation, fxByCurrency)
+      )
+    : 0;
+  const debtBreakdownAnchor = {
+    bonds: bondDebtAnchor,
+    loans: loanDebtAnchor,
+    arrears: arrearsAnchor,
+    imf: imfDebtAnchor,
+  };
+  const totalDebtAnchor = Object.values(debtBreakdownAnchor).reduce((sum, value) => sum + value, 0);
   const annualInterestAnchor = outstandingBonds.reduce((sum, b) => {
     const bondCcy = (b.currencyCode ??
       (b.countryId && b.countryId in COUNTRY_CURRENCY_MAP
         ? COUNTRY_CURRENCY_MAP[b.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
         : undefined)) as CurrencyCode | undefined;
-    const bondFxRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    const bondFxRate = bondCcy
+      ? fxRateForCorpFromMap({ liquidCurrencyCode: bondCcy }, fxByCurrency)
+      : 1;
     return sum + corpCapitalToAnchor((b.couponRate / 100) * b.totalIssued, bondCcy, bondFxRate);
   }, 0);
   const dailyInterestAnchor = annualInterestAnchor / GAME_DAYS_PER_YEAR_RATIO;
@@ -286,11 +368,13 @@ export async function loadPortfolioHoldings(
     imfReceivablesPrincipal,
     imfLenderReceiptsAnchor,
     latestCorpIncomeRow,
+    historicalIncomeUnavailable: rawCorpIncomeRow != null && latestCorpIncomeRow == null,
     turnIncomeForImf,
     dividendIncomeReceivedDaily,
     imfFacilityPaymentDaily,
     imfFacilityReceiptsDaily,
     totalDebtAnchor,
+    debtBreakdownAnchor,
     annualInterestAnchor,
     dailyInterestAnchor,
     supplyAgreementSettlementDaily,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NET_MARGIN_FLOOR_PCT, plantsNetMarginPct } from "./netMargin";
+import { plantsNetMarginPct } from "./netMargin";
 
 describe("plantsNetMarginPct", () => {
   it("is profit over revenue", () => {
@@ -21,16 +21,12 @@ describe("plantsNetMarginPct", () => {
     );
   });
 
-  it("floors a sector that sold nothing but still paid its bill", () => {
-    expect(plantsNetMarginPct({ profit: -850, revenue: 0, totalCost: 850 })).toBe(
-      NET_MARGIN_FLOOR_PCT
-    );
+  it("has no percentage when no revenue was recorded", () => {
+    expect(plantsNetMarginPct({ profit: -850, revenue: 0, totalCost: 850 })).toBe(null);
   });
 
-  it("floors a tiny sale against a large bill instead of printing five figures", () => {
-    expect(plantsNetMarginPct({ profit: -10_000, revenue: 1, totalCost: 10_001 })).toBe(
-      NET_MARGIN_FLOOR_PCT
-    );
+  it("retains the actual numeric ratio for a tiny sale", () => {
+    expect(plantsNetMarginPct({ profit: -10_000, revenue: 1, totalCost: 10_001 })).toBe(-1_000_000);
   });
 
   it("has no figure for a sector with no revenue and no costs", () => {

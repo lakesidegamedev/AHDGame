@@ -1,3 +1,7 @@
+import {
+  consolidatedTaxScale,
+  type SectorTaxAssessment,
+} from "@/lib/corporations/rules/sectorTaxes";
 import { closeCorporationAccount } from "@/lib/turn/corporation/closeCorporationAccount";
 
 import {
@@ -98,6 +102,7 @@ function prepareProcessCorporationAccount(
   // Per-sector records for territorial tax apportionment (fed rate by sector country,
   // state rate by sector state) and for tax-base blending (Tasks 3 and 4).
   const sectorResults: Array<{
+    sectorId: typeof corp._id;
     hourlyRevenue: number;
     effectiveMargin: number;
     stateId: string;
@@ -194,6 +199,7 @@ function prepareProcessCorporationAccount(
 
     // Record per-sector metrics for tax apportionment and base blending (Tasks 3/4).
     sectorResults.push({
+      sectorId: sector._id,
       hourlyRevenue: r.hourlyRevenue,
       effectiveMargin: r.effectiveMargin,
       stateId: r.stateId,
@@ -444,24 +450,28 @@ function prepareProcessCorporationAccount(
   // scale every sector's taxable income by consolidated ÷ gross-positive.
   // Per-sector state/country ATTRIBUTION is preserved proportionally; a
   // corp with no losing sectors has scale = 1 and is byte-identical.
-  let grossPositiveTaxable = 0;
   let consolidatedNet = 0;
   for (const s of sectorResults) {
     const revenueShare = corpRevenue > 0 ? s.hourlyRevenue / corpRevenue : 0;
     const sectorNetIncome =
       s.hourlyRevenue * (s.effectiveMargin / 100) - corpLevelTaxCosts * revenueShare;
     consolidatedNet += sectorNetIncome;
-    if (sectorNetIncome > 0) grossPositiveTaxable += sectorNetIncome;
   }
-  const lossOffsetScale =
-    grossPositiveTaxable > 0 ? Math.max(0, Math.min(1, consolidatedNet / grossPositiveTaxable)) : 0;
+  const lossOffsetScale = consolidatedTaxScale(
+    sectorResults.map(
+      (s) =>
+        s.hourlyRevenue * (s.effectiveMargin / 100) -
+        corpLevelTaxCosts * (corpRevenue > 0 ? s.hourlyRevenue / corpRevenue : 0)
+    )
+  );
+  const sectorTaxAssessments = new Map<string, SectorTaxAssessment>();
 
   for (const s of sectorResults) {
     const revenueShare = corpRevenue > 0 ? s.hourlyRevenue / corpRevenue : 0;
     const sectorOpIncome = s.hourlyRevenue * (s.effectiveMargin / 100);
     const sectorNetIncome = sectorOpIncome - corpLevelTaxCosts * revenueShare;
     const sectorTaxable = Math.max(0, sectorNetIncome) * lossOffsetScale;
-    if (sectorTaxable <= 0) continue;
+
     // Domestic = corp HQ'd in the same country as this sector.
     // Foreign = corp HQ'd elsewhere; pays the host country's foreign rate.
     const isDomestic = corp.countryId === s.countryId;
@@ -475,6 +485,15 @@ function prepareProcessCorporationAccount(
       (isDomestic
         ? (context.lookups.domesticStateCorpTaxRateByState.get(s.stateId) ?? 0)
         : (context.lookups.foreignStateCorpTaxRateByState.get(s.stateId) ?? 0));
+    sectorTaxAssessments.set(s.sectorId.toHexString(), {
+      turn: context.currentTurn,
+      national: (sectorTaxable * federalRate) / 100,
+      regional: (sectorTaxable * stateRate) / 100,
+      taxableProfit: sectorTaxable,
+      overheadShare: corpLevelTaxCosts * revenueShare,
+      nationalRate: federalRate,
+      regionalRate: stateRate,
+    });
     const fedTax = sectorTaxable * (federalRate / 100);
     const stTax = sectorTaxable * (stateRate / 100);
     totalFederalTax += fedTax;
@@ -577,11 +596,13 @@ function prepareProcessCorporationAccount(
 
   // Tax loss carryforward: bank this turn's loss, or offset part of this
   // turn's profit with banked losses (scaling every tax line alike).
+  let finalCarryScale = isStateOwned(corp) ? 0 : 1;
   if (!isStateOwned(corp)) {
     const carry = applyLossCarryforward(
       consolidatedNet + Math.max(0, perTurnBondCouponIncome),
       openingCarryforward(corp.taxLossCarryforward, context.currentTurn)
     );
+    finalCarryScale = carry.taxScale;
     if (carry.taxScale < 1) {
       totalFederalTax *= carry.taxScale;
       totalStateTax *= carry.taxScale;
@@ -604,6 +625,17 @@ function prepareProcessCorporationAccount(
         before: opening,
       });
     }
+  }
+
+  for (const s of sectorResults) {
+    const assessment = sectorTaxAssessments.get(s.sectorId.toHexString());
+    if (!assessment) continue;
+    context.sectorTaxAssessmentsById.set(s.sectorId.toHexString(), {
+      ...assessment,
+      national: assessment.national * finalCarryScale,
+      regional: assessment.regional * finalCarryScale,
+      taxableProfit: assessment.taxableProfit * finalCarryScale,
+    });
   }
 
   const corporateTaxOwed = totalFederalTax + totalStateTax;

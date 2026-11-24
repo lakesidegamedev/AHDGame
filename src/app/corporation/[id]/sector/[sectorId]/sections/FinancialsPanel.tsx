@@ -52,9 +52,11 @@ export default function FinancialsPanel({
   const fmtMoneyFull = fmtMoney;
   // Figures are stored per financial day (TURNS_PER_DAY turns). Rows show the
   // per-turn amount as the primary value with the daily figure as secondary.
-  const perTurn = (dailyAmount: number) => fmtMoneyFull(Math.round(dailyAmount / TURNS_PER_DAY));
-  const perTurnParen = (dailyAmount: number) => `(${perTurn(dailyAmount)})`;
-  const dailyParen = (dailyAmount: number) => `(${fmtMoney(dailyAmount)})`;
+  const perTurn = (dailyAmount: number | null) =>
+    dailyAmount == null ? "n/a" : fmtMoneyFull(Math.round(dailyAmount / TURNS_PER_DAY));
+  const perTurnParen = (dailyAmount: number | null) => `(${perTurn(dailyAmount)})`;
+  const dailyParen = (dailyAmount: number | null) =>
+    dailyAmount == null ? "n/a" : `(${fmtMoney(dailyAmount)})`;
 
   // Realization gap, signed. Positive = earning above nameplate (price premium
   // or hot production policy); negative = capacity/clearing/throughput/embargo
@@ -71,6 +73,11 @@ export default function FinancialsPanel({
       <p className="mb-4 text-xs text-muted">
         {MONEY_PERIOD_HELP} Figures below are per turn; each row&apos;s tooltip shows the daily
         amount.
+      </p>
+      <p className="mb-3 text-xs text-muted">
+        {financials.taxAssessmentTurn != null
+          ? `Income tax assessment recorded for turn ${financials.taxAssessmentTurn}. Assessed tax can remain payable until funded.`
+          : "Recorded sector tax is unavailable until the next company turn. No tax payment is inferred."}
       </p>
       <div className="space-y-3">
         <FinRow
@@ -178,7 +185,7 @@ export default function FinancialsPanel({
           />
         </div>
 
-        {financials.corpOverheadShare > 0 && (
+        {(financials.corpOverheadShare ?? 0) > 0 && (
           <div className="space-y-2">
             <FinRow
               label="Corp overhead (this sector's share)"
@@ -191,9 +198,9 @@ export default function FinancialsPanel({
             <FinRow
               label="Taxable income"
               value={perTurn(financials.taxableIncome)}
-              daily={fmtMoney(financials.taxableIncome)}
-              valueClass={financials.taxableIncome > 0 ? "text-foreground" : "text-muted"}
-              tooltip="Net Profit minus this sector's share of company-wide costs, and never below zero. The tax below is charged on this figure. If the shared costs are bigger than the profit, the sector pays no tax even though Net Profit looks positive."
+              daily={financials.taxableIncome == null ? "n/a" : fmtMoney(financials.taxableIncome)}
+              valueClass={(financials.taxableIncome ?? 0) > 0 ? "text-foreground" : "text-muted"}
+              tooltip="Recorded taxable profit after company overhead, consolidated loss offsets and loss relief. It belongs to the assessment turn shown above."
             />
           </div>
         )}
@@ -205,12 +212,12 @@ export default function FinancialsPanel({
             </div>
             {financials.federalTaxRate > 0 && (
               <FinRow
-                label={`Federal (${financials.federalTaxRate}%)`}
+                label={`Federal assessed (${financials.federalTaxRate}%)`}
                 value={perTurnParen(financials.federalTaxApprox)}
                 daily={dailyParen(financials.federalTaxApprox)}
                 valueClass="text-error"
                 indent
-                tooltip={`This sector's federal tax at ${financials.federalTaxRate}%. It is charged on the sector's slice of company profit, after its share of company-wide costs such as marketing, logistics, and CEO salary. Sectors that bring in more revenue take a bigger slice of both. This matches the federal tax shown for this sector on the corporation Financials tab.`}
+                tooltip={`This sector's federal tax at ${financials.federalTaxRate}%. It is charged on the sector's slice of company profit, after its share of company-wide costs such as marketing, logistics, and CEO salary. Sectors that bring in more revenue take a bigger slice of both. This is the recorded assessment, including consolidated loss offsets and loss relief.`}
               />
             )}
             {financials.stateTaxRate > 0 && (

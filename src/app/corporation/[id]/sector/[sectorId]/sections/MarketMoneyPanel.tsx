@@ -632,24 +632,47 @@ export default function MarketMoneyPanel({
           {financials && (
             <>
               <DetailRow
+                label="Income tax assessment turn"
+                value={
+                  financials.taxAssessmentTurn == null
+                    ? "n/a"
+                    : String(financials.taxAssessmentTurn)
+                }
+              />
+              <DetailRow
                 label="Corporation overhead charged here"
-                value={corpMoney(financials.corpOverheadShare)}
+                value={
+                  financials.corpOverheadShare == null
+                    ? "n/a"
+                    : corpMoney(financials.corpOverheadShare)
+                }
               />
-              <DetailRow label="Taxable income" value={corpMoney(financials.taxableIncome)} />
               <DetailRow
-                label={`Federal tax (${financials.federalTaxRate}%)`}
-                value={corpMoney(financials.federalTaxApprox)}
+                label="Taxable income"
+                value={
+                  financials.taxableIncome == null ? "n/a" : corpMoney(financials.taxableIncome)
+                }
               />
               <DetailRow
-                label={`Regional tax (${financials.stateTaxRate}%)`}
-                value={corpMoney(financials.stateTaxApprox)}
+                label={`Federal tax assessed (${financials.federalTaxRate}%)`}
+                value={
+                  financials.federalTaxApprox == null
+                    ? "n/a"
+                    : corpMoney(financials.federalTaxApprox)
+                }
+              />
+              <DetailRow
+                label={`Regional tax assessed (${financials.stateTaxRate}%)`}
+                value={
+                  financials.stateTaxApprox == null ? "n/a" : corpMoney(financials.stateTaxApprox)
+                }
               />
             </>
           )}
         </dl>
         <p className="mt-2 text-body-xs text-muted">
-          Any line shown with a plus sign is a credit. The lines above always add up to the profit
-          the turn actually booked.
+          A plus sign marks a credit. Operating cost lines reconcile to booked operating profit.
+          Company overhead and income tax assessments are shown separately.
         </p>
       </DetailsDisclosure>
     </div>

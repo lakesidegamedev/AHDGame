@@ -36,16 +36,20 @@ describe("corpEconomyFields", () => {
     expect(readCorpEconomicAnchor(local, "GBP", 2)).toBe(anchor);
   });
 
-  it("passes values through unchanged when rate is non-positive or non-finite", () => {
-    // Matches the guard in corporationCapital.ts helpers: missing/invalid rate →
-    // treat as if no conversion available; pass raw value through.
-    expect(readCorpEconomicAnchor(100, "USD", 0)).toBe(100);
-    expect(readCorpEconomicAnchor(100, "USD", -1)).toBe(100);
-    expect(readCorpEconomicAnchor(100, "USD", Number.NaN)).toBe(100);
-    expect(readCorpEconomicAnchor(100, "USD", Number.POSITIVE_INFINITY)).toBe(100);
-    expect(writeCorpEconomicLocal(100, "USD", 0)).toBe(100);
-    expect(writeCorpEconomicLocal(100, "USD", -1)).toBe(100);
-    expect(writeCorpEconomicLocal(100, "USD", Number.NaN)).toBe(100);
+  it("refuses named-currency conversion when the rate is invalid", () => {
+    expect(() => readCorpEconomicAnchor(100, "USD", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => readCorpEconomicAnchor(100, "USD", -1)).toThrow(/Exchange rate unavailable/);
+    expect(() => readCorpEconomicAnchor(100, "USD", Number.NaN)).toThrow(
+      /Exchange rate unavailable/
+    );
+    expect(() => readCorpEconomicAnchor(100, "USD", Number.POSITIVE_INFINITY)).toThrow(
+      /Exchange rate unavailable/
+    );
+    expect(() => writeCorpEconomicLocal(100, "USD", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => writeCorpEconomicLocal(100, "USD", -1)).toThrow(/Exchange rate unavailable/);
+    expect(() => writeCorpEconomicLocal(100, "USD", Number.NaN)).toThrow(
+      /Exchange rate unavailable/
+    );
   });
 
   it("handles zero values cleanly in both directions", () => {

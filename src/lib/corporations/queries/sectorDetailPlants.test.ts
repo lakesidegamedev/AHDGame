@@ -1,7 +1,6 @@
 import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { describe, it, expect } from "vitest";
 import { soldShareForList, unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
-import { NET_MARGIN_FLOOR_PCT } from "@/lib/corporations/rules/netMargin";
 import { ObjectId } from "mongodb";
 import { buildSectorPlantsSection } from "./sectorDetailSections";
 import type { CorporateSector } from "@/lib/db/types";
@@ -149,14 +148,14 @@ describe("buildSectorPlantsSection", () => {
       sector: sectorFixture({ soldUnits: 0 }),
       money,
     });
-    expect(booked.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+    expect(booked.truth.fillAdjustedMarginPct).toBeNull();
     expect(booked.pnl.ownSiteMemoAnchor).toBeUndefined();
     const s = buildSectorPlantsSection({ ...BASE_ARGS, eraUnitScale: 1, sector: supplier, money });
     // 5 units a turn at 20, over a 24-turn day.
     expect(s.pnl.ownSiteMemoAnchor).toBe(2400);
     expect(s.pnl.revenueAnchor).toBe(0);
     expect(s.pnl.profitAnchor).toBe(-850);
-    expect(s.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+    expect(s.truth.fillAdjustedMarginPct).toBeNull();
   });
   it("adds no memo once the deliveries were priced", () => {
     const s = buildSectorPlantsSection({
@@ -828,7 +827,7 @@ describe("buildSectorPlantsSection", () => {
       expect(s.truth.costPerUnitAnchor).toBeNull();
       // Nothing sold but costs still exist: the net margin reads as the floor
       // rather than null, and there is no path to profit at this fill.
-      expect(s.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+      expect(s.truth.fillAdjustedMarginPct).toBeNull();
       expect(s.truth.breakEven).toEqual({ status: "not_at_current_fills", turns: null });
     });
 

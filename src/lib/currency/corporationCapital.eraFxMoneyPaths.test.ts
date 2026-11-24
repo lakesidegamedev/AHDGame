@@ -100,16 +100,18 @@ describe.each(CASES)("%s-hosted sector owned by a US corp", (countryId, receipt,
     expect(annual).toBeCloseTo(receipt * TURNS_PER_YEAR, 3);
   });
 
-  it("bond cap input: a live-only map reads it high by the era rate (the bug)", () => {
-    const annual = sumCorporateSectorAnnualRevenue([sector], usCorpId, usCorp, liveRows());
-    expect(annual / (receipt * TURNS_PER_YEAR)).toBeCloseTo(ratio, 3);
+  it("bond cap input refuses an incomplete live-only quote map", () => {
+    expect(() => sumCorporateSectorAnnualRevenue([sector], usCorpId, usCorp, liveRows())).toThrow(
+      /Exchange rate unavailable/
+    );
   });
 
   it("remittance basis: SOE operating income equals the receipt anchor revenue x 24", () => {
     const income = estimateNationalizedOperatingIncome(usCorp, [sector], engineMap(), new Map());
     expect(income).toBeCloseTo(receipt * TURNS_PER_DAY, 3);
-    const inflated = estimateNationalizedOperatingIncome(usCorp, [sector], liveRows(), new Map());
-    expect(inflated / (receipt * TURNS_PER_DAY)).toBeCloseTo(ratio, 3);
+    expect(() =>
+      estimateNationalizedOperatingIncome(usCorp, [sector], liveRows(), new Map())
+    ).toThrow(/Exchange rate unavailable/);
   });
 
   it("market share: shares a cell with a euro-stamped domestic sibling at true weights", () => {
@@ -243,4 +245,10 @@ describe("db-backed share readers resolve each sibling with its own owner", () =
     expect(basis.anchorByCorp.get(usCorpId.toString())).toBeCloseTo(1778.55 * TURNS_PER_DAY, 3);
     expect(basis.anchorByCorp.get(itCorpId.toString())).toBeCloseTo(1778.55 * TURNS_PER_DAY, 3);
   });
+});
+
+it("fills modern preset currencies absent from the era-blind country map", () => {
+  const map = withAuthoredEraRates(new Map(), "2027-default");
+  expect(map.get("RUB")).toBeGreaterThan(0);
+  expect(map.get("TRY")).toBeGreaterThan(0);
 });
