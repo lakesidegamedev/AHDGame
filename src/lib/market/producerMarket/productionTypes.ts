@@ -186,4 +186,8 @@ export type ProducerEconomyResult = {
   /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
   countryBooks?: ReturnType<typeof settleProducerMarket>["countryBooks"];
   regionalBooks?: ReturnType<typeof settleProducerMarket>["regionalBooks"];
+  /** Who every unit of `countryBooks` came from and went to (marketAttributionRules). */
+  countryBookAttribution?: import("./marketAttributionRules").CountryBookAttribution[];
+  /** Each company's part of `countryBooks`. */
+  companyBooks?: import("./marketAttributionRules").CompanyBookRow[];
 };

@@ -36,6 +36,14 @@ export interface FundedCountryBookRow {
    * when no spillover order was placed in the row.
    */
   spilloverRequested?: number;
+  /**
+   * Who the units came from and went to, by kind of account, on the same
+   * basis (marketAttributionRules). Each split adds up to its total.
+   */
+  supplyBy?: import("./marketAttributionRules").UnitsByKind;
+  demandBy?: import("./marketAttributionRules").UnitsByKind;
+  requestedBy?: import("./marketAttributionRules").UnitsByKind;
+  filledBy?: import("./marketAttributionRules").UnitsByKind;
 }
 
 /** Compact regional-only market measurements, in settlement units per turn. */

@@ -21,7 +21,7 @@ export default function DemandDriverBanner({ demandDriver, unit }: DemandDriverB
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           <span className="font-semibold text-foreground">{demandDriver.sourceLabel}:</span>
           <span className="font-bold text-primary">
-            {formatUnits(demandDriver.sourceUnits, unit)}/day
+            {formatUnits(demandDriver.sourceUnits, unit)} per turn
           </span>
           {demandDriver.sourceShare != null && (
             <span className="text-muted">

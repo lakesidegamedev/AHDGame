@@ -96,6 +96,10 @@ export interface CommodityDetail {
   nationalBalanceSource?: NationalBalanceSource;
   /** Per-country funded market, present only when the source is "funded_book". */
   fundedCountryBooks?: Record<string, FundedCountryMarket>;
+  /** The world market as the sum of `fundedCountryBooks`, splits included. */
+  worldMarket?: FundedCountryMarket;
+  /** "settled": producer and consumer lists are what companies offered and ordered on the market. */
+  volumeSource?: "settled" | "estimated";
   /**
    * Per-country reachable market book for this commodity: own production
    * against the demand that country's sellers can actually serve.

@@ -1205,8 +1205,9 @@
     "commodityMarket": {
       "priceBasisWorld": "World average price",
       "priceBasisMarket": "{market} price ({currency})",
-      "supplyOfferedPerDay": "offered per day",
+      "supplyOfferedPerDay": "offered per turn",
       "supplyIncludesStock": "includes unsold stock",
+      "supplyWorldIncludes": "Includes the background economy and economy-only countries",
       "supplyOfferedExplanation": "Supply is what producers put up for sale each turn: the stock they could not sell earlier plus what they plan to make now. Stock that stays unsold is counted again every turn, so this can be well above what is actually produced. Producer rankings below use capacity and consumer rankings use estimated plant inputs, so they will not add up to this figure.",
       "substitutionOrders": "plus {units} substitution orders",
       "substitutionOrdersExplanation": "Households placed these after their first choice sold out. They are not counted as demand here, so they do not make this good read as short."

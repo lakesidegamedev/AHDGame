@@ -243,6 +243,9 @@ export default function HeroPanel({
           <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
             {t("supplyIncludesStock")}
           </span>
+          {!activeCountry && (
+            <span className="text-[10px] text-muted">{t("supplyWorldIncludes")}</span>
+          )}
           {funded && funded.imports > 0 ? (
             <span className="text-[10px] text-muted">
               plus {formatUnits(funded.imports, data.unit)} imported
@@ -257,7 +260,7 @@ export default function HeroPanel({
             {formatUnits(marketScope.demand, data.unit)}
           </span>
           <span className="text-xs text-muted">
-            {marketScope.demandBasis === "funded_orders" ? "ordered per day" : "per day"}
+            {marketScope.demandBasis === "funded_orders" ? "ordered per turn" : "per turn"}
           </span>
           {funded && funded.exports > 0 ? (
             <span className="text-[10px] text-muted">

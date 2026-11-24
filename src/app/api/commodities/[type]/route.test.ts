@@ -1,3 +1,4 @@
+import { bookPerTurn } from "@/lib/commodities/perTurnUnits";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -42,7 +43,8 @@ describe("advertising commodity detail", () => {
     db.collection("commodityPrices").findOne.mockResolvedValue({
       basePrice: 100,
       globalPrice: 100,
-      globalDemand: 1000,
+      // 1000 per turn, stored on the price phase's 24-turn basis.
+      globalDemand: 24_000,
       turn: 91,
     });
     db.collection("gameConfig").findOne.mockResolvedValue({ marketSystemMode: "plants" });
@@ -164,7 +166,7 @@ describe("advertising commodity detail", () => {
       const data = await getCommodityDetailData("advertising");
 
       expect(data.topConsumers).toEqual([]);
-      expect(data.demandDriver?.sourceUnits).toBe(total);
+      expect(data.demandDriver?.sourceUnits).toBe(bookPerTurn(total));
       expect(data.demandDriver?.sourceShare).toBe(total > 0 ? 100 : 0);
       expect(data.syntheticDemandSources).toHaveLength(total > 0 ? 1 : 0);
     }
@@ -386,11 +388,14 @@ describe("advertising commodity detail", () => {
       { projection: { books: 1 } }
     );
     expect(data.nationalBalanceSource).toBe("funded_book");
-    expect(data.nationalDemand).toEqual({ US: 2400 });
-    expect(data.reachableBooks?.US).toMatchObject({ domesticDemand: 2400, exports: 100 });
+    expect(data.nationalDemand).toEqual({ US: bookPerTurn(2400) });
+    expect(data.reachableBooks?.US).toMatchObject({
+      domesticDemand: bookPerTurn(2400),
+      exports: bookPerTurn(100),
+    });
     const scope = buildCommodityMarketScope(data, "US");
-    expect(scope.demand).toBe(2400);
-    expect(scope.filled).toBe(700);
+    expect(scope.demand).toBe(bookPerTurn(2400));
+    expect(scope.filled).toBe(bookPerTurn(700));
     expect(scope.demandBasis).toBe("funded_orders");
   });
 
@@ -407,6 +412,6 @@ describe("advertising commodity detail", () => {
     const data = await getCommodityDetailData("advertising");
 
     expect(data.nationalBalanceSource).toBe("modelled");
-    expect(data.nationalDemand).toEqual({ US: 40 });
+    expect(data.nationalDemand).toEqual({ US: bookPerTurn(40) });
   });
 });

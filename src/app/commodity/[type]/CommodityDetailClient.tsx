@@ -364,6 +364,8 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           marketSupply={marketScope.supply}
           marketDemand={marketScope.demand}
           marketLabel={marketScope.marketLabel}
+          market={marketScope.fundedMarket}
+          settled={data.volumeSource === "settled"}
         />
 
         {heavyLoaded && showAdvancedSections ? (
@@ -379,6 +381,16 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
             nationalSupply={marketScope.activeCountry ? undefined : data.nationalSupply}
             nationalDemand={marketScope.activeCountry ? undefined : data.nationalDemand}
             nationalPrices={marketScope.activeCountry ? undefined : data.nationalPrices}
+            countryTotals={
+              data.fundedCountryBooks
+                ? Object.fromEntries(
+                    Object.entries(data.fundedCountryBooks).map(([c, m]) => [
+                      c,
+                      { supply: m.supply, demand: m.demand },
+                    ])
+                  )
+                : undefined
+            }
           />
         ) : (
           <Skeleton className="mb-6 h-[320px] w-full rounded-xl" />

@@ -66,8 +66,7 @@ export default function CommodityMapLegend({
           ? "Deposits"
           : priceLabel;
 
-  const unitLabel =
-    mode === "price" ? "(price)" : mode === "capacity" ? `(${unit}/turn)` : `(${unit}/day)`;
+  const unitLabel = mode === "price" ? "(price)" : `(${unit} per turn)`;
 
   return (
     <div className="flex items-center gap-2 bg-card px-3 py-2 rounded-lg border border-card-border shadow-sm">

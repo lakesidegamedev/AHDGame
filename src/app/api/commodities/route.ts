@@ -1,6 +1,8 @@
+import { commodityListRowPerTurn } from "@/lib/commodities/perTurnUnits";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { worldFundedMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import {
   fundedReachableBookEntries,
   type WithNationalBalanceSource,
@@ -145,10 +147,12 @@ export async function GET(request: Request) {
     // Country figures read the funded country book of the prices' turn when
     // there is one: stored nationalDemand misses buyers with no state (public,
     // military and investment orders). See fundedCountryViewRules.
-    const prices: WithNationalBalanceSource<CommodityPrice>[] =
-      scopeFull || exchangeCountry
-        ? await withFundedNationalBalances(db, rawPrices, gameState?.worldEpochId)
-        : rawPrices.map((p) => ({ ...p, nationalBalanceSource: "modelled" as const }));
+    // Always read: the world totals are the sum of the country books.
+    const prices: WithNationalBalanceSource<CommodityPrice>[] = await withFundedNationalBalances(
+      db,
+      rawPrices,
+      gameState?.worldEpochId
+    );
 
     // Build a map for quick lookup
     const priceMap = new Map(prices.map((p) => [p.commodity, p]));
@@ -177,6 +181,9 @@ export async function GET(request: Request) {
 
     const commodities = COMMODITY_TYPES.map((commodity) => {
       const data = priceMap.get(commodity);
+      // World totals as the sum of the country books, so the list matches the
+      // commodity page and its rows; the background economy is named apart.
+      const world = data?.fundedCountryBooks ? worldFundedMarket(data.fundedCountryBooks) : null;
       // Prefer the world's OWN seeded basePrice: it is era-scaled, so a 1953
       // world would otherwise report 2019 unit prices next to its real ones.
       const basePrice = data?.basePrice ?? COMMODITY_BASE_PRICES[commodity];
@@ -211,7 +218,8 @@ export async function GET(request: Request) {
         }
       }
 
-      return {
+      // Quantities per turn, the unit company production is measured in.
+      return commodityListRowPerTurn({
         commodity,
         label: COMMODITY_LABELS[commodity],
         icon: COMMODITY_ICONS[commodity],
@@ -222,8 +230,16 @@ export async function GET(request: Request) {
           Math.round(fundedPriceCeiling(basePrice * priceNominalIndex, pricePace) * 100) / 100,
         priceCapBasis,
         globalPrice: data?.globalPrice ?? basePrice,
-        globalSupply: data?.globalSupply ?? 0,
-        globalDemand: data?.globalDemand ?? 0,
+        globalSupply: world ? world.supply : (data?.globalSupply ?? 0),
+        globalDemand: world ? world.demand : (data?.globalDemand ?? 0),
+        ...(world
+          ? {
+              backgroundEconomy: {
+                sold: world.supplyBy?.wideEconomy ?? 0,
+                bought: world.demandBy?.wideEconomy ?? 0,
+              },
+            }
+          : {}),
         exchangeSupply: Math.round(exchangeSupply * 100) / 100,
         exchangeDemand: Math.round(exchangeDemand * 100) / 100,
         statePrices: relevantStatePrices,
@@ -287,7 +303,7 @@ export async function GET(request: Request) {
                 : reachableBooksFor(reachableBooks, commodity),
             }
           : {}),
-      };
+      });
     });
 
     // Per-user (enabled-country filtered) — ETag/304 keeps it live but skips the

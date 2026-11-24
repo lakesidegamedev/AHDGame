@@ -78,7 +78,7 @@ describe("marketing budget list", () => {
     expect(screen.getByText("Advertiser 0").closest("a")?.getAttribute("href")).toBe(
       "/corporation/100"
     );
-    expect(screen.getByText("₳1,000/day")).toBeTruthy();
+    expect(screen.getByText("₳1,000 per day (24 turns)")).toBeTruthy();
     expect(screen.queryByText("Advertiser 10")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Next/ }));
     expect(screen.getByText("Advertiser 10")).toBeTruthy();
@@ -147,7 +147,7 @@ describe("producer list basis caption", () => {
     renderProducers("steel");
     expect(
       screen.getByText(
-        /Largest corporations by output volume, with their share of the corporate output listed here/i
+        /Largest corporations by estimated output, with their share of the corporate output listed here/i
       )
     ).toBeTruthy();
   });
