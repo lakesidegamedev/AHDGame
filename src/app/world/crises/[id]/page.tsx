@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { getGameState } from "@/lib/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { rawTurnToLarpDate } from "@/lib/utils/formatters";
 import type { Crisis } from "@/lib/db/types/crisis";
@@ -179,33 +179,43 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   const db = await getDb();
   const [crisis, gameState, admin, viewer] = await Promise.all([
     crisesCollection(db).findOne({ _id: new ObjectId(id) }),
-    getGameState(db),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      {
+        projection: {
+          currentTurn: 1,
+          startingYear: 1,
+          preIterationTurns: 1,
+          "preIteration.active": 1,
+        },
+      }
+    ),
     getAuthAdmin(),
     getAuthUserWithCharacter(),
   ]);
 
   if (!crisis) notFound();
-  const v2Detail = await loadCrisisV2Detail(
-    db,
-    crisis,
-    viewer?.hasCharacter && viewer.character ? viewer.character._id : null
-  );
-
-  // Affected regions — used for the dollar value of a one-time GDP loss and to
-  // resolve real place names for the `{location}` flavor substitution.
+  // Affected regions: the dollar value of a one-time GDP loss and the real
+  // place names for the `{location}` flavor substitution.
   const stateFilter: Record<string, unknown> =
     crisis.scope === "region"
       ? { _id: { $in: crisis.regionIds } }
       : crisis.scope === "country"
         ? { countryId: { $in: crisis.countryIds }, regionType: { $nin: ["nation"] } }
         : {};
-  const affectedStates =
+  const [v2Detail, affectedStates] = await Promise.all([
+    loadCrisisV2Detail(
+      db,
+      crisis,
+      viewer?.hasCharacter && viewer.character ? viewer.character._id : null
+    ),
     crisis.scope === "global"
-      ? []
-      : await statesCollection(db)
+      ? Promise.resolve([] as Pick<State, "_id" | "name" | "gdp">[])
+      : statesCollection(db)
           .find(stateFilter as never)
-          .project({ name: 1, gdp: 1 })
-          .toArray();
+          .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
+          .toArray(),
+  ]);
   const affectedGdpMillions = affectedStates.reduce((sum, s) => sum + (s.gdp ?? 0), 0);
   const locationName = await resolveCrisisLocationName(
     db,

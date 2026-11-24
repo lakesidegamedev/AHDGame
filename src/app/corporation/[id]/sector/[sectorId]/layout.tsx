@@ -65,20 +65,23 @@ export async function generateMetadata({
 export default async function SectorLayout({ children, params }: LayoutProps) {
   const { id, sectorId } = await params;
   const db = await getDb();
-  const resolved = await resolveCorporation(db, id);
+  const [resolved, sector] = await Promise.all([
+    resolveCorporation(db, id, { countryId: 1, headquartersState: 1 }),
+    ObjectId.isValid(sectorId)
+      ? corporateSectorsCollection(db).findOne(
+          { _id: new ObjectId(sectorId) },
+          { projection: { countryId: 1, stateId: 1, corporationId: 1 } }
+        )
+      : Promise.resolve(null),
+  ]);
 
   let pageCountryId: string | null = null;
   if (resolved.ok) {
     pageCountryId = resolved.corporation.countryId;
-    if (ObjectId.isValid(sectorId)) {
-      const sector = await corporateSectorsCollection(db).findOne(
-        { _id: new ObjectId(sectorId), corporationId: resolved.corporation._id },
-        { projection: { countryId: 1, stateId: 1 } }
-      );
-
-      if (sector?.countryId) {
+    if (sector && sector.corporationId.equals(resolved.corporation._id)) {
+      if (sector.countryId) {
         pageCountryId = sector.countryId;
-      } else if (sector?.stateId) {
+      } else if (sector.stateId) {
         const state = await statesCollection(db).findOne(
           { _id: sector.stateId },
           { projection: { countryId: 1 } }

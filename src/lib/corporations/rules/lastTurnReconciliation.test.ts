@@ -29,7 +29,7 @@ describe("groupCashFlowLines", () => {
     ]);
   });
 
-  it("itemises a research unlock, share and bond movements and received dividends", () => {
+  it("itemises movements outside canonical earnings without double counting dividends", () => {
     const lines = groupCashFlowLines([
       { type: "corp_tech_unlock", amount: -686_668 },
       { type: "corp_starting_grant", amount: 5_000 },
@@ -37,11 +37,9 @@ describe("groupCashFlowLines", () => {
       { type: "corp_dividend", amount: 1_200 },
       { type: "corp_dividend", amount: -900 },
     ]);
-    expect(lines.map((l) => l.key).sort()).toEqual(
-      ["bond_repay", "capital", "dividends_received", "tech"].sort()
-    );
+    expect(lines.map((l) => l.key).sort()).toEqual(["bond_repay", "capital", "tech"].sort());
     expect(lines.find((l) => l.key === "tech")?.amount).toBe(-686_668);
-    expect(lines.find((l) => l.key === "dividends_received")?.amount).toBe(1_200);
+    expect(lines.find((l) => l.key === "dividends_received")).toBeUndefined();
   });
 
   it("shows a staff adjustment as its own line", () => {

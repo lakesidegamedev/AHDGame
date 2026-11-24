@@ -47,6 +47,7 @@ import {
   getRegionPartyOrg,
   getRegionGovernmentApproval,
   getRegionPlayers,
+  serializeRegionPlayers,
   getRegionNPPs,
   getRegionOfficials,
   serializePartyOrg,
@@ -212,18 +213,7 @@ async function renderUKRegion(regionCode: string) {
     officeType: o.officeType,
   }));
 
-  const sortedPlayers = [...players].sort(
-    (a, b) => (b.politicalInfluence || 0) - (a.politicalInfluence || 0)
-  );
-  const serializedPlayers = sortedPlayers.map((p) => ({
-    ...p,
-    _id: p._id.toString(),
-    userId: p.userId.toString(),
-    // factionId is an ObjectId (or null) — must be stringified to avoid the
-    // "Only plain objects can be passed to Client Components" hydration error.
-    factionId: p.factionId ? p.factionId.toString() : null,
-    politicalInfluence: p.politicalInfluence || 0,
-  }));
+  const serializedPlayers = serializeRegionPlayers(players);
 
   const sortedNPPs = [...npps].sort(
     (a, b) => (b.politicalInfluence || 0) - (a.politicalInfluence || 0)
@@ -533,18 +523,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     governor: serializedGovernor,
   };
 
-  const sortedPlayers = [...players].sort(
-    (a, b) => (b.politicalInfluence || 0) - (a.politicalInfluence || 0)
-  );
-  const serializedPlayers = sortedPlayers.map((p) => ({
-    ...p,
-    _id: p._id.toString(),
-    userId: p.userId.toString(),
-    // factionId is an ObjectId (or null) — must be stringified to avoid the
-    // "Only plain objects can be passed to Client Components" hydration error.
-    factionId: p.factionId ? p.factionId.toString() : null,
-    politicalInfluence: p.politicalInfluence || 0,
-  }));
+  const serializedPlayers = serializeRegionPlayers(players);
 
   const serializedDemographics = demographics
     ? {

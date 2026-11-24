@@ -7449,7 +7449,7 @@
     "src/app/congress/bills/[id]/components/VoteTallyTable.tsx": {
       "narrativeLines": 1
     },
-    "src/app/congress/bills/[id]/page.tsx": {
+    "src/app/congress/bills/[id]/BillDetailClient.tsx": {
       "narrativeLines": 1
     },
     "src/app/corporation/[id]/page.test.tsx": {
