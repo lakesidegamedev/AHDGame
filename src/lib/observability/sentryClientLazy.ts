@@ -1,29 +1,56 @@
-/**
- * Lazy client-side access to `@sentry/nextjs`.
- *
- * The full browser SDK is ~450KB+. A static import from any module in the
- * shared layout/landing graph (instrumentation-client, fetchJson via Navbar,
- * error UI) pulls that into the initial JS shell for every anonymous visit.
- * Dynamic import keeps the SDK in an async chunk; callers that need to report
- * an error pay the load cost at report time (or share a chunk already loading
- * from deferred init).
- */
+import { installErrorShim, scheduleSentryLoad, type ErrorShim } from "./errorQueueShim";
 
 type SentryClient = typeof import("@sentry/nextjs");
+type BrowserSdk = typeof import("./initSentryClient");
+type NavigationArgs = Parameters<SentryClient["captureRouterTransitionStart"]>;
 
-let loadPromise: Promise<SentryClient> | null = null;
-let loaded: SentryClient | null = null;
+let loadPromise: Promise<BrowserSdk> | undefined;
+let captureTransition: SentryClient["captureRouterTransitionStart"] | undefined;
+let pendingNavigation: NavigationArgs | undefined;
+let errorShim: ErrorShim | undefined;
+let cancelScheduledLoad: (() => void) | undefined;
 
-/** Start (or reuse) loading the browser Sentry SDK. Safe to call repeatedly. */
-function loadSentryClient(): Promise<SentryClient> {
-  if (loaded) return Promise.resolve(loaded);
+function loadSentryClient(): Promise<BrowserSdk> {
   if (!loadPromise) {
-    loadPromise = import("@sentry/nextjs").then((mod) => {
-      loaded = mod;
-      return mod;
-    });
+    cancelScheduledLoad?.();
+    loadPromise = import("./initSentryClient")
+      .then((sdk) => {
+        captureTransition = sdk.initSentryClient();
+        errorShim?.uninstall();
+        for (const entry of errorShim?.drain() ?? []) sdk.captureQueuedError(entry);
+        errorShim = undefined;
+        if (pendingNavigation) captureTransition(...pendingNavigation);
+        pendingNavigation = undefined;
+        return sdk;
+      })
+      .catch((error: unknown) => {
+        errorShim?.uninstall();
+        errorShim = undefined;
+        pendingNavigation = undefined;
+        throw error;
+      });
   }
   return loadPromise;
+}
+
+function startSentryClient(): void {
+  void loadSentryClient().catch(() => {});
+}
+
+/** Keep early errors while the browser paints and hydrates the page. */
+export function deferSentryClient(browser: Window, document: Document): void {
+  if (loadPromise || errorShim) return;
+  errorShim = installErrorShim(browser, startSentryClient);
+  cancelScheduledLoad = scheduleSentryLoad(browser, document, startSentryClient);
+}
+
+export function captureClientNavigation(...args: NavigationArgs): void {
+  if (captureTransition) {
+    captureTransition(...args);
+  } else {
+    pendingNavigation = args;
+    startSentryClient();
+  }
 }
 
 /** Fire-and-forget exception capture after the SDK chunk loads. */
