@@ -110,6 +110,70 @@ describe("wider-economy demand", () => {
   });
 });
 
+describe("wider-economy split between countries", () => {
+  // A US state of 1,000 dollars at 2 per anchor and a Japanese state of
+  // 150,000 yen at 300 per anchor: the same size, 500, in the anchor.
+  const mixedDb = () => {
+    const memory = createInMemoryDb();
+    memory.seed("states", [
+      { _id: "US_CA", countryId: "US", gdp: 1000 },
+      { _id: "JP_TK", countryId: "JP", gdp: 150_000 },
+    ]);
+    return memory as unknown as Db;
+  };
+  const mixedLookups = () =>
+    ({
+      ...lookups(),
+      federalBudgets: [
+        { _id: new ObjectId(), countryId: "US", currencyCode: "USD", priceIndex: 100 },
+        { _id: new ObjectId(), countryId: "JP", currencyCode: "JPY", priceIndex: 100 },
+      ],
+      exchangeRatesByCurrency: new Map([
+        ["USD", 2],
+        ["JPY", 300],
+      ]),
+    }) as unknown as Parameters<typeof buildProducerTurnDemand>[1]["lookups"];
+  const build = (extra: Partial<Parameters<typeof buildProducerTurnDemand>[1]>) =>
+    buildProducerTurnDemand(mixedDb(), {
+      turn: 1,
+      worldEpoch: "world",
+      lookups: mixedLookups(),
+      env: { wideEconomyStage: 1 } as unknown as Parameters<
+        typeof buildProducerTurnDemand
+      >[1]["env"],
+      sectorOps: [],
+      carry: null,
+      ...extra,
+    });
+  const unitsOf = (r: Awaited<ReturnType<typeof build>>, c: string) =>
+    r.wideEconomyOffers.find((o) => o.commodity === "steel" && o.countryId === c)!.units;
+
+  it("gives countries of equal size in the anchor currency equal lines", async () => {
+    const r = await build({ wideEconomyBaselineTurns: turns });
+    expect(r.wideEconomyBaselineCreated?.weight).toEqual({
+      JP_TK: expect.closeTo(0.5, 9),
+      US_CA: expect.closeTo(0.5, 9),
+    });
+    expect(unitsOf(r, "US")).toBeCloseTo(unitsOf(r, "JP"), 9);
+  });
+
+  it("weighs a baseline stored before the anchor split, and hands the weights back to keep", async () => {
+    const r = await build({
+      wideEconomyBaseline: {
+        units: { steel: 8 },
+        realGdp: { US_CA: 10, JP_TK: 1500 },
+        countryOfState: { US_CA: "US", JP_TK: "JP" },
+      },
+    });
+    expect(r.wideEconomyBaselineWeights).toEqual({
+      JP_TK: expect.closeTo(0.5, 9),
+      US_CA: expect.closeTo(0.5, 9),
+    });
+    expect(unitsOf(r, "US")).toBeCloseTo(4, 9);
+    expect(unitsOf(r, "JP")).toBeCloseTo(4, 9);
+  });
+});
+
 describe("wider-economy funding", () => {
   function fundedWorld() {
     const memory = createInMemoryDb();
@@ -173,9 +237,11 @@ describe("wider-economy funding", () => {
 
   async function runWith(
     wideSpend: number,
-    extra: (wallet: string) => Record<string, unknown> = () => ({})
+    extra: (wallet: string) => Record<string, unknown> = () => ({}),
+    seed: (memory: ReturnType<typeof createInMemoryDb>) => void = () => {}
   ) {
     const f = fundedWorld();
+    seed(f.memory);
     const wallet = producerWalletId("world", {
       kind: "wideEconomy",
       countryId: "US",
@@ -246,7 +312,7 @@ describe("wider-economy funding", () => {
     const returns = f.memory
       .collection("bankMoneyMoves")
       .docs.filter((m) => m.kind === "producer_background_return");
-    return { moves, wallets, returns, wallet };
+    return { moves, wallets, returns, wallet, memory: f.memory };
   }
 
   it("funds nothing and creates no wallet when there are no orders (stage 0)", async () => {
@@ -309,5 +375,23 @@ describe("wider-economy funding", () => {
     const legs = r.returns[0].legs as { kind: string; amount: number; filter?: { _id: string } }[];
     expect(legs.find((l) => l.kind === "debit")!.filter!._id).toBe(r.wallet);
     expect(legs.find((l) => l.kind === "burn")!.amount).toBeCloseTo(5 * sellerAsk * RATE, 6);
+  });
+
+  it("keeps the anchor-currency weights it worked out for an older baseline", async () => {
+    const r = await runWith(
+      0,
+      () => ({ wideEconomyBaselineWeights: { US_CA: 1 } }),
+      (memory) =>
+        memory.seed("producerWideEconomyBaseline", [
+          {
+            _id: "world",
+            units: { steel: 8 },
+            realGdp: { US_CA: 10 },
+            countryOfState: { US_CA: "US" },
+          },
+        ])
+    );
+    const [doc] = r.memory.collection("producerWideEconomyBaseline").docs;
+    expect(doc.weight).toEqual({ US_CA: 1 });
   });
 });
