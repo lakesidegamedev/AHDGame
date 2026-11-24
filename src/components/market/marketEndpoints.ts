@@ -11,6 +11,12 @@
 import type { BondListing } from "@/app/country/[code]/stockmarket/types";
 import type { FundListItem } from "@/components/indexFunds/types";
 import type { CorporationType } from "@/lib/constants/corporationsClient";
+import {
+  OFFER_SORT_DEFAULT_DIR,
+  type OfferView,
+} from "@/lib/corporations/supplyExchange/offerOrdering";
+import type { SupplyListingView } from "@/lib/db/types/supplyListing";
+import type { OfferCorporation } from "./SupplyOfferRow";
 
 export const STOCKS_URL = "/api/stock-exchange?exchange=global";
 export const stocksUrl = (exchange: string) =>
@@ -24,6 +30,35 @@ export const FUNDS_URL = "/api/investment-funds?exchange=global";
 
 export const sectorsUrl = (page: number) =>
   `/api/sectors?view=forSale&sort=revenue&dir=desc&page=${page}`;
+
+export const SUPPLY_PAGE_SIZE = 20;
+
+/** GET /api/supply-offers, as both the hub preview and the deals panel read it. */
+export interface SupplyOffersResponse {
+  enabled: boolean;
+  offers: SupplyListingView[];
+  myCorporations: OfferCorporation[];
+  currentTurn: number;
+  page: number;
+  hasMore: boolean;
+  /** Offers matching the filters. */
+  total: number;
+  /** Every open offer in the commodity scope, before the source and side filters. */
+  totalAll?: number;
+}
+
+/** Query string for GET /api/supply-offers; omits anything left at its default. */
+export function offersQuery(filters: OfferView, page?: number, pageSize?: number): string {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  if (pageSize) params.set("pageSize", String(pageSize));
+  params.set("kind", filters.kind);
+  if (filters.side !== "both") params.set("side", filters.side);
+  if (filters.commodity) params.set("commodity", filters.commodity);
+  params.set("sort", filters.sort);
+  if (filters.dir !== OFFER_SORT_DEFAULT_DIR[filters.sort]) params.set("dir", filters.dir);
+  return params.toString();
+}
 
 export interface BondsResponse {
   bonds?: BondListing[];

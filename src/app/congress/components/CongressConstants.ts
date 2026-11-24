@@ -1,17 +1,15 @@
-// Chamber hero: interior of each chamber (Wikimedia Commons — public domain / CC).
+// Chamber photo credits are in public/heroes/CREDITS.md.
 // Titles are de-prefixed to match the shared label authority + COUNTRY_CONFIGS.US
 // chamber names ("Senate" / "House of Representatives").
 export const CHAMBER_HERO = {
   senate: {
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Old_Senate_chambers_US_Capitol.jpg/1280px-Old_Senate_chambers_US_Capitol.jpg",
+    image: "/heroes/us-senate-chamber.webp",
     title: "Senate",
     tagline: "100 senators, six-year terms. Confirms judges and cabinet.",
     alt: "Old Senate Chamber interior, United States Capitol.",
   },
   house: {
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/9/90/United_States_House_of_Representatives_chamber.jpg",
+    image: "/heroes/us-house-chamber.webp",
     title: "House of Representatives",
     tagline: "435 reps, two-year terms. All money bills start here.",
     alt: "House of Representatives chamber interior, United States Capitol.",

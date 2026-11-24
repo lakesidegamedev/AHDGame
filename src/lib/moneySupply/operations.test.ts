@@ -8,8 +8,7 @@ vi.mock("@/lib/banking/featureFlag", () => ({
 }));
 describe("liquidity operation wrapper", () => {
   it.each([
-    { deposits: [900, 300], enabled: true, expected: [300, 100], reserve: 0 },
-    { deposits: [0, 0], enabled: true, expected: [200, 200], reserve: 0 },
+    { deposits: [9_000, 3_000], enabled: true, expected: [300, 100], reserve: 0 },
     { deposits: [], enabled: true, expected: [], reserve: 400 },
   ])(
     "routes a liquidity command through funded settlement: %j",
@@ -48,6 +47,34 @@ describe("liquidity operation wrapper", () => {
       expect(memory.collection("centralBanks").docs[0].reserveBalance).toBe(100 + reserve);
     }
   );
+  it("refuses to split an advance evenly across banks that hold no deposits", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("centralBanks", [{ _id: "US", reserveBalance: 100, netMoneyCreatedLifetime: 0 }]);
+    memory.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
+    memory.seed(
+      "corporations",
+      [0, 0].map((totalDeposits) => ({
+        _id: new ObjectId(),
+        bankCharter: { status: "active", currency: "USD", cashReserves: 0, totalDeposits },
+      }))
+    );
+    await expect(
+      executeMonetaryOperation(memory as unknown as Db, {
+        countryId: "US",
+        type: "liquidity_injection",
+        turn: 12,
+        actorName: "Chair",
+        amount: 400,
+        operationId: "wrapper-empty-banks",
+      })
+    ).rejects.toThrow("largest advance its deposits support");
+    expect(
+      memory
+        .collection("corporations")
+        .docs.map((bank) => (bank.bankCharter as BankCharter).cashReserves)
+    ).toEqual([0, 0]);
+    expect(memory.collection("centralBanks").docs[0].reserveBalance).toBe(100);
+  });
   it.each(["treasury_advance", "liquidity_injection"] as const)(
     "preserves a persisted euro denomination through the journaled%s wrapper",
     async (type) => {
@@ -72,7 +99,7 @@ describe("liquidity operation wrapper", () => {
             currency: "EUR",
             cashReserves: 0,
             cbMarginDebt: 0,
-            totalDeposits: 100,
+            totalDeposits: 1_000,
           },
         },
       ]);

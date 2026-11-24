@@ -759,11 +759,14 @@ async function returnDepositBookInner(
   if (settled.status === "rejected" || settled.status === "partial") {
     return { ...EMPTY, depositorsFlipped, error: settled.error };
   }
+  // Both models release the accounts frozen before the waterfall. Under the
+  // pointer model the bank never held their cash, so nothing waits on it; a
+  // skipped release left those accounts frozen at a dead bank for good.
+  depositorsFlipped = Math.max(
+    depositorsFlipped,
+    await releaseAccountsFrom(db, bankIdHex, currency, now)
+  );
   if (playerDepositsAreLiabilities) {
-    depositorsFlipped = Math.max(
-      depositorsFlipped,
-      await releaseAccountsFrom(db, bankIdHex, currency, now)
-    );
     await charactersCollection(db).updateMany(
       { [holderPath]: bankIdHex },
       { $set: { [holderPath]: "centralBank", updatedAt: now } }
@@ -854,7 +857,7 @@ export async function freezeAccountsAt(
  * Release the accounts a resolved bank held: back to the central bank, open
  * again. Runs only after the waterfall settled, so the central bank holds both
  * the backing and the liability by the time an owner can move the balance.
- * Idempotent: a second run matches nothing.
+ * A closed account stays closed. Idempotent: a second run matches nothing.
  */
 export async function releaseAccountsFrom(
   db: Db,
@@ -863,7 +866,7 @@ export async function releaseAccountsFrom(
   now: Date
 ): Promise<number> {
   const released = await savingsAccountsCollection(db).updateMany(
-    { currency, holder: bankIdHex },
+    { currency, holder: bankIdHex, status: { $in: ["open", "frozen"] } },
     { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }
   );
   return released.modifiedCount ?? 0;

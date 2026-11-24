@@ -32,7 +32,7 @@ function world() {
         currency: "USD",
         cashReserves: 100,
         cbMarginDebt: 0,
-        totalDeposits: index === 0 ? 900 : 300,
+        totalDeposits: index === 0 ? 9_000 : 3_000,
       },
     }))
   );
@@ -102,6 +102,31 @@ describe("durable liquidity advance commands", () => {
       expect(state.logs).toHaveLength(2);
     }
   );
+  it("delivers no more than each bank's deposit cap and records only what was delivered", async () => {
+    const memory = world(),
+      db = memory as unknown as Db;
+    const result = await executeLiquidityAdvance(db, { ...command, amount: 1_000_000 }, 6);
+    // Caps are 10 percent of 9,000 and 3,000 of deposits.
+    expect(result).toMatchObject({ amount: 1_200, banksCredited: 2, reserveDelta: 0 });
+    const state = snapshot(memory);
+    expect(state.banks.map((bank) => bank.bankCharter.cbLiquidityAdvanceDebt)).toEqual([900, 300]);
+    expect(state.central[0]).toMatchObject({ reserveBalance: 100, netMoneyCreatedLifetime: 1_200 });
+  });
+  it("refuses an advance when every bank already carries its full cap", async () => {
+    const memory = world(),
+      db = memory as unknown as Db;
+    for (const row of memory.collection("corporations").docs) {
+      const charter = row.bankCharter as BankCharter;
+      charter.cbLiquidityAdvanceDebt = (charter.totalDeposits ?? 0) * 0.1;
+      charter.cbMarginDebt = charter.cbLiquidityAdvanceDebt;
+    }
+    await expect(executeLiquidityAdvance(db, command, 6)).rejects.toThrow(
+      "largest advance its deposits support"
+    );
+    const state = snapshot(memory);
+    expect(state.banks.map((bank) => bank.bankCharter.cashReserves)).toEqual([100, 100]);
+    expect(state.central[0]).toMatchObject({ reserveBalance: 100, netMoneyCreatedLifetime: 0 });
+  });
   it("preserves native receipts without inventing a missing FX valuation", async () => {
     const memory = world();
     memory.collection("exchangeRates").docs.splice(0);

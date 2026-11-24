@@ -141,8 +141,43 @@ describe("bank treasury rules", () => {
       requiredReserves: 200_000,
       withdrawalBufferLocal: 20_000,
       nextTurnDueInterest: 2_500,
+      liquidityAdvanceHeldLocal: 0,
       floorLocal: 222_500,
     });
+  });
+
+  it("holds an outstanding central bank advance in cash so the sweep cannot spend it", () => {
+    // Shape of the failure this guards: a bank with about 400M of deposits was
+    // handed a 6.36B advance it never asked for. The sweep bought bills at the
+    // ask, the solvency pass marked them at the bid, and the 2 percent spread on
+    // the whole advance exceeded the bank's equity.
+    const floor = computeBankTreasuryCashFloor({
+      cashBackedDeposits: 400_000_000,
+      npcDeposits: 400_000_000,
+      reserveRatio: 0.1,
+      nextTurnDueInterest: 150_000,
+      liquidityAdvanceDebt: 6_360_978_952,
+    });
+    expect(floor.liquidityAdvanceHeldLocal).toBe(6_360_978_952);
+    const ownCashAboveFloor = 1_000_000;
+    const plans = planBankTreasurySweep(
+      [
+        {
+          bondId: "bill",
+          remainingTurns: 9,
+          publicFloatUnits: 500_000_000,
+          askPerUnitLocal: 984.1,
+          annualizedContractYieldPercent: 20,
+          eligible: true,
+        },
+      ],
+      floor.floorLocal + ownCashAboveFloor,
+      floor.floorLocal,
+      1
+    );
+    const spent = plans.reduce((sum, plan) => sum + plan.costLocal, 0);
+    expect(spent).toBeLessThanOrEqual(ownCashAboveFloor);
+    expect(plans[0]?.units).toBe(Math.floor(ownCashAboveFloor / 984.1));
   });
 
   it("quotes only same-currency sovereign public float within 48 turns", () => {

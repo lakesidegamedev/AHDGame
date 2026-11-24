@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { CorporationDetailPageViewContext } from "./page";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ContractOpportunityBanner } from "@/components/governmentContracts/ContractOpportunityBanner";
 
 import BackButton from "@/components/BackButton";
@@ -13,10 +14,8 @@ import { CorporationMasthead } from "@/components/corporation/CorporationMasthea
 import { ParentDirectionNote } from "@/components/corporation/ParentDirectionNote";
 
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
-import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";
 import { PrivatizationVotePanel } from "@/components/corporation/PrivatizationVotePanel";
 import { ManagePrivateShareholdersPanel } from "@/components/corporation/ManagePrivateShareholdersPanel";
-import IndexCommitteePanel from "@/components/corporation/IndexCommitteePanel";
 import { NationalizationStatusCard } from "@/components/corporation/NationalizationStatusCard";
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
 import { SwitchToCeoCharacterNotice } from "@/components/corporation/SwitchToCeoCharacterNotice";
@@ -57,8 +56,20 @@ import {
   DefenceContractsTab,
   SupplyAgreementsSection,
   DefaultedBondCrisisModal,
+  TabFallback,
 } from "@/components/corporation/CorporationPageTabs";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
+
+const SubsidiaryManagementCard = dynamic(
+  () =>
+    import("@/components/corporation/SubsidiaryManagementCard").then(
+      (module) => module.SubsidiaryManagementCard
+    ),
+  { loading: TabFallback }
+);
+const IndexCommitteePanel = dynamic(() => import("@/components/corporation/IndexCommitteePanel"), {
+  loading: TabFallback,
+});
 
 export function renderCorporationDetailPageView(
   context: CorporationDetailPageViewContext

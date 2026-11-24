@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useReducer, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { SHELL_LOGO_URL } from "@/lib/images/cdnStaticUrls";
@@ -12,11 +12,9 @@ import { useAuthMe, useHasSession } from "@/contexts/AuthDataContext";
 import { useStatusBarLayout } from "./statusbar/useStatusBarLayout";
 import { useInterface } from "@/contexts/InterfaceContext";
 import { buildClientStatusUrl, fetchClientStatusJson } from "@/lib/statusBar/clientStatusRequest";
-import { Navbar } from "./Navbar";
 import dynamic from "next/dynamic";
-// Only one navbar variant renders at a time. Code-splitting the new one means
-// a legacy-interface player never downloads it (and vice versa) while both stay
-// server-rendered, so there is no layout shift on first paint.
+
+const Navbar = dynamic(() => import("./Navbar").then((m) => m.Navbar));
 const ExperimentalNavbar = dynamic(() =>
   import("./ExperimentalNavbar").then((m) => m.ExperimentalNavbar)
 );
@@ -610,43 +608,47 @@ export function NavbarWrapper({
   // Lightweight layouts always use the classic chrome regardless of preference.
   const useExperimentalNav = !useLightweightNav && interfaceMode === "modern";
 
+  const navPlaceholder = (
+    <nav
+      data-site-navbar
+      className="sticky top-0 z-50 border-b pt-[env(safe-area-inset-top,0px)] border-card-border bg-card/50 backdrop-blur-md"
+    >
+      {/* Same height as the navbar that replaces it (modern: 56 px, 60 px
+          from lg; classic: 56 px), so the page holds its position while
+          the session or the selected navbar loads. */}
+      <div
+        className={`mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 ${
+          useExperimentalNav ? "h-14 lg:h-[60px]" : "h-14"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Image
+            src={SHELL_LOGO_URL}
+            priority
+            unoptimized
+            alt=""
+            width={40}
+            height={40}
+            className="object-contain"
+          />
+          <Wordmark
+            typed={typedWordmark}
+            className={`text-lg font-semibold tracking-tight ${typedWordmark ? "font-mono" : ""}`}
+          />
+        </div>
+        <div className="hidden md:block h-4 w-32 animate-pulse rounded bg-card-border" />
+        <div className="md:hidden h-9 w-9 animate-pulse rounded-lg bg-card-border" />
+      </div>
+    </nav>
+  );
+
   return (
     <>
       <NavbarTopFlair bootLoading={navBootLoading} />
       {state.isLoading && !useLightweightNav ? (
-        <nav
-          data-site-navbar
-          className="sticky top-0 z-50 border-b pt-[env(safe-area-inset-top,0px)] border-card-border bg-card/50 backdrop-blur-md"
-        >
-          {/* Same height as the navbar that replaces it (modern: 56 px, 60 px
-              from lg; classic: 56 px), so the page does not jump when the
-              session bootstrap finishes. */}
-          <div
-            className={`mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 ${
-              useExperimentalNav ? "h-14 lg:h-[60px]" : "h-14"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Image
-                src={SHELL_LOGO_URL}
-                priority
-                unoptimized
-                alt=""
-                width={40}
-                height={40}
-                className="object-contain"
-              />
-              <Wordmark
-                typed={typedWordmark}
-                className={`text-lg font-semibold tracking-tight ${typedWordmark ? "font-mono" : ""}`}
-              />
-            </div>
-            <div className="hidden md:block h-4 w-32 animate-pulse rounded bg-card-border" />
-            <div className="md:hidden h-9 w-9 animate-pulse rounded-lg bg-card-border" />
-          </div>
-        </nav>
+        navPlaceholder
       ) : (
-        <>
+        <Suspense fallback={navPlaceholder}>
           {useExperimentalNav ? (
             <ExperimentalNavbar
               navigationVariant={navigationVariant}
@@ -731,7 +733,7 @@ export function NavbarWrapper({
               autoCaptureFailed={state.screenshotCaptureFailed}
             />
           )}
-        </>
+        </Suspense>
       )}
     </>
   );
