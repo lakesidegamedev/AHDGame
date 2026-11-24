@@ -7,7 +7,7 @@ summary: >-
   always sell first and buy first.
 tags: [economy, market]
 badges: [minor]
-areas: [economy]
+areas: [engine]
 ---
 
 Every state in a country with company plants now has a small "rest of the
