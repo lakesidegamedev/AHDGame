@@ -11,7 +11,8 @@ import type {
 import type { PoliticalParty } from "@/lib/db/types";
 import { MAX_NATIONAL_CAMPAIGNERS } from "./access";
 import { canRenameParty } from "./rules/defaultIdentity";
-import { holdRemovalUntilWindow, REMOVAL_VOTE_MIN_OPEN_MS } from "./rules/removalVoteWindow";
+import { holdUntilMinimumOpen, PROPOSAL_MIN_OPEN_MS } from "./rules/proposalOpenWindow";
+import { countEligibleVotes } from "./rules/eligibleVoteCount";
 import { notifyRemovedByCommittee } from "./officeRemovalNotifications";
 import { MergeEligibilityError } from "./mergeEligibility";
 
@@ -604,7 +605,7 @@ async function markProposalTerminal(
 
 export interface ResolutionOptions {
   expired?: boolean;
-  /** Wall clock for the removal-vote minimum window; defaults to now. */
+  /** Wall clock for the proposal minimum open window; defaults to now. */
   now?: Date;
 }
 
@@ -656,10 +657,14 @@ async function attemptResolutionInTransaction(
   if (proposal.type === "campaignerAppointment" && proposal.campaignerAppointment) {
     baseVoterSet.delete(proposal.campaignerAppointment.targetCharacterId.toString());
   }
-  const proposingSize = baseVoterSet.size;
-  const pYes = proposal.proposingVotes.filter((v) => v.vote === "yes").length;
-  const pNo = proposal.proposingVotes.filter((v) => v.vote === "no").length;
-  const proposingOutcome = checkResolution(pYes, pNo, proposingSize, options);
+  // Only voters who still hold a voting seat count, against the same set.
+  const proposingCount = countEligibleVotes(proposal.proposingVotes, baseVoterSet);
+  const proposingOutcome = checkResolution(
+    proposingCount.yes,
+    proposingCount.no,
+    proposingCount.eligible,
+    options
+  );
 
   // Decide the outcome on reads alone; nothing below writes until the claim.
   let outcome: "passed" | "rejected" | "open" = proposingOutcome;
@@ -680,10 +685,16 @@ async function attemptResolutionInTransaction(
       return;
     }
 
-    const targetSize = getEligibleVoterSet(targetParty).size;
-    const tYes = (proposal.targetVotes ?? []).filter((v) => v.vote === "yes").length;
-    const tNo = (proposal.targetVotes ?? []).filter((v) => v.vote === "no").length;
-    const targetOutcome = checkResolution(tYes, tNo, targetSize, options);
+    const targetCount = countEligibleVotes(
+      proposal.targetVotes ?? [],
+      getEligibleVoterSet(targetParty)
+    );
+    const targetOutcome = checkResolution(
+      targetCount.yes,
+      targetCount.no,
+      targetCount.eligible,
+      options
+    );
 
     outcome =
       targetOutcome === "rejected"
@@ -694,8 +705,8 @@ async function attemptResolutionInTransaction(
     // still open — both committees haven't reached threshold yet
   }
   const createdAtMs = proposal.createdAt ? new Date(proposal.createdAt).getTime() : NaN;
-  if (proposal.type === "removeOfficeHolder" && Number.isFinite(createdAtMs)) {
-    outcome = holdRemovalUntilWindow(outcome, createdAtMs, (options?.now ?? new Date()).getTime());
+  if (Number.isFinite(createdAtMs)) {
+    outcome = holdUntilMinimumOpen(outcome, createdAtMs, (options?.now ?? new Date()).getTime());
   }
   if (outcome === "open") return;
 
@@ -875,16 +886,13 @@ export async function expireOpenProposals(
   currentTurn: number,
   now: Date = new Date()
 ): Promise<number> {
-  // A removal vote that reached its threshold early is held open until its
+  // A proposal that reached its threshold early is held open until its
   // minimum window ends; pick it up on the first sweep after that.
-  const windowEndedBefore = new Date(now.getTime() - REMOVAL_VOTE_MIN_OPEN_MS);
+  const windowEndedBefore = new Date(now.getTime() - PROPOSAL_MIN_OPEN_MS);
   const due = await committeeProposalsCollection(db)
     .find({
       status: "open",
-      $or: [
-        { expiresAtTurn: { $lte: currentTurn } },
-        { type: "removeOfficeHolder", createdAt: { $lte: windowEndedBefore } },
-      ],
+      $or: [{ expiresAtTurn: { $lte: currentTurn } }, { createdAt: { $lte: windowEndedBefore } }],
     })
     .toArray();
   let resolved = 0;

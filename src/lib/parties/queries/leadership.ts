@@ -4,6 +4,7 @@ import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getEligibleVoterSet } from "@/lib/parties/proposals";
+import { committeeElectorate } from "@/lib/elections/party/leadershipVoterFilter";
 import {
   COMMITTEE_ELECTION_DURATION_TURNS,
   COMMITTEE_SIZE,
@@ -194,6 +195,15 @@ export async function getNationalPartyElectionState(
   const bannedVoterObjectIds = [...bannedCharacterIds].map((id) => new ObjectId(id));
   if (bannedVoterObjectIds.length > 0) {
     voteMatch.voterId = { $nin: bannedVoterObjectIds };
+  }
+  // Open committee-method races show only the ballots the tally will count.
+  // Finished races keep the result they were decided on.
+  const electorate = committeeElectorate(party);
+  if (electorate && activeElectionIds.length > 0) {
+    voteMatch.$or = [
+      { electionId: { $nin: activeElectionIds } },
+      { electionId: { $in: activeElectionIds }, voterId: { $in: electorate } },
+    ];
   }
 
   const [allCandidatesRaw, allVoteCounts, allUserVotes] = await Promise.all([
