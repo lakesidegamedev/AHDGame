@@ -55,11 +55,14 @@ export interface CompanyBookRow {
 
 /** Player-facing names for each kind, on the side it appears. */
 export const MARKET_KIND_LABELS: Record<MarketAccountKind, { sellers: string; buyers: string }> = {
-  company: { sellers: "Companies", buyers: "Companies" },
+  company: { sellers: "Player and AI companies", buyers: "Player and AI companies" },
   households: { sellers: "Households", buyers: "Households" },
   publicBuyer: { sellers: "Governments", buyers: "Governments" },
   investmentBuyer: { sellers: "Construction", buyers: "Construction buyers" },
-  backgroundEconomy: { sellers: "Economy-only countries", buyers: "Economy-only countries" },
+  backgroundEconomy: {
+    sellers: "Background economy (countries without companies)",
+    buyers: "Background economy (countries without companies)",
+  },
   wideEconomy: {
     sellers: "Background economy (sellers)",
     buyers: "Background economy (buyers)",

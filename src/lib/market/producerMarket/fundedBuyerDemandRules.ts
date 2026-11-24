@@ -94,7 +94,7 @@ export const FUNDED_BUYER_LABELS: Record<FundedBuyerKind, { name: string; descri
       "What construction and investment buyers ordered last turn. Ordered units the market could not supply were not received.",
   },
   backgroundEconomy: {
-    name: "Economy-only countries",
+    name: "Background economy (countries without companies)",
     description:
       "What economy-only countries, which trade from their national economy instead of company plants, ordered from this market last turn. Ordered units the market could not supply were not received.",
   },

@@ -46,7 +46,15 @@ export function marketPerTurn<M extends MarketFields>(m: M): M {
     ...(m.filledBy ? { filledBy: splitPerTurn(m.filledBy) } : {}),
   };
 }
-interface BookFields {
+interface PricingFields {
+  pricingSupply?: number;
+  pricingDemand?: number;
+}
+const pricingPerTurn = (x: PricingFields) => ({
+  ...(x.pricingSupply != null ? { pricingSupply: bookPerTurn(x.pricingSupply) } : {}),
+  ...(x.pricingDemand != null ? { pricingDemand: bookPerTurn(x.pricingDemand) } : {}),
+});
+interface BookFields extends PricingFields {
   globalSupply: number;
   globalDemand: number;
   stateSupply: Units;
@@ -119,6 +127,7 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
     ...detail,
     globalSupply: bookPerTurn(detail.globalSupply),
     globalDemand: bookPerTurn(detail.globalDemand),
+    ...pricingPerTurn(detail),
     stateSupply: recordPerTurn(detail.stateSupply) ?? {},
     stateDemand: recordPerTurn(detail.stateDemand) ?? {},
     ...(detail.nationalSupply ? { nationalSupply: recordPerTurn(detail.nationalSupply) } : {}),
@@ -172,7 +181,7 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
   } as T;
 }
 
-interface ListRowFields {
+interface ListRowFields extends PricingFields {
   backgroundEconomy?: { sold: number; bought: number };
   globalSupply: number;
   globalDemand: number;
@@ -191,6 +200,7 @@ export function commodityListRowPerTurn<T extends ListRowFields>(row: T): T {
     ...row,
     globalSupply: bookPerTurn(row.globalSupply),
     globalDemand: bookPerTurn(row.globalDemand),
+    ...pricingPerTurn(row),
     exchangeSupply: bookPerTurn(row.exchangeSupply),
     exchangeDemand: bookPerTurn(row.exchangeDemand),
     ...(row.backgroundEconomy

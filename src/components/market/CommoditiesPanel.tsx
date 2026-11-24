@@ -44,8 +44,11 @@ const CAP_TITLE =
 export function premiumTitle(c: CommodityData): string | undefined {
   const mult = scarcityMultFromAttribution(c.priceAttribution ?? null);
   if (mult == null) return undefined;
-  const pressure = balancePressure(c.globalSupply, c.globalDemand);
-  return `Scarcity premium ${mult.toFixed(2)}x on the base price. It builds up while a good is short and eases back at a set pace after supply catches up. ${premiumTrendSentence(pressure, FUNDED_SCARCITY_MAX_MOVE)}`;
+  // The premium moves on what the price reads, not on the world supply shown.
+  const supply = c.pricingSupply ?? c.globalSupply;
+  const pressure = balancePressure(supply, c.pricingDemand ?? c.globalDemand);
+  const leavesOut = c.globalSupply > supply * (1 + 1e-6);
+  return `Scarcity premium ${mult.toFixed(2)}x on the base price. It builds up while a good is short and eases back at a set pace after supply catches up. ${premiumTrendSentence(pressure, FUNDED_SCARCITY_MAX_MOVE, leavesOut)}`;
 }
 
 export function CommoditiesPanel({
