@@ -1009,3 +1009,23 @@ describe("campaign cell lean fold", () => {
     expect(touched).toBeGreaterThan(0);
   });
 });
+
+describe("campaign cells on the substrate", () => {
+  it("reads as one stable, enumerable array, including through a spread", () => {
+    const substrate = buildGranularElectorateSubstrate({
+      countryId: "US",
+      stateId: "CT",
+      preset: "2019-default",
+      turnoutDoc: null,
+      statePopulation: 1_000_000,
+      demographics: LEGACY_DEMOGRAPHICS,
+      enriched: [makeCandidate("left", "democrat", -2, -2)],
+      campaignRulesVersion: CAMPAIGN_RULES_VERSION,
+    })!;
+    const cells = substrate.campaignCells;
+    expect(cells?.length).toBeGreaterThan(0);
+    expect(substrate.campaignCells).toBe(cells);
+    expect(Object.keys(substrate)).toContain("campaignCells");
+    expect({ ...substrate }.campaignCells).toBe(cells);
+  });
+});
