@@ -1002,30 +1002,40 @@ export function buildGranularElectorateSubstrate(
 
   // Preserve identities until after the nonlinear response, then average within
   // the same units the election already uses. Buying an ad cannot regroup voters.
-  const campaignCells = units.flatMap((unit) =>
-    (unit.campaignCells ?? []).map((cell) => ({
-      ...cell,
-      // Match the counted unit's live turnout, including temporary turnout drift, while preserving its internal turnout mix.
-      turnout:
-        unit.turnout > 0
-          ? (cell.turnout * liveTurnouts[unit.id]) / unit.turnout
-          : liveTurnouts[unit.id],
-      economicLean: foldCellLean(cell.economicLean, cell.buckets, econDeltaParts, econBucketDeltas),
-      socialLean: foldCellLean(cell.socialLean, cell.buckets, socDeltaParts, socBucketDeltas),
-      identities: Object.fromEntries(
-        Object.entries(cell.identities).map(([dim, position]) => {
-          const key = `${dim}:${cell.buckets[dim]}`;
-          return [
-            dim,
-            {
-              economicLean: clamp(position.economicLean + (econBucketDeltas[key] ?? 0), -5, 5),
-              socialLean: clamp(position.socialLean + (socBucketDeltas[key] ?? 0), -5, 5),
-            },
-          ];
-        })
-      ),
-    }))
-  );
+  // Built on first read: vote distribution never reads cells, and building
+  // them for every state and party dominated projection time.
+  const buildCampaignCells = (): CampaignCell[] =>
+    units.flatMap((unit) =>
+      (unit.campaignCells ?? []).map((cell) => ({
+        ...cell,
+        // Match the counted unit's live turnout, including temporary turnout drift, while preserving its internal turnout mix.
+        turnout:
+          unit.turnout > 0
+            ? (cell.turnout * liveTurnouts[unit.id]) / unit.turnout
+            : liveTurnouts[unit.id],
+        economicLean: foldCellLean(
+          cell.economicLean,
+          cell.buckets,
+          econDeltaParts,
+          econBucketDeltas
+        ),
+        socialLean: foldCellLean(cell.socialLean, cell.buckets, socDeltaParts, socBucketDeltas),
+        identities: Object.fromEntries(
+          Object.entries(cell.identities).map(([dim, position]) => {
+            const key = `${dim}:${cell.buckets[dim]}`;
+            return [
+              dim,
+              {
+                economicLean: clamp(position.economicLean + (econBucketDeltas[key] ?? 0), -5, 5),
+                socialLean: clamp(position.socialLean + (socBucketDeltas[key] ?? 0), -5, 5),
+              },
+            ];
+          })
+        ),
+      }))
+    );
+  let campaignCellsMemo: CampaignCell[] | undefined;
+  const campaignCellsOf = (): CampaignCell[] => (campaignCellsMemo ??= buildCampaignCells());
   const applySalience = (candidate: EnrichedCandidate): EnrichedCandidate =>
     salience
       ? {
@@ -1055,7 +1065,7 @@ export function buildGranularElectorateSubstrate(
       );
     }
     const bonuses = targetedAdBonuses(
-      campaignCells,
+      campaignCellsOf(),
       { economicLean: ec.charEP, socialLean: ec.charSP },
       ec.targetedAds,
       input.stateId,
@@ -1111,7 +1121,7 @@ export function buildGranularElectorateSubstrate(
         })
       : null;
 
-  return {
+  const substrate: GranularSubstrate = {
     electorate,
     demographics,
     categories,
@@ -1122,6 +1132,16 @@ export function buildGranularElectorateSubstrate(
     units,
     ...(input.v2 ? { participationLedgers } : {}),
     ...(participationSummary ? { participationSummary } : {}),
-    ...(usesCampaignAds(input, input.enriched) ? { campaignCells } : {}),
   };
+  if (usesCampaignAds(input, input.enriched)) {
+    Object.defineProperty(substrate, "campaignCells", {
+      enumerable: true,
+      configurable: true,
+      get: campaignCellsOf,
+      set: (cells: CampaignCell[]) => {
+        campaignCellsMemo = cells;
+      },
+    });
+  }
+  return substrate;
 }
