@@ -1,6 +1,7 @@
 "use client";
 
 import type { LastTurnReconciliation as Reconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
+import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 import { describeCostDriver } from "@/lib/corporations/rules/costBreakdown";
 import { formatCurrency } from "@/lib/utils/formattersCore";
 import {
@@ -55,11 +56,15 @@ export function LastTurnReconciliation({
     cash.evidence != null &&
     (cash.evidence.boundary !== "recorded" || cash.evidence.unconvertedMovements > 0);
   return (
-    <DenseSection title={`Turn ${data.turn}, recorded`} meta="per turn, local currency">
+    <DenseSection
+      title={`Turn ${data.turn}, recorded`}
+      meta={data.reportingCurrency === null ? "per turn, in ₳" : "per turn, local currency"}
+    >
       <p className="py-2 text-xs text-muted">
         What the turn actually booked. The Income statement below the estimate is a forecast for the
         next turn and can differ.
       </p>
+      {data.reportingCurrency === null && <AnchorUnitNote className="pb-2" />}
       <StatementTable>
         <StatementGroup>Income, as recorded</StatementGroup>
         <StatementLine strong label="Revenue" amount={fmt(round(statement.revenue))} />

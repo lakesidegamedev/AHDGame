@@ -14,6 +14,8 @@ import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetri
 export interface ResetMetricDetailRead {
   history: ResetMetricHistoryPoint[];
   historyNotice?: string;
+  /** Set when every region opened at one shared figure, so equal values are not a fault. */
+  openingNotice?: string;
   nationalValue: number;
   regions: Array<{ regionId: string; name: string; value: number }>;
 }
@@ -44,6 +46,9 @@ function withCurrentPoint(
   if (!last || last.turn < turn) next.push(current);
   return next;
 }
+
+export const SHARED_OPENING_NOTICE =
+  "No regional measurement exists for this, so every region started at the national figure. Differences between regions come only from what has happened in play.";
 
 /** Read-only shell for the dedicated v2 metric drill-down. */
 export async function readResetMetricDetail(
@@ -95,6 +100,7 @@ export async function readResetMetricDetail(
           projection: {
             regionId: 1,
             asOfTurn: 1,
+            [`openingValues.${metricId}`]: 1,
             [`observations.${metricId}`]: 1,
             [`history.${metricId}`]: 1,
           },
@@ -175,8 +181,13 @@ export async function readResetMetricDetail(
           nationalValue,
           readings[0]!.observations[metricId]
         );
+    const openings = regionalBoards.map((regional) => regional.openingValues?.[metricId]);
+    const sharedOpening =
+      openings.length > 1 &&
+      openings.every((value) => typeof value === "number" && value === openings[0]);
     return {
       history: displayedHistory,
+      ...(sharedOpening ? { openingNotice: SHARED_OPENING_NOTICE } : {}),
       ...(!selectedRegion && nationalHistory.length < (readings[0]?.history[metricId]?.length ?? 0)
         ? {
             historyNotice:

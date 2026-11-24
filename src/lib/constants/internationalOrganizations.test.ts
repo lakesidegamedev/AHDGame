@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COUNTRY_ORDER } from "./countriesCoreTables";
 import { tierFor } from "@/lib/world/eraRoster";
+import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import {
   INTERNATIONAL_ORGANIZATIONS,
   INTERNATIONAL_ORGANIZATION_ORDER,
@@ -264,8 +265,8 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
     ).not.toContain("AL");
   });
 
-  it("only seats entities the alignment roster actually models", () => {
-    // A typo here would seed a member that no screen could name.
+  it("only seats entities that exist in that era's world", () => {
+    // A typo or an anachronism would seed a member that no screen could name.
     for (const org of [INTERNATIONAL_ORGANIZATIONS.NATO, INTERNATIONAL_ORGANIZATIONS.WARSAW_PACT]) {
       for (const preset of [
         "1953-default",
@@ -277,14 +278,25 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
         "2023-default",
         "2027-default",
       ]) {
+        const year = getStartingYearForPreset(preset);
+        if ((org.foundedYear ?? 0) > year || (org.dissolvedYear ?? Infinity) <= year) continue;
+        const world = new Set(
+          getWorldEntityPresetManifest(preset)
+            .entries.filter((entry) => entry.status === "sovereign")
+            .map((entry) => entry.entityId)
+        );
         for (const id of resolveSeedRoster(org, preset)) {
-          expect(
-            ROSTER_BY_KEY[id as keyof typeof ROSTER_BY_KEY],
-            `${org.id} ${preset} ${id}`
-          ).toBeDefined();
+          expect(world.has(id), `${org.id} ${preset} ${id}`).toBe(true);
         }
       }
     }
+  });
+
+  it("seats every real NATO member that exists in the 2027 world", () => {
+    const roster = new Set(resolveSeedRoster(INTERNATIONAL_ORGANIZATIONS.NATO, "2027-default"));
+    for (const id of ["CZ2", "EE", "LV", "LT", "SK", "SI", "HR", "ME", "MK", "FI", "SE", "TR"])
+      expect(roster.has(id), id).toBe(true);
+    expect(roster.size).toBe(32);
   });
 });
 

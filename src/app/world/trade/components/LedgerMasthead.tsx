@@ -2,6 +2,7 @@
 
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
+import { ANCHOR_UNIT_NOTE } from "@/lib/currency/anchorUnitNote";
 
 /**
  * World Trade Ledger masthead. Follows the institution-masthead grammar
@@ -62,8 +63,8 @@ export default function LedgerMasthead({ ledger }: { ledger: WorldTradeLedger })
       >
         <div className="relative flex flex-wrap items-center gap-4">
           <div
-            aria-hidden
-            className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full"
+            title={ANCHOR_UNIT_NOTE}
+            className="flex h-16 w-16 flex-shrink-0 cursor-help items-center justify-center rounded-full"
             style={{
               border: `2px solid ${GOLD}b3`,
               background: "linear-gradient(160deg,#2a2233,#1d1a26)",

@@ -138,7 +138,8 @@ function MarketingBudgets({
     <div className="rounded-xl border border-card-border bg-card p-6 sm:col-span-2">
       <h2 className="text-lg font-bold text-foreground mb-1">Marketing budgets by company</h2>
       <p className="text-xs text-muted mb-3">
-        Current configured daily budgets in ₳ (anchor currency)
+        Current configured daily budgets in ₳, the game&apos;s shared accounting unit (not pegged to
+        any currency)
         {marketLabel ? `; companies by headquarters in the ${marketLabel.toLowerCase()}` : ""}.{" "}
         These are not settled spending or recorded demand. Budgets may be limited by funding and
         delivery.
