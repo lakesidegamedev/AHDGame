@@ -307,6 +307,9 @@ export const NPP_SUPPLY_AGREEMENT_PROJECTION = {
   expiresAtTurn: 1,
   exclusive: 1,
   currentOffer: 1,
+  priceMode: 1,
+  fixedUnitPrice: 1,
+  signingMarketPrice: 1,
 } as const;
 
 /**
@@ -340,6 +343,35 @@ export function openEndedAiContracts(
     .map((a) => a._id as ObjectId);
 }
 
+/**
+ * The active agreement an AI-to-AI proposal signs. It uses market plus or
+ * minus pricing with the premium the AI already chose.
+ */
+export function aiProposalAgreement(
+  d: Extract<NppAgreementDecision, { action: "propose" }>,
+  turn: number,
+  now: Date
+): SupplyAgreement {
+  return {
+    volumeCapBasis: "scaledCapacity",
+    supplierCorpId: new ObjectId(d.supplierCorpId),
+    buyerCorpId: new ObjectId(d.buyerCorpId),
+    commodity: d.commodity,
+    ...(d.stateId ? { stateId: d.stateId } : {}),
+    volumeCap: d.volumeCap,
+    pricePremium: d.pricePremium,
+    priceMode: "indexed",
+    exclusive: false,
+    status: "active",
+    startsAtTurn: turn,
+    durationTurns: NPP_CONTRACT_TERM_TURNS,
+    expiresAtTurn: turn + NPP_CONTRACT_TERM_TURNS,
+    proposedByCorpId: new ObjectId(d.supplierCorpId),
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export function toExistingNppAgreement(a: SupplyAgreement): ExistingNppAgreement {
   return {
     id: a._id!.toString(),
@@ -349,6 +381,9 @@ export function toExistingNppAgreement(a: SupplyAgreement): ExistingNppAgreement
     ...(a.stateId ? { stateId: a.stateId } : {}),
     volumeCap: a.volumeCap,
     pricePremium: a.pricePremium,
+    ...(a.priceMode ? { priceMode: a.priceMode } : {}),
+    ...(a.fixedUnitPrice != null ? { fixedUnitPrice: a.fixedUnitPrice } : {}),
+    ...(a.signingMarketPrice != null ? { signingMarketPrice: a.signingMarketPrice } : {}),
     status: a.status,
     ...(a.proposedByCorpId ? { proposedByCorpId: a.proposedByCorpId.toString() } : {}),
     ...(a.durationTurns != null ? { durationTurns: a.durationTurns } : {}),
@@ -488,11 +523,25 @@ async function writeSupplierReplies(
   for (const d of args.counters) {
     const raw = args.rawById.get(d.agreementId);
     if (!raw) continue;
+    // The counter stays in the offer's own price mode: a set price keeps its
+    // signing market price and moves the per-unit price, market plus or minus
+    // moves the percentage.
+    const setPrice = raw.priceMode === "fixed" && d.fixedUnitPrice != null;
+    const pricing = setPrice
+      ? {
+          priceMode: "fixed" as const,
+          fixedUnitPrice: d.fixedUnitPrice,
+          ...(raw.signingMarketPrice != null ? { signingMarketPrice: raw.signingMarketPrice } : {}),
+        }
+      : raw.priceMode
+        ? { priceMode: raw.priceMode }
+        : {};
     const offer = {
       revision: (raw.currentOffer?.revision ?? 1) + 1,
       proposedByCorpId: raw.supplierCorpId,
       volumeCap: d.volumeCap,
       pricePremium: d.pricePremium,
+      ...pricing,
       exclusive: raw.exclusive ?? false,
       ...(raw.durationTurns != null ? { durationTurns: raw.durationTurns } : {}),
       proposedAtTurn: args.turn,
@@ -505,15 +554,12 @@ async function writeSupplierReplies(
           $set: {
             volumeCap: d.volumeCap,
             pricePremium: d.pricePremium,
+            ...(setPrice ? { fixedUnitPrice: d.fixedUnitPrice } : {}),
             proposedByCorpId: raw.supplierCorpId,
             currentOffer: offer,
             updatedAt: args.now,
           },
           $push: { offers: offer },
-          // An AI counter is a plain premium offer, so it drops any set price.
-          ...(raw.priceMode
-            ? { $unset: { priceMode: "", fixedUnitPrice: "", signingMarketPrice: "" } }
-            : {}),
         },
       },
     });
@@ -548,11 +594,15 @@ async function notifySupplierReplies(args: {
     const userId = raw && args.userById.get(raw.buyerCorpId.toString());
     if (!raw || !userId) continue;
     const pct = Math.round(d.pricePremium * 100);
+    const priceText =
+      raw.priceMode === "fixed" && d.fixedUnitPrice != null
+        ? `at a set price of ${d.fixedUnitPrice.toFixed(2)} per unit`
+        : `at ${pct > 0 ? "+" : ""}${pct}% of market`;
     inputs.push({
       userId,
       type: "corp_supply_agreement_offer",
       title: "Supply agreement countered",
-      message: `${supplierName(raw)} countered your ${label(raw)} supply proposal at ${pct > 0 ? "+" : ""}${pct}% of market for ${Math.floor(d.volumeCap)} units. AI suppliers accept at most 10% below market and only what they can spare. Accept or counter in the Commodities tab.`,
+      message: `${supplierName(raw)} countered your ${label(raw)} supply proposal ${priceText} for ${Math.floor(d.volumeCap)} units. AI suppliers accept at most 10% below market and only what they can spare. Accept or counter in the Commodities tab.`,
       metadata: {
         corporationId: raw.buyerCorpId.toString(),
         agreementId: d.agreementId,
@@ -777,23 +827,7 @@ export async function processNppSupplyAgreements(
   for (const d of decisions) {
     if (d.action === "propose") {
       if (!nppIds.has(d.supplierCorpId) || !nppIds.has(d.buyerCorpId)) continue;
-      inserts.push({
-        volumeCapBasis: "scaledCapacity",
-        supplierCorpId: new ObjectId(d.supplierCorpId),
-        buyerCorpId: new ObjectId(d.buyerCorpId),
-        commodity: d.commodity,
-        ...(d.stateId ? { stateId: d.stateId } : {}),
-        volumeCap: d.volumeCap,
-        pricePremium: d.pricePremium,
-        exclusive: false,
-        status: "active",
-        startsAtTurn: turn,
-        durationTurns: NPP_CONTRACT_TERM_TURNS,
-        expiresAtTurn: turn + NPP_CONTRACT_TERM_TURNS,
-        proposedByCorpId: new ObjectId(d.supplierCorpId),
-        createdAt: now,
-        updatedAt: now,
-      });
+      inserts.push(aiProposalAgreement(d, turn, now));
       proposed += 1;
     }
   }

@@ -14,6 +14,7 @@ import {
   decideAiSupplyListings,
   buildTradeBlocked,
   aiListingId,
+  aiProposalAgreement,
   processNppSupplyAgreements,
   AI_LISTINGS_PER_SIDE,
   NPP_CONTRACT_TERM_TURNS,
@@ -695,6 +696,33 @@ describe("AI supplier accepts a player buy proposal", () => {
     ]);
   });
 
+  it("counters a set-price proposal with a set price inside the set-price band", () => {
+    const d = run([
+      proposal({
+        priceMode: "fixed",
+        signingMarketPrice: 100,
+        fixedUnitPrice: 65,
+        pricePremium: -0.35,
+      }),
+    ]);
+    expect(d).toEqual([
+      {
+        action: "counter",
+        agreementId: "pb1",
+        pricePremium: -0.1,
+        volumeCap: 10,
+        fixedUnitPrice: 90,
+      },
+    ]);
+  });
+
+  it("counters a market plus or minus proposal with a percentage and no set price", () => {
+    const d = run([proposal({ priceMode: "indexed", pricePremium: -0.35 })]);
+    expect(d).toEqual([
+      { action: "counter", agreementId: "pb1", pricePremium: -0.1, volumeCap: 10 },
+    ]);
+  });
+
   it("counters with the spare volume when the volume is too large", () => {
     const cap = computeSupplierCommodityCapacityUnits({
       sectors: miner().sectors,
@@ -1046,6 +1074,101 @@ describe("processNppSupplyAgreements shell", () => {
       userId: buyer.userId,
       title: "Supply agreement countered",
     });
+  });
+
+  it("keeps market plus or minus pricing when it counters", async () => {
+    const buyer = { _id: new ObjectId(), countryId: "US", userId: new ObjectId() };
+    const f = fakeDb({
+      buyer,
+      agreements: (sellerId) => [
+        {
+          _id: new ObjectId(),
+          supplierCorpId: sellerId,
+          buyerCorpId: buyer._id,
+          proposedByCorpId: buyer._id,
+          commodity: "iron",
+          volumeCap: 1,
+          pricePremium: -0.35,
+          priceMode: "indexed",
+          exclusive: false,
+          currentOffer: { revision: 1, proposedByCorpId: buyer._id },
+          status: "pending",
+        },
+      ],
+    });
+    await processNppSupplyAgreements(f.db, 100, new Date(), true);
+    const op = f.calls.agreementBulk[0] as {
+      updateOne: {
+        update: {
+          $set: Record<string, unknown>;
+          $push: { offers: { priceMode?: string; pricePremium: number } };
+          $unset?: unknown;
+        };
+      };
+    };
+    expect(op.updateOne.update.$unset).toBeUndefined();
+    expect(op.updateOne.update.$push.offers).toMatchObject({
+      priceMode: "indexed",
+      pricePremium: -0.1,
+    });
+  });
+
+  it("keeps a set price when it counters", async () => {
+    const buyer = { _id: new ObjectId(), countryId: "US", userId: new ObjectId() };
+    const f = fakeDb({
+      buyer,
+      agreements: (sellerId) => [
+        {
+          _id: new ObjectId(),
+          supplierCorpId: sellerId,
+          buyerCorpId: buyer._id,
+          proposedByCorpId: buyer._id,
+          commodity: "iron",
+          volumeCap: 1,
+          pricePremium: -0.25,
+          priceMode: "fixed",
+          fixedUnitPrice: 75,
+          signingMarketPrice: 100,
+          exclusive: false,
+          currentOffer: { revision: 1, proposedByCorpId: buyer._id },
+          status: "pending",
+        },
+      ],
+    });
+    await processNppSupplyAgreements(f.db, 100, new Date(), true);
+    const op = f.calls.agreementBulk[0] as {
+      updateOne: {
+        update: {
+          $set: Record<string, unknown>;
+          $push: { offers: Record<string, unknown> };
+          $unset?: unknown;
+        };
+      };
+    };
+    expect(op.updateOne.update.$unset).toBeUndefined();
+    expect(op.updateOne.update.$set).toMatchObject({ pricePremium: -0.1, fixedUnitPrice: 90 });
+    expect(op.updateOne.update.$push.offers).toMatchObject({
+      priceMode: "fixed",
+      fixedUnitPrice: 90,
+      signingMarketPrice: 100,
+    });
+  });
+
+  it("signs AI-to-AI agreements as market plus or minus", () => {
+    const row = aiProposalAgreement(
+      {
+        action: "propose",
+        supplierCorpId: new ObjectId().toString(),
+        buyerCorpId: new ObjectId().toString(),
+        commodity: "iron",
+        volumeCap: 5,
+        pricePremium: -0.1,
+      },
+      100,
+      new Date()
+    );
+    expect(row).toMatchObject({ priceMode: "indexed", pricePremium: -0.1, status: "active" });
+    expect(row.fixedUnitPrice).toBeUndefined();
   });
 
   it("declines a proposal the supplier cannot serve and tells the player", async () => {

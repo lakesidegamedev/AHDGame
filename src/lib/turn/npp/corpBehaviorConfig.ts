@@ -11,6 +11,9 @@ import {
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
 import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
+import type { LegacyTechContext } from "@/lib/techTree/rules/legacyTech";
+import { getSectorTechEffectBreakdown } from "@/lib/techTree/rules/selectors";
+import { inputEfficiencyHeadroom } from "@/lib/techTree/rules/inputEfficiencyHeadroom";
 
 /**
  * Pick one deterministic, affordable node per turn. Sector-lane nodes win ties
@@ -24,6 +27,8 @@ export function pickBestNppTechNode(
     cashReserve?: number;
     cashFloorLocal?: number;
     plantBasis?: TechPlantBasis | null;
+    /** Lets the pick value input reduction against the corporation's researched cap. */
+    legacy?: LegacyTechContext;
   } = {}
 ): { node: TechTreeNode; cashCost: number } | null {
   const rdScore = corp.rdScore ?? 0;
@@ -31,14 +36,29 @@ export function pickBestNppTechNode(
     0,
     (corp.liquidCapital ?? 0) - Math.max(0, options.cashReserve ?? 0)
   );
+  const researchedInputBonus = options.legacy
+    ? getSectorTechEffectBreakdown(
+        corp,
+        corp.type as Parameters<typeof getSectorTechEffectBreakdown>[1],
+        currentYear,
+        options.legacy
+      ).researched.inputEfficiencyBonus
+    : undefined;
   const candidates = getTreeForType(corp.type as Corporation["type"])
+    // Input reduction beyond the cap adds nothing, and unlockTechNode refuses such nodes.
+    .filter(
+      (node) =>
+        researchedInputBonus === undefined ||
+        !inputEfficiencyHeadroom(node.effects, node.lane, researchedInputBonus).noRemainingBenefit
+    )
     .map((node) => ({
       node,
       cashCost: techNodeCashCost(
         node,
         dailyGrossRevenue,
         options.cashFloorLocal ?? 0,
-        options.plantBasis
+        options.plantBasis,
+        researchedInputBonus
       ),
     }))
     .filter(
@@ -81,6 +101,8 @@ export function maybePushNppTechUnlock(args: {
   techCashFloorLocal?: number;
   /** Per-turn plant P&L the node price is valued against. */
   techPlantBasis?: TechPlantBasis | null;
+  /** Era context for reading the corporation's researched input-reduction cap. */
+  techLegacy?: LegacyTechContext;
   techCurrentYear: number;
   turn: number;
   now: Date;
@@ -105,6 +127,7 @@ export function maybePushNppTechUnlock(args: {
       cashReserve: args.cashReserve,
       cashFloorLocal: args.techCashFloorLocal,
       plantBasis: args.techPlantBasis,
+      legacy: args.techLegacy,
     }
   );
   if (!pick) return;

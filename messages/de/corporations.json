@@ -20,6 +20,13 @@
         "maximumContract": "Maximale zulässige Verpflichtung (pro Tag)",
         "penaltyWarning": "Dies ist eine Verpflichtung pro Tag, die je Runde zu einem Vierundzwanzigstel abgerechnet wird. Eine Produktion unterhalb der Verpflichtung, bis zur Obergrenze für Schadenersatz (die höchste Menge, die Sie in dieser Runde hätten herstellen können), führt zu Schadenersatz in Höhe von {penaltyPercent}% des Vertragsreferenzpreises jeder fehlenden Einheit."
       },
+      "negotiation": {
+        "moneyMarket": "Marktpreis in der Rohstofftabelle: {price} pro {unit}. Der abgerechnete Einsatzpreis folgt ihm, wird aber gedämpft und begrenzt, deshalb weichen beide voneinander ab.",
+        "moneyRange": "Reglerbereich: {low} bis {high} pro {unit}",
+        "moneyBuyerSide": "Als Käufer zahlst du am Markt etwa {market} pro {unit}. Dieser Vertrag kostet {contract}.",
+        "moneySellerSide": "Als Verkäufer erhältst du am Markt etwa {market} pro {unit}. Dieser Vertrag zahlt etwa {contract}: dieser Marktverkauf plus den Aufschlag.",
+        "moneyPerDay": "Pro Tag bei voller Obergrenze: {units} {unit}, Wert {value}. Jede stündliche Runde rechnet ein Vierundzwanzigstel ab."
+      },
       "priceModes": {
         "title": "So funktioniert der Preis",
         "fixed": "Festpreis",
@@ -39,6 +46,26 @@
         "fixedRange": "Der Festpreis muss zwischen {low} und {high} liegen.",
         "fixedSummary": "Festpreis {price} pro {unit}",
         "indexedSummary": "Marktpreis {percent}"
+      }
+    },
+    "sectorInvestment": {
+      "freightNoneEstimate": "Die Produktion dieses Sektors läuft über Kabel oder Leitung, nicht per Fracht, und braucht daher keine eigenen TEU.",
+      "forecastUnavailableReasons": {
+        "noCapacity": "Noch kein Gewinn und keine Amortisation: In diesem Sektor laufen keine Anlagen, daher gibt es kein Ergebnis zum Hochrechnen. Die Anzeige erscheint, sobald die ersten Anlagen eröffnet sind und eine Runde gelaufen ist.",
+        "notRun": "Noch kein Gewinn und keine Amortisation: Dieser Sektor hat in der letzten Runde nichts produziert, daher gibt es kein Ergebnis zum Hochrechnen. Die Anzeige erscheint nach seiner nächsten Runde mit Produktion.",
+        "mothballed": "Kein Gewinn und keine Amortisation, solange die Anlagen stillgelegt sind. Die Anzeige erscheint, nachdem sie wieder geöffnet haben und eine Runde gelaufen sind.",
+        "ramping": "Noch kein Gewinn und keine Amortisation: Dieser Sektor befindet sich noch im Hochlauf der Marktunterstützung, die Ergebnisse der letzten Runde sind daher nicht typisch. Die Anzeige erscheint in {turns, plural, one {# Runde} other {# Runden}}.",
+        "transition": "Noch kein Gewinn und keine Amortisation: Dieser Sektor wechselt seine Strategie, daher passen die Ergebnisse der letzten Runde nicht zu dem, was er künftig betreibt. Die Anzeige erscheint, sobald der Wechsel abgeschlossen ist.",
+        "upkeepBasis": "Noch kein Gewinn und keine Amortisation: Die laufenden Fixkosten dieses Sektors wurden noch nicht erfasst. Die Anzeige erscheint nach seiner nächsten abgerechneten Runde.",
+        "other": "Noch kein Gewinn und keine Amortisation: Die Ergebnisse der letzten Runde sind für diesen Sektor unvollständig. Die Anzeige erscheint nach seiner nächsten abgerechneten Runde."
+      },
+      "noExtraBuyersNote": "Für diese Produktion ist kein unbefriedigter Bedarf messbar, daher wird die zusätzliche Kapazität ohne zusätzliche Verkäufe, nur mit ihren laufenden Kosten, gerechnet. Sektoren desselben Typs mit ähnlichen Kosten zeigen denselben Wert.",
+      "warnFreight": "Die Fracht in {state} ist zu {share}% ausgelastet. Produktion für andere Bundesstaaten wird erst versandt, wenn wieder Fracht frei ist. Lokale Verkäufe sind nicht betroffen.",
+      "invalidBuildCount": "Gib eine ganze Zahl zwischen 1 und {max, number} ein.",
+      "marketReadout": {
+        "nationalMarket": "(nationaler Markt, keine Zahlen des Bundesstaats)",
+        "sidebarCapped": "Keine unerfüllten bezahlten Aufträge. Die Preise liegen an der Obergrenze.",
+        "capNote": "Die Preise liegen hier an der Obergrenze. Bedarf über den bezahlten Aufträgen wird nicht gezählt."
       }
     },
     "supplyBoard": {
@@ -102,6 +129,10 @@
       "specializationClosed": "In einem abgeschlossenen Jahrzehnt nicht erforschbar",
       "specializationsClosed": "Dieses Jahrzehnt ist abgeschlossen; seine Spezialisierungen können nicht mehr erforscht werden.",
       "chooseSpecialization": "Wähle eine. Die anderen werden für dieses Jahrzehnt gesperrt. Jeder Abschluss folgt seiner eigenen Wahl."
+    },
+    "runHold": {
+      "stoppedByInput": "Gestoppt: {input} fehlt",
+      "stoppedByInputHelp": "{sites} konnten nicht genug {input} kaufen, daher wurde ein Teil des Laufs gestoppt. Prüfe {input} in der Liste der Einsatzstoffe unten."
     },
     "commodityMarket": {
       "priceBasisWorld": "Weltdurchschnittspreis",
