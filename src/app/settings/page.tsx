@@ -47,6 +47,7 @@ import { SupporterPerksSection } from "./components/SupporterPerksSection";
 import { ApiKeysSection } from "./components/ApiKeysSection";
 import { ExperimentalFeaturesSection } from "./components/ExperimentalFeaturesSection";
 import { AskDrawerSection } from "./components/AskDrawerSection";
+import { NavigationLayoutSection } from "./components/NavigationLayoutSection";
 
 import {
   type CharacterData,
@@ -588,6 +589,7 @@ function useSettingsPageContentContext() {
               interfaceModeSaving={interfaceModeSaving}
               onInterfaceModeChange={handleInterfaceModeChange}
             />
+            <NavigationLayoutSection />
             <AskDrawerSection />
           </div>
         );

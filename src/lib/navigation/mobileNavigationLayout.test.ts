@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { experimentalMobileLayout, mobileNavigationLayout } from "./mobileNavigationLayout";
+import { mobileNavigationLayout } from "./mobileNavigationLayout";
 
 describe("mobile navigation preferences", () => {
-  it("defaults opted-in accounts to the dock and requires explicit experimental opt-in", () => {
-    expect(experimentalMobileLayout(true, undefined)).toBe("dock");
-    for (const enabled of [false, undefined, "true"]) {
-      expect(experimentalMobileLayout(enabled, "dock")).toBeNull();
-    }
+  it("gives every account the bottom dock until they pick a layout", () => {
+    expect(mobileNavigationLayout(undefined)).toBe("dock");
+    expect(mobileNavigationLayout(null)).toBe("dock");
+  });
+
+  it("respects a saved standard menu", () => {
+    expect(mobileNavigationLayout("standard")).toBe("standard");
   });
 
   it("preserves explicit choices and safely handles old values", () => {
