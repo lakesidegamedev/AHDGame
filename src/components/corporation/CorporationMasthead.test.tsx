@@ -102,6 +102,11 @@ describe("CorporationMasthead", () => {
     expect(screen.getByText("+$1000")).toBeTruthy();
   });
 
+  it("prints the corporation description under the identity line", () => {
+    renderMasthead({ description: "Holds restructured corporate bonds." });
+    expect(screen.getByText("Holds restructured corporate bonds.")).toBeTruthy();
+  });
+
   it("leaves the market quote off a private corporation, whose shares do not trade", () => {
     // An unlisted private corporation has no market, so no price and no quote.
     renderMasthead({ isPrivate: true, publicFloat: 0 }, { isCeo: true });

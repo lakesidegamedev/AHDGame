@@ -29,7 +29,8 @@ import type { SearchResult } from "@/lib/search/types";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { dedupeByLabel } from "@/lib/search/dedupeResults";
 import { nearMatches } from "@/lib/search/nearMatch";
-import { annotatePartialWordMatch } from "@/lib/search/partialWordMatch";
+import { annotatePartialWordMatch, titleHasQueryWord } from "@/lib/search/partialWordMatch";
+import { loadSuggestionVocabulary } from "@/lib/search/suggestionVocabulary";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -131,11 +132,14 @@ export async function runUniversalSearch({
   isResultsPage,
   isAdmin,
   isModerator,
+  relaxed = false,
 }: {
   query: string;
   isResultsPage: boolean;
   isAdmin: boolean;
   isModerator: boolean;
+  /** Set on the single-word retry, which never retries again. */
+  relaxed?: boolean;
 }): Promise<SearchResult[]> {
   const enabledCountries = isAdmin ? undefined : await getEnabledCountryIds();
 
@@ -893,6 +897,39 @@ export async function runUniversalSearch({
           href: `/character/${character.sequentialId ?? character._id.toString()}`,
         });
       }
+    }
+  }
+
+  if (!relaxed && !results.some((r) => titleHasQueryWord(r.title, query))) {
+    const vocabulary = await loadSuggestionVocabulary(db, enabledCountries, isAdmin || isModerator);
+    const known = new Set(results.map((r) => r.href));
+    for (const entry of nearMatches(query, vocabulary, 5)) {
+      if (known.has(entry.result.href)) continue;
+      known.add(entry.result.href);
+      results.push({
+        ...entry.result,
+        subtitle: `Did you mean this? · ${entry.result.subtitle}`,
+      });
+    }
+  }
+
+  if (!relaxed && results.length === 0) {
+    const words = query
+      .split(/\s+/)
+      .filter((w) => w.length >= 3)
+      .sort((a, b) => b.length - a.length);
+    if (words.length > 1) {
+      const partial = await runUniversalSearch({
+        query: words[0],
+        isResultsPage,
+        isAdmin,
+        isModerator,
+        relaxed: true,
+      });
+      return partial.map((r) => ({
+        ...r,
+        subtitle: `${r.subtitle} · matches only "${words[0]}" from your search`,
+      }));
     }
   }
 

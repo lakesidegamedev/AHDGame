@@ -42,7 +42,12 @@ import {
   sovereignInputsFromBudget,
   sovereignInputsFromFiscalClose,
 } from "@/lib/budget/rules/sovereignInputs";
-import { splitOtherByArea, type SpendingAreaId } from "@/lib/budget/rules/portfolioSpendingLines";
+import {
+  liftHousingFromCategories,
+  SPENDING_AREA_LABELS,
+  splitOtherByArea,
+  type SpendingAreaId,
+} from "@/lib/budget/rules/portfolioSpendingLines";
 import {
   lawSpendingCategory,
   otherRevenueParts,
@@ -325,6 +330,26 @@ export function NationalBudgetClient() {
           .filter((law) => !law.isGrant && lawSpendingCategory(law.budgetCategory) === "other")
           .map((law) => ({ law, area: law.spendingArea, amount: law.annualCost }))
       );
+  // Housing laws booked under another stored category (public housing books as
+  // infrastructure in some countries) are lifted out of that category's line.
+  const housingElsewhere = data.isSnapshot
+    ? null
+    : liftHousingFromCategories(
+        budget.spending.byCategory as Record<string, number>,
+        (enactedLaws as (DisplayEnactedLaw & { spendingArea?: SpendingAreaId })[])
+          .filter(
+            (law) =>
+              !law.isGrant &&
+              law.spendingArea === "housing" &&
+              lawSpendingCategory(law.budgetCategory) !== "other"
+          )
+          .map((law) => ({
+            law,
+            category: lawSpendingCategory(law.budgetCategory),
+            amount: law.annualCost,
+          }))
+      );
+  const liftedHousingLaws = new Set<unknown>(housingElsewhere?.laws ?? []);
   const areaLines: BreakdownLine[] = (otherSplit?.lines ?? []).map((line) => ({
     id: `area-${line.id}`,
     label: line.label,
@@ -336,13 +361,40 @@ export function NationalBudgetClient() {
       year: law.enactedYear,
     })),
   }));
+  if (housingElsewhere && housingElsewhere.total > 0) {
+    const lifted = {
+      amount: housingElsewhere.total,
+      laws: housingElsewhere.laws.map((law) => ({
+        title: law.title,
+        cost: formatLawCost(law),
+        year: law.enactedYear,
+      })),
+    };
+    const existing = areaLines.find((line) => line.id === "area-housing");
+    if (existing) {
+      existing.amount += lifted.amount;
+      existing.laws = [...(existing.laws ?? []), ...lifted.laws];
+    } else {
+      areaLines.push({
+        id: "area-housing",
+        label: SPENDING_AREA_LABELS.housing.label,
+        description: SPENDING_AREA_LABELS.housing.description,
+        amount: lifted.amount,
+        laws: lifted.laws,
+      });
+    }
+    areaLines.sort((a, b) => b.amount - a.amount);
+  }
   const otherRemainderLaws = otherSplit?.remainderLaws ?? null;
 
   const spendingLines: BreakdownLine[] = [
     ...Object.entries(budget.spending.byCategory)
       .filter(([key]) => key !== "tax")
       .map(([key, value]) => {
-        const lineValue = key === "other" && otherSplit ? otherSplit.remainderTotal : value;
+        const lineValue =
+          key === "other" && otherSplit
+            ? otherSplit.remainderTotal
+            : Math.max(0, value - (housingElsewhere?.amountByCategory[key] ?? 0));
         const label =
           labels.spendingLabels[key as keyof typeof labels.spendingLabels] ?? humanizeKey(key);
         return {
@@ -358,6 +410,7 @@ export function NationalBudgetClient() {
           // listed there too rather than under no line at all.
           laws: enactedLaws
             .filter((law) => lawSpendingCategory(law.budgetCategory) === key)
+            .filter((law) => !liftedHousingLaws.has(law))
             .filter(
               (law) =>
                 key !== "other" ||

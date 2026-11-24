@@ -240,9 +240,12 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
                         {p.partyName}
                         {p.inGovernment ? " (government)" : ""}
                       </span>
-                      <span className="text-muted">
-                        {p.seats} seats ({((p.seats / politics.totalSeats) * 100).toFixed(1)}% of
-                        seats), {(p.voteShare * 100).toFixed(1)}% of votes
+                      <span className="flex flex-col items-end text-right text-muted">
+                        <span>
+                          {p.seats} of {politics.totalSeats} seats (
+                          {((p.seats / politics.totalSeats) * 100).toFixed(1)}% of seats)
+                        </span>
+                        <span>Won {(p.voteShare * 100).toFixed(1)}% of votes cast</span>
                       </span>
                     </li>
                   ))}

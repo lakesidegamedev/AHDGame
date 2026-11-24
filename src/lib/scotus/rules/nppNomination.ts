@@ -13,6 +13,13 @@ export const SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS = 48;
  */
 export const SCOTUS_PLAYER_NOMINATION_GRACE_TURNS = 96;
 
+/** Last turn a player President can still nominate; null when the clock has not started. */
+export function playerNominationDeadlineTurn(
+  vacantSinceTurn: number | null | undefined
+): number | null {
+  return vacantSinceTurn == null ? null : vacantSinceTurn + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS;
+}
+
 /** True once a player President has had the whole grace window and nominated no one. */
 export function playerNominationGraceElapsed(
   vacantSinceTurn: number | null | undefined,

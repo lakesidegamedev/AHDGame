@@ -17,7 +17,7 @@ export const SPENDING_AREA_LABELS: Record<SpendingAreaId, { label: string; descr
     environment: {
       label: "Environment and energy",
       description:
-        "Environment, water, parks, energy and resources laws, run by the environment and interior departments.",
+        "Environment, water, parks, energy and resources laws, run by the environment and interior departments. The game has no separate water budget, so water laws are counted on this line.",
     },
     justice: {
       label: "Justice and public safety",
@@ -109,5 +109,49 @@ export function splitOtherByArea<T>(
     lines,
     remainderTotal: Math.max(0, otherTotal - lines.reduce((sum, l) => sum + l.amount, 0)),
     remainderLaws: items.filter((i) => !taken.has(i.law)).map((i) => i.law),
+  };
+}
+
+export interface CategoryHousingLaw<T> {
+  law: T;
+  /** Stored spending category the law books into. */
+  category: string;
+  /** Live annual cost; null when unpriced. */
+  amount: number | null | undefined;
+}
+
+/**
+ * Housing laws that book into a stored category other than "other" (public
+ * housing is booked as infrastructure in some countries). Each category gives up
+ * no more than its own total, scaled down together when live prices overshoot.
+ */
+export function liftHousingFromCategories<T>(
+  categoryTotals: Readonly<Record<string, number>>,
+  items: readonly CategoryHousingLaw<T>[]
+): { amountByCategory: Record<string, number>; laws: T[]; total: number } {
+  const amountByCategory: Record<string, number> = {};
+  const laws: T[] = [];
+  const raw = new Map<string, number>();
+  const priced = items.filter(
+    (i) => typeof i.amount === "number" && Number.isFinite(i.amount) && i.amount > 0
+  );
+  for (const item of priced) {
+    raw.set(item.category, (raw.get(item.category) ?? 0) + (item.amount as number));
+  }
+  for (const [category, sum] of raw) {
+    const total = categoryTotals[category] ?? 0;
+    if (!(total > 0)) continue;
+    const scale = sum > total ? total / sum : 1;
+    for (const item of priced) {
+      if (item.category !== category) continue;
+      amountByCategory[category] =
+        (amountByCategory[category] ?? 0) + (item.amount as number) * scale;
+      laws.push(item.law);
+    }
+  }
+  return {
+    amountByCategory,
+    laws,
+    total: Object.values(amountByCategory).reduce((sum, v) => sum + v, 0),
   };
 }

@@ -210,6 +210,13 @@ export type ElectionType =
   | "nationalAssembly";
 
 export interface ElectionDetail {
+  /** Sitting officeholder of a single-seat race, and whether they are on the ballot. */
+  incumbent?: {
+    name: string;
+    party: string;
+    running?: boolean;
+    notRunningReason?: string | null;
+  } | null;
   /** Seats decided district by district (see ElectionResponse). */
   seatsDecidedByDistrict?: boolean;
   id: string;

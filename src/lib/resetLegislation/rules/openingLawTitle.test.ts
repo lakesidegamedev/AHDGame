@@ -54,6 +54,15 @@ describe("opening law title", () => {
     );
   });
 
+  it("replaces the internal no-mapped-seed wording with plain text", () => {
+    const unmapped = {
+      ...reference([]),
+      status: "modeled-unmapped",
+      currentLaw: "2027-default: no mapped seed law for L39",
+    };
+    expect(openingLawTitle(unmapped, lookup)).toBe("No dedicated law at the start of the game");
+  });
+
   it("keeps hand-written titles for reviewed references", () => {
     const reviewed = { ...reference([]), status: "seeded-regimes", currentLaw: "Ethics Act" };
     expect(openingLawTitle(reviewed, lookup)).toBe("Ethics Act");

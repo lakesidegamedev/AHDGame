@@ -231,7 +231,8 @@ describe("BackgroundCountryOverview", () => {
     expect(screen.getByText(/not today's yield/)).toBeTruthy();
     const gov = screen.getByTestId("background-government");
     expect(gov.textContent).toContain("of seats");
-    expect(gov.textContent).toContain("of votes");
+    expect(gov.textContent).toContain("of votes cast");
+    expect(gov.textContent).toMatch(/\d+ of \d+ seats \(\d+\.\d% of seats\)/);
   });
 
   it("explains an empty brief list and a missing fiscal record", () => {

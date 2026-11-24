@@ -1,5 +1,8 @@
 import { POSITIVE_MODIFIER_NET_CAP, type ActiveModifier } from "@/lib/approval/activeModifier";
-import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import {
+  computeRegionalConditionMargin,
+  marginEffectForModifier,
+} from "@/lib/states/conditions/marginEffects";
 
 export interface ApprovalBreakdown {
   /** Population-weighted state average, before any national adjustment. */
@@ -118,6 +121,32 @@ export function nationalMarginFromRegions(
     total += population;
   }
   return total > 0 ? round1(weighted / total) : null;
+}
+
+/**
+ * Each condition's margin as the population-weighted mean of the regions' own
+ * margin for it (zero where a region lacks it), so the chips on the national
+ * page add up to what the regions add up to before their 3pp cap.
+ */
+export function regionWeightedConditionMargins(
+  regions: readonly { population?: number; modifiers: ActiveModifier[] }[]
+): Map<string, number> {
+  const sums = new Map<string, number>();
+  let total = 0;
+  for (const region of regions) {
+    const population = region.population;
+    if (!Number.isFinite(population) || !population || population <= 0) continue;
+    total += population;
+    for (const m of region.modifiers) {
+      if (m.source === "address") continue;
+      const margin = m.marginEffect ?? marginEffectForModifier(m.effect, m.id);
+      sums.set(m.id, (sums.get(m.id) ?? 0) + margin * population);
+    }
+  }
+  const result = new Map<string, number>();
+  if (total <= 0) return result;
+  for (const [id, sum] of sums) result.set(id, round1(sum / total));
+  return result;
 }
 
 export interface RegionReconciliation {
