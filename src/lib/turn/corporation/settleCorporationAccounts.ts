@@ -56,6 +56,11 @@ export function settleCorporationAccounts(
     processCorporationAccount(context, corp);
   }
 
+  for (const op of context.sectorOps) {
+    const assessment = context.sectorTaxAssessmentsById.get(op.updateOne.filter._id.toHexString());
+    if (assessment) op.updateOne.update.$set.corporateTaxAssessment = assessment;
+  }
+
   // Route only the clearing value of delivered advertising. Buyer shares are
   // already capped above, so unfilled budget remains in treasury. Pair legs
   // stay unrounded until every corporation's transfers have been aggregated,

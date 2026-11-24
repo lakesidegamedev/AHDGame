@@ -489,13 +489,14 @@ export interface Financials {
    * Actual per-turn deduction apportions corp-level overhead across sectors by revenue
    * share, see corporation Financials tab for exact totals.
    */
-  federalTaxApprox: number;
+  federalTaxApprox: number | null;
+  taxAssessmentTurn?: number | null;
   /** Same as federalTaxApprox but for the sector's state/regional rate. */
-  stateTaxApprox: number;
+  stateTaxApprox: number | null;
   /** This sector's revenue-weighted share of corp-level overhead (marketing + logistics + CEO salary). */
-  corpOverheadShare: number;
+  corpOverheadShare: number | null;
   /** Net Profit minus the overhead share, floored at zero, the base the tax rates apply to. */
-  taxableIncome: number;
+  taxableIncome: number | null;
 }
 
 export interface Competitor {

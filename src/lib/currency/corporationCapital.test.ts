@@ -26,10 +26,10 @@ describe("anchorToCorpCapital", () => {
     expect(anchorToCorpCapital(1000, "GBP", 0.75)).toBe(750);
   });
 
-  it("falls back to the raw amount if the FX rate is invalid", () => {
-    expect(anchorToCorpCapital(1000, "JPY", 0)).toBe(1000);
-    expect(anchorToCorpCapital(1000, "JPY", -5)).toBe(1000);
-    expect(anchorToCorpCapital(1000, "JPY", Number.NaN)).toBe(1000);
+  it("refuses conversion when a named currency quote is invalid", () => {
+    expect(() => anchorToCorpCapital(1000, "JPY", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => anchorToCorpCapital(1000, "JPY", -5)).toThrow(/Exchange rate unavailable/);
+    expect(() => anchorToCorpCapital(1000, "JPY", Number.NaN)).toThrow(/Exchange rate unavailable/);
   });
 });
 
@@ -61,9 +61,9 @@ describe("corpCapitalToAnchor", () => {
     expect(corpCapitalToAnchor(106_000, "JPY", 106)).toBe(1000);
   });
 
-  it("falls back to the raw amount if the FX rate is invalid", () => {
-    expect(corpCapitalToAnchor(1000, "JPY", 0)).toBe(1000);
-    expect(corpCapitalToAnchor(1000, "JPY", -5)).toBe(1000);
+  it("refuses conversion when a named currency quote is invalid", () => {
+    expect(() => corpCapitalToAnchor(1000, "JPY", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => corpCapitalToAnchor(1000, "JPY", -5)).toThrow(/Exchange rate unavailable/);
   });
 });
 
@@ -105,10 +105,14 @@ describe("fxRateForCorpFromMap", () => {
     expect(fxRateForCorpFromMap({ countryId: "JP" }, fullMap)).toBe(106);
   });
 
-  it("falls back to 1 when the currency is missing from the map", () => {
+  it("refuses a missing named-currency quote", () => {
     const empty = new Map<CurrencyCode, number>();
-    expect(fxRateForCorpFromMap({ liquidCurrencyCode: "JPY" }, empty)).toBe(1);
-    expect(fxRateForCorpFromMap({ liquidCurrencyCode: "USD" }, empty)).toBe(1);
+    expect(() => fxRateForCorpFromMap({ liquidCurrencyCode: "JPY" }, empty)).toThrow(
+      /Exchange rate unavailable/
+    );
+    expect(() => fxRateForCorpFromMap({ liquidCurrencyCode: "USD" }, empty)).toThrow(
+      /Exchange rate unavailable/
+    );
   });
 });
 

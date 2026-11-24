@@ -96,6 +96,8 @@ export interface NationalizationTaking {
 }
 
 export interface CorporateSector {
+  /** Recorded corporate income-tax assessment, not a page-time projection. */
+  corporateTaxAssessment?: import("@/lib/corporations/rules/sectorTaxes").SectorTaxAssessment;
   /** Identity for a separately acquired or built site in an occupied market. */
   nationalizationSiteKey?: string;
   /** Physical ownership receipt for replay safety. */

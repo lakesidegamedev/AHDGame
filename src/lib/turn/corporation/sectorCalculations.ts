@@ -1,3 +1,4 @@
+import type { SectorTaxAssessment } from "@/lib/corporations/rules/sectorTaxes";
 import type { SettledProfitEntry } from "@/lib/market/producerMarket/rules/recentSettledProfit";
 import { settleCorporationAccounts } from "@/lib/turn/corporation/settleCorporationAccounts";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
@@ -112,6 +113,7 @@ function prepareProcessSectors(
   // pattern as strike events).
   const pendingCapacityBindingEvents: SectorCalculationsResult["capacityBindingEvents"] = [];
 
+  const sectorTaxAssessmentsById = new Map<string, SectorTaxAssessment>();
   const sectorOps: {
     updateOne: {
       filter: { _id: ObjectId };
@@ -332,6 +334,7 @@ function prepareProcessSectors(
       profitMarginByCorpId,
       sectorFxSpreadFees,
       sectorOps,
+      sectorTaxAssessmentsById,
       sectorsProcessed,
       sectorTurnEnv,
       totalAdvertisingDeliveredValueAnchor,

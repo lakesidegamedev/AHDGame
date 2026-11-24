@@ -242,7 +242,7 @@ describe("buildFreightBillingBySector — corp-phase glue", () => {
       sectorsByCorp: new Map([[CORP_ID.toString(), [buyer, hauler]]]),
       corpById: new Map([[CORP_ID.toString(), corp]]),
       eraUnitScale: 1,
-      exchangeRatesByCurrency: new Map(),
+      exchangeRatesByCurrency: new Map([["USD", 1]]),
       stateResourceCapacityByState: new Map(),
       ...over,
     } as unknown as Parameters<typeof buildFreightBillingBySector>[0]["lookups"];

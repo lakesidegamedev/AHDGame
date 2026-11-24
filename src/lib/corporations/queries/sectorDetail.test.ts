@@ -11,6 +11,9 @@ let db: MockDb;
 beforeEach(async () => {
   vi.clearAllMocks();
   db = createMockDb();
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+  });
   db.collection("corporations");
   db.collection("corporateSectors");
 

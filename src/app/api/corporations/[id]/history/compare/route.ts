@@ -4,7 +4,6 @@ import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getAuthUser } from "@/lib/auth";
 import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCorporateHoldings";
-import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { loadCorporationHistoryComparePoints } from "@/lib/corporations/queries/corporationHistoryCompare";
 
 interface RouteParams {
@@ -56,19 +55,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const data = await loadCorporationHistoryComparePoints({ db, corporation });
-
-    // The newest snapshot's market cap freezes at last turn processing and
-    // can disagree with the live Overview card, so overwrite just the latest
-    // point with the live figure and stamp its current currency (dropping
-    // fxRateAtWrite so the client converts at the live rate). Older points
-    // stay frozen.
-    const latest = data.points[data.points.length - 1];
-    if (latest) {
-      latest.marketCap = getRoundedPublicMarketCap(corporation, corporation.totalShares ?? 0);
-      latest.currencyCode = corporation.liquidCurrencyCode;
-      delete latest.fxRateAtWrite;
-      data.currencyCode = corporation.liquidCurrencyCode ?? data.currencyCode;
-    }
 
     return NextResponse.json(data, {
       headers: {

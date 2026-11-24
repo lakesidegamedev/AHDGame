@@ -240,6 +240,15 @@ export default function SnapshotTab({
         Turn-over-turn change across the corporation&apos;s recorded history. Pick two turns or a
         lookback window.
       </p>
+      {points.some(
+        (point) =>
+          (point.turn === earlierTurn || point.turn === laterTurn) && point.incomeIsEstimated
+      ) && (
+        <p className="mb-3 text-xs text-muted">
+          Bond payments were not recorded for one of these turns. Retained income includes accrued
+          coupons and may differ from cash received.
+        </p>
+      )}
       <TableScroll>
         <table className="w-full border-collapse">
           <thead>

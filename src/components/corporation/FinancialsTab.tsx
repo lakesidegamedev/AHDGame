@@ -656,7 +656,13 @@ export default function FinancialsTab({
                   )}
                   <StatementLine
                     strong
-                    label={basis.isRealized ? "Net income, last turn" : "Net income"}
+                    label={
+                      basis.isRealized
+                        ? financials.historicalBondFeesUnavailable
+                          ? "Net income, last turn estimate"
+                          : "Net income, last turn"
+                        : "Net income, forecast"
+                    }
                     amount={fmtSigned(scale(basis.netIncome))}
                     amountClass={signTone(basis.netIncome)}
                     pct={pctOf(basis.netIncome)}
@@ -740,12 +746,28 @@ export default function FinancialsTab({
               )}
             </DenseSection>
 
+            {financials.historicalIncomeUnavailable && (
+              <p className="text-sm text-muted">
+                Recorded income is unavailable because its historical currency conversion is
+                missing. The statement shows a forecast.
+              </p>
+            )}
+            {financials.historicalBondFeesUnavailable && (
+              <p className="text-sm text-muted">
+                Historical bond settlement evidence is unavailable. Last-turn income includes
+                estimated bond flows and may differ from cash received or paid.
+              </p>
+            )}
             <DenseSection title="Health">
               <KVList>
                 <KVRow
                   label="Net margin"
-                  value={<span className={signTone(netMargin)}>{netMargin.toFixed(1)}%</span>}
-                  title="Net income over everything taken in, bond coupons and IMF receipts included."
+                  value={
+                    <span className={signTone(netMargin ?? 0)}>
+                      {netMargin == null ? "n/a" : `${netMargin.toFixed(1)}%`}
+                    </span>
+                  }
+                  title="Net income divided by income from the same period, including received dividends and bond coupons."
                 />
                 {creditRating && (
                   <KVRow
@@ -906,9 +928,28 @@ export default function FinancialsTab({
                       <StatementLine
                         indent
                         label={`Bond debt, ${balanceSheet.liabilities.bondCount} issue${balanceSheet.liabilities.bondCount === 1 ? "" : "s"}`}
-                        amount={fmt(balanceSheet.liabilities.totalDebt)}
+                        amount={fmt(
+                          balanceSheet.liabilities.debtBreakdown?.bonds ??
+                            balanceSheet.liabilities.totalDebt
+                        )}
                         note={`interest ${money.fmt(scaleMoney(balanceSheet.liabilities.dailyInterestCost, "turn"))} a turn`}
                       />
+                      {Object.entries(balanceSheet.liabilities.debtBreakdown ?? {})
+                        .filter(([key, value]) => key !== "bonds" && value > 0)
+                        .map(([key, value]) => (
+                          <StatementLine
+                            key={key}
+                            indent
+                            label={
+                              key === "loans"
+                                ? "Bank loans"
+                                : key === "arrears"
+                                  ? "Operating and tax payables"
+                                  : "IMF facility principal"
+                            }
+                            amount={fmt(value)}
+                          />
+                        ))}
                       <StatementLine
                         strong
                         label="Total liabilities"

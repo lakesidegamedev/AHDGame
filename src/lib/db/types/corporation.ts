@@ -1069,6 +1069,23 @@ export interface Corporation {
   lastSpinOffTurn?: number;
   /** Per-subsidiary cooldown anchor for parent capital injections into this corp. */
   lastCapitalInjectionTurn?: number;
+  /** Frozen capital-transfer quote retained for interruption recovery and same-turn retries. */
+  capitalInjectionIntent?: {
+    key: string;
+    parentId: string;
+    turn: number;
+    completed?: boolean;
+    amountParent: number;
+    amountSubsidiary: number;
+    parentCurrency?: CurrencyCode;
+    subsidiaryCurrency?: CurrencyCode;
+    parentStampedCurrency?: CurrencyCode;
+    subsidiaryStampedCurrency?: CurrencyCode;
+    parentRate: number;
+    subsidiaryRate: number;
+    createdAt: Date;
+    turnLengthMinutes: number;
+  };
   /**
    * Divestiture ordered as the remedy on a cleared-with-conditions merger (C3).
    * Satisfied by spinning off the named industry; overdue it fines this corp

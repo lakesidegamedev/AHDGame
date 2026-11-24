@@ -1,5 +1,5 @@
+import { recordedPersonalNetWorth } from "@/lib/portfolio/rules/netWorth";
 import { ObjectId, type Db } from "mongodb";
-import type { User } from "@/lib/db/types/user";
 import type { PortfolioHistory } from "@/lib/db/types/portfolioHistory";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -43,12 +43,22 @@ export async function loadNetWorth(db: Db, userId: string): Promise<NetWorthWidg
       .sort({ turn: -1 })
       .limit(NET_WORTH_TURNS)
       .project<
-        Pick<PortfolioHistory, "turn" | "totalValue" | "netValue" | "exchangeRatesSnapshot">
+        Pick<
+          PortfolioHistory,
+          | "turn"
+          | "totalValue"
+          | "netValue"
+          | "locDebtValue"
+          | "incomeTaxDebtValue"
+          | "exchangeRatesSnapshot"
+        >
       >({
         _id: 0,
         turn: 1,
         totalValue: 1,
         netValue: 1,
+        locDebtValue: 1,
+        incomeTaxDebtValue: 1,
         exchangeRatesSnapshot: 1,
       })
       .toArray(),
@@ -59,10 +69,17 @@ export async function loadNetWorth(db: Db, userId: string): Promise<NetWorthWidg
     : null;
   return {
     currencyCode,
-    points: [...history].reverse().map((row) => ({
-      turn: row.turn,
-      value: row.netValue ?? row.totalValue,
-      rate: (currencyCode && row.exchangeRatesSnapshot?.[currencyCode]) || null,
-    })),
+    points: [...history].reverse().flatMap((row) => {
+      const value = recordedPersonalNetWorth(row);
+      return value == null
+        ? []
+        : [
+            {
+              turn: row.turn,
+              value,
+              rate: (currencyCode && row.exchangeRatesSnapshot?.[currencyCode]) || null,
+            },
+          ];
+    }),
   };
 }

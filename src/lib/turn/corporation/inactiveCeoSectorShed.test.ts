@@ -74,7 +74,7 @@ function makeMinimalLookups(
     foreignCorpTaxRateByCountry: new Map(),
     domesticStateCorpTaxRateByState: new Map(),
     foreignStateCorpTaxRateByState: new Map(),
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([["USD", 1]]),
     stateCountryMap: new Map(),
     stateResourceCapacityByState: new Map(),
     extractionCapacityUtilBySector: new Map(),

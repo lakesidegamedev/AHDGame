@@ -91,6 +91,11 @@ const PRIVATE_REDACTED_SECTOR_FIELDS = [
   // with the booked profit beside it, how much.
   "managementProfit",
   "siteStatement",
+  "recordedTax",
+  "federalTaxPaid",
+  "stateTaxPaid",
+  "federalTaxForecast",
+  "stateTaxForecast",
   "ownSiteMemoValue",
   // Share of output a rival could not get to market. Same class of intel as the
   // exact fill rate: it tells an attacker which of this corp's plants cannot

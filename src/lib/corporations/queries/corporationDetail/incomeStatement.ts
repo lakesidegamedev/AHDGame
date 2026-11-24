@@ -1,3 +1,4 @@
+import { consolidatedTaxScale } from "@/lib/corporations/rules/sectorTaxes";
 import type { CountryTax } from "./countryStatements";
 import type { Db } from "mongodb";
 import { applyLossCarryforward } from "@/lib/corporations/rules/lossCarryforward";
@@ -155,6 +156,7 @@ export interface IncomeStatementResult {
     liabilities: {
       dailyCosts: number;
       totalDebt: number;
+      debtBreakdown?: Record<string, number>;
       dailyInterestCost: number;
       bondCount: number;
     };
@@ -305,12 +307,19 @@ export async function computeIncomeStatement(
   // pass-through owner taxes added below have no country of their own.
   const sectorTaxByCountry: Record<string, CountryTax> = {};
   const perSectorTax = new Map<string, SectorTaxLine>();
+  const projectedSectorNet = sectorDetails.map(
+    (sd) =>
+      (sd.profit ?? 0) -
+      corpLevelTaxCosts *
+        (sectorRevenueTotal > 0 ? (sd.financialRevenue ?? sd.revenue ?? 0) / sectorRevenueTotal : 0)
+  );
+  const lossOffsetScale = consolidatedTaxScale(projectedSectorNet);
   for (const sd of sectorDetails) {
     const revenueShare =
       sectorRevenueTotal > 0 ? (sd.financialRevenue ?? sd.revenue ?? 0) / sectorRevenueTotal : 0;
     const sectorNetIncome = (sd.profit ?? 0) - corpLevelTaxCosts * revenueShare;
     consolidatedTaxableNet += sectorNetIncome;
-    const sectorTaxable = Math.max(0, sectorNetIncome);
+    const sectorTaxable = Math.max(0, sectorNetIncome) * lossOffsetScale;
     const sectorCountry = sd.countryId ?? corporation.countryId;
     const isDomestic = corporation.countryId === sectorCountry;
     const federalRate =
@@ -424,7 +433,7 @@ export async function computeIncomeStatement(
   );
   const lossCarry = applyLossCarryforward(
     consolidatedTaxableNet + Math.max(0, dailyCouponIncomeLocal),
-    lossBankLocal
+    lossBankLocal * TURNS_PER_DAY
   );
   if (lossCarry.taxScale < 1) {
     displayFederalTax = Math.round(displayFederalTax * lossCarry.taxScale);
@@ -433,6 +442,10 @@ export async function computeIncomeStatement(
     bondCouponFedTaxLocal = Math.round(bondCouponFedTaxLocal * lossCarry.taxScale);
     for (const cc of Object.keys(federalTaxByCountry)) {
       federalTaxByCountry[cc] = Math.round(federalTaxByCountry[cc] * lossCarry.taxScale);
+    }
+    for (const tax of perSectorTax.values()) {
+      tax.federalTaxPaid = Math.round(tax.federalTaxPaid * lossCarry.taxScale);
+      tax.stateTaxPaid = Math.round(tax.stateTaxPaid * lossCarry.taxScale);
     }
     for (const tax of Object.values(sectorTaxByCountry)) {
       tax.federal = Math.round(tax.federal * lossCarry.taxScale);
@@ -579,6 +592,12 @@ export async function computeIncomeStatement(
     liabilities: {
       dailyCosts: Math.round(operatingCosts),
       totalDebt: Math.round(totalDebtLocal),
+      debtBreakdown: Object.fromEntries(
+        Object.entries(portfolio.debtBreakdownAnchor ?? {}).map(([key, value]) => [
+          key,
+          anchorToCorpCapital(value, corpCurrency, corpFxRate),
+        ])
+      ),
       dailyInterestCost: Math.round(dailyInterestLocal),
       bondCount: outstandingBonds.length,
     },

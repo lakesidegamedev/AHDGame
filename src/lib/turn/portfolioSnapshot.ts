@@ -4,13 +4,12 @@ import {
   loadReservedCorporatePositionsByTarget,
   corporationWithReservedHoldings,
 } from "@/lib/corporations/reservedCorporateHoldings";
-import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import {
   holdingMarketValues,
   holdingMarketSnapshotValues,
 } from "@/lib/corporations/rules/holdingTerms";
 import { loadUnpaidIncomeTaxByCharacter } from "@/lib/budget/playerIncomeTaxSummary";
-import { personalNetWorth } from "@/lib/portfolio/rules/netWorth";
+import { personalPortfolioNetWorth } from "@/lib/portfolio/rules/netWorth";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
@@ -29,7 +28,6 @@ import {
 } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import type { ExchangeRate } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -355,11 +353,14 @@ export async function snapshotPortfolioValues(
       totalValue: Math.round(values.totalValue * 100) / 100,
       netValue:
         Math.round(
-          personalNetWorth(
-            values.totalValue,
-            values.locDebtValue,
-            incomeTaxDebts.get(charId) ?? 0
-          ) * 100
+          personalPortfolioNetWorth({
+            stockValue: values.stockValue,
+            bondValue: values.bondValue,
+            fundValue: values.fundValue,
+            cashValue: values.cashValue,
+            loanDebt: values.locDebtValue,
+            incomeTaxDebt: incomeTaxDebts.get(charId) ?? 0,
+          }) * 100
         ) / 100,
       incomeTaxDebtValue: incomeTaxDebts.get(charId) ?? 0,
       stockValue: Math.round(values.stockValue * 100) / 100,

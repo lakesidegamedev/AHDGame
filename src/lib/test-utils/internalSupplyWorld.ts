@@ -157,7 +157,10 @@ export function runInternalSupplyWorld(
   const lookups = emptyLookups();
   lookups.eraUnitScale = overrides.eraScale ?? 1;
   lookups.preset = "2019-default";
-  lookups.exchangeRatesByCurrency = new Map(overrides.fx ? [["JPY", overrides.fx]] : []);
+  lookups.exchangeRatesByCurrency = new Map([
+    ["USD", 1],
+    ...(overrides.fx ? [["JPY", overrides.fx] as const] : []),
+  ]);
   lookups.reachablePriceRatioByCountry = new Map();
   lookups.statePriceRatioByState = new Map();
   lookups.corpById = new Map([
