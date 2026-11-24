@@ -3,10 +3,7 @@
  * scale at once (rules in src/lib/resetMetrics/rules/propertyCrimeReset.ts).
  * Snapshots each board to heal_snapshot_property_crime_era_scale and skips
  * boards already there, so a rerun changes nothing. Writes only if the value
- * is unchanged since read. Run between turns.
- *
- *   npx tsx scripts/migrations/2026-11-24-property-crime-era-scale.ts --dry-run
- *   npx tsx scripts/migrations/2026-11-24-property-crime-era-scale.ts --apply
+ * is unchanged since read. Run between turns: --dry-run first, then --apply.
  */
 import { connectDb, closeDb } from "../utils/db";
 import { TURNS_PER_YEAR } from "../../src/lib/constants/turnTime";
