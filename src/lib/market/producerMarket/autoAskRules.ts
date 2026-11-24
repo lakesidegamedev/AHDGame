@@ -202,27 +202,14 @@ export function rememberAutoAsk(
 }
 
 /**
- * Ask bracket: memory that stops a posted ask flipping between two prices.
- *
- * The ordinary rules pick a candidate ask from the market anchor, the shortage
- * step and the stock-cover markdown. Where the price buyers will pay sits
- * between two of those levels, the seller asks the high one, sells little,
- * marks the leftover stock down, sells out, and asks the high one again, every
- * other turn. The bracket remembers the highest ask that sold out and the
- * lowest ask that fell short. With both known, the next ask is their midpoint,
- * so the gap halves each turn until it is too small to matter and the price
- * holds.
- *
- * The bracket lets go so the seller can follow a moving market: when a
- * sell-out lands at or above the rejected ask (buyers now pay more), when a
- * shortfall lands at or below the ask that sold out (buyers now pay less), when
- * the reference price has moved since the bracket last learned something, and
- * when the price has held for ASK_BRACKET_MAX_TURNS turns. The ordinary
- * candidate then applies again.
- *
- * Silence is never a signal: nothing offered keeps the bracket unchanged.
- *
- * Pure: plain numbers in, plain numbers out.
+ * Ask bracket: stops a posted ask flipping between two candidate prices (the
+ * anchor above the market, the stock-cover markdown below it). It remembers the
+ * highest ask that sold out and the lowest that fell short; with both known the
+ * next ask is their midpoint, so the gap halves until it is under
+ * ASK_BRACKET_CONVERGED_GAP and the price holds. It lets go when a sell-out
+ * reaches the rejected ask, a shortfall reaches the sold-out ask, the reference
+ * price moves, or the price has held ASK_BRACKET_MAX_TURNS turns. Silence keeps
+ * it unchanged.
  */
 
 /** Gap between the bounds, as a share of the lower one, under which the price holds. */
