@@ -2,6 +2,7 @@ import { ROSTER_BY_KEY, type AlignmentCountryKey } from "@/lib/constants/alignme
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
+import { successorPolityName } from "@/lib/world/successorPolities";
 
 /**
  * Display name and flag for any organisation member (or any world entity).
@@ -16,6 +17,9 @@ import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
 
 const REGIONAL_INDICATOR_A = 0x1f1e6;
 
+/** Entity ids that differ from the ISO code their flag uses. */
+const ISO_ALPHA2_BY_ENTITY: Readonly<Record<string, string>> = { CZ2: "CZ" };
+
 function isoAlpha2ToFlag(code: string): string {
   return String.fromCodePoint(
     REGIONAL_INDICATOR_A + (code.charCodeAt(0) - 65),
@@ -27,6 +31,7 @@ export function entityName(id: OrgMemberId): string {
   return (
     COUNTRY_DISPLAY_LABELS[id as CountryId]?.name ??
     ROSTER_BY_KEY[id as AlignmentCountryKey]?.name ??
+    successorPolityName(id) ??
     id
   );
 }
@@ -40,6 +45,7 @@ export function entityName(id: OrgMemberId): string {
 export function entityFlag(id: OrgMemberId): string {
   const authored = COUNTRY_DISPLAY_LABELS[id as CountryId]?.flagEmoji;
   if (authored) return authored;
-  if (/^[A-Z]{2}$/.test(id)) return isoAlpha2ToFlag(id);
+  const iso = ISO_ALPHA2_BY_ENTITY[id] ?? id;
+  if (/^[A-Z]{2}$/.test(iso)) return isoAlpha2ToFlag(iso);
   return "🏳️";
 }
