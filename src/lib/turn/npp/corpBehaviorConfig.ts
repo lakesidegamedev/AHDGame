@@ -45,8 +45,7 @@ export function pickBestNppTechNode(
       ).researched.inputEfficiencyBonus
     : undefined;
   const candidates = getTreeForType(corp.type as Corporation["type"])
-    // A node that only adds input reduction past the cap does nothing; players
-    // cannot unlock it either.
+    // Input reduction beyond the cap adds nothing, and unlockTechNode refuses such nodes.
     .filter(
       (node) =>
         researchedInputBonus === undefined ||
@@ -102,7 +101,7 @@ export function maybePushNppTechUnlock(args: {
   techCashFloorLocal?: number;
   /** Per-turn plant P&L the node price is valued against. */
   techPlantBasis?: TechPlantBasis | null;
-  /** Era context used to read the corporation's researched input-reduction cap. */
+  /** Era context for reading the corporation's researched input-reduction cap. */
   techLegacy?: LegacyTechContext;
   techCurrentYear: number;
   turn: number;
