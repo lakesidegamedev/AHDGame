@@ -25,6 +25,8 @@ export function propertyCrimeOnEraScale(
   if (before === null || now === null) return null;
   const span = band.worst - band.best;
   const openingScore = ((band.worst - openingValue) / span) * 100;
-  const score = Math.max(0, Math.min(100, openingScore + (now - before)));
+  // Not clamped to 0-100: a region that opened beyond the band (DC) must stay
+  // beyond it rather than be pulled under its own opening.
+  const score = openingScore + (now - before);
   return Number(Math.max(0, band.worst - (score / 100) * span).toFixed(6));
 }

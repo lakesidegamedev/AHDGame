@@ -1,3 +1,4 @@
+import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PartyStrengthPressure, StatePartyOrg, PoliticalParty } from "@/lib/db/types";
@@ -63,6 +64,8 @@ export type BuildOrgPreviewResult =
       dilutions: {
         partyId: string;
         loss: number;
+        partyName?: string;
+        abbreviation?: string;
       }[];
       scope: "state" | "national-targeted";
       eligibleScopes: SpenderScopeEligibility;
@@ -205,12 +208,20 @@ export async function computeBuildOrgPreview(
     contributionUnits: ORG_BUILD_UNITS_PER_CLICK,
     projectedOrganizationUnits: ownProjection.organizationUnits,
     projectedGain: ownProjection.delta,
-    dilutions: bucketResult.rows
-      .filter((row) => row.id !== previewRowId && row.delta < 0)
-      .map((row) => ({
-        partyId: partyIdByRow.get(row.id) ?? row.id,
-        loss: Math.abs(row.delta),
-      })),
+    // Each diluted party carries its name, so the panel never shows "Party #1".
+    dilutions: await Promise.all(
+      bucketResult.rows
+        .filter((row) => row.id !== previewRowId && row.delta < 0)
+        .map(async (row) => {
+          const partyId = partyIdByRow.get(row.id) ?? row.id;
+          const party = await findPartyBySequentialId(db, partyId, countryId).catch(() => null);
+          return {
+            partyId,
+            loss: Math.abs(row.delta),
+            ...(party ? { partyName: party.name, abbreviation: party.abbreviation } : {}),
+          };
+        })
+    ),
     scope,
     eligibleScopes,
   };

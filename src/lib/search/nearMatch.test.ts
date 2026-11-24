@@ -26,3 +26,18 @@ describe("suggestion vocabulary names", () => {
     expect(nearMatches("Selina Myer", names, 5).map((n) => n.name)).toEqual(["Selina Meyer"]);
   });
 });
+
+describe("typos at the start of a longer word", () => {
+  it("finds a word that begins with the misspelled query", () => {
+    const names = [{ name: "Top Marginal Income Tax" }, { name: "Martin Lockheed" }];
+    expect(nearMatches("Margn", names, 5).map((n) => n.name)[0]).toBe("Top Marginal Income Tax");
+  });
+
+  it("ranks a whole-word match ahead of a prefix match", () => {
+    expect(nearMatchScore("Margn", "Margin")!).toBeLessThan(nearMatchScore("Margn", "Marginal")!);
+  });
+
+  it("keeps short queries strict", () => {
+    expect(nearMatchScore("Mar", "Marginal")).toBeNull();
+  });
+});

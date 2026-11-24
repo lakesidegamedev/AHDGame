@@ -669,6 +669,12 @@ export function PrimaryBlendView({
         );
       })}
       <FogNote campaigns={campaigns} />
+      {/* The two campaign columns are counts a reader cannot guess, so say what
+          they count right under the table. */}
+      <p style={{ margin: "10px 0 0", fontSize: 12, color: BLEND.muted }}>
+        Actions: campaign actions this candidate has taken in the race. Levels: campaign upgrades
+        they have bought, which carry over after the primary.
+      </p>
     </>
   );
 

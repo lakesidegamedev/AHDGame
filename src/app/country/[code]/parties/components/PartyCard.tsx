@@ -68,9 +68,11 @@ export function PartyCard({
             {party.isDefault && <DefaultPartyBadge />}
           </div>
         </Link>
-        {/* No invite: no greyed icon that cannot be clicked. */}
-        {party.discordInviteUrl && (
+        {/* No invite: say so in words rather than show an icon that goes nowhere. */}
+        {party.discordInviteUrl ? (
           <DiscordInviteButton inviteUrl={party.discordInviteUrl} entityName={party.name} />
+        ) : (
+          <span className="shrink-0 text-body-sm text-muted">No Discord server</span>
         )}
       </div>
 
