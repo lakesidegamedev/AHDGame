@@ -31,6 +31,7 @@ import type { CommitteeProposal } from "@/lib/db/types/committeeProposal";
 import * as gameTimeModule from "@/lib/time/gameTime";
 import { getPartyNppCapacity } from "@/lib/npp/partyCapacity";
 import { assertMergeEligibility } from "./mergeEligibility";
+import { notifyRemovedByCommittee } from "./officeRemovalNotifications";
 
 vi.mock("./mergeEligibility", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./mergeEligibility")>()),
@@ -38,6 +39,9 @@ vi.mock("./mergeEligibility", async (importOriginal) => ({
 }));
 
 vi.mock("@/lib/npp/partyCapacity", () => ({ getPartyNppCapacity: vi.fn() }));
+vi.mock("./officeRemovalNotifications", () => ({
+  notifyRemovedByCommittee: vi.fn().mockResolvedValue(undefined),
+}));
 beforeEach(() => {
   vi.mocked(assertMergeEligibility).mockResolvedValue(undefined);
   vi.mocked(getPartyNppCapacity).mockResolvedValue({
@@ -619,6 +623,43 @@ describe("applyRemoveOfficeHolderEffect", () => {
     const update = updates[0]!.update as { $pull: Record<string, unknown>; $set: object };
     expect(filter.campaignerIds).toBe(targetId);
     expect(update.$pull.campaignerIds).toBe(targetId);
+  });
+
+  it("tells the removed holder once the seat is actually cleared", async () => {
+    vi.mocked(notifyRemovedByCommittee).mockClear();
+    const partyId = makePartyId();
+    const proposalId = new ObjectId();
+    const targetId = new ObjectId();
+    const { db } = makeDbStub({});
+    await applyRemoveOfficeHolderEffect(db, {
+      _id: proposalId,
+      type: "removeOfficeHolder",
+      partyId,
+      removeOfficeHolder: { role: "chair", targetCharacterId: targetId },
+    } as unknown as CommitteeProposal);
+    expect(notifyRemovedByCommittee).toHaveBeenCalledTimes(1);
+    expect(notifyRemovedByCommittee).toHaveBeenCalledWith({
+      partyId,
+      proposalId,
+      role: "chair",
+      targetCharacterId: targetId,
+    });
+  });
+
+  it("sends nothing when the seat had already changed hands", async () => {
+    vi.mocked(notifyRemovedByCommittee).mockClear();
+    const db = {
+      collection: vi.fn().mockReturnValue({
+        updateOne: vi.fn().mockResolvedValue({ matchedCount: 0, modifiedCount: 0 }),
+      }),
+    } as unknown as Db;
+    await applyRemoveOfficeHolderEffect(db, {
+      _id: new ObjectId(),
+      type: "removeOfficeHolder",
+      partyId: makePartyId(),
+      removeOfficeHolder: { role: "treasurer", targetCharacterId: new ObjectId() },
+    } as unknown as CommitteeProposal);
+    expect(notifyRemovedByCommittee).not.toHaveBeenCalled();
   });
 
   it("throws when proposal is not a removeOfficeHolder", async () => {
