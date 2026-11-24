@@ -4,6 +4,7 @@ import { useState } from "react";
 import { partyApiUrl } from "@/lib/urls";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import type { PartyLeadershipTitles } from "@/lib/db/types/party";
+import type { RemovalLockView } from "@/lib/parties/dto/partyView";
 import { MergerNppWarning } from "./MergerNppWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
@@ -61,6 +62,7 @@ export function CreateProposalForm({
   isChair,
   isDefaultParty = false,
   currentTransactionApprovalMode,
+  removalLocks = [],
   onCreated,
 }: {
   country: string;
@@ -69,8 +71,11 @@ export function CreateProposalForm({
   isChair: boolean;
   isDefaultParty?: boolean;
   currentTransactionApprovalMode: TransactionApprovalMode;
+  removalLocks?: RemovalLockView[];
   onCreated: () => void;
 }) {
+  const lockFor = (o: OfficerOption) =>
+    removalLocks.find((l) => l.characterId === o.id && l.role === o.role);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<ProposalType>(isDefaultParty ? "positionShift" : "rename");
   const [newName, setNewName] = useState("");
@@ -161,7 +166,7 @@ export function CreateProposalForm({
               id: m.id,
               name: m.name,
               role: "committeeMember",
-              label: `${getPartyRoleLabel(countryCode, "committee")} — ${m.name}`,
+              label: `${getPartyRoleLabel(countryCode, "committee")}: ${m.name}`,
             });
           }
         }
@@ -173,7 +178,7 @@ export function CreateProposalForm({
               id: c.id,
               name: c.name,
               role: "campaigner",
-              label: `Campaigner — ${c.name}`,
+              label: `Campaigner: ${c.name}`,
             });
           }
         }
@@ -218,7 +223,7 @@ export function CreateProposalForm({
         body = { type, method: electionMethod };
       } else if (type === "electionDuration") {
         if (electionDurationTurns < 168 || electionDurationTurns > 420) {
-          setMsg("Duration must be between 168 and 420 turns (1–2.5 weeks)");
+          setMsg("Duration must be between 168 and 420 turns (1 to 2.5 weeks)");
           setSubmitting(false);
           return;
         }
@@ -431,7 +436,7 @@ export function CreateProposalForm({
       {type === "electionDuration" && (
         <div className="space-y-2">
           <label className="block text-xs text-muted">
-            Election duration (turns) — 168 min (1 week), 420 max (2.5 weeks)
+            Election duration (turns): 168 min (1 week), 420 max (2.5 weeks)
           </label>
           <input
             type="number"
@@ -464,18 +469,35 @@ export function CreateProposalForm({
               onChange={(e) => setRemoveOfficerId(e.target.value)}
             >
               <option value="">Select officer…</option>
-              {officers.map((o) => (
-                <option key={`${o.role}-${o.id}`} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
+              {officers.map((o) => {
+                const lock = lockFor(o);
+                return (
+                  <option key={`${o.role}-${o.id}`} value={o.id} disabled={!!lock}>
+                    {lock ? `${o.label} (locked until turn ${lock.unlocksAtTurn})` : o.label}
+                  </option>
+                );
+              })}
             </select>
+          )}
+          {!loadingOfficers && officers.some((o) => lockFor(o)) && (
+            <ul className="text-xs text-muted mt-1 space-y-0.5">
+              {officers.map((o) => {
+                const lock = lockFor(o);
+                return lock ? (
+                  <li key={`lock-${o.role}-${o.id}`}>
+                    {o.name}: {lock.message}
+                  </li>
+                ) : null;
+              })}
+            </ul>
           )}
           <p className="text-xs text-muted mt-1">
             The target is excluded from voting on their own removal. 60% of remaining filled
             committee + leadership roles must vote yes. If a chair is removed, the vice-chair acts
             as chair until a new chair is elected or admin-appointed. Removing a campaigner strips
-            their Build Org and NPP Management rights; the chair can also fire one directly.
+            their Build Org and NPP Management rights; the chair can also fire one directly. A
+            removal vote cannot be opened against someone for 24 turns after they took the seat, or
+            for 24 turns after a vote to remove them failed or expired.
           </p>
         </div>
       )}
