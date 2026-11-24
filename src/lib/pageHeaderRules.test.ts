@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import nextConfig from "../../next.config";
+
+// Only the header rules are under test. The real plugins load a native file
+// watcher that cannot be loaded twice in one test worker.
+vi.mock("next-intl/plugin", () => ({
+  default: () => (config: unknown) => config,
+}));
+vi.mock("@sentry/nextjs/config", () => ({
+  withSentryConfig: (config: unknown) => config,
+}));
 
 describe("page header rules", () => {
   it("never set no-transform on a page, which switches off compression", async () => {
