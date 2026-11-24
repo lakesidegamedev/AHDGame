@@ -48,9 +48,11 @@ export function CoalitionCard({ coalition, effectiveCountry }: CoalitionCardProp
             </p>
           </div>
         </Link>
-        {/* No invite: no greyed icon that cannot be clicked. */}
-        {coalition.discordInviteUrl && (
+        {/* No invite: say so in words rather than show an icon that goes nowhere. */}
+        {coalition.discordInviteUrl ? (
           <DiscordInviteButton inviteUrl={coalition.discordInviteUrl} entityName={coalition.name} />
+        ) : (
+          <span className="shrink-0 text-body-sm text-muted">No Discord server</span>
         )}
       </div>
 

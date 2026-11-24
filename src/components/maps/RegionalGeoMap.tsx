@@ -62,6 +62,11 @@ interface RegionalGeoMapProps {
    */
   labelOffsets?: Record<string, [number, number]>;
   /**
+   * Labels moved out of a region that is too small to hold one, drawn with a
+   * leader line back to it and exempt from the crowded-label check.
+   */
+  callouts?: Record<string, [number, number]>;
+  /**
    * SVG viewBox dimensions. Defaults to a portrait 280×400 (UK/DE/JP/BR). Pass a
    * landscape box for wide countries (e.g. CN 480×340, US 800×600) so the auto-fit
    * doesn't letterbox them; the container's `aspectRatio` should match.
@@ -350,6 +355,7 @@ export function RegionalGeoMap({
   highlightColor = "#a855f7",
   labelOverrides,
   labelOffsets,
+  callouts,
   width = W,
   height = H,
   projection = "geoMercator",
@@ -588,9 +594,12 @@ export function RegionalGeoMap({
               const hasData = splitMode ? !!splitData?.[code] : !!data;
               if (!hasData) return null;
               const isHov = hovered === code;
-              const [dx, dy] = labelOffsets?.[code] ?? [0, 0];
+              const [dx, dy] = callouts?.[code] ?? labelOffsets?.[code] ?? [0, 0];
               const text = regionLabelText(code, labelOverrides, data?.label);
-              if (hideCrowdedLabels && path && !isHov) {
+              const offset = !!callouts?.[code];
+              // A callout label sits outside its region by design; only labels
+              // inside their region are checked for fit.
+              if (hideCrowdedLabels && path && !isHov && !offset) {
                 try {
                   const [[x0, y0], [x1, y1]] = path.bounds(geo);
                   if (!labelFits(text.length, x1 - x0, y1 - y0, zoom)) return null;
@@ -604,10 +613,17 @@ export function RegionalGeoMap({
                   subject={featureCentroid(geo)}
                   dx={dx}
                   dy={dy}
-                  connectorProps={{ stroke: "none" }}
+                  connectorProps={
+                    offset
+                      ? { stroke: "rgba(255,255,255,0.45)", strokeWidth: 0.6 }
+                      : { stroke: "none" }
+                  }
                 >
                   <text
-                    textAnchor="middle"
+                    // A callout label starts just past its leader line instead of
+                    // being centred on the line's end.
+                    x={offset ? 2 : 0}
+                    textAnchor={offset ? "start" : "middle"}
                     dominantBaseline="middle"
                     fontSize={code === "LON" || code === "DC" ? 4 : 6}
                     fontWeight={700}

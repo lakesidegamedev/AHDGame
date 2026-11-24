@@ -106,7 +106,7 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
         </div>
         <p className="text-body-sm text-muted">
           {displayCanadianRegionCode(item.homeState)}
-          {item.currentOffice ? ` · ${item.currentOffice}` : ""}
+          {` · ${item.currentOffice || "No office"}`}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">

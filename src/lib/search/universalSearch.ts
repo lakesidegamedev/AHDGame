@@ -31,6 +31,8 @@ import { dedupeByLabel } from "@/lib/search/dedupeResults";
 import { nearMatches } from "@/lib/search/nearMatch";
 import { annotatePartialWordMatch, titleHasQueryWord } from "@/lib/search/partialWordMatch";
 import { loadSuggestionVocabulary } from "@/lib/search/suggestionVocabulary";
+import { searchRetiredLives } from "@/lib/search/retiredLives";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -178,6 +180,10 @@ export async function runUniversalSearch({
       });
     }
   }
+  // Retired lives still rank on the Legacy leaderboard, so players search for them.
+  const liveNames = new Set(results.map((r) => r.title.toLowerCase()));
+  for (const life of await searchRetiredLives(db, searchRegex, enabledCountries))
+    if (!liveNames.has(life.title.toLowerCase())) results.push(life);
 
   // Search users by discordUsername — when someone types a Discord handle,
   // find their characters and surface them in results (unless already found by name).
@@ -859,7 +865,8 @@ export async function runUniversalSearch({
     if (idx !== -1) return 2 + idx / 100;
     return 5;
   };
-  if (!results.some((r) => r.type === "politician")) {
+  const nothingNamed = !results.some((r) => titleHasQueryWord(r.title, query));
+  if (!relaxed && nothingNamed && !results.some((r) => r.type === "politician")) {
     const nameQuery: Record<string, unknown> = {};
     if (enabledCountries) nameQuery.countryId = { $in: enabledCountries };
     const nameCandidates = await charactersCollection(db)
@@ -880,6 +887,24 @@ export async function runUniversalSearch({
       })
       .limit(5000)
       .toArray();
+    const retiredNames = await retiredCharactersCollection(db).distinct("snapshot.name", {
+      "snapshot.isSynthetic": { $ne: true },
+      ...(enabledCountries ? { "snapshot.countryId": { $in: enabledCountries } } : {}),
+    });
+    const liveCandidateNames = new Set(nameCandidates.map((c) => c.name.toLowerCase()));
+    const closeRetired = nearMatches(
+      query,
+      retiredNames
+        .filter((name): name is string => typeof name === "string")
+        .filter((name) => !liveCandidateNames.has(name.toLowerCase()))
+        .map((name) => ({ name })),
+      3
+    );
+    for (const { name } of closeRetired) {
+      const exact = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+      for (const life of await searchRetiredLives(db, exact, enabledCountries, 1))
+        results.push({ ...life, subtitle: `Did you mean this? · ${life.subtitle}` });
+    }
     const close = nearMatches(query, nameCandidates, 5);
     if (close.length > 0) {
       const closeUsers = await usersCollection(db)

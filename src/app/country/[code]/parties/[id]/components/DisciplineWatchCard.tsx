@@ -126,7 +126,7 @@ export function DisciplineWatchCard({ countryCode, partyId }: Props) {
                 </Link>
                 <p className="truncate text-body-sm text-muted">
                   {row.homeState.replace(/^.+_/, "")}
-                  {row.currentOffice ? ` | ${row.currentOffice}` : ""}
+                  {` | ${row.currentOffice || "No office"}`}
                 </p>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm md:justify-end">
