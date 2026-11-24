@@ -19,13 +19,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type {
-  CommodityPrice,
-  CommodityPriceHistory,
-  Corporation,
-  CorporateSector,
-  State,
-} from "@/lib/db/types";
+import type { CommodityPriceHistory, Corporation, CorporateSector, State } from "@/lib/db/types";
 import {
   COMMODITY_LABELS,
   COMMODITY_ICONS,
@@ -42,7 +36,6 @@ import {
   blendPrice,
 } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
-import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
@@ -373,6 +366,8 @@ export async function getCommodityDetailData(
     // Per-corp FX normalizes sector revenue to ₳ for retail demand and
     // realized producer/consumer volumes. Unused on the light header path.
     const fxByCurrency = includeHeavy ? await loadFxRatesByCurrency(db) : new Map();
+    const worldPreset = includeHeavy ? await loadWorldPreset(db) : "modern";
+    if (includeHeavy) withAuthoredEraRates(fxByCurrency, worldPreset);
     const fxByCorpId = new Map<string, { code: CurrencyCode | undefined; rate: number }>();
     for (const c of allCorps) {
       fxByCorpId.set(c._id.toString(), {
@@ -396,7 +391,6 @@ export async function getCommodityDetailData(
     // scope as the corporation tab). Loaded once; the leaderboard aggregation
     // below runs every sector through `computeSectorCommodityUnits`, the exact
     // chain `computeCorpCommodityFlows` uses.
-    const worldPreset = includeHeavy ? await loadWorldPreset(db) : "modern";
     const eraUnitScale = getEraUnitScale(worldPreset);
     const [gameConfigDoc, gameStateDoc, stateResourceDocs] = includeHeavy
       ? await Promise.all([
@@ -422,12 +416,6 @@ export async function getCommodityDetailData(
             .toArray(),
         ])
       : [null, null, [] as { stateId: string; resources?: Record<string, number> | null }[]];
-    // Command-economy currencies are deliberately untraded and have no
-    // exchangeRates row; fill only the absent ones from the authored preset,
-    // exactly like the corporation commodities route. Live rates win.
-    if (includeHeavy) {
-      withAuthoredEraRates(fxByCurrency, worldPreset);
-    }
     const marketingBudgets =
       includeHeavy && commodity === "advertising"
         ? allCorps
