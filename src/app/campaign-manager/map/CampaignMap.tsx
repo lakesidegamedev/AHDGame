@@ -573,7 +573,7 @@ export function CampaignMap(props: CampaignMapProps) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <MapLegend lines={legendLines} ground={ground} />
+        <MapLegend lines={legendLines} ground={ground} primary={!!selectedRace?.primaryPartyId} />
         <span style={{ display: "flex", flexWrap: "wrap", gap: "0 6px", fontSize: 12 }}>
           <span style={{ color: BLEND.muted }}>
             {sel && noCount
@@ -672,9 +672,12 @@ function MapFrameBox({ children }: { children: React.ReactNode }) {
 function MapLegend({
   lines,
   ground,
+  primary,
 }: {
   lines: Array<{ partyId: string; partyName: string; partyAbbr: string; partyColor: string }>;
   ground: string;
+  /** A party primary has one party by definition; the caption says so. */
+  primary: boolean;
 }) {
   const t = useTranslations("elections.campaignManager.map");
   if (lines.length === 0) return null;
@@ -711,7 +714,9 @@ function MapLegend({
           {l.partyAbbr}
         </li>
       ))}
-      <li style={{ fontSize: 11, color: BLEND.muted }}>{t("legendScale")}</li>
+      <li style={{ fontSize: 11, color: BLEND.muted }}>
+        {t(primary ? "legendScalePrimary" : "legendScale")}
+      </li>
     </ul>
   );
 }

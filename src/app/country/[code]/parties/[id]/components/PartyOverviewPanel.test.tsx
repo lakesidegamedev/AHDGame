@@ -5,7 +5,7 @@ import type { CommitteeData, PartyData } from "./types";
 import { PartyOverviewPanel } from "./PartyOverviewPanel";
 
 describe("PartyOverviewPanel leadership labels", () => {
-  it("centers the chair and keeps party titles and country defaults", () => {
+  it("lists the chair first and keeps party titles and country defaults", () => {
     const party = {
       countryId: "CN",
       leadershipTitles: { chair: "Party Chair" },
@@ -24,11 +24,11 @@ describe("PartyOverviewPanel leadership labels", () => {
     expect(screen.getByText("Deputy General Secretary")).toBeTruthy();
     const seats = screen.getAllByRole("listitem");
     expect(seats.map((seat) => seat.textContent)).toEqual([
-      expect.stringContaining("Deputy General Secretary"),
       expect.stringContaining("Party Chair"),
+      expect.stringContaining("Deputy General Secretary"),
       expect.stringContaining("National Treasurer"),
     ]);
-    const chairLink = within(seats[1]).getByRole("link", { name: /Lian Zhao/ });
+    const chairLink = within(seats[0]).getByRole("link", { name: /Lian Zhao/ });
     expect(chairLink.getAttribute("href")).toBe("/character/27");
     expect(chairLink.querySelector("img")?.getAttribute("src")).toContain("chair.png");
     expect(chairLink.querySelector("img")?.closest('[aria-hidden="true"]')).toBeTruthy();

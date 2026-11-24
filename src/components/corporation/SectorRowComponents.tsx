@@ -6,7 +6,7 @@ import {
   MIN_GROWTH_RATE,
   GROWTH_RATE_TURNS_PER_YEAR,
 } from "@/lib/constants/corporationsClient";
-import { STATE_FLAGS } from "@/lib/constants/flags";
+import { getCountryFlagUrl, STATE_FLAGS } from "@/lib/constants/flags";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Slider } from "@/components/ui";
 import { getStrategy } from "@/lib/constants/sectorStrategies";
@@ -19,12 +19,20 @@ const GROWTH_STEP = 0.5;
 
 export function StateFlag({ stateId, stateName }: { stateId: string; stateName: string }) {
   const [failed, setFailed] = useState(false);
-  const src = STATE_FLAGS[stateId];
+  // Regions without their own flag (Ontario "CA_ON", Ile-de-France "FR_IDF")
+  // fly their country's flag; a bare code like "CA_" read as broken.
+  const countryPrefix = stateId.includes("_") ? stateId.split("_")[0] : null;
+  const src =
+    STATE_FLAGS[stateId] ?? (countryPrefix ? getCountryFlagUrl(countryPrefix, 40) : undefined);
 
   if (!src || failed) {
     return (
-      <span className="inline-flex items-center justify-center w-6 h-4 rounded-sm bg-card-elevated text-[7px] font-bold text-muted shrink-0">
-        {stateId.slice(0, 3)}
+      <span
+        title={stateName}
+        aria-hidden
+        className="inline-flex h-4 w-6 shrink-0 items-center justify-center rounded-sm bg-card-elevated"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-muted" />
       </span>
     );
   }
@@ -200,9 +208,13 @@ export function StatusBadge({
       <span className="inline-flex items-center gap-1 max-w-full">
         <InfoTooltip
           trigger={
-            <span className="inline-flex max-w-full cursor-help items-center gap-1 truncate text-xs text-warning">
-              <span className="truncate">To {toName}</span>
-              <span className="shrink-0 font-mono tabular-nums">{transitionTurnsRemaining}t</span>
+            // The Strategy column already names the target, so the status says
+            // what is happening and for how long instead of "To PropTec… 7t".
+            <span className="inline-flex cursor-help items-center gap-1 whitespace-nowrap text-xs text-warning">
+              Switching ·{" "}
+              <span className="font-mono tabular-nums">
+                {transitionTurnsRemaining} {transitionTurnsRemaining === 1 ? "turn" : "turns"}
+              </span>
             </span>
           }
           width={240}

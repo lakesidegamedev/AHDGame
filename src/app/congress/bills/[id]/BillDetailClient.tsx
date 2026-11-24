@@ -728,8 +728,9 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="min-w-0 space-y-4">
+          {/* Sidebar: follows the page on wide screens, so the timeline, how it
+              becomes law and the whip count stay in view beside a long vote list. */}
+          <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:self-start lg:overflow-y-auto">
             {/* Progress timeline */}
             <TimelineStepper bill={bill} />
 
@@ -799,7 +800,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                         {w.direction === "for"
                           ? "Whipping Aye"
                           : w.direction === "against"
-                            ? "Whipping no"
+                            ? "Whipping No"
                             : "Free vote"}
                       </span>
                     </div>

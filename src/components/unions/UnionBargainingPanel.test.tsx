@@ -83,7 +83,7 @@ describe("UnionBargainingPanel dispute actions", () => {
       />
     );
 
-    expect(screen.getByText(/Cost 0 · Affects 2 local\(s\): MI, OH/)).toBeTruthy();
+    expect(screen.getByText(/Cost \S*0 · Affects 2 locals: MI, OH/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Begin overtime ban" }));
 
@@ -175,7 +175,7 @@ describe("UnionBargainingPanel dispute actions", () => {
       />
     );
     // 2 locals in scope, so 2 x the per-local upkeep every turn it is held.
-    expect(screen.getByText(/then 80 per turn to hold it/)).toBeTruthy();
+    expect(screen.getByText(/then \S*80 per turn to hold it/)).toBeTruthy();
 
     const held = dispute();
     held.escalationLevel = "overtime_ban";
@@ -198,7 +198,7 @@ describe("UnionBargainingPanel dispute actions", () => {
         onReload={vi.fn().mockResolvedValue(undefined)}
       />
     );
-    expect(screen.getByText(/Upkeep 80 per turn · treasury funds 25 more turn\(s\)/)).toBeTruthy();
+    expect(screen.getByText(/Upkeep \S*80 per turn · treasury funds 25 more turns/)).toBeTruthy();
   });
 
   it("shows a blocked escalation as blocked instead of offering the button", () => {
@@ -259,7 +259,7 @@ describe("UnionBargainingPanel dispute actions", () => {
         onReload={vi.fn().mockResolvedValue(undefined)}
       />
     );
-    expect(screen.getByText(/Upkeep 80 per turn/)).toBeTruthy();
+    expect(screen.getByText(/Upkeep \S*80 per turn/)).toBeTruthy();
     expect(screen.queryByText(/Upkeep 200 per turn/)).toBeNull();
   });
 

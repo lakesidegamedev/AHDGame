@@ -105,7 +105,13 @@ export function ShadowCabinetSection({
       <InlineError error={error} className="mb-3 text-body-sm text-error" />
 
       <ul className="space-y-2">
-        {positions.map((position) => {
+        {/* Everyone but the opposition leader sees the filled posts as rows and
+            the vacant ones named on one line: sixteen rows reading "Vacant" told
+            a reader nothing. The leader keeps a row per post to appoint into. */}
+        {(viewerIsOppositionLeader
+          ? positions
+          : positions.filter((position) => appointees[position.id])
+        ).map((position) => {
           const appointee = appointees[position.id];
           const isBusy = busyPositionId === position.id;
           const selectableCharacters = eligibleCharacters.filter(
@@ -185,6 +191,15 @@ export function ShadowCabinetSection({
           );
         })}
       </ul>
+      {!viewerIsOppositionLeader && filledCount < positions.length && (
+        <p className="mt-3 text-body-sm text-muted">
+          <span className="font-medium text-foreground">Vacant: </span>
+          {positions
+            .filter((position) => !appointees[position.id])
+            .map((position) => position.name.replace(/^Minister (of|for) /, ""))
+            .join(", ")}
+        </p>
+      )}
     </section>
   );
 }

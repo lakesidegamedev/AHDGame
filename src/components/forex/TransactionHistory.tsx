@@ -289,7 +289,9 @@ export function TransactionHistory({ currency }: Props) {
       )}
 
       <div className="flex items-center justify-between px-6 py-3 border-t border-card-border text-xs text-muted">
-        <span>Showing last {turns.length} turn(s)</span>
+        <span>
+          Showing last {turns.length} {turns.length === 1 ? "turn" : "turns"}
+        </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setOffset((o) => Math.max(0, o - TURNS_PER_PAGE))}

@@ -565,6 +565,22 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
             plaques={leftPlaques}
           />
 
+          {/* The opposition leader sits with the government's leaders, which keeps
+              the two columns even. */}
+          <OfficePlaques
+            countryId={countryId}
+            identity={getExecutiveIdentity(countryId)}
+            gridClassName="grid"
+            plaques={[
+              plaqueFor(
+                surface.oppositionPlaque,
+                oppositionLeaderChar,
+                oppositionPartyDoc,
+                oppositionNpp
+              ),
+            ]}
+          />
+
           <div className="rounded-2xl border border-card-border bg-card p-6 shadow-card">
             <SectionLabel as="h3">Government record</SectionLabel>
             {pmCharacter || pmNpp ? (
@@ -611,19 +627,6 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
               healthcareShare={nhsState.lastHealthcareShare}
             />
           )}
-          <OfficePlaques
-            countryId={countryId}
-            identity={getExecutiveIdentity(countryId)}
-            gridClassName="grid"
-            plaques={[
-              plaqueFor(
-                surface.oppositionPlaque,
-                oppositionLeaderChar,
-                oppositionPartyDoc,
-                oppositionNpp
-              ),
-            ]}
-          />
 
           <div className="rounded-2xl border border-card-border bg-card p-6 shadow-card">
             <SectionLabel as="h3">{surface.seatsPanel.title}</SectionLabel>

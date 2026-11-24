@@ -3,10 +3,9 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { KeirSprite } from "@/components/askDrawer/KeirSprite";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
 import { useNavBottom } from "@/components/askDrawer/useNavBottom";
-import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
 import type { WidgetLayout, WidgetMenu } from "@/lib/sidebarWidgets/widgetCatalog";
 import { SidebarWidget, widgetBadge } from "./SidebarWidget";
 import { WidgetEditor, type WidgetOption } from "./WidgetEditor";
@@ -17,8 +16,6 @@ const AskDrawerPanel = dynamic(
   { ssr: false }
 );
 
-/** Collapsed rail width. */
-const RAIL_PX = 48;
 /** Open panel width. The tray sits over the page and never moves the nav or content. */
 const PANEL_PX = 380;
 
@@ -90,40 +87,36 @@ export function SideTray({
   return (
     <>
       {!open && (
-        <nav
-          aria-label={t("label")}
+        // Closed, the tray is one small arrow tab on the edge, about a tenth of
+        // the screen tall and centred between the nav and the bottom bar. The
+        // full-height rail with icons, Keir and a label crowded the page edge;
+        // Keir and the widgets are tabs inside the tray once it opens.
+        <button
+          type="button"
+          onClick={() => show(true, tab)}
+          aria-label={t("openTray")}
+          title={t("openTray")}
           data-feedback-ignore="true"
           data-side-tray-rail
-          style={{ ...bounds, width: RAIL_PX }}
-          className={`fixed z-[44] hidden flex-col items-center gap-2 border-card-border/80 bg-card/95 py-3 backdrop-blur-md sm:flex ${edge}`}
+          style={{
+            top: `calc((${navBottom}px + 100vh - var(--status-bar-height, 0px)) / 2)`,
+            height: "clamp(44px, 10vh, 84px)",
+          }}
+          className={`fixed z-[44] hidden w-5 -translate-y-1/2 flex-col items-center justify-center gap-1 border border-card-border/80 bg-card/95 text-fg-2 shadow-card backdrop-blur-md transition-colors hover:bg-card-elevated hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary sm:flex ${
+            left ? "left-0 rounded-r-md border-l-0" : "right-0 rounded-l-md border-r-0"
+          }`}
         >
-          <button
-            type="button"
-            onClick={() => show(true, "widgets")}
-            aria-label={t("openTray")}
-            title={t("openTray")}
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg text-fg-2 hover:bg-white/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            <PixelNavIcon name="star" className="h-5 w-5" />
-            {badge > 0 && (
-              <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
-                {badge > 99 ? "99+" : badge}
-              </span>
-            )}
-          </button>
-          {!keirHidden && (
-            <button
-              type="button"
-              onClick={() => show(true, "keir")}
-              aria-label="Open Ask Keir"
-              title="Ask Keir about this page"
-              className="flex flex-col items-center gap-1 rounded-lg px-1 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <KeirSprite mood="idle" />
-              <span className="[writing-mode:vertical-rl]">Ask</span>
-            </button>
+          {badge > 0 && (
+            <span className="min-w-[14px] rounded-full bg-primary px-0.5 text-center text-[9px] font-bold leading-[14px] text-white">
+              {badge > 9 ? "9+" : badge}
+            </span>
           )}
-        </nav>
+          {left ? (
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </button>
       )}
       <aside
         aria-label={t("label")}

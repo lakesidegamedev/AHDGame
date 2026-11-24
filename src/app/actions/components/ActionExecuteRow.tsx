@@ -234,7 +234,12 @@ export default function ActionExecuteRow({
 
   const pendingConfirm = confirmCount === 5 ? sim5 : confirmCount === 10 ? sim10 : null;
 
-  const batchHint = afford5?.title ?? afford10?.title;
+  // One note sits under both batch buttons. When both are blocked it explains
+  // the 5-run case and says so for 10, instead of reading as the 10-run reason.
+  const batchHint =
+    !can5 && !can10 && afford5?.title
+      ? `${afford5.title} 10 runs cost more still.`
+      : (afford5?.title ?? afford10?.title);
 
   const campaignCurrencyCode = getCampaignCurrency(character.countryId ?? "US", preset);
   const escalation =
