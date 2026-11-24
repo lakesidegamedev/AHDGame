@@ -131,3 +131,6 @@ export const CA_INCOME_ANCHORS: NormalAnchor[] = [
   { year: 2019, value: 82000 },
   { year: 2040, value: 140000 },
 ];
+
+/** Property crime per 100k in FBI-comparable categories (StatCan 35-10-0177-01, 2025). */
+export const CA_PROPERTY_CRIME_NORMALS: NormalAnchor[] = [{ year: 2025, value: 1858 }];
