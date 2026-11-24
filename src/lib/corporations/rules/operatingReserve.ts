@@ -101,9 +101,9 @@ export interface RunAfterBuild {
 }
 
 /**
- * Next turn's run after a build, by the same rule the producer run uses: the
- * cash left funds the run, and a run whose expected sales (less the margin the
- * sales advance holds back) cover its bills is funded in full.
+ * Next turn's run after a build, by the same rule the producer run uses: a run
+ * whose expected sales cover its bills is funded in full however little cash
+ * the build leaves, and one that does not runs the share the cash left covers.
  */
 export function runAfterBuild(input: {
   cash: number;

@@ -5,6 +5,7 @@ import {
   expectedInputUnitPrice,
   expectedUnitRevenue,
   salesAdvanceAmount,
+  salesFundedPlantShares,
   salesFundedRunShare,
 } from "./salesAdvanceRules";
 import type { MarketAccount, ProducerOffer, PurchaseOrder } from "./rules";
@@ -188,7 +189,7 @@ describe("sales fund the run", () => {
     expect(owed(run.payables)).toBeGreaterThan(0);
   });
 
-  it("a thinner cushion (producerSalesAdvanceRevenueShare) runs a thin-margin plant on no cash", () => {
+  it("runs a thin-margin plant in full on no cash, whatever cushion the advance keeps", () => {
     const thin = (salesAdvanceRevenueShare?: number) =>
       advanceProducerEconomy({
         turn: 2,
@@ -198,9 +199,12 @@ describe("sales fund the run", () => {
         externalOrders: [buyer()],
         ...(salesAdvanceRevenueShare ? { salesAdvanceRevenueShare } : {}),
       });
-    expect(thin().producers[0].producedUnits).toBe(0);
-    expect(thin(0.97).producers[0].producedUnits).toBeGreaterThan(5);
-    expect(total(thin(0.97).accounts)).toBeCloseTo(total(accounts(0)));
+    for (const share of [undefined, 0.97, 0.5]) {
+      const run = thin(share);
+      expect(run.producers[0].producedUnits).toBeCloseTo(10);
+      expect(run.producers[0].runCutBy).toBeUndefined();
+      expect(total(run.accounts)).toBeCloseTo(total(accounts(0)));
+    }
   });
 
   it("does not advance a run whose sales would not pay for it", () => {
@@ -391,5 +395,174 @@ describe("expected sales count own-site deliveries (ticket 1785)", () => {
     const withInternal = revenueFor(expectedUnitRevenue(outputs, [line]));
     expect(salesFundedRunShare({ free: 0, need, expectedRevenue: marketOnly })).toBeLessThan(1);
     expect(salesFundedRunShare({ free: 0, need, expectedRevenue: withInternal })).toBe(1);
+  });
+});
+
+// Owner rule: spending the company's cash down to zero (or below) never cuts a
+// run that makes money, not even by 0.1%.
+describe("cash never throttles a run that pays for itself", () => {
+  // A plant whose whole site bill scales with the run: a full run costs wages
+  // 20 + site 10 + ore 10 = 40.
+  const plant = (id: string, unitRevenue: number, unitPrice: number): ProductionPlan =>
+    mill({
+      id,
+      idleOperatingCost: 0,
+      expectedUnitRevenue: unitRevenue,
+      outputs: [
+        {
+          commodity: `steel-${id}`,
+          unitsPerOutput: 1,
+          book: "world",
+          policy: { kind: "manual", unitPrice },
+          referenceUnitPrice: unitPrice,
+          storable: false,
+        },
+      ],
+    });
+  const order = (id: string, unitPrice: number): PurchaseOrder => ({
+    id: `buyer-${id}`,
+    accountId: "buyers",
+    commodity: `steel-${id}`,
+    book: "world",
+    units: 10,
+    maximumUnitPrice: unitPrice,
+  });
+  const settle = (
+    cash: number,
+    plants: readonly { id: string; unitRevenue: number; unitPrice: number }[],
+    extra: Partial<Parameters<typeof advanceProducerEconomy>[0]> = {}
+  ) => {
+    const opening = accounts(cash, 100_000);
+    const run = advanceProducerEconomy({
+      turn: 2,
+      accounts: opening,
+      producers: plants.map((p) => plant(p.id, p.unitRevenue, p.unitPrice)),
+      externalOffers: [{ ...ore, units: 10 * plants.length }],
+      externalOrders: plants.map((p) => order(p.id, p.unitPrice)),
+      ...extra,
+    });
+    return { run, opening };
+  };
+  // 0.1% margin: expected sales 40.04 against bills of 40.
+  const thin = { unitRevenue: 4.004, unitPrice: 4.004 };
+
+  it("judges a 0.1% margin as paying, with no share held back", () => {
+    for (const revenueShare of [undefined, 0.97, 0.9])
+      expect(salesFundedRunShare({ free: 0, need: 40, expectedRevenue: 40.04, revenueShare })).toBe(
+        1
+      );
+    // A run judged on expected input prices pays the same way.
+    expect(
+      salesFundedRunShare({ free: 0, need: 400, expectedNeed: 40, expectedRevenue: 40.04 })
+    ).toBe(1);
+  });
+
+  it("runs a paying plant in full at zero cash", () => {
+    const { run, opening } = settle(0, [{ id: "a", unitRevenue: 8, unitPrice: 8 }]);
+    expect(run.producers[0].producedUnits).toBeCloseTo(10);
+    expect(run.producers[0].runCutBy).toBeUndefined();
+    expect(owed(run.payables)).toBe(0);
+    expect(cashOf(run.accounts, "corp")).toBeCloseTo(80 - 40);
+    expect(total(run.accounts)).toBeCloseTo(total(opening));
+  });
+
+  it("runs a 0.1% margin plant in full at zero cash, settling every bill from its sales", () => {
+    for (const salesAdvanceRevenueShare of [undefined, 0.97]) {
+      const { run, opening } = settle(0, [{ id: "a", ...thin }], {
+        ...(salesAdvanceRevenueShare ? { salesAdvanceRevenueShare } : {}),
+      });
+      const p = run.producers[0];
+      expect(p.producedUnits).toBe(10);
+      expect(p.runCutBy).toBeUndefined();
+      expect(p.purchases).toBeCloseTo(10);
+      expect(p.labourPaid).toBeCloseTo(20);
+      expect(p.otherOperatingPaid).toBeCloseTo(10);
+      expect(owed(run.payables)).toBe(0);
+      expect(cashOf(run.accounts, "corp")).toBeCloseTo(0.04);
+      expect(total(run.accounts)).toBeCloseTo(total(opening));
+    }
+  });
+
+  it("runs sixteen thin-margin plants in full when the cash was spent to zero", () => {
+    const plants = Array.from({ length: 16 }, (_, i) => ({ id: `p${i}`, ...thin }));
+    const { run, opening } = settle(0, plants, { salesAdvanceRevenueShare: 0.97 });
+    for (const p of run.producers) {
+      expect(p.producedUnits).toBe(10);
+      expect(p.runCutBy).toBeUndefined();
+    }
+    expect(owed(run.payables)).toBe(0);
+    expect(total(run.accounts)).toBeCloseTo(total(opening));
+  });
+
+  it("keeps a paying plant at full run when a sibling plant loses money", () => {
+    const { run, opening } = settle(0, [
+      { id: "paying", ...thin },
+      { id: "losing", unitRevenue: 3, unitPrice: 3 },
+    ]);
+    const [losing, paying] = [...run.producers].sort((a, b) => (a.id < b.id ? -1 : 1));
+    expect(paying.producedUnits).toBe(10);
+    expect(paying.runCutBy).toBeUndefined();
+    // The losing plant has no cash and no sales that cover it: it stays held.
+    expect(losing.producedUnits).toBe(0);
+    expect(losing.runCutBy).toEqual(["cash"]);
+    for (const account of run.accounts) expect(account.cash).toBeGreaterThanOrEqual(0);
+    expect(total(run.accounts)).toBeCloseTo(total(opening));
+  });
+
+  it("still holds a losing run at zero cash, exactly as before", () => {
+    const { run } = settle(0, [{ id: "a", unitRevenue: 3.9, unitPrice: 3.9 }]);
+    expect(run.producers[0].producedUnits).toBe(0);
+    expect(run.producers[0].runCutBy).toEqual(["cash"]);
+    expect(owed(run.payables)).toBe(0);
+    // With some cash it runs the share that cash covers: 2 / (40 - 0.9 x 39).
+    const cut = settle(2, [{ id: "a", unitRevenue: 3.9, unitPrice: 3.9 }]).run.producers[0];
+    expect(cut.plannedUnits).toBeCloseTo((10 * 2) / (40 - 0.9 * 39), 6);
+    expect(cut.runCutBy).toContain("cash");
+  });
+
+  it("splits a mixed company: paying plants in full, losing ones never below the old share", () => {
+    const shares = salesFundedPlantShares({
+      free: 2,
+      plants: [
+        { need: 40, expectedRevenue: 40.04 },
+        { need: 40, expectedRevenue: 30 },
+      ],
+    });
+    expect(shares.shares[0]).toBe(1);
+    // Old whole-company share: 2 / (80 - 0.9 x 70.04); the losing plant alone: 2 / (40 - 27).
+    const whole = 2 / (80 - 0.9 * 70.04);
+    expect(shares.shares[1]).toBeCloseTo(Math.max(whole, 2 / (40 - 27)), 9);
+    // A losing company's plants all share one run, as before.
+    const losing = salesFundedPlantShares({
+      free: 2,
+      plants: [
+        { need: 40, expectedRevenue: 30 },
+        { need: 40, expectedRevenue: 39 },
+      ],
+    });
+    expect(losing.shares[0]).toBeCloseTo(2 / (80 - 0.9 * 69), 9);
+    expect(losing.shares[1]).toBe(losing.shares[0]);
+    expect(losing.advance).toBeCloseTo(
+      salesAdvanceAmount({ free: 2, need: 80, runShare: losing.shares[0] }),
+      9
+    );
+  });
+
+  it("a paying run whose sales fall short owes the rest as a payable; no money is created", () => {
+    // Expected to pay, but buyers only take half: sales 20 against bills of 40.
+    const { run, opening } = settle(0, [{ id: "a", ...thin }], {
+      externalOrders: [{ ...order("a", thin.unitPrice), units: 5 }],
+    });
+    for (const account of run.accounts) expect(account.cash).toBeGreaterThanOrEqual(0);
+    expect(total(run.accounts)).toBeCloseTo(total(opening));
+    const p = run.producers[0];
+    expect(cashOf(run.accounts, "supplier")).toBeCloseTo(p.purchases);
+    const unpaid = p.labourArrears + p.otherOperatingArrears;
+    expect(unpaid).toBeGreaterThan(0);
+    expect(owed(run.payables)).toBeCloseTo(unpaid);
+    // Every bill is either paid in cash or owed: wages and site bills add up.
+    expect(
+      p.labourPaid + p.labourArrears + p.otherOperatingPaid + p.otherOperatingArrears
+    ).toBeCloseTo((p.producedUnits / 10) * 30, 6);
   });
 });
