@@ -2,27 +2,54 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { AuthDataProvider } from "@/contexts/AuthDataContext";
 import { CharacterStatsProvider } from "@/contexts/CharacterStatsContext";
 import { NavbarWrapper } from "./NavbarWrapper";
+
+const variants = vi.hoisted(() => {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  return {
+    classic: vi.fn(),
+    modern: vi.fn(),
+    promise,
+    resolve,
+    translate: (key: string) => key,
+    showToast: vi.fn(),
+  };
+});
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/corporation/7",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({ useTranslations: () => variants.translate }));
 vi.mock("next/image", () => ({ default: () => null }));
-vi.mock("next/dynamic", () => ({ default: () => () => null }));
+vi.mock("next/dynamic", async () => {
+  const { lazy } = await import("react");
+  return {
+    default: (load: () => Promise<React.ComponentType>) =>
+      lazy(async () => ({ default: await load() })),
+  };
+});
 vi.mock("@/contexts/InterfaceContext", () => ({
   useInterface: () => ({ mode: "modern", setMode: vi.fn() }),
 }));
-vi.mock("@/contexts/ToastContext", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
+vi.mock("@/contexts/ToastContext", () => ({
+  useToast: () => ({ showToast: variants.showToast }),
+}));
 vi.mock("@/lib/analytics/posthogClient", () => ({ getPostHogClient: async () => null }));
 vi.mock("./Wordmark", () => ({ Wordmark: () => null }));
 vi.mock("./NavbarTopFlair", () => ({ NavbarTopFlair: () => null }));
-vi.mock("./Navbar", () => ({ Navbar: () => null }));
-vi.mock("./ExperimentalNavbar", () => ({ ExperimentalNavbar: () => null }));
+vi.mock("./Navbar", () => {
+  variants.classic();
+  return { Navbar: () => null };
+});
+vi.mock("./ExperimentalNavbar", async () => {
+  variants.modern();
+  await variants.promise;
+  return { ExperimentalNavbar: () => <nav aria-label="Modern navigation" /> };
+});
 
 afterEach(() => {
   cleanup();
@@ -30,9 +57,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-function renderShell() {
+function renderShell(hasSessionHint = true) {
   return render(
-    <AuthDataProvider hasSessionHint>
+    <AuthDataProvider hasSessionHint={hasSessionHint}>
       <CharacterStatsProvider>
         <NavbarWrapper singleplayer={false} initialPageCountry={null} />
       </CharacterStatsProvider>
@@ -48,12 +75,27 @@ function renderShell() {
  * the device knows its own layout, so the request starts with the page.
  */
 describe("navbar status request", () => {
+  it("loads the selected navbar and preserves its height during the download", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ user: null }), { status: 200 }))
+    );
+    const { container, findByRole } = renderShell(false);
+    await waitFor(() => expect(variants.modern).toHaveBeenCalledOnce());
+    expect(container.querySelector("[data-site-navbar] > div")?.className).toContain(
+      "h-14 lg:h-[60px]"
+    );
+    expect(variants.classic).not.toHaveBeenCalled();
+
+    variants.resolve();
+    await findByRole("navigation", { name: "Modern navigation" });
+  });
+
   it("asks for the status payload without waiting for the auth bootstrap", async () => {
+    const bootstrap = Promise.withResolvers<Response>();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      // The bootstrap never resolves: the assertion below is about what was
-      // asked for while it is still in flight.
-      if (url === "/api/client-nav") return new Promise<Response>(() => {});
+      if (url === "/api/client-nav") return bootstrap.promise;
       return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -64,13 +106,15 @@ describe("navbar status request", () => {
       const urls = fetchMock.mock.calls.map(([input]) => String(input));
       expect(urls).toContain("/api/client-status?layout=standard");
     });
+    await act(async () => bootstrap.resolve(Response.json({ user: null })));
   });
 
   it("uses the device layout for the first request", async () => {
     localStorage.setItem("statusBarLayout", "corp");
+    const bootstrap = Promise.withResolvers<Response>();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === "/api/client-nav") return new Promise<Response>(() => {});
+      if (url === "/api/client-nav") return bootstrap.promise;
       return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -81,5 +125,6 @@ describe("navbar status request", () => {
       const urls = fetchMock.mock.calls.map(([input]) => String(input));
       expect(urls).toContain("/api/client-status?layout=corp");
     });
+    await act(async () => bootstrap.resolve(Response.json({ user: null })));
   });
 });
