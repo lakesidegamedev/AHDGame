@@ -1,4 +1,8 @@
-import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
+import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import {
+  realizedNetIncomePerTurn,
+  historyIncomeBase,
+} from "@/lib/corporations/rules/historyFinancials";
 import { buildCountryStatements } from "./countryStatements";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { MAX_DIVIDEND_RATE, TURNS_PER_DAY } from "@/lib/constants/corporations";
@@ -53,6 +57,7 @@ export interface FinancialsInputs {
   portfolio: Pick<
     PortfolioHoldings,
     | "latestCorpIncomeRow"
+    | "historicalIncomeUnavailable"
     | "dividendIncomeReceivedDaily"
     | "supplyAgreementSettlementDaily"
     | "supplyAgreementUnpaidAnchor"
@@ -88,6 +93,9 @@ export function buildFinancials(inputs: FinancialsInputs) {
   );
 
   return {
+    historicalIncomeUnavailable: portfolio.historicalIncomeUnavailable,
+    historicalBondFeesUnavailable:
+      latestCorpIncomeRow != null && historyBondSettlementUnavailable(latestCorpIncomeRow),
     totalRevenue: Math.round(totals.totalRevenue),
     // Maintenance shown net of labour; the wage slice is broken out as `laborCosts`.
     // Under plants this residual CAN be negative: derived operating cost already
@@ -142,6 +150,15 @@ export function buildFinancials(inputs: FinancialsInputs) {
           // bond interest + dividends received): history.income is
           // operating-only, so a bond/holding-portfolio corp's masthead went
           // deeply negative while the income statement was positive.
+          ...(typeof latestCorpIncomeRow.revenue === "number"
+            ? {
+                realizedRevenueBase:
+                  historyIncomeBase({
+                    ...latestCorpIncomeRow,
+                    revenue: latestCorpIncomeRow.revenue,
+                  }) * TURNS_PER_DAY,
+              }
+            : {}),
           realizedIncome: Math.round(
             realizedNetIncomePerTurn({
               ...latestCorpIncomeRow,

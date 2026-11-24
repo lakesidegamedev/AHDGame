@@ -120,6 +120,11 @@ export interface CorporationHistory {
    * basis. Older snapshots lack this field.
    */
   perTurnBondCouponIncome?: number;
+  /** Actual holder coupon-conversion fees, in this snapshot currency; absent when unrecorded. */
+  bondCouponFxFees?: number;
+  /** Cash coupon credits and issuer charges witnessed after settlement, in snapshot currency. */
+  settledBondCouponIncome?: number;
+  settledBondInterestPaid?: number;
   /**
    * Gross bond coupon expense on issued bonds this turn (currencyCode/turn), before natcorp
    * subsidy. Matches `financials.bondInterestCost / 24`. Older snapshots lack this

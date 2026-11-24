@@ -75,6 +75,8 @@ const corporation = {
 
 const financials = {
   totalRevenue: 48_000,
+  bondCouponIncome: 0,
+  imfFacilityReceiptsDaily: 0,
   operatingIncome: 9_600,
   income: 7_200,
   totalCosts: 38_400,

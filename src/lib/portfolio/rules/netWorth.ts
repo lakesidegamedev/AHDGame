@@ -25,3 +25,24 @@ export function personalPortfolioNetWorth(parts: {
     parts.incomeTaxDebt
   );
 }
+
+/** Historical net worth never substitutes current liabilities or gross assets for missing evidence. */
+export function recordedPersonalNetWorth(point: {
+  totalValue: number;
+  netValue?: number;
+  locDebtValue?: number;
+  incomeTaxDebtValue?: number;
+}): number | null {
+  if (
+    [point.totalValue, point.locDebtValue, point.incomeTaxDebtValue].every(
+      (n) => typeof n === "number" && Number.isFinite(n)
+    )
+  ) {
+    return (
+      Math.round((point.totalValue - point.locDebtValue! - point.incomeTaxDebtValue!) * 100) / 100
+    );
+  }
+  return typeof point.netValue === "number" && Number.isFinite(point.netValue)
+    ? point.netValue
+    : null;
+}

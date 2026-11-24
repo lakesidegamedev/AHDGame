@@ -16,6 +16,9 @@ const ctx = () => ({ params: Promise.resolve({ code: "US", id: "CA" }) });
 beforeEach(async () => {
   vi.clearAllMocks();
   db = createMockDb();
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+  });
   db.collection("states");
   db.collection("stateMetrics");
   db.collection("macroMetrics");

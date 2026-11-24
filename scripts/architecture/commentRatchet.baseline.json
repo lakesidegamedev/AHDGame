@@ -7110,9 +7110,6 @@
     "src/app/api/corporations/[id]/funds/route.ts": {
       "narrativeLines": 1
     },
-    "src/app/api/corporations/[id]/history/route.test.ts": {
-      "narrativeLines": 1
-    },
     "src/app/api/corporations/[id]/history/route.ts": {
       "narrativeLines": 1
     },

@@ -376,7 +376,11 @@ describe("openPrivatizationVote — bank-NAV floor (issue #1750)", () => {
           return { findOne: vi.fn().mockResolvedValue(null), insertOne };
         }
         if (name === "exchangeRates") {
-          return { find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) };
+          return {
+            find: vi.fn().mockReturnValue({
+              toArray: vi.fn().mockResolvedValue([{ currencyCode: "USD", rate: 1 }]),
+            }),
+          };
         }
         return {
           findOne: vi.fn().mockResolvedValue(null),

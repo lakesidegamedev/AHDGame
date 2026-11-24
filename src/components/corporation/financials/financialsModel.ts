@@ -31,11 +31,17 @@ export function netMarginPct(
     | "totalRevenue"
     | "bondCouponIncome"
     | "imfFacilityReceiptsDaily"
-  >
-): number {
+  > &
+    Partial<Pick<Financials, "realizedRevenueBase" | "dividendIncomeReceived">>
+): number | null {
   const incomeBase =
-    f.totalRevenue + Math.max(0, f.bondCouponIncome) + Math.max(0, f.imfFacilityReceiptsDaily);
-  if (incomeBase <= 0) return 0;
+    typeof f.realizedIncome === "number"
+      ? f.realizedRevenueBase
+      : f.totalRevenue +
+        Math.max(0, f.bondCouponIncome) +
+        Math.max(0, f.imfFacilityReceiptsDaily) +
+        Math.max(0, f.dividendIncomeReceived ?? 0);
+  if (incomeBase == null || !Number.isFinite(incomeBase) || incomeBase <= 0) return null;
   return (corpIncomeBasis(f).netIncome / incomeBase) * 100;
 }
 

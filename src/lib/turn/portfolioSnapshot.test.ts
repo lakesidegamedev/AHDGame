@@ -529,7 +529,7 @@ describe("portfolioSnapshot", () => {
       expect(insertedDocs[0].totalValue).toBe(expectedValue);
     });
 
-    it("snapshots loc debt separately and net value after debt", async () => {
+    it.each([500, 3000])("snapshots loc debt %s and permits negative net value", async (debt) => {
       const charId = new ObjectId("507f1f77bcf86cd799439011");
       const { isForexEnabled } = await import("@/lib/currency/featureFlag");
       vi.mocked(isForexEnabled).mockResolvedValue(true);
@@ -545,7 +545,7 @@ describe("portfolioSnapshot", () => {
             },
             countryId: "US",
             lineOfCredit: {
-              balances: { USD: 400 },
+              balances: { USD: debt - 100 },
               arrears: { USD: 100 },
             },
           },
@@ -565,9 +565,9 @@ describe("portfolioSnapshot", () => {
 
       const [doc] = mockInsertMany.mock.calls[0][0];
       expect(doc.cashValue).toBe(2500);
-      expect(doc.locDebtValue).toBe(500);
+      expect(doc.locDebtValue).toBe(debt);
       expect(doc.totalValue).toBe(2500);
-      expect(doc.netValue).toBe(2000);
+      expect(doc.netValue).toBe(2500 - debt);
     });
 
     it("skips matured bonds", async () => {

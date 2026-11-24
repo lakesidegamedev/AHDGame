@@ -274,6 +274,16 @@ describe("corporation turn golden capture", () => {
     expect(capture).toEqual(goldenTurn(readGolden()));
   });
 
+  it("preserves every financial write apart from the added assessment record", () => {
+    const { result } = runTurn();
+    for (const op of result.sectorOps) {
+      if (op.updateOne.update.$set) delete op.updateOne.update.$set.corporateTaxAssessment;
+    }
+    expect(captureTurn(result as Parameters<typeof captureTurn>[0]).sha256).toBe(
+      "a090c65a86ff9e9839a3eb89d2b244c87c1923b0f8e9fa923e2be1a7157133e0"
+    );
+  });
+
   it("processes every sector and books non-zero money", () => {
     const { capture } = runTurn();
     expect(capture.sectorsProcessed).toBe(420);

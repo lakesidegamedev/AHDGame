@@ -94,3 +94,30 @@ it("counts unsold corporate reservations at the held corporation's explicit curr
   const projection = db.collection("corporations").find.mock.results[0].value.project;
   expect(projection).toHaveBeenCalledWith(expect.objectContaining({ liquidCurrencyCode: 1 }));
 });
+
+it("includes loans, operating and tax arrears and IMF principal without changing balances", async () => {
+  const db = createMockDb();
+  const corporation = makeCorporation({
+    countryId: "US",
+    liquidCurrencyCode: "USD",
+    operatingCashArrearsByCurrency: { CAD: 140 },
+    federalTaxArrearsAnchorByCountry: { US: 20 },
+    imfBailoutActive: true,
+    imfFacilityPrincipalOutstanding: 30,
+  });
+  db.collection("bankLoans").find.mockReturnValue({
+    toArray: async () => [{ outstanding: 280, currency: "CAD" }],
+  });
+  const result = await loadPortfolioHoldings(
+    db as unknown as Db,
+    corporation,
+    10,
+    new Map([
+      ["USD", 1],
+      ["CAD", 1.4],
+    ])
+  );
+  expect(result.debtBreakdownAnchor).toEqual({ bonds: 0, loans: 200, arrears: 120, imf: 30 });
+  expect(result.totalDebtAnchor).toBe(350);
+  expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
+});

@@ -494,7 +494,11 @@ export interface CorpHistoryPoint {
   /** State/regional corporate tax paid this turn, summed across states (₳/turn). */
   stateTaxPaid?: number;
   /** Coupon income earned from held bonds this turn. */
+  dividendIncomeReceived?: number;
   perTurnBondCouponIncome?: number;
+  bondCouponFxFees?: number;
+  settledBondCouponIncome?: number;
+  settledBondInterestPaid?: number;
   /** Gross bond coupon expense on issued bonds this turn (before natcorp subsidy). */
   perTurnBondInterestExpense?: number;
   /** Interest drag from issued bonds this turn. */
@@ -642,6 +646,9 @@ export interface Financials {
    * cash shows negative here even if `income` looks positive.
    */
   realizedIncome?: number;
+  realizedRevenueBase?: number;
+  historicalIncomeUnavailable?: boolean;
+  historicalBondFeesUnavailable?: boolean;
   /** Turn the realized figure was booked on (for the "actual, last turn" chip). */
   realizedIncomeTurn?: number;
   /**
@@ -942,6 +949,7 @@ export interface BalanceSheet {
   liabilities: {
     dailyCosts: number;
     totalDebt: number;
+    debtBreakdown?: Record<string, number>;
     dailyInterestCost: number;
     bondCount: number;
   };

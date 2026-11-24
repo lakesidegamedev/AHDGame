@@ -214,7 +214,7 @@ function makeLookups(
     foreignCorpTaxRateByCountry: new Map(),
     domesticStateCorpTaxRateByState: new Map(),
     foreignStateCorpTaxRateByState: new Map(),
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([["BRL", 1]]),
     stateCountryMap: new Map(),
     stateResourceCapacityByState: new Map(),
     extractionCapacityUtilBySector: new Map(),

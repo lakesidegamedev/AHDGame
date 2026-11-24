@@ -30,6 +30,9 @@ interface HistoryProjection {
   createdAt?: Date;
   cashSnapshotAt?: Date;
   dividendIncomeReceived?: number;
+  bondCouponFxFees?: number;
+  settledBondCouponIncome?: number;
+  settledBondInterestPaid?: number;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
   dividendReceivedTax?: number;
@@ -58,6 +61,9 @@ const HISTORY_PROJECTION = {
   createdAt: 1,
   cashSnapshotAt: 1,
   dividendIncomeReceived: 1,
+  bondCouponFxFees: 1,
+  settledBondCouponIncome: 1,
+  settledBondInterestPaid: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
   dividendReceivedTax: 1,
@@ -146,8 +152,10 @@ export async function loadLastTurnReconciliation(
       retained: realizedNetIncomePerTurn({ ...latest, income: latest.income }),
       dividendPaid: Math.max(0, latest.dividendPaidPerTurn ?? 0),
       tax: Math.max(0, latest.corporateTaxPaid ?? 0),
-      bondCouponIncome: latest.perTurnBondCouponIncome,
-      bondInterestPaid: latest.perTurnBondDragOnNetIncome,
+      bondCouponIncome:
+        latest.settledBondCouponIncome ??
+        (latest.perTurnBondCouponIncome ?? 0) - (latest.bondCouponFxFees ?? 0),
+      bondInterestPaid: latest.settledBondInterestPaid ?? latest.perTurnBondDragOnNetIncome,
       dividendIncomeReceived: latest.dividendIncomeReceived,
       dividendReceivedTax: latest.dividendReceivedTax ?? null,
       sectorFxSpread: latest.sectorFxSpread ?? null,

@@ -63,6 +63,7 @@ function fixture(direction: "buy" | "sell") {
     createdAt: now,
     updatedAt: now,
   };
+  memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   memory.seed("indexFunds", [{ ...fund }]);
   memory.seed("corporations", [corp]);
   memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true, auditLog: true }]);

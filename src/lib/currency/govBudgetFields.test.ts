@@ -57,12 +57,12 @@ describe("govBudgetFields read/write", () => {
     expect(readGovBudgetAnchor(local, "GBP", 2)).toBe(anchor);
   });
 
-  it("passes values through on non-positive or non-finite rate", () => {
-    expect(readGovBudgetAnchor(100, "USD", 0)).toBe(100);
-    expect(readGovBudgetAnchor(100, "USD", -1)).toBe(100);
-    expect(readGovBudgetAnchor(100, "USD", Number.NaN)).toBe(100);
-    expect(writeGovBudgetLocal(100, "USD", 0)).toBe(100);
-    expect(writeGovBudgetLocal(100, "USD", Number.NaN)).toBe(100);
+  it("refuses non-positive or non-finite named-currency rates", () => {
+    expect(() => readGovBudgetAnchor(100, "USD", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => readGovBudgetAnchor(100, "USD", -1)).toThrow(/Exchange rate unavailable/);
+    expect(() => readGovBudgetAnchor(100, "USD", Number.NaN)).toThrow(/Exchange rate unavailable/);
+    expect(() => writeGovBudgetLocal(100, "USD", 0)).toThrow(/Exchange rate unavailable/);
+    expect(() => writeGovBudgetLocal(100, "USD", Number.NaN)).toThrow(/Exchange rate unavailable/);
   });
 
   it("handles zero values cleanly in both directions", () => {

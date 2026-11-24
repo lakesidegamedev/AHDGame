@@ -46,7 +46,7 @@ describe("SnapshotTab", () => {
     expect(down.getAttribute("data-direction")).toBe("down");
     expect(down.querySelector<HTMLElement>("[data-fill]")!.className).toContain("bg-error");
 
-    const flat = (await bar("Net income / turn"))!;
+    const flat = (await bar("Retained income / turn"))!;
     expect(flat.getAttribute("data-direction")).toBe("flat");
     expect(flat.querySelector("[data-fill]")).toBeNull();
   });

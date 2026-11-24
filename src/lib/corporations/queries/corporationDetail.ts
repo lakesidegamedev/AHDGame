@@ -4,7 +4,7 @@ import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
 import { displayedMarketDepth } from "@/lib/equities/displayedDepth";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
-import type { Corporation, GameState, ShareListing, ShareOrder } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   indexFundOwnershipFraction,
@@ -560,10 +560,13 @@ export async function loadCorporationDetailView(args: {
       const tax = income.perSectorTax.get(sd._id.toString());
       return {
         ...sd,
-        federalTaxPaid: tax?.federalTaxPaid ?? 0,
-        stateTaxPaid: tax?.stateTaxPaid ?? 0,
-        federalTaxRate: tax?.federalTaxRate ?? 0,
-        stateTaxRate: tax?.stateTaxRate ?? 0,
+        federalTaxPaid: sd.recordedTax?.federalTax,
+        taxAssessmentTurn: sd.recordedTax?.turn,
+        federalTaxForecast: tax?.federalTaxPaid,
+        stateTaxPaid: sd.recordedTax?.stateTax,
+        stateTaxForecast: tax?.stateTaxPaid,
+        federalTaxRate: sd.recordedTax?.federalRate ?? tax?.federalTaxRate ?? 0,
+        stateTaxRate: sd.recordedTax?.stateRate ?? tax?.stateTaxRate ?? 0,
       };
     }),
     balanceSheet: income.balanceSheet,

@@ -1,3 +1,4 @@
+import { recordBondCouponFees } from "./bondCouponFeeHistory";
 import { readFundedBankMaturityCash } from "./bondTurnBankMaturityCash";
 /**
  * Bond turns settle coupons and principal while preserving holder denominations.
@@ -197,6 +198,7 @@ async function processBondTurnInScope(
   }
 
   if (activeBonds.length === 0) {
+    await recordBondCouponFees(db, turn, new Map(), new Map(), new Map());
     const flows = captureSovereignCashProceeds
       ? await readCapturedSovereignIssuance(db, turn, config?.treasuryCashLedgerEnabled === true, {
           atParIssues,
@@ -970,6 +972,23 @@ async function processBondTurnInScope(
 
   // Emit bond_coupon / bond_maturity for character holders + gov_coupon_payment
   await emitBondTurnLedger({ db, txBondEntries, govCouponByCountry, turn, now });
+
+  const couponFeesByCorp = new Map<string, number>();
+  for (const entry of txBondEntries) {
+    const fee = entry.meta?.fxSpreadAnchor;
+    if (
+      entry.type === "bond_coupon" &&
+      entry.subjectType === "corporation" &&
+      entry.subjectId &&
+      typeof fee === "number" &&
+      Number.isFinite(fee) &&
+      fee >= 0
+    ) {
+      const id = entry.subjectId.toString();
+      couponFeesByCorp.set(id, (couponFeesByCorp.get(id) ?? 0) + fee);
+    }
+  }
+  await recordBondCouponFees(db, turn, couponFeesByCorp, corpPayments, corpCouponCosts);
 
   // Flush bond-issuer notifications (due-soon reminders + maturity confirms)
   // collected during phases 4 and 5. Single insertMany instead of one

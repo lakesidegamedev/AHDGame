@@ -130,7 +130,8 @@ describe("macro player/NPP action parity fixture", () => {
               bulkWrite: async (ops: unknown[]) => sectorWrites.push(ops),
             };
           if (name === "commodityFlows") return { find: () => ({ toArray: async () => [] }) };
-          if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+          if (name === "exchangeRates")
+            return { find: () => ({ toArray: async () => [{ currencyCode: "RUB", rate: 1 }] }) };
           if (name === "gameState") return { findOne: async () => null };
           throw new Error(`unexpected collection: ${name}`);
         },

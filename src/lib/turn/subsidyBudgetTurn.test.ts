@@ -140,6 +140,12 @@ describe("processSubsidyBudget", () => {
 
   beforeEach(() => {
     db = createMockDb();
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [
+        { currencyCode: "USD", rate: 1 },
+        { currencyCode: "GBP", rate: 1 },
+      ],
+    });
     // loadFxRatesByCurrency caches module-level; reset so each test's
     // exchangeRates mock (or lack of one) is what actually gets read.
     resetCorpFxRateCacheForTests();

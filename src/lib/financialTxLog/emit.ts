@@ -8,7 +8,6 @@ import {
   type FinancialSuspectFlag,
   type TxThresholds,
 } from "@/lib/db/types/financialTxLog";
-import type { ExchangeRate, SystemSettings } from "@/lib/db/types";
 import {
   computeExpiresAt,
   computeExpiresAtSync,
@@ -35,9 +34,9 @@ function amountToAnchor(
   amount: number,
   currencyCode: string,
   ratesByCurrency: Map<string, number>
-): number {
+): number | undefined {
   const rate = ratesByCurrency.get(currencyCode);
-  if (!rate || rate <= 0) return amount;
+  if (!rate || !Number.isFinite(rate) || rate <= 0) return undefined;
   return amount / rate;
 }
 

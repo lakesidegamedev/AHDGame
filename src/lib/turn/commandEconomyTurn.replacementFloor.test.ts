@@ -100,6 +100,8 @@ function makeDb(creditAggressiveness: number): { db: Db; captured: Captured } {
   const db = {
     collection: (name: string) => {
       switch (name) {
+        case "exchangeRates":
+          return { find: () => ({ toArray: async () => [{ currencyCode: "SUR", rate: 1 }] }) };
         case "gameConfig":
           return {
             findOne: async () => ({

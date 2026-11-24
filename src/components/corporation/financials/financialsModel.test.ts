@@ -95,6 +95,7 @@ describe("netMarginPct", () => {
       netMarginPct({
         income: 18_500,
         realizedIncome: -15_800,
+        realizedRevenueBase: 138_000,
         realizedDividendPaid: 0,
         dividendDistribution: 0,
         totalRevenue: 138_000,
@@ -103,7 +104,7 @@ describe("netMarginPct", () => {
       })
     ).toBeCloseTo(-11.45, 1);
   });
-  it("returns 0 when the total income base is non-positive", () => {
+  it("returns no percentage when the total income base is non-positive", () => {
     expect(
       netMarginPct({
         income: 100,
@@ -112,7 +113,7 @@ describe("netMarginPct", () => {
         bondCouponIncome: 0,
         imfFacilityReceiptsDaily: 0,
       })
-    ).toBe(0);
+    ).toBeNull();
   });
   it("counts bond coupon income in the denominator so bond-heavy corps stay under 100%", () => {
     // Operating revenue 1.7M, coupon 3.1M, net income 3.3M — the raw
@@ -280,4 +281,32 @@ describe("corpIncomeBasis (ticket #1098)", () => {
     expect(basis.netIncome).toBe(-250);
     expect(basis.retained).toBe(-250);
   });
+});
+
+it("keeps the margin on its recorded turn when current revenue and holdings change", () => {
+  const f = {
+    ...baseFinancials,
+    realizedIncome: 20,
+    realizedDividendPaid: 0,
+    realizedRevenueBase: 100,
+  };
+  expect(netMarginPct(f)).toBe(20);
+  expect(netMarginPct({ ...f, totalRevenue: 200, bondCouponIncome: 5000 })).toBe(20);
+});
+it("includes received dividends in a forecast denominator", () => {
+  expect(
+    netMarginPct({
+      ...baseFinancials,
+      totalRevenue: 0,
+      income: 50,
+      bondCouponIncome: 0,
+      imfFacilityReceiptsDaily: 0,
+      dividendIncomeReceived: 50,
+    })
+  ).toBe(100);
+});
+it("does not mix recorded income with an unavailable historical denominator", () => {
+  expect(
+    netMarginPct({ ...baseFinancials, realizedIncome: 20, realizedRevenueBase: undefined })
+  ).toBeNull();
 });

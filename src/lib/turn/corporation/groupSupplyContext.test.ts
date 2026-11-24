@@ -42,7 +42,7 @@ function fixture() {
       [child._id.toString(), child],
     ]),
     sectorsByCorp: new Map([[child._id.toString(), [sector]]]),
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([["USD", 1]]),
     preset: "2019-default",
     eraUnitScale: 1,
     priceRatioByCommodity: new Map(),

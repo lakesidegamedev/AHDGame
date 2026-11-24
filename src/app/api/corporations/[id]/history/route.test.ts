@@ -79,7 +79,6 @@ describe("GET /api/corporations/[id]/history", () => {
         expect(json.history[0]).toMatchObject({
           currencyCode: "EUR",
           fxRateAtWrite: 2,
-          marketCapCurrencyCode: null,
         });
       } else {
         expect(json.isPrivate).toBe(true);
@@ -190,10 +189,14 @@ describe("GET /api/corporations/[id]/history", () => {
           income: 1,
           incomePreDividends: 1,
           dividendPaidPerTurn: 1,
+          dividendIncomeReceived: 1,
           corporateTaxPaid: 1,
           federalTaxPaid: 1,
           stateTaxPaid: 1,
           perTurnBondCouponIncome: 1,
+          bondCouponFxFees: 1,
+          settledBondCouponIncome: 1,
+          settledBondInterestPaid: 1,
           perTurnBondInterestExpense: 1,
           perTurnBondDragOnNetIncome: 1,
           taxPaidByCountry: 1,
@@ -270,7 +273,7 @@ describe("GET /api/corporations/[id]/history", () => {
     expect(mainPipeline).not.toContainEqual({ $limit: 500 });
   });
 
-  it("overwrites the latest row's market cap with the live quote (#963) but leaves other fields as the stored snapshot", async () => {
+  it("preserves the latest frozen values and currency despite a different live quote", async () => {
     const corpId = new ObjectId();
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
     vi.mocked(resolveCorporation).mockResolvedValue({
@@ -330,20 +333,15 @@ describe("GET /api/corporations/[id]/history", () => {
 
     expect(res.status).toBe(200);
     expect(json.history).toHaveLength(2);
-    // marketCap on the latest row is overwritten with the live sharePrice * totalShares
-    // (getRoundedPublicMarketCap) so the Charts tab's "current" figure always matches
-    // the Overview card, instead of staying frozen at whatever snapshotMarketCap()
-    // wrote last turn (#963). Every other field — and the older turn-468 row — is
-    // untouched.
     expect(json.history[1]).toMatchObject({
       turn: 469,
       sharePrice: 101,
-      marketCap: 125_550,
+      marketCap: 101_000,
       liquidCapital: 41_000,
       marketingStrength: 31,
       dividendRate: 5,
       currencyCode: "EUR",
-      marketCapCurrencyCode: "USD",
+
       revenue: 510,
       totalCosts: 351,
       income: 159,
@@ -354,7 +352,7 @@ describe("GET /api/corporations/[id]/history", () => {
     expect(json.history[0]).toMatchObject({ turn: 468, marketCap: 99_000 });
   });
 
-  it("overwrites the latest row's market cap with the live quote even when the current turn has no snapshot yet", async () => {
+  it("preserves the latest snapshot when the current turn has no snapshot yet", async () => {
     const corpId = new ObjectId();
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
     vi.mocked(resolveCorporation).mockResolvedValue({
@@ -417,7 +415,7 @@ describe("GET /api/corporations/[id]/history", () => {
     expect(json.history[1]).toMatchObject({
       turn: 469,
       sharePrice: 101,
-      marketCap: 222_220,
+      marketCap: 101_000,
       liquidCapital: 41_000,
       marketingStrength: 31,
       dividendRate: 5,

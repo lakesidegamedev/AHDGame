@@ -181,7 +181,12 @@ function baseLookups(corporations: Corporation[], sectors: CorporateSector[]): C
     foreignCorpTaxRateByCountry: new Map(),
     domesticStateCorpTaxRateByState: new Map(),
     foreignStateCorpTaxRateByState: new Map(),
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([
+      ["USD", 1],
+      ["GBP", 1],
+      ["JPY", 1],
+      ["SUR", 1],
+    ]),
     stateCountryMap: new Map(),
     stateResourceCapacityByState: new Map(),
     extractionCapacityUtilBySector: new Map(),
@@ -701,7 +706,12 @@ describe("marketing settlement", () => {
         turn: 1,
         corporations: [buyer, seller],
         snapshots: [],
-        exchangeRatesByCurrency: new Map(),
+        exchangeRatesByCurrency: new Map([
+          ["USD", 1],
+          ["GBP", 1],
+          ["JPY", 1],
+          ["SUR", 1],
+        ]),
         bondsByCorpId: new Map(),
         sectorsByCorp: new Map(),
         mediaProductSlatesEnabled: true,
@@ -739,7 +749,12 @@ describe("marketing settlement", () => {
       turn: 1,
       corporations: [buyer, seller],
       snapshots: [],
-      exchangeRatesByCurrency: new Map(),
+      exchangeRatesByCurrency: new Map([
+        ["USD", 1],
+        ["GBP", 1],
+        ["JPY", 1],
+        ["SUR", 1],
+      ]),
       bondsByCorpId: new Map(),
       sectorsByCorp: new Map(),
       mediaProductSlatesEnabled: true,
@@ -837,7 +852,12 @@ describe("marketing settlement", () => {
       turn: 1,
       corporations: [buyer, seller],
       snapshots: [],
-      exchangeRatesByCurrency: new Map(),
+      exchangeRatesByCurrency: new Map([
+        ["USD", 1],
+        ["GBP", 1],
+        ["JPY", 1],
+        ["SUR", 1],
+      ]),
       bondsByCorpId: new Map(),
       sectorsByCorp: new Map(),
       mediaProductSlatesEnabled: true,
@@ -1181,6 +1201,14 @@ describe("corporate tax deduction", () => {
     const snapshot = result.corpSnapshots[0];
     expect(snapshot.federalTaxPaid).toBeCloseTo(100, 2);
     expect(snapshot.stateTaxPaid).toBeCloseTo(50, 2);
+    const assessment = result.sectorOps.find(
+      (op) => String(op.updateOne.filter._id) === String(sector._id)
+    )?.updateOne.update.$set?.corporateTaxAssessment;
+    expect(assessment).toMatchObject({
+      turn: 1,
+      national: snapshot.federalTaxPaid,
+      regional: snapshot.stateTaxPaid,
+    });
     // Total pre-dividend income after tax = 500 - 150 = 350
     expect(result.totalIncomeGenerated).toBeCloseTo(350, 1);
   });
