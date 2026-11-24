@@ -19,13 +19,14 @@ const JpStatutoryConstituencyList = dynamic(
 
 type NotesRace = Pick<
   ElectionResponse,
-  "state" | "hungarianModernByElection" | "japanShugiinRules"
+  "state" | "hungarianModernByElection" | "japanShugiinRules" | "incumbent"
 >;
 
 /**
  * Short notes a race needs read before acting, as the election page showed
- * them: campaign season in a general's closing turns, a Hungarian by-election's
- * district, and Japan's 1994 mixed chamber with its statutory constituency map.
+ * them: campaign season in a general's closing turns, where the sitting
+ * officeholder stands (they may be in another party's race or off the ballot),
+ * a Hungarian by-election's district, and Japan's 1994 mixed chamber.
  */
 export function RaceNotes({
   election,
@@ -42,7 +43,8 @@ export function RaceNotes({
   const byElection = election.hungarianModernByElection;
   const jp =
     election.japanShugiinRules?.ruleVersion === "mixed-1994-v1" ? election.japanShugiinRules : null;
-  if (!season && !byElection && !jp) return null;
+  const incumbent = typeof election.incumbent?.running === "boolean" ? election.incumbent : null;
+  if (!season && !incumbent && !byElection && !jp) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
@@ -58,6 +60,20 @@ export function RaceNotes({
           }}
         >
           {t("campaignManager.race.campaignSeason", { n: turnsLeft })}
+        </p>
+      ) : null}
+      {incumbent ? (
+        <p style={{ margin: 0, color: BLEND.muted }} data-testid="cm-incumbent-note">
+          {incumbent.running
+            ? t("campaignManager.race.incumbentRunning", {
+                name: incumbent.name,
+                party: incumbent.party,
+              })
+            : t("campaignManager.race.incumbentNotRunning", {
+                name: incumbent.name,
+                party: incumbent.party,
+                reason: incumbent.notRunningReason || "none",
+              })}
         </p>
       ) : null}
       {byElection ? (
