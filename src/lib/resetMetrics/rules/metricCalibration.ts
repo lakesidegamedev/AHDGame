@@ -7,6 +7,7 @@ import type { PrimaryMetricDefinition } from "../catalog";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import type { MetricCategoryId } from "@/lib/db/types";
 import { metricQualityRange } from "@/lib/corporations/sectorMetricMarginProfiles";
+import { propertyCrimeBand } from "./propertyCrimeBand";
 
 // Published value = offset + scale * legacy value. None of these are new
 // empirical calibrations; they are the existing board's unit adapters.
@@ -49,6 +50,9 @@ export function proxyResponseCalibration(
   // research percentages or housing ratios. Preserve their existing spans.
   if (["12", "15", "24", "58"].includes(metric.id))
     return { span: 100, direction, min: 0, max: metric.id === "58" ? 100 : Infinity };
+  const propertyBand = metric.id === "32" ? propertyCrimeBand(countryId, year) : null;
+  if (propertyBand)
+    return { span: propertyBand.worst - propertyBand.best, direction, min: 0, max: Infinity };
   if (!legacy.definition) return null;
   const range = metricQualityRange(legacy.definition, legacy.id, { countryId, year });
   const ends = [legacy.definition.minValue ?? 0, legacy.definition.maxValue ?? 100].map(

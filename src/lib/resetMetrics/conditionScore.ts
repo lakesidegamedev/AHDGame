@@ -1,6 +1,7 @@
 import type { PrimaryMetricDefinition } from "./catalog";
 import { politicalScoreFromLegacyValue } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { legacyMetricCalibration } from "./rules/metricCalibration";
+import { propertyCrimeBand } from "./rules/propertyCrimeBand";
 
 export const RESET_METRIC_SCORE_COUNTRIES = ["US", "UK", "JP", "IE", "SCO", "WAL", "CA"] as const;
 export type ResetMetricScoreCountry = (typeof RESET_METRIC_SCORE_COUNTRIES)[number];
@@ -54,6 +55,11 @@ export function resetMetricConditionScore(
       return linearScore(value, 50, 150);
     case "24":
       return linearScore(value, 160, 60);
+    case "32": {
+      const band = propertyCrimeBand(countryId, year);
+      if (band) return linearScore(value, band.worst, band.best);
+      break;
+    }
     case "55":
       return preferredBandScore(value, 1.9, 2.3, 0.8, 3.5);
     case "58":
