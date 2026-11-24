@@ -103,15 +103,16 @@ export default async function LegislaturePage({ params, searchParams }: PageProp
   const ru = countryHasFeature("ruUi", id) ? await ruLegislaturePresentation() : undefined;
   const hungarianElectoralDecisions =
     countryHasFeature("huUi", id) && (await getGameStatePreset(await getDb())) === "1991-default";
-  const requestedChamber = id === "US" ? (await searchParams).chamber : undefined;
+  const showUsCongress = countryHasFeature("usUi", id);
+  const requestedChamber = showUsCongress ? (await searchParams).chamber : undefined;
   const initialChamber = Array.isArray(requestedChamber) ? requestedChamber[0] : requestedChamber;
   const photo = CHAMBER_HERO[initialChamber === "house" ? "house" : "senate"].image;
   return (
     <>
-      {id === "US" && <link rel="preload" href={photo} as="image" fetchPriority="high" />}
+      {showUsCongress && <link rel="preload" href={photo} as="image" fetchPriority="high" />}
       <NationalPartyBillAction countryId={id} />
       <NationalImpeachmentAction countryId={id} />
-      {id === "US" ? (
+      {showUsCongress ? (
         <USLegislatureClient />
       ) : (
         <LegislatureClient
