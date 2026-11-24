@@ -2,6 +2,11 @@ import type { Db } from "mongodb";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import type { CountryId } from "@/lib/constants/countries";
+import { legislatureUrl } from "@/lib/urls";
+import { getEraContext } from "@/lib/era/context";
+import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import type { SearchResult } from "@/lib/search/types";
 
 export interface SuggestionEntry {
@@ -21,7 +26,16 @@ export async function loadSuggestionVocabulary(
     ? { countryId: { $in: enabledCountries } }
     : {};
 
-  const [pages, corporations, npps] = await Promise.all([
+  const lawScopes = enabledCountries?.map((id) => id.toLowerCase());
+  const lawFilter: Record<string, unknown> = lawScopes
+    ? {
+        $or: [
+          { countryScope: { $in: lawScopes } },
+          ...(lawScopes.includes("us") ? [{ countryScope: { $exists: false } }] : []),
+        ],
+      }
+    : {};
+  const [pages, corporations, npps, laws] = await Promise.all([
     wikiPagesCollection(db)
       .find(wikiFilter)
       .project<{ _id: { toString(): string }; title: string; slug: string; description?: string }>({
@@ -46,9 +60,34 @@ export async function loadSuggestionVocabulary(
       })
       .limit(3000)
       .toArray(),
+    legislationTypesCollection(db)
+      .find(lawFilter)
+      .project<{ _id: { toString(): string }; name: string; countryScope?: string }>({
+        name: 1,
+        countryScope: 1,
+      })
+      .limit(3000)
+      .toArray(),
   ]);
 
+  const { year } = await getEraContext(db);
+  const activeLaws = laws.filter((law) => isLegislationTypeActive(law._id.toString(), year));
+  const lawHref = (scope: string) =>
+    scope === "us" ? "/congress" : legislatureUrl(scope.toUpperCase() as CountryId);
   return [
+    ...activeLaws.map((law) => {
+      const scope = String(law.countryScope ?? "us").toLowerCase();
+      return {
+        name: law.name,
+        result: {
+          type: "bill" as const,
+          id: law._id.toString(),
+          title: law.name,
+          subtitle: "Proposable law · propose in the legislature",
+          href: lawHref(scope),
+        },
+      };
+    }),
     ...pages.map((p) => ({
       name: p.title,
       result: {
