@@ -370,3 +370,14 @@ export const US_POPULATION_MULTIPLIERS: Record<string, number> = {
   retirees: 0.85,
   small_business: 1.1,
 };
+
+/**
+ * National property crime per 100k: FBI Crime Data Explorer summarized
+ * national offenses over the reporting population, the same basis as the
+ * 2027 state seed. Anchors the reset board's property crime scale.
+ */
+export const US_PROPERTY_CRIME_NORMALS: NormalAnchor[] = [
+  { year: 1991, value: 5388 },
+  { year: 2019, value: 2109 },
+  { year: 2024, value: 1766 },
+];
