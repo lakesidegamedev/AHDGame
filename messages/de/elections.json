@@ -181,6 +181,25 @@
       "house": "Repräsentantenhaus",
       "governor": "Gouverneur",
       "stateSenate": "Staatssenat"
+    },
+    "campaignTargeting": {
+      "unitCost": "Preis: {funds} Wahlkampfmittel und {actions} Aktion pro Kauf. Wähle ein Ziel, um die Summe zu sehen."
+    },
+    "campaignManager": {
+      "finder": {
+        "showUnopposed": "{count, plural, one {# Wahl ohne Gegenkandidat anzeigen} other {# Wahlen ohne Gegenkandidat anzeigen}}",
+        "hideUnopposed": "Wahlen ohne Gegenkandidat ausblenden"
+      },
+      "race": {
+        "primaryShareNote": "Der Umfrageanteil in der Vorwahl stammt aus einem Wert, der Parteinähe, Nähe zum Bundesstaat, Beliebtheit und Einfluss berücksichtigt. Die Nähe zählt am meisten, daher kann ein Kandidat mit geringerer Beliebtheit trotzdem vorn liegen, und Unterschiede im Wert wirken im Anteil größer."
+      },
+      "chart": {
+        "loading": "Umfrageverlauf wird geladen."
+      },
+      "map": {
+        "legendScale": "Hell bis dunkel: offen, leicht, wahrscheinlich, sicher. Parteien im gewählten Rennen.",
+        "legendScalePrimary": "Eine Vorwahl findet innerhalb einer Partei statt, daher wird nur ihre Farbe gezeigt. Hell bis dunkel: offen, leicht, wahrscheinlich, sicher für den führenden Kandidaten."
+      }
     }
   }
 }

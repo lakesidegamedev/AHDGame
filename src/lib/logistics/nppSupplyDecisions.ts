@@ -6,7 +6,12 @@ import {
   AI_SUPPLIER_MAX_DISCOUNT,
   SUPPLY_AGREEMENT_PRICE_BAND,
   type SupplyAgreement,
+  type SupplyAgreementPriceMode,
 } from "@/lib/db/types/supplyAgreement";
+import {
+  SUPPLY_AGREEMENT_FIXED_PRICE_BAND,
+  roundFixedPrice,
+} from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import {
   computeSupplierCommodityCapacityUnits,
   computeSupplierMaxContractableUnits,
@@ -77,6 +82,11 @@ export type ExistingNppAgreement = {
   stateId?: string;
   volumeCap: number;
   pricePremium: number;
+  /** Price mode of a newer-mode proposal; absent on a legacy premium agreement. */
+  priceMode?: SupplyAgreementPriceMode;
+  /** Set-price mode: the proposed per-unit price and the market price it was bounded against. */
+  fixedUnitPrice?: number;
+  signingMarketPrice?: number;
   status: SupplyAgreement["status"];
   /** Corporation that authored the standing offer (a buyer-authored pending proposal). */
   proposedByCorpId?: string;
@@ -92,7 +102,14 @@ export type NppAgreementDecision =
   | { action: "activate"; agreementId: string }
   | { action: "cancelNotice"; agreementId: string }
   /** Supplier answers a player proposal with the terms it would sign. */
-  | { action: "counter"; agreementId: string; pricePremium: number; volumeCap: number }
+  | {
+      action: "counter";
+      agreementId: string;
+      pricePremium: number;
+      volumeCap: number;
+      /** Set-price mode only: the countered per-unit price, kept in the offer's own mode. */
+      fixedUnitPrice?: number;
+    }
   /** Supplier turns a player proposal down; the reason is shown to the player. */
   | { action: "decline"; agreementId: string; reason: NppDeclineReason }
   | {
@@ -384,9 +401,11 @@ export function decideNppSupplyAgreements(args: {
       // Always answer within a turn: sign the proposal as written, or counter
       // with the closest terms the supplier can honour (price no deeper than
       // the glut discount, volume no more than its spare capacity).
+      const setPrice =
+        a.priceMode === "fixed" && a.signingMarketPrice != null && a.signingMarketPrice > 0;
       const price = Math.min(
         Math.max(a.pricePremium, NPP_CONTRACT_GLUT_PREMIUM),
-        SUPPLY_AGREEMENT_PRICE_BAND
+        setPrice ? SUPPLY_AGREEMENT_FIXED_PRICE_BAND : SUPPLY_AGREEMENT_PRICE_BAND
       );
       const volume = Math.min(a.volumeCap, Math.floor(spare));
       if (!(volume >= 1)) {
@@ -397,7 +416,15 @@ export function decideNppSupplyAgreements(args: {
         out.push({ action: "activate", agreementId: a.id });
         accepted.set(key, taken + a.volumeCap);
       } else {
-        out.push({ action: "counter", agreementId: a.id, pricePremium: price, volumeCap: volume });
+        out.push({
+          action: "counter",
+          agreementId: a.id,
+          pricePremium: price,
+          volumeCap: volume,
+          ...(setPrice
+            ? { fixedUnitPrice: roundFixedPrice(a.signingMarketPrice! * (1 + price)) }
+            : {}),
+        });
       }
     }
   }

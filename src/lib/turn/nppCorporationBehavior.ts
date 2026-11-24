@@ -126,6 +126,8 @@ import {
   type NppConstructionFinanceRequest,
 } from "@/lib/turn/npp/nppConstructionFinance";
 import { maybePushNppTechUnlock } from "@/lib/turn/npp/corpBehaviorConfig";
+import type { LegacyTechContext } from "@/lib/techTree/rules/legacyTech";
+import { loadLegacyTechContext } from "@/lib/corporations/techTree/legacyTechContext";
 import {
   AUTOPILOT_ADVISORY_COPY,
   AUTOPILOT_MODIFIERS,
@@ -595,6 +597,7 @@ export async function processNppCorporationDecisions(
   // World frontier research per lane, one aggregate for the cohort: opens the
   // 2049 breakthrough methods to NPP retooling and founding.
   let techCurrentYear = 0;
+  let techLegacy: LegacyTechContext | undefined;
   let sectorResearchByLane: ReadonlyMap<string, number> | undefined;
   // Diffusion worlds: readiness by country, and the method operators taken
   // from the sector rows already in hand.
@@ -616,6 +619,7 @@ export async function processNppCorporationDecisions(
     techCurrentYear =
       gs?.currentYear ??
       startingYear + Math.floor(((gs?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR);
+    techLegacy = await loadLegacyTechContext(db, { startingYear });
   }
 
   const manufacturingProductProjects = buildNppProductProjectsV2({
@@ -1005,6 +1009,7 @@ export async function processNppCorporationDecisions(
         techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
           fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
         }),
+        techLegacy,
         techCurrentYear,
         turn,
         now,
