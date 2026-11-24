@@ -20,11 +20,7 @@ import {
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
 import { householdSpendBase } from "./householdSpendRules";
-import {
-  expectedInputUnitPrice,
-  salesAdvanceAmount,
-  salesFundedRunShare,
-} from "./salesAdvanceRules";
+import { expectedInputUnitPrice, salesFundedPlantShares } from "./salesAdvanceRules";
 import { restartProbe, RESTART_PROBE_RUN_SHARE } from "./restartProbeRules";
 import { addStageTiming, listStageTiming, stageClock, type StageTimings } from "./stageTimings";
 import { landedPriceGate } from "./tariffRules";
@@ -187,14 +183,32 @@ export function advanceProducerEconomy(
   // The same run with inputs at what they are expected to cost, for the sales
   // advance: a run that pays for itself at market prices is not held to its
   // opening cash because the bid ceiling is several times the market.
-  const expectedNeed = input.salesAdvanceAtClearing
-    ? producerRunBudget(plans, (recipe) =>
-        expectedInputUnitPrice(
-          recipe.maximumUnitPrice,
-          input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)]
-        )
-      ).variableNeed
-    : undefined;
+  const expectedInputPrice = (recipe: ProductionPlan["inputs"][number]) =>
+    expectedInputUnitPrice(
+      recipe.maximumUnitPrice,
+      input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)]
+    );
+  // Each plant's own run, so a plant that pays for itself is never cut because
+  // another plant of the same company loses money (salesFundedPlantShares).
+  const plantRun = (p: ProductionPlan) => ({
+    need: producerRunBudget([p]).variableNeed.get(p.accountId) ?? 0,
+    ...(input.salesAdvanceAtClearing
+      ? {
+          expectedNeed:
+            producerRunBudget([p], expectedInputPrice).variableNeed.get(p.accountId) ?? 0,
+        }
+      : {}),
+    expectedRevenue:
+      (p.expectedUnitRevenue ?? 0) > 0
+        ? p.capacityUnits * p.activeFraction * p.outputMultiplier * p.expectedUnitRevenue!
+        : 0,
+  });
+  const plansByAccount = new Map<string, ProductionPlan[]>();
+  for (const p of plans) {
+    const list = plansByAccount.get(p.accountId);
+    if (list) list.push(p);
+    else plansByAccount.set(p.accountId, [p]);
+  }
   // A private company on the credit line may run past its cash: it buys the
   // inputs with cash and owes the wages and site bills it cannot cover, up to
   // its headroom (producerCreditRules). `inputReserve` is the cash kept back
@@ -202,20 +216,11 @@ export function advanceProducerEconomy(
   const creditAccounts = new Set(input.credit?.accountIds ?? []);
   // Wages plus site running costs at a full run: the bills a company may owe.
   const fullRunningBills = new Map<string, number>();
-  // What a full run is expected to earn, for the sales advance (salesAdvanceRules).
-  const expectedRevenue = new Map<string, number>();
-  for (const p of plans) {
+  for (const p of plans)
     fullRunningBills.set(
       p.accountId,
       (fullRunningBills.get(p.accountId) ?? 0) + p.labourCost + p.otherOperatingCost - idleUpkeep(p)
     );
-    if ((p.expectedUnitRevenue ?? 0) > 0)
-      expectedRevenue.set(
-        p.accountId,
-        (expectedRevenue.get(p.accountId) ?? 0) +
-          p.capacityUnits * p.activeFraction * p.outputMultiplier * p.expectedUnitRevenue!
-      );
-  }
   const notShrinkingSince = new Map<string, number>();
   for (const claim of prior.payables)
     if (claim.notShrinkingSince != null)
@@ -229,37 +234,39 @@ export function advanceProducerEconomy(
   const inputReserve = new Map<string, number>();
   // Cash a company borrows against this turn's own sales to fund its run.
   const salesAdvance = new Map<string, number>();
+  // Run share of a plant whose company's plants run on different shares.
+  const plantShare = new Map<string, number>();
   const runShare = new Map(
     [...bills.keys()].map((id) => {
       const need = variableNeed.get(id) ?? 0;
       const free = Math.max(0, cash.get(id)! - (fixedBills.get(id) ?? 0));
       const cashOnly = need > 0 ? Math.min(1, free / need) : 1;
       if (cashOnly >= 1) return [id, cashOnly];
-      // Sales fund the run: a run that earns more than it costs is not held
-      // back by the cash the company happens to hold at the open.
-      const salesFunded = Math.max(
-        cashOnly,
-        salesFundedRunShare({
-          free,
-          need,
-          expectedRevenue: expectedRevenue.get(id) ?? 0,
-          revenueShare: input.salesAdvanceRevenueShare,
-          ...(expectedNeed ? { expectedNeed: expectedNeed.get(id) ?? need } : {}),
-        })
-      );
+      // Sales fund the run: a run that earns more than it costs runs in full,
+      // whatever cash the company holds at the open, zero or below.
+      const accountPlans = plansByAccount.get(id) ?? [];
+      const funded = salesFundedPlantShares({
+        free,
+        plants: accountPlans.map(plantRun),
+        revenueShare: input.salesAdvanceRevenueShare,
+        unpaidFixedBills: Math.max(0, (fixedBills.get(id) ?? 0) - cash.get(id)!),
+      });
+      const split = funded.shares.some((share) => share !== funded.shares[0]);
+      const salesFunded = Math.max(cashOnly, split ? 0 : (funded.shares[0] ?? 0));
       const advance = () => {
-        const amount = salesAdvanceAmount({
-          free,
-          need,
-          runShare: salesFunded,
-          revenueShare: input.salesAdvanceRevenueShare,
-          ...(expectedNeed ? { expectedRevenue: expectedRevenue.get(id) ?? 0 } : {}),
-        });
-        if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
-          salesAdvance.set(id, amount);
+        if (split) {
+          accountPlans.forEach((p, i) =>
+            plantShare.set(p.id, Math.max(cashOnly, funded.shares[i]))
+          );
+          if (funded.advance > 0) salesAdvance.set(id, funded.advance);
+          return [id, cashOnly] as const;
+        }
+        if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && funded.advance > 0)
+          salesAdvance.set(id, funded.advance);
         return [id, salesFunded] as const;
       };
-      if (!creditAccounts.has(id) || salesFunded >= 1) return advance();
+      // A plant that pays for itself runs on its sales, never on the credit line.
+      if (!creditAccounts.has(id) || salesFunded >= 1 || split) return advance();
       const labour = fullRunningBills.get(id) ?? 0;
       const inputs = Math.max(0, need - labour);
       const share = creditRunShare({
@@ -288,7 +295,7 @@ export function advanceProducerEconomy(
   const probeShare = new Map<string, number>();
   if (input.restartProbes) {
     const candidates = plans.filter((p) => {
-      const share = runShare.get(p.accountId) ?? 1;
+      const share = plantShare.get(p.id) ?? runShare.get(p.accountId) ?? 1;
       return (
         share < RESTART_PROBE_RUN_SHARE &&
         !inputReserve.has(p.accountId) &&
@@ -365,7 +372,8 @@ export function advanceProducerEconomy(
       }
     }
   }
-  const shareOf = (p: ProductionPlan) => probeShare.get(p.id) ?? runShare.get(p.accountId) ?? 1;
+  const shareOf = (p: ProductionPlan) =>
+    probeShare.get(p.id) ?? plantShare.get(p.id) ?? runShare.get(p.accountId) ?? 1;
   // Wages and site running costs follow the run the company can fund; idle
   // capacity keeps its cold upkeep.
   plans = plans.map((p) => {

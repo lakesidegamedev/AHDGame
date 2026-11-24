@@ -141,6 +141,19 @@ describe("run after a build (ticket 1785)", () => {
     ).toContain("would not be cut");
   });
 
+  it("warns of no cut when a thin-margin run's sales cover its bills and the build spends all the cash", () => {
+    // Sales 0.1% above the bills, cash spent to zero: the run is not cut.
+    const after = runAfterBuild({
+      cash: 1_000_000,
+      cost: 1_000_000,
+      billsPerTurn: 6_900_000,
+      revenuePerTurn: 6_906_900,
+    });
+    expect(after.cashAfter).toBe(0);
+    expect(after.runShare).toBe(1);
+    expect(after.cutPercent).toBe(0);
+  });
+
   it("reads own-site sales into the run's revenue", () => {
     const flows = runningFlowsPerTurn(
       [receipt({ revenue: 100, internalSupplyIncome: 40, purchases: 20 })],
