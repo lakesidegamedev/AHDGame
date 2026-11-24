@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { AnchorAmount } from "@/components/currency/AnchorUnit";
 
 interface InventoryPanelProps {
   corporationId: string;
@@ -112,7 +113,9 @@ export default function InventoryPanel({
           <p>
             Holding <span className="font-medium text-foreground">{fmt(inventory.heldUnits)}</span>{" "}
             units worth{" "}
-            <span className="font-medium text-foreground">₳ {fmt(inventory.heldValueAnchor)}</span>
+            <span className="font-medium text-foreground">
+              <AnchorAmount>₳ {fmt(inventory.heldValueAnchor)}</AnchorAmount>
+            </span>
             {inventory.drainedUnits > 0 && <> · sold {fmt(inventory.drainedUnits)} last turn</>}
             {inventory.spoiledUnits > 0 && <> · spoiled {fmt(inventory.spoiledUnits)} last turn</>}
           </p>

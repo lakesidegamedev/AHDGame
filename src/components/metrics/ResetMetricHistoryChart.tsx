@@ -5,6 +5,7 @@ import type { ResetMetricCountry, ResetMetricRow } from "./ResetMetricBoard";
 export type ResetMetricDetailResponse = Readonly<{
   history: Array<{ turn: number; value: number }>;
   historyNotice?: string;
+  openingNotice?: string;
   nationalValue: number;
   regions: Array<{ regionId: string; name: string; value: number }>;
 }>;

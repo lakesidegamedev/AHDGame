@@ -55,6 +55,19 @@ describe("opening rebase", () => {
     expect(set["history.35"]).toEqual([{ turn: 1, value: 67 }]);
   });
 
+  it("rescales seeded homelessness but not the housing model's own count", () => {
+    const seeded = {
+      openingValues: { "41": 10 },
+      observations: { "41": observation("41", 12) },
+    };
+    expect(planOpeningRebase(seeded, { "41": 30 })[0]?.newCurrent).toBeCloseTo(36, 6);
+    const modeled = {
+      openingValues: { "41": 10 },
+      observations: { "41": observation("41", 12, { definitionVersion: 2 }) },
+    };
+    expect(planOpeningRebase(modeled, { "41": 30 })).toEqual([]);
+  });
+
   it("is idempotent once the opening matches", () => {
     const rebased = { ...board, openingValues: { ...board.openingValues, "31": 293.9, "35": 67 } };
     expect(planOpeningRebase(rebased, corrected)).toEqual([]);

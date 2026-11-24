@@ -9,6 +9,7 @@ import {
   SmallButton,
   Td,
 } from "@/components/corporation/dense/DenseKit";
+import { AnchorAmount } from "@/components/currency/AnchorUnit";
 
 interface Queue {
   seat: { seatId: string; seatName: string } | null;
@@ -82,8 +83,10 @@ export function IndexListingQueuePanel({ canAct }: { canAct: boolean }) {
                         </Link>
                         <span className="ml-2 text-xs text-muted">
                           filed turn {petition.filedAtTurn}, decide by {petition.deadlineAtTurn},
-                          contribution ₳
-                          {Math.round(petition.contributionAnchor).toLocaleString("en-US")}
+                          contribution{" "}
+                          <AnchorAmount>
+                            ₳{Math.round(petition.contributionAnchor).toLocaleString("en-US")}
+                          </AnchorAmount>
                         </span>
                       </Td>
                       <Td align="right" numeric={false}>
