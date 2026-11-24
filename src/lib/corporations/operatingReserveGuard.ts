@@ -134,9 +134,15 @@ export async function checkCorpPurchaseReserve(
   if (!(turns > 0)) return { ok: true };
   const currentTurn = await getCurrentTurn(db);
   const ids = [corporation._id, ...(input.extraCorporationIds ?? [])];
-  let billsAnchor = 0;
-  for (const id of ids)
-    billsAnchor += (await loadOperatingReserve(db, id, currentTurn, turns)).billsPerTurnAnchor;
+  const sectors = await corporateSectorsCollection(db)
+    .find(ids.length === 1 ? { corporationId: ids[0] } : { corporationId: { $in: ids } }, {
+      projection: RESERVE_RECEIPT_PROJECTION,
+    })
+    .toArray();
+  const billsAnchor = runningFlowsPerTurn(
+    sectors.flatMap((s) => (s.producerSettlement ? [s.producerSettlement] : [])),
+    currentTurn
+  ).bills;
   if (!(billsAnchor > 0)) return { ok: true };
   const fxRate = await getCorpFxRate(db, corporation);
   const billsLocal = anchorToCorpLiquidCapital(billsAnchor, corporation, fxRate);
