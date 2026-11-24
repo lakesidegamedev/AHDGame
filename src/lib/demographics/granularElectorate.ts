@@ -977,42 +977,55 @@ export function buildGranularElectorateSubstrate(
     groups,
   };
 
+  // A cell sits in exactly one bucket per dimension, so it carries a delta key
+  // when its own bucket for that dimension matches. Same key order as foldLean.
+  const splitDeltaKeys = (keys: string[]) =>
+    keys.map((key) => {
+      const at = key.indexOf(":");
+      return [key.slice(0, at), key.slice(at + 1), key] as const;
+    });
+  const econDeltaParts = splitDeltaKeys(econDeltaKeys);
+  const socDeltaParts = splitDeltaKeys(socDeltaKeys);
+  const foldCellLean = (
+    base: number,
+    buckets: Record<string, string>,
+    parts: ReturnType<typeof splitDeltaKeys>,
+    deltas: Record<string, number>
+  ) => {
+    if (parts.length === 0) return base;
+    let v = base;
+    for (const [dim, bucket, key] of parts) {
+      if (buckets[dim] === bucket) v += deltas[key];
+    }
+    return clamp(v, -5, 5);
+  };
+
   // Preserve identities until after the nonlinear response, then average within
   // the same units the election already uses. Buying an ad cannot regroup voters.
-  const campaignCells = units
-    .flatMap((unit) =>
-      (unit.campaignCells ?? []).map((cell) => ({
-        ...cell,
-        // Match the counted unit's live turnout, including temporary turnout drift, while preserving its internal turnout mix.
-        turnout:
-          unit.turnout > 0
-            ? (cell.turnout * liveTurnouts[unit.id]) / unit.turnout
-            : liveTurnouts[unit.id],
-      }))
-    )
-    .map((cell) => {
-      const bucketWeights = Object.fromEntries(
-        Object.entries(cell.buckets).map(([dim, bucket]) => [`${dim}:${bucket}`, 1])
-      );
-      const cellUnit = { ...cell, bucketWeights };
-      return {
-        ...cell,
-        economicLean: foldLean(cell.economicLean, cellUnit, econDeltaKeys, econBucketDeltas),
-        socialLean: foldLean(cell.socialLean, cellUnit, socDeltaKeys, socBucketDeltas),
-        identities: Object.fromEntries(
-          Object.entries(cell.identities).map(([dim, position]) => {
-            const key = `${dim}:${cell.buckets[dim]}`;
-            return [
-              dim,
-              {
-                economicLean: clamp(position.economicLean + (econBucketDeltas[key] ?? 0), -5, 5),
-                socialLean: clamp(position.socialLean + (socBucketDeltas[key] ?? 0), -5, 5),
-              },
-            ];
-          })
-        ),
-      };
-    });
+  const campaignCells = units.flatMap((unit) =>
+    (unit.campaignCells ?? []).map((cell) => ({
+      ...cell,
+      // Match the counted unit's live turnout, including temporary turnout drift, while preserving its internal turnout mix.
+      turnout:
+        unit.turnout > 0
+          ? (cell.turnout * liveTurnouts[unit.id]) / unit.turnout
+          : liveTurnouts[unit.id],
+      economicLean: foldCellLean(cell.economicLean, cell.buckets, econDeltaParts, econBucketDeltas),
+      socialLean: foldCellLean(cell.socialLean, cell.buckets, socDeltaParts, socBucketDeltas),
+      identities: Object.fromEntries(
+        Object.entries(cell.identities).map(([dim, position]) => {
+          const key = `${dim}:${cell.buckets[dim]}`;
+          return [
+            dim,
+            {
+              economicLean: clamp(position.economicLean + (econBucketDeltas[key] ?? 0), -5, 5),
+              socialLean: clamp(position.socialLean + (socBucketDeltas[key] ?? 0), -5, 5),
+            },
+          ];
+        })
+      ),
+    }))
+  );
   const applySalience = (candidate: EnrichedCandidate): EnrichedCandidate =>
     salience
       ? {

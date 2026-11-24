@@ -248,12 +248,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "no-store, no-transform" }],
       },
       {
+        // Cache-Control comes from the private page rule above. A no-transform
+        // here would switch off compression for this page.
         source: "/country/:code/region/:id/party/:partyId",
         headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate, no-transform",
-          },
           { key: "Pragma", value: "no-cache" },
           { key: "Expires", value: "0" },
         ],
