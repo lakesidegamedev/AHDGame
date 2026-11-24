@@ -280,3 +280,43 @@ describe("lender states at resolution", () => {
     expect(JSON.stringify(db.collection("corporations").docs)).toBe(snapshot);
   });
 });
+
+describe("savings accounts at a resolved bank under the pointer model", () => {
+  it("reopens frozen accounts at the central bank and leaves closed ones closed", async () => {
+    const db = world({ borrowerCash: 150_000 });
+    const holder = BORROWER.toString();
+    db.seed("savingsAccounts", [
+      {
+        _id: new ObjectId(),
+        ownerType: "character",
+        ownerId: new ObjectId(),
+        currency: "USD",
+        holder,
+        balance: 3_000,
+        status: "frozen",
+        version: 1,
+      },
+      {
+        _id: new ObjectId(),
+        ownerType: "character",
+        ownerId: new ObjectId(),
+        currency: "USD",
+        holder,
+        balance: 0,
+        status: "closed",
+        version: 1,
+      },
+    ]);
+    const result = await returnDepositBook(db as unknown as Db, BORROWER, {
+      cause: "failure",
+      turn: TURN,
+      releaseResidualToOwner: false,
+    });
+    expect(result.error).toBeUndefined();
+    const accounts = db.collection("savingsAccounts").docs as { holder: string; status: string }[];
+    expect(accounts.map((a) => [a.holder, a.status])).toEqual([
+      ["centralBank", "open"],
+      [holder, "closed"],
+    ]);
+  });
+});

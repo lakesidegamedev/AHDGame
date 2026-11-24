@@ -11,6 +11,7 @@ interface HeroImageProps {
   className?: string;
   sizes?: string;
   priority?: boolean;
+  fetchPriority?: React.ImgHTMLAttributes<HTMLImageElement>["fetchPriority"];
   style?: React.CSSProperties;
 }
 
@@ -25,6 +26,7 @@ export function HeroImage({
   className = "",
   sizes = "100vw",
   priority,
+  fetchPriority,
   style,
 }: HeroImageProps) {
   const [errored, setErrored] = useState(false);
@@ -44,6 +46,7 @@ export function HeroImage({
       alt={alt}
       fill={fill}
       priority={priority}
+      fetchPriority={fetchPriority}
       sizes={sizes}
       className={fill ? `object-cover ${className}` : className}
       style={fill ? { objectPosition: "center", ...style } : style}

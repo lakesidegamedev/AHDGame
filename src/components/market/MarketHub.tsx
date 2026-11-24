@@ -9,9 +9,14 @@ import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { MARKET_TABS, parseMarketTab, type MarketTab } from "@/lib/market/hubTabs";
 import dynamic from "next/dynamic";
 import { MarketOverview } from "./MarketOverview";
-import { sectorsUrl, type SectorsForSaleResponse } from "./marketEndpoints";
-import { DEFAULT_OFFER_FILTERS, offersQuery, SUPPLY_PAGE_SIZE } from "./supplyOfferUi";
-import type { SupplyOffersResponse } from "./supplyOfferUi";
+import {
+  offersQuery,
+  sectorsUrl,
+  SUPPLY_PAGE_SIZE,
+  type SectorsForSaleResponse,
+  type SupplyOffersResponse,
+} from "./marketEndpoints";
+import { DEFAULT_OFFER_VIEW } from "@/lib/corporations/supplyExchange/offerOrdering";
 import type { MarketOverviewPreviews } from "@/lib/market/loadOverviewPreviews";
 import { useMarketJson } from "./useMarketJson";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -133,7 +138,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
   const enabledCountries = useEnabledCountries();
   const countryName = useCountryDisplayName();
   const exchangeMeta = useMemo(
-    () => buildRuntimeExchangeMeta(new Set(enabledCountries), "US", countryName),
+    () => buildRuntimeExchangeMeta(new Set(enabledCountries), countryName),
     [enabledCountries, countryName]
   );
   const selectedExchange = searchParams.get("exchange")?.toUpperCase() ?? "global";
@@ -154,7 +159,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
   const hasSession = useHasSession();
   const offers = useMarketJson<SupplyOffersResponse>(
     hasSession && (tab === "overview" || tab === "commodities")
-      ? `/api/supply-offers?${offersQuery({ ...DEFAULT_OFFER_FILTERS, kind: "all" }, 1, SUPPLY_PAGE_SIZE)}`
+      ? `/api/supply-offers?${offersQuery({ ...DEFAULT_OFFER_VIEW, kind: "all" }, 1, SUPPLY_PAGE_SIZE)}`
       : null
   );
   const list = commodities.data?.commodities ?? null;

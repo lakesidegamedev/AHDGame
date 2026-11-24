@@ -205,6 +205,10 @@ export async function bankCashFloor(
       npcDeposits: charter.npcDeposits ?? 0,
       reserveRatio,
       nextTurnDueInterest: computeBankTreasuryDueInterest(dueInterestInput),
+      liquidityAdvanceDebt: Math.min(
+        Math.max(0, charter.cbLiquidityAdvanceDebt ?? 0),
+        Math.max(0, charter.cbMarginDebt ?? 0)
+      ),
     }),
     fundingRatePercent: computeBankTreasuryFundingRatePercent(dueInterestInput),
   };

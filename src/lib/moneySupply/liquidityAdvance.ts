@@ -110,14 +110,30 @@ export async function executeLiquidityAdvance(
       ? await corporationsCollection(db)
           .find(
             { "bankCharter.status": "active", "bankCharter.currency": currency },
-            { projection: { _id: 1, name: 1, "bankCharter.totalDeposits": 1 } }
+            {
+              projection: {
+                _id: 1,
+                name: 1,
+                "bankCharter.totalDeposits": 1,
+                "bankCharter.cbLiquidityAdvanceDebt": 1,
+              },
+            }
           )
           .toArray()
       : [];
     const shares = allocateLiquidityAdvance(
       input.amount,
-      banks.map((bank) => bank.bankCharter?.totalDeposits ?? 0)
+      banks.map((bank) => ({
+        deposits: bank.bankCharter?.totalDeposits ?? 0,
+        outstandingAdvance: bank.bankCharter?.cbLiquidityAdvanceDebt ?? 0,
+      }))
     );
+    // Chartered banks exist but none has room under its deposit cap: refuse
+    // rather than push the whole amount into one bank or the reserve.
+    if (banks.length > 0 && shares.every((share) => share <= 0))
+      throw new LiquidityAdvanceRejected(
+        "Every chartered bank already carries the largest advance its deposits support"
+      );
     const createdAt = new Date();
     const recipients = banks.flatMap((bank, index) =>
       shares[index] > 0 ? [{ bank, amount: shares[index] }] : []
@@ -165,7 +181,7 @@ export async function executeLiquidityAdvance(
         amount,
         transaction: transactions[index],
       })),
-      fallback: banks.length === 0 || shares.every((share) => share <= 0),
+      fallback: banks.length === 0,
     };
     try {
       await receipts.insertOne(receipt);

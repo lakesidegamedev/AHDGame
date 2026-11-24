@@ -88,12 +88,20 @@ export interface BankTreasuryCashFloorInput {
   npcDeposits: number;
   reserveRatio: number;
   nextTurnDueInterest: number;
+  /** Outstanding central bank advance principal (`cbLiquidityAdvanceDebt`). */
+  liquidityAdvanceDebt?: number;
 }
 
 export interface BankTreasuryCashFloor {
   requiredReserves: number;
   withdrawalBufferLocal: number;
   nextTurnDueInterest: number;
+  /**
+   * Advance cash held back from treasury purchases. The bank did not ask for
+   * it and owes it back at par, so it stays cash: bills bought at the ask and
+   * marked at the bid would turn the advance itself into a loss.
+   */
+  liquidityAdvanceHeldLocal: number;
   floorLocal: number;
 }
 
@@ -188,11 +196,14 @@ export function computeBankTreasuryCashFloor(
   const requiredReserves = nonNegative(input.cashBackedDeposits) * nonNegative(input.reserveRatio);
   const withdrawalBufferLocal = nonNegative(input.npcDeposits) * MAX_NPC_FLOW_PER_TURN_FRACTION;
   const nextTurnDueInterest = nonNegative(input.nextTurnDueInterest);
+  const liquidityAdvanceHeldLocal = nonNegative(input.liquidityAdvanceDebt ?? 0);
   return {
     requiredReserves,
     withdrawalBufferLocal,
     nextTurnDueInterest,
-    floorLocal: requiredReserves + withdrawalBufferLocal + nextTurnDueInterest,
+    liquidityAdvanceHeldLocal,
+    floorLocal:
+      requiredReserves + withdrawalBufferLocal + nextTurnDueInterest + liquidityAdvanceHeldLocal,
   };
 }
 

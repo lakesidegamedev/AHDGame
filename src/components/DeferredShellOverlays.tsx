@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
+import { useHasSession, useOptionalAuthMe } from "@/contexts/AuthDataContext";
 
 /**
  * Shell overlays that never contribute to first paint: the one-time stat gate,
@@ -37,16 +39,29 @@ const NominationChoicePrompt = dynamic(
   { ssr: false }
 );
 
+// Keep the gate's in-flight work and dismissal state once it has been needed.
+function useGateEnabled(eligible: boolean) {
+  const [enabled, setEnabled] = useState(eligible);
+  if (eligible && !enabled) setEnabled(true);
+  return eligible || enabled;
+}
+
 export function DeferredStatAllocationGate() {
-  return <StatAllocationGate />;
+  const auth = useOptionalAuthMe();
+  const enabled = useGateEnabled(Boolean(auth?.user?.character?.needsStatAllocation));
+  return enabled ? <StatAllocationGate /> : null;
 }
 
 export function DeferredWealthTierRepickGate() {
-  return <WealthTierRepickGate />;
+  const auth = useOptionalAuthMe();
+  const enabled = useGateEnabled(Boolean(auth?.user?.character?.needsWealthTierRepick));
+  return enabled ? <WealthTierRepickGate /> : null;
 }
 
 export function DeferredSeasonRecapGate() {
-  return <SeasonRecapGate />;
+  const auth = useOptionalAuthMe();
+  const enabled = useGateEnabled(Boolean(auth?.navData?.pendingSeasonRecapId));
+  return enabled ? <SeasonRecapGate /> : null;
 }
 
 export function DeferredTurnProgressToast() {
@@ -58,9 +73,11 @@ export function DeferredSingleplayerGuide() {
 }
 
 export function DeferredTutorialCoachMount() {
-  return <TutorialCoachMount />;
+  const enabled = useGateEnabled(useHasSession());
+  return enabled ? <TutorialCoachMount /> : null;
 }
 
 export function DeferredNominationChoicePrompt() {
-  return <NominationChoicePrompt />;
+  const enabled = useGateEnabled(useHasSession());
+  return enabled ? <NominationChoicePrompt /> : null;
 }

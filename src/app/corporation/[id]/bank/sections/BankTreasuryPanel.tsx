@@ -195,9 +195,10 @@ export function BankTreasuryPanel({
         </div>
       </div>
       <p className="pb-2 text-xs text-muted">
-        The floor covers required reserves, the existing household withdrawal buffer, and next-turn
-        interest. Bill marks use current pool bids; sale proceeds are limited to cash actually
-        available in the pool.
+        The floor covers required reserves, the existing household withdrawal buffer, next-turn
+        interest, and any central bank liquidity advance, which stays in cash until it is repaid.
+        Bill marks use current pool bids; sale proceeds are limited to cash actually available in
+        the pool.
       </p>
       {hasManualTrade && (
         <label className="mb-2 flex items-center gap-2 text-xs">

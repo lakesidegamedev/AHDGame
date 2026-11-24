@@ -8,7 +8,7 @@ import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
-import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formatters";
+import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formattersCore";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
 import dynamic from "next/dynamic";
 
