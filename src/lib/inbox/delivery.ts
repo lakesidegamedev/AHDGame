@@ -85,6 +85,7 @@ export const DELIVERY_OF: Record<NotificationType, NotificationDelivery> = {
   national_leadership_lost: "inbox",
   national_leadership_appointed: "push",
   national_leadership_removed: "push",
+  office_removal_vote_opened: "push",
   committee_elected: "push",
   committee_lost: "inbox",
   committee_removed: "push",

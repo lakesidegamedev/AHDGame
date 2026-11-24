@@ -1,4 +1,4 @@
-import { withSessionDb } from "@/lib/db/sessionDb";
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 import { mergePartyInto } from "@/lib/parties/mergeParty";
 export { mergePartyInto } from "@/lib/parties/mergeParty";
 export type { MergePartyOptions } from "@/lib/parties/mergeParty";
@@ -11,6 +11,7 @@ import type {
 import type { PoliticalParty } from "@/lib/db/types";
 import { MAX_NATIONAL_CAMPAIGNERS } from "./access";
 import { canRenameParty } from "./rules/defaultIdentity";
+import { notifyRemovedByCommittee } from "./officeRemovalNotifications";
 import { MergeEligibilityError } from "./mergeEligibility";
 
 import { PartyTerritoryError } from "./relocationTerritory";
@@ -363,9 +364,10 @@ export async function applyRemoveOfficeHolderEffect(
   if (!proposal.removeOfficeHolder) throw new Error("Not a removeOfficeHolder proposal");
   const { role, targetCharacterId } = proposal.removeOfficeHolder;
   const now = new Date();
+  let removed: { modifiedCount: number };
 
   if (role === "chair") {
-    await politicalPartiesCollection(db).updateOne(
+    removed = await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, chairId: targetCharacterId },
       { $set: { chairId: null, updatedAt: now } }
     );
@@ -375,7 +377,7 @@ export async function applyRemoveOfficeHolderEffect(
     const { syncCoalitionChairsForParty } = await import("@/lib/coalitions/syncCoalitionChair");
     await syncCoalitionChairsForParty(db, proposal.partyId, now);
   } else if (role === "viceChair") {
-    await politicalPartiesCollection(db).updateOne(
+    removed = await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, viceChairId: targetCharacterId },
       { $set: { viceChairId: null, updatedAt: now } }
     );
@@ -384,12 +386,12 @@ export async function applyRemoveOfficeHolderEffect(
     // treasurerId: null is already a handled state (leave-party, admin
     // appointment, and banned-user cleanup all vacate it), and the chair
     // can re-appoint or a fresh election can refill it.
-    await politicalPartiesCollection(db).updateOne(
+    removed = await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, treasurerId: targetCharacterId },
       { $set: { treasurerId: null, updatedAt: now } }
     );
   } else if (role === "campaigner") {
-    await politicalPartiesCollection(db).updateOne(
+    removed = await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, campaignerIds: targetCharacterId },
       {
         $pull: { campaignerIds: targetCharacterId } as Record<string, unknown>,
@@ -398,12 +400,25 @@ export async function applyRemoveOfficeHolderEffect(
     );
   } else {
     // committeeMember
-    await politicalPartiesCollection(db).updateOne(
+    removed = await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, committeeIds: targetCharacterId },
       {
         $pull: { committeeIds: targetCharacterId } as Record<string, unknown>,
         $set: { updatedAt: now },
       }
+    );
+  }
+
+  // The filter pins the target, so a zero count means the seat had already
+  // changed hands and there is nobody to tell.
+  if (removed.modifiedCount > 0) {
+    await afterCommit(db, () =>
+      notifyRemovedByCommittee({
+        partyId: proposal.partyId,
+        proposalId: proposal._id,
+        role,
+        targetCharacterId,
+      })
     );
   }
 }
