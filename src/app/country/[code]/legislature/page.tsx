@@ -2,6 +2,7 @@ import { NationalImpeachmentAction } from "@/components/legislation/NationalImpe
 import { NationalPartyBillAction } from "@/components/legislation/NationalPartyBillAction";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { CHAMBER_HERO } from "@/app/congress/components/CongressConstants";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getDb } from "@/lib/mongodb";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
@@ -9,6 +10,7 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { bgAssemblyName } from "@/lib/countries/bg/rules/assemblyTransition";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
 import LegislatureClient from "./LegislatureClient";
+import { USLegislatureClient } from "./USLegislatureClient";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
@@ -16,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ chamber?: string | string[] }>;
 }
 
 async function bgLegislaturePresentation(): Promise<{ name: string; seats: number }> {
@@ -90,7 +93,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function LegislaturePage({ params }: PageProps) {
+export default async function LegislaturePage({ params, searchParams }: PageProps) {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[id]) notFound();
@@ -100,24 +103,33 @@ export default async function LegislaturePage({ params }: PageProps) {
   const ru = countryHasFeature("ruUi", id) ? await ruLegislaturePresentation() : undefined;
   const hungarianElectoralDecisions =
     countryHasFeature("huUi", id) && (await getGameStatePreset(await getDb())) === "1991-default";
+  const showUsCongress = countryHasFeature("usUi", id);
+  const requestedChamber = showUsCongress ? (await searchParams).chamber : undefined;
+  const initialChamber = Array.isArray(requestedChamber) ? requestedChamber[0] : requestedChamber;
+  const photo = CHAMBER_HERO[initialChamber === "house" ? "house" : "senate"].image;
   return (
     <>
+      {showUsCongress && <link rel="preload" href={photo} as="image" fetchPriority="high" />}
       <NationalPartyBillAction countryId={id} />
       <NationalImpeachmentAction countryId={id} />
-      <LegislatureClient
-        countryId={id}
-        legislatureName={ru?.name ?? bgName}
-        generic={ru?.generic}
-        hungarianElectoralDecisions={hungarianElectoralDecisions}
-        bulgarianConstitutionalDecision={
-          countryHasFeature("bgUi", id) &&
-          (await getGameStatePreset(await getDb())) === "1991-default"
-        }
-        romanianElectoralDecision={
-          countryHasFeature("roUi", id) &&
-          (await getGameStatePreset(await getDb())) === "1991-default"
-        }
-      />
+      {showUsCongress ? (
+        <USLegislatureClient />
+      ) : (
+        <LegislatureClient
+          countryId={id}
+          legislatureName={ru?.name ?? bgName}
+          generic={ru?.generic}
+          hungarianElectoralDecisions={hungarianElectoralDecisions}
+          bulgarianConstitutionalDecision={
+            countryHasFeature("bgUi", id) &&
+            (await getGameStatePreset(await getDb())) === "1991-default"
+          }
+          romanianElectoralDecision={
+            countryHasFeature("roUi", id) &&
+            (await getGameStatePreset(await getDb())) === "1991-default"
+          }
+        />
+      )}
     </>
   );
 }
