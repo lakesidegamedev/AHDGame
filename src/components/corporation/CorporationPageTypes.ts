@@ -130,6 +130,8 @@ export interface CorporationDefenceView {
 }
 
 export interface CorporationDetail {
+  /** Set when the figures are visible only because the viewer is an admin. */
+  adminView?: boolean;
   canManageAcquisitions?: boolean;
   canEditEditorialStance?: boolean;
   /** Public CEO-published position, exposed only while the world gate is on. */

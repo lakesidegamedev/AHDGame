@@ -12,6 +12,7 @@ import {
   type SupplyOffersResponse,
 } from "./marketEndpoints";
 import { atPriceCap } from "@/lib/market/overviewPreview";
+import { cappedGoodNote, cappedGoodTarget } from "@/lib/market/cappedGoodTarget";
 import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { PreviewCard, PreviewRow, pctText, toneClass, vsBasePct } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
@@ -182,15 +183,19 @@ export function MarketOverview({
         error=""
         empty={movers.length === 0}
       >
-        {movers.map((c) => (
-          <PreviewRow
-            key={c.commodity}
-            href={`/commodity/${c.commodity}`}
-            left={c.label}
-            right={pctText(vsBasePct(c))}
-            rightTone={toneClass(vsBasePct(c))}
-          />
-        ))}
+        {movers.map((c) => {
+          const target = atPriceCap(c) ? cappedGoodTarget(c) : null;
+          return (
+            <PreviewRow
+              key={c.commodity}
+              href={`/commodity/${c.commodity}`}
+              left={c.label}
+              right={pctText(vsBasePct(c))}
+              rightTone={toneClass(vsBasePct(c))}
+              note={target ? cappedGoodNote(target) : null}
+            />
+          );
+        })}
       </PreviewCard>
       <PreviewCard
         title="Supply deals"

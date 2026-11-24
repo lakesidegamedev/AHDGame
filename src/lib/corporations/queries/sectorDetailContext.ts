@@ -18,7 +18,7 @@ import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/aut
 import { ObjectId } from "mongodb";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import { isCeoActor } from "@/lib/corporations/ceoActor";
-import { shouldRedactCorporation } from "@/lib/corporations/redaction";
+import { isAdminOnlyView, shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import {
   getCorpFxRate,
@@ -481,6 +481,7 @@ export async function loadSectorDetailContext({
     allCorpSectors,
     shouldRedact,
     publicFinancialFog,
+    adminView: isAdminOnlyView(corporation, user ?? null, { isParentCeo }),
     ceo,
     corporationFxRate,
     viewerCorporation,

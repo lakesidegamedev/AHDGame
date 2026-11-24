@@ -557,6 +557,8 @@ export type FinancialVisibilityReason = "visible" | "private-corp" | "public-riv
 export interface FinancialVisibility {
   hidden: boolean;
   reason: FinancialVisibilityReason;
+  /** Figures are shown only because the viewer is an admin. */
+  adminView?: boolean;
 }
 
 // Extractable resource capacities for this sector's state (units/turn).

@@ -86,15 +86,20 @@ export function PreviewRow({
   left,
   right,
   rightTone,
+  note,
 }: {
   href?: string;
   left: ReactNode;
   right: ReactNode;
   rightTone?: string;
+  note?: string | null;
 }) {
   const inner = (
     <>
-      <span className="min-w-0 truncate text-sm text-foreground">{left}</span>
+      <span className="min-w-0 text-sm text-foreground">
+        <span className="block truncate">{left}</span>
+        {note && <span className="block text-xs text-muted">{note}</span>}
+      </span>
       <span
         className={`shrink-0 text-sm font-medium tabular-nums ${rightTone ?? "text-foreground"}`}
       >

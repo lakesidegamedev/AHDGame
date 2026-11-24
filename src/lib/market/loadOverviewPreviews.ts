@@ -34,7 +34,19 @@ export async function loadOverviewPreviews() {
       )
       .catch(() => null),
     commodityPricesCollection(db)
-      .find({}, { projection: { commodity: 1, basePrice: 1, globalPrice: 1 } })
+      .find(
+        {},
+        {
+          projection: {
+            commodity: 1,
+            basePrice: 1,
+            globalPrice: 1,
+            globalSupply: 1,
+            globalDemand: 1,
+            priceAttribution: 1,
+          },
+        }
+      )
       .toArray()
       .then((prices) => {
         const byCommodity = new Map(prices.map((price) => [price.commodity, price]));
@@ -47,6 +59,9 @@ export async function loadOverviewPreviews() {
               label: COMMODITY_LABELS[commodity],
               basePrice,
               globalPrice: price?.globalPrice ?? basePrice,
+              globalSupply: price?.globalSupply,
+              globalDemand: price?.globalDemand,
+              priceAttribution: price?.priceAttribution ?? null,
               ...(capBasis
                 ? {
                     priceCapBasis: capBasis,
