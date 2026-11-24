@@ -200,3 +200,132 @@ export function rememberAutoAsk(
   if (decision.sellThrough === null) return { ask: posted, previousAsk: memory.previousAsk };
   return { ask: posted, previousAsk: posted };
 }
+
+/**
+ * Ask bracket: stops a posted ask flipping between two candidate prices (the
+ * anchor above the market, the stock-cover markdown below it). It remembers the
+ * highest ask that sold out and the lowest that fell short; with both known the
+ * next ask is their midpoint, so the gap halves until it is under
+ * ASK_BRACKET_CONVERGED_GAP and the price holds. It lets go when a sell-out
+ * reaches the rejected ask, a shortfall reaches the sold-out ask, the reference
+ * price moves, or the price has held ASK_BRACKET_MAX_TURNS turns. Silence keeps
+ * it unchanged.
+ */
+
+/** Gap between the bounds, as a share of the lower one, under which the price holds. */
+export const ASK_BRACKET_CONVERGED_GAP = 0.005;
+/** Turns a bracket may go without learning anything before it lets go. */
+export const ASK_BRACKET_MAX_TURNS = 6;
+/** Reference price move, as a share, that clears the bracket. */
+export const ASK_BRACKET_REFERENCE_MOVE = 0.05;
+
+export interface AskBracket {
+  /** Highest posted ask known to sell out. */
+  lowerAsk?: number;
+  /** Lowest posted ask known to fall short of the revert ratio. */
+  rejectedAsk?: number;
+  /** Reference price when a bound last changed. */
+  referenceUnitPrice: number;
+  /** Turns since a bound last changed. */
+  turns: number;
+}
+
+/** Last turn's posted ask, its result, and the bracket it was posted under. */
+export interface AskBracketReading {
+  ask: number;
+  soldUnits: number;
+  offeredUnits: number;
+  bracket?: AskBracket | null;
+}
+
+export type AskBracketAction = "candidate" | "bisect" | "hold";
+
+const positive = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
+/** A stored bracket, or null when it is missing or malformed (older receipts carry none). */
+function storedBracket(value: AskBracket | null | undefined): AskBracket | null {
+  if (!value || !positive(value.referenceUnitPrice)) return null;
+  if (!(typeof value.turns === "number" && Number.isFinite(value.turns) && value.turns >= 0))
+    return null;
+  const lowerAsk = positive(value.lowerAsk) ? value.lowerAsk : undefined;
+  const rejectedAsk = positive(value.rejectedAsk) ? value.rejectedAsk : undefined;
+  if (lowerAsk == null && rejectedAsk == null) return null;
+  if (lowerAsk != null && rejectedAsk != null && !(lowerAsk < rejectedAsk)) return null;
+  return {
+    ...(lowerAsk != null ? { lowerAsk } : {}),
+    ...(rejectedAsk != null ? { rejectedAsk } : {}),
+    referenceUnitPrice: value.referenceUnitPrice,
+    turns: value.turns,
+  };
+}
+
+/**
+ * This turn's ask and the bracket to store with it. `candidate` is the ask the
+ * ordinary rules chose; it is posted unchanged unless both bounds are known.
+ */
+export function bracketAsk(input: {
+  candidate: number;
+  last: AskBracketReading | null | undefined;
+  referenceUnitPrice: number;
+}): { ask: number; bracket: AskBracket | null; action: AskBracketAction } {
+  const candidate = input.candidate;
+  const last = input.last;
+  if (!last || !positive(last.ask)) return { ask: candidate, bracket: null, action: "candidate" };
+  const ask = last.ask;
+  const reference = positive(input.referenceUnitPrice) ? input.referenceUnitPrice : null;
+
+  let bracket = storedBracket(last.bracket);
+  if (bracket) bracket = { ...bracket, turns: bracket.turns + 1 };
+  if (
+    bracket &&
+    (bracket.turns >= ASK_BRACKET_MAX_TURNS ||
+      (reference != null &&
+        Math.abs(reference / bracket.referenceUnitPrice - 1) > ASK_BRACKET_REFERENCE_MOVE))
+  )
+    bracket = null;
+
+  const sellThrough = sellThroughRatio(last.soldUnits, last.offeredUnits);
+  if (sellThrough === null) return { ask: candidate, bracket, action: "candidate" };
+
+  const learned = (bounds: Pick<AskBracket, "lowerAsk" | "rejectedAsk">): AskBracket => ({
+    ...bounds,
+    referenceUnitPrice: reference ?? bracket?.referenceUnitPrice ?? ask,
+    turns: 0,
+  });
+  const soldOut = sellThrough >= AUTO_ASK_SELLOUT_RATIO - SELLOUT_EPSILON;
+  const fellShort = sellThrough < AUTO_ASK_REVERT_RATIO;
+  if (soldOut) {
+    const rejected = bracket?.rejectedAsk;
+    // Buyers took everything at or above the price they refused before: the
+    // market moved up, so the old ceiling no longer holds.
+    const keepRejected = rejected != null && ask < rejected ? rejected : undefined;
+    const lower = Math.max(bracket?.lowerAsk ?? 0, ask);
+    if (!bracket || lower !== bracket.lowerAsk || keepRejected !== rejected)
+      bracket = learned({
+        lowerAsk: lower,
+        ...(keepRejected != null ? { rejectedAsk: keepRejected } : {}),
+      });
+  } else if (fellShort) {
+    const lower = bracket?.lowerAsk;
+    // A shortfall at or below the price that sold out before: the market moved down.
+    const keepLower = lower != null && ask > lower ? lower : undefined;
+    const rejected = Math.min(bracket?.rejectedAsk ?? Number.POSITIVE_INFINITY, ask);
+    if (!bracket || rejected !== bracket.rejectedAsk || keepLower !== lower)
+      bracket = learned({
+        rejectedAsk: rejected,
+        ...(keepLower != null ? { lowerAsk: keepLower } : {}),
+      });
+  }
+
+  const lowerAsk = bracket?.lowerAsk;
+  const rejectedAsk = bracket?.rejectedAsk;
+  if (lowerAsk == null || rejectedAsk == null)
+    return { ask: candidate, bracket, action: "candidate" };
+  // Inside the deadband the last ask is close enough: keep it while it sits in the bracket.
+  if (!soldOut && !fellShort && ask > lowerAsk && ask < rejectedAsk)
+    return { ask, bracket, action: "hold" };
+  if ((rejectedAsk - lowerAsk) / lowerAsk <= ASK_BRACKET_CONVERGED_GAP)
+    return { ask: lowerAsk, bracket, action: "hold" };
+  return { ask: (lowerAsk + rejectedAsk) / 2, bracket, action: "bisect" };
+}
