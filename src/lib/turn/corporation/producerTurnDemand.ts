@@ -81,6 +81,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import {
   wideEconomyBaseline as buildWideEconomyBaseline,
   wideEconomyOrders as buildWideEconomyOrders,
+  wideEconomyOffers as buildWideEconomyOffers,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -570,17 +571,19 @@ export async function buildProducerTurnDemand(
       ? buildWideEconomyBaseline({ turns: input.wideEconomyBaselineTurns!, states: wideStates })
       : null;
   const wideBaseline = input.wideEconomyBaseline ?? wideEconomyBaselineCreated;
-  const wideEconomyOrders =
-    wideOn && wideBaseline
-      ? buildWideEconomyOrders({
-          baseline: wideBaseline,
-          realGdpNow: new Map(wideStates.map((s) => [s.stateId, s.realGdp])),
-          accountId: wideEconomyAccountId,
-          referencePrice: (c, stateId) => refPrice(c as CommodityType, stateId),
-          isStateScoped: (c) => isStateScopedCommodity(c as CommodityType),
-          mapBook: shadowBook,
-        })
-      : [];
+  const wideLineInput = wideBaseline
+    ? {
+        baseline: wideBaseline,
+        realGdpNow: new Map(wideStates.map((s) => [s.stateId, s.realGdp])),
+        accountId: wideEconomyAccountId,
+        referencePrice: (c: string, stateId: string) => refPrice(c as CommodityType, stateId),
+        isStateScoped: (c: string) => isStateScopedCommodity(c as CommodityType),
+        mapBook: shadowBook,
+      }
+    : null;
+  // Both sides trade only in the after-market pass (residualWideEconomyLines).
+  const wideEconomyOrders = wideOn && wideLineInput ? buildWideEconomyOrders(wideLineInput) : [];
+  const wideEconomyOffers = wideOn && wideLineInput ? buildWideEconomyOffers(wideLineInput) : [];
 
   input.stage?.("demand.public");
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
@@ -807,9 +810,17 @@ export async function buildProducerTurnDemand(
         restrict(o, listFor(o.commodity, investmentCountry.get(o.accountId) ?? ""));
     for (const o of marketingOrders)
       restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
-    // Unlike a background country, the wider economy buys its own country's output.
+    // Unlike a background country, the wider economy buys its own country's
+    // output, and only plant output: never a background country's offer.
+    const backgroundOfferIds = new Set(backgroundOffers.map((o) => o.id));
     for (const o of wideEconomyOrders)
-      if (o.book === "world") restrict(o, listFor(o.commodity, o.countryId ?? ""));
+      if (o.book === "world") {
+        const list = listFor(o.commodity, o.countryId ?? "");
+        restrict(
+          o,
+          list?.filter((id) => !backgroundOfferIds.has(id))
+        );
+      }
   }
 
   // Import tariffs (producerTariffStage): one rate per open route that can
@@ -892,6 +903,7 @@ export async function buildProducerTurnDemand(
     investmentFundingTotal,
     marketingOrders,
     wideEconomyOrders,
+    wideEconomyOffers,
     wideEconomyBaselineCreated,
     newCompanyCash,
     openingById,

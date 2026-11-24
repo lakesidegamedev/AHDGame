@@ -61,7 +61,7 @@ const buildWith = (
   });
 
 describe("wider-economy demand", () => {
-  it("builds no wider-economy orders at stage 0 or when the stage is absent", async () => {
+  it("builds no wider-economy lines at stage 0 or when the turn passes no stage", async () => {
     expect((await buildWith(0, { wideEconomyBaselineTurns: turns })).wideEconomyOrders).toEqual([]);
     expect(
       (await buildWith(undefined, { wideEconomyBaselineTurns: turns })).wideEconomyOrders
@@ -74,14 +74,18 @@ describe("wider-economy demand", () => {
     expect(r.wideEconomyBaselineCreated).toBeNull();
   });
 
-  it("builds the baseline on its first turn and buys the room up to 1.1x supply", async () => {
+  it("builds the baseline on its first turn: a seller at 10% of demand, a buyer 1.1x that", async () => {
     const r = await buildWith(1, { wideEconomyBaselineTurns: turns });
-    expect(r.wideEconomyBaselineCreated?.units).toEqual({ steel: expect.closeTo(30, 9) });
+    expect(r.wideEconomyBaselineCreated?.units).toEqual({ steel: expect.closeTo(8, 9) });
     const steel = r.wideEconomyOrders.filter((o) => o.commodity === "steel");
     expect(steel).toHaveLength(1);
-    expect(steel[0].units).toBeCloseTo(30, 9);
+    expect(steel[0].units).toBeCloseTo(8.8, 9);
     expect(steel[0].accountId).toBe("wide:US");
     expect(steel[0].demandStep).toBe(1);
+    const offers = r.wideEconomyOffers.filter((o) => o.commodity === "steel");
+    expect(offers).toHaveLength(1);
+    expect(offers[0]).toMatchObject({ accountId: "wide:US", countryId: "US", book: "world" });
+    expect(offers[0].units).toBeCloseTo(8, 9);
   });
 
   it("uses a stored baseline as is and grows with real GDP, not with prices", async () => {
@@ -96,11 +100,11 @@ describe("wider-economy demand", () => {
       wideEconomyBaselineTurns: turns,
     });
     expect(same.wideEconomyBaselineCreated).toBeNull();
-    expect(same.wideEconomyOrders.find((o) => o.commodity === "steel")!.units).toBeCloseTo(30, 9);
+    expect(same.wideEconomyOrders.find((o) => o.commodity === "steel")!.units).toBeCloseTo(33, 9);
     // Prices doubled with no real growth: nominal GDP is unchanged here, so real GDP halves.
     const inflated = await buildWith(1, { wideEconomyBaseline: baseline }, 200);
     expect(inflated.wideEconomyOrders.find((o) => o.commodity === "steel")!.units).toBeCloseTo(
-      15,
+      16.5,
       9
     );
   });
@@ -167,7 +171,10 @@ describe("wider-economy funding", () => {
     return { memory, corp, sector, scopes, household, operating, prepare };
   }
 
-  async function runWith(wideSpend: number) {
+  async function runWith(
+    wideSpend: number,
+    extra: (wallet: string) => Record<string, unknown> = () => ({})
+  ) {
     const f = fundedWorld();
     const wallet = producerWalletId("world", {
       kind: "wideEconomy",
@@ -223,6 +230,7 @@ describe("wider-economy funding", () => {
       planCountry: new Map([[String(f.sector._id), "US"]]),
       headcountBySectorId: new Map([[String(f.sector._id), { desiredWorkers: 10, workers: 10 }]]),
       householdSource: null,
+      ...extra(wallet),
     } as unknown as Awaited<ReturnType<typeof demandBuilder.buildProducerTurnDemand>>);
     try {
       await runFundedProducerTurn(f.memory as unknown as Db, input);
@@ -235,7 +243,10 @@ describe("wider-economy funding", () => {
     const wallets = f.memory
       .collection("producerEconomyAccounts")
       .docs.filter((w) => w.kind === "wideEconomy");
-    return { moves, wallets };
+    const returns = f.memory
+      .collection("bankMoneyMoves")
+      .docs.filter((m) => m.kind === "producer_background_return");
+    return { moves, wallets, returns, wallet };
   }
 
   it("funds nothing and creates no wallet when there are no orders (stage 0)", async () => {
@@ -253,5 +264,50 @@ describe("wider-economy funding", () => {
     )!;
     expect(mint.amount).toBeCloseTo(40 * RATE, 6);
     expect(r.wallets[0].cash).toBeCloseTo(0, 6);
+  });
+
+  it("pays the seller's takings out through the declared return, so its wallet closes empty", async () => {
+    const publicWallet = producerWalletId("world", {
+      kind: "publicBuyer",
+      countryId: "US",
+      currency: "USD",
+    });
+    const sellerAsk = 3.15;
+    const r = await runWith(0, (wallet) => ({
+      funding: [{ countryId: "US", fundingLocal: 10_000 }],
+      publicBuyerOrders: [
+        {
+          id: "public-fs",
+          accountId: publicWallet,
+          commodity: "financial_services",
+          book: "world",
+          units: 1_000_000,
+          maximumUnitPrice: 4,
+          maximumSpend: 10_000,
+          countryId: "US",
+        },
+      ],
+      wideEconomyOffers: [
+        {
+          id: "wide-offer-fs",
+          accountId: wallet,
+          commodity: "financial_services",
+          book: "world",
+          units: 5,
+          unitPrice: sellerAsk,
+          countryId: "US",
+        },
+      ],
+    }));
+    // No buyer lines: nothing minted for the wider economy.
+    expect(r.moves).toEqual([]);
+    expect(r.wallets).toHaveLength(1);
+    expect(r.wallets[0].cash).toBeCloseTo(0, 6);
+    // The seller sold its 5 units to the public buyer it was short for, and
+    // that money left only through the declared return.
+    expect(r.returns).toHaveLength(1);
+    const legs = r.returns[0].legs as { kind: string; amount: number; filter?: { _id: string } }[];
+    expect(legs.find((l) => l.kind === "debit")!.filter!._id).toBe(r.wallet);
+    expect(legs.find((l) => l.kind === "burn")!.amount).toBeCloseTo(5 * sellerAsk * RATE, 6);
   });
 });
