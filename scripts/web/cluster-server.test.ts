@@ -33,7 +33,8 @@ describe("childEnv", () => {
     const secondary = childEnv(base, 2, childPort(3000, 2));
     expect(primary.DISABLE_DEV_BACKGROUND).toBeUndefined();
     expect(secondary.DISABLE_DEV_BACKGROUND).toBe("1");
-    expect(primary).toMatchObject({ PORT: "3100", HOSTNAME: "127.0.0.1", CRON_OWNER: "worker" });
+    // 127.0.0.1 made Next send the signed-out home page rewrite out over https.
+    expect(primary).toMatchObject({ PORT: "3100", HOSTNAME: "0.0.0.0", CRON_OWNER: "worker" });
     expect(secondary.PORT).toBe("3102");
   });
 });
@@ -130,7 +131,12 @@ describe("cluster-server end to end", () => {
         body: "payload",
       });
       const json = await res.json();
-      expect(json).toMatchObject({ role: "primary", method: "POST", body: "payload" });
+      expect(json).toMatchObject({
+        role: "primary",
+        host: "0.0.0.0",
+        method: "POST",
+        body: "payload",
+      });
     }
   });
 
