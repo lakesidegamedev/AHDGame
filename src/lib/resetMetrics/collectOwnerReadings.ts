@@ -28,7 +28,7 @@ import {
   POLICY_DRIFT_RATE_PER_TURN,
 } from "./rules/policyDrift";
 import { linkedOutcomeTargets } from "./rules/linkedOutcomes";
-import { outputGrowth, productivityBasis, productivityGrowth } from "./rules/productivity";
+import { productivityBasis, productivityGrowth } from "./rules/productivity";
 import { compatibleConditionChange, gameplayMetricPressure } from "./rules/gameplayDrivers";
 import { marketServicePressure } from "./rules/marketServices";
 import { resetMetricConditionScore } from "./conditionScore";
@@ -741,16 +741,11 @@ export async function collectResetMetricOwnerReadings(
           candidateMacro?.countryId === board.countryId ? candidateMacro : undefined;
         for (const [id, field] of DIRECT_ECONOMIC_OWNERS) {
           if (!due.has(id)) continue;
-          if (id === "05" || id === "06") {
+          if (id === "06") {
             const basis = productivityReady.has(board.countryId)
               ? productivityBasis(liveMacro?.labourProductivity)
               : null;
-            const growth =
-              basis?.endTurn === turn
-                ? id === "06"
-                  ? productivityGrowth([basis])
-                  : outputGrowth([basis])
-                : null;
+            const growth = basis?.endTurn === turn ? productivityGrowth([basis]) : null;
             if (growth !== null && basis) {
               updates[id] = {
                 ...board.observations[id]!,
@@ -758,14 +753,8 @@ export async function collectResetMetricOwnerReadings(
                 status: "proxy",
                 observedAtTurn: turn,
                 growthBasis: basis,
-                source:
-                  id === "06"
-                    ? "modeled real output per modeled hour worked"
-                    : "matching modeled real-output endpoints",
-                note:
-                  id === "06"
-                    ? "Trailing 48-turn growth. Whole-economy real output and background plus corporate employment share the same window. Hours use a fixed country assumption, not recorded timecards. Funded policies affect output and employment through their owning systems, not a second headline bonus."
-                    : "Trailing 48-turn growth in the economy engine's real-output level. National growth pools opening and closing output before calculating the change. This is a game model, not observed national accounts.",
+                source: "modeled real output per modeled hour worked",
+                note: "Trailing 48-turn growth. Whole-economy real output and background plus corporate employment share the same window. Hours use a fixed country assumption, not recorded timecards. Funded policies affect output and employment through their owning systems, not a second headline bonus.",
               };
               continue;
             }
@@ -776,15 +765,21 @@ export async function collectResetMetricOwnerReadings(
           }
           const value = liveMacro?.economic?.[field]?.value;
           if (typeof value !== "number" || !Number.isFinite(value)) continue;
+          // Output growth is the economy's current annual rate, the same reading the
+          // budget shows. A retained trailing-window basis would pin an old value.
+          const { growthBasis: _retiredBasis, ...carried } = board.observations[id]!;
           updates[id] = {
-            ...board.observations[id]!,
+            ...carried,
+            ...(id === "05" ? { observedAtTurn: turn } : {}),
             value,
             status: id === "03" || id === "06" ? "proxy" : "derived",
             source: `current regional economy engine: ${field}`,
             note:
-              id === "03"
-                ? "Modeled population-share estimate, not surveyed household poverty. Current funded law delivery replaces booked social spending in v2 countries; historical adjustments decay over time."
-                : "Current model result, not a political-board score or an independently measured statistic.",
+              id === "05"
+                ? "The economy's current annual real-growth rate, updated every turn. The budget's Real GDP growth reads the same figure. National growth is the GDP-weighted mean of regional rates. This is a game model, not observed national accounts."
+                : id === "03"
+                  ? "Share of people under the game's own modeled poverty line, driven by joblessness, inequality, crime and delivered relief. It is not the half-of-median-income measure used in published statistics, so it will not match real figures for a country and two countries should not be compared one for one."
+                  : "Current model result, not a political-board score or an independently measured statistic.",
             ratioBasis:
               id === "01" &&
               liveMacro?.labourEmployment?.lastTurn === turn &&

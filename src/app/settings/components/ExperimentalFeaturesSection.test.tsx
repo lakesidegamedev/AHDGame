@@ -28,6 +28,16 @@ describe("experimental desktop layout choice", () => {
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 
+  it("words the switch hint to match the switch state", () => {
+    mocks.user.experimentalFeatures = false;
+    const { unmount } = render(<ExperimentalFeaturesSection />);
+    expect(screen.getByText("experimental.toggleHintOff")).toBeTruthy();
+    unmount();
+    mocks.user.experimentalFeatures = true;
+    render(<ExperimentalFeaturesSection />);
+    expect(screen.getByText("experimental.toggleHintOn")).toBeTruthy();
+  });
+
   it("saves a layout to the account and refreshes navigation", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);

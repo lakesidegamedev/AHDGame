@@ -5,6 +5,7 @@ import {
   displayEffect,
   listedRegionAverage,
   NATIONAL_CAP_ADJUSTMENT_ID,
+  regionWeightedConditionMargins,
 } from "./approvalBreakdown";
 
 const mod = (id: string, effect: number): ActiveModifier => ({ id, label: id, effect });
@@ -114,5 +115,20 @@ describe("national margin and region reconciliation", () => {
     ];
     const r = reconcileRegionApproval(43.3, mods);
     expect(r).toEqual({ base: 43.3, effects: -23, adjustments: 9.1, total: 29.4 });
+  });
+});
+
+describe("regionWeightedConditionMargins", () => {
+  it("averages each condition's margin across regions by population, zero where absent", () => {
+    const boom = { id: "economic_boom", label: "Boom", effect: 2, marginEffect: 2 };
+    const margins = regionWeightedConditionMargins([
+      { population: 75, modifiers: [boom] },
+      { population: 25, modifiers: [] },
+    ]);
+    expect(margins.get("economic_boom")).toBe(1.5);
+  });
+
+  it("is empty when no region has a population", () => {
+    expect(regionWeightedConditionMargins([{ modifiers: [] }]).size).toBe(0);
   });
 });

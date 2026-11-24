@@ -70,6 +70,41 @@ describe("LegacyLeaderboardClient ranking switch", () => {
     expect(screen.getAllByText("Rich").length).toBeGreaterThan(0);
   });
 
+  it("shows near career scores as distinct whole numbers and names the life behind the office", () => {
+    const data = {
+      entries: [
+        entry({
+          userId: "a",
+          displayName: "Alpha",
+          score: 2449.6,
+          highestOffice: "Vice President",
+        }),
+        entry({
+          userId: "b",
+          displayName: "Beta",
+          score: 2352.2,
+          rank: 2,
+          scoringCharacterName: "Beta Two",
+        }),
+      ],
+      total: 2,
+      self: null,
+    } as unknown as LegacyLeaderboardData;
+    render(
+      <LegacyLeaderboardClient
+        data={data}
+        total={2}
+        selfUserId={null}
+        initialScope="all"
+        initialRankBy="legacy"
+        embedded
+      />
+    );
+    expect(screen.getAllByText("2,450").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2,352").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("as Beta Two").length).toBeGreaterThan(0);
+  });
+
   it("defines Lives in place", () => {
     render(
       <LegacyLeaderboardClient

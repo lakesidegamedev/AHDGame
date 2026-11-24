@@ -214,7 +214,7 @@ function fundIncomeSummary(
   const dues = `${format(fund.annualDuesLocal ?? 0)}/yr dues`;
   const tribute = fund.annualTributeLocal ?? 0;
   if (tribute <= 0) {
-    return `${dues} · ${(fund.duesRateAnnual * 100).toFixed(3)}%`;
+    return `${dues} · ${(fund.duesRateAnnual * 100).toFixed(3)}% of each member's GDP`;
   }
   return `${dues} · ${format(tribute)}/yr tribute`;
 }

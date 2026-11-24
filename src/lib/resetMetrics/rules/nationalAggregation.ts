@@ -265,7 +265,7 @@ export function aggregateNationalMetricObservations(
                         : "Discrete lognormal household model fitted to regional medians and Ginis. Population weights stand in for household counts; not a measured national income distribution."
                       : "National rate recomputed from the sum of same-observation regional counts, not a mean weighted by a different population."
                 : metric.id === "03"
-                  ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
+                  ? "Population-weighted share of people under the game's own modeled poverty line. It is not the half-of-median-income measure used in published statistics, so it will not match real figures and two countries should not be compared one for one."
                   : isProvisional
                     ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
                     : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,

@@ -399,6 +399,10 @@ export function CorporationMasthead({
         )}
       </div>
 
+      {corporation.description?.trim() && (
+        <p className="max-w-3xl text-sm text-muted">{corporation.description.trim()}</p>
+      )}
+
       {(ceoIsInactive || nationalizationRisk || threatActive) && (
         <div className="space-y-2">
           {ceoIsInactive && (

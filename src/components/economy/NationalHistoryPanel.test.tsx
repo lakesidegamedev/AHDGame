@@ -43,11 +43,19 @@ function mockFetch(response: unknown) {
   return fetchMock;
 }
 
-function renderPanel(props: { countryId: "US" | "JP"; compact?: boolean }) {
+function renderPanel(props: {
+  countryId: "US" | "JP";
+  compact?: boolean;
+  liveGdpMillions?: number | null;
+}) {
   return render(panel(props));
 }
 
-function panel(props: { countryId: "US" | "JP"; compact?: boolean }) {
+function panel(props: {
+  countryId: "US" | "JP";
+  compact?: boolean;
+  liveGdpMillions?: number | null;
+}) {
   return (
     <NextIntlClientProvider locale="en" messages={en}>
       <NationalHistoryPanel {...props} />
@@ -71,6 +79,12 @@ describe("NationalHistoryPanel", () => {
     expect(await screen.findByText("$1.20T")).toBeTruthy();
     expect(screen.getByText(/\+20.0% over window/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /GDP per capita/ })).toBeTruthy();
+  });
+
+  it("shows the live GDP figure as the headline so it matches the rest of the page", async () => {
+    renderPanel({ countryId: "US", liveGdpMillions: 1_260_000 });
+    expect(await screen.findByText("$1.26T")).toBeTruthy();
+    expect(screen.getByText(/\+26.0% over window/)).toBeTruthy();
   });
 
   it("switches to population and reports its own window change", async () => {
