@@ -12,6 +12,7 @@ import BackButton from "@/components/BackButton";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { CorporationMasthead } from "@/components/corporation/CorporationMasthead";
 import { ParentDirectionNote } from "@/components/corporation/ParentDirectionNote";
+import AdminViewLabel from "@/components/corporation/AdminViewLabel";
 
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
 import { PrivatizationVotePanel } from "@/components/corporation/PrivatizationVotePanel";
@@ -564,6 +565,9 @@ export function renderCorporationDetailPageView(
                     </div>
                   )}
 
+                  {tab === "financials" && financials && (
+                    <AdminViewLabel show={corporation.adminView} />
+                  )}
                   {tab === "financials" && financials && (
                     <FinancialsTab
                       corporation={corporation}
