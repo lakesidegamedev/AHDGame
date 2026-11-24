@@ -48,6 +48,8 @@ export interface SimpleFigures {
   cashTone?: Tone;
   debt: { text: string; rating: string | null; bonds: number } | null;
   sharePrice: string | null;
+  /** Names the per-share figure; a private corporation shows book value, not a price. */
+  sharePriceLabel?: string;
   marketCap: string | null;
   fillPct: number | null;
 }
@@ -158,7 +160,7 @@ export function OverviewSimple({
   if (figures.sharePrice != null) {
     cells.push({
       key: "price",
-      label: "Share price",
+      label: figures.sharePriceLabel ?? "Share price",
       value: figures.sharePrice,
       sub: figures.marketCap ?? undefined,
     });

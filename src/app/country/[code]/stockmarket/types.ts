@@ -1,3 +1,4 @@
+import type { PriceCapBasis } from "@/lib/market/priceCapBasis";
 import type { SovereignRiskDisclosure } from "@/lib/bonds/sovereignRiskDisclosure";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { NationalBalanceSource } from "@/lib/market/producerMarket/fundedCountryViewRules";
@@ -89,6 +90,8 @@ export interface CommodityData {
   basePrice: number;
   /** Highest price the market can publish (base times the price ceiling multiple). */
   priceCeiling?: number;
+  /** The multiple and inflation index the ceiling is built from. */
+  priceCapBasis?: PriceCapBasis;
   globalPrice: number;
   globalSupply: number;
   globalDemand: number;

@@ -9,7 +9,8 @@ import {
   type OfferMissReason,
   type UnfilledDemand,
 } from "./rules/unfilledReasons";
-import { eligibleSetOf } from "./producerQuotes";
+import { eligibleSetOf, producerTrades } from "./producerQuotes";
+import { fundedBuyerKind } from "./fundedBuyerDemandRules";
 import { type ProducerPayable, accrueProducerPayable } from "./payablesRules";
 import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
 import { minorInputs, minorInputShortfallCost } from "./makeDoRules";
@@ -189,6 +190,22 @@ export function buildProducerOperatingResults({
       unitPrice: ask,
     });
     return Object.keys(unservedBy).length > 0 ? { unservedBy } : {};
+  };
+  // Outside sales of each offer by buyer kind, replayed once from the receipt.
+  let soldToByOffer: Map<string, Record<string, number>> | null = null;
+  const soldToOf = (offerId: string): { soldTo?: Record<string, number> } => {
+    if (!soldToByOffer) {
+      soldToByOffer = new Map();
+      for (const trade of producerTrades(market.tradeReceipt)) {
+        if (trade.kind !== "sale" || !(trade.units > 0)) continue;
+        const kind = fundedBuyerKind(trade.buyerAccountId) ?? "companies";
+        const row = soldToByOffer.get(trade.offerId) ?? {};
+        row[kind] = (row[kind] ?? 0) + trade.units;
+        soldToByOffer.set(trade.offerId, row);
+      }
+    }
+    const soldTo = soldToByOffer.get(offerId);
+    return soldTo ? { soldTo } : {};
   };
   const inputReceiptsOf = (p: ProductionPlan): InputReceipt[] => {
     const maximum = physicalMaximum.get(p.id)!;
@@ -523,6 +540,7 @@ export function buildProducerOperatingResults({
           : {}),
         realizedUnitPrice: sold.soldUnits > 0 ? sold.revenue / sold.soldUnits : null,
         ...unservedFields(p.id, output.commodity, output.book, sold),
+        ...soldToOf(sold.id),
         unsoldUnits: unsold,
         lostUnits: unsold - kept,
       });

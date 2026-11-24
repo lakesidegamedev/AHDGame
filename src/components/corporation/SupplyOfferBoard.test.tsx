@@ -184,3 +184,37 @@ it("lists usable offers first, groups unusable ones in a collapsed section and s
     container.textContent!.indexOf("Unusable Co")
   );
 });
+
+it("shows the computer-run note and each offer's quantity basis", async () => {
+  const base = {
+    corporationId: "npp",
+    corporationName: "Seller Co",
+    slot: 0,
+    own: false,
+    ai: true,
+    commodity: "energy",
+    volumeCap: 5.21,
+    pricePremium: 0.2,
+    expiresAtTurn: 200,
+  };
+  const listings = [
+    { ...base, id: "a", side: "buy", sizingBasis: "unmetOutput" },
+    { ...base, id: "b", side: "sell", sizingBasis: "spareCapacity" },
+  ];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ listings, ownListings: [], hasMore: false }),
+    })
+  );
+  render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <SupplyOfferBoard corpId="self" onRespond={vi.fn()} />
+    </NextIntlClientProvider>
+  );
+  await waitFor(() => expect(screen.getByTestId("computer-run-offer-note")).toBeTruthy());
+  const lines = screen.getAllByTestId("offer-sizing-basis").map((n) => n.textContent);
+  expect(lines[0]).toContain("total unmet output");
+  expect(lines[1]).toContain("half of the seller's spare capacity");
+});

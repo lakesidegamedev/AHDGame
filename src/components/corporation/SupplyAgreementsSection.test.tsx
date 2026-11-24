@@ -218,11 +218,54 @@ describe("SupplyAgreementsSection delivery outcome", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "steel" } });
     fireEvent.change(screen.getByPlaceholderText("e.g. 5000"), { target: { value: "2400" } });
 
-    expect(screen.getByText(/Billed input price \(contracts settle at this/)).toBeTruthy();
-    expect(screen.getByText(/Market price on the commodities table: A1700/)).toBeTruthy();
-    expect(screen.getByText(/Slider range: A689 to A1431/)).toBeTruthy();
+    expect(
+      screen.getByText(/Within 25% of the market price when the agreement is signed/)
+    ).toBeTruthy();
+    expect(screen.getByText(/The market is A1700 per .* now/)).toBeTruthy();
     expect(screen.getByText(/Per day at the full cap: 2,400/)).toBeTruthy();
     expect(screen.getByText("Damage ceiling (per day)")).toBeTruthy();
+  });
+
+  it("states what each side pays or receives on the market and under the contract", async () => {
+    render(<SupplyAgreementsSection corpId="supplier" />);
+
+    await waitFor(() => expect(screen.getByText("As supplier")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Propose agreement" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "steel" } });
+
+    expect(screen.getByTestId("contract-seller-side").textContent).toMatch(
+      /Seller receives exactly A1700 per .* delivered/
+    );
+    expect(screen.getByTestId("contract-buyer-side").textContent).toMatch(
+      /market input bill of A1060 per .* plus a transfer of A0 per .*about A1060 per .* net/
+    );
+    expect(
+      screen.getByText(/settles the difference against that turn's market price/)
+    ).toBeTruthy();
+  });
+
+  it("switches to market price plus or minus and shows the percentage lines", async () => {
+    render(<SupplyAgreementsSection corpId="supplier" />);
+
+    await waitFor(() => expect(screen.getByText("As supplier")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Propose agreement" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "steel" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Market price plus or minus" }));
+    fireEvent.change(screen.getByLabelText("Percentage of market price"), {
+      target: { value: "10" },
+    });
+
+    expect(screen.getByTestId("contract-seller-side").textContent).toMatch(
+      /Seller receives the market price plus \+10%/
+    );
+    expect(screen.getByTestId("contract-buyer-side").textContent).toMatch(/transfer of A170 per/);
+  });
+
+  it("explains that an older agreement does not fix a price", async () => {
+    render(<SupplyAgreementsSection corpId="buyer" />);
+
+    await waitFor(() => expect(screen.getByText("As buyer")).toBeTruthy());
+    expect(screen.getAllByText(/do not fix a price/).length).toBeGreaterThan(0);
   });
 
   it("asks for the fulfilling state when freight is selected", async () => {
@@ -267,6 +310,7 @@ describe("SupplyAgreementsSection delivery outcome", () => {
           body: JSON.stringify({
             action: "counter",
             volumeCap: 110,
+            priceMode: "indexed",
             pricePremium: -0.05,
             exclusive: false,
           }),

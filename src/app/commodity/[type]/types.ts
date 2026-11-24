@@ -1,3 +1,4 @@
+import type { PriceCapBasis } from "@/lib/market/priceCapBasis";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
@@ -60,6 +61,8 @@ export interface CommodityDetail {
   colors: string;
   unit: string;
   basePrice: number;
+  /** What the price cap is a multiple of; null when the config could not be read. */
+  priceCapBasis?: PriceCapBasis | null;
   globalPrice: number;
   globalSupply: number;
   globalDemand: number;
@@ -132,6 +135,8 @@ export interface CommodityDetail {
     stockUnits: number | null;
     coverTurns: number | null;
   };
+  /** Stored price drivers in plain terms; null when the price row has no attribution. */
+  scarcityBreakdown?: import("@/lib/market/priceBreakdownRules").ScarcityBreakdown | null;
   turn: number;
   history: HistoryPoint[];
   suppliers: SectorFlow[];

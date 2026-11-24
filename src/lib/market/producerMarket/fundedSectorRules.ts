@@ -223,6 +223,10 @@ export function fundedSectorOpsAll(
           // Shown to the owner beside profit; decisions keep reading profit.
           stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),
           transitionSupport: daily(receipt.transitionSupport ?? 0),
+          // Legs of totalCost the receipt does not carry; recorded so readers
+          // itemise the cost instead of inferring it.
+          managementOverhead: daily(result.costParts?.managementOverhead ?? 0),
+          growthCost: daily(result.hourlyGrowthCost),
           ...((receipt.internalSupplyIncome ?? 0) > 0
             ? { internalSupplyIncome: daily(receipt.internalSupplyIncome!) }
             : {}),

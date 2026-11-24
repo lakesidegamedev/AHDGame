@@ -76,6 +76,9 @@ export function toListingView(
     ...(row.stateId ? { stateId: row.stateId } : {}),
     volumeCap: row.volumeCap,
     pricePremium: row.pricePremium,
+    ...(ai
+      ? { sizingBasis: row.sizingBasis ?? (row.side === "sell" ? "spareCapacity" : "unmetOutput") }
+      : {}),
     ...(row.durationTurns != null ? { durationTurns: row.durationTurns } : {}),
     expiresAtTurn: row.expiresAtTurn,
   };

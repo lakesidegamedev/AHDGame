@@ -49,3 +49,33 @@ export function recordedRevenueSplit(statement: {
     retained: statement.retained,
   };
 }
+
+export interface PerShareFigure {
+  label: string;
+  /** Per-share amount in the corporation's currency; null when it cannot be stated. */
+  amount: number | null;
+  title?: string;
+}
+
+/**
+ * The per-share figure an Overview shows. A private corporation has no market
+ * price, so it states its book value per share and says so; a listed one
+ * states its quote.
+ */
+export function perShareFigure(input: {
+  isPrivate: boolean;
+  sharePrice: number;
+  bookValue: number | null;
+  totalShares: number;
+}): PerShareFigure {
+  if (!input.isPrivate) return { label: "Share price", amount: input.sharePrice };
+  const amount =
+    input.bookValue != null && Number.isFinite(input.bookValue) && input.totalShares > 0
+      ? input.bookValue / input.totalShares
+      : null;
+  return {
+    label: "Book value / share",
+    amount,
+    title: "Assets minus debt, per share. Private shares have no market price.",
+  };
+}

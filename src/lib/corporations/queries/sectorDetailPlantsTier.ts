@@ -90,6 +90,7 @@ import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
 import { loadPlantBuildPriceScale } from "@/lib/corporations/plantBuildPriceScale";
+import { fundedCostParts } from "@/lib/corporations/rules/fundedCostParts";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
@@ -786,6 +787,9 @@ export async function buildSectorDetailPlantsTier({
       }),
       sectorAmountAnchor(1)
     );
+    const fundedParts = matchingReceipt
+      ? fundedCostParts(matchingReceipt, sector.plantsPnl, TURNS_PER_DAY, sectorAmountAnchor)
+      : null;
     const buildMarketShare = isStrategyBuildSite(sector)
       ? (await fetchAttackerDefenderShares(db, sector, corporation, corporation._id))
           .attackerSharePercent
@@ -860,7 +864,8 @@ export async function buildSectorDetailPlantsTier({
         labourAnchor: matchingReceipt
           ? (matchingReceipt.labourPaid + (matchingReceipt.labourArrears ?? 0)) * TURNS_PER_DAY
           : sectorAmountAnchor(sectorLaborCost),
-        growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
+        growthCostAnchor: fundedParts?.growthAnchor ?? sectorAmountAnchor(sector.currentGrowthCost),
+        fundedParts,
         profitAnchor: statement.profit,
         inputsAnchor: matchingReceipt
           ? matchingReceipt.inputsConsumed * TURNS_PER_DAY

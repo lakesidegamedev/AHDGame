@@ -20,6 +20,8 @@ import { postImportBalance } from "@/lib/trade/postImportGap";
 import { fundedCountryTradeTotals } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
+import { atPriceCap } from "@/lib/market/overviewPreview";
+import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { useTranslations } from "next-intl";
 import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
@@ -58,6 +60,14 @@ export default function HeroPanel({
         })),
     [registered]
   );
+  const capBasis = data.priceCapBasis;
+  const atCap =
+    !!capBasis &&
+    atPriceCap({
+      globalPrice: marketScope.marketPrice,
+      priceCeiling: data.basePrice * capBasis.multiplier * capBasis.nominalIndex,
+    });
+  const capNote = atCap ? priceCapBasisText(capBasis) : null;
   const heroSlug = COMMODITY_HERO_SLUGS[data.commodity as CommodityType];
   const heroAlt = COMMODITY_HERO_ALTS[data.commodity as CommodityType] ?? data.label;
   const selectedCurrency = activeCountry ? getCommodityDisplayCurrency(activeCountry) : null;
@@ -172,8 +182,9 @@ export default function HeroPanel({
             }`}
           >
             {marketScope.priceChange > 0 ? "+" : ""}
-            {marketScope.priceChange}% vs base
+            {marketScope.priceChange}% vs original base
           </span>
+          {capNote && <span className="text-[10px] text-muted">At cap: {capNote}</span>}
           <span className="mt-1 text-[10px] text-muted">{marketScope.marketCaption}</span>
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">

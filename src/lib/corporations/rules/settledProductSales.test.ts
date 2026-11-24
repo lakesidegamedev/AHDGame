@@ -57,4 +57,26 @@ describe("settledProductSales", () => {
     expect(settledProductSales(receipt, 108)).toBeNull();
     expect(settledProductSales(receipt, 105)).toBeNull();
   });
+
+  it("sums who bought a commodity only when every selling row recorded it", () => {
+    const row = (soldUnits: number, soldTo?: Record<string, number>) => ({
+      commodity: "steel",
+      producedUnits: soldUnits,
+      offeredUnits: soldUnits,
+      soldUnits,
+      internalDeliveredUnits: 0,
+      revenue: soldUnits,
+      ...(soldTo ? { soldTo } : {}),
+    });
+    const complete = settledProductSales(
+      { turn: 5, products: [row(3, { households: 3 }), row(2, { households: 1, companies: 1 })] },
+      5
+    );
+    expect(complete!.get("steel")!.soldTo).toEqual({ households: 4, companies: 1 });
+    const partial = settledProductSales(
+      { turn: 5, products: [row(3, { households: 3 }), row(2)] },
+      5
+    );
+    expect(partial!.get("steel")!.soldTo).toBeUndefined();
+  });
 });

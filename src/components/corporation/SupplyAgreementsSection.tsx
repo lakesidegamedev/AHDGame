@@ -22,12 +22,18 @@ import { useToast } from "@/contexts/ToastContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { apiErrorText } from "@/lib/errors/catalog";
-import { contractMoney } from "@/lib/corporations/supplyExchange/rules/contractPricing";
+import { fixedPriceBounds } from "@/lib/corporations/supplyExchange/rules/contractPricing";
 import {
   negotiateDraftFromSearch,
   type NegotiateDraft,
 } from "@/lib/corporations/supplyExchange/negotiateLink";
 import { sortByRegionLabel } from "@/lib/regionOptions";
+import {
+  ContractPriceFields,
+  defaultPriceValue,
+  priceRequestFields,
+  type ContractPriceValue,
+} from "./ContractPriceFields";
 import { agreementDeliveryStatus } from "@/lib/corporations/supplyExchange/rules/deliveryStatus";
 
 interface SupplyAgreement {
@@ -43,6 +49,9 @@ interface SupplyAgreement {
   stateId?: string;
   volumeCap: number;
   pricePremium: number;
+  /** Absent on an older agreement, which adds a bonus or discount on the input price. */
+  priceMode?: "fixed" | "indexed";
+  fixedUnitPrice?: number;
   exclusive: boolean;
   durationTurns?: number;
   status: "pending" | "active" | "cancelling" | "cancelled";
@@ -76,6 +85,8 @@ interface SupplyAgreementOffer {
   proposedByCorpId: string;
   volumeCap: number;
   pricePremium: number;
+  priceMode?: "fixed" | "indexed";
+  fixedUnitPrice?: number;
   exclusive: boolean;
   durationTurns?: number;
   proposedAt?: string;
@@ -101,13 +112,11 @@ interface CorpSearchResult {
 
 interface CounterDraft {
   volumeCap: string;
-  premiumPct: string;
+  price: ContractPriceValue;
   exclusive: boolean;
   durationTurns: string;
 }
 
-const BAND_PCT = Math.round(SUPPLY_AGREEMENT_PRICE_BAND * 100);
-const AI_FLOOR_PCT = Math.round(AI_SUPPLIER_MAX_DISCOUNT * 100);
 const SHORTFALL_PENALTY_PCT = Math.round(CONTRACT_SHORTFALL_PENALTY * 100);
 const MIN_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MIN_TURNS;
 const MAX_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MAX_TURNS;
@@ -177,10 +186,31 @@ export default function SupplyAgreementsSection({
     AGREEMENT_COMMODITIES[0] ?? COMMODITY_TYPES[0]
   );
   const [volumeCap, setVolumeCap] = useState("");
-  const [premiumPct, setPremiumPct] = useState(0);
+  const [priceValue, setPriceValue] = useState<ContractPriceValue>({
+    priceMode: "fixed",
+    percent: 0,
+    fixedPrice: "",
+  });
   const [exclusive, setExclusive] = useState(false);
   const [durationTurns, setDurationTurns] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const marketForCommodity = contractMarketPrices[commodity];
+  // A new commodity restarts the set price at today's market; with no market
+  // price there is nothing to fix a price against, so offer the percentage.
+  useEffect(() => {
+    if (loading) return;
+    setPriceValue((value) => {
+      const next = defaultPriceValue(marketForCommodity);
+      if (value.priceMode === "indexed" && next.priceMode === "fixed") {
+        return { ...value, fixedPrice: next.fixedPrice };
+      }
+      return {
+        ...value,
+        priceMode: next.priceMode === "indexed" ? "indexed" : value.priceMode,
+        fixedPrice: next.fixedPrice,
+      };
+    });
+  }, [commodity, marketForCommodity, loading]);
 
   const load = useCallback(async () => {
     try {
@@ -228,7 +258,11 @@ export default function SupplyAgreementsSection({
       setCommodity(listing.commodity);
       setStateId(listing.stateId ?? "");
       setVolumeCap(String(listing.volumeCap));
-      setPremiumPct(listing.pricePremium * 100);
+      setPriceValue({
+        priceMode: "indexed",
+        percent: Math.round(listing.pricePremium * 100),
+        fixedPrice: "",
+      });
       setDurationTurns(listing.durationTurns != null ? String(listing.durationTurns) : "");
       setExclusive(false);
       setShowForm(true);
@@ -300,6 +334,23 @@ export default function SupplyAgreementsSection({
     }
   }
 
+  function a_commodity(agreementId: string): CommodityType {
+    return agreements.find((x) => x._id === agreementId)?.commodity ?? commodity;
+  }
+
+  /** Plain refusal for a price option the server would reject, or null. */
+  function priceValueError(value: ContractPriceValue | undefined, market: number | undefined) {
+    if (!value) return null;
+    if (value.priceMode === "indexed") return null;
+    if (!(typeof market === "number" && market > 0)) return t("priceModes.needMarket");
+    const { min, max } = fixedPriceBounds(market);
+    const price = Number(value.fixedPrice);
+    if (!Number.isFinite(price) || price < min || price > max) {
+      return t("priceModes.fixedRange", { low: formatAnchor(min), high: formatAnchor(max) });
+    }
+    return null;
+  }
+
   function openCounter(a: SupplyAgreement) {
     const offer = a.currentOffer ?? a.offers?.[a.offers.length - 1];
     const offerDuration = offer?.durationTurns ?? a.durationTurns;
@@ -308,7 +359,11 @@ export default function SupplyAgreementsSection({
       ...current,
       [a._id]: {
         volumeCap: String(offer?.volumeCap ?? a.volumeCap),
-        premiumPct: String(Math.round((offer?.pricePremium ?? a.pricePremium) * 100)),
+        price: {
+          priceMode: offer?.priceMode ?? a.priceMode ?? "indexed",
+          percent: Math.round((offer?.pricePremium ?? a.pricePremium) * 100),
+          fixedPrice: String(offer?.fixedUnitPrice ?? a.fixedUnitPrice ?? ""),
+        },
         exclusive: offer?.exclusive ?? a.exclusive,
         durationTurns: offerDuration !== undefined ? String(offerDuration) : "",
       },
@@ -319,14 +374,17 @@ export default function SupplyAgreementsSection({
     e.preventDefault();
     const draft = counterDrafts[agreementId];
     const cap = Number(draft?.volumeCap);
-    const premium = Number(draft?.premiumPct);
     const term = draft?.durationTurns.trim() ? Number(draft.durationTurns) : undefined;
     if (!(cap > 0)) {
       showToast(t("validation.positiveVolume"), "error");
       return;
     }
-    if (!Number.isFinite(premium) || premium < -BAND_PCT || premium > BAND_PCT) {
-      showToast(t("validation.priceBand", { band: BAND_PCT }), "error");
+    const priceError = priceValueError(
+      draft?.price,
+      contractMarketPrices[a_commodity(agreementId)]
+    );
+    if (priceError) {
+      showToast(priceError, "error");
       return;
     }
     if (
@@ -347,7 +405,7 @@ export default function SupplyAgreementsSection({
         body: JSON.stringify({
           action: amend ? "amend" : "counter",
           volumeCap: cap,
-          pricePremium: premium / 100,
+          ...priceRequestFields(draft!.price),
           exclusive: draft?.exclusive === true,
           ...(term !== undefined ? { durationTurns: term } : {}),
         }),
@@ -385,6 +443,11 @@ export default function SupplyAgreementsSection({
       showToast(t("validation.localServiceState"), "error");
       return;
     }
+    const proposalPriceError = priceValueError(priceValue, contractMarketPrices[commodity]);
+    if (proposalPriceError) {
+      showToast(proposalPriceError, "error");
+      return;
+    }
     setSubmitting(true);
     const term = durationTurns.trim() ? Number(durationTurns) : undefined;
     if (
@@ -409,7 +472,7 @@ export default function SupplyAgreementsSection({
           commodity,
           ...(supplyAgreementRequiresState(commodity) ? { stateId } : {}),
           volumeCap: cap,
-          pricePremium: premiumPct / 100,
+          ...priceRequestFields(priceValue),
           exclusive,
           ...(term !== undefined ? { durationTurns: term } : {}),
         }),
@@ -421,7 +484,7 @@ export default function SupplyAgreementsSection({
         setBuyerQuery("");
         setSelectedBuyer(null);
         setVolumeCap("");
-        setPremiumPct(0);
+        setPriceValue(defaultPriceValue(contractMarketPrices[commodity]));
         setExclusive(false);
         setDurationTurns("");
         setStateId("");
@@ -510,6 +573,26 @@ export default function SupplyAgreementsSection({
     );
   }
 
+  function priceSummary(
+    terms: {
+      priceMode?: "fixed" | "indexed";
+      fixedUnitPrice?: number;
+      pricePremium: number;
+    },
+    agreementCommodity: CommodityType
+  ): string {
+    if (terms.priceMode === "fixed") {
+      return t("priceModes.fixedSummary", {
+        price: formatAnchor(terms.fixedUnitPrice ?? 0),
+        unit: COMMODITY_UNITS[agreementCommodity],
+      });
+    }
+    if (terms.priceMode === "indexed") {
+      return t("priceModes.indexedSummary", { percent: fmtPremium(terms.pricePremium) });
+    }
+    return fmtPremium(terms.pricePremium);
+  }
+
   function renderAgreement(a: SupplyAgreement, role: "supplier" | "buyer") {
     const currentOffer: SupplyAgreementOffer = a.currentOffer ??
       a.offers?.[a.offers.length - 1] ?? {
@@ -564,8 +647,10 @@ export default function SupplyAgreementsSection({
             </span>
           </span>
           <span>
-            Price: <span className="font-medium text-foreground">{fmtPremium(a.pricePremium)}</span>
+            Price:{" "}
+            <span className="font-medium text-foreground">{priceSummary(a, a.commodity)}</span>
           </span>
+          {!a.priceMode && <span className="basis-full">{t("priceModes.legacyNote")}</span>}
           <span>
             {t("negotiation.term")}:{" "}
             <span className="font-medium text-foreground">
@@ -605,7 +690,7 @@ export default function SupplyAgreementsSection({
                             ? t("negotiation.you")
                             : t("negotiation.counterparty"),
                         volume: formatUnits(offer.volumeCap),
-                        premium: fmtPremium(offer.pricePremium),
+                        premium: priceSummary(offer, a.commodity),
                       })}
                     </li>
                   ))}
@@ -787,24 +872,21 @@ export default function SupplyAgreementsSection({
                   className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
                 />
               </label>
-              <label className="space-y-1 text-xs text-muted">
-                <span className="font-semibold text-foreground">
-                  {t("negotiation.pricePremium")}
-                </span>
-                <input
-                  type="number"
-                  min={-BAND_PCT}
-                  max={BAND_PCT}
-                  value={counterDrafts[a._id]?.premiumPct ?? "0"}
-                  onChange={(event) =>
+              <div className="sm:col-span-2">
+                <ContractPriceFields
+                  value={counterDrafts[a._id]!.price}
+                  onChange={(price) =>
                     setCounterDrafts((current) => ({
                       ...current,
-                      [a._id]: { ...current[a._id]!, premiumPct: event.target.value },
+                      [a._id]: { ...current[a._id]!, price },
                     }))
                   }
-                  className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                  marketPrice={contractMarketPrices[a.commodity]}
+                  billedPrice={contractReferencePrices[a.commodity]}
+                  unit={COMMODITY_UNITS[a.commodity]}
+                  formatPrice={formatAnchor}
                 />
-              </label>
+              </div>
               <label className="space-y-1 text-xs text-muted">
                 <span className="font-semibold text-foreground">{t("negotiation.term")}</span>
                 <input
@@ -1094,83 +1176,44 @@ export default function SupplyAgreementsSection({
             </div>
           </div>
 
-          {/* Price premium */}
-          <div className="space-y-1">
-            <label className="flex items-center justify-between text-xs font-semibold text-foreground">
-              <span>{t("negotiation.priceLabel")}</span>
-              <span className="tabular-nums text-primary">{fmtPremium(premiumPct / 100)}</span>
-            </label>
-            <input
-              type="range"
-              min={-BAND_PCT}
-              max={BAND_PCT}
-              step={1}
-              value={premiumPct}
-              onChange={(e) => setPremiumPct(Number(e.target.value))}
-              className="w-full accent-primary"
+          {/* Price option */}
+          <div className="space-y-2">
+            <ContractPriceFields
+              value={priceValue}
+              onChange={setPriceValue}
+              marketPrice={contractMarketPrices[commodity]}
+              billedPrice={contractReferencePrices[commodity]}
+              unit={COMMODITY_UNITS[commodity]}
+              formatPrice={formatAnchor}
             />
-            <p className="text-[11px] text-muted">
-              {t("negotiation.priceHelp", { band: BAND_PCT, aiFloor: AI_FLOOR_PCT })}
-            </p>
             {(() => {
               const reference = contractReferencePrices[commodity];
-              if (!(typeof reference === "number" && reference > 0)) {
-                return (
-                  <p className="text-[11px] text-muted">{t("negotiation.moneyNoReference")}</p>
-                );
-              }
               const cap = Number(volumeCap);
-              const money = contractMoney({
-                volumeCapPerDay: Number.isFinite(cap) && cap > 0 ? cap : 0,
-                pricePremium: premiumPct / 100,
-                referenceUnitPrice: reference,
-                durationTurns: durationTurns === "" ? null : Number(durationTurns),
-              });
+              if (!(typeof reference === "number" && reference > 0 && cap > 0)) return null;
               const unit = COMMODITY_UNITS[commodity];
+              const market = contractMarketPrices[commodity] ?? reference;
+              const fixed = Number(priceValue.fixedPrice);
+              const perUnit =
+                priceValue.priceMode === "fixed"
+                  ? Number.isFinite(fixed)
+                    ? fixed
+                    : market
+                  : market * (1 + priceValue.percent / 100);
+              const perDay = cap * perUnit;
               return (
                 <ul className="space-y-0.5 rounded-lg border border-card-border bg-card-elevated p-2 text-[11px] text-muted">
                   <li>
-                    {t("negotiation.moneyReference", {
-                      percent: fmtPremium(premiumPct / 100),
-                      price: formatAnchor(money.referenceUnitPrice),
+                    {t("negotiation.moneyPerDay", {
+                      units: formatUnits(cap),
                       unit,
+                      value: formatAnchor(perDay),
                     })}
                   </li>
-                  {typeof contractMarketPrices[commodity] === "number" && (
-                    <li>
-                      {t("negotiation.moneyMarket", {
-                        price: formatAnchor(contractMarketPrices[commodity] ?? 0),
-                        unit,
-                      })}
-                    </li>
-                  )}
-                  <li>
-                    {t("negotiation.moneyRange", {
-                      low: formatAnchor(reference * (1 - BAND_PCT / 100)),
-                      high: formatAnchor(reference * (1 + BAND_PCT / 100)),
-                      unit,
-                    })}
-                  </li>
-                  <li>
-                    {t("negotiation.moneyUnitPrice", {
-                      price: formatAnchor(money.unitPrice),
-                      unit,
-                    })}
-                  </li>
-                  {money.unitsPerTurn > 0 && (
-                    <li>
-                      {t("negotiation.moneyPerDay", {
-                        units: formatUnits(Number.isFinite(cap) ? cap : 0),
-                        unit,
-                        value: formatAnchor(money.valuePerDay),
-                      })}
-                    </li>
-                  )}
-                  {money.unitsPerTurn > 0 && money.valueOverTerm !== null && (
+                  {durationTurns !== "" && Number(durationTurns) > 0 && (
                     <li>
                       {t("negotiation.moneyOverTerm", {
                         turns: Number(durationTurns),
-                        value: formatAnchor(money.valueOverTerm),
+                        value: formatAnchor((perDay / 24) * Number(durationTurns)),
                       })}
                     </li>
                   )}

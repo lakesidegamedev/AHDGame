@@ -10,7 +10,7 @@ type ProductRow = Pick<
   | "internalDeliveredUnits"
   | "revenue"
 > &
-  Partial<Pick<ProducerOperatingResult["products"][number], "unservedBy">>;
+  Partial<Pick<ProducerOperatingResult["products"][number], "unservedBy" | "soldTo">>;
 
 export interface SettledProductSales {
   produced: number;
@@ -22,6 +22,11 @@ export interface SettledProductSales {
   revenue: number;
   /** Buyers' unfilled units by why this ask missed them; absent on older receipts. */
   unservedBy?: Partial<Record<OfferMissReason, number>>;
+  /**
+   * Units sold by buyer kind. Set only when every product row of this commodity
+   * recorded it, so the parts add up to `sold`; absent on older receipts.
+   */
+  soldTo?: Partial<Record<string, number>>;
 }
 
 export function settledProductSales(
@@ -32,6 +37,7 @@ export function settledProductSales(
     return null;
   }
   const sales = new Map<string, SettledProductSales>();
+  const soldToComplete = new Map<string, boolean>();
   for (const product of receipt.products) {
     const row = sales.get(product.commodity) ?? {
       produced: 0,
@@ -53,6 +59,15 @@ export function settledProductSales(
         number,
       ][])
         by[reason] = (by[reason] ?? 0) + units;
+    }
+    if (product.soldTo && soldToComplete.get(product.commodity) !== false) {
+      const to = (row.soldTo ??= {});
+      for (const [kind, units] of Object.entries(product.soldTo))
+        to[kind] = (to[kind] ?? 0) + (units ?? 0);
+      soldToComplete.set(product.commodity, true);
+    } else if (product.soldUnits > 0) {
+      soldToComplete.set(product.commodity, false);
+      delete row.soldTo;
     }
     row.unsold = Math.max(0, row.offered - row.sold - row.ownSites);
     sales.set(product.commodity, row);

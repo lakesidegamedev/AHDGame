@@ -733,6 +733,10 @@ export interface CorporateSector {
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */
     transitionSupport?: number;
+    /** Funded market: management overhead inside `totalCost`, daily host-currency money. */
+    managementOverhead?: number;
+    /** Funded market: growth spend realized this turn inside `totalCost`, daily host-currency money. */
+    growthCost?: number;
     /** Matched own-site management-account entries, daily host-currency money. */
     internalSupplyIncome?: number;
     internalSupplyCharge?: number;

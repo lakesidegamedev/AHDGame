@@ -26,6 +26,7 @@ import {
   formatCurrencyCompactChip,
   formatSharePrice,
   formatSharePriceOrder,
+  formatSharePriceFine,
   formatCurrencyFull,
   type DisplayCurrencyPreference,
 } from "@/lib/utils/formattersCore";
@@ -217,6 +218,8 @@ interface CurrencyContextValue {
    * Accepts an internal-unit amount and optional native currency code for "local" mode.
    */
   formatPriceOrder: (internalAmount: number, nativeCurrencyCode?: CurrencyCode) => string;
+  /** Per-share rate with at least four significant digits (payout and buyout rates). */
+  formatPriceFine: (internalAmount: number, nativeCurrencyCode?: CurrencyCode) => string;
   /**
    * Format a share price ALWAYS in the given currency, ignoring the viewer's
    * `displayCurrencyPreference`. Use for shares that trade on a specific
@@ -271,6 +274,7 @@ const USD_FALLBACK: CurrencyContextValue = {
   formatPrice: (x) => formatSharePrice(x, "₳"),
   formatFull: (x) => formatCurrencyFull(x, "₳"),
   formatPriceOrder: (x) => formatSharePriceOrder(x, "₳"),
+  formatPriceFine: (x) => formatSharePriceFine(x, "₳"),
   formatPriceIn: (x) => formatSharePrice(x, "₳"),
   formatListingPrice: (x) => formatSharePrice(x, "₳"),
   ratesLoading: false,
@@ -618,6 +622,14 @@ export function CurrencyProvider({
     [resolveDisplay]
   );
 
+  const formatPriceFineFn = useCallback(
+    (internalAmount: number, nativeCurrencyCode?: CurrencyCode): string => {
+      const { value, symbol } = resolveDisplay(internalAmount, nativeCurrencyCode);
+      return formatSharePriceFine(value, symbol);
+    },
+    [resolveDisplay]
+  );
+
   const setDisplayCurrencyPreference = useCallback((pref: DisplayCurrencyPreference) => {
     setPrefOverride(pref);
     // Persist to server (fire-and-forget; optimistic update already applied above)
@@ -660,6 +672,7 @@ export function CurrencyProvider({
       formatListingPrice: formatListingPriceFn,
       formatFull: formatFullFn,
       formatPriceOrder: formatPriceOrderFn,
+      formatPriceFine: formatPriceFineFn,
       ratesLoading: ratesState.loading,
       baseRates: effectiveBaseRates,
       forexRates: effectiveRates,
@@ -689,6 +702,7 @@ export function CurrencyProvider({
       formatListingPriceFn,
       formatFullFn,
       formatPriceOrderFn,
+      formatPriceFineFn,
       ratesState.loading,
       ratesState.spreadStrengths,
       effectiveBaseRates,

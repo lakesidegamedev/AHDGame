@@ -6,7 +6,11 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { formatUnits } from "../lib/helpers";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
-import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
+import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
+import {
+  governmentBoughtGoods,
+  governmentBuysCommodity,
+} from "@/lib/market/governmentCommodityDemand";
 
 const PAGE_SIZE = 10;
 
@@ -23,6 +27,18 @@ interface TopProducersConsumersProps {
   /** Recorded demand for this market, so the listed buyers can be reconciled against it. */
   marketDemand?: number;
   marketLabel?: string;
+}
+
+/** Says governments do not buy this good, naming what they do buy. Null when they buy it. */
+export function governmentDemandNote(commodity: string): string | null {
+  if (governmentBuysCommodity(commodity)) return null;
+  const bought = governmentBoughtGoods().map(
+    (g) =>
+      `${(COMMODITY_LABELS[g.commodity] ?? g.commodity).toLowerCase()}${g.plannedOnly ? " (planned economies only)" : ""}`
+  );
+  const list =
+    bought.length > 1 ? `${bought.slice(0, -1).join(", ")} and ${bought.at(-1)}` : bought[0];
+  return `Governments do not buy this good. They buy only ${list}.`;
 }
 
 /**
@@ -205,6 +221,7 @@ export default function TopProducersConsumers({
     producerPage * PAGE_SIZE
   );
   const fillNotes = buyerFillNotes(syntheticDemandSources, marketSupply, unit);
+  const governmentNote = governmentDemandNote(commodity);
   const demandGap = unlistedDemand(marketDemand, topConsumers, syntheticDemandSources);
   const pagedConsumers = topConsumers.slice(
     (consumerPage - 1) * PAGE_SIZE,
@@ -275,6 +292,7 @@ export default function TopProducersConsumers({
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
           </p>
           {consumerNote && <p className="text-xs text-muted mb-3">{consumerNote}</p>}
+          {governmentNote && <p className="text-xs text-muted mb-3">{governmentNote}</p>}
           {fillNotes && (
             <p className="text-xs text-muted mb-3">
               {fillNotes.totals}

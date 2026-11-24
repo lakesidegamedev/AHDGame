@@ -104,22 +104,19 @@ export async function unlockTechNode(
   const { node } = preCheck;
 
   const legacy = await loadLegacyTechContext(db);
-  const headroom = inputEfficiencyHeadroom(
-    node.effects,
-    node.lane,
-    getSectorTechEffectBreakdown(
-      {
-        type: corporation.type,
-        unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-        techDecadeLane: corporation.techDecadeLane,
-        frontierProgrammes: corporation.frontierProgrammes,
-        frontierMethods: corporation.frontierMethods,
-      },
-      corporation.type,
-      currentYear,
-      legacy
-    ).researched.inputEfficiencyBonus
-  );
+  const researchedInputBonus = getSectorTechEffectBreakdown(
+    {
+      type: corporation.type,
+      unlockedTechNodeIds: corporation.unlockedTechNodeIds,
+      techDecadeLane: corporation.techDecadeLane,
+      frontierProgrammes: corporation.frontierProgrammes,
+      frontierMethods: corporation.frontierMethods,
+    },
+    corporation.type,
+    currentYear,
+    legacy
+  ).researched.inputEfficiencyBonus;
+  const headroom = inputEfficiencyHeadroom(node.effects, node.lane, researchedInputBonus);
   if (headroom.noRemainingBenefit) {
     return { ok: false, status: 409, error: NO_REMAINING_BENEFIT_MESSAGE };
   }
@@ -129,7 +126,8 @@ export async function unlockTechNode(
     node,
     pricing.dailyGrossRevenueLocal,
     pricing.techCashFloorLocal,
-    pricing.techPlantBasis
+    pricing.techPlantBasis,
+    researchedInputBonus
   );
   const check: CanUnlockResult = canUnlock(corpView, nodeId, currentYear, {
     rdScore,

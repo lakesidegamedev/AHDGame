@@ -2,7 +2,10 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import TopProducersConsumers, { unlistedDemand } from "./TopProducersConsumers";
+import TopProducersConsumers, {
+  governmentDemandNote,
+  unlistedDemand,
+} from "./TopProducersConsumers";
 
 const otherDemand = {
   name: "Other demand (including marketing)",
@@ -199,5 +202,29 @@ describe("unlistedDemand", () => {
     expect(
       unlistedDemand(100, [{ units: 50 }], [{ ...funded[0], receivedUnits: undefined }])
     ).toBeNull();
+  });
+});
+
+describe("government demand note", () => {
+  it("says governments do not buy a good that is not in the demand table", () => {
+    expect(governmentDemandNote("steel")).toMatch(/^Governments do not buy this good\./);
+    expect(governmentDemandNote("steel")).toContain("healthcare services");
+    expect(governmentDemandNote("steel")).toContain("ordnance");
+    expect(governmentDemandNote("steel")).toContain("advertising & media (planned economies only)");
+    expect(governmentDemandNote("ordnance")).toBeNull();
+    expect(governmentDemandNote("advertising")).toBeNull();
+  });
+
+  it("renders under Top consumers", () => {
+    render(
+      <TopProducersConsumers
+        topProducers={[]}
+        topConsumers={[]}
+        syntheticDemandSources={[otherDemand]}
+        unit="tons"
+        commodity="steel"
+      />
+    );
+    expect(screen.getByText(/Governments do not buy this good/)).toBeTruthy();
   });
 });

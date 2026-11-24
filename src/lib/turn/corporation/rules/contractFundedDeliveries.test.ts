@@ -5,6 +5,7 @@ import {
   fundedPairFlowKey,
   fundedPairFlows,
   fundedPairKeysOf,
+  realisedSupplierPrices,
   type FundedContractTrade,
 } from "./contractFundedDeliveries";
 import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
@@ -182,8 +183,45 @@ describe("fundedContractTradesOf", () => {
         buyerAccountId: "B",
         commodity: "steel",
         units: 4,
+        amount: 20,
         sellerStateId: "TX",
       },
     ]);
+  });
+});
+
+describe("realisedSupplierPrices", () => {
+  it("averages what a supplier's units cleared for, by commodity and state", () => {
+    const prices = realisedSupplierPrices([
+      {
+        kind: "sale",
+        sellerAccountId: "S",
+        buyerAccountId: "B",
+        commodity: "steel",
+        units: 2,
+        amount: 10,
+        sellerStateId: "TX",
+      },
+      {
+        kind: "sale",
+        sellerAccountId: "S",
+        buyerAccountId: "C",
+        commodity: "steel",
+        units: 2,
+        amount: 14,
+        sellerStateId: "OH",
+      },
+      {
+        kind: "internalTransfer",
+        sellerAccountId: "S",
+        buyerAccountId: "S",
+        commodity: "steel",
+        units: 9,
+        amount: 0,
+      },
+    ]);
+    expect(prices.get("S")?.get("steel")).toBe(6);
+    expect(prices.get("S")?.get("steel@TX")).toBe(5);
+    expect(prices.get("S")?.get("steel@OH")).toBe(7);
   });
 });

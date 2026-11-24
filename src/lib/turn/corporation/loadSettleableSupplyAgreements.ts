@@ -49,6 +49,8 @@ type LiveAgreementDoc = {
   stateId?: string;
   volumeCap: number;
   pricePremium?: number;
+  priceMode?: SupplyAgreement["priceMode"];
+  fixedUnitPrice?: number;
   volumeCapBasis?: SupplyAgreement["volumeCapBasis"];
   lastDeliveryTurn?: number;
   lastDeliveredUnits?: number;
@@ -155,6 +157,8 @@ export async function loadSettleableSupplyAgreements(args: {
           stateId: 1,
           volumeCap: 1,
           pricePremium: 1,
+          priceMode: 1,
+          fixedUnitPrice: 1,
           volumeCapBasis: 1,
           lastDeliveryTurn: 1,
           lastDeliveredUnits: 1,
@@ -225,6 +229,12 @@ export async function loadSettleableSupplyAgreements(args: {
       ...(a.stateId ? { stateId: a.stateId } : {}),
       volumeCap: Math.max(0, a.volumeCap ?? 0),
       pricePremium: clampAgreementPremium(a.pricePremium ?? 0),
+      ...(a.priceMode === "fixed" || a.priceMode === "indexed"
+        ? {
+            priceMode: a.priceMode,
+            ...(a.priceMode === "fixed" ? { fixedUnitPrice: a.fixedUnitPrice ?? 0 } : {}),
+          }
+        : {}),
       // Shortfall damages only apply to contracts whose `volumeCap` was
       // checked against scaled plant capacity when it was signed. Contracts
       // predating that check carry no basis, so they settle their price

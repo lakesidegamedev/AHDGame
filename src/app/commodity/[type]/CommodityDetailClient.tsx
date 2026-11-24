@@ -10,6 +10,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CommodityDetail } from "./types";
 import type { MapMode } from "./components/CommodityMapModeToggle";
 import HeroPanel from "./components/HeroPanel";
+import PriceBreakdownPanel from "./components/PriceBreakdownPanel";
 import DemandDriverBanner from "./components/DemandDriverBanner";
 import FreightMarketExplainer from "./components/FreightMarketExplainer";
 import SupplyDemandBar from "./components/SupplyDemandBar";
@@ -205,6 +206,10 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           forexEnabled={forexEnabled}
           exchangeRates={exchangeRates}
           onSelectExchange={handleSelectCountry}
+        />
+        <PriceBreakdownPanel
+          breakdown={data.scarcityBreakdown}
+          formatPrice={formatCurrencyPrecise}
         />
         {drillDownCountry && stateOptions.length > 0 && (
           <div className="mb-4 flex items-center gap-2">

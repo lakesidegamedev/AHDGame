@@ -87,6 +87,8 @@ export function povertyLawRelief(pressure: number): number {
 }
 
 export function povertyTarget(input: {
+  /** Points added to the shared anchor so a country starts from its real level. */
+  anchorOffset?: number;
   unemployment?: number;
   inequality?: number;
   crime?: number;
@@ -101,6 +103,7 @@ export function povertyTarget(input: {
     : (6 * spending) / (spending + 2700);
   return (
     13 +
+    safe(input.anchorOffset, 0) +
     (safe(input.unemployment, 5) - 5) * 0.6 +
     (safe(input.inequality, 42) - 42) * 0.15 +
     (safe(input.crime, 4500) - 4500) * 0.0004 -
