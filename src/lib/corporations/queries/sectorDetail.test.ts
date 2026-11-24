@@ -402,9 +402,11 @@ describe("getCorporationSectorDetail", () => {
       expect(response.status).toBe(200);
       expect(data.sector.revenue, `isPrivate=${isPrivate}`).not.toBeNull();
       expect(data.financials, `isPrivate=${isPrivate}`).not.toBeNull();
+      // Figures an outsider would not get are labelled as an admin view.
       expect(data.financialVisibility, `isPrivate=${isPrivate}`).toEqual({
         hidden: false,
         reason: "visible",
+        adminView: true,
       });
     }
   });
