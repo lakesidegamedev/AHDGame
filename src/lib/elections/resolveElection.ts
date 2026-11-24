@@ -504,13 +504,17 @@ export async function resolveElections(
   const latestSnapshotByElection = new Map<string, PrimarySnapshot>();
 
   if (!isFull) {
-    // The newest row per election straight off the { electionId, recordedAt }
-    // index. Sorting the whole $in match and grouping read every snapshot.
-    const latestRows = await perElectionInBatches(electionIds, (electionId) =>
-      primarySnapshotsCollection(db).find({ electionId }).sort({ recordedAt: -1 }).limit(1).next()
-    );
-    for (const doc of latestRows) {
-      if (doc) latestSnapshotByElection.set(doc.electionId.toString(), doc);
+    // One query: sorting on the { electionId, recordedAt } index lets $first
+    // run as a DISTINCT_SCAN, reading one row per election rather than all.
+    const latestRows = await primarySnapshotsCollection(db)
+      .aggregate<{ doc: PrimarySnapshot }>([
+        { $match: { electionId: { $in: electionIds } } },
+        { $sort: { electionId: 1, recordedAt: -1 } },
+        { $group: { _id: "$electionId", doc: { $first: "$$ROOT" } } },
+      ])
+      .toArray();
+    for (const { doc } of latestRows) {
+      latestSnapshotByElection.set(doc.electionId.toString(), doc);
     }
   } else {
     // Full view: pick last snapshot per election from the already-fetched array
@@ -622,6 +626,10 @@ export async function resolveElections(
       )
     : new Map();
 
+  // Converted once: every election scans these lists, and ObjectId to string
+  // per row per election dominated the batch.
+  const characterIdStrings = characters.map((c) => c._id.toString());
+  const nppIdStrings = npps.map((n) => n._id.toString());
   const results: ElectionResponse[] = await Promise.all(
     elections.map((election) => {
       const eid = election._id.toString();
@@ -638,8 +646,8 @@ export async function resolveElections(
         candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!.toString())
       );
 
-      const electionChars = characters.filter((c) => electionCharIds.has(c._id.toString()));
-      const electionNpps = npps.filter((n) => electionNppIds.has(n._id.toString()));
+      const electionChars = characters.filter((_, i) => electionCharIds.has(characterIdStrings[i]));
+      const electionNpps = npps.filter((_, i) => electionNppIds.has(nppIdStrings[i]));
       // Parties: scoped by countryId (already filtered globally, subset by country)
       const electionCountryId = election.countryId ?? "US";
       const electionParties = parties.filter((p) => (p.countryId ?? "US") === electionCountryId);
