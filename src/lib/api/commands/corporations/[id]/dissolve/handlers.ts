@@ -6,7 +6,8 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
+import { executeCorporationBondDefaultDissolution } from "@/lib/bonds/executeCorporationBondDefaultDissolution";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -65,6 +66,65 @@ interface RouteParams {
 }
 
 /**
+ * Voluntary dissolve of a company with bonds outstanding and none in default.
+ * Runs the bond settlement waterfall: one pool of cash, held-bond sale
+ * proceeds, buyback escrow and plant salvage; bondholders pro-rata up to face
+ * value, then shareholders. Every payout is booked as a ledger entry.
+ */
+async function dissolveSettlingBonds(
+  db: Awaited<ReturnType<typeof getDb>>,
+  corporation: Corporation,
+  currentTurn: number
+): Promise<Response> {
+  const result = await withCorporationSettlementLock(
+    db,
+    corporation._id,
+    "bondSettlementInProgressAt",
+    new Date(),
+    async () =>
+      executeCorporationBondDefaultDissolution(db, corporation, {
+        requireDefaultedBonds: false,
+        exitReason: "voluntary_closure",
+        turn: currentTurn,
+      })
+  );
+  if (!result) {
+    return errorResponse(409, "Bond settlement is already in progress for this corporation");
+  }
+  const ceoIdStr = corporation.ceoId.toString();
+  const ceoPayout = Math.max(
+    0,
+    Math.floor(result.shareholderPayouts.find((r) => r.characterId === ceoIdStr)?.payout ?? 0)
+  );
+  recordAudit({
+    source: "api",
+    action: "corp.dissolve",
+    category: "corp",
+    subject: { type: "corporation", id: corporation._id, name: corporation.name },
+    amount: result.shareholderPool,
+    refs: { corporationId: corporation._id },
+    outcome: "ok",
+    meta: {
+      isPrivate: corporation.isPrivate,
+      settledBonds: true,
+      bondRecoveryPool: result.bondRecoveryPool,
+      shareholderPool: result.shareholderPool,
+    },
+  });
+  return NextResponse.json({
+    success: true,
+    settledBonds: true,
+    bondRecoveryPool: result.bondRecoveryPool,
+    shareholderPool: result.shareholderPool,
+    ceoPayout,
+    shareholderPayouts: result.shareholderPayouts,
+    corporateShareholderPayouts: result.corporateShareholderPayouts,
+    publicFloatPayout: result.publicFloatPayout,
+    message: `${corporation.name} has been dissolved. Bondholders were paid ${formatFundsCompact(result.bondRecoveryPool)} first; shareholders shared ${formatFundsCompact(result.shareholderPool)}. Your share: ${formatFundsCompact(ceoPayout)}.`,
+  });
+}
+
+/**
  * GET /api/corporations/[id]/dissolve — Preview for the sitting CEO’s quick dissolve (same auth as
  * POST). Not used for admin force-liquidate. Does not mutate state.
  */
@@ -95,7 +155,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
  * Instantly dissolve a corporation. Returns remaining liquid capital to player funds.
  * CEO only.
  */
-export async function POST(_request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -147,15 +207,34 @@ export async function POST(_request: Request, { params }: RouteParams) {
       }
     }
 
-    const outstandingBonds = await bondsCollection(db).countDocuments({
-      corporationId: corporation._id,
-      matured: false,
-    });
-    if (outstandingBonds > 0) {
-      return errorResponse(
-        400,
-        "This corporation has outstanding bonds. Resolve them via Bond default resolution (pay, refinance, or dissolve & settle) before using quick dissolve."
-      );
+    const outstandingBonds = await bondsCollection(db)
+      .find(
+        { corporationId: corporation._id, matured: false },
+        { projection: { _id: 1, defaulted: 1 } }
+      )
+      .toArray();
+    if (outstandingBonds.length > 0) {
+      if (outstandingBonds.some((b) => b.defaulted)) {
+        return errorResponse(
+          400,
+          "This corporation has a defaulted bond. Resolve it via Bond default resolution (pay, refinance, or dissolve & settle)."
+        );
+      }
+      // Voluntary dissolve with bonds still in good standing: bondholders are
+      // paid first from cash and plant salvage, shareholders share the rest.
+      // It cannot be undone, so the CEO must confirm it explicitly.
+      const body = (await request.json().catch(() => null)) as { settleBonds?: unknown } | null;
+      if (body?.settleBonds !== true) {
+        return errorResponse(
+          409,
+          "This corporation has bonds outstanding. Dissolving pays bondholders first, then shareholders share what is left. Review the payout and confirm to dissolve.",
+          {
+            code: "BOND_SETTLEMENT_CONFIRM_REQUIRED",
+            extra: { requiresBondSettlementConfirm: true },
+          }
+        );
+      }
+      return dissolveSettlingBonds(db, corporation, currentTurn);
     }
 
     const forexEnabled = await isForexEnabled();
