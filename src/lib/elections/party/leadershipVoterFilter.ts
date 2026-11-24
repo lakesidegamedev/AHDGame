@@ -44,3 +44,51 @@ export async function leadershipVoterFilter(
 ): Promise<Document> {
   return (await leadershipEligibilityFilters(db, elections)).voterFilter;
 }
+
+type ElectoralParty = {
+  leadershipElectionMethod?: "party" | "committee" | "influence";
+  committeeIds?: ObjectId[];
+  chairId?: ObjectId | null;
+  viceChairId?: ObjectId | null;
+  treasurerId?: ObjectId | null;
+};
+
+/**
+ * Under the committee method only committee members and national officers
+ * vote, judged when ballots are counted, so a ballot cast before a switch to
+ * the committee method, or by someone who has since left the committee,
+ * counts for nothing. Null when the party uses another method.
+ */
+export function committeeElectorate(party: ElectoralParty | undefined): ObjectId[] | null {
+  if (party?.leadershipElectionMethod !== "committee") return null;
+  const ids = new Map<string, ObjectId>();
+  for (const id of [
+    ...(party.committeeIds ?? []),
+    party.chairId,
+    party.viceChairId,
+    party.treasurerId,
+  ]) {
+    if (id) ids.set(id.toString(), id);
+  }
+  return [...ids.values()];
+}
+
+/**
+ * Mongo clause restricting ballots of committee-method elections to the
+ * committee electorate; ballots of other elections pass untouched. Null when
+ * no election in the batch uses the committee method.
+ */
+export function committeeBallotClause(
+  elections: readonly { _id: ObjectId; partyId: string; countryId?: string }[],
+  partyFor: (partyId: string, countryId: string) => ElectoralParty | undefined
+): Document | null {
+  const open: ObjectId[] = [];
+  const restricted: Document[] = [];
+  for (const election of elections) {
+    const electorate = committeeElectorate(partyFor(election.partyId, election.countryId ?? "US"));
+    if (electorate) restricted.push({ electionId: election._id, voterId: { $in: electorate } });
+    else open.push(election._id);
+  }
+  if (restricted.length === 0) return null;
+  return { $or: [...(open.length > 0 ? [{ electionId: { $in: open } }] : []), ...restricted] };
+}
