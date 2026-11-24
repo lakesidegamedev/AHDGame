@@ -191,3 +191,40 @@ export function balanceParts({
     receivedParts: null,
   };
 }
+
+/**
+ * Whole units for a total and its parts, rounded so the parts shown add up
+ * exactly to the total shown (largest remainder). Negative parts count as 0.
+ */
+export function wholeUnitsAddingUp(parts: readonly number[]): { total: number; parts: number[] } {
+  const clean = parts.map((u) => (Number.isFinite(u) && u > 0 ? u : 0));
+  const total = Math.round(clean.reduce((sum, u) => sum + u, 0));
+  const floors = clean.map(Math.floor);
+  let left = total - floors.reduce((sum, u) => sum + u, 0);
+  const order = clean
+    .map((u, i) => ({ i, rest: u - Math.floor(u) }))
+    .sort((a, b) => b.rest - a.rest || a.i - b.i);
+  for (const { i } of order) {
+    if (left <= 0) break;
+    floors[i]! += 1;
+    left -= 1;
+  }
+  return { total, parts: floors };
+}
+
+/** A whole number of units with thousands separators, e.g. "11,758 campaigns". */
+export function formatWholeUnits(units: number, unit: string): string {
+  return `${Math.round(units).toLocaleString("en-US")} ${unit}`;
+}
+
+/** Labelled rows and their total as whole units that add up exactly. */
+export function wholeUnitRows(
+  parts: readonly { label: string; units: number }[],
+  unit: string
+): { total: string; rows: { label: string; value: string }[] } {
+  const whole = wholeUnitsAddingUp(parts.map((p) => p.units));
+  return {
+    total: formatWholeUnits(whole.total, unit),
+    rows: parts.map((p, i) => ({ label: p.label, value: formatWholeUnits(whole.parts[i]!, unit) })),
+  };
+}

@@ -8,6 +8,8 @@ import {
 } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBookRules";
 import { commodityDetailPerTurn, marketPerTurn } from "@/lib/commodities/perTurnUnits";
+import { flowsFromWorldMarket, worldSupplyFigures } from "@/lib/commodities/worldSupplyRules";
+import { buildScarcityBreakdown, premiumTrendSentence } from "@/lib/market/priceBreakdownRules";
 import { balanceParts, listRowsWithOthers, marketRows, rowsTotal } from "./marketRows";
 
 const sum = (xs: readonly { units: number }[]) => xs.reduce((n, x) => n + x.units, 0);
@@ -62,7 +64,7 @@ describe("market rows add up to the totals shown", () => {
     expect(rowsTotal(rows.demand.rows)).toBeCloseTo(us.demand, 2);
     expect(rowsTotal(rows.received!.rows)).toBeCloseTo(us.filled!, 2);
     expect(rows.supply.rows.map((r) => r.label)).toEqual([
-      "Companies",
+      "Player and AI companies",
       "Background economy (sellers)",
     ]);
     expect(rows.demand.rows.map((r) => r.label)).toContain("Background economy (buyers)");
@@ -79,12 +81,12 @@ describe("market rows add up to the totals shown", () => {
     expect(sum(parts.demandParts)).toBeCloseTo(trade.demand, 2);
     expect(sum(parts.receivedParts!)).toBeCloseTo(us.filled!, 2);
     expect(parts.supplyParts.map((p) => p.label)).toEqual([
-      "Companies",
+      "Player and AI companies",
       "Background economy (sellers)",
       "Imports",
     ]);
     expect(parts.demandParts.map((p) => p.label)).toEqual([
-      "Companies",
+      "Player and AI companies",
       "Households",
       "Background economy (buyers)",
       "Substitution orders",
@@ -99,8 +101,8 @@ describe("market rows add up to the totals shown", () => {
     expect(rowsTotal(rows.supply.rows)).toBeCloseTo(world.supply, 2);
     expect(rowsTotal(rows.demand.rows)).toBeCloseTo(world.demand, 2);
     expect(rows.supply.rows.map((r) => r.label)).toEqual([
-      "Companies",
-      "Economy-only countries",
+      "Player and AI companies",
+      "Background economy (countries without companies)",
       "Background economy (sellers)",
     ]);
     expect(rows.imports).toBeNull();
@@ -133,5 +135,80 @@ describe("market rows add up to the totals shown", () => {
     expect(detail.fundedCountryBooks!.US!.supplyBy).toEqual({ company: 100, wideEconomy: 10 });
     const world = marketRows(detail.worldMarket, { world: true })!;
     expect(rowsTotal(world.received!.rows)).toBeCloseTo(detail.worldMarket!.filled!, 2);
+  });
+
+  it("one world supply figure: the page, its strip and its chart show the traded total, not the pricing input", () => {
+    const world = worldFundedMarket(markets);
+    // The stored price row leaves out what the background economy sold (10 a turn in the US).
+    const stored = { supply: world.supply - perTurn(10), demand: world.demand };
+    const figures = worldSupplyFigures(stored, world);
+    const flows = flowsFromWorldMarket(
+      {
+        clearedUnits: stored.supply,
+        clearedUnitsPooled: stored.supply,
+        unmetDemandUnits: 0,
+        unmetDemandUnitsPooled: 0,
+        surplusUnits: 0,
+        surplusUnitsPooled: 0,
+        stockUnits: null,
+      },
+      world
+    );
+    const detail = commodityDetailPerTurn({
+      ...figures,
+      stateSupply: {},
+      stateDemand: {},
+      fundedCountryBooks: markets,
+      worldMarket: world,
+      flows,
+      history: [{ supply: world.supply, demand: world.demand }],
+      syntheticDemandSources: [],
+      demandDriver: null,
+    });
+    const shown = detail.worldMarket!;
+    // Every world supply figure on the page is the same number...
+    expect(detail.globalSupply).toBe(150);
+    expect(shown.supply).toBe(detail.globalSupply);
+    expect(detail.history[0]!.supply).toBe(detail.globalSupply);
+    expect(detail.flows!.clearedUnitsPooled + detail.flows!.surplusUnitsPooled).toBeCloseTo(
+      detail.globalSupply,
+      2
+    );
+    // ...its rows add up to it exactly, the background economy named apart...
+    const rows = marketRows(shown, { world: true })!;
+    expect(rowsTotal(rows.supply.rows)).toBeCloseTo(detail.globalSupply, 6);
+    expect(Object.fromEntries(rows.supply.rows.map((r) => [r.label, r.units]))).toEqual({
+      "Player and AI companies": 100,
+      "Background economy (countries without companies)": 40,
+      "Background economy (sellers)": 10,
+    });
+    // ...and the pricing input is kept apart, per turn like the rest.
+    expect(detail.pricingSupply).toBe(140);
+    expect(detail.globalSupply * TURNS_PER_DAY).toBeCloseTo(world.supply, 6);
+  });
+
+  it("the premium sentence says the price reads supply without background sales", () => {
+    const breakdown = buildScarcityBreakdown({
+      scarcityMult: 1.2,
+      previousScarcityMult: 1.18,
+      supply: 140,
+      demand: 150,
+      shownSupply: 150,
+      attribution: {
+        appliedPrice: 300,
+        realBasePrice: 150,
+        nominalInflation: 0,
+        scarcityMemory: 30,
+        producerInputCostPassThrough: 0,
+      },
+    })!;
+    expect(breakdown.pricingLeavesOutBackground).toBe(true);
+    expect(
+      premiumTrendSentence(
+        breakdown.pressure,
+        breakdown.maxMovePerTurn,
+        breakdown.pricingLeavesOutBackground
+      )
+    ).toMatch(/^The premium reads supply without what the background economy sold\. Demand/);
   });
 });

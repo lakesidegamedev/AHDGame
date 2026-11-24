@@ -97,6 +97,10 @@ export interface CommodityData {
   /** Of the world totals, what the background economy sold and bought; per turn. */
   backgroundEconomy?: { sold: number; bought: number };
   globalDemand: number;
+  /** What the price reads: world supply without the background economy's sales; per turn. Not world supply. */
+  pricingSupply?: number;
+  /** What the price reads for demand; per turn. */
+  pricingDemand?: number;
   exchangeSupply: number;
   exchangeDemand: number;
   priceChange: number;

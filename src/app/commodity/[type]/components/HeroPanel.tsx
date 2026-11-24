@@ -6,6 +6,7 @@ import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { formatCurrencyPrecise } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { formatUnits } from "../lib/helpers";
+import { formatWholeUnits } from "../lib/marketRows";
 import type { CommodityDetail } from "../types";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
@@ -74,8 +75,9 @@ export default function HeroPanel({
       ? cappedGoodTarget({
           basePrice: data.basePrice,
           globalPrice: data.globalPrice,
-          globalSupply: data.globalSupply,
-          globalDemand: data.globalDemand,
+          // What it takes to come off the cap is a question for the price's own input.
+          globalSupply: data.pricingSupply ?? data.globalSupply,
+          globalDemand: data.pricingDemand ?? data.globalDemand,
           priceAttribution: data.priceAttribution,
         })
       : null;
@@ -237,7 +239,7 @@ export default function HeroPanel({
             {activeCountry ? "National supply" : "Global supply"}
           </span>
           <span className="text-base font-bold tabular-nums text-success">
-            {formatUnits(marketScope.supply, data.unit)}
+            {formatWholeUnits(marketScope.supply, data.unit)}
           </span>
           <span className="text-xs text-muted">{t("supplyOfferedPerDay")}</span>
           <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
@@ -257,7 +259,7 @@ export default function HeroPanel({
             {activeCountry ? "National demand" : "Global demand"}
           </span>
           <span className="text-base font-bold tabular-nums text-error">
-            {formatUnits(marketScope.demand, data.unit)}
+            {formatWholeUnits(marketScope.demand, data.unit)}
           </span>
           <span className="text-xs text-muted">
             {marketScope.demandBasis === "funded_orders" ? "ordered per turn" : "per turn"}

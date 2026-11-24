@@ -1,3 +1,4 @@
+import { loadWorldBookTotals } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
@@ -145,6 +146,23 @@ export async function GET(request: Request, { params }: RouteParams) {
     >();
     for (const f of flows) {
       flowByCommodityTurn.set(`${f.commodity}:${f.turn}`, f);
+    }
+    // World supply is the traded market (the country books, background
+    // economy included) wherever a funded book exists, as on the commodity page.
+    const worldTotals = await loadWorldBookTotals(db, {
+      commodities,
+      fromTurn: minTurn,
+      toTurn: maxTurn,
+    });
+    for (const [key, totals] of worldTotals) {
+      const [commodity, turn] = key.split(":");
+      const flow = flowByCommodityTurn.get(key);
+      flowByCommodityTurn.set(key, {
+        commodity: commodity as CommodityFlow["commodity"],
+        turn: Number(turn),
+        stockUnits: flow?.stockUnits ?? null,
+        supplyUnits: totals.supply,
+      });
     }
 
     // Downsample to bounded chart points (same spirit as /history?full=1).

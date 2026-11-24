@@ -1,6 +1,6 @@
 "use client";
 
-import { balanceParts } from "../lib/marketRows";
+import { balanceParts, wholeUnitRows } from "../lib/marketRows";
 import { useEffect, useRef } from "react";
 import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
 import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map/commodityRegionMappings";
@@ -217,6 +217,12 @@ function CardContent({
       : undefined;
   const activePrice = data.avgPrice ?? null;
 
+  // Rows as whole units that add up exactly to the totals shown.
+  const parts = market
+    ? balanceParts({ supply: market.supply, demand: market.demand, market, world: false })
+    : null;
+  const supplyRows = parts ? wholeUnitRows(parts.supplyParts, unit) : null;
+  const demandRows = parts && trade ? wholeUnitRows(parts.demandParts, unit) : null;
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-2xl overflow-hidden">
       {/* Header */}
@@ -248,32 +254,15 @@ function CardContent({
       <div className="grid grid-cols-2 gap-2 px-3 pt-3">
         <TradeTotal
           label={trade ? "Total supply" : "Estimated local supply"}
-          value={`${formatUnits(trade?.supply ?? data.supply, unit)} per turn`}
+          value={`${supplyRows?.total ?? formatUnits(trade?.supply ?? data.supply, unit)} per turn`}
           tone="supply"
-          parts={
-            market &&
-            balanceParts({
-              supply: market.supply,
-              demand: market.demand,
-              market,
-              world: false,
-            }).supplyParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
-          }
+          parts={supplyRows?.rows}
         />
         <TradeTotal
           label={trade ? "Total demand" : "Estimated domestic demand"}
-          value={`${formatUnits(trade?.demand ?? data.demand, unit)} per turn`}
+          value={`${demandRows?.total ?? formatUnits(trade?.demand ?? data.demand, unit)} per turn`}
           tone="demand"
-          parts={
-            market && trade
-              ? balanceParts({
-                  supply: market.supply,
-                  demand: market.demand,
-                  market,
-                  world: false,
-                }).demandParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
-              : undefined
-          }
+          parts={demandRows?.rows}
         />
       </div>
 
