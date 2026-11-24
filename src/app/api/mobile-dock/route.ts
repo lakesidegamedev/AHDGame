@@ -11,7 +11,7 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Election } from "@/lib/db/types";
-import { experimentalDesktopLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import {
   applySavedOrder,
   navCustomization as parseNavCustomization,
@@ -40,7 +40,6 @@ interface DockNav {
     isModerator?: boolean;
     isJuniorDev?: boolean;
     username?: string;
-    experimentalFeatures?: boolean;
     desktopNavigationLayout?: unknown;
     navCustomization?: unknown;
   } | null;
@@ -167,9 +166,7 @@ export async function GET(request: Request) {
 
     // The saved group order applies to the grouped-cards layout only, as on the web.
     const custom = parseNavCustomization(nav.user.navCustomization);
-    const customizable =
-      experimentalDesktopLayout(nav.user.experimentalFeatures, nav.user.desktopNavigationLayout) ===
-      "cards";
+    const customizable = desktopNavigationLayout(nav.user.desktopNavigationLayout) === "cards";
     const ordered: Partial<Record<DesktopMenuKey, DesktopNavMenu>> = {};
     for (const key of MENU_KEYS) {
       const menu = menus[key];

@@ -9,6 +9,7 @@ import { producerWalletId, type ProducerWalletScope } from "./producerMarketPhas
 import { runFundedProducerTurn } from "./fundedProducerTurn";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import * as demandBuilder from "./producerTurnDemand";
+import * as backgroundTraders from "./backgroundTraders";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -238,10 +239,14 @@ describe("wider-economy funding", () => {
   async function runWith(
     wideSpend: number,
     extra: (wallet: string) => Record<string, unknown> = () => ({}),
-    seed: (memory: ReturnType<typeof createInMemoryDb>) => void = () => {}
+    seed: (memory: ReturnType<typeof createInMemoryDb>) => void = () => {},
+    traders: Awaited<ReturnType<typeof backgroundTraders.loadBackgroundTraders>>["traders"] = []
   ) {
     const f = fundedWorld();
     seed(f.memory);
+    const traderSpy = vi
+      .spyOn(backgroundTraders, "loadBackgroundTraders")
+      .mockResolvedValue({ traders, warnings: [] });
     const wallet = producerWalletId("world", {
       kind: "wideEconomy",
       countryId: "US",
@@ -302,6 +307,7 @@ describe("wider-economy funding", () => {
       await runFundedProducerTurn(f.memory as unknown as Db, input);
     } finally {
       spy.mockRestore();
+      traderSpy.mockRestore();
     }
     const moves = f.memory
       .collection("bankMoneyMoves")
@@ -309,10 +315,13 @@ describe("wider-economy funding", () => {
     const wallets = f.memory
       .collection("producerEconomyAccounts")
       .docs.filter((w) => w.kind === "wideEconomy");
+    const corrections = f.memory
+      .collection("bankMoneyMoves")
+      .docs.filter((m) => String(m.kind).includes("retry_correction"));
     const returns = f.memory
       .collection("bankMoneyMoves")
       .docs.filter((m) => m.kind === "producer_background_return");
-    return { moves, wallets, returns, wallet, memory: f.memory };
+    return { moves, wallets, returns, wallet, memory: f.memory, corrections };
   }
 
   it("funds nothing and creates no wallet when there are no orders (stage 0)", async () => {
@@ -393,5 +402,53 @@ describe("wider-economy funding", () => {
     );
     const [doc] = r.memory.collection("producerWideEconomyBaseline").docs;
     expect(doc.weight).toEqual({ US_CA: 1 });
+  });
+
+  it("funds background countries and the wider economy together, so neither replaces the other", async () => {
+    const scope: ProducerWalletScope = {
+      kind: "backgroundEconomy",
+      countryId: "FR",
+      currency: "USD",
+    };
+    const traderWallet = producerWalletId("world", scope);
+    const r = await runWith(
+      40,
+      () => ({
+        backgroundOrders: [
+          {
+            id: "bg-fr-steel",
+            accountId: traderWallet,
+            commodity: "steel",
+            book: "world",
+            units: 6,
+            maximumUnitPrice: 5,
+            maximumSpend: 30,
+            countryId: "FR",
+          },
+        ],
+      }),
+      () => {},
+      [
+        {
+          countryId: "FR",
+          macroId: new ObjectId() as never,
+          accountId: traderWallet,
+          scope,
+          currency: "USD",
+          byCommodity: {} as never,
+          fundedTrade: undefined as never,
+        },
+      ]
+    );
+    expect(r.corrections).toEqual([]);
+    const mints = r.moves.flatMap((m) =>
+      (m.legs as { kind: string; amount: number; filter?: { _id: string } }[]).filter(
+        (l) => l.kind === "credit"
+      )
+    );
+    const credited = (id: string) =>
+      mints.filter((l) => l.filter?._id === id).reduce((n, l) => n + l.amount, 0);
+    expect(credited(traderWallet)).toBeCloseTo(30 * RATE, 6);
+    expect(credited(r.wallet)).toBeCloseTo(40 * RATE, 6);
   });
 });

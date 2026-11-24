@@ -4,26 +4,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExperimentalFeaturesSection } from "./ExperimentalFeaturesSection";
 
 const mocks = vi.hoisted(() => ({
-  user: { experimentalFeatures: true, desktopNavigationLayout: "cards" },
+  user: { experimentalFeatures: true } as { experimentalFeatures: boolean },
   refetch: vi.fn(),
   showToast: vi.fn(),
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/contexts/AuthDataContext", () => ({ useAuthMe: () => mocks }));
 vi.mock("@/contexts/ToastContext", () => ({ useToast: () => mocks }));
-vi.mock("@/contexts/InterfaceContext", () => ({ useInterface: () => ({ mode: "modern" }) }));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.user = { experimentalFeatures: true, desktopNavigationLayout: "cards" };
+  mocks.user = { experimentalFeatures: true };
 });
 
-describe("experimental desktop layout choice", () => {
-  it("offers all layouts only after explicit opt-in", () => {
-    mocks.user.experimentalFeatures = false;
+describe("experimental features section", () => {
+  it("holds only the opt-in switch; navigation layouts live under Appearance", () => {
     render(<ExperimentalFeaturesSection />);
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
@@ -38,55 +36,12 @@ describe("experimental desktop layout choice", () => {
     expect(screen.getByText("experimental.toggleHintOn")).toBeTruthy();
   });
 
-  it("saves a layout to the account and refreshes navigation", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<ExperimentalFeaturesSection />);
-    // Two desktop layouts and two phone layouts.
-    expect(screen.getAllByRole("radio")).toHaveLength(4);
-    fireEvent.click(
-      screen.getByRole("radio", { name: /desktopNavigation.options.standard.title/ })
-    );
-    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/settings/experimental-features",
-      expect.objectContaining({
-        method: "PATCH",
-        body: JSON.stringify({ desktopNavigationLayout: "standard" }),
-      })
-    );
-  });
-
-  it("restores the prior choice after a failed save", async () => {
+  it("saves the opt-in and puts the switch back after a failed save", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    mocks.user.experimentalFeatures = false;
     render(<ExperimentalFeaturesSection />);
-    fireEvent.click(
-      screen.getByRole("radio", { name: /desktopNavigation.options.standard.title/ })
-    );
+    fireEvent.click(screen.getByRole("switch"));
     await waitFor(() => expect(mocks.showToast).toHaveBeenCalledOnce());
-    expect(
-      screen.getByRole<HTMLInputElement>("radio", { name: /options.cards.title/ }).checked
-    ).toBe(true);
-    expect(mocks.refetch).not.toHaveBeenCalled();
-  });
-
-  it("saves the phone layout separately from the desktop layout", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<ExperimentalFeaturesSection />);
-    expect(
-      screen.getByRole<HTMLInputElement>("radio", { name: /mobileNavigation.options.dock.title/ })
-        .checked
-    ).toBe(true);
-    fireEvent.click(screen.getByRole("radio", { name: /mobileNavigation.options.standard.title/ }));
-    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/settings/experimental-features",
-      expect.objectContaining({ body: JSON.stringify({ mobileNavigationLayout: "standard" }) })
-    );
-    expect(
-      screen.getByRole<HTMLInputElement>("radio", { name: /desktopNavigation.options.cards.title/ })
-        .checked
-    ).toBe(true);
+    expect(screen.getByText("experimental.toggleHintOff")).toBeTruthy();
   });
 });

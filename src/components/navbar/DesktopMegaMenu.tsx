@@ -340,7 +340,7 @@ export function DesktopMegaMenu({
           </button>
         ) : (
           <Link
-            href="/settings?section=experimental"
+            href="/settings?section=appearance"
             onClick={onClose}
             className="hover:text-foreground hover:underline"
           >

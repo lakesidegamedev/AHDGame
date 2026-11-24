@@ -171,6 +171,44 @@ describe("GET /api/mobile-dock", () => {
     );
   });
 
+  it("applies the saved group order for every grouped-cards player, opted in or not", async () => {
+    type Section = { id: string; links: { id: string }[] };
+    const sheetSections = (body: { sheets: Record<string, { sections: Section[] }> }) =>
+      body.sheets.nation.sections;
+    const plain = await (await GET(request())).json();
+    // Sheet sections are keyed menu:group, the same key the saved order uses.
+    const section = sheetSections(plain).find(
+      (s: Section) => s.id.startsWith("nation:") && s.links.length > 2
+    )!;
+    const ids = section.links.map((link) => link.id);
+    const reversed = [...ids].reverse();
+    const withOrder = (user: Record<string, unknown>) =>
+      Response.json({
+        ...navBody,
+        user: {
+          ...navBody.user,
+          ...user,
+          navCustomization: { pinned: [], order: { [section.id]: reversed } },
+        },
+      });
+    const linkIds = async () => {
+      const body = await (await GET(request())).json();
+      return sheetSections(body)
+        .find((s: Section) => s.id === section.id)!
+        .links.map((link: { id: string }) => link.id);
+    };
+
+    // No layout saved and experimental features off: grouped cards by default.
+    mocks.clientNav.mockResolvedValue(withOrder({ experimentalFeatures: false }));
+    expect(await linkIds()).toEqual(reversed);
+
+    // A player who picked the standard menus keeps the default order.
+    mocks.clientNav.mockResolvedValue(
+      withOrder({ experimentalFeatures: false, desktopNavigationLayout: "standard" })
+    );
+    expect(await linkIds()).toEqual(ids);
+  });
+
   it("passes a client-nav failure through, uncached", async () => {
     mocks.clientNav.mockResolvedValue(Response.json({ error: "boom" }, { status: 500 }));
     const response = await GET(request());

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { desktopNavigationLayout, experimentalDesktopLayout } from "./desktopNavigationLayout";
+import { desktopNavigationLayout } from "./desktopNavigationLayout";
 import { rankDesktopLinks } from "@/components/navbar/desktopNavModel";
 
 describe("desktop navigation preferences", () => {
-  it("defaults opted-in accounts to cards and requires explicit experimental opt-in", () => {
-    expect(experimentalDesktopLayout(true, undefined)).toBe("cards");
-    for (const enabled of [false, undefined, "true"]) {
-      expect(experimentalDesktopLayout(enabled, "standard")).toBeNull();
-    }
+  it("gives every account grouped cards until they pick a layout", () => {
+    expect(desktopNavigationLayout(undefined)).toBe("cards");
+    expect(desktopNavigationLayout(null)).toBe("cards");
+  });
+
+  it("respects a saved standard layout", () => {
+    expect(desktopNavigationLayout("standard")).toBe("standard");
   });
 
   it("preserves all explicit layout choices and safely handles old values", () => {
