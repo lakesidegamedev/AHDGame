@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
-import { formatEffectiveCouponPct } from "@/lib/utils/formatters";
+import { formatEffectiveCouponPct } from "@/lib/utils/formattersCore";
 import { KVList, KVRow, signTone, type useCorpMoney } from "../dense/DenseKit";
 import { Delta, DivergingBar, Meter, TEXT_TONE, gradeTone, toneOfSign } from "../dense/InlineViz";
 import { CompareBars } from "../ledger/CompareBars";

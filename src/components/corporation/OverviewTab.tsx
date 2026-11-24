@@ -16,7 +16,7 @@ import {
 } from "@/lib/constants/moneyTimescale";
 import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import { formatMarketingStrength } from "@/lib/utils/formatters";
+import { formatMarketingStrength } from "@/lib/utils/formattersCore";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 import { QUALITY_PILLAR_WEIGHTS } from "@/lib/market/brandQuality";
 import { CorpEconomicModelBadge } from "@/components/economy/CorpEconomicModelBadge";

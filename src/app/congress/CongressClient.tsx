@@ -214,12 +214,14 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
           {/* Hero image */}
           <div className="relative h-[175px] w-full sm:h-[220px]">
             <HeroImage
+              key={hero.image}
               src={hero.image}
               alt={hero.alt}
               fill
               className="object-cover object-center"
               sizes="(max-width: 1280px) 100vw, 1280px"
               priority
+              fetchPriority="high"
             />
             <div
               className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
