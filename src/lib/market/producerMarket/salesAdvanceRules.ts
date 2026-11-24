@@ -13,8 +13,7 @@
  * still runs only the share its own cash covers.
  *
  * A company's plants are judged one by one: a plant that pays for itself runs in full even
- * when another of the company's plants loses money, and the losing plants keep at least the
- * share the company's cash gave them before.
+ * when another of the company's plants loses money.
  *
  * Whether a run pays for itself is judged on expected input cost
  * (gameConfig.producerSalesAdvancePriceStage): last turn's clearing price, never above the bid
@@ -166,19 +165,12 @@ export interface SalesFundedPlant {
 
 /**
  * Run share of each of a company's plants and the cash it borrows against its
- * sales to fund them, from `free` cash (after old bills and idle upkeep).
- *
- * - The company's run as a whole pays for itself: every plant runs in full.
- * - Otherwise a plant that pays for itself still runs in full, financed by its
- *   own sales, and the plants that do not run on the larger of the share the
- *   company's cash covers for them alone and the share the whole company's run
- *   would have got, so no plant runs smaller than it did before plants were
- *   judged one by one.
- *
- * The advance for plants that pay for themselves covers their whole cost; the
- * settlement cuts the input line of any company whose sales did not cover what
- * it bought on it, and whatever sales leave unpaid stays an ordinary payable.
- * The advance for plants that do not pay is capped as salesAdvanceAmount caps it.
+ * sales, from `free` cash (after old bills and idle upkeep). If the company's
+ * run as a whole pays for itself, every plant runs in full. Otherwise a plant
+ * that pays runs in full on its own sales, and the losing plants run on the
+ * larger of what cash covers for them alone and the whole company's share.
+ * A paying plant's advance covers its whole cost: the settlement cuts the input
+ * line of a company whose sales fall short, and unpaid bills stay payables.
  */
 export function salesFundedPlantShares(input: {
   free: number;
