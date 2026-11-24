@@ -207,8 +207,26 @@ describe("signedOutTemplateNamespaces", () => {
     expect(signedOutTemplateNamespaces("/")).toEqual(["auth", "worldConflicts"]);
   });
 
-  it("leaves game routes on the full catalog", () => {
-    for (const path of ["/corporation/1", "/country/us/legislature", "/profile", "/actions"]) {
+  it("selects the catalog for public game routes", () => {
+    expect(signedOutTemplateNamespaces("/corporation/1")).toEqual(["corporations", "profile"]);
+    expect(signedOutTemplateNamespaces("/corporation/1/sector/example")).toEqual([
+      "corporations",
+      "profile",
+    ]);
+    expect(signedOutTemplateNamespaces("/market")).toEqual(["corporations"]);
+    expect(signedOutTemplateNamespaces("/country/us/map")).toEqual(["elections"]);
+    expect(signedOutTemplateNamespaces("/country/us/parties/1")).toEqual(["elections", "parties"]);
+    expect(signedOutTemplateNamespaces("/country/us/legislature")).toContain("legislation");
+    expect(signedOutTemplateNamespaces("/country/us/region/IL")).toContain("profile");
+  });
+
+  it("keeps the full catalog for routes outside the public rules", () => {
+    for (const path of [
+      "/profile",
+      "/actions",
+      "/marketplace",
+      "/country/us/region/IL/elections",
+    ]) {
       expect(signedOutTemplateNamespaces(path)).toBeNull();
     }
     expect(signedOutTemplateNamespaces(null)).toBeNull();
