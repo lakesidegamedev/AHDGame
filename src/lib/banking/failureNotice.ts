@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
@@ -49,7 +50,7 @@ export async function notifyBankFailure(db: Db, input: BankFailureNoticeInput): 
     );
     return res.upsertedCount === 1;
   } catch (err) {
-    console.error("[notifyBankFailure] Failed:", err);
+    Sentry.captureException(err, { tags: { operation: "notify_bank_failure" } });
     return false;
   }
 }
