@@ -161,14 +161,14 @@ describe("MarketPositionPanel NPP grouping", () => {
 
   it("shows the NPP field's combined share, not a per-corp figure", () => {
     renderPanel([npp("Atlas Mining", 5.56), npp("Prime Shipping", 5.68)]);
-    expect(screen.getByText("11.24%")).toBeTruthy();
+    expect(screen.getByText("11.2%")).toBeTruthy();
   });
 
   it("sums shares without leaking a float onto the screen", () => {
     // Per-corp percentages arrive already rounded, so the sum of rounded parts
     // can land on 16.919999999999998.
     renderPanel([npp("A", 5.56), npp("B", 5.68), npp("C", 5.68)]);
-    expect(screen.getByText("16.92%")).toBeTruthy();
+    expect(screen.getByText("16.9%")).toBeTruthy();
   });
 
   it("reveals the NPP roster on expand, and hides it again", () => {

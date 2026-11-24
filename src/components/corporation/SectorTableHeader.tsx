@@ -19,7 +19,7 @@ export const SECTOR_TABLE_GRID =
  * own column instead of a second line under profit.
  */
 export const PLANTS_SECTOR_TABLE_GRID =
-  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_120px_72px_88px_88px_88px_64px_44px]";
+  "grid-cols-[minmax(200px,1.6fr)_minmax(110px,1fr)_minmax(112px,0.9fr)_120px_100px_88px_88px_88px_56px_44px]";
 
 /** The grid template for the given world. */
 export function sectorTableGrid(plantsMode: boolean): string {

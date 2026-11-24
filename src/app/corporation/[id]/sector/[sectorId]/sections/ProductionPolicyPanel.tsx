@@ -59,7 +59,7 @@ export default function ProductionPolicyPanel({
         <div className="text-center">
           <div className="text-xs text-muted">Revenue</div>
           <div
-            className={`text-sm font-semibold ${effects.revenue.multiplier >= 1 ? "text-success" : "text-error"}`}
+            className={`text-sm font-semibold ${toneFor(effects.revenue.multiplier, "text-success", "text-error")}`}
           >
             {effects.revenue.label}
           </div>
@@ -67,7 +67,7 @@ export default function ProductionPolicyPanel({
         <div className="text-center">
           <div className="text-xs text-muted">Output (supply)</div>
           <div
-            className={`text-sm font-semibold ${effects.output.multiplier >= 1 ? "text-success" : "text-error"}`}
+            className={`text-sm font-semibold ${toneFor(effects.output.multiplier, "text-success", "text-error")}`}
           >
             {effects.output.label}
           </div>
@@ -75,7 +75,7 @@ export default function ProductionPolicyPanel({
         <div className="text-center">
           <div className="text-xs text-muted">Input (demand)</div>
           <div
-            className={`text-sm font-semibold ${effects.input.multiplier >= 1 ? "text-warning" : "text-success"}`}
+            className={`text-sm font-semibold ${toneFor(effects.input.multiplier, "text-warning", "text-success")}`}
           >
             {effects.input.label}
           </div>
@@ -124,4 +124,10 @@ export default function ProductionPolicyPanel({
       )}
     </div>
   );
+}
+
+/** An unchanged multiplier (+0%) is neither good nor bad, so it stays plain. */
+function toneFor(multiplier: number, above: string, below: string): string {
+  if (Math.abs(multiplier - 1) < 0.0005) return "text-muted";
+  return multiplier > 1 ? above : below;
 }

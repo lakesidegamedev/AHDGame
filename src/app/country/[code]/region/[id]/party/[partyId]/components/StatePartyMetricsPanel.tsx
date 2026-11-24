@@ -27,14 +27,14 @@ function getOrgEffects(organization: number): OrgEffect[] {
     {
       label: "Vote power",
       value: `${votePower}×`,
-      blurb: "General-election vote scalar",
+      blurb: "General-election vote scalar, 0.50× to 1.00×",
       tooltip:
         "Scales your candidates' general-election vote weight in this state. Formula: 0.5 + (Org ÷ 100) × 0.5, so 0 Org is 0.50× and 100 Org is 1.00×.",
     },
     {
       label: "Pres. Primary",
       value: `${primaryPts} pts`,
-      blurb: "Home-state primary scoring",
+      blurb: "Home-state primary scoring, 0 to 25 pts",
       tooltip:
         "Adds up to 25 points to presidential primary scoring when this is the candidate's home state. Formula: (Org ÷ 100) × 25.",
     },
@@ -131,10 +131,8 @@ export function StatePartyMetricsPanel({ stateParty }: StatePartyMetricsPanelPro
                   </div>
                   <div className="mt-0.5 text-[11px] leading-snug text-muted">{effect.blurb}</div>
                 </div>
-                <div
-                  className="shrink-0 text-sm font-bold tabular-nums"
-                  style={{ color: stateParty.partyColor }}
-                >
+                {/* Plain text: the party colour read as a warning when it was red. */}
+                <div className="shrink-0 text-sm font-bold tabular-nums text-foreground">
                   {effect.value}
                 </div>
               </div>

@@ -25,7 +25,7 @@
       "turnExplainer": "1 Zug = 1 echte Stunde. 48 Züge = 1 Spieljahr. Limit: {cap}.",
       "hoardWarning": "Ab {threshold} Aktionen gilt eine Hortungsstrafe von {penalty}/Zug.",
       "hoarding": "Hortung: −{penalty} pro Zug",
-      "hoardAbove": "Hortungsstrafe ab {threshold}",
+      "hoardAbove": "Hortungsstrafe ab {threshold} Aktionen",
       "campaignOffice": "Wahlkampfbüro",
       "stateInfluence": "Einfluss im Staat",
       "influenceTooltip": "Politischer Rückhalt im Heimatstaat. Gib Aktionen aus, um ihn auszubauen; er nimmt jeden Zug ab. Höherer Einfluss verbessert deine Chancen bei Staatswahlen und schaltet lokale Macht frei.",

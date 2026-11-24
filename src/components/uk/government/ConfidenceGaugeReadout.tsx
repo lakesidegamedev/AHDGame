@@ -135,7 +135,11 @@ export const ConfidenceGaugeReadout = memo(function ConfidenceGaugeReadout({
             </LineChart>
           </ResponsiveContainer>
         )}
-        <p className="mt-2 text-xs text-muted">{t("history.retention")}</p>
+        {/* The 500-change limit only matters once there is a history to limit;
+            under the empty state it repeated the same point. */}
+        {chartData.length >= 2 && (
+          <p className="mt-2 text-xs text-muted">{t("history.retention")}</p>
+        )}
         {recent.length > 0 && (
           <ol className="mt-3 space-y-1 border-t border-card-border pt-3 text-xs text-muted">
             {recent.map((point) => (

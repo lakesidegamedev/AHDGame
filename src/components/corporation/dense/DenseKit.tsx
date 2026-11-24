@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 import { resolveCorpDisplayCurrency } from "@/lib/corporations/resolveCorpDisplayCurrency";
@@ -331,7 +331,51 @@ export function StatementGroup({ children }: { children: ReactNode }) {
  * with the table instead of stretching the document.
  */
 export function TableScroll({ children }: { children: ReactNode }) {
-  return <div className="scroll-cue-x relative -mx-2 overflow-x-auto px-2">{children}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setEdges({ left: el.scrollLeft > 2, right: max - el.scrollLeft > 2 });
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+    };
+  }, []);
+  // A visible cue on whichever edge still hides columns: a shade plus an arrow,
+  // drawn over the table so row backgrounds cannot cover it.
+  const cue = (side: "left" | "right") => (
+    <span
+      aria-hidden
+      data-scroll-cue={side}
+      className={`pointer-events-none absolute inset-y-0 z-10 flex w-10 items-center ${
+        side === "right"
+          ? "right-0 justify-end bg-gradient-to-l from-card via-card/80 to-transparent"
+          : "left-0 justify-start bg-gradient-to-r from-card via-card/80 to-transparent"
+      }`}
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-card-border bg-card-elevated text-sm leading-none text-foreground shadow-card">
+        {side === "right" ? "›" : "‹"}
+      </span>
+    </span>
+  );
+  return (
+    <div className="relative -mx-2">
+      <div ref={ref} className="relative overflow-x-auto px-2">
+        {children}
+      </div>
+      {edges.left && cue("left")}
+      {edges.right && cue("right")}
+    </div>
+  );
 }
 
 export function SmallButton({

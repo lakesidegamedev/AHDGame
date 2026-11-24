@@ -221,8 +221,8 @@ function TabButton({
   let className: string;
   if (variant === "admin") {
     className = active
-      ? "border-b-2 border-error text-error font-medium"
-      : "text-error/70 hover:text-error";
+      ? "border-b-2 border-dashed border-foreground/50 text-foreground font-medium"
+      : "text-muted/80 hover:text-foreground";
   } else {
     className = active
       ? "border-b-2 border-primary text-foreground font-medium"

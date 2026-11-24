@@ -146,7 +146,7 @@ export function PartiesHeader({
                   size="sm"
                   onClick={onCreateCoalitionClick}
                   disabled={!isNationalChair || isInCoalition}
-                  className="w-full"
+                  className="w-full whitespace-nowrap"
                 >
                   Create coalition
                 </Button>

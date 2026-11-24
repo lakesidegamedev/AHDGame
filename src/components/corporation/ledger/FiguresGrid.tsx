@@ -16,6 +16,18 @@ const MD: Record<number, string> = {
   4: "md:grid-cols-4",
   5: "md:grid-cols-5",
 };
+const MD_SPAN: Record<number, string> = {
+  2: "md:col-span-2",
+  3: "md:col-span-3",
+  4: "md:col-span-4",
+};
+const LG_SPAN: Record<number, string> = {
+  2: "lg:col-span-2",
+  3: "lg:col-span-3",
+  4: "lg:col-span-4",
+  5: "lg:col-span-5",
+  6: "lg:col-span-6",
+};
 const LG: Record<number, string> = {
   4: "lg:grid-cols-4",
   5: "lg:grid-cols-5",
@@ -35,17 +47,27 @@ export function FiguresGrid({
   const cols = `grid-cols-2 ${columns.md ? (MD[columns.md] ?? "") : ""} ${
     columns.lg ? (LG[columns.lg] ?? "") : ""
   }`;
+  // A short set (a private company has fewer figures) left an empty slot that
+  // showed as a dark block. The last cell stretches across whatever is left.
+  const fill = (perRow: number | undefined): number => {
+    if (!perRow) return 0;
+    const slots = cells.reduce((n, c) => n + (c.lead ? 2 : 1), 0);
+    const rows = Math.ceil(slots / perRow);
+    // The lead cell takes one column on each of the first two rows.
+    return rows * perRow - slots;
+  };
+  const lastSpan = `${MD_SPAN[1 + fill(columns.md)] ?? ""} ${LG_SPAN[1 + fill(columns.lg)] ?? ""}`;
   return (
     <dl
       className={`m-0 grid gap-px overflow-hidden rounded-[var(--corp-rad,6px)] border border-card-border bg-card-border ${cols} ${className}`}
     >
-      {cells.map((c) => (
+      {cells.map((c, i) => (
         <div
           key={c.key}
           title={c.title}
           className={`flex min-w-0 flex-col justify-between gap-1.5 px-3.5 py-3 ${
             c.lead ? "bg-card md:row-span-2 md:justify-center" : "bg-background"
-          }`}
+          } ${i === cells.length - 1 && !c.lead ? lastSpan : ""}`}
         >
           <dt className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
             {c.label}

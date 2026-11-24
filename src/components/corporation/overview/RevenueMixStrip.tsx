@@ -1,6 +1,9 @@
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 import { sectorRevenue } from "../overviewModel";
 import { pctWidth, seriesBg, type SeriesTone } from "../ledger/seriesColours";
 import type { SectorDetail } from "../CorporationPageTypes";
+
+const US_STATE_CODE_SET: ReadonlySet<string> = new Set(US_STATES);
 
 /** Segments narrower than this share hide their label so labels never collide. */
 const LABEL_MIN_PCT = 8;
@@ -25,7 +28,9 @@ export function RevenueMixStrip({
 
   const items = rows.map((r) => ({
     key: r.sector._id,
-    label: r.sector.stateId,
+    // US states keep their familiar two-letter code; any other region uses its
+    // name, as the table below does ("Ontario", not "CA_ON").
+    label: US_STATE_CODE_SET.has(r.sector.stateId) ? r.sector.stateId : r.sector.stateName,
     name: `${r.sector.stateName} ${r.sector.sectorLabel}`,
     pct: (r.revenue / total) * 100,
     tone: tones[r.sector.sectorType] ?? "muted",

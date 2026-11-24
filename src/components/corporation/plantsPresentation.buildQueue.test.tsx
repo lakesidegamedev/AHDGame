@@ -76,8 +76,9 @@ describe("BuildQueueBadge", () => {
     );
     expect(screen.getByText(/\+2 building/)).toBeTruthy();
     expect(screen.getByText(/done turn 539/)).toBeTruthy();
-    expect(screen.getByText(/1 of 3 in/)).toBeTruthy();
-    expect(screen.getByText(/about 0\.5 a turn/)).toBeTruthy();
+    expect(screen.getByText(/1 of 3 finished/)).toBeTruthy();
+    // Half a plant a turn reads as a whole plant every other turn, never "about 0".
+    expect(screen.getByText(/1 every 2 turns/)).toBeTruthy();
   });
 
   it("shows no per-turn rate for an order that lands whole (ticket 1753)", () => {

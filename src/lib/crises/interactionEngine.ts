@@ -636,7 +636,10 @@ async function answerMultiResponderNodeInTransaction(
   const response = {
     countryId,
     characterId,
-    characterName: character?.name ?? "Unknown leader",
+    // Countries no player runs answer through a background government actor,
+    // which has no character record. The row already names the country, so
+    // it reads "Spain · Government", not "Unknown leader".
+    characterName: character?.name ?? "Government",
     nodeId: currentNode.nodeId,
     optionId,
     optionLabel: option.label,

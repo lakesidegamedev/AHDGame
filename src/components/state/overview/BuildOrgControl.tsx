@@ -71,7 +71,7 @@ export function BuildOrgControl({
   const isTie = tiedAtTop.length > 1;
 
   const standingLine = (() => {
-    if (!focusPartyAbbr) return "No party currently has organization in this state.";
+    if (!focusPartyAbbr) return "No party has organization here yet.";
     if (isLeader && isTie) {
       const others = tiedAtTop.filter((p) => p.abbr !== focusPartyAbbr).map((p) => p.abbr);
       const otherList =
@@ -83,7 +83,7 @@ export function BuildOrgControl({
       return `${focusPartyAbbr} is tied with ${otherList} at ${topOrgPct.toFixed(1)}% Organization.`;
     }
     if (isLeader) {
-      return `${focusPartyAbbr} leads the state with ${topOrgPct.toFixed(1)}% Organization.`;
+      return `${focusPartyAbbr} leads here with ${topOrgPct.toFixed(1)}% Organization.`;
     }
     return (
       `${focusPartyAbbr} ranks ${narrative.rank} of ${narrative.totalParties}, ` +
@@ -160,8 +160,8 @@ export function BuildOrgControl({
   // foothold, so we don't duplicate that check client-side.
   const buildOrgDisabled = !viewerPartyId || busy;
   const buildOrgTitle = !viewerPartyId
-    ? "Join a party to build organization in this state"
-    : "Spend Political Strength to grow your party's Organization in this state (needs a party player or official here)";
+    ? "Join a party to build organization here"
+    : "Spend Political Strength to grow your party's Organization here (needs a party player or official here)";
 
   const buttonClass =
     "rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";

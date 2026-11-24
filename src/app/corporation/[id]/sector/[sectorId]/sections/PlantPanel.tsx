@@ -24,7 +24,7 @@ import {
 } from "@/lib/constants/facilityVocabulary";
 import RunMeter from "../components/RunMeter";
 import RunReport from "../components/RunReport";
-import StateLabourPool from "../components/StateLabourPool";
+import StateLabourPool, { poolOversubscribed } from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct, fmtTeuEstimate, buildOrderMoney, withAnchorAmount } from "../lib/plants";
@@ -420,7 +420,7 @@ export default function PlantPanel({
           value={fmtUnits(plantsBeingBuilt)}
           sub={
             plants.constructionInProgressAnchor > 0
-              ? `${moneyWithAnchor(plants.constructionInProgressAnchor)} paid for what is still to arrive`
+              ? `${moneyWithAnchor(plants.constructionInProgressAnchor)}, for what is still to arrive`
               : "nothing on order"
           }
           help={`${vocab.plural.charAt(0).toUpperCase()}${vocab.plural.slice(1)} you have paid for that are still under construction. They arrive a few at a time and are finished on the turn shown in the build list.`}
@@ -430,7 +430,13 @@ export default function PlantPanel({
       {staffingShortfall > 0.001 &&
         (stateLabourMarket ? (
           <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body-sm text-foreground">
-            <p className="mb-2 font-semibold">Local worker shortage is limiting this run.</p>
+            {/* Only call it a shortage when the state's pool really is short; with
+                enough workers about, the gap is staffing still catching up. */}
+            <p className="mb-2 font-semibold">
+              {poolOversubscribed(stateLabourMarket)
+                ? "Local worker shortage is limiting this run."
+                : "Staffing is still catching up with your jobs, which limits this run."}
+            </p>
             <StateLabourPool pool={stateLabourMarket} stateName={stateName ?? "this state"} />
           </div>
         ) : (
@@ -479,9 +485,13 @@ export default function PlantPanel({
                         {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
-                            ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
-                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · ${moneyWithAnchor(orderMoney.paid)} paid`
-                          : `arrives next turn · ${moneyWithAnchor(orderMoney.paid)} paid`}
+                            ? `${
+                                sitesPerTurn < 1
+                                  ? `1 ${vocab.singular} arriving every ${Math.max(2, Math.round(1 / sitesPerTurn))} turns`
+                                  : `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn`
+                              } · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · paid ${moneyWithAnchor(orderMoney.paid)}`
+                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · only finished ${vocab.plural} run · paid ${moneyWithAnchor(orderMoney.paid)}`
+                          : `arrives next turn · paid ${moneyWithAnchor(orderMoney.paid)}`}
                       </p>
                     </div>
                     {isCeo && o.turnsRemaining > 0 && (
