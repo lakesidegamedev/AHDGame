@@ -99,9 +99,9 @@ export const FUNDED_BUYER_LABELS: Record<FundedBuyerKind, { name: string; descri
       "What economy-only countries, which trade from their national economy instead of company plants, ordered from this market last turn. Ordered units the market could not supply were not received.",
   },
   wideEconomy: {
-    name: "Wider economy",
+    name: "Background economy (buyers)",
     description:
-      "The rest of each state's economy buying spare output of goods that had more supply than demand, never above the normal price. Its size was set when it started and grows with real economic growth. It only counts what it bought.",
+      "The rest of each state's economy, buying output that no other buyer took, never above the normal price. Its size is about a tenth of normal demand and grows with real economic growth. It only counts what it bought.",
   },
   other: {
     name: "Other buyers",

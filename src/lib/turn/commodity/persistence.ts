@@ -1,3 +1,9 @@
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import {
+  producerMarketCompanyBooksCollection,
+  type ProducerMarketCompanyBooksDoc,
+} from "@/lib/db/repositories/producerMarketCompanyBooks";
+import type { CommodityOutputBasis } from "@/lib/corporations/corpCommoditySnapshot";
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -65,7 +71,8 @@ export function serializeCorporationCommodityOutput(
 export function buildCorporationCommodityOutputOps(
   corporationIds: readonly ObjectId[],
   supplyByCorporation: ReadonlyMap<string, ReadonlyMap<CommodityType, number>>,
-  turn: number
+  turn: number,
+  basis: CommodityOutputBasis = "plants-ledger-v1"
 ) {
   return corporationIds.map((corporationId) => ({
     updateMany: {
@@ -75,7 +82,7 @@ export function buildCorporationCommodityOutputOps(
           commodityOutput: serializeCorporationCommodityOutput(
             supplyByCorporation.get(corporationId.toString())
           ),
-          commodityOutputBasis: "plants-ledger-v1" as const,
+          commodityOutputBasis: basis,
         },
       },
     },
@@ -243,8 +250,18 @@ export async function persistTurnOutputs(
   // mixes, embargoes, policy, and diversions. Overwrite every current-turn row,
   // including non-producers with {}, so retries cannot retain a stale snapshot.
   if (corporationIds.length > 0) {
+    // On a funded turn the settled market says what each company offered, per
+    // turn, the same units the market screens show (perTurnUnits).
+    const settled = await settledCompanyOutput(db, turn);
     await corporationHistoryCollection(db).bulkWrite(
-      buildCorporationCommodityOutputOps(corporationIds, supplyByCorporation, turn),
+      settled
+        ? buildCorporationCommodityOutputOps(
+            corporationIds,
+            settled,
+            turn,
+            "market-receipts-per-turn-v1"
+          )
+        : buildCorporationCommodityOutputOps(corporationIds, supplyByCorporation, turn),
       {
         ordered: false,
       }
@@ -252,4 +269,31 @@ export async function persistTurnOutputs(
   }
 
   return { tradeClearedVolume: tradeSnapshot.world.clearedVolume };
+}
+
+/** What each company offered on this turn's settled market, per turn, or null off a funded turn. */
+async function settledCompanyOutput(
+  db: Db,
+  turn: number
+): Promise<Map<string, Map<CommodityType, number>> | null> {
+  const epoch = (
+    await gameStateCollection(db).findOne({ _id: "current" }, { projection: { worldEpochId: 1 } })
+  )?.worldEpochId;
+  if (!epoch) return null;
+  const docs = await producerMarketCompanyBooksCollection<ProducerMarketCompanyBooksDoc>(db)
+    .find({ worldEpoch: epoch, turn })
+    .toArray();
+  if (docs.length === 0) return null;
+  const out = new Map<string, Map<CommodityType, number>>();
+  for (const doc of docs)
+    for (const row of doc.rows) {
+      if (!(row.offered > 0)) continue;
+      const byCommodity = out.get(row.accountId) ?? new Map<CommodityType, number>();
+      byCommodity.set(
+        doc.commodity as CommodityType,
+        (byCommodity.get(doc.commodity as CommodityType) ?? 0) + row.offered
+      );
+      out.set(row.accountId, byCommodity);
+    }
+  return out;
 }

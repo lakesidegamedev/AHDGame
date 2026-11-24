@@ -28,6 +28,8 @@ interface RegionalBreakdownProps {
   /** National totals; countries with no regions on the map are listed from these. */
   nationalSupply?: Record<string, number>;
   nationalDemand?: Record<string, number>;
+  /** Each country's market total (its funded book), so the regions add up to it. */
+  countryTotals?: Record<string, { supply: number; demand: number }>;
   nationalPrices?: Record<string, number>;
 }
 
@@ -43,6 +45,7 @@ export default function RegionalBreakdown({
   nationalSupply = {},
   nationalDemand = {},
   nationalPrices = {},
+  countryTotals,
 }: RegionalBreakdownProps) {
   const resolveCountryName = useCountryDisplayName();
   const [isOpen, setIsOpen] = useState(true);
@@ -224,6 +227,22 @@ export default function RegionalBreakdown({
                       </tr>
                     );
                   })}
+                  {regionFooterRows({
+                    ids,
+                    visible,
+                    stateSupply,
+                    stateDemand,
+                    total: countryTotals?.[country],
+                  }).map((row) => (
+                    <tr
+                      key={row.key}
+                      className={`border-b border-card-border/30 ${row.key === "total" ? "font-semibold" : "text-muted"}`}
+                    >
+                      <td className="py-1.5 pr-3">{row.label}</td>
+                      <td />
+                      {balanceCells(row.supply, row.demand)}
+                    </tr>
+                  ))}
                   {(hidden > 0 || isExpanded) && ids.length > REGION_PREVIEW_ROWS && (
                     <tr>
                       <td colSpan={6} className="pt-1.5">
@@ -297,4 +316,45 @@ export default function RegionalBreakdown({
       )}
     </div>
   );
+}
+
+/**
+ * Rows under a country's listed regions so the column adds up to the
+ * country's market total: regions not shown yet, buyers and sellers placed
+ * in no region (national buyers, the background economy on goods traded
+ * country-wide), then the total. Without a total only the hidden regions row.
+ */
+export function regionFooterRows(input: {
+  ids: readonly string[];
+  visible: readonly string[];
+  stateSupply: Readonly<Record<string, number>>;
+  stateDemand: Readonly<Record<string, number>>;
+  total?: { supply: number; demand: number };
+}): { key: string; label: string; supply: number; demand: number }[] {
+  const shown = new Set(input.visible);
+  const hidden = input.ids.filter((id) => !shown.has(id));
+  const sumOf = (ids: readonly string[], map: Readonly<Record<string, number>>) =>
+    ids.reduce((n, id) => n + (map[id] ?? 0), 0);
+  const rows: { key: string; label: string; supply: number; demand: number }[] = [];
+  if (hidden.length > 0)
+    rows.push({
+      key: "hidden",
+      label: `${hidden.length} more regions`,
+      supply: sumOf(hidden, input.stateSupply),
+      demand: sumOf(hidden, input.stateDemand),
+    });
+  if (!input.total) return rows;
+  const regionSupply = sumOf(input.ids, input.stateSupply);
+  const regionDemand = sumOf(input.ids, input.stateDemand);
+  const wideSupply = input.total.supply - regionSupply;
+  const wideDemand = input.total.demand - regionDemand;
+  if (Math.abs(wideSupply) > 0.005 || Math.abs(wideDemand) > 0.005)
+    rows.push({
+      key: "countryWide",
+      label: "Country-wide (no region, incl. background economy)",
+      supply: wideSupply,
+      demand: wideDemand,
+    });
+  rows.push({ key: "total", label: "Country total", ...input.total });
+  return rows;
 }

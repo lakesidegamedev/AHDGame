@@ -1,5 +1,6 @@
 "use client";
 
+import { balanceParts } from "../lib/marketRows";
 import { useEffect, useRef } from "react";
 import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
 import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map/commodityRegionMappings";
@@ -247,25 +248,30 @@ function CardContent({
       <div className="grid grid-cols-2 gap-2 px-3 pt-3">
         <TradeTotal
           label={trade ? "Total supply" : "Estimated local supply"}
-          value={`${formatUnits(trade?.supply ?? data.supply, unit)}/day`}
+          value={`${formatUnits(trade?.supply ?? data.supply, unit)} per turn`}
           tone="supply"
           parts={
-            market && [
-              { label: "Local offers", value: formatUnits(market.supply, unit) },
-              { label: "Imports", value: formatUnits(market.imports, unit) },
-            ]
+            market &&
+            balanceParts({
+              supply: market.supply,
+              demand: market.demand,
+              market,
+              world: false,
+            }).supplyParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
           }
         />
         <TradeTotal
           label={trade ? "Total demand" : "Estimated domestic demand"}
-          value={`${formatUnits(trade?.demand ?? data.demand, unit)}/day`}
+          value={`${formatUnits(trade?.demand ?? data.demand, unit)} per turn`}
           tone="demand"
           parts={
             market && trade
-              ? [
-                  { label: "Local orders", value: formatUnits(trade.domesticOrders, unit) },
-                  { label: "Exports", value: formatUnits(market.exports, unit) },
-                ]
+              ? balanceParts({
+                  supply: market.supply,
+                  demand: market.demand,
+                  market,
+                  world: false,
+                }).demandParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
               : undefined
           }
         />
@@ -281,7 +287,7 @@ function CardContent({
         )}
         <StatRow
           label="Local producer sales"
-          value={sold !== null ? `${formatUnits(sold, unit)}/day` : "Unavailable"}
+          value={sold !== null ? `${formatUnits(sold, unit)} per turn` : "Unavailable"}
           color={sold !== null ? "text-success" : "text-muted"}
           sub={percentSold}
         />
