@@ -146,6 +146,9 @@ describe("processRegionalBudgets", () => {
 
   beforeEach(() => {
     db = createMockDb();
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [{ currencyCode: "GBP", rate: 1 }],
+    });
   });
 
   const cursor = (rows: unknown[]) => ({

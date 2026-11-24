@@ -328,7 +328,7 @@ describe("120-turn upkeep-heavy loop (the #2043 shape)", () => {
         corporation: corp,
         sectors: [sector],
         corpOverheadAnchor: 0,
-        fxByCurrency: new Map(),
+        fxByCurrency: new Map([["SUR", 1]]),
       });
       expect(estimated).toBeGreaterThan(0);
       expect(estimated).toBeLessThan(LOSS);

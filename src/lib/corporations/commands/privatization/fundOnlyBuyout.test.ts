@@ -189,7 +189,7 @@ describe("executeFundOnlyBuyout", () => {
     /**
      * Mock db with separate spies per collection: `indexFunds` serves the fund
      * load (find) and the top-up credit (updateOne); `exchangeRates` serves the
-     * FX load (empty ⇒ USD identity); `corporations` serves the post-buyback
+     * FX load (explicit USD quote); `corporations` serves the post-buyback
      * re-read (findOne) plus the top-up debit and the finalize (updateOne).
      */
     function makeBankDb({ afterCorp }: { afterCorp: unknown }) {
@@ -206,7 +206,11 @@ describe("executeFundOnlyBuyout", () => {
             };
           }
           if (name === "exchangeRates") {
-            return { find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) };
+            return {
+              find: vi.fn().mockReturnValue({
+                toArray: vi.fn().mockResolvedValue([{ currencyCode: "USD", rate: 1 }]),
+              }),
+            };
           }
           return {
             findOne: vi.fn().mockResolvedValue(afterCorp),

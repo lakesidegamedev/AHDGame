@@ -103,6 +103,9 @@ describe("processDERegionalBudgets", () => {
 
   beforeEach(() => {
     db = createMockDb();
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [{ currencyCode: "EUR", rate: 1 }],
+    });
   });
 
   it("includes active subsidy costs in Land budget persistence", async () => {

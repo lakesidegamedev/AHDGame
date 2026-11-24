@@ -240,6 +240,7 @@ describe("GET /api/character/portfolio", () => {
     const allRecords = Array.from({ length: 600 }, (_, i) => ({
       turn: i + 1,
       totalValue: 1000 + i,
+      netValue: 1000 + i,
     }));
     db.collectionMocks.portfolioHistory.find.mockReturnValue({
       sort: (sortArgs: { turn: 1 | -1 }) => {

@@ -21,7 +21,11 @@
 
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
+import {
+  COUNTRY_CURRENCY_MAP,
+  FOREX_ACTIVE_CURRENCIES,
+  eraRateForCurrency,
+} from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { ExchangeRate } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -406,7 +410,10 @@ export function withAuthoredEraRates(
   rates: Map<CurrencyCode, number>,
   preset: string | undefined
 ): Map<CurrencyCode, number> {
-  for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
+  for (const code of new Set([
+    ...Object.values(COUNTRY_CURRENCY_MAP),
+    ...FOREX_ACTIVE_CURRENCIES,
+  ])) {
     if (rates.has(code)) continue;
     const era = eraRateForCurrency(code, preset);
     if (era !== undefined) rates.set(code, era);
