@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { createAsciiReveal } from "ascii-reveal/core";
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 
 /**
@@ -41,6 +40,77 @@ export function readyToReveal(state: {
   if (textSince === null) return false;
   if (now - lastMutationAt < QUIET_MS) return false;
   return !stillLoading || now - textSince >= SKELETON_GRACE_MS;
+}
+
+function hasReadableText(host: HTMLElement): boolean {
+  return (host.textContent ?? "").trim().length >= MIN_TEXT_LENGTH;
+}
+
+function animatePage(
+  host: HTMLDivElement,
+  startedAt: number,
+  createAsciiReveal: typeof import("ascii-reveal/core").createAsciiReveal
+) {
+  const controller = createAsciiReveal(host, {
+    preset: "decode",
+    duration: "fast",
+    speed: 1.5,
+    lazy: true,
+    fallback: false,
+  });
+  controller.shimmer(true);
+
+  let lastMutationAt = performance.now();
+  let textSince: number | null = null;
+  let finished = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      const target = record.target instanceof Element ? record.target : record.target.parentElement;
+      if (target?.closest(".ar-overlay")) continue;
+      lastMutationAt = performance.now();
+      return;
+    }
+  });
+  observer.observe(host, { childList: true, subtree: true, characterData: true });
+
+  const finish = () => {
+    finished = true;
+    observer.disconnect();
+    controller.shimmer(false);
+    // Lift the cover after hiding the content so it can decode without a flash.
+    void controller.hide({ instant: true });
+    host.removeAttribute(REVEAL_WAITING_ATTR);
+    void controller.reveal();
+  };
+
+  const poll = () => {
+    if (finished) return;
+    const now = performance.now();
+    if (textSince === null && hasReadableText(host)) textSince = now;
+    if (
+      readyToReveal({
+        now,
+        startedAt,
+        lastMutationAt,
+        textSince,
+        stillLoading: host.querySelector(".animate-pulse") !== null,
+      })
+    ) {
+      finish();
+    } else {
+      timer = setTimeout(poll, POLL_INTERVAL_MS);
+    }
+  };
+  poll();
+
+  return () => {
+    finished = true;
+    clearTimeout(timer);
+    observer.disconnect();
+    controller.destroy();
+  };
 }
 
 /**
@@ -81,77 +151,36 @@ export function ExperimentalPageReveal({
     const host = hostRef.current;
     if (!host) return;
 
-    const textLength = () => (host.textContent ?? "").trim().length;
-    const isLoading = () => host.querySelector(".animate-pulse") !== null;
-
     // Server HTML with real text is already on screen. Hiding it to wait on a
     // late panel's skeleton blanks a readable page and pushes its largest paint
     // back by the whole wait, so only a pure route skeleton is covered.
-    if (firstMount && textLength() >= MIN_TEXT_LENGTH) return;
+    if (firstMount && hasReadableText(host)) return;
 
-    const controller = createAsciiReveal(host, {
-      preset: "decode",
-      duration: "fast",
-      // The page has already waited to settle, so the decode itself stays short.
-      speed: 1.5,
-      lazy: true,
-      // On a slow frame the watchdog would end the decode instantly, which
-      // read as "nothing happened".
-      fallback: false,
-    });
     host.setAttribute(REVEAL_WAITING_ATTR, "");
-    controller.shimmer(true);
-
     const startedAt = performance.now();
-    let lastMutationAt = startedAt;
-    let textSince: number | null = null;
-    let finished = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const observer = new MutationObserver((records) => {
-      for (const record of records) {
-        const target =
-          record.target instanceof Element ? record.target : record.target.parentElement;
-        if (target?.closest(".ar-overlay")) continue;
-        lastMutationAt = performance.now();
-        return;
-      }
-    });
-    observer.observe(host, { childList: true, subtree: true, characterData: true });
-
-    const finish = () => {
-      finished = true;
-      observer.disconnect();
-      controller.shimmer(false);
-      // Hide synchronously, then lift the cover, in one task: no frame shows
-      // the plain page between the shimmer and the decode.
-      void controller.hide({ instant: true });
+    let cancelled = false;
+    let stopAnimation: (() => void) | undefined;
+    const uncover = () => {
+      cancelled = true;
       host.removeAttribute(REVEAL_WAITING_ATTR);
-      void controller.reveal();
     };
+    const loadDeadline = setTimeout(uncover, MAX_WAIT_MS);
 
-    const poll = () => {
-      if (finished) return;
-      const now = performance.now();
-      if (textSince === null && textLength() >= MIN_TEXT_LENGTH) textSince = now;
-      const ready = readyToReveal({
-        now,
-        startedAt,
-        lastMutationAt,
-        textSince,
-        stillLoading: isLoading(),
+    void import("ascii-reveal/core")
+      .then(({ createAsciiReveal }) => {
+        if (cancelled) return;
+        clearTimeout(loadDeadline);
+        stopAnimation = animatePage(host, startedAt, createAsciiReveal);
+      })
+      .catch(() => {
+        clearTimeout(loadDeadline);
+        uncover();
       });
-      if (ready) finish();
-      else timer = setTimeout(poll, POLL_INTERVAL_MS);
-    };
-    poll();
 
     return () => {
-      finished = true;
-      clearTimeout(timer);
-      observer.disconnect();
-      controller.destroy();
-      host.removeAttribute(REVEAL_WAITING_ATTR);
+      clearTimeout(loadDeadline);
+      stopAnimation?.();
+      uncover();
     };
   }, [enabled, skip, pathname]);
 
