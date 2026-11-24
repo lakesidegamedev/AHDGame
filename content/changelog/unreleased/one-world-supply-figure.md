@@ -19,7 +19,8 @@ supply and demand: what was traded on the market, per turn on the screens.
 
 - **Rows that add up.** Supply is split into player and AI companies, the
   background economy (countries without companies) and the background economy
-  (sellers), and each set of rows adds up exactly to its total.
+  (sellers). The supply and demand panel, the country card and the header show
+  whole numbers, rounded so each set of rows adds up exactly to its total.
 - **World totals strip and chart.** "Could sell", "orders above supply" and the
   supply line on the chart use the same world supply.
 - **Your market share.** A company's share of world supply uses the same total.
