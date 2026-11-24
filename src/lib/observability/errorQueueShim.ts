@@ -1,5 +1,5 @@
 /**
- * Tiny stand-in for the Sentry browser SDK on anonymous public pages. It keeps
+ * Tiny stand-in for the Sentry browser SDK before it loads. It keeps
  * the first few uncaught errors and unhandled rejections so they can be replayed
  * into the SDK once that loads, and tells the caller to load it right away when
  * one happens. No SDK code lives here, so it stays out of the critical path.
