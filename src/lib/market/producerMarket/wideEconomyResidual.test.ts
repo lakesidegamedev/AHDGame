@@ -254,6 +254,165 @@ describe("a plant short of an input", () => {
   });
 });
 
+describe("background countries' imports", () => {
+  // Steel: 2 real units, a US buyer wanting 10 and a French import buyer
+  // wanting 10, both bidding 12. The US seller has 12 units at 10.5.
+  const FR = JSON.stringify(["world", "backgroundEconomy", "FR", null, "EUR"]);
+  const runExport = (sellers?: ProducerOffer[], exportTo: string[] = [FR]) =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        { id: "scarce-corp", cash: 0 },
+        { id: "buyer", cash: 1000 },
+        { id: FR, cash: 1000 },
+        { id: WIDE, cash: 0 },
+        { id: "households", cash: 0 },
+        { id: "services", cash: 0 },
+      ],
+      carryLossByCommodity: { steel: 0 },
+      producers: [stockOnly("scarce", "steel", 2, 10)],
+      externalOrders: [
+        realOrder("steel", 10, 12),
+        { ...realOrder("steel", 10, 12), id: "fr-steel", accountId: FR, countryId: "FR" },
+      ],
+      ...(sellers ? { residualOffers: sellers, residualExportBuyers: exportTo } : {}),
+    });
+  const got = (r: ReturnType<typeof runExport>, account: string) =>
+    r.orderOutcomes!.find((o) => o.accountId === account)!.deliveredUnits;
+
+  it("fills an import order after home buyers, and after real sellers", () => {
+    const off = runExport();
+    const on = runExport([wideSeller("steel", 12, 10.5)]);
+    expect(plantSold(on as never, "scarce")).toBeCloseTo(plantSold(off as never, "scarce"), 9);
+    expect(cashOf(on as never, "scarce-corp")).toBeCloseTo(cashOf(off as never, "scarce-corp"), 9);
+    // The US buyer is topped up to its 10 first; France gets the 4 left.
+    expect(got(on, "buyer")).toBeCloseTo(10, 9);
+    expect(got(on, FR) - got(off, FR)).toBeCloseTo(4, 9);
+    expect(cashOf(on as never, WIDE)).toBeCloseTo(12 * 10.5, 9);
+    const total = (r: ReturnType<typeof runExport>) => r.accounts.reduce((n, a) => n + a.cash, 0);
+    expect(total(on)).toBeCloseTo(total(off), 9);
+  });
+
+  it("serves no import order that is not named as an export buyer", () => {
+    const on = runExport([wideSeller("steel", 12, 10.5)], []);
+    expect(got(on, FR)).toBeCloseTo(got(runExport(), FR), 9);
+  });
+});
+
+describe("a short lane's extra seller units", () => {
+  const extraOf = (o: ProducerOffer, units: number): ProducerOffer => ({
+    ...o,
+    id: JSON.stringify([...JSON.parse(o.id), "boost"]),
+    units,
+  });
+
+  it("serve final buyers but never a plant's inputs, so plants plan as before", () => {
+    // The bank's advertising seller has 1 base unit; 100 extra units sit beside it.
+    const base = wideSeller("advertising", 1, 10.5);
+    const runWith = (boost: ProducerOffer[]) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts: [
+          { id: "bank-corp", cash: 1000 },
+          { id: "media-corp", cash: 0 },
+          { id: "buyer", cash: 10_000 },
+          { id: WIDE, cash: 0 },
+          { id: "households", cash: 0 },
+          { id: "services", cash: 0 },
+        ],
+        carryLossByCommodity: { advertising: 0, financial_services: 0 },
+        producers: [
+          stockOnly("media", "advertising", 4, 10),
+          {
+            id: "bank",
+            accountId: "bank-corp",
+            capacityUnits: 10,
+            activeFraction: 1,
+            outputMultiplier: 1,
+            labourCost: 0,
+            otherOperatingCost: 0,
+            labourRecipientAccountId: "households",
+            operatingRecipientAccountId: "services",
+            inputs: [
+              { commodity: "advertising", unitsPerOutput: 1, book: "world", maximumUnitPrice: 12 },
+            ],
+            outputs: [
+              {
+                commodity: "financial_services",
+                unitsPerOutput: 1,
+                book: "world",
+                referenceUnitPrice: 30,
+                policy: { kind: "manual", unitPrice: 30 },
+                storable: false,
+              },
+            ],
+            inputStock: [],
+            outputStock: [],
+          },
+        ],
+        externalOrders: [
+          realOrder("financial_services", 100, 40),
+          realOrder("advertising", 20, 12),
+        ],
+        countryOfProducer: () => "US",
+        residualOffers: [base],
+        ...(boost.length > 0 ? { residualBoostOffers: boost } : {}),
+      });
+    const off = runWith([]);
+    const on = runWith([extraOf(base, 100)]);
+    const bank = (r: ReturnType<typeof runWith>) => r.producers.find((p) => p.id === "bank")!;
+    expect(bank(on).producedUnits).toBeCloseTo(bank(off).producedUnits, 9);
+    expect(plantSold(on as never, "media")).toBeCloseTo(plantSold(off as never, "media"), 9);
+    const ads = (r: ReturnType<typeof runWith>) =>
+      r.orderOutcomes!.find((o) => o.accountId === "buyer" && o.commodity === "advertising")!
+        .deliveredUnits;
+    expect(ads(on)).toBeGreaterThan(ads(off));
+    const total = (r: ReturnType<typeof runWith>) => r.accounts.reduce((n, a) => n + a.cash, 0);
+    expect(total(on)).toBeCloseTo(total(off), 9);
+  });
+});
+
+describe("same-turn spillover", () => {
+  // Households want steel (2 real units, sold out) and food (plenty of real
+  // stock). Spillover moves their stranded steel budget onto food.
+  const runSpill = (sellers?: ProducerOffer[]) =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        { id: "scarce-corp", cash: 0 },
+        { id: "plenty-corp", cash: 0 },
+        { id: "households", cash: 1000 },
+        { id: WIDE, cash: 0 },
+        { id: "services", cash: 0 },
+      ],
+      carryLossByCommodity: { steel: 0, food: 0 },
+      producers: [stockOnly("scarce", "steel", 2, 10), stockOnly("plenty", "food", 1000, 5)],
+      households: [
+        {
+          accountId: "households",
+          countryId: "US",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 1 },
+            { commodity: "food", book: "world", maximumUnitPrice: 6, weight: 1 },
+          ],
+        },
+      ],
+      spilloverShare: 0.7,
+      ...(sellers ? { residualOffers: sellers } : {}),
+    });
+
+  it("still moves stranded spend to real stock first; the seller only gets what is left", () => {
+    const off = runSpill();
+    const on = runSpill([wideSeller("steel", 500, 10.5)]);
+    expect(plantSold(on as never, "plenty")).toBeCloseTo(plantSold(off as never, "plenty"), 9);
+    expect(cashOf(on as never, "plenty-corp")).toBeCloseTo(cashOf(off as never, "plenty-corp"), 9);
+    expect(plantSold(on as never, "scarce")).toBeCloseTo(plantSold(off as never, "scarce"), 9);
+    // Whatever the households still held went to the seller.
+    expect(cashOf(on as never, WIDE)).toBeCloseTo(cashOf(off as never, "households"), 6);
+  });
+});
+
 describe("withWideEconomyFallback", () => {
   const seller = wideEconomyFallbackOffers([wideSeller("steel", 100, 10.5)]);
 

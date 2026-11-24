@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { laneKeyOf } from "./laneKey";
 import {
   WIDE_ECONOMY_DEMAND_SHARE,
+  WIDE_ECONOMY_MAX_SHARE,
+  wideEconomyLaneShortage,
+  wideEconomyShortageBoost,
+  wideEconomyBoostOffers,
   WIDE_ECONOMY_SELLER_MARKUP,
   WIDE_ECONOMY_SUPPLY_HEADROOM,
   wideEconomyBaseline,
@@ -197,5 +202,79 @@ describe("splitting between countries", () => {
       )
     ).toEqual({ JP_TK: 0.75, US_CA: 0.25 });
     expect(wideEconomyWeights({ US_CA: 100 }, { US_CA: "US" }, () => null)).toEqual({});
+  });
+});
+
+describe("short-lane boost", () => {
+  const turn = (u: number) => ({ "advertising|world": u, "steel|world": 0.05 });
+
+  it("grows a lane short in every recent turn toward its unmet demand, leaving a balanced lane alone", () => {
+    const boost = wideEconomyShortageBoost([turn(0.32), turn(0.3), turn(0.35)]);
+    // Smallest recent shortage 30%, less the 10% target: a 20% seller, twice the base.
+    expect(boost.get("advertising|world")).toBeCloseTo(2, 9);
+    expect(boost.has("steel|world")).toBe(false);
+  });
+
+  it("never goes beyond the cap", () => {
+    expect(
+      wideEconomyShortageBoost([turn(0.9), turn(0.9), turn(0.9)]).get("advertising|world")
+    ).toBeCloseTo(WIDE_ECONOMY_MAX_SHARE / WIDE_ECONOMY_DEMAND_SHARE, 9);
+  });
+
+  it("needs every recent turn short, and shrinks back as real supply grows", () => {
+    expect(wideEconomyShortageBoost([turn(0.3), turn(0.1), turn(0.3)]).size).toBe(0);
+    expect(wideEconomyShortageBoost([turn(0.3), turn(0.3)]).size).toBe(0);
+    // Real supply grew: the smallest shortage is now 18%, so the seller is back near base.
+    expect(wideEconomyShortageBoost([turn(0.18), turn(0.25), turn(0.3)]).size).toBe(0);
+  });
+
+  it("adds the extra units as separate offers on the boosted lane only, never to the buyer", () => {
+    const base = wideEconomyOffers(lineInput(atBaseline));
+    const extra = wideEconomyBoostOffers(base, new Map([["steel|world", 3]]), laneKeyOf);
+    expect(extra.map((o) => o.commodity)).toEqual(["steel", "steel"]);
+    const us = extra.find((o) => o.countryId === "US")!;
+    expect(us.units).toBeCloseTo(80, 9);
+    expect(us.unitPrice).toBeCloseTo(
+      base.find((o) => o.commodity === "steel" && o.countryId === "US")!.unitPrice,
+      9
+    );
+    expect(JSON.parse(us.id).at(-1)).toBe("boost");
+    expect(
+      wideEconomyOrders(lineInput(atBaseline)).find(
+        (o) => o.commodity === "steel" && o.countryId === "US"
+      )!.units
+    ).toBeCloseTo(40 * H, 9);
+  });
+});
+
+describe("real lane shortage", () => {
+  it("counts what the wider economy filled as unmet, and leaves its own buyer out", () => {
+    const shortage = wideEconomyLaneShortage({
+      outcomes: [
+        {
+          accountId: "bank",
+          commodity: "advertising",
+          book: "world",
+          requestedUnits: 100,
+          deliveredUnits: 90,
+        },
+        {
+          accountId: "wide:US",
+          commodity: "advertising",
+          book: "world",
+          requestedUnits: 50,
+          deliveredUnits: 50,
+        },
+      ],
+      orders: [{ id: "o", commodity: "advertising", book: "world" }],
+      fills: [
+        { orderId: "o", units: 20, spillBook: "wide:world" },
+        { orderId: "o", units: 70 },
+      ],
+      isWideAccount: (id) => id.startsWith("wide:"),
+      laneKey: laneKeyOf,
+    });
+    // 100 asked, 90 received, 20 of it from the wider economy: real unmet 30%.
+    expect(shortage["advertising|world"]).toBeCloseTo(0.3, 9);
   });
 });

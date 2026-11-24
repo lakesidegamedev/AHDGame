@@ -1,3 +1,4 @@
+import { wideEconomyLaneShortage } from "@/lib/market/producerMarket/wideEconomyRules";
 import type { FundedProducerTurnResult } from "@/lib/turn/corporation/fundedProducerTurn";
 import { nextPostureAnchors } from "@/lib/market/producerMarket/postureAnchorRules";
 import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
@@ -105,6 +106,11 @@ export async function settleFundedProducerTurn(
         ? {
             residualOrders: context.demand.wideEconomyOrders ?? [],
             residualOffers: context.demand.wideEconomyOffers ?? [],
+            // Background countries' imports may fall back on it too, after home buyers.
+            residualExportBuyers: context.traders.map((t) => t.accountId),
+            ...((context.demand.wideEconomyBoostOffers?.length ?? 0) > 0
+              ? { residualBoostOffers: context.demand.wideEconomyBoostOffers }
+              : {}),
           }
         : {}),
       ...(context.demand.backgroundOffers.length > 0
@@ -553,6 +559,16 @@ export async function publishFundedProducerTurn(
       } as never,
       { upsert: true }
     );
+  // Any wider-economy wallet means it ran this turn (also on a resumed turn).
+  const wideShortage = [...context.scopeById.values()].some((s) => s.kind === "wideEconomy")
+    ? wideEconomyLaneShortage({
+        outcomes: settled.result.orderOutcomes ?? [],
+        orders: settled.result.tradeReceipt.orders,
+        fills: settled.result.tradeReceipt.fills,
+        isWideAccount: (id) => context.scopeById.get(id)?.kind === "wideEconomy",
+        laneKey: laneKeyOf,
+      })
+    : null;
   await producerMarketOutcomesCollection<{ _id: string }>(context.db).replaceOne(
     { _id: `${context.worldEpoch}:${context.turn}` },
     {
@@ -570,6 +586,9 @@ export async function publishFundedProducerTurn(
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
       ...(settled.result.regionalBooks ? { regionalBuildBooks: settled.result.regionalBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
+      // Real shortage per lane, read by the next turns to size the wider
+      // economy's seller on persistently short lanes (wideEconomyShortageBoost).
+      ...(wideShortage ? { wideShortage } : {}),
       ...(restartOn && pressureNow
         ? {
             recipePressure: fundedRecipePressure({

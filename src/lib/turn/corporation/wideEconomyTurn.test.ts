@@ -89,6 +89,22 @@ describe("wider-economy demand", () => {
     expect(offers[0].units).toBeCloseTo(8, 9);
   });
 
+  it("gives a lane short in each recent turn a bigger seller, and leaves the buyer as it was", async () => {
+    const short = { "steel|world": 0.3 };
+    const r = await buildWith(1, {
+      wideEconomyBaselineTurns: turns,
+      wideEconomyShortageHistory: [short, short, short],
+    });
+    expect(r.wideEconomyOffers.find((o) => o.commodity === "steel")!.units).toBeCloseTo(8, 9);
+    expect(r.wideEconomyBoostOffers.find((o) => o.commodity === "steel")!.units).toBeCloseTo(8, 9);
+    expect(r.wideEconomyOrders.find((o) => o.commodity === "steel")!.units).toBeCloseTo(8.8, 9);
+    const brief = await buildWith(1, {
+      wideEconomyBaselineTurns: turns,
+      wideEconomyShortageHistory: [short, short],
+    });
+    expect(brief.wideEconomyBoostOffers).toEqual([]);
+  });
+
   it("uses a stored baseline as is and grows with real GDP, not with prices", async () => {
     const baseline = {
       units: { steel: 30 },
@@ -384,6 +400,10 @@ describe("wider-economy funding", () => {
     const legs = r.returns[0].legs as { kind: string; amount: number; filter?: { _id: string } }[];
     expect(legs.find((l) => l.kind === "debit")!.filter!._id).toBe(r.wallet);
     expect(legs.find((l) => l.kind === "burn")!.amount).toBeCloseTo(5 * sellerAsk * RATE, 6);
+    // The turn records each lane's real shortage for the next turns' boost.
+    const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+    const shortage = outcome.wideShortage as Record<string, number>;
+    expect(shortage["financial_services|world"]).toBeGreaterThan(0.9);
   });
 
   it("keeps the anchor-currency weights it worked out for an older baseline", async () => {

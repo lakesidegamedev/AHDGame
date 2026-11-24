@@ -107,6 +107,8 @@ export async function runCorporationProducerMarket(
       | "externalOffers"
       | "residualOrders"
       | "residualOffers"
+      | "residualExportBuyers"
+      | "residualBoostOffers"
       | "inputReservations"
       | "eligibleOffersByOrder"
       | "spilloverShare"
