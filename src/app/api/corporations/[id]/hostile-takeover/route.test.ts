@@ -144,6 +144,8 @@ describe("POST /api/corporations/[id]/hostile-takeover", () => {
     db.collectionMocks.bonds.countDocuments.mockResolvedValue(0);
 
     db.collectionMocks.corporateSectors.find
+      // The operating reserve reads both companies' plant receipts first.
+      .mockReturnValueOnce(makeCursor([]))
       .mockReturnValueOnce(
         makeCursor([
           {

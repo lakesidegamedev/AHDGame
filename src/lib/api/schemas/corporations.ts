@@ -177,6 +177,8 @@ export const buySharesSchema = z.object({
   shares: z.number().int().positive("Must buy at least 1 share"),
   buyAsCorporation: z.boolean().optional().default(false),
   payCurrency: z.enum(ZOD_CURRENCY_ENUM).optional(),
+  /** The CEO confirmed spending company cash below the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.literal(true).optional(),
 });
 
 export const placeOrderSchema = z.object({
@@ -185,6 +187,8 @@ export const placeOrderSchema = z.object({
   shares: z.number().int().positive("Must be at least 1 share"),
   pricePerShare: z.number().positive("Price must be positive"),
   placeAsCorporation: z.boolean().optional().default(false),
+  /** The CEO confirmed spending company cash below the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.literal(true).optional(),
 });
 
 export const issueSharesSchema = z.object({
@@ -210,6 +214,8 @@ export const fillOrderSchema = z.object({
   shares: z.number().int().positive("Must fill at least 1 share"),
   /** When true and the open order is a sell (ask), pay from the CEO's corporation liquid capital and credit shares to that corporation. */
   fillAsCorporation: z.boolean().optional().default(false),
+  /** The CEO confirmed spending company cash below the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.literal(true).optional(),
 });
 
 export const setSectorStrategySchema = z.object({
@@ -318,6 +324,8 @@ export const submitOfferSchema = z.object({
   shares: z.number().int().positive("Must offer at least 1 share"),
   pricePerShare: z.number().positive("Price must be positive"),
   offerAsCorporation: z.boolean().optional().default(false),
+  /** The CEO confirmed spending company cash below the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.literal(true).optional(),
 });
 
 export const acceptOfferSchema = z.object({
@@ -326,6 +334,8 @@ export const acceptOfferSchema = z.object({
 
 export const hostileTakeoverSchema = z.object({
   parentCorporationId: schemas.objectId,
+  /** The CEO confirmed spending company cash below the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.literal(true).optional(),
 });
 
 export const parentBondPayoffSchema = z.object({

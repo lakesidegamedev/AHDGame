@@ -1,4 +1,6 @@
 "use client";
+import { operatingReserveRefusalText, useOperatingReserveConfirm } from "./OperatingReserveConfirm";
+import { isOperatingReserveRefusal } from "@/lib/corporations/rules/operatingReserve";
 import { wholeNumberInput } from "@/lib/utils/rules/wholeNumberInput";
 import { renderSharePurchaseModalView } from "./SharePurchaseModal.view";
 
@@ -122,6 +124,7 @@ function useSharePurchaseModalContext({
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [ceoVacateConfirm, setCeoVacateConfirm] = useState<{ message: string } | null>(null);
+  const reserveConfirm = useOperatingReserveConfirm();
   /** Preserve the complete draft so invalid input stays available for correction. */
   const [quantityDraft, setQuantityDraft] = useState<string | null>(null);
   const [selectedPayCurrency, setSelectedPayCurrency] = useState<CurrencyCode>(
@@ -641,7 +644,7 @@ function useSharePurchaseModalContext({
   }
 
   // ─── API handlers ─────────────────────────────────────────────────────────────
-  async function handleBuyAtMarket() {
+  async function handleBuyAtMarket(confirmReserve = false) {
     if (!canSubmitFloat) return;
     setError("");
     setLoading(true);
@@ -672,10 +675,15 @@ function useSharePurchaseModalContext({
           shares: quantity,
           buyAsCorporation: buyAsCorp,
           ...(myCurrencyBalances && !buyAsCorp ? { payCurrency: selectedPayCurrency } : {}),
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
         }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
+        if (buyAsCorp && !confirmReserve && isOperatingReserveRefusal(data)) {
+          reserveConfirm.ask(operatingReserveRefusalText(data), () => handleBuyAtMarket(true));
+          return;
+        }
         setError(apiErrorText(data, "Purchase failed"));
         return;
       }
@@ -757,7 +765,7 @@ function useSharePurchaseModalContext({
     }
   }
 
-  async function handlePlaceLimitOrder() {
+  async function handlePlaceLimitOrder(confirmReserve = false) {
     if (!canSubmitLimit) return;
     setError("");
     setSuccessMsg("");
@@ -776,6 +784,7 @@ function useSharePurchaseModalContext({
             : toInternal(limitPrice),
           placeAsCorporation: limitAsCorp,
           ...(orderSide === "sell" && !limitAsCorp ? { holdingTerm } : {}),
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
         }),
       });
       const data = (await res.json()) as {
@@ -788,6 +797,10 @@ function useSharePurchaseModalContext({
         escrowAmount?: number;
       };
       if (!res.ok) {
+        if (limitAsCorp && !confirmReserve && isOperatingReserveRefusal(data)) {
+          reserveConfirm.ask(operatingReserveRefusalText(data), () => handlePlaceLimitOrder(true));
+          return;
+        }
         setError(apiErrorText(data, "Failed to place order"));
         return;
       }
@@ -904,6 +917,7 @@ function useSharePurchaseModalContext({
       quantity,
       quantityDraft,
       ratesNeededButMissing,
+      reserveConfirm,
       resetQuantity,
       selectedPayCurrency,
       sellAsCorp,

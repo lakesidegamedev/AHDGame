@@ -4,6 +4,7 @@ import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { dividendStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import { garnishLocFromIncome } from "@/lib/lineOfCredit/garnishment";
 import { fillPendingShareOrders } from "./shareOrders";
+import { trimCorporateBuyOrdersToReserve } from "./shareOrderReserveTrim";
 import { expireShareListings } from "./shareListings";
 import { snapshotMarketCap } from "./marketCapSnapshot";
 import { ObjectId } from "mongodb";
@@ -763,6 +764,9 @@ export async function settleShareMarketTurn(args: {
     rng,
     mark,
   } = args;
+  // A company below its operating reserve gets escrow back from its unconfirmed
+  // resting buy orders before they fill (shareOrderReserveTrim.ts).
+  await trimCorporateBuyOrdersToReserve(db, now, turn ?? 0);
   await fillPendingShareOrders(db, now, turn ?? 0, lookups.stockHoldingTaxStartTurn);
   await expireShareListings(db, now, turn ?? 0);
   mark("fillOrders+expireListings");

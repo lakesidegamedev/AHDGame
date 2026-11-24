@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  OperatingReserveConfirmDialog,
+  operatingReserveRefusalText,
+  useOperatingReserveConfirm,
+} from "@/components/corporation/shares/OperatingReserveConfirm";
+import { isOperatingReserveRefusal } from "@/lib/corporations/rules/operatingReserve";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -46,6 +52,8 @@ export function HostileTakeoverCard({
     : pricePerShareLocal;
   const canAffordPayoff = parentLiquidCapital >= outstandingBondDebt;
 
+  const reserveConfirm = useOperatingReserveConfirm();
+
   async function handlePayoffBonds() {
     if (
       !confirm(
@@ -79,8 +87,9 @@ export function HostileTakeoverCard({
     }
   }
 
-  async function handleMerge() {
+  async function handleMerge(confirmReserve = false) {
     if (
+      !confirmReserve &&
       !confirm(
         `Merge ${corporation.name} into your holding company? Minority shareholders receive ${Math.round(HOSTILE_TAKEOVER_PREMIUM_RATE * 100)}% over market per share (${formatPrice(pricePerShare)} per share in internal terms). Your corporation must have enough liquid capital. This cannot be undone.`
       )
@@ -93,10 +102,17 @@ export function HostileTakeoverCard({
       const res = await fetch(`/api/corporations/${corporation._id}/hostile-takeover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentCorporationId }),
+        body: JSON.stringify({
+          parentCorporationId,
+          ...(confirmReserve ? { overrideOperatingReserve: true } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (!confirmReserve && isOperatingReserveRefusal(data)) {
+          reserveConfirm.ask(operatingReserveRefusalText(data), () => handleMerge(true));
+          return;
+        }
         setErr(apiErrorText(data, "Merge failed"));
         return;
       }
@@ -110,6 +126,7 @@ export function HostileTakeoverCard({
 
   return (
     <div className="rounded-xl border border-warning/35 bg-warning/5 p-4 space-y-3">
+      <OperatingReserveConfirmDialog state={reserveConfirm} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">
@@ -124,7 +141,7 @@ export function HostileTakeoverCard({
         </div>
         <button
           type="button"
-          onClick={handleMerge}
+          onClick={() => void handleMerge()}
           disabled={busy || outstandingBonds > 0}
           className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
           title={outstandingBonds > 0 ? "Outstanding bonds must be resolved first" : undefined}
