@@ -1,5 +1,6 @@
 "use client";
 
+import { isPremierLabel, PREMIER_ELECTION_NOTE } from "@/lib/states/premierElectionNote";
 import type { State } from "@/lib/db/types";
 import { isParliamentarySystem } from "@/lib/constants/countriesCore";
 import {
@@ -107,9 +108,6 @@ function LeanMeter({
     </div>
   );
 }
-
-const PREMIER_ELECTION_NOTE =
-  "The premier is elected in a separate vote from the legislature, so the premier's party can differ from the party with the most seats.";
 
 export function PoliticsTab({
   state,
@@ -414,14 +412,16 @@ export function PoliticsTab({
             governor={officials.governor}
             label={regionalExecutiveLabel}
             officeType={regionalExecutiveOfficeType}
-            note={regionalExecutiveLabel === "Premier" ? PREMIER_ELECTION_NOTE : undefined}
+            note={isPremierLabel(regionalExecutiveLabel) ? PREMIER_ELECTION_NOTE : undefined}
           />
-          <StateSenateSection
-            state={state}
-            stateSenators={officials.stateSenators}
-            label={subNationalName}
-            memberTitle={subNationalMemberTitle}
-          />
+          {config.subNationalChamber && (
+            <StateSenateSection
+              state={state}
+              stateSenators={officials.stateSenators}
+              label={subNationalName}
+              memberTitle={subNationalMemberTitle}
+            />
+          )}
         </div>
       </div>
     </section>

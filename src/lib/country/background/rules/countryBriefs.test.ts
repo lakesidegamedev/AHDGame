@@ -119,7 +119,7 @@ describe("planBriefs", () => {
   it("falls back to a periodic outlook when nothing else happened", () => {
     const quiet = planBriefs(obs(), memory({ lastByKind: { outlook: 100 } }));
     expect(quiet.briefs.map((b) => b.kind)).toEqual(["outlook"]);
-    expect(quiet.briefs[0].body).toContain("growth 1.2%");
+    expect(quiet.briefs[0].body).toContain("steady 1.2%");
     expect(planBriefs(obs(), memory({ lastByKind: { outlook: 250 } })).briefs).toEqual([]);
   });
 

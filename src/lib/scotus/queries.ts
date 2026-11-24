@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { SupremeCourtSeat, DocketCase } from "@/lib/db/types/scotus";
 import { getGameState } from "@/lib/gameState";
 import { divergentDeathChance, type DivergentDeathChance } from "@/lib/scotus/tenure";
+import { playerNominationDeadlineTurn } from "@/lib/scotus/rules/nppNomination";
 import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
@@ -26,6 +27,10 @@ export interface ScotusSeatSummary {
   /** True only for the preset's first occupant, never a later historical successor. */
   originalRoster: boolean;
   deathChance: DivergentDeathChance | null;
+  /** Turn the seat was first seen vacant; null while occupied or not yet stamped. */
+  vacantSinceTurn: number | null;
+  /** Last turn a player President can nominate before the Administration files one. */
+  nominationDeadlineTurn: number | null;
 }
 
 /** Current Court composition — one row per seat, vacant seats included so callers can see what's open before nominating. */
@@ -56,6 +61,8 @@ export async function getScotusComposition(
         !vacant && seat.isDivergent && currentTurn != null
           ? divergentDeathChance(currentTurn, seat.divergentHazardStartsTurn)
           : null,
+      vacantSinceTurn: vacant ? (seat.vacantSinceTurn ?? null) : null,
+      nominationDeadlineTurn: vacant ? playerNominationDeadlineTurn(seat.vacantSinceTurn) : null,
     };
   });
 }

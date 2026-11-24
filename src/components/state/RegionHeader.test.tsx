@@ -70,3 +70,48 @@ describe("Regional hero legislature shortcut", () => {
     expect(screen.queryByRole("link", { name: "Scottish Parliament" })).toBeNull();
   });
 });
+
+describe("Premier note", () => {
+  const base: RegionHeaderProps = {
+    regionId: "CA_SK",
+    regionName: "Saskatchewan",
+    countryId: "CA",
+    countryName: "Canada",
+    countryHref: "/country/ca",
+    regionHref: "/country/ca/region/CA_SK",
+    descriptor: "Province",
+    flagSrc: null,
+    bannerSrc: null,
+    population: "1.2M",
+    gdp: "C$90B",
+    districts: { label: "Ridings", count: 14 },
+    leans: null,
+    approval: null,
+    executiveLabel: "Premier",
+    executive: {
+      characterId: null,
+      characterName: "Richard Thorne",
+      partyAbbreviation: "LIB",
+      partyColor: null,
+      avatarUrl: null,
+      borderKey: null,
+      tintColor: null,
+      nppId: "npp1",
+      characterSequentialId: null,
+      nppSequentialId: 1,
+    },
+    officeHref: null,
+    motto: null,
+    comprising: null,
+    relocate: {},
+    currentParty: null,
+  };
+  it("explains the separate vote beside a sitting premier", () => {
+    render(<RegionHeader {...base} />);
+    expect(screen.getByText(/elected in a separate vote from the legislature/)).toBeTruthy();
+  });
+  it("adds no note for other executive titles", () => {
+    render(<RegionHeader {...base} executiveLabel="Governor" />);
+    expect(screen.queryByText(/separate vote/)).toBeNull();
+  });
+});

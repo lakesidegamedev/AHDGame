@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annotatePartialWordMatch } from "./partialWordMatch";
+import { annotatePartialWordMatch, titleHasQueryWord } from "./partialWordMatch";
 import type { SearchResult } from "./types";
 
 const bill = (title: string): SearchResult => ({
@@ -21,7 +21,24 @@ describe("annotatePartialWordMatch", () => {
     expect(annotatePartialWordMatch(bill("Margin Call"), "margin").subtitle).toBe("Nigeria bill");
   });
 
-  it("leaves hits whose title does not contain the query alone", () => {
-    expect(annotatePartialWordMatch(bill("Labour"), "margin").subtitle).toBe("Nigeria bill");
+  it("says when only the description or full text matched", () => {
+    const withText = { ...bill("Labour"), subtitle: "Wages and margins" };
+    expect(annotatePartialWordMatch(withText, "margin").subtitle).toBe(
+      'Wages and margins · matched in description: "margins"'
+    );
+    expect(annotatePartialWordMatch(bill("Labour"), "margin").subtitle).toBe(
+      "Nigeria bill · matched in the full text, not the title"
+    );
+  });
+
+  it("does not double label suggestions", () => {
+    const hit = { ...bill("Margin of Victory"), subtitle: "Did you mean this? · Wiki" };
+    expect(annotatePartialWordMatch(hit, "margn").subtitle).toBe("Did you mean this? · Wiki");
+  });
+
+  it("detects titles that carry the typed words", () => {
+    expect(titleHasQueryWord("Marginal Tax", "Margin")).toBe(true);
+    expect(titleHasQueryWord("Labour", "Margin")).toBe(false);
+    expect(titleHasQueryWord("Selina Meyer", "Selina Myer")).toBe(false);
   });
 });

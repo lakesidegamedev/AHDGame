@@ -79,7 +79,9 @@ export function ExperimentalFeaturesSection() {
       <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-background/50 px-4 py-3">
         <div>
           <div className="text-sm font-medium text-foreground">{t("experimental.toggleLabel")}</div>
-          <div className="text-xs text-muted">{t("experimental.toggleHint")}</div>
+          <div className="text-xs text-muted">
+            {enabled ? t("experimental.toggleHintOn") : t("experimental.toggleHintOff")}
+          </div>
         </div>
         <SettingsSwitch
           checked={enabled}

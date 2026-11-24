@@ -3,6 +3,8 @@ import {
   SCOTUS_NPP_RENOMINATION_COOLDOWN_TURNS,
   chooseNppNominatingParty,
   isRenominationCoolingDown,
+  SCOTUS_PLAYER_NOMINATION_GRACE_TURNS,
+  playerNominationDeadlineTurn,
   vacancyReminderDue,
 } from "./nppNomination";
 
@@ -53,5 +55,15 @@ describe("vacancy reminders for a player President", () => {
     expect(vacancyReminderDue(100, 1, 148)).toBe(2);
     expect(vacancyReminderDue(100, 2, 190)).toBeNull();
     expect(vacancyReminderDue(null, null, 100)).toBeNull();
+  });
+});
+
+describe("playerNominationDeadlineTurn", () => {
+  it("ends the player's window one grace period after the vacancy started", () => {
+    expect(playerNominationDeadlineTurn(100)).toBe(100 + SCOTUS_PLAYER_NOMINATION_GRACE_TURNS);
+  });
+  it("has no deadline before the clock starts", () => {
+    expect(playerNominationDeadlineTurn(null)).toBeNull();
+    expect(playerNominationDeadlineTurn(undefined)).toBeNull();
   });
 });

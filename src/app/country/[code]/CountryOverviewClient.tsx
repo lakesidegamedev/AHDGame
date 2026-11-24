@@ -573,7 +573,11 @@ export default function CountryOverviewClient({
 
         {/* National history: the compact sparkline form of the economy page's
             chart, for every country including economy-only ones. */}
-        <NationalHistoryPanel countryId={countryId} compact />
+        <NationalHistoryPanel
+          countryId={countryId}
+          compact
+          liveGdpMillions={counts?.gdpMillions ?? null}
+        />
 
         {/* The figures a player checks before opening anything, each with its
             recent direction. Same payload as the economy page. */}
@@ -603,6 +607,16 @@ export default function CountryOverviewClient({
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/world" className={NAV_BUTTON}>
             Back to world
+          </Link>
+          <Link href="/world/conflicts" className={NAV_BUTTON}>
+            Wars and peace
+          </Link>
+          <Link
+            href={`/country/${countryId.toLowerCase()}/executive`}
+            className={NAV_BUTTON}
+            title="Declare war, make peace and handle alliances from the Foreign affairs tab"
+          >
+            Foreign affairs
           </Link>
           {countryId === COUNTRY_CLIENT_CONFIGS.US.id && (
             <Link href="/dashboard" className={NAV_BUTTON}>

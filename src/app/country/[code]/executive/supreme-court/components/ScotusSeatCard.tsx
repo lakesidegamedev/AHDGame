@@ -23,6 +23,8 @@ export interface SeatCardData {
   isDivergent: boolean;
   originalRoster: boolean;
   deathChance: DivergentDeathChance | null;
+  vacantSinceTurn?: number | null;
+  nominationDeadlineTurn?: number | null;
 }
 
 /** [-5, +5] lean scale (shared by characters/parties/justices) → a 0-100% bar position. */
@@ -82,6 +84,13 @@ function JusticePortrait({ name }: { name: string | null }) {
   );
 }
 
+/** Plain statement of who can fill a vacant seat and by when. */
+export function vacancyNotice(seat: SeatCardData): string {
+  if (seat.vacantSinceTurn == null || seat.nominationDeadlineTurn == null)
+    return `Seat ${seat.seatNumber} is vacant. The President can nominate a Justice now.`;
+  return `Seat ${seat.seatNumber} vacant since turn ${seat.vacantSinceTurn}. The President can nominate until turn ${seat.nominationDeadlineTurn}, after which the Administration files a nominee from the President's party.`;
+}
+
 /**
  * One Court seat (#3605). Vacant seats surface a Nominate CTA to the
  * president; occupied seats show the justice's name/party and both ideology
@@ -115,6 +124,7 @@ export function ScotusSeatCard({
       {seat.vacant ? (
         <div className="mt-3">
           <p className="text-sm italic text-muted">Vacant</p>
+          <p className="mt-1 text-xs text-muted">{vacancyNotice(seat)}</p>
           {canNominate && (
             <Button variant="secondary" onClick={onNominate} className="mt-3">
               Nominate

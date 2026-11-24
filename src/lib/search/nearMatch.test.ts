@@ -18,3 +18,11 @@ describe("nearMatches", () => {
     expect(nearMatchScore("Se", "Sean")).toBeNull();
   });
 });
+
+describe("suggestion vocabulary names", () => {
+  it("finds a page for a one letter typo and a swapped name", () => {
+    const names = [{ name: "Margin of Victory" }, { name: "Selina Meyer" }, { name: "Labour" }];
+    expect(nearMatches("Margn", names, 5).map((n) => n.name)).toEqual(["Margin of Victory"]);
+    expect(nearMatches("Selina Myer", names, 5).map((n) => n.name)).toEqual(["Selina Meyer"]);
+  });
+});

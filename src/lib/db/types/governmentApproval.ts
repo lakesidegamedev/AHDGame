@@ -62,6 +62,8 @@ export interface GovernmentApproval {
     net: number;
     /** Regional average that turn, so the rest of the move is national adjustments. */
     stateAverage?: number;
+    /** Why this turn moved when the cause is not a game effect, e.g. a correction. */
+    note?: string;
   }>;
   /**
    * The war block's applied total as of the last snapshot: the sum of the war

@@ -43,6 +43,11 @@ const SCORE_BREAKDOWN_ROWS: {
   { key: "infamyPenalty", label: "Infamy penalty" },
 ];
 
+/** Whole points, so near scores never collapse to the same rounded label. */
+function formatCareerScore(score: number): string {
+  return Math.round(score).toLocaleString("en-US");
+}
+
 /** ₳ is this game's internal-currency symbol: see formatters.ts. Net worth is forex-normalized to it so amounts are comparable across countries. */
 function formatNetWorth(value: number): string {
   return value < 0 ? `-₳${formatCompactNumber(Math.abs(value))}` : `₳${formatCompactNumber(value)}`;
@@ -143,7 +148,7 @@ function ScoreBreakdownModal({
             </p>
             <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-sm font-semibold">
               <span className="text-foreground">Total career score</span>
-              <span className="font-mono text-foreground">{formatCompactNumber(row.score)}</span>
+              <span className="font-mono text-foreground">{formatCareerScore(row.score)}</span>
             </div>
           </div>
         ))}
@@ -298,7 +303,7 @@ export default function LegacyLeaderboardClient({
           aria-label={`View ${isNetWorth ? "net worth" : "score"} breakdown for ${row.displayName}`}
           title={isNetWorth ? ANCHOR_UNIT_NOTE : undefined}
         >
-          {isNetWorth ? formatNetWorth(row.netWorth) : formatCompactNumber(row.score)}
+          {isNetWorth ? formatNetWorth(row.netWorth) : formatCareerScore(row.score)}
           <Info className="h-3.5 w-3.5 text-muted group-hover:text-primary" aria-hidden="true" />
         </button>
       ),
@@ -321,9 +326,17 @@ export default function LegacyLeaderboardClient({
     },
     {
       key: "office",
-      header: "Highest office",
+      header: isNetWorth ? "Office (net worth life)" : "Office (career life)",
       hideOnMobile: true,
-      render: (row) => <span className="text-sm text-muted">{row.highestOffice ?? "-"}</span>,
+      render: (row) => (
+        <span
+          className="text-sm text-muted"
+          title={`Highest office reached by ${row.scoringCharacterName}, the life this row is ranked on`}
+        >
+          {row.highestOffice ?? "-"}
+          <span className="block text-xs">as {row.scoringCharacterName}</span>
+        </span>
+      ),
     },
     {
       key: "achievements",

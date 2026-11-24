@@ -12,7 +12,7 @@ import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { executiveUrl, scotusJusticeOfficeUrl } from "@/lib/urls";
 import { SCOTUS_HERO_IMAGE_URL } from "@/lib/scotus/justiceImages";
 import { formatDeathChancePercent } from "@/lib/scotus/tenure";
-import { ScotusSeatCard, type SeatCardData } from "./components/ScotusSeatCard";
+import { ScotusSeatCard, vacancyNotice, type SeatCardData } from "./components/ScotusSeatCard";
 import {
   ScotusNominateModal,
   type NomineeMode,
@@ -413,6 +413,11 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
                       <p className="text-sm text-muted">
                         Sends a nomination to the Senate for confirmation before the seat is filled.
                       </p>
+                      {vacantSeats.map((seat) => (
+                        <p key={seat.seatNumber} className="mt-1 text-xs text-muted">
+                          {vacancyNotice(seat)}
+                        </p>
+                      ))}
                     </div>
                     <Button variant="primary" onClick={() => openNominateModal()}>
                       Nominate a justice

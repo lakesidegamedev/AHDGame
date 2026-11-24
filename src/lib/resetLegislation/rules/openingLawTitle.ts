@@ -6,12 +6,17 @@ export type LawLevelLookup = (
   optionIndex: number
 ) => { lawName: string; levelName: string } | null;
 
+/** Shown where the opening seed carries no law for a family. */
+export const NO_DEDICATED_LAW = "No dedicated law at the start of the game";
+
 /**
  * Plain title for a modeled opening law: the laws actually in force at the
  * start, each with the level the Policy page shows. Laws seeded at their
  * no-statute level are left out, so the row never names an unenacted law.
  */
 export function openingLawTitle(reference: OpeningLawReference, lookup: LawLevelLookup): string {
+  if (reference.status === "modeled-unmapped" || /no mapped seed law/.test(reference.currentLaw))
+    return NO_DEDICATED_LAW;
   if (reference.status !== "modeled-game-seed" || !reference.sourceComponents.length)
     return reference.currentLaw;
   const inForce = reference.sourceComponents

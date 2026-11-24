@@ -1,5 +1,6 @@
 "use client";
 
+import { isPremierLabel, PREMIER_ELECTION_NOTE } from "@/lib/states/premierElectionNote";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -219,6 +220,9 @@ export function GovernorOfficeClient(props: Props) {
                   </div>
                 </div>
               </div>
+            )}
+            {isPremierLabel(props.regionalTitle) && (
+              <p className="max-w-md px-5 py-3 text-body-sm text-muted">{PREMIER_ELECTION_NOTE}</p>
             )}
             <div className="flex flex-col px-5 py-3">
               <span className="text-body-sm font-medium text-muted">Office action points</span>

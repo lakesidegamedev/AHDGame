@@ -93,7 +93,7 @@ describe("OrgMasthead", () => {
     // The UN takes no tribute, so the tile keeps its single-line form rather
     // than carrying a permanent zero.
     render(<OrgMasthead org={org} viewer={viewer} />);
-    expect(screen.getByText(/\$5B\/yr dues · 0\.006%/)).toBeTruthy();
+    expect(screen.getByText(/\$5B\/yr dues · 0\.006% of each member's GDP/)).toBeTruthy();
   });
 
   it("shows tribute beside dues for a bloc that levies it", () => {
