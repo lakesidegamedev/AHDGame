@@ -109,8 +109,9 @@ export function KVRow({
       title={title}
     >
       <dt
-        title={typeof label === "string" ? label : undefined}
-        className={`truncate text-xs ${lead ? "text-foreground/80" : "text-muted"} ${
+        // Labels wrap onto a second line rather than truncating; the figure
+        // beside them never shrinks.
+        className={`break-words text-xs leading-tight ${lead ? "text-foreground/80" : "text-muted"} ${
           ledger ? "min-w-0 shrink" : "min-w-0"
         }`}
       >
@@ -338,16 +339,25 @@ export function TableScroll({ children }: { children: ReactNode }) {
     if (!el) return;
     const measure = () => {
       const max = el.scrollWidth - el.clientWidth;
-      setEdges({ left: el.scrollLeft > 2, right: max - el.scrollLeft > 2 });
+      const next = { left: el.scrollLeft > 2, right: max - el.scrollLeft > 2 };
+      setEdges((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
     };
     measure();
     el.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    // The table inside is replaced when its data loads (skeleton, then rows),
+    // so watch for content changes as well as size, and re-check after fonts.
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     ro?.observe(el);
-    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(measure);
+    mo?.observe(el, { childList: true, subtree: true, characterData: true });
+    const late = window.setTimeout(measure, 600);
     return () => {
       el.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
       ro?.disconnect();
+      mo?.disconnect();
+      window.clearTimeout(late);
     };
   }, []);
   // A visible cue on whichever edge still hides columns: a shade plus an arrow,
