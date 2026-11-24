@@ -11,4 +11,5 @@ areas: [frontend]
 
 The market cap chart on the Market page and the stock market pages moved down
 a few lines once its latest value and date arrived. Those lines now keep their
-space from the start, so the chart stays put while the page fills in.
+space from the start, and the coverage notes that arrive with the data sit
+under the chart, so the chart stays put while the page fills in.
