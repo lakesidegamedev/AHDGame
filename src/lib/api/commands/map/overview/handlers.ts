@@ -20,6 +20,7 @@ import { buildRegionRoster, filterPoliticalUsRoster } from "@/lib/map/rosterServ
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 
 import type { MapSectorSpecializationState, MapOverviewResponse } from "@/lib/map/overviewTypes";
+import type { State } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { isParliamentaryMapCountry } from "@/lib/world/mapVariant";
 
@@ -27,14 +28,9 @@ import { isParliamentaryMapCountry } from "@/lib/world/mapVariant";
 // New consumers should import from "@/lib/map/overviewTypes".
 export type { MapSectorSpecializationState, MapOverviewResponse } from "@/lib/map/overviewTypes";
 
-async function computeSectorSpecializationMap(
-  db: Awaited<ReturnType<typeof getDb>>,
-  countryId: CountryId
-): Promise<Record<string, MapSectorSpecializationState>> {
-  const states = await statesCollection(db)
-    .find({ countryId }, { projection: { _id: 1, name: 1, sectorSpecializations: 1 } })
-    .toArray();
-
+function sectorSpecializationsFromStates(
+  states: Array<Pick<State, "_id" | "name" | "sectorSpecializations">>
+): Record<string, MapSectorSpecializationState> {
   const result: Record<string, MapSectorSpecializationState> = {};
   for (const state of states) {
     const spec = state.sectorSpecializations;
@@ -70,19 +66,33 @@ export async function GET(request: Request) {
     // Live region roster (drives the nation map's list / names / seat counts) —
     // read straight from the country's owned states so it follows ownership and
     // future cross-country transfers.
-    const rosterStates = await statesCollection(db)
+    const rosterStatesPromise = statesCollection(db)
       .find(
         { countryId },
-        { projection: { _id: 1, name: 1, houseDistricts: 1, region: 1, population: 1 } }
+        {
+          projection: {
+            _id: 1,
+            name: 1,
+            houseDistricts: 1,
+            region: 1,
+            population: 1,
+            sectorSpecializations: 1,
+          },
+        }
       )
       .toArray();
+    // The US political-state lookup is independent of the roster read.
+    const [rosterStates, usPolitical] = await Promise.all([
+      rosterStatesPromise,
+      countryId === COUNTRY_CONFIGS.US.id ? loadUsPoliticalStateIds(db) : Promise.resolve(null),
+    ]);
     let regions = buildRegionRoster(rosterStates);
 
-    if (countryId === COUNTRY_CONFIGS.US.id) {
+    if (usPolitical) {
       // Era gate: Alaska/Hawaii under 1953-default are owned territories with
       // zero House seats. Leaving them on the roster paints vacant "states" on
       // the nation map; keep only political states (48 until admission).
-      const { politicalIds, admittedIds, preset, currentYear } = await loadUsPoliticalStateIds(db);
+      const { politicalIds, admittedIds, preset, currentYear } = usPolitical;
       const electoralVotesByState = buildApportionment(
         Object.fromEntries(rosterStates.map((s) => [s._id, s.houseDistricts])),
         preset,
@@ -109,7 +119,7 @@ export async function GET(request: Request) {
         computeApprovalMap(db, "US"),
         computeLeanMap(db, "US"),
         computePresidentialMap(db, "US"),
-        computeSectorSpecializationMap(db, "US"),
+        sectorSpecializationsFromStates(rosterStates),
         computeMapOfficeholders(
           db,
           countryId,
@@ -156,7 +166,7 @@ export async function GET(request: Request) {
         computeHouseMap(db, "UK"),
         computeApprovalMap(db, "UK"),
         computeLeanMap(db, "UK"),
-        computeSectorSpecializationMap(db, "UK"),
+        sectorSpecializationsFromStates(rosterStates),
       ]);
 
       return NextResponse.json({
@@ -179,7 +189,7 @@ export async function GET(request: Request) {
         computeHouseMap(db, "DE"),
         computeApprovalMap(db, "DE"),
         computeLeanMap(db, "DE"),
-        computeSectorSpecializationMap(db, "DE"),
+        sectorSpecializationsFromStates(rosterStates),
       ]);
 
       return NextResponse.json({
@@ -204,7 +214,7 @@ export async function GET(request: Request) {
           computeGovernorMap(db, "JP"),
           computeApprovalMap(db, "JP"),
           computeLeanMap(db, "JP"),
-          computeSectorSpecializationMap(db, "JP"),
+          sectorSpecializationsFromStates(rosterStates),
         ]);
 
       return NextResponse.json({
@@ -227,7 +237,7 @@ export async function GET(request: Request) {
         computeSenateMap(db, "BR"),
         computeApprovalMap(db, "BR"),
         computeLeanMap(db, "BR"),
-        computeSectorSpecializationMap(db, "BR"),
+        sectorSpecializationsFromStates(rosterStates),
       ]);
 
       return NextResponse.json({
@@ -249,7 +259,7 @@ export async function GET(request: Request) {
         computeHouseMap(db, "CN"),
         computeApprovalMap(db, "CN"),
         computeLeanMap(db, "CN"),
-        computeSectorSpecializationMap(db, "CN"),
+        sectorSpecializationsFromStates(rosterStates),
       ]);
 
       return NextResponse.json({
@@ -274,7 +284,7 @@ export async function GET(request: Request) {
           computeGovernorMap(db, "NG"),
           computeApprovalMap(db, "NG"),
           computeLeanMap(db, "NG"),
-          computeSectorSpecializationMap(db, "NG"),
+          sectorSpecializationsFromStates(rosterStates),
         ]);
 
       return NextResponse.json({
@@ -299,7 +309,7 @@ export async function GET(request: Request) {
         computeGovernorMap(db, countryId),
         computeApprovalMap(db, countryId),
         computeLeanMap(db, countryId),
-        computeSectorSpecializationMap(db, countryId),
+        sectorSpecializationsFromStates(rosterStates),
       ]);
 
       return NextResponse.json({
@@ -316,7 +326,7 @@ export async function GET(request: Request) {
     }
 
     const sectorSpecializations = COUNTRY_CONFIGS[countryId]
-      ? await computeSectorSpecializationMap(db, countryId)
+      ? sectorSpecializationsFromStates(rosterStates)
       : {};
 
     return NextResponse.json({
