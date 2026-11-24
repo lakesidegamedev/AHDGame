@@ -68,6 +68,16 @@ describe("opening rebase", () => {
     expect(planOpeningRebase(modeled, { "41": 30 })).toEqual([]);
   });
 
+  it("leaves rounding-level opening differences alone and keeps relative indexes above 100", () => {
+    const research = {
+      openingValues: { "15": 186.4, "13": 100 },
+      observations: { "15": observation("15", 113.1), "13": observation("13", 90) },
+    };
+    expect(planOpeningRebase(research, { "15": 186.45, "13": 100.04 })).toEqual([]);
+    const moved = planOpeningRebase(research, { "15": 200 });
+    expect(moved[0]?.newCurrent).toBeCloseTo(126.7, 6);
+  });
+
   it("is idempotent once the opening matches", () => {
     const rebased = { ...board, openingValues: { ...board.openingValues, "31": 293.9, "35": 67 } };
     expect(planOpeningRebase(rebased, corrected)).toEqual([]);
