@@ -36,14 +36,23 @@ export function parseProcessCount(raw) {
   return Number.isInteger(n) && n >= 1 && n <= MAX_PROCESSES ? n : 1;
 }
 
-/** Loopback port for server `index`, kept clear of the public port. */
+/**
+ * Address each server binds to. Next derives its own origin from this: with
+ * 127.0.0.1 one part of it says 127.0.0.1 and another says localhost, so a
+ * proxy rewrite (the signed-out home page) looked cross-origin and was sent
+ * out over https to a plain http port. 0.0.0.0 reads as localhost in both,
+ * the same as a single `next start`. Only the router's port is published.
+ */
+export const CHILD_HOSTNAME = "0.0.0.0";
+
+/** Port for server `index`, kept clear of the public port. */
 export function childPort(publicPort, index) {
   return publicPort + 100 + index;
 }
 
 /** Environment for server `index`; only server 0 owns the hosted boot work. */
 export function childEnv(baseEnv, index, port) {
-  const env = { ...baseEnv, PORT: String(port), HOSTNAME: "127.0.0.1" };
+  const env = { ...baseEnv, PORT: String(port), HOSTNAME: CHILD_HOSTNAME };
   if (index > 0) env.DISABLE_DEV_BACKGROUND = "1";
   return env;
 }
@@ -131,7 +140,7 @@ function runCluster(count, nextBin) {
   }
 
   function start(child) {
-    const proc = spawn(nextBin, ["start", "-p", String(child.port), "-H", "127.0.0.1"], {
+    const proc = spawn(nextBin, ["start", "-p", String(child.port), "-H", CHILD_HOSTNAME], {
       stdio: "inherit",
       env: childEnv(process.env, child.index, child.port),
     });
