@@ -72,6 +72,7 @@ describe("poverty rules", () => {
     expect(povertyTarget({ socialSpending: 1e9, policy: { deliveredPressure: 1 } })).toBe(10);
     expect(povertyTarget({ unemployment: 10 }) - povertyTarget({ unemployment: 5 })).toBe(3);
     expect(povertyTarget({ crime: 9500 }) - povertyTarget({ crime: 4500 })).toBe(2);
+    expect(povertyTarget({ anchorOffset: 9.7 }) - povertyTarget({})).toBeCloseTo(9.7, 6);
   });
 
   it("smooths old positive and negative residuals away without a deployment reset", () => {

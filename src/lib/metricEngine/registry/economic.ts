@@ -1,4 +1,5 @@
 import { blendOutputGrowthSignal } from "../rules/outputVolume";
+import { povertyAnchorOffset } from "@/lib/countries/rules/povertyAnchors";
 import { shareWeightedGrowth } from "../rules/shareWeightedGrowth";
 import {
   computeConsumptionTaxAdjustedGrowthRate,
@@ -333,6 +334,7 @@ export const povertyRateNode: RegistryNode = {
     decayPovertyOffset(delta, ctx.providers.povertyPolicy !== undefined),
   compute: (ctx) =>
     povertyTarget({
+      anchorOffset: povertyAnchorOffset(ctx.countryId),
       unemployment: ctx.current["economic.unemploymentRate"],
       inequality: ctx.current["social.incomeInequality"],
       crime: ctx.prev["publicSafety.crimeRate"],
