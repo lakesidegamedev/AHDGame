@@ -27,6 +27,7 @@ import type {
 import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
 import { GRANULAR_DIMENSIONS } from "@/lib/demographics/granularCells";
+import { CAMPAIGN_RULES_VERSION } from "@/lib/campaignTargeting/rules";
 import {
   buildGranularElectorateSubstrate,
   deriveGranularElectorateUnits,
@@ -955,5 +956,56 @@ describe("electorate cache under preview traffic", () => {
         "bypass"
       );
     expect(deriveGranularElectorateUnits("US", "CT", "1953-default", null)!.units).toBe(hot.units);
+  });
+});
+
+describe("campaign cell lean fold", () => {
+  it("matches a bucket-weight fold of the live lean overlay, cell by cell", () => {
+    const overlay = {
+      race: { white: { economicLean: 0.4, socialLean: -0.3 } },
+      age: { senior: { economicLean: -0.25 } },
+    };
+    const demographics = { ...LEGACY_DEMOGRAPHICS, layer1PositionOverrides: overlay };
+    const input = {
+      countryId: "US",
+      stateId: "CT",
+      preset: "2019-default",
+      turnoutDoc: null,
+      statePopulation: 1_000_000,
+      enriched: [makeCandidate("left", "democrat", -2, -2)],
+      campaignRulesVersion: CAMPAIGN_RULES_VERSION,
+    };
+    const plain = buildGranularElectorateSubstrate({ ...input, demographics: LEGACY_DEMOGRAPHICS });
+    const folded = buildGranularElectorateSubstrate({
+      ...input,
+      demographics: demographics as typeof LEGACY_DEMOGRAPHICS,
+    });
+    expect(plain?.campaignCells?.length).toBeGreaterThan(0);
+    const deltas: Record<string, { economicLean?: number; socialLean?: number }> = {
+      "race:white": overlay.race.white,
+      "age:senior": overlay.age.senior,
+    };
+    let touched = 0;
+    plain!.campaignCells!.forEach((cell, index) => {
+      const weights = Object.fromEntries(
+        Object.entries(cell.buckets).map(([dim, bucket]) => [`${dim}:${bucket}`, 1])
+      );
+      const expectLean = (axis: "economicLean" | "socialLean") => {
+        let value = cell[axis];
+        let any = false;
+        for (const [key, delta] of Object.entries(deltas)) {
+          if (delta[axis] == null) continue;
+          any = true;
+          if (weights[key]) value += weights[key] * delta[axis]!;
+        }
+        return any ? Math.max(-5, Math.min(5, value)) : value;
+      };
+      const actual = folded!.campaignCells![index];
+      expect(actual.id).toBe(cell.id);
+      expect(actual.economicLean).toBe(expectLean("economicLean"));
+      expect(actual.socialLean).toBe(expectLean("socialLean"));
+      if (actual.economicLean !== cell.economicLean) touched++;
+    });
+    expect(touched).toBeGreaterThan(0);
   });
 });
