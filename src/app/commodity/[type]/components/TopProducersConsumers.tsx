@@ -215,7 +215,7 @@ export default function TopProducersConsumers({
   )
     return null;
 
-  // The list holds every producer in this market, so shares are exact.
+  // Shares are of the corporate producers listed, not of total market supply.
   const producerTotalUnits = topProducers.reduce((sum, c) => sum + Math.max(0, c.units), 0);
   const pagedProducers = topProducers.slice(
     (producerPage - 1) * PAGE_SIZE,
@@ -236,8 +236,8 @@ export default function TopProducersConsumers({
           <h2 className="text-lg font-bold text-foreground mb-1">Top producers</h2>
           <p className="text-xs text-muted mb-3">
             {extractionBasis
-              ? "Largest corporations by production capacity, not dug output, with their share of the market"
-              : "Largest corporations by output volume, with their share of the market"}
+              ? "Largest corporations by production capacity, not dug output, with their share of the capacity listed here. Not market share: it leaves out any other supply"
+              : "Largest corporations by output volume, with their share of the corporate output listed here. Not market share: it leaves out stock and background supply, and buyer demand is a separate figure"}
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
           </p>
           <div className="space-y-2">
