@@ -69,6 +69,12 @@ export interface PurchaseOrder {
    */
   fallbackOfferIds?: readonly string[];
   /**
+   * Fallback purchases spend only cash the account holds, never input credit,
+   * so a company's final purchases from the wider economy can never cut the
+   * credit its plants buy real inputs with.
+   */
+  fallbackCashOnly?: boolean;
+  /**
    * Orders sharing a spend group draw on one budget: together they never spend more than `maximumSpend`, at any mix of fill prices. Every order in a group must carry the same limit.
    */
   spendGroup?: { id: string; maximumSpend: number };
@@ -282,7 +288,9 @@ export function* producerTrades(
       (!eligible || eligible.has(offer.id) || !!order.fallbackOfferIds?.includes(offer.id)) &&
       (!fill.sellerState || offer.stateId === fill.sellerState) &&
       (!fill.homeCountry || offer.countryId === order.countryId) &&
-      (!fill.spillBook || offer.countryId === order.countryId) &&
+      (!fill.spillBook ||
+        offer.countryId === order.countryId ||
+        !!order.fallbackOfferIds?.includes(offer.id)) &&
       (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier) &&
       !(fill.skipOutsideFirst && offer.sellOutsideFirst);
     // Internal transfers and contract/supplier orders ignore the posted price

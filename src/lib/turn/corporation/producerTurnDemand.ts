@@ -77,12 +77,15 @@ import {
   backgroundTradeLines,
   type BackgroundEconomy,
 } from "@/lib/market/producerMarket/backgroundTradeRules";
+import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { statesCollection } from "@/lib/db/repositories/states";
 import {
   wideEconomyBaseline as buildWideEconomyBaseline,
   wideEconomyOrders as buildWideEconomyOrders,
   wideEconomyOffers as buildWideEconomyOffers,
   wideEconomyWeights as buildWideEconomyWeights,
+  wideEconomyShortageBoost as buildWideEconomyShortageBoost,
+  wideEconomyBoostOffers as buildWideEconomyBoostOffers,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -112,6 +115,8 @@ export async function buildProducerTurnDemand(
     investmentAccountId?: (countryId: string) => string;
     /** Wider-economy buyer account per country; the shadow uses `wide:<country>`. */
     wideEconomyAccountId?: (countryId: string) => string;
+    /** Recent real shortage per lane, newest first (wideEconomyShortageBoost). */
+    wideEconomyShortageHistory?: readonly Readonly<Record<string, number>>[];
     /** The world's stored wider-economy baseline, when one exists. */
     wideEconomyBaseline?: WideEconomyBaseline | null;
     /** Recent settled turns to build the baseline from when none is stored yet. */
@@ -613,7 +618,13 @@ export async function buildProducerTurnDemand(
     : null;
   // Both sides trade only in the after-market pass (residualWideEconomyLines).
   const wideEconomyOrders = wideOn && wideLineInput ? buildWideEconomyOrders(wideLineInput) : [];
+  // A persistently short lane gets a bigger seller, residual only as ever.
+  const wideBoost = buildWideEconomyShortageBoost(input.wideEconomyShortageHistory ?? []);
   const wideEconomyOffers = wideOn && wideLineInput ? buildWideEconomyOffers(wideLineInput) : [];
+  const wideEconomyBoostOffers =
+    wideEconomyOffers.length > 0
+      ? buildWideEconomyBoostOffers(wideEconomyOffers, wideBoost, laneKeyOf)
+      : [];
 
   input.stage?.("demand.public");
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
@@ -934,6 +945,7 @@ export async function buildProducerTurnDemand(
     marketingOrders,
     wideEconomyOrders,
     wideEconomyOffers,
+    wideEconomyBoostOffers,
     wideEconomyBaselineCreated,
     wideEconomyBaselineWeights,
     newCompanyCash,
