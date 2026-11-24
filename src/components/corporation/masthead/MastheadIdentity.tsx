@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
-import { STATE_FLAGS } from "@/lib/constants";
+import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { regionUrl } from "@/lib/urls";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";

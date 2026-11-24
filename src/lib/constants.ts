@@ -30,7 +30,7 @@ const STATE_IMAGES: Record<string, string> = {
   GA: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/A2ATL20250614-0721_%28cropped%29.jpg/1280px-A2ATL20250614-0721_%28cropped%29.jpg",
   HI: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Diamond_Head_Hawaii_From_Round_Top_Rd.JPG/1280px-Diamond_Head_Hawaii_From_Round_Top_Rd.JPG",
   ID: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Shoshone_Falls%2C_Idaho.jpg/1280px-Shoshone_Falls%2C_Idaho.jpg",
-  IL: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Chicago_River_ferry_b.jpg/1280px-Chicago_River_ferry_b.jpg",
+  IL: "/heroes/illinois-chicago-river.webp",
   IN: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Indianapolis-1872528.jpg/1280px-Indianapolis-1872528.jpg",
   IA: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Big_bear_mound_at_Effigy_Mounds_State_Park.jpg/1280px-Big_bear_mound_at_Effigy_Mounds_State_Park.jpg",
   KS: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Sunset_falls_across_the_beautiful_Flint_Hills_%28f0f6c731-1dd8-b71b-0b88-d326127c9973%29.jpg/1280px-Sunset_falls_across_the_beautiful_Flint_Hills_%28f0f6c731-1dd8-b71b-0b88-d326127c9973%29.jpg",
