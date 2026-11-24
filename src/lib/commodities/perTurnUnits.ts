@@ -11,6 +11,41 @@
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 
 type Units = Record<string, number>;
+type Split = Partial<Record<string, number>>;
+interface MarketFields {
+  supply: number;
+  demand: number;
+  spilloverRequested: number;
+  filled: number | null;
+  funded: number | null;
+  imports: number;
+  exports: number;
+  supplyBy?: Split;
+  demandBy?: Split;
+  filledBy?: Split;
+}
+
+const splitPerTurn = (split: Split | undefined) =>
+  split
+    ? Object.fromEntries(Object.entries(split).map(([k, v]) => [k, bookPerTurn(v ?? 0)]))
+    : undefined;
+
+/** One funded market (a country's, or the world's), per turn. */
+export function marketPerTurn<M extends MarketFields>(m: M): M {
+  return {
+    ...m,
+    supply: bookPerTurn(m.supply),
+    demand: bookPerTurn(m.demand),
+    spilloverRequested: bookPerTurn(m.spilloverRequested),
+    filled: bookPerTurn(m.filled),
+    funded: bookPerTurn(m.funded),
+    imports: bookPerTurn(m.imports),
+    exports: bookPerTurn(m.exports),
+    ...(m.supplyBy ? { supplyBy: splitPerTurn(m.supplyBy) } : {}),
+    ...(m.demandBy ? { demandBy: splitPerTurn(m.demandBy) } : {}),
+    ...(m.filledBy ? { filledBy: splitPerTurn(m.filledBy) } : {}),
+  };
+}
 interface BookFields {
   globalSupply: number;
   globalDemand: number;
@@ -18,18 +53,8 @@ interface BookFields {
   stateDemand: Units;
   nationalSupply?: Units;
   nationalDemand?: Units;
-  fundedCountryBooks?: Record<
-    string,
-    {
-      supply: number;
-      demand: number;
-      spilloverRequested: number;
-      filled: number | null;
-      funded: number | null;
-      imports: number;
-      exports: number;
-    }
-  >;
+  fundedCountryBooks?: Record<string, MarketFields>;
+  worldMarket?: MarketFields;
   reachableBooks?: Record<
     string,
     {
@@ -99,19 +124,9 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
     ...(detail.nationalSupply ? { nationalSupply: recordPerTurn(detail.nationalSupply) } : {}),
     ...(detail.nationalDemand ? { nationalDemand: recordPerTurn(detail.nationalDemand) } : {}),
     ...(detail.fundedCountryBooks
-      ? {
-          fundedCountryBooks: mapValues(detail.fundedCountryBooks, (b) => ({
-            ...b,
-            supply: bookPerTurn(b.supply),
-            demand: bookPerTurn(b.demand),
-            spilloverRequested: bookPerTurn(b.spilloverRequested),
-            filled: bookPerTurn(b.filled),
-            funded: bookPerTurn(b.funded),
-            imports: bookPerTurn(b.imports),
-            exports: bookPerTurn(b.exports),
-          })),
-        }
+      ? { fundedCountryBooks: mapValues(detail.fundedCountryBooks, marketPerTurn) }
       : {}),
+    ...(detail.worldMarket ? { worldMarket: marketPerTurn(detail.worldMarket) } : {}),
     ...(detail.reachableBooks
       ? {
           reachableBooks: mapValues(detail.reachableBooks, (b) => ({
@@ -158,6 +173,7 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
 }
 
 interface ListRowFields {
+  backgroundEconomy?: { sold: number; bought: number };
   globalSupply: number;
   globalDemand: number;
   exchangeSupply: number;
@@ -177,6 +193,14 @@ export function commodityListRowPerTurn<T extends ListRowFields>(row: T): T {
     globalDemand: bookPerTurn(row.globalDemand),
     exchangeSupply: bookPerTurn(row.exchangeSupply),
     exchangeDemand: bookPerTurn(row.exchangeDemand),
+    ...(row.backgroundEconomy
+      ? {
+          backgroundEconomy: {
+            sold: bookPerTurn(row.backgroundEconomy.sold),
+            bought: bookPerTurn(row.backgroundEconomy.bought),
+          },
+        }
+      : {}),
     stateSupply: recordPerTurn(row.stateSupply) ?? {},
     ...(row.stateDemand ? { stateDemand: recordPerTurn(row.stateDemand) } : {}),
     ...(row.nationalSupply ? { nationalSupply: recordPerTurn(row.nationalSupply) } : {}),

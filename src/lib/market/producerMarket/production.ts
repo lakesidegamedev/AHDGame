@@ -1,4 +1,5 @@
 import { productionOrderOutcomes } from "./productionOrderOutcomes";
+import { attributeCountryBooks, marketAccountKind } from "./marketAttributionRules";
 import { markStateServiceSpill } from "./stateServiceSpillRules";
 import { closingProducerCash, ProducerCashChanges } from "./cashChangesRules";
 import { settleProducerMarket, type ProducerOffer, type PurchaseOrder } from "./rules";
@@ -841,6 +842,16 @@ export function advanceProducerEconomy(
     addStageTiming(timings, "residualTrialRuns", trialRuns - trialsBeforeResidual);
   }
   market = withWideEconomyFills(market, [...wideOffers, ...wideBoostOffers]);
+  // Who every unit of the country books came from and went to.
+  const attribution = market.countryBooks
+    ? attributeCountryBooks({
+        orders: market.tradeReceipt.orders,
+        offers: market.tradeReceipt.offers,
+        orderResults: new Map(market.orders.map((o) => [o.id, o])),
+        offerResults: new Map(market.offers.map((o) => [o.id, o])),
+        kindOf: marketAccountKind,
+      })
+    : null;
   const results: ProducerOperatingResult[] = [];
   const cashChanges = new ProducerCashChanges(input.accounts.map((account) => account.id));
   for (const payment of prior.payments)
@@ -903,6 +914,9 @@ export function advanceProducerEconomy(
     ...(spillover ? { spillover } : {}),
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
     ...(market.regionalBooks ? { regionalBooks: market.regionalBooks } : {}),
+    ...(attribution
+      ? { countryBookAttribution: attribution.books, companyBooks: attribution.companies }
+      : {}),
     orderOutcomes: productionOrderOutcomes(
       [...consumerOrders, ...inputOrders()],
       market.orders,

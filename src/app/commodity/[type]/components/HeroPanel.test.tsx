@@ -62,7 +62,9 @@ describe("HeroPanel supply card", () => {
 
     expect(screen.getByText("Global supply")).toBeTruthy();
     expect(screen.getByText("offered per turn")).toBeTruthy();
-    expect(screen.getByText("Includes imports and background sellers")).toBeTruthy();
+    expect(
+      screen.getByText("Includes the background economy and economy-only countries")
+    ).toBeTruthy();
     const note = screen.getByText("includes unsold stock");
     expect(note.getAttribute("title")).toMatch(/counted again every turn/);
   });

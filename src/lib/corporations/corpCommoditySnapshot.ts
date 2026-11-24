@@ -5,7 +5,13 @@
  */
 import { bookPerTurn } from "@/lib/commodities/perTurnUnits";
 
-export type CommodityOutputBasis = "revenue-proxy-v1" | "plants-ledger-v1";
+/**
+ * How a company's recorded output was measured. "market-receipts-per-turn-v1"
+ * is what it offered on the settled market, per turn, the unit the market
+ * screens use; earlier bases are model estimates on their own scale.
+ */
+export type CommodityOutputBasis =
+  "revenue-proxy-v1" | "plants-ledger-v1" | "market-receipts-per-turn-v1";
 
 /**
  * Production first reached the live history writer on this deployment. The
@@ -27,7 +33,7 @@ interface BasisHistoryRow {
   commodityOutputBasis?: CommodityOutputBasis;
 }
 
-function inferredBasis(row: BasisHistoryRow): CommodityOutputBasis | null {
+export function inferredBasis(row: BasisHistoryRow): CommodityOutputBasis | null {
   if (row.commodityOutputBasis) return row.commodityOutputBasis;
   if (!row.createdAt) return null;
   const createdAt = new Date(row.createdAt);
@@ -68,15 +74,19 @@ export function computeCommodityOutputSharePercent(
 export function commodityOutputPoint(
   turn: number,
   outputUnits: number,
-  flow: { supplyUnits?: number | null; stockUnits?: number | null } | undefined
+  flow: { supplyUnits?: number | null; stockUnits?: number | null } | undefined,
+  basis: CommodityOutputBasis | null = null
 ) {
   const globalSupplyUnits = flow?.supplyUnits != null ? bookPerTurn(flow.supplyUnits) : null;
+  // Only output measured per turn on the market compares with world supply
+  // per turn; an estimate on its own scale has no honest share.
+  const comparable = basis === "market-receipts-per-turn-v1";
   return {
     turn,
     outputUnits,
     globalSupplyUnits,
     sharePercent:
-      globalSupplyUnits != null
+      comparable && globalSupplyUnits != null
         ? computeCommodityOutputSharePercent(outputUnits, globalSupplyUnits)
         : null,
     stockUnits: flow?.stockUnits != null ? bookPerTurn(flow.stockUnits) : null,

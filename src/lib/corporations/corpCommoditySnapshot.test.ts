@@ -50,7 +50,12 @@ describe("findCommodityOutputBasisChange", () => {
 describe("commodityOutputPoint", () => {
   it("compares a company's per-turn output with world supply per turn", () => {
     // World supply 9,000 per turn, stored on the price phase's 24-turn basis.
-    const point = commodityOutputPoint(5, 2200, { supplyUnits: 9000 * 24, stockUnits: 480 });
+    const point = commodityOutputPoint(
+      5,
+      2200,
+      { supplyUnits: 9000 * 24, stockUnits: 480 },
+      "market-receipts-per-turn-v1"
+    );
     expect(point).toEqual({
       turn: 5,
       outputUnits: 2200,
@@ -58,6 +63,12 @@ describe("commodityOutputPoint", () => {
       sharePercent: 24.44,
       stockUnits: 20,
     });
+  });
+
+  it("shows no share for a model estimate, which is not in turns", () => {
+    expect(
+      commodityOutputPoint(5, 2200, { supplyUnits: 9000 * 24 }, "plants-ledger-v1").sharePercent
+    ).toBeNull();
   });
 
   it("has no share without a ledger row", () => {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { formatUnits } from "../lib/helpers";
 import { PER_TURN } from "@/lib/commodities/perTurnUnits";
+import { listRowsWithOthers, type MarketRow } from "../lib/marketRows";
+import type { FundedCountryMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
 import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
@@ -28,6 +30,10 @@ interface TopProducersConsumersProps {
   /** Recorded demand for this market, so the listed buyers can be reconciled against it. */
   marketDemand?: number;
   marketLabel?: string;
+  /** The funded market in scope; with its split the lists add up to its totals. */
+  market?: FundedCountryMarket | null;
+  /** True when company rows are what each company offered and ordered on the market. */
+  settled?: boolean;
 }
 
 /** Says governments do not buy this good, naming what they do buy. Null when they buy it. */
@@ -173,7 +179,7 @@ function MarketingBudgets({
               )}
             </div>
             <span className="text-foreground font-medium tabular-nums shrink-0 ml-2">
-              {formatCurrencyFull(c.dailyBudgetAnchor, "₳")}/day
+              {formatCurrencyFull(c.dailyBudgetAnchor, "₳")} per day (24 turns)
             </span>
           </Link>
         ))}
@@ -199,6 +205,8 @@ export default function TopProducersConsumers({
   marketSupply,
   marketDemand,
   marketLabel,
+  market,
+  settled = false,
 }: TopProducersConsumersProps) {
   const [producerPage, setProducerPage] = useState(1);
   const [consumerPage, setConsumerPage] = useState(1);
@@ -225,6 +233,12 @@ export default function TopProducersConsumers({
   const fillNotes = buyerFillNotes(syntheticDemandSources, marketSupply, unit);
   const governmentNote = governmentDemandNote(commodity);
   const demandGap = unlistedDemand(marketDemand, topConsumers, syntheticDemandSources);
+  // With a settled split, each list ends with every other seller or buyer so
+  // the rows add up to the market's supply and demand.
+  const producerExtra =
+    settled && market ? listRowsWithOthers(topProducers, market.supplyBy, "sellers") : null;
+  const consumerExtra =
+    settled && market ? listRowsWithOthers(topConsumers, market.demandBy, "buyers") : null;
   const pagedConsumers = topConsumers.slice(
     (consumerPage - 1) * PAGE_SIZE,
     consumerPage * PAGE_SIZE
@@ -236,10 +250,13 @@ export default function TopProducersConsumers({
         <div className="rounded-xl border border-card-border bg-card p-6">
           <h2 className="text-lg font-bold text-foreground mb-1">Top producers</h2>
           <p className="text-xs text-muted mb-3">
-            {extractionBasis
-              ? "Largest corporations by production capacity, not dug output, with their share of the capacity listed here. Not market share: it leaves out any other supply"
-              : "Largest corporations by output volume, with their share of the corporate output listed here. Not market share: it leaves out stock and background supply, and buyer demand is a separate figure"}
-            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}. Figures are {PER_TURN}.
+            {settled
+              ? "Companies by units offered on the market, with their share of what companies offered. With the rows below they add up to the market's supply"
+              : extractionBasis
+                ? "Largest corporations by production capacity, not dug output, with their share of the capacity listed here. Not market share: it leaves out any other supply"
+                : "Largest corporations by estimated output, with their share of the corporate output listed here. These are model estimates, not in the same unit as the market totals, and not market share"}
+            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
+            {settled ? `. Figures are ${PER_TURN}.` : "."}
           </p>
           <div className="space-y-2">
             {pagedProducers.map((c, i) => (
@@ -274,6 +291,14 @@ export default function TopProducersConsumers({
               </Link>
             ))}
           </div>
+          {producerExtra && market && (
+            <ListTotals
+              rows={producerExtra}
+              totalLabel="Total offered"
+              total={market.supply}
+              unit={unit}
+            />
+          )}
           <Pagination
             page={producerPage}
             total={topProducers.length}
@@ -289,9 +314,14 @@ export default function TopProducersConsumers({
         <div className="rounded-xl border border-card-border bg-card p-6">
           <h2 className="text-lg font-bold text-foreground mb-1">Top consumers</h2>
           <p className="text-xs text-muted mb-3">
-            Largest corporations by input demand
-            {commodity === "advertising" && " (plant inputs only; excludes marketing budgets)"}
-            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}. Figures are {PER_TURN}.
+            {settled
+              ? "Companies by units ordered on the market (plant inputs and marketing). With the rows below they add up to the market's demand"
+              : "Largest corporations by estimated input demand (model estimates, not in the same unit as the market totals)"}
+            {!settled &&
+              commodity === "advertising" &&
+              " (plant inputs only; excludes marketing budgets)"}
+            {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
+            {settled ? `. Figures are ${PER_TURN}.` : "."}
           </p>
           {consumerNote && <p className="text-xs text-muted mb-3">{consumerNote}</p>}
           {governmentNote && <p className="text-xs text-muted mb-3">{governmentNote}</p>}
@@ -336,7 +366,8 @@ export default function TopProducersConsumers({
                 </span>
               </Link>
             ))}
-            {consumerPage === Math.max(1, Math.ceil(topConsumers.length / PAGE_SIZE)) &&
+            {!consumerExtra &&
+              consumerPage === Math.max(1, Math.ceil(topConsumers.length / PAGE_SIZE)) &&
               syntheticDemandSources?.map((source) => (
                 <div
                   key={source.name}
@@ -362,7 +393,8 @@ export default function TopProducersConsumers({
                   </span>
                 </div>
               ))}
-            {consumerPage === Math.max(1, Math.ceil(topConsumers.length / PAGE_SIZE)) &&
+            {!consumerExtra &&
+              consumerPage === Math.max(1, Math.ceil(topConsumers.length / PAGE_SIZE)) &&
               demandGap &&
               demandGap.unlisted > 0 && (
                 <div
@@ -382,6 +414,14 @@ export default function TopProducersConsumers({
                 </div>
               )}
           </div>
+          {consumerExtra && market && (
+            <ListTotals
+              rows={consumerExtra}
+              totalLabel="Total ordered"
+              total={market.demand}
+              unit={unit}
+            />
+          )}
           <Pagination
             page={consumerPage}
             total={topConsumers.length}
@@ -395,6 +435,36 @@ export default function TopProducersConsumers({
       {showMarketingBudgets && (
         <MarketingBudgets key={marketLabel} rows={marketingBudgets} marketLabel={marketLabel} />
       )}
+    </div>
+  );
+}
+
+/** The rows after the listed companies, then the total they all add up to. */
+function ListTotals({
+  rows,
+  totalLabel,
+  total,
+  unit,
+}: {
+  rows: readonly MarketRow[];
+  totalLabel: string;
+  total: number;
+  unit: string;
+}) {
+  return (
+    <div className="mt-2 space-y-1 border-t border-card-border pt-2" data-testid="list-totals">
+      {rows.map((r) => (
+        <div key={r.key} className="flex items-center justify-between text-sm">
+          <span className="text-muted">{r.label}</span>
+          <span className="tabular-nums text-muted">{formatUnits(r.units, unit)}</span>
+        </div>
+      ))}
+      <div className="flex items-center justify-between text-sm font-semibold">
+        <span className="text-foreground">{totalLabel}</span>
+        <span className="tabular-nums text-foreground">
+          {formatUnits(total, unit)} {PER_TURN}
+        </span>
+      </div>
     </div>
   );
 }

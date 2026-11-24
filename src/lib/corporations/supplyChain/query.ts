@@ -44,8 +44,8 @@ export function marketParty(id: string): SupplyChainParty {
       if (kind === "investmentBuyer")
         return { id, name: "Construction and investment", kind: "investment" };
       if (kind === "backgroundEconomy")
-        return { id, name: "Background economy", kind: "background" };
-      if (kind === "wideEconomy") return { id, name: "Wider economy", kind: "background" };
+        return { id, name: "Economy-only countries", kind: "background" };
+      if (kind === "wideEconomy") return { id, name: "Background economy", kind: "background" };
       if (kind === "operatingPayee") return { id, name: "Operating services", kind: "other" };
     }
   } catch {

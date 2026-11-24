@@ -172,9 +172,10 @@ export function MarketSharePanel({
           <span className="font-semibold text-warning">
             Reporting basis changed at turn {basisChange.turn}.
           </span>{" "}
-          Earlier points estimated output from revenue. From this turn onward, the chart uses
-          measured plant output. A step at this marker is a reporting correction, not production
-          disappearing.
+          {basisChange.to === "market-receipts-per-turn-v1"
+            ? "Earlier points were model estimates on their own scale, so they show no share. From this turn onward, output is what you offered on the market, per turn, the same unit as global supply."
+            : "Earlier points estimated output from revenue. From this turn onward, the chart uses measured plant output."}{" "}
+          A step at this marker is a reporting correction, not production disappearing.
         </p>
       )}
 

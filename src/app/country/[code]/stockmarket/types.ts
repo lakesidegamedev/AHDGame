@@ -94,6 +94,8 @@ export interface CommodityData {
   priceCapBasis?: PriceCapBasis;
   globalPrice: number;
   globalSupply: number;
+  /** Of the world totals, what the background economy sold and bought; per turn. */
+  backgroundEconomy?: { sold: number; bought: number };
   globalDemand: number;
   exchangeSupply: number;
   exchangeDemand: number;

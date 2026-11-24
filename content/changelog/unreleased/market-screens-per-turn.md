@@ -1,20 +1,37 @@
 ---
 date: 2026-11-24
-title: "Market screens now show every amount per turn"
+title: "Market screens add up, per turn, with the background economy shown"
 summary: >-
-  Company output, world supply and demand, and country and state figures on the
-  market screens now all use the same unit, per turn, and say so.
+  Every market screen now shows who offered, ordered and received each good,
+  including the background economy, imports and exports, in rows that add up to
+  the totals, all per turn.
 tags: [market, interface]
-badges: [patch]
+badges: [minor]
 areas: [frontend]
 ---
 
-The commodity pages showed company output per turn but world supply and demand
-on a basis 24 times larger, and neither said which. A large company could look
-like a tiny sliver of a world total that was really only a few times its size.
+The market screens mixed units and hid part of the market. World supply and
+demand were daily figures (24 turns), company lists were model estimates on
+their own scale, and the background economy's sales and purchases were inside
+the totals without a row of their own, so nothing added up.
 
-Every amount on the commodity page, the market list and a company's market share
-panel is now per turn and labelled that way. A company's share of world supply
-on its market share panel is now correct too. The world total also notes that it
-includes imports and background sellers. Nothing about the market itself has
-changed, only how the amounts are shown.
+Now, on the commodity page, the market list, a country's card and the regional
+breakdown:
+
+- **One unit.** Every amount is per turn and says so. Marketing budgets, which
+  are money per day, now say "per day (24 turns)".
+- **Rows that add up.** Supply is split into companies, the background economy
+  (sellers) and economy-only countries, plus imports. Demand is split into
+  companies, households, governments, construction buyers, the background
+  economy (buyers) and economy-only countries, plus exports. What buyers
+  received is split the same way. Each set of rows adds up to its total.
+- **Exact company lists.** Top producers and top consumers now show what each
+  company offered and ordered on the market last turn, followed by every other
+  seller or buyer and the total they add up to.
+- **Regions add up to the country.** The regional breakdown adds a row for
+  buyers and sellers not placed in a region, then the country total.
+- **Your market share.** A company's output history now records what it offered
+  on the market, per turn, so its share of world supply is measured in the same
+  unit. Earlier estimates are marked and show no share.
+
+Nothing about trading or prices changed.

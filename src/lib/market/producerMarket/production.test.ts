@@ -1750,7 +1750,9 @@ describe("spillover measurement tags", () => {
                   k !== "spilloverRequestedUnits" &&
                   k !== "planning" &&
                   k !== "soldTo" &&
-                  k !== "cashChanges"
+                  k !== "cashChanges" &&
+                  k !== "countryBookAttribution" &&
+                  k !== "companyBooks"
               )
               .map(([k, v]) => [k, untagged(v)])
           )

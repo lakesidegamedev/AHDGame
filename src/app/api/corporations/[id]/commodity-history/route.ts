@@ -7,6 +7,7 @@ import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCor
 import {
   commodityOutputPoint,
   findCommodityOutputBasisChange,
+  inferredBasis,
 } from "@/lib/corporations/corpCommoditySnapshot";
 import type { CorporationHistory } from "@/lib/db/types";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
@@ -159,7 +160,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         const outputUnits = row.commodityOutput?.[commodity] ?? 0;
         if (!(outputUnits > 0)) continue;
         const flow = flowByCommodityTurn.get(`${commodity}:${row.turn}`);
-        points.push(commodityOutputPoint(row.turn, outputUnits, flow));
+        points.push(commodityOutputPoint(row.turn, outputUnits, flow, inferredBasis(row)));
       }
       return {
         commodity,

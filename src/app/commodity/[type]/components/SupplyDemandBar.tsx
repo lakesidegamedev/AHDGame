@@ -7,6 +7,7 @@ import {
   type FundedCountryMarket,
 } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { BUILD_OUTLOOK_COPY } from "./CommodityCountryStatCard";
+import { balanceParts, type Segment } from "../lib/marketRows";
 
 interface SupplyDemandBarProps {
   supply: number;
@@ -19,12 +20,6 @@ interface SupplyDemandBarProps {
   market?: FundedCountryMarket | null;
   /** True for a whole-world view, where trade nets out. */
   world?: boolean;
-}
-
-interface Segment {
-  label: string;
-  units: number;
-  className: string;
 }
 
 /**
@@ -46,26 +41,13 @@ export default function SupplyDemandBar({
   world = false,
 }: SupplyDemandBarProps) {
   const trade = market ? fundedCountryTradeTotals(market) : null;
-  const importsKnown = typeof imports === "number" && imports > 0;
-
-  const supplyParts: Segment[] = trade
-    ? [
-        { label: "Local offers", units: market!.supply, className: "bg-success" },
-        { label: "Imports", units: market!.imports, className: "bg-success/45" },
-      ]
-    : importsKnown
-      ? [
-          { label: "Local offers", units: supply, className: "bg-success" },
-          { label: "Imports", units: imports ?? 0, className: "bg-success/45" },
-        ]
-      : [{ label: "Offered", units: supply, className: "bg-success" }];
-  const demandParts: Segment[] = trade
-    ? [
-        { label: "Local orders", units: trade.domesticOrders, className: "bg-info" },
-        { label: "Exports", units: market!.exports, className: "bg-info/45" },
-      ]
-    : [{ label: "Ordered", units: demand, className: "bg-info" }];
-
+  const { supplyParts, demandParts, receivedParts } = balanceParts({
+    supply,
+    demand,
+    imports,
+    market,
+    world,
+  });
   const totalSupply = supplyParts.reduce((sum, s) => sum + Math.max(0, s.units), 0);
   const totalDemand = demandParts.reduce((sum, s) => sum + Math.max(0, s.units), 0);
   const scale = Math.max(totalSupply, totalDemand);
@@ -106,12 +88,22 @@ export default function SupplyDemandBar({
           scale={scale}
           unit={unit}
         />
+        {receivedParts && (
+          <BalanceRow
+            title="Received by buyers"
+            tone="text-foreground"
+            total={receivedParts.reduce((sum, s) => sum + Math.max(0, s.units), 0)}
+            parts={receivedParts}
+            scale={scale}
+            unit={unit}
+          />
+        )}
       </div>
 
       {sold !== null && market && market.supply > 0 && (
         <p className="mt-3 text-xs text-muted" data-testid="balance-sold">
           <span className="font-semibold text-foreground">
-            Local producers sold {formatUnits(sold, unit)}
+            {world ? "Sellers sold" : "Local producers sold"} {formatUnits(sold, unit)}
           </span>{" "}
           ({Math.round((100 * sold) / market.supply)}% of their offers, at home and abroad)
         </p>
@@ -157,7 +149,7 @@ function BalanceRow({
           />
         ))}
       </div>
-      {parts.length > 1 && (
+      {parts.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] text-muted tabular-nums">
           {parts.map((p) => (
             <span key={p.label} className="inline-flex items-center gap-1">

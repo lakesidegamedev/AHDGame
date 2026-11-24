@@ -1,5 +1,6 @@
 "use client";
 
+import { balanceParts } from "../lib/marketRows";
 import { useEffect, useRef } from "react";
 import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
 import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map/commodityRegionMappings";
@@ -250,10 +251,13 @@ function CardContent({
           value={`${formatUnits(trade?.supply ?? data.supply, unit)} per turn`}
           tone="supply"
           parts={
-            market && [
-              { label: "Local offers", value: formatUnits(market.supply, unit) },
-              { label: "Imports", value: formatUnits(market.imports, unit) },
-            ]
+            market &&
+            balanceParts({
+              supply: market.supply,
+              demand: market.demand,
+              market,
+              world: false,
+            }).supplyParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
           }
         />
         <TradeTotal
@@ -262,10 +266,12 @@ function CardContent({
           tone="demand"
           parts={
             market && trade
-              ? [
-                  { label: "Local orders", value: formatUnits(trade.domesticOrders, unit) },
-                  { label: "Exports", value: formatUnits(market.exports, unit) },
-                ]
+              ? balanceParts({
+                  supply: market.supply,
+                  demand: market.demand,
+                  market,
+                  world: false,
+                }).demandParts.map((p) => ({ label: p.label, value: formatUnits(p.units, unit) }))
               : undefined
           }
         />

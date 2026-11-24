@@ -169,6 +169,12 @@ export function buildCommodityMarketScope(
   }
 
   if (!activeCountry) {
+    // The world market as the sum of the country books when the turn has
+    // them, so its rows add up to the totals shown. Trade between countries
+    // nets out worldwide: every sale is counted once, by the selling country.
+    const world = data.worldMarket ? { ...data.worldMarket, imports: 0, exports: 0 } : null;
+    const supply = world ? world.supply : data.globalSupply;
+    const demand = world ? world.demand : data.globalDemand;
     return {
       activeCountry: null,
       activeState: null,
@@ -176,13 +182,13 @@ export function buildCommodityMarketScope(
       marketCaption: "Aggregated across all enabled countries.",
       marketPrice: data.globalPrice,
       priceChange: percentChangeFromBase(data.globalPrice, data.basePrice),
-      supply: data.globalSupply,
-      demand: data.globalDemand,
-      balance: data.globalSupply - data.globalDemand,
-      demandBasis: "stored",
-      filled: null,
-      spilloverRequested: 0,
-      fundedMarket: null,
+      supply,
+      demand,
+      balance: supply - demand,
+      demandBasis: world ? "funded_orders" : "stored",
+      filled: world ? world.filled : null,
+      spilloverRequested: world ? world.spilloverRequested : 0,
+      fundedMarket: world,
       imports: null,
       stateImports: {},
       regionCount: Object.keys(stateCountryMap).length,

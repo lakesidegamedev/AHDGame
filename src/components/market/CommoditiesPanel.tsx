@@ -155,6 +155,16 @@ export function CommoditiesPanel({
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">
                       {formatCount(c.globalSupply)} / {formatCount(c.globalDemand)}
+                      {c.backgroundEconomy &&
+                        (c.backgroundEconomy.sold > 0 || c.backgroundEconomy.bought > 0) && (
+                          <span
+                            className="block text-[10px]"
+                            title="Included in the totals: the background economy's sales and purchases."
+                          >
+                            incl. background economy {formatCount(c.backgroundEconomy.sold)} sold /{" "}
+                            {formatCount(c.backgroundEconomy.bought)} bought
+                          </span>
+                        )}
                     </td>
                     <td className={`px-3 py-2 text-xs font-medium ${bal.tone}`} title={bal.title}>
                       {bal.label}

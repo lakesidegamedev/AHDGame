@@ -1,4 +1,11 @@
 import { commodityDetailPerTurn } from "./perTurnUnits";
+import { settledCompanyVolumes } from "./settledCompanyVolumes";
+import { worldFundedMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
+import {
+  companyBooksId,
+  producerMarketCompanyBooksCollection,
+  type ProducerMarketCompanyBooksDoc,
+} from "@/lib/db/repositories/producerMarketCompanyBooks";
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { getDb } from "@/lib/mongodb";
@@ -232,9 +239,20 @@ export async function getCommodityDetailData(
     // Country views read the funded country book of the price row's turn when
     // there is one: stored nationalDemand misses buyers with no state (public,
     // military and investment orders). See fundedCountryViewRules.
-    const nationalView =
-      includeHeavy && currentPrice
-        ? (await withFundedNationalBalances(db, [currentPrice], gameState?.worldEpochId))[0]
+    const nationalView = currentPrice
+      ? (await withFundedNationalBalances(db, [currentPrice], gameState?.worldEpochId))[0]
+      : null;
+    // The world market as the sum of the country books, so its rows (who
+    // offered and who bought, imports and exports) add up to the totals shown.
+    const worldMarket = nationalView?.fundedCountryBooks
+      ? worldFundedMarket(nationalView.fundedCountryBooks)
+      : undefined;
+    // Each company's settled part of those books, when the turn recorded it.
+    const companyBooks =
+      includeHeavy && worldMarket && gameState?.worldEpochId && currentPrice
+        ? await producerMarketCompanyBooksCollection<ProducerMarketCompanyBooksDoc>(db).findOne({
+            _id: companyBooksId(gameState.worldEpochId, currentPrice.turn, commodity),
+          })
         : null;
 
     let allSectors: CorporateSector[] = [];
@@ -610,6 +628,29 @@ export async function getCommodityDetailData(
       }
       for (const [countryId, unitsByCorp] of corpDemandByCountry.entries()) {
         topConsumersByCountry[countryId] = buildCorpVolumeRows(unitsByCorp.entries(), corpMap);
+      }
+      // Settled company books replace the estimates: what each company offered
+      // and ordered on the market, the units the totals above are made of.
+      if (companyBooks) {
+        const settled = settledCompanyVolumes(companyBooks.rows);
+        topProducers.splice(
+          0,
+          topProducers.length,
+          ...buildCorpVolumeRows(settled.offered, corpMap)
+        );
+        topConsumers.splice(
+          0,
+          topConsumers.length,
+          ...buildCorpVolumeRows(settled.requested, corpMap)
+        );
+        for (const key of Object.keys(topProducersByCountry))
+          delete topProducersByCountry[key as CountryId];
+        for (const key of Object.keys(topConsumersByCountry))
+          delete topConsumersByCountry[key as CountryId];
+        for (const [countryId, units] of settled.offeredByCountry)
+          topProducersByCountry[countryId as CountryId] = buildCorpVolumeRows(units, corpMap);
+        for (const [countryId, units] of settled.requestedByCountry)
+          topConsumersByCountry[countryId as CountryId] = buildCorpVolumeRows(units, corpMap);
       }
 
       // Company demand is per turn; the market totals it is netted against are
@@ -1031,6 +1072,8 @@ export async function getCommodityDetailData(
       // commodity tab (see `realizedCommodityBasis`). Same turn, same
       // geographic scope; per-corp volumes round to
       // REALIZED_COMMODITY_ROUNDING_DECIMALS decimals.
+      ...(worldMarket ? { worldMarket } : {}),
+      volumeSource: companyBooks ? ("settled" as const) : ("estimated" as const),
       volumeBasis: {
         basis: "realized_physical_units" as const,
         turn: currentTurn,

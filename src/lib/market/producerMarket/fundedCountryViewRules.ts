@@ -18,6 +18,7 @@
  *
  * Pure: rows in, view out. No DB.
  */
+import type { UnitsByKind } from "./marketAttributionRules";
 import type { ReachableBookEntry } from "@/lib/trade/reachableBook";
 import { reachableDemandUnits } from "@/lib/market/tradePartition";
 import type { FundedCountryBookRow } from "./fundedBookRules";
@@ -42,6 +43,14 @@ export interface FundedCountryMarket {
   funded: number | null;
   imports: number;
   exports: number;
+  /**
+   * Who `supply`, `demand` and `filled` came from and went to, by kind of
+   * account; absent on books written before attribution. Each adds up to its
+   * total (`demand` leaves household spillover out, as `demand` does).
+   */
+  supplyBy?: UnitsByKind;
+  demandBy?: UnitsByKind;
+  filledBy?: UnitsByKind;
 }
 
 /** The funded book a turn published, or null when there is none. */
@@ -67,6 +76,54 @@ export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMar
     funded: optional(row.funded),
     imports: nonNegative(row.imports),
     exports: nonNegative(row.exports),
+    ...(row.supplyBy ? { supplyBy: { ...row.supplyBy } } : {}),
+    ...(row.requestedBy ? { demandBy: withoutSpillover(row.requestedBy, spilloverRequested) } : {}),
+    ...(row.filledBy ? { filledBy: { ...row.filledBy } } : {}),
+  };
+}
+
+/** A requested split less household spillover, which only households place. */
+function withoutSpillover(requested: UnitsByKind, spillover: number): UnitsByKind {
+  if (!(spillover > 0)) return { ...requested };
+  const out = { ...requested };
+  out.households = Math.max(0, (out.households ?? 0) - spillover);
+  return out;
+}
+
+/** Country markets added up into one world market, splits included. */
+export function worldFundedMarket(
+  markets: Readonly<Record<string, FundedCountryMarket>>
+): FundedCountryMarket {
+  const sum = (pick: (m: FundedCountryMarket) => number) =>
+    Object.values(markets).reduce((total, m) => total + pick(m), 0);
+  const mergeBy = (pick: (m: FundedCountryMarket) => UnitsByKind | undefined) => {
+    const out: UnitsByKind = {};
+    let any = false;
+    for (const m of Object.values(markets)) {
+      const split = pick(m);
+      if (!split) continue;
+      any = true;
+      for (const [kind, units] of Object.entries(split) as [keyof UnitsByKind, number][])
+        out[kind] = (out[kind] ?? 0) + units;
+    }
+    return any ? out : undefined;
+  };
+  const filledKnown = Object.values(markets).every((m) => m.filled !== null);
+  const fundedKnown = Object.values(markets).every((m) => m.funded !== null);
+  const supplyBy = mergeBy((m) => m.supplyBy);
+  const demandBy = mergeBy((m) => m.demandBy);
+  const filledBy = mergeBy((m) => m.filledBy);
+  return {
+    supply: sum((m) => m.supply),
+    demand: sum((m) => m.demand),
+    spilloverRequested: sum((m) => m.spilloverRequested),
+    filled: filledKnown ? sum((m) => m.filled ?? 0) : null,
+    funded: fundedKnown ? sum((m) => m.funded ?? 0) : null,
+    imports: sum((m) => m.imports),
+    exports: sum((m) => m.exports),
+    ...(supplyBy ? { supplyBy } : {}),
+    ...(demandBy ? { demandBy } : {}),
+    ...(filledBy ? { filledBy } : {}),
   };
 }
 

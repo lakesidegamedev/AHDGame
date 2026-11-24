@@ -58,7 +58,10 @@ describe("commodity country card", () => {
     expect(screen.getAllByText("Total demand")).toHaveLength(2);
     expect(screen.getAllByText("167.7K units per turn")).toHaveLength(2);
     expect(screen.getAllByText("Local orders")).toHaveLength(2);
-    expect(screen.getAllByText("76.2K units")).toHaveLength(2);
+    expect(screen.getAllByText("74.7K units")).toHaveLength(2);
+    // Substitution orders are their own row; the rows still add up to total demand.
+    expect(screen.getAllByText("Substitution orders")).toHaveLength(2);
+    expect(screen.getAllByText("1.5K units")).toHaveLength(2);
     expect(screen.getAllByText("Exports")).toHaveLength(2);
     expect(screen.getAllByText("91.5K units")).toHaveLength(2);
     expect(screen.getAllByText("161.9K units per turn")).toHaveLength(2);
