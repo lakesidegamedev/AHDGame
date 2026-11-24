@@ -9,7 +9,11 @@ import {
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { getDb } from "@/lib/mongodb";
-import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import {
+  loadWorldBookTotals,
+  withFundedNationalBalances,
+} from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { flowsFromWorldMarket, worldSupplyFigures } from "./worldSupplyRules";
 import { fundedReachableBookEntries } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CommodityFlow as CommodityFlowDoc } from "@/lib/db/types/commodityFlow";
@@ -254,6 +258,17 @@ export async function getCommodityDetailData(
             _id: companyBooksId(gameState.worldEpochId, currentPrice.turn, commodity),
           })
         : null;
+
+    // World supply and demand on the chart: the traded market (the country
+    // books, background economy included) on every turn that has one.
+    const historyWorld = worldMarket
+      ? await loadWorldBookTotals(db, {
+          commodities: [commodity],
+          fromTurn: Math.min(...history.map((h) => h.turn)),
+          toTurn: Math.max(...history.map((h) => h.turn)),
+          worldEpochId: gameState?.worldEpochId,
+        })
+      : null;
 
     let allSectors: CorporateSector[] = [];
     let allCorps: Pick<
@@ -974,7 +989,7 @@ export async function getCommodityDetailData(
 
     const detail = {
       commodity,
-      flows,
+      flows: flows && worldMarket ? flowsFromWorldMarket(flows, worldMarket) : flows,
       label: COMMODITY_LABELS[commodity],
       icon: COMMODITY_ICONS[commodity],
       colors: COMMODITY_COLORS[commodity],
@@ -982,8 +997,13 @@ export async function getCommodityDetailData(
       basePrice,
       priceCapBasis: await loadPriceCapBasis(db).catch(() => null),
       globalPrice: currentPrice?.globalPrice ?? basePrice,
-      globalSupply: currentPrice?.globalSupply ?? 0,
-      globalDemand: currentPrice?.globalDemand ?? 0,
+      // One world supply figure on every screen: the traded market. The price
+      // still reads the stored figure, which leaves out background sales; it
+      // is kept apart as the pricing input, never shown as world supply.
+      ...worldSupplyFigures(
+        { supply: currentPrice?.globalSupply ?? 0, demand: currentPrice?.globalDemand ?? 0 },
+        worldMarket
+      ),
       priceAttribution: currentPrice?.priceAttribution ?? null,
       scarcityBreakdown: buildScarcityBreakdown({
         scarcityMult: currentPrice?.scarcityMult,
@@ -995,6 +1015,7 @@ export async function getCommodityDetailData(
         demand: currentPrice?.globalDemand ?? 0,
         attribution: currentPrice?.priceAttribution ?? null,
         configuredMaxMove: priceConfigDoc?.producerPriceMaxMove,
+        ...(worldMarket ? { shownSupply: worldMarket.supply } : {}),
       }),
       priceChange:
         Math.round((((currentPrice?.globalPrice ?? basePrice) - basePrice) / basePrice) * 10000) /
@@ -1055,12 +1076,15 @@ export async function getCommodityDetailData(
           ? reachableBooksFor(reachableBooks, commodity)
           : undefined,
       turn: currentPrice?.turn ?? 0,
-      history: history.map((h: CommodityPriceHistory) => ({
-        turn: h.turn,
-        price: h.globalPrice,
-        supply: h.globalSupply,
-        demand: h.globalDemand,
-      })),
+      history: history.map((h: CommodityPriceHistory) => {
+        const world = historyWorld?.get(`${commodity}:${h.turn}`);
+        return {
+          turn: h.turn,
+          price: h.globalPrice,
+          supply: world ? world.supply : h.globalSupply,
+          demand: world ? world.demand : h.globalDemand,
+        };
+      }),
       suppliers,
       consumers,
       topProducers,

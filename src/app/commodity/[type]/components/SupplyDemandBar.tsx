@@ -7,7 +7,12 @@ import {
   type FundedCountryMarket,
 } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { BUILD_OUTLOOK_COPY } from "./CommodityCountryStatCard";
-import { balanceParts, type Segment } from "../lib/marketRows";
+import {
+  balanceParts,
+  formatWholeUnits,
+  wholeUnitsAddingUp,
+  type Segment,
+} from "../lib/marketRows";
 
 interface SupplyDemandBarProps {
   supply: number;
@@ -131,12 +136,14 @@ function BalanceRow({
   unit: string;
 }) {
   const shown = parts.filter((p) => p.units > 0);
+  // Whole units, rounded so the rows shown add up exactly to the total shown.
+  const whole = wholeUnitsAddingUp(parts.map((p) => p.units));
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
         <span className={`text-xs font-semibold ${tone}`}>{title}</span>
         <span className="text-sm font-bold tabular-nums text-foreground">
-          {formatUnits(total, unit)}
+          {parts.length > 0 ? formatWholeUnits(whole.total, unit) : formatUnits(total, unit)}
         </span>
       </div>
       <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-card-elevated">
@@ -151,10 +158,10 @@ function BalanceRow({
       </div>
       {parts.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] text-muted tabular-nums">
-          {parts.map((p) => (
+          {parts.map((p, i) => (
             <span key={p.label} className="inline-flex items-center gap-1">
               <span className={`inline-block h-2 w-2 rounded-sm ${p.className}`} aria-hidden />
-              {p.label} {formatUnits(Math.max(0, p.units), unit)}
+              {p.label} {formatWholeUnits(whole.parts[i] ?? 0, unit)}
             </span>
           ))}
         </div>

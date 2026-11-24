@@ -353,20 +353,25 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           </div>
         )}
 
-        <TopProducersConsumers
-          topProducers={marketScope.topProducers}
-          topConsumers={marketScope.topConsumers}
-          marketingBudgets={marketScope.marketingBudgets}
-          syntheticDemandSources={marketScope.syntheticDemandSources}
-          unit={data.unit}
-          commodity={data.commodity}
-          consumerNote={data.demandDriver?.consumerNote}
-          marketSupply={marketScope.supply}
-          marketDemand={marketScope.demand}
-          marketLabel={marketScope.marketLabel}
-          market={marketScope.fundedMarket}
-          settled={data.volumeSource === "settled"}
-        />
+        {/* The light first payload has no company figures; lists wait for them. */}
+        {heavyLoaded ? (
+          <TopProducersConsumers
+            topProducers={marketScope.topProducers}
+            topConsumers={marketScope.topConsumers}
+            marketingBudgets={marketScope.marketingBudgets}
+            syntheticDemandSources={marketScope.syntheticDemandSources}
+            unit={data.unit}
+            commodity={data.commodity}
+            consumerNote={data.demandDriver?.consumerNote}
+            marketSupply={marketScope.supply}
+            marketDemand={marketScope.demand}
+            marketLabel={marketScope.marketLabel}
+            market={marketScope.fundedMarket}
+            settled={data.volumeSource === "settled"}
+          />
+        ) : (
+          <Skeleton className="mb-6 h-[320px] w-full rounded-xl" />
+        )}
 
         {heavyLoaded && showAdvancedSections ? (
           <RegionalBreakdown

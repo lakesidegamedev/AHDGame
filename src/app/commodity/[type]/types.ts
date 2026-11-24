@@ -69,6 +69,10 @@ export interface CommodityDetail {
   globalPrice: number;
   globalSupply: number;
   globalDemand: number;
+  /** What the price reads: world supply without the background economy's sales; per turn. Not world supply. */
+  pricingSupply?: number;
+  /** What the price reads for demand; per turn. */
+  pricingDemand?: number;
   priceChange: number;
   annualPriceChange: number;
   statePrices: Record<string, number>;

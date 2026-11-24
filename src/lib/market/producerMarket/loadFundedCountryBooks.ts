@@ -57,3 +57,63 @@ export async function withFundedNationalBalances<
   const byCommodity = books ? fundedCountryMarketsByCommodity(books.rows) : new Map();
   return prices.map((p) => overlayFundedNationalBalances(p, books, byCommodity));
 }
+
+/** World supply and demand of one good on one turn: its country books summed. */
+export interface WorldBookTotals {
+  supply: number;
+  demand: number;
+}
+
+/**
+ * World supply and demand per good and turn, each the sum of that turn's
+ * funded country books (the traded market, background economy included), on
+ * the books' daily basis. Keyed `${commodity}:${turn}`; turns without a funded
+ * book are absent, so callers keep their stored figure for those.
+ */
+export async function loadWorldBookTotals(
+  db: Db,
+  input: {
+    commodities: readonly string[];
+    fromTurn: number;
+    toTurn: number;
+    worldEpochId?: string | null;
+  }
+): Promise<Map<string, WorldBookTotals>> {
+  const out = new Map<string, WorldBookTotals>();
+  if (input.commodities.length === 0 || !(input.toTurn >= input.fromTurn)) return out;
+  const epoch =
+    input.worldEpochId ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { worldEpochId: 1 } }))
+      ?.worldEpochId;
+  if (!epoch) return out;
+  const ids: string[] = [];
+  for (let t = input.fromTurn; t <= input.toTurn; t++) ids.push(`${epoch}:${t}`);
+  const rows = await producerMarketOutcomesCollection(db)
+    .aggregate<{ _id: { turn: number; commodity: string }; supply: number; demand: number }>([
+      { $match: { _id: { $in: ids } } },
+      {
+        $project: {
+          turn: 1,
+          books: {
+            $filter: {
+              input: { $ifNull: ["$books", []] },
+              as: "b",
+              cond: { $in: ["$$b.commodity", [...input.commodities]] },
+            },
+          },
+        },
+      },
+      { $unwind: "$books" },
+      {
+        $group: {
+          _id: { turn: "$turn", commodity: "$books.commodity" },
+          supply: { $sum: "$books.supply" },
+          demand: { $sum: "$books.demand" },
+        },
+      },
+    ])
+    .toArray();
+  for (const r of rows)
+    out.set(`${r._id.commodity}:${r._id.turn}`, { supply: r.supply, demand: r.demand });
+  return out;
+}
