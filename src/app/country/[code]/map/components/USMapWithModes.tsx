@@ -45,6 +45,19 @@ const RegionalGeoMap = dynamic(
   { loading: MapFallback, ssr: false }
 );
 
+/**
+ * Callouts for the north-east's smallest states: their labels sit in the ocean
+ * to the east with a leader line instead of piling up inside the coast.
+ * Offsets are in map units for geoAlbersUsa at scale 1000 on a 960x600 frame.
+ */
+const US_NORTHEAST_CALLOUTS: Record<string, [number, number]> = {
+  RI: [39, 0],
+  CT: [54, 10],
+  NJ: [47, 2],
+  DE: [54, -3],
+  DC: [73, 16],
+};
+
 type USMapMode =
   | "electoralAllocation"
   | "population"
@@ -770,6 +783,7 @@ export function USMapWithModes({
                           // instead of piling codes on top of each other; hover still
                           // names them.
                           hideCrowdedLabels
+                          callouts={US_NORTHEAST_CALLOUTS}
                           splitMode={senateSplitMode}
                           splitData={splitData}
                           highlightColor="var(--primary)"
