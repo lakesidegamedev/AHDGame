@@ -659,16 +659,17 @@ async function prepareRunFundedProducerTurn(
     )
   );
 
-  // Each background country's import budget: its orders' spend limits.
+  // Each background country's import budget (its orders' spend limits) and
+  // the wider economy's budget, minted the same way and returned empty at
+  // close. One batch: two batches of the same kind share one key, and the
+  // second one replaced the first, so background countries lost their budget.
   const backgroundFunding = backgroundFundingByAccount(demand.backgroundOrders);
   await apply(
     batchProducerMoves(
       worldEpoch,
       turn,
-      backgroundFundingMoves(
-        worldEpoch,
-        turn,
-        traders.flatMap((t) => {
+      backgroundFundingMoves(worldEpoch, turn, [
+        ...traders.flatMap((t) => {
           const anchor = backgroundFunding.get(t.accountId) ?? 0;
           if (!(anchor > 0)) return [];
           const rate = rateOf(t.currency);
@@ -681,21 +682,8 @@ async function prepareRunFundedProducerTurn(
               localPerAnchor: rate,
             },
           ];
-        })
-      )
-    )
-  );
-
-  // The wider economy's budget: its orders' spend limits, minted like a
-  // background country's and returned empty at close.
-  await apply(
-    batchProducerMoves(
-      worldEpoch,
-      turn,
-      backgroundFundingMoves(
-        worldEpoch,
-        turn,
-        wideEconomyScopes.flatMap((s) => {
+        }),
+        ...wideEconomyScopes.flatMap((s) => {
           const walletId = wideEconomyWallet(s.countryId);
           const anchor = wideEconomyFunding.get(walletId) ?? 0;
           if (!(anchor > 0)) return [];
@@ -709,8 +697,8 @@ async function prepareRunFundedProducerTurn(
               localPerAnchor: rate,
             },
           ];
-        })
-      )
+        }),
+      ])
     )
   );
 
