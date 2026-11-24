@@ -3,6 +3,8 @@ import corporationsEn from "../../messages/en/corporations.json";
 import corporationsDe from "../../messages/de/corporations.json";
 import electionsEn from "../../messages/en/elections.json";
 import electionsDe from "../../messages/de/elections.json";
+import governmentConfidenceEn from "../../messages/en/governmentConfidence.json";
+import governmentConfidenceDe from "../../messages/de/governmentConfidence.json";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -52,9 +54,16 @@ const ELECTIONS = [
   "elections.campaignManager.map.legendScalePrimary",
 ];
 
+const GOVERNMENT_CONFIDENCE = [
+  "governmentConfidence.title",
+  "governmentConfidence.history.points",
+  "governmentConfidence.history.turn",
+];
+
 describe.each([
   ["corporations", CORPORATIONS, corporationsEn, corporationsDe],
   ["elections", ELECTIONS, electionsEn, electionsDe],
+  ["governmentConfidence", GOVERNMENT_CONFIDENCE, governmentConfidenceEn, governmentConfidenceDe],
 ] as Array<[string, string[], Tree, Tree]>)("German parity: %s", (_n, keys, en, de) => {
   it.each(keys)("%s is translated with the same placeholders", (key) => {
     const english = get(en, key);

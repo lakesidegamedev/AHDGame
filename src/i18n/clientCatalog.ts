@@ -161,6 +161,25 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
     pattern: "/country/:code/parties",
     namespaces: ["nav", "tutorial"],
   },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/parties/:id",
+    namespaces: ["elections", "nav", "parties", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/region/:id",
+    namespaces: [
+      "corporations",
+      "elections",
+      "layout",
+      "nav",
+      "parties",
+      "profile",
+      "tutorial",
+      "worldConflicts",
+    ],
+  },
   // Everything else under /country keeps the family union.
   {
     prefix: "/country",
@@ -203,8 +222,8 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
  * Public routes a signed-out visitor can land on, with the namespaces their
  * client trees translate beyond the shell (analyzer output). Signed-in players
  * always get the full catalog: they can open dialogs and panels that translate
- * namespaces the page itself does not. `/guides`, `/news` and `/wiki` reuse the
- * main rules above.
+ * namespaces the page itself does not. The routes below also reuse catalog
+ * rules verified for anonymous visits.
  */
 const SIGNED_OUT_RULES: ReadonlyArray<{ prefix: string; namespaces: readonly string[] }> = [
   { prefix: "/about", namespaces: ["nav", "tutorial"] },
@@ -222,7 +241,24 @@ const SIGNED_OUT_RULES: ReadonlyArray<{ prefix: string; namespaces: readonly str
   { prefix: "/corporations", namespaces: ["nav", "tutorial"] },
 ];
 
-const SIGNED_OUT_REUSED_PREFIXES = ["/guides", "/news", "/wiki"] as const;
+const SIGNED_OUT_REUSED_PREFIXES = [
+  "/campaign-manager",
+  "/character",
+  "/corporation",
+  "/elections",
+  "/guides",
+  "/market",
+  "/news",
+  "/politicians",
+  "/wiki",
+] as const;
+
+const SIGNED_OUT_REUSED_PATTERNS = [
+  "/country/:code/legislature",
+  "/country/:code/map",
+  "/country/:code/parties/:id",
+  "/country/:code/region/:id",
+] as const;
 
 /**
  * The non-shell namespaces `app/template.tsx` ships to a signed-out visitor, or
@@ -236,9 +272,10 @@ export function signedOutTemplateNamespaces(
   const own = SIGNED_OUT_RULES.find(
     (rule) => normalized === rule.prefix || normalized.startsWith(`${rule.prefix}/`)
   );
-  const reused = SIGNED_OUT_REUSED_PREFIXES.some(
-    (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`)
-  );
+  const reused =
+    SIGNED_OUT_REUSED_PREFIXES.some(
+      (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`)
+    ) || SIGNED_OUT_REUSED_PATTERNS.some((pattern) => matchesPattern(pattern, normalized));
   const namespaces =
     own?.namespaces ?? (normalized === "/" || reused ? clientNamespacesForPath(normalized) : null);
   if (!namespaces) return null;
