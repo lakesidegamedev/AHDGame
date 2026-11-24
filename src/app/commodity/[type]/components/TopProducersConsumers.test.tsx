@@ -140,12 +140,16 @@ describe("producer list basis caption", () => {
 
   it("says mining figures are capacity, not dug output", () => {
     renderProducers("iron");
-    expect(screen.getByText(/production capacity, not dug output/i)).toBeTruthy();
+    expect(screen.getByText(/share of the capacity listed here/i)).toBeTruthy();
   });
 
   it("keeps the output-volume caption for manufactured goods", () => {
     renderProducers("steel");
-    expect(screen.getByText(/Largest corporations by output volume/i)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Largest corporations by output volume, with their share of the corporate output listed here/i
+      )
+    ).toBeTruthy();
   });
 });
 
