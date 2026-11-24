@@ -28,7 +28,7 @@
       "turnExplainer": "1 turn = 1 real hour. 48 turns = 1 game year. Cap: {cap}.",
       "hoardWarning": "Above {threshold} actions, a hoarding penalty of {penalty}/turn applies.",
       "hoarding": "Hoarding: −{penalty} per turn",
-      "hoardAbove": "Hoarding penalty above {threshold}",
+      "hoardAbove": "Hoarding penalty above {threshold} actions",
       "campaignOffice": "Campaign office",
       "stateInfluence": "State influence",
       "influenceTooltip": "Political foothold in home state. Spend actions to grow it; it decays each turn. Higher influence improves odds in state elections and unlocks local power.",

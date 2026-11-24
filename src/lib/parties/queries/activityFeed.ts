@@ -2,6 +2,7 @@ import type { PartyActivityFeedItem, PartyActivityFeedResponse } from "@/lib/par
 import type { RecruitmentSlate, SlateCandidate, TreasuryTransaction } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { TREASURY_CATEGORY_LABEL } from "@/lib/parties/treasuryCategoryLabels";
 import { SLATE_REFUSAL_LABEL, isSlateFilingFailure } from "@/lib/slateRefusalReasons";
 import type { Db } from "mongodb";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
@@ -98,7 +99,8 @@ export async function getPartyActivityFeed(
       type: "treasury",
       createdAt: tx.createdAt.toISOString(),
       summary: `${tx.direction === "credit" ? "+" : "-"}${symbol}${tx.amount.toLocaleString()} | ${tx.memo}`,
-      detail: tx.category,
+      // Plain words, never the stored code ("ps_investment").
+      detail: TREASURY_CATEGORY_LABEL[tx.category] ?? tx.category,
       link: { tab: "treasury" },
     });
   }

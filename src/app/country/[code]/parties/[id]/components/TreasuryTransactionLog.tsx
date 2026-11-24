@@ -13,6 +13,7 @@ import {
   type TreasuryTransactionCategory,
 } from "@/lib/db/types/treasuryTransaction";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { TREASURY_CATEGORY_LABEL as CATEGORY_LABEL } from "@/lib/parties/treasuryCategoryLabels";
 
 /**
  * Append-only audit log of treasury inflows and outflows for a party. Reads
@@ -39,26 +40,6 @@ interface TransactionsResponse {
   items: TransactionRow[];
   nextBefore: string | null;
 }
-
-/**
- * Typed as a total record so a new `TreasuryTransactionCategory` cannot ship
- * without a label here — the compiler catches it.
- */
-const CATEGORY_LABEL: Record<TreasuryTransactionCategory, string> = {
-  donations: "Donations",
-  caucus_tax: "Caucus tax",
-  transfers: "Transfers",
-  slate: "Slate",
-  gotv: "GOTV",
-  suppression: "Suppression",
-  whip_ops: "Whip ops",
-  recruitment: "Recruitment",
-  operations: "Operations",
-  fund_generation: "Fund generation",
-  ps_investment: "Political Strength purchase",
-  org_building: "Organization building",
-  campaign_donation: "Campaign donation",
-};
 
 const HOLDER_LABEL: Record<string, string> = {
   party: "National party",

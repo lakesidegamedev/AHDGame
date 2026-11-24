@@ -16,6 +16,10 @@ export function RegionalHeroActions({
       aria-label="Regional government"
       className="flex flex-wrap items-center gap-2 border-t border-card-border px-5 py-3 sm:px-6"
     >
+      {/* A visible group label, so the buttons say where they lead. */}
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+        Regional government
+      </span>
       {officeHref && (
         <Link href={officeHref} className={buttonClass}>
           Office

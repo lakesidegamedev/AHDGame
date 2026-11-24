@@ -565,12 +565,6 @@ export function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind:
       countryId={stateParty.countryId}
       regimeStatus={stateParty.regimeStatus}
       tierLabel={isMember ? "Member" : null}
-      headerExtra={
-        <p className="mt-3 text-body text-muted">
-          {stateParty.stateName} electorate:{" "}
-          <span className="font-medium text-foreground">{leanLabel.label}</span>
-        </p>
-      }
       statsStrip={
         <PartyStatsRow>
           <PartyStat label="Organization" detail={orgLabel.label}>

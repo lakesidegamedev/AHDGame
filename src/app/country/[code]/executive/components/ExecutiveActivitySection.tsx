@@ -221,7 +221,11 @@ export function ExecutiveActivitySection({
             }
             footer={{
               href: `${executiveUrl(countryId)}/cabinet`,
-              label: "All positions",
+              // Say how many the preview leaves out (it shows eight).
+              label:
+                (roster?.rows.length ?? 0) > 8
+                  ? `All ${roster?.rows.length} positions, ${(roster?.rows.length ?? 0) - 8} more`
+                  : "All positions",
             }}
           />
         </div>

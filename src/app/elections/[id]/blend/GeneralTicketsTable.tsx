@@ -258,10 +258,14 @@ export function TicketsTable({
               <th scope="col" style={TH}>
                 Funds
               </th>
-              <th scope="col" style={TH}>
+              <th scope="col" style={TH} title="Campaign actions this ticket has taken.">
                 Actions
               </th>
-              <th scope="col" style={TH}>
+              <th
+                scope="col"
+                style={TH}
+                title="Total campaign upgrade levels this ticket has bought."
+              >
                 Levels
               </th>
               <th scope="col" style={TH}>

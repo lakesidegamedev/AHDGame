@@ -304,13 +304,20 @@ async function buildOnce(
     );
   }
 
-  const dilutions = bucketResult.rows
+  const dilutionRows = bucketResult.rows
     .filter((row) => row.id !== spenderRow._id && row.delta < 0)
     .map((row) => ({
       partyId: rowById.get(row.id)?.partyId ?? row.id,
       loss: Math.abs(row.delta),
       newOrg: row.organization,
     }));
+  // Name each diluted party, so the panel never falls back to "Party #1".
+  const dilutions = await Promise.all(
+    dilutionRows.map(async (row) => {
+      const party = await findPartyBySequentialId(db, row.partyId, countryId).catch(() => null);
+      return party ? { ...row, partyName: party.name, abbreviation: party.abbreviation } : row;
+    })
+  );
 
   // Authoritative estimate for the NEXT click, computed from the just-committed
   // state via the same helper the preview GET uses. Returning it lets the client

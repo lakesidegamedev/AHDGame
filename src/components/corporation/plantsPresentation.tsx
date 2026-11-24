@@ -140,6 +140,12 @@ function formatPlantCount(plants: number): string {
 }
 
 /** Arrival pace in plain words; a slow pace reads "1 every N turns", never "About 0". */
+/** Short arrival rate for a badge: "about 2 a turn", or "1 every 12 turns" when slower than one a turn. */
+export function arrivalRateShort(perTurn: number): string {
+  if (perTurn < 1) return `1 every ${Math.max(2, Math.round(1 / perTurn))} turns`;
+  return `about ${formatPlantCount(perTurn)} a turn`;
+}
+
 export function arrivalRateSentence(perTurn: number, singular: string, plural: string): string {
   if (perTurn < 1) {
     const every = Math.max(2, Math.round(1 / perTurn));
@@ -223,8 +229,8 @@ export function BuildQueueBadge({
         </span>
         {p.perTurn != null && (
           <span className="font-normal opacity-80">
-            {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} in · about{" "}
-            {formatPlantCount(p.perTurn)} a turn
+            {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} finished ·{" "}
+            {arrivalRateShort(p.perTurn)}
           </span>
         )}
       </span>

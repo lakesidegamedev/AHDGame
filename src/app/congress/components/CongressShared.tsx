@@ -28,8 +28,11 @@ export function PartyChip({
     );
   const id = partyId ?? "independent";
   return (
+    // One line always: a long party name truncates with the full name on hover
+    // instead of wrapping and doubling the row it sits in.
     <span
-      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+      title={partyName}
+      className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"
       style={{
         borderColor: partyColor + "60",
         backgroundColor: partyColor + "18",
@@ -43,7 +46,7 @@ export function PartyChip({
         size="h-2 w-2"
         countryId={countryId}
       />
-      {partyName}
+      <span className="min-w-0 truncate">{partyName}</span>
     </span>
   );
 }

@@ -4,6 +4,8 @@
  * seat ids like `"US-house-AZ"` when no meaningful district number is set.
  */
 
+import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+
 interface RaceLabelInput {
   electionType: string;
   /** Numeric district label only; missing for single-seat races. */
@@ -32,7 +34,10 @@ export function raceLabel(race: RaceLabelInput): string {
   if (race.electionType === "bundestag") return "Bundestag";
   if (race.electionType === "npcDelegate") return "NPC Delegate";
   if (race.electionType === "peoplesCongress") return "People's Congress";
-  return race.district ? `${race.electionType} (${race.district})` : race.electionType;
+  // Every other type goes through the shared label table, so a raw id such as
+  // "caCommons" or "provincialLegislature" never reaches the page.
+  const label = formatElectionTypeLabel(race.electionType);
+  return race.district ? `${label} (${race.district})` : label;
 }
 
 function toRoman(n: number): string {

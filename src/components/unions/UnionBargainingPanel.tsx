@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button, EmptyState } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -151,6 +152,10 @@ export function UnionBargainingPanel({
   campaigns: UnionBargainingCampaign[];
   onReload: () => Promise<void>;
 }) {
+  // The union treasury is held in the anchor currency; show every figure with
+  // its symbol, as money is shown elsewhere.
+  const { formatAmount } = useCurrency();
+  const money = (value: number) => formatAmount(value);
   const [employerId, setEmployerId] = useState("");
   const [wage, setWage] = useState("1.10");
   const [duration, setDuration] = useState("48");
@@ -261,9 +266,9 @@ export function UnionBargainingPanel({
     const upkeep = preview.upkeepPerTurn ?? 0;
     const confirmed = window.confirm(
       `${nextEscalationFor(campaign.escalationLevel)?.label ?? "Escalate dispute"}?\n\n` +
-        `Treasury cost: ${preview.cashCost.toLocaleString("en-US")}\n` +
+        `Treasury cost: ${money(preview.cashCost)}\n` +
         (upkeep > 0
-          ? `Upkeep while held: ${upkeep.toLocaleString("en-US")} per turn (the action ends by itself if the treasury cannot pay)\n`
+          ? `Upkeep while held: ${money(upkeep)} per turn (the action ends by itself if the treasury cannot pay)\n`
           : "") +
         `Affected locals: ${targetList}\n` +
         `New strike calls: ${preview.newStrikeLocalCount}`
@@ -414,321 +419,337 @@ export function UnionBargainingPanel({
           />
         </div>
       ) : (
-        campaigns.map((campaign) => {
-          const offer = campaign.currentOffer;
-          const counter = counterDrafts[campaign.campaignId] ?? offer;
-          const canAccept =
-            isLeader &&
-            (campaign.status === "negotiating" || campaign.status === "dispute") &&
-            offer.proposedBy === "employer";
-          const canCounter = canAccept;
-          const nextEscalation = nextEscalationFor(campaign.escalationLevel);
-          const escalationPreview = campaign.escalationPreview;
-          const escalationSupport = escalationPreview?.supportRequired ?? null;
-          const canEscalate =
-            isLeader &&
-            campaign.status === "dispute" &&
-            nextEscalation != null &&
-            escalationSupport != null &&
-            campaign.mandate.support >= escalationSupport &&
-            campaign.lastActionTurn < currentTurn &&
-            unionTreasury >= (escalationPreview?.cashCost ?? 0) &&
-            !escalationPreview?.blockedReason &&
-            (escalationPreview?.targetLocals.length ?? 0) > 0;
-          const mediation = campaign.mediation;
-          // Both figures come from the server, which scopes them to the locals
-          // that still resolve, exactly as the turn charges them. The panel used
-          // to recompute these from `sectorCount` against a mirrored constant,
-          // which overstated the cost for a campaign whose locals had since been
-          // sold or destroyed.
-          const heldUpkeep = campaign.heldUpkeepPerTurn ?? 0;
-          const nextUpkeep = campaign.escalationPreview?.upkeepPerTurn ?? 0;
-          const turnsFunded = heldUpkeep > 0 ? Math.floor(unionTreasury / heldUpkeep) : null;
-          // First reason the escalate command would refuse, in the order a
-          // leader can act on it. Printed as visible text, not a tooltip.
-          const escalateBlocker =
-            escalationSupport != null && campaign.mandate.support < escalationSupport
-              ? `Requires ${escalationSupport} member support. This campaign has ${campaign.mandate.support.toFixed(0)}.`
-              : campaign.lastActionTurn >= currentTurn
-                ? "This campaign has already acted this turn."
-                : unionTreasury < (escalationPreview?.cashCost ?? 0)
-                  ? `Needs ${(escalationPreview?.cashCost ?? 0).toLocaleString("en-US")} in the treasury.`
-                  : (escalationPreview?.blockedReason ??
-                    ((escalationPreview?.targetLocals.length ?? 0) === 0
-                      ? "No local is available to escalate against right now."
-                      : null));
-          // A long member state list wraps into a wall of codes on mobile, so
-          // it is capped and counted instead.
-          const targetStateIds = (escalationPreview?.targetLocals ?? []).map(
-            (local) => local.stateId
-          );
-          const targetStates =
-            targetStateIds.length > 6
-              ? `${targetStateIds.slice(0, 6).join(", ")} and ${targetStateIds.length - 6} more`
-              : targetStateIds.join(", ");
-          return (
-            <article
-              key={campaign.campaignId}
-              className="rounded-xl border border-card-border bg-card p-5 space-y-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <Link
-                    href={`/corporation/${campaign.employerCorporationId}`}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    {campaign.employerName}
-                  </Link>
-                  <p className="text-body-sm text-muted">
-                    {campaign.sectorCount} local(s) · Deadline turn {campaign.deadlineTurn} ·{" "}
-                    {campaign.offers.length} offer(s)
-                  </p>
+        <>
+          {/* The tab counts open campaigns; the list also keeps settled and lapsed
+            ones, so say how the list splits. */}
+          <p className="text-body-sm text-muted">
+            {(() => {
+              const open = campaigns.filter(
+                (c) => c.status === "negotiating" || c.status === "dispute"
+              ).length;
+              return `${open} open, ${campaigns.length - open} settled or lapsed.`;
+            })()}
+          </p>
+          {campaigns.map((campaign) => {
+            const offer = campaign.currentOffer;
+            const counter = counterDrafts[campaign.campaignId] ?? offer;
+            const canAccept =
+              isLeader &&
+              (campaign.status === "negotiating" || campaign.status === "dispute") &&
+              offer.proposedBy === "employer";
+            const canCounter = canAccept;
+            const nextEscalation = nextEscalationFor(campaign.escalationLevel);
+            const escalationPreview = campaign.escalationPreview;
+            const escalationSupport = escalationPreview?.supportRequired ?? null;
+            const canEscalate =
+              isLeader &&
+              campaign.status === "dispute" &&
+              nextEscalation != null &&
+              escalationSupport != null &&
+              campaign.mandate.support >= escalationSupport &&
+              campaign.lastActionTurn < currentTurn &&
+              unionTreasury >= (escalationPreview?.cashCost ?? 0) &&
+              !escalationPreview?.blockedReason &&
+              (escalationPreview?.targetLocals.length ?? 0) > 0;
+            const mediation = campaign.mediation;
+            // Both figures come from the server, which scopes them to the locals
+            // that still resolve, exactly as the turn charges them. The panel used
+            // to recompute these from `sectorCount` against a mirrored constant,
+            // which overstated the cost for a campaign whose locals had since been
+            // sold or destroyed.
+            const heldUpkeep = campaign.heldUpkeepPerTurn ?? 0;
+            const nextUpkeep = campaign.escalationPreview?.upkeepPerTurn ?? 0;
+            const turnsFunded = heldUpkeep > 0 ? Math.floor(unionTreasury / heldUpkeep) : null;
+            // First reason the escalate command would refuse, in the order a
+            // leader can act on it. Printed as visible text, not a tooltip.
+            const escalateBlocker =
+              escalationSupport != null && campaign.mandate.support < escalationSupport
+                ? `Requires ${escalationSupport} member support. This campaign has ${campaign.mandate.support.toFixed(0)}.`
+                : campaign.lastActionTurn >= currentTurn
+                  ? "This campaign has already acted this turn."
+                  : unionTreasury < (escalationPreview?.cashCost ?? 0)
+                    ? `Needs ${money(escalationPreview?.cashCost ?? 0)} in the treasury.`
+                    : (escalationPreview?.blockedReason ??
+                      ((escalationPreview?.targetLocals.length ?? 0) === 0
+                        ? "No local is available to escalate against right now."
+                        : null));
+            // A long member state list wraps into a wall of codes on mobile, so
+            // it is capped and counted instead.
+            const targetStateIds = (escalationPreview?.targetLocals ?? []).map(
+              (local) => local.stateId
+            );
+            const targetStates =
+              targetStateIds.length > 6
+                ? `${targetStateIds.slice(0, 6).join(", ")} and ${targetStateIds.length - 6} more`
+                : targetStateIds.join(", ");
+            return (
+              <article
+                key={campaign.campaignId}
+                className="rounded-xl border border-card-border bg-card p-5 space-y-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <Link
+                      href={`/corporation/${campaign.employerCorporationId}`}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {campaign.employerName}
+                    </Link>
+                    <p className="text-body-sm text-muted">
+                      {campaign.sectorCount} {campaign.sectorCount === 1 ? "local" : "locals"} ·
+                      Deadline turn {campaign.deadlineTurn} · {campaign.offers.length}{" "}
+                      {campaign.offers.length === 1 ? "offer" : "offers"}
+                    </p>
+                  </div>
+                  <CampaignStatus campaign={campaign} />
                 </div>
-                <CampaignStatus campaign={campaign} />
-              </div>
 
-              {/* Six metrics: three across at sm so the row never leaves one
+                {/* Six metrics: three across at sm so the row never leaves one
                   orphan, six across once there is width for it. */}
-              <div className="grid grid-cols-2 gap-3 text-body sm:grid-cols-3 lg:grid-cols-6">
-                <Metric label="Wage floor" value={`${offer.wageLevel.toFixed(2)}×`} />
-                <Metric label="Agreement" value={`${offer.agreementDurationTurns} turns`} />
-                <Metric label="Labour peace" value={`${offer.noStrikeTurns} turns`} />
-                <Metric
-                  label="Pension"
-                  value={
-                    offer.pensionContributionRate
-                      ? `${(offer.pensionContributionRate * 100).toFixed(1)}% of pay`
-                      : "None"
-                  }
-                />
-                <Metric label="Support" value={campaign.mandate.support.toFixed(0)} />
-                <Metric label="Leverage" value={campaign.mandate.leverage.toFixed(0)} />
-              </div>
+                <div className="grid grid-cols-2 gap-3 text-body sm:grid-cols-3 lg:grid-cols-6">
+                  <Metric label="Wage floor" value={`${offer.wageLevel.toFixed(2)}×`} />
+                  <Metric label="Agreement" value={`${offer.agreementDurationTurns} turns`} />
+                  <Metric label="Labour peace" value={`${offer.noStrikeTurns} turns`} />
+                  <Metric
+                    label="Pension"
+                    value={
+                      offer.pensionContributionRate
+                        ? `${(offer.pensionContributionRate * 100).toFixed(1)}% of pay`
+                        : "None"
+                    }
+                  />
+                  <Metric label="Support" value={campaign.mandate.support.toFixed(0)} />
+                  <Metric label="Leverage" value={campaign.mandate.leverage.toFixed(0)} />
+                </div>
 
-              <MandateBreakdown mandate={campaign.mandate} />
+                <MandateBreakdown mandate={campaign.mandate} />
 
-              {campaign.offers.length > 1 && <OfferHistory offers={campaign.offers} />}
+                {campaign.offers.length > 1 && <OfferHistory offers={campaign.offers} />}
 
-              {campaign.status === "dispute" && (
-                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-body font-semibold text-foreground">Industrial action</p>
-                      <p className="text-body-sm text-muted">
-                        Current level: {campaign.escalationLevel.replaceAll("_", " ")}
-                      </p>
-                      {heldUpkeep > 0 && (
-                        <p className="text-body-sm text-warning">
-                          Upkeep {heldUpkeep.toLocaleString("en-US")} per turn · treasury funds{" "}
-                          {turnsFunded} more turn(s). The ban ends by itself when it cannot be paid.
+                {campaign.status === "dispute" && (
+                  <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-body font-semibold text-foreground">Industrial action</p>
+                        <p className="text-body-sm text-muted">
+                          Current level: {campaign.escalationLevel.replaceAll("_", " ")}
                         </p>
+                        {heldUpkeep > 0 && (
+                          <p className="text-body-sm text-warning">
+                            Upkeep {money(heldUpkeep)} per turn · treasury funds {turnsFunded} more{" "}
+                            {turnsFunded === 1 ? "turn" : "turns"}. The ban ends by itself when it
+                            cannot be paid.
+                          </p>
+                        )}
+                      </div>
+                      {isLeader && nextEscalation && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={pending || !canEscalate}
+                          onClick={() => confirmEscalation(campaign)}
+                        >
+                          {nextEscalation.label}
+                        </Button>
                       )}
                     </div>
-                    {isLeader && nextEscalation && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={pending || !canEscalate}
-                        onClick={() => confirmEscalation(campaign)}
-                      >
-                        {nextEscalation.label}
-                      </Button>
-                    )}
-                  </div>
 
-                  {/* A `title` never fires on a disabled button and never fires
+                    {/* A `title` never fires on a disabled button and never fires
                       on touch at all, so every reason the escalation is refused
                       is printed here instead. */}
-                  {isLeader && nextEscalation && !canEscalate && escalateBlocker && (
-                    <p className="flex items-start gap-2 text-body-sm font-medium text-error">
-                      <span aria-hidden>⚠</span>
-                      <span>{escalateBlocker}</span>
-                    </p>
-                  )}
-
-                  {nextEscalation && escalationPreview && (
-                    <p className="text-body-sm text-muted">
-                      Cost {escalationPreview.cashCost.toLocaleString("en-US")} · Affects{" "}
-                      {escalationPreview.targetLocals.length} local(s)
-                      {targetStates ? `: ${targetStates}` : ""}
-                      {escalationPreview.newStrikeLocalCount > 0
-                        ? ` · ${escalationPreview.newStrikeLocalCount} new strike call(s)`
-                        : ""}
-                      {nextUpkeep > 0
-                        ? ` · then ${nextUpkeep.toLocaleString("en-US")} per turn to hold it`
-                        : ""}
-                    </p>
-                  )}
-
-                  {mediation ? (
-                    <div className="rounded-lg bg-card p-3 text-body">
-                      <p className="font-medium text-foreground">
-                        Mediation package: {mediation.wageLevel.toFixed(2)}× wage,{" "}
-                        {mediation.agreementDurationTurns} turns, {mediation.noStrikeTurns}{" "}
-                        no-strike
+                    {isLeader && nextEscalation && !canEscalate && escalateBlocker && (
+                      <p className="flex items-start gap-2 text-body-sm font-medium text-error">
+                        <span aria-hidden>⚠</span>
+                        <span>{escalateBlocker}</span>
                       </p>
-                      <p className="mt-1 text-body-sm text-muted">
-                        {mediation.status === "pending"
-                          ? `Open through turn ${mediation.expiresAtTurn}. Union ${mediation.unionAccepted ? "accepted" : "pending"}; employer ${mediation.employerAccepted ? "accepted" : "pending"}.`
-                          : `Mediation ${mediation.status}.`}
+                    )}
+
+                    {nextEscalation && escalationPreview && (
+                      <p className="text-body-sm text-muted">
+                        Cost {money(escalationPreview.cashCost)} · Affects{" "}
+                        {escalationPreview.targetLocals.length}{" "}
+                        {escalationPreview.targetLocals.length === 1 ? "local" : "locals"}
+                        {targetStates ? `: ${targetStates}` : ""}
+                        {escalationPreview.newStrikeLocalCount > 0
+                          ? ` · ${escalationPreview.newStrikeLocalCount} new strike ${escalationPreview.newStrikeLocalCount === 1 ? "call" : "calls"}`
+                          : ""}
+                        {nextUpkeep > 0 ? ` · then ${money(nextUpkeep)} per turn to hold it` : ""}
                       </p>
-                      {isLeader && mediation.status === "pending" && !mediation.unionAccepted && (
-                        <div className="mt-3 flex gap-2">
-                          <Button
-                            size="sm"
-                            className="bg-success hover:bg-success-muted"
-                            disabled={pending}
-                            onClick={() => void act(campaign.campaignId, "accept_mediation")}
-                          >
-                            Accept mediation
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="border-error/40 text-error hover:border-error/60 hover:text-error"
-                            disabled={pending}
-                            onClick={() => void act(campaign.campaignId, "reject_mediation")}
-                          >
-                            Reject mediation
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ) : isLeader && campaign.mediationAvailable ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="border-primary/40 text-primary hover:border-primary/60 hover:text-primary"
-                      disabled={pending}
-                      onClick={() => void act(campaign.campaignId, "request_mediation")}
-                    >
-                      Request mediation
-                    </Button>
-                  ) : campaign.mediationUnavailableReason ? (
-                    <p className="text-body-sm text-muted">{campaign.mediationUnavailableReason}</p>
-                  ) : null}
-                </div>
-              )}
+                    )}
 
-              {campaign.ratification && (
-                <RatificationCard
-                  ratification={campaign.ratification}
-                  currentTurn={currentTurn}
-                  pending={pending}
-                  onVote={(vote) => void castBallot(campaign.campaignId, vote)}
-                />
-              )}
+                    {mediation ? (
+                      <div className="rounded-lg bg-card p-3 text-body">
+                        <p className="font-medium text-foreground">
+                          Mediation package: {mediation.wageLevel.toFixed(2)}× wage,{" "}
+                          {mediation.agreementDurationTurns} turns, {mediation.noStrikeTurns}{" "}
+                          no-strike
+                        </p>
+                        <p className="mt-1 text-body-sm text-muted">
+                          {mediation.status === "pending"
+                            ? `Open through turn ${mediation.expiresAtTurn}. Union ${mediation.unionAccepted ? "accepted" : "pending"}; employer ${mediation.employerAccepted ? "accepted" : "pending"}.`
+                            : `Mediation ${mediation.status}.`}
+                        </p>
+                        {isLeader && mediation.status === "pending" && !mediation.unionAccepted && (
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-success hover:bg-success-muted"
+                              disabled={pending}
+                              onClick={() => void act(campaign.campaignId, "accept_mediation")}
+                            >
+                              Accept mediation
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="border-error/40 text-error hover:border-error/60 hover:text-error"
+                              disabled={pending}
+                              onClick={() => void act(campaign.campaignId, "reject_mediation")}
+                            >
+                              Reject mediation
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : isLeader && campaign.mediationAvailable ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="border-primary/40 text-primary hover:border-primary/60 hover:text-primary"
+                        disabled={pending}
+                        onClick={() => void act(campaign.campaignId, "request_mediation")}
+                      >
+                        Request mediation
+                      </Button>
+                    ) : campaign.mediationUnavailableReason ? (
+                      <p className="text-body-sm text-muted">
+                        {campaign.mediationUnavailableReason}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
 
-              {canAccept && (
-                <div className="space-y-3 border-t border-card-border pt-4">
-                  {canCounter && (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <NumberField
-                        label="Counter wage"
-                        value={String(Math.round(counter.wageLevel * 100) / 100)}
-                        step="0.01"
-                        min="0.8"
-                        max="1.5"
-                        onChange={(value) =>
-                          setCounterDrafts((all) => ({
-                            ...all,
-                            [campaign.campaignId]: { ...counter, wageLevel: Number(value) },
-                          }))
-                        }
-                      />
-                      <NumberField
-                        label="Agreement turns"
-                        value={String(counter.agreementDurationTurns)}
-                        step="1"
-                        min="24"
-                        max="192"
-                        onChange={(value) =>
-                          setCounterDrafts((all) => ({
-                            ...all,
-                            [campaign.campaignId]: {
-                              ...counter,
-                              agreementDurationTurns: Number(value),
-                            },
-                          }))
-                        }
-                      />
-                      <NumberField
-                        label="No-strike turns"
-                        value={String(counter.noStrikeTurns)}
-                        step="1"
-                        min="0"
-                        max={String(counter.agreementDurationTurns)}
-                        onChange={(value) =>
-                          setCounterDrafts((all) => ({
-                            ...all,
-                            [campaign.campaignId]: { ...counter, noStrikeTurns: Number(value) },
-                          }))
-                        }
-                      />
-                      <NumberField
-                        label="Pension %"
-                        value={String(((counter.pensionContributionRate ?? 0) * 100).toFixed(1))}
-                        step="0.5"
-                        min="0"
-                        max="15"
-                        onChange={(value) =>
-                          setCounterDrafts((all) => ({
-                            ...all,
-                            [campaign.campaignId]: {
-                              ...counter,
-                              pensionContributionRate: Number(value) / 100,
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-success hover:bg-success-muted"
-                      disabled={pending || !!campaign.ratificationBlockedReason}
-                      title={campaign.ratificationBlockedReason ?? undefined}
-                      onClick={() => void act(campaign.campaignId, "accept")}
-                    >
-                      Accept and put to members
-                    </Button>
+                {campaign.ratification && (
+                  <RatificationCard
+                    ratification={campaign.ratification}
+                    currentTurn={currentTurn}
+                    pending={pending}
+                    onVote={(vote) => void castBallot(campaign.campaignId, vote)}
+                  />
+                )}
+
+                {canAccept && (
+                  <div className="space-y-3 border-t border-card-border pt-4">
                     {canCounter && (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <NumberField
+                          label="Counter wage"
+                          value={String(Math.round(counter.wageLevel * 100) / 100)}
+                          step="0.01"
+                          min="0.8"
+                          max="1.5"
+                          onChange={(value) =>
+                            setCounterDrafts((all) => ({
+                              ...all,
+                              [campaign.campaignId]: { ...counter, wageLevel: Number(value) },
+                            }))
+                          }
+                        />
+                        <NumberField
+                          label="Agreement turns"
+                          value={String(counter.agreementDurationTurns)}
+                          step="1"
+                          min="24"
+                          max="192"
+                          onChange={(value) =>
+                            setCounterDrafts((all) => ({
+                              ...all,
+                              [campaign.campaignId]: {
+                                ...counter,
+                                agreementDurationTurns: Number(value),
+                              },
+                            }))
+                          }
+                        />
+                        <NumberField
+                          label="No-strike turns"
+                          value={String(counter.noStrikeTurns)}
+                          step="1"
+                          min="0"
+                          max={String(counter.agreementDurationTurns)}
+                          onChange={(value) =>
+                            setCounterDrafts((all) => ({
+                              ...all,
+                              [campaign.campaignId]: { ...counter, noStrikeTurns: Number(value) },
+                            }))
+                          }
+                        />
+                        <NumberField
+                          label="Pension %"
+                          value={String(((counter.pensionContributionRate ?? 0) * 100).toFixed(1))}
+                          step="0.5"
+                          min="0"
+                          max="15"
+                          onChange={(value) =>
+                            setCounterDrafts((all) => ({
+                              ...all,
+                              [campaign.campaignId]: {
+                                ...counter,
+                                pensionContributionRate: Number(value) / 100,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
-                        disabled={pending}
-                        onClick={() => void act(campaign.campaignId, "counter")}
+                        className="bg-success hover:bg-success-muted"
+                        disabled={pending || !!campaign.ratificationBlockedReason}
+                        title={campaign.ratificationBlockedReason ?? undefined}
+                        onClick={() => void act(campaign.campaignId, "accept")}
                       >
-                        Send counteroffer
+                        Accept and put to members
                       </Button>
+                      {canCounter && (
+                        <Button
+                          size="sm"
+                          disabled={pending}
+                          onClick={() => void act(campaign.campaignId, "counter")}
+                        >
+                          Send counteroffer
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-body-sm text-muted">
+                      Accepting does not settle on its own. The offer goes to the organizers, who
+                      ratify or reject it by banked strength.
+                    </p>
+                    {campaign.ratificationBlockedReason && (
+                      <p className="text-body-sm font-medium text-error">
+                        {campaign.ratificationBlockedReason}
+                      </p>
                     )}
                   </div>
-                  <p className="text-body-sm text-muted">
-                    Accepting does not settle on its own. The offer goes to the organizers, who
-                    ratify or reject it by banked strength.
-                  </p>
-                  {campaign.ratificationBlockedReason && (
-                    <p className="text-body-sm font-medium text-error">
-                      {campaign.ratificationBlockedReason}
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
 
-              {isLeader && (campaign.status === "negotiating" || campaign.status === "dispute") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => void act(campaign.campaignId, "withdraw")}
-                  className="hover:text-error"
-                >
-                  Withdraw campaign
-                </Button>
-              )}
-            </article>
-          );
-        })
+                {isLeader &&
+                  (campaign.status === "negotiating" || campaign.status === "dispute") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => void act(campaign.campaignId, "withdraw")}
+                      className="hover:text-error"
+                    >
+                      Withdraw campaign
+                    </Button>
+                  )}
+              </article>
+            );
+          })}
+        </>
       )}
     </div>
   );
@@ -766,7 +787,7 @@ function RatificationCard({
           </p>
           <p className="text-body-sm text-muted">
             {open
-              ? `Open through turn ${ratification.closesAtTurn}. ${ratification.voterCount} organizer(s) hold a ballot.`
+              ? `Open through turn ${ratification.closesAtTurn}. ${ratification.voterCount} ${ratification.voterCount === 1 ? "organizer holds" : "organizers hold"} a ballot.`
               : ratification.status === "ratified"
                 ? `Ratified on turn ${ratification.closedAtTurn ?? ratification.closesAtTurn}.`
                 : ratification.status === "rejected"

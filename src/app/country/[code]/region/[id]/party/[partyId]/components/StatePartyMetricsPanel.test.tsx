@@ -74,12 +74,12 @@ describe("StatePartyMetricsPanel", () => {
 
     expect(screen.getByText("Vote power")).toBeTruthy();
     expect(screen.getByText("0.67×")).toBeTruthy();
-    expect(screen.getByText("General-election vote scalar")).toBeTruthy();
+    expect(screen.getByText("General-election vote scalar, 0.50× to 1.00×")).toBeTruthy();
     expect(screen.getByLabelText("About Vote power")).toBeTruthy();
 
     expect(screen.getByText("Pres. Primary")).toBeTruthy();
     expect(screen.getByText("8 pts")).toBeTruthy();
-    expect(screen.getByText("Home-state primary scoring")).toBeTruthy();
+    expect(screen.getByText("Home-state primary scoring, 0 to 25 pts")).toBeTruthy();
 
     expect(screen.getByText("NPP quality")).toBeTruthy();
     expect(screen.getByText("Mid")).toBeTruthy();

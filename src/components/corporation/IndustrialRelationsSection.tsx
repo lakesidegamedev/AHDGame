@@ -266,8 +266,8 @@ export default function IndustrialRelationsSection({ corpId }: { corpId: string 
                       {campaign.unionName}
                     </Link>
                     <p className="text-xs text-muted">
-                      {campaign.sectorCount} local(s) · Deadline turn {campaign.deadlineTurn} · Turn{" "}
-                      {currentTurn}
+                      {campaign.sectorCount} {campaign.sectorCount === 1 ? "local" : "locals"} ·
+                      Deadline turn {campaign.deadlineTurn} · Turn {currentTurn}
                     </p>
                   </div>
                   <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
@@ -518,7 +518,8 @@ export default function IndustrialRelationsSection({ corpId }: { corpId: string 
                   >
                     {agreement.unionName}
                   </Link>
-                  : {agreement.sectorCount} local(s) at {agreement.wageLevel.toFixed(2)}×
+                  : {agreement.sectorCount} {agreement.sectorCount === 1 ? "local" : "locals"} at{" "}
+                  {agreement.wageLevel.toFixed(2)}×
                 </span>
                 <span className="text-muted">
                   Expires turn {agreement.expiresAtTurn} · No strike through turn{" "}

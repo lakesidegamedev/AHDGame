@@ -216,7 +216,9 @@ describe("CorporationMasthead ledger", () => {
     );
     expect(screen.queryByLabelText("Share quote")).toBeNull();
     expect(container.textContent).not.toContain("NYSE");
-    expect(container.textContent).toContain("Private: KSTN");
+    expect(container.textContent).toContain("KSTN");
+    expect(container.textContent).not.toContain("Private: KSTN");
+    expect(container.textContent).toContain("Private");
     expect(container.textContent).toContain("Book value / share");
     expect(container.textContent).not.toContain("Mkt cap");
     expect(container.textContent).toContain("Valuation");

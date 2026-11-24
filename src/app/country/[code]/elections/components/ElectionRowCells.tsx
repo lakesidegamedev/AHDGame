@@ -177,6 +177,11 @@ function FieldCellBody({ election }: { election: ElectionDisplay }) {
           </div>
         ))}
         {hidden > 0 && <span className="text-xs text-muted">+{hidden} more parties</span>}
+        {primaryLeaders.length === 1 && (
+          // Without this line a one-party race looked like a row missing its
+          // other half.
+          <span className="text-xs text-muted">No other party has filed</span>
+        )}
       </div>
     );
   }
