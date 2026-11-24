@@ -1,3 +1,4 @@
+import { worldSupplyFigures } from "@/lib/commodities/worldSupplyRules";
 import { commodityListRowPerTurn } from "@/lib/commodities/perTurnUnits";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -230,8 +231,10 @@ export async function GET(request: Request) {
           Math.round(fundedPriceCeiling(basePrice * priceNominalIndex, pricePace) * 100) / 100,
         priceCapBasis,
         globalPrice: data?.globalPrice ?? basePrice,
-        globalSupply: world ? world.supply : (data?.globalSupply ?? 0),
-        globalDemand: world ? world.demand : (data?.globalDemand ?? 0),
+        ...worldSupplyFigures(
+          { supply: data?.globalSupply ?? 0, demand: data?.globalDemand ?? 0 },
+          world
+        ),
         ...(world
           ? {
               backgroundEconomy: {

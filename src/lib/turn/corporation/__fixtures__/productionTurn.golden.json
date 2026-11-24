@@ -5,7 +5,7 @@
   "totalRevenueGenerated": 6460696.071294792,
   "totalIncomeGenerated": 1524974.966037701,
   "sectorsProcessed": 420,
-  "sha256": "a090c65a86ff9e9839a3eb89d2b244c87c1923b0f8e9fa923e2be1a7157133e0",
+  "sha256": "fa3365a86d37cd480acc1de511d78858d6603528630c581ffa1fa6cb3299db9c",
   "shadow": {
     "plants": 420,
     "skipped": 0,
@@ -36,7 +36,7 @@
     "sectorPresenceKeys": 0,
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
-    "sha256": "17f5103d540acefcdf98b94a5d18c271c883bda45c798ae4b0aa9ece2e666839"
+    "sha256": "59c568c425f8865f59bcf677dcc0a0a591d1464772af8a2b0e3773e74f8e381b"
   },
   "historicalShadow": {
     "plants": 420,

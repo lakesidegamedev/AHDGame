@@ -7,7 +7,7 @@
  */
 
 import type { Db } from "mongodb";
-import type { CommodityPrice, CorporateSector, GameState, State } from "@/lib/db/types";
+import type { CommodityPrice, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   OPERATING_SECTOR_TYPES,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/constants/commodities";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
@@ -413,7 +413,7 @@ export async function aggregateCountrySectorMix(
       .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
       .toArray(),
     corporateSectorsCollection(db).find({ countryId }).toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     loadWorldPreset(db),
     gameStateCollection(db).findOne(
       { _id: "current" },

@@ -47,6 +47,9 @@ beforeEach(async () => {
   vi.clearAllMocks();
   endSessionMock = vi.fn().mockResolvedValue(undefined);
   db = createMockDb();
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+  });
   for (const name of [
     "bonds",
     "corporations",
@@ -141,7 +144,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — ledger emission", ()
 
     db.collectionMocks["bonds"]!.find.mockReturnValue(makeCursor([defaultedBond]));
     // FX rates — empty (USD bonds, no conversion)
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     // Holder docs for currency lookup
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
@@ -269,7 +274,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — ledger emission", ()
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US" }]),
@@ -331,7 +338,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — ledger emission", ()
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US" }]),
@@ -382,7 +391,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — ledger emission", ()
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([{ _id: charId, countryId: "US", name: "Alice" }]),
@@ -442,7 +453,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — ledger emission", ()
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([]),
@@ -534,7 +547,9 @@ describe("POST /api/corporations/[id]/bond-default/cash: standalone fallback", (
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue(
@@ -654,7 +669,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — fund and NPP holders
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
     });
@@ -716,7 +733,9 @@ describe("POST /api/corporations/[id]/bond-default/cash — fund and NPP holders
         },
       ])
     );
-    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(makeCursor([]));
+    db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
+      makeCursor([{ currencyCode: "USD", rate: 1 }])
+    );
     db.collectionMocks["characters"]!.find.mockReturnValue({
       project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
     });

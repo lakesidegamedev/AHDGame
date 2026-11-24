@@ -74,7 +74,7 @@ describe("computeSectorTaxSection revenue-weighting basis", () => {
       sector: thisSector,
       profit: 500,
       sectorCountryId: "US",
-      fxByCurrency: new Map(),
+      fxByCurrency: new Map([["USD", 1]] as const),
     });
 
     // Nameplate would have been 1000 / (1000 + 9000) = 10% share.
@@ -98,7 +98,7 @@ describe("computeSectorTaxSection revenue-weighting basis", () => {
       sector: thisSector,
       profit: 500,
       sectorCountryId: "US",
-      fxByCurrency: new Map(),
+      fxByCurrency: new Map([["USD", 1]] as const),
     });
 
     expect(result.thisRevenueShare).toBeCloseTo(0.5, 10);
@@ -345,7 +345,7 @@ describe("computeSectorMarketPosition share bounds", () => {
       corporation: corp,
       siblingCorps: [],
       siblingsSectors: sectors,
-      siblingFxByCurrency: new Map(),
+      siblingFxByCurrency: new Map([["USD", 1]] as const),
     });
   };
 

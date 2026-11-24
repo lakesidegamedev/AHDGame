@@ -473,7 +473,7 @@ describe("settleSupplyAgreements delivery persistence", () => {
       lookups: {
         eraUnitScale: 1,
         corpById: new Map(),
-        exchangeRatesByCurrency: new Map(),
+        exchangeRatesByCurrency: new Map([["USD", 1]]),
       } as unknown as CorporationLookups,
       agreements: [
         {
@@ -1190,7 +1190,7 @@ describe("ticket #1147 — shortfall damage visibility", () => {
         [S, corpRow(userId)],
         [B, { _id: buyId, name: "Buy", liquidCapital: 1_000_000_000 }],
       ]),
-      exchangeRatesByCurrency: new Map(),
+      exchangeRatesByCurrency: new Map([["USD", 1]]),
     } as unknown as CorporationLookups;
   }
 

@@ -20,6 +20,7 @@ describe("loadNetWorth", () => {
     const history = cursor([
       { turn: 12, totalValue: 900, netValue: 800, exchangeRatesSnapshot: { GBP: 0.8, JPY: 150 } },
       { turn: 11, totalValue: 700, exchangeRatesSnapshot: {} },
+      { turn: 10, totalValue: 100, netValue: 0, locDebtValue: 200, incomeTaxDebtValue: 0 },
     ]);
     const find = vi.fn(() => history);
     const db = {
@@ -36,7 +37,7 @@ describe("loadNetWorth", () => {
     expect(data).toEqual({
       currencyCode: "GBP",
       points: [
-        { turn: 11, value: 700, rate: null },
+        { turn: 10, value: -100, rate: null },
         { turn: 12, value: 800, rate: 0.8 },
       ],
     });

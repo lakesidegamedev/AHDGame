@@ -27,7 +27,7 @@ vi.mock("@/lib/constants/metricDefinitions", async (importOriginal) => {
 // Avoid the FX collection read under MockDb; passthrough rate=1.
 vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/currency/corporationCapital")>();
-  return { ...actual, loadValuationFxRates: vi.fn().mockResolvedValue(new Map()) };
+  return { ...actual, loadValuationFxRates: vi.fn().mockResolvedValue(new Map([["USD", 1]])) };
 });
 
 import { buildMandateMetricOps, buildRdModernizationOps } from "./soeOperations";

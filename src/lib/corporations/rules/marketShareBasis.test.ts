@@ -52,7 +52,7 @@ describe("one share on every surface", () => {
     const input = {
       sectors,
       stateById,
-      exchangeRatesByCurrency: new Map(),
+      exchangeRatesByCurrency: new Map([["USD", 1]] as const),
     };
     const local = buildMarketShareBySectorId(input);
     const national = buildNationalDominanceShareBySectorId(input);
@@ -65,7 +65,7 @@ describe("one share on every surface", () => {
       corporation: { _id: a.corporationId, countryId: "US" } as never,
       siblingCorps: [],
       siblingsSectors: sectors,
-      siblingFxByCurrency: new Map() as never,
+      siblingFxByCurrency: new Map([["USD", 1]] as const) as never,
     });
     for (const [sector, expected] of [
       [a, 25],

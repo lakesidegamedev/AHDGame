@@ -25,7 +25,7 @@ function buildLookups(
 ): CorporationLookups {
   return {
     federalBudgets,
-    exchangeRatesByCurrency: new Map(),
+    exchangeRatesByCurrency: new Map([["USD", 1]]),
     stateCountryMap: new Map(),
     ...overrides,
   } as unknown as CorporationLookups;

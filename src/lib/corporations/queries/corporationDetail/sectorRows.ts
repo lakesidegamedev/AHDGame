@@ -1,3 +1,4 @@
+import { recordedSectorTax } from "@/lib/corporations/rules/sectorTaxes";
 import { loadOwnTruckTeuByState } from "@/lib/corporations/ownTruckHaul";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
@@ -8,7 +9,7 @@ import {
   TRANSITION_WINDOW_TURNS,
 } from "@/lib/market/producerMarket/transitionRules";
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import type { StateViewContext } from "./stateViewContext";
@@ -898,6 +899,12 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),
       siteStatement: supplyView,
+      recordedTax: ctx.viewerIsCeo
+        ? recordedSectorTax(
+            sector.corporateTaxAssessment,
+            TURNS_PER_DAY * (restatement.corpCurrency ? restatement.corpRate : 1)
+          )
+        : null,
       // Profit with internal supply income and charges counted, display only.
       // Null when there are no internal lines, so the row shows `profit`.
       managementProfit:

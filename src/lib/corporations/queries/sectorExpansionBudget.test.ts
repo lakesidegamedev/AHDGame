@@ -54,6 +54,12 @@ beforeEach(async () => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   db = createMockDb();
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [
+      { currencyCode: "USD", rate: 1 },
+      { currencyCode: "JPY", rate: 100 },
+    ],
+  });
   const { getDb } = await import("@/lib/mongodb");
   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   const { getAuthUser } = await import("@/lib/auth");

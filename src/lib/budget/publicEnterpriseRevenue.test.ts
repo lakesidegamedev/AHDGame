@@ -7,8 +7,18 @@ vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/currency/corporationCapital")>();
   return {
     ...actual,
-    loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
-    loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
+    loadFxRatesByCurrency: vi.fn().mockResolvedValue(
+      new Map([
+        ["USD", 1],
+        ["GBP", 1],
+      ])
+    ),
+    loadValuationFxRates: vi.fn().mockResolvedValue(
+      new Map([
+        ["USD", 1],
+        ["GBP", 1],
+      ])
+    ),
   };
 });
 
@@ -239,7 +249,7 @@ describe("estimateNationalizedOperatingIncome — plants idle upkeep", () => {
     return estimateNationalizedOperatingIncome(
       corp as never,
       [sector(s)] as never,
-      new Map(),
+      new Map([["USD", 1]]),
       new Map(),
       1,
       true,
@@ -298,14 +308,14 @@ describe("estimateNationalizedOperatingIncome — R&D operating charge (ticket #
     currentGrowthCost: 0,
     profitMargin: 20,
   };
-  // FULL_FUND cost = revenue × 0.03 = 30_000 (rate map empty ⇒ anchor = local).
+  // FULL_FUND cost = revenue × 0.03 = 30_000 (explicit USD quote at 1 keeps anchor equal to local).
 
   async function income(corpExtra: Record<string, unknown>) {
     const { estimateNationalizedOperatingIncome } = await import("./publicEnterpriseRevenue");
     return estimateNationalizedOperatingIncome(
       { ...base, ...corpExtra } as never,
       [sector] as never,
-      new Map(),
+      new Map([["USD", 1]]),
       new Map()
     );
   }

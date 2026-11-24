@@ -21,7 +21,11 @@
 
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
+import {
+  COUNTRY_CURRENCY_MAP,
+  FOREX_ACTIVE_CURRENCIES,
+  eraRateForCurrency,
+} from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { ExchangeRate } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -49,12 +53,19 @@ export interface CorpCapitalCurrencyInfo {
   liquidCurrencyCode?: CurrencyCode | string | null;
 }
 
+/** Named currencies require a finite, positive quote before money can move. */
+export function requireCurrencyRate(code: string, rate: number | undefined): number {
+  if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0)
+    throw new Error(`Exchange rate unavailable for ${code}`);
+  return rate;
+}
+
 function buildFxRateMap(docs: ExchangeRate[]): Map<CurrencyCode, number> {
   const map = new Map<CurrencyCode, number>();
   for (const doc of docs) {
-    if (doc.rate && doc.rate > 0) map.set(doc.currencyCode as CurrencyCode, doc.rate);
+    if (Number.isFinite(doc.rate) && doc.rate > 0)
+      map.set(doc.currencyCode as CurrencyCode, doc.rate);
   }
-  if (!map.has("USD")) map.set("USD", 1.0);
   return map;
 }
 
@@ -80,12 +91,10 @@ export function resolveCorpLiquidCurrencyCode(
 
 /**
  * FX rate (local per 1 ₳) for a corp's home currency using a preloaded map.
- * Missing currency in the map falls back to `1.0` — same operational risk as
- * a missing `exchangeRates` row (corps then receive anchor amounts literally
- * and look under-credited vs intended local denomination).
+ * Missing named-currency quotes refuse conversion.
  *
  * Note: USD is a forex-active currency and floats against ₳ — it must use the
- * live rate, not a hardcoded 1.0. Only truly-missing codes return 1.0.
+ * live rate, not a hardcoded 1.0. Only anchor-denominated accounts bypass FX.
  */
 export function fxRateForCorpFromMap(
   corp: CorpCapitalCurrencyInfo | null | undefined,
@@ -93,7 +102,7 @@ export function fxRateForCorpFromMap(
 ): number {
   const code = resolveCorpLiquidCurrencyCode(corp);
   if (!code) return 1.0;
-  return fxByCurrency.get(code) ?? 1.0;
+  return requireCurrencyRate(code, fxByCurrency.get(code));
 }
 
 /**
@@ -135,7 +144,7 @@ export function resolveSectorHostCurrencyCode(
 
 /**
  * FX rate (local per 1 ₳) for a sector's host currency using a preloaded map.
- * Missing currency falls back to `1.0` — same operational risk profile as
+ * Missing named-currency quotes refuse conversion, as in
  * {@link fxRateForCorpFromMap}.
  */
 export function fxRateForSectorHostFromMap(
@@ -145,7 +154,7 @@ export function fxRateForSectorHostFromMap(
 ): number {
   const code = resolveSectorHostCurrencyCode(sector, corp);
   if (!code) return 1.0;
-  return fxByCurrency.get(code) ?? 1.0;
+  return requireCurrencyRate(code, fxByCurrency.get(code));
 }
 
 /**
@@ -179,7 +188,7 @@ export function corpLiquidCapitalToAnchor(
  * @param liquidCurrencyCode The corp's `liquidCurrencyCode` field (undefined
  *   = pre-forex).
  * @param fxRate Current FX rate for the corp's home currency (local per 1 ₳).
- *   Must be > 0; caller should default to `1.0` if unknown.
+ *   Must be finite and positive; missing quotes refuse conversion.
  */
 export function anchorToCorpCapital(
   amountAnchor: number,
@@ -189,7 +198,7 @@ export function anchorToCorpCapital(
   // Pre-forex corps (no liquidCurrencyCode) hold their balance directly in ₳.
   // All named currencies — including USD — float against ₳ and must use the live rate.
   if (!liquidCurrencyCode) return amountAnchor;
-  if (!Number.isFinite(fxRate) || fxRate <= 0) return amountAnchor;
+  requireCurrencyRate(liquidCurrencyCode, fxRate);
   return amountAnchor * fxRate;
 }
 
@@ -206,14 +215,13 @@ export function corpCapitalToAnchor(
   // Pre-forex corps (no liquidCurrencyCode) hold their balance directly in ₳.
   // All named currencies — including USD — float against ₳ and must use the live rate.
   if (!liquidCurrencyCode) return amountLocal;
-  if (!Number.isFinite(fxRate) || fxRate <= 0) return amountLocal;
+  requireCurrencyRate(liquidCurrencyCode, fxRate);
   return amountLocal / fxRate;
 }
 
 /**
  * Look up the current FX rate for a corp's home currency.
- * Returns `1.0` (no conversion) when the corp is pre-forex (no
- * `liquidCurrencyCode`) or when no rate document exists.
+ * Anchor-denominated accounts need no conversion. Missing live quotes use authored era rates.
  *
  * Prefer the batch helper {@link loadFxRatesByCurrency} inside turn-level
  * loops; this per-corp lookup is convenient for one-off API routes.
@@ -223,20 +231,20 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
   // Only pre-forex corps (no resolvable code) skip conversion. USD is forex-active.
   if (!code) return 1.0;
   const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc?.rate && doc.rate > 0) return doc.rate;
-  return (await eraFallbackRate(db, code)) ?? 1.0;
+  if (doc) return requireCurrencyRate(code, doc.rate);
+  return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
 /**
  * FX rate (local per 1 ₳) for an explicit currency code — the country-currency
  * sibling of {@link getCorpFxRate}, for money moving into a GOVERNMENT account
  * rather than a corporation's. Same fallback chain: live rate, then the era
- * rate, then 1.0.
+ * rate; unavailable quotes refuse conversion.
  */
 export async function getCurrencyFxRate(db: Db, code: CurrencyCode): Promise<number> {
   const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc?.rate && doc.rate > 0) return doc.rate;
-  return (await eraFallbackRate(db, code)) ?? 1.0;
+  if (doc) return requireCurrencyRate(code, doc.rate);
+  return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
 /**
@@ -254,8 +262,8 @@ export async function getSectorHostFxRate(
   const code = resolveSectorHostCurrencyCode(sector, corp);
   if (!code) return 1.0;
   const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc?.rate && doc.rate > 0) return doc.rate;
-  return (await eraFallbackRate(db, code)) ?? 1.0;
+  if (doc) return requireCurrencyRate(code, doc.rate);
+  return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
 /**
@@ -402,7 +410,10 @@ export function withAuthoredEraRates(
   rates: Map<CurrencyCode, number>,
   preset: string | undefined
 ): Map<CurrencyCode, number> {
-  for (const code of Object.values(COUNTRY_CURRENCY_MAP) as CurrencyCode[]) {
+  for (const code of new Set([
+    ...Object.values(COUNTRY_CURRENCY_MAP),
+    ...FOREX_ACTIVE_CURRENCIES,
+  ])) {
     if (rates.has(code)) continue;
     const era = eraRateForCurrency(code, preset);
     if (era !== undefined) rates.set(code, era);

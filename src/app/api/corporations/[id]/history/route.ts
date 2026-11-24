@@ -5,7 +5,6 @@ import { compressedJson } from "@/lib/api/jsonCompression";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getAuthUser } from "@/lib/auth";
 import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCorporateHoldings";
-import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import type { CorporationHistory } from "@/lib/db/types";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { getGameState } from "@/lib/gameState";
@@ -25,10 +24,14 @@ type CorporationHistoryChartRow = Pick<
   | "income"
   | "incomePreDividends"
   | "dividendPaidPerTurn"
+  | "dividendIncomeReceived"
   | "corporateTaxPaid"
   | "federalTaxPaid"
   | "stateTaxPaid"
   | "perTurnBondCouponIncome"
+  | "bondCouponFxFees"
+  | "settledBondCouponIncome"
+  | "settledBondInterestPaid"
   | "perTurnBondInterestExpense"
   | "perTurnBondDragOnNetIncome"
   | "taxPaidByCountry"
@@ -193,10 +196,14 @@ export async function GET(request: Request, { params }: RouteParams) {
             income: 1,
             incomePreDividends: 1,
             dividendPaidPerTurn: 1,
+            dividendIncomeReceived: 1,
             corporateTaxPaid: 1,
             federalTaxPaid: 1,
             stateTaxPaid: 1,
             perTurnBondCouponIncome: 1,
+            bondCouponFxFees: 1,
+            settledBondCouponIncome: 1,
+            settledBondInterestPaid: 1,
             perTurnBondInterestExpense: 1,
             perTurnBondDragOnNetIncome: 1,
             taxPaidByCountry: 1,
@@ -227,16 +234,6 @@ export async function GET(request: Request, { params }: RouteParams) {
         marketCapCurrencyCode?: CorporationHistory["currencyCode"] | null;
       }
     > = history.map(({ totalShares: _totalShares, createdAt: _createdAt, ...row }) => row);
-
-    // Keep the latest market cap aligned with the live Overview quote. Its
-    // currency basis applies only to market cap; all other amounts remain
-    // snapshots with their original currency and write-time exchange rate.
-    // Explicit null marks a live anchor-currency quote for legacy corporations.
-    const latestPoint = responseHistory[responseHistory.length - 1];
-    if (latestPoint) {
-      latestPoint.marketCap = getRoundedPublicMarketCap(corporation, corporation.totalShares ?? 0);
-      latestPoint.marketCapCurrencyCode = corporation.liquidCurrencyCode ?? null;
-    }
 
     // The live balance and turn let the Charts tab tell a reader when the
     // recorded history has stopped short of the current turn, instead of

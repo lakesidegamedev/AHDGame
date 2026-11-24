@@ -38,7 +38,7 @@ async function setup() {
 }
 
 describe("GET /api/character/[id]/portfolio", () => {
-  it("normalizes current cash across currencies and derives latest net history from loc debt", async () => {
+  it("normalizes current cash without inventing historical liabilities", async () => {
     await setup();
 
     const charId = new ObjectId();
@@ -105,8 +105,7 @@ describe("GET /api/character/[id]/portfolio", () => {
     expect(res.status).toBe(200);
     expect(data.cashOnHand).toBe(400); // 100 USD + 21200/106 JPY + 90/0.9 EUR
     expect(data.locDebtValue).toBe(30);
-    expect(data.history[0].netValue).toBe(470);
-    expect(data.history[0].locDebtValue).toBe(30);
+    expect(data.history).toEqual([]);
   });
 
   it("returns the most recent 500 history points (not the oldest) for long-lived characters", async () => {
@@ -144,6 +143,7 @@ describe("GET /api/character/[id]/portfolio", () => {
     const allRecords = Array.from({ length: 600 }, (_, i) => ({
       turn: i + 1,
       totalValue: 1000 + i,
+      netValue: 1000 + i,
     }));
     db.collectionMocks.portfolioHistory.find.mockReturnValue({
       sort: (sortArgs: { turn: 1 | -1 }) => {
@@ -213,6 +213,7 @@ describe("GET /api/character/[id]/portfolio", () => {
               {
                 turn: 500,
                 totalValue: 80,
+                netValue: 80,
               },
             ],
           }),
@@ -278,7 +279,13 @@ it("includes funds and unpaid tax like the owner view without exposing the priva
       limit: () => ({
         project: () => ({
           toArray: async () => [
-            { turn: 100, totalValue: 1250, fundValue: 250, shortTermStockValue: 999 },
+            {
+              turn: 100,
+              totalValue: 1250,
+              netValue: 1200,
+              fundValue: 250,
+              shortTermStockValue: 999,
+            },
           ],
         }),
       }),

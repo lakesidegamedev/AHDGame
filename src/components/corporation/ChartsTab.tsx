@@ -1,4 +1,6 @@
 "use client";
+import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
 
 import { totalCostsPerTurnFromParts } from "@/lib/corporations/rules/historyFinancials";
 import { useEffect, useState, type ReactNode } from "react";
@@ -443,19 +445,27 @@ export default function ChartsTab({
         });
         const tax = toAnchor(point.corporateTaxPaid ?? 0, currencyCode, fx);
         if (tax !== 0) rows.push({ label: "Taxes", value: fmtMoney(tax) });
-        const coupons = toAnchor(point.perTurnBondCouponIncome ?? 0, currencyCode, fx);
+        const coupons = toAnchor(
+          point.settledBondCouponIncome ??
+            (point.perTurnBondCouponIncome ?? 0) - (point.bondCouponFxFees ?? 0),
+          currencyCode,
+          fx
+        );
         if (coupons !== 0) rows.push({ label: "Bond coupons", value: fmtMoney(coupons) });
-        const drag = toAnchor(point.perTurnBondDragOnNetIncome ?? 0, currencyCode, fx);
+        const drag = toAnchor(
+          point.settledBondInterestPaid ?? point.perTurnBondDragOnNetIncome ?? 0,
+          currencyCode,
+          fx
+        );
         if (drag !== 0) rows.push({ label: "Bond interest", value: fmtMoney(drag) });
         if (point.incomePreDividends != null) {
           rows.push({
-            label: "Net income",
+            label: historyBondSettlementUnavailable(point)
+              ? "Net income (bond settlement unavailable)"
+              : "Net income",
             value: fmtMoney(
               toAnchor(
-                point.incomePreDividends -
-                  (point.corporateTaxPaid ?? 0) +
-                  (point.perTurnBondCouponIncome ?? 0) -
-                  (point.perTurnBondDragOnNetIncome ?? 0),
+                realizedNetIncomePerTurn(point) + Math.max(0, point.dividendPaidPerTurn ?? 0),
                 currencyCode,
                 fx
               )
@@ -466,8 +476,10 @@ export default function ChartsTab({
         if (dividends !== 0) {
           rows.push({ label: "Dividends", value: fmtMoney(dividends) });
           rows.push({
-            label: "Retained after dividends",
-            value: fmtMoney(toAnchor(point.income, currencyCode, fx)),
+            label: historyBondSettlementUnavailable(point)
+              ? "Retained (bond settlement unavailable)"
+              : "Retained after dividends",
+            value: fmtMoney(toAnchor(realizedNetIncomePerTurn(point), currencyCode, fx)),
           });
         }
         const md = point.marginDiagnostic;

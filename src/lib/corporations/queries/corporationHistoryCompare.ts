@@ -1,5 +1,7 @@
+import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
 import type { Db } from "mongodb";
-import type { Corporation, CorporationHistory } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
@@ -32,6 +34,13 @@ export interface CorpHistoryComparePoint {
   liquidCapital: number;
   revenue: number;
   income: number;
+  incomeIsEstimated?: boolean;
+  perTurnBondCouponIncome?: number;
+  perTurnBondDragOnNetIncome?: number;
+  dividendIncomeReceived?: number;
+  bondCouponFxFees?: number;
+  settledBondCouponIncome?: number;
+  settledBondInterestPaid?: number;
   currencyCode?: CurrencyCode;
   fxRateAtWrite?: number;
 }
@@ -68,7 +77,7 @@ export const SNAPSHOT_COMPARE_METRICS: readonly SnapshotMetricDef[] = [
   },
   {
     key: "income",
-    label: "Net income / turn",
+    label: "Retained income / turn",
     format: "money",
     description: "Retained income per turn after costs, tax, and dividends.",
   },
@@ -175,6 +184,12 @@ export async function loadCorporationHistoryComparePoints(args: {
           liquidCapital: 1,
           revenue: 1,
           income: 1,
+          perTurnBondCouponIncome: 1,
+          bondCouponFxFees: 1,
+          settledBondCouponIncome: 1,
+          settledBondInterestPaid: 1,
+          perTurnBondDragOnNetIncome: 1,
+          dividendIncomeReceived: 1,
           currencyCode: 1,
           fxRateAtWrite: 1,
         },
@@ -184,7 +199,11 @@ export async function loadCorporationHistoryComparePoints(args: {
 
   const representative = points.length > 0 ? points[points.length - 1].currencyCode : undefined;
   return {
-    points,
+    points: points.map((point) => ({
+      ...point,
+      income: realizedNetIncomePerTurn(point),
+      incomeIsEstimated: historyBondSettlementUnavailable(point),
+    })),
     currencyCode: representative ?? corporation.liquidCurrencyCode,
   };
 }

@@ -1,3 +1,5 @@
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { recordedSectorTax } from "@/lib/corporations/rules/sectorTaxes";
 import { corpCanProspect } from "@/lib/constants/prospecting";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -17,7 +19,6 @@ import {
 } from "@/lib/labour/laborCost";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
-import type { CorporateSector } from "@/lib/db/types";
 import {
   getTariffBlendWeights,
   buildSectorPresenceKeys,
@@ -34,7 +35,6 @@ import {
 import { loadEconomicModelsByCountry } from "@/lib/economicModels/queries";
 import { type CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameConfig } from "@/lib/db/types";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
   getEffectiveStrategyRates,
@@ -459,25 +459,24 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
 
     // Apportioned per-sector tax, matches the corp page formula (see
     // computeSectorTaxSection for the full derivation).
-    const {
-      corpLevelCosts,
-      thisRevenueShare,
-      thisSectorTaxable,
-      sectorFederalRate,
-      sectorStateRate,
-      apportionedFederalTax,
-      apportionedStateTax,
-    } = computeSectorTaxSection({
-      allFederalBudgets,
-      allSiblingStateBudgets,
-      corporation,
-      allCorpSectors,
-      sector,
-      profit,
-      sectorCountryId,
-      fxByCurrency: siblingFxByCurrency,
-    });
+    const { corpLevelCosts, thisRevenueShare, sectorFederalRate, sectorStateRate } =
+      computeSectorTaxSection({
+        allFederalBudgets,
+        allSiblingStateBudgets,
+        corporation,
+        allCorpSectors,
+        sector,
+        profit,
+        sectorCountryId,
+        fxByCurrency: siblingFxByCurrency,
+      });
 
+    const recordedTax = isCeo
+      ? recordedSectorTax(
+          sector.corporateTaxAssessment,
+          TURNS_PER_DAY * (resolveCorpLiquidCurrencyCode(corporation) ? corporationFxRate : 1)
+        )
+      : null;
     const r = (v: number | null) => (v != null ? Math.round(v * 10) / 10 : null);
 
     // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────
@@ -786,8 +785,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         profit: Math.round(sectorAmountInCorpCurrency(profit)),
         // Rates displayed to the player are whichever side (domestic/foreign) actually applies
         // to THIS sector based on the corp's HQ country vs the sector's country.
-        federalTaxRate: sectorFederalRate,
-        stateTaxRate: sectorStateRate,
+        federalTaxRate: recordedTax?.federalRate ?? sectorFederalRate,
+        stateTaxRate: recordedTax?.stateRate ?? sectorStateRate,
         // Per-sector apportioned tax: matches corp-page math (revenue-weighted share of
         // corp-level overhead allocated to each sector, remainder taxed at country/state
         // rate). Sibling weighting now uses the same realized-preferring basis
@@ -795,16 +794,15 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // no longer disagree over a haircut sibling. Sibling profits still use raw margins
         // here (no state-modifier recomputation), so the total can still differ slightly
         // from the corp-page aggregate for that separate reason.
-        federalTaxApprox: Math.round(sectorAmountInCorpCurrency(apportionedFederalTax)),
-        stateTaxApprox: Math.round(sectorAmountInCorpCurrency(apportionedStateTax)),
+        federalTaxApprox: recordedTax?.federalTax ?? null,
+        taxAssessmentTurn: recordedTax?.turn ?? null,
+        stateTaxApprox: recordedTax?.stateTax ?? null,
         // This sector's revenue-weighted share of corp-level overhead (marketing +
         // logistics + CEO salary), and the taxable income that remains after it.
         // Surfaced so a zero tax on a profitable-looking sector is self-explanatory:
         // when overhead exceeds operating profit, taxable income is floored at 0.
-        corpOverheadShare: Math.round(
-          sectorAmountInCorpCurrency(corpLevelCosts * thisRevenueShare)
-        ),
-        taxableIncome: Math.round(sectorAmountInCorpCurrency(thisSectorTaxable)),
+        corpOverheadShare: recordedTax?.overheadShare ?? null,
+        taxableIncome: recordedTax?.taxableProfit ?? null,
       },
       market: {
         totalMarket: effectiveMarket,

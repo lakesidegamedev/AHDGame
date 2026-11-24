@@ -48,8 +48,8 @@ function makeSector(revenue: number, marginPct: number): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-/** No FX rows: every currency passes through at rate 1 (₳-on-disk). */
-const FX = new Map<CurrencyCode, number>();
+/** Synthetic USD quote keeps local and anchor units equal. */
+const FX = new Map<CurrencyCode, number>([["USD", 1]]);
 
 describe("coverableSoeShortfallAnchor (realized-loss contract)", () => {
   it("covers the whole hole below plants (unchanged behaviour)", () => {

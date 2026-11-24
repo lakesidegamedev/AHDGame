@@ -1,6 +1,8 @@
-import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
-import type { Db, ObjectId } from "mongodb";
+/** Subsidiary capital transfers reserve a cooldown slot and replay frozen journal legs. */
+import { createHash } from "node:crypto";
+import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
+import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
 import {
   anchorToCorpLiquidCapital,
@@ -8,13 +10,12 @@ import {
   getCorpFxRate,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import {
-  atomicallyDebitCorpLiquidCapital,
-  creditCorpLiquidCapital,
-  refundCorpLiquidCapital,
-} from "@/lib/financialTxLog/atomicCashGuard";
-import { emitTx } from "@/lib/financialTxLog/emit";
-import { recordAudit } from "@/lib/audit/recordAudit";
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
+import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { buildTxDocs } from "@/lib/financialTxLog/emit";
+import { DEFAULT_TX_THRESHOLDS } from "@/lib/db/types/financialTxLog";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { canActOnCorporationAsParent } from "../authorization";
 import {
   SUBSIDIARY_CAPITAL_INJECTION_COOLDOWN_TURNS,
@@ -26,146 +27,216 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export interface CapitalInjectionInput {
   sub: Corporation;
   callerUserId: ObjectId;
-  /** The character the caller is playing as; a sibling character is not the parent CEO. */
   callerCharacterId?: string | null;
-  /** Amount in the PARENT's local (liquidCurrencyCode) units. */
+  /** Native parent currency units. */
   amount: number;
   turn: number;
   now: Date;
 }
+const receiptId = (key: string) =>
+  new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 
-/**
- * Parent injects capital into the subsidiary. Forex-aware (parent local → ₳ →
- * subsidiary local); atomic debit on the parent, credit on the subsidiary.
- * One injection ≤ 25% of parent liquid capital; 24-turn per-subsidiary cooldown.
- */
 export async function capitalInjection(
   db: Db,
   input: CapitalInjectionInput
 ): Promise<SubsidiaryCommandResult<{ debitedParent: number; creditedSubsidiary: number }>> {
-  const { sub, callerUserId, amount, turn, now } = input;
-
+  const { callerUserId, amount, turn, now } = input;
+  if (!Number.isSafeInteger(amount) || amount <= 0)
+    return fail("Injection amount must be a positive whole number.");
+  const sub = await corporationsCollection(db).findOne({ _id: input.sub._id });
+  if (!sub) return fail("Subsidiary corporation not found.", 404);
   if (
     !(await canActOnCorporationAsParent(
       db,
       { userId: callerUserId.toString(), activeCharacterId: input.callerCharacterId },
       sub
     ))
-  ) {
+  )
     return fail("You are not authorized to manage this subsidiary.", 403);
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) return fail("Injection amount must be positive.");
-
-  const controllingParent = await resolveControllingCorporateParent(db, sub);
-  if (!controllingParent) return fail("This corporation is no longer a subsidiary.", 409);
-  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
+  const parentPosition = await resolveControllingCorporateParent(db, sub);
+  if (!parentPosition) return fail("This corporation is no longer a subsidiary.", 409);
+  const parent = await corporationsCollection(db).findOne({ _id: parentPosition.corporationId });
   if (!parent) return fail("Parent corporation not found.", 404);
-  const transferRestriction = await controllerTransferBarrierError(db, parent, turn, now);
-  if (transferRestriction) return fail(transferRestriction, 403);
-
-  // Per-subsidiary cooldown.
-  if (
-    sub.lastCapitalInjectionTurn != null &&
-    turn - sub.lastCapitalInjectionTurn < SUBSIDIARY_CAPITAL_INJECTION_COOLDOWN_TURNS
-  ) {
-    const remaining =
-      SUBSIDIARY_CAPITAL_INJECTION_COOLDOWN_TURNS - (turn - sub.lastCapitalInjectionTurn);
-    return fail(`Capital injection is on cooldown for ${remaining} more turn(s).`);
+  const restriction = await controllerTransferBarrierError(db, parent, turn, now);
+  if (restriction) return fail(restriction, 403);
+  let intent = sub.capitalInjectionIntent;
+  const unfinished = intent && !intent.completed;
+  if (!unfinished && intent?.turn !== turn) {
+    if (
+      sub.lastCapitalInjectionTurn != null &&
+      turn - sub.lastCapitalInjectionTurn < SUBSIDIARY_CAPITAL_INJECTION_COOLDOWN_TURNS
+    )
+      return fail("Capital injection is on cooldown.");
+    const cap = Math.floor(
+      (parent.liquidCapital ?? 0) * SUBSIDIARY_CAPITAL_INJECTION_MAX_PCT_OF_PARENT_LIQUID
+    );
+    if (amount > cap)
+      return fail(
+        `A single injection cannot exceed 25% of parent liquid capital (max ${cap.toLocaleString()}).`
+      );
+    const [parentRate, subRate, turnLengthMinutes] = await Promise.all([
+      getCorpFxRate(db, parent),
+      getCorpFxRate(db, sub),
+      loadTurnLengthMinutes(db),
+    ]);
+    const anchor = corpLiquidCapitalToAnchor(amount, parent, parentRate);
+    const credit = anchorToCorpLiquidCapital(anchor, sub, subRate);
+    if (!Number.isFinite(credit) || credit <= 0)
+      return fail("Injection conversion is unavailable.");
+    const next: NonNullable<Corporation["capitalInjectionIntent"]> = {
+      key: `subsidiary-capital:${sub._id.toHexString()}:${turn}:${new ObjectId().toHexString()}`,
+      parentId: parent._id.toHexString(),
+      turn,
+      amountParent: amount,
+      amountSubsidiary: credit,
+      parentCurrency: resolveCorpLiquidCurrencyCode(parent),
+      subsidiaryCurrency: resolveCorpLiquidCurrencyCode(sub),
+      parentStampedCurrency: parent.liquidCurrencyCode,
+      subsidiaryStampedCurrency: sub.liquidCurrencyCode,
+      parentRate,
+      subsidiaryRate: subRate,
+      createdAt: now,
+      turnLengthMinutes,
+    };
+    const reserved = await corporationsCollection(db).findOneAndUpdate(
+      {
+        _id: sub._id,
+        lastCapitalInjectionTurn: sub.lastCapitalInjectionTurn ?? { $exists: false },
+        "capitalInjectionIntent.key": intent?.key ?? { $exists: false },
+      },
+      { $set: { capitalInjectionIntent: next } },
+      { returnDocument: "after" }
+    );
+    intent =
+      reserved?.capitalInjectionIntent ??
+      (
+        await corporationsCollection(db).findOne(
+          { _id: sub._id },
+          { projection: { capitalInjectionIntent: 1 } }
+        )
+      )?.capitalInjectionIntent;
   }
-
-  // Cap at 25% of parent liquid capital (parent local units).
-  const maxInjection = Math.floor(
-    (parent.liquidCapital ?? 0) * SUBSIDIARY_CAPITAL_INJECTION_MAX_PCT_OF_PARENT_LIQUID
-  );
-  const amountLocal = Math.round(amount);
-  if (amountLocal > maxInjection) {
+  if (!intent || intent.parentId !== parent._id.toHexString() || intent.amountParent !== amount)
     return fail(
-      `A single injection cannot exceed 25% of parent liquid capital (max ${maxInjection.toLocaleString()} ${
-        resolveCorpLiquidCurrencyCode(parent) ?? "USD"
-      }).`
+      "A different capital injection owns this cooldown slot. Finish that transfer first.",
+      409
+    );
+  const key = intent.key;
+  const anchor = intent.amountParent / intent.parentRate;
+  const parentCurrency = intent.parentCurrency ?? "USD";
+  const subsidiaryCurrency = intent.subsidiaryCurrency ?? "USD";
+  const docs = buildTxDocs(
+    [
+      {
+        type: "corp_capital_injection",
+        turn: intent.turn,
+        createdAt: intent.createdAt,
+        subjectType: "corporation",
+        subjectId: parent._id,
+        subjectName: parent.name,
+        amount: -intent.amountParent,
+        anchorAmount: -anchor,
+        currencyCode: parentCurrency,
+        counterpartyType: "corporation",
+        counterpartyId: sub._id,
+        meta: { kind: "parent_capital_injection", settlementKey: key },
+      },
+      {
+        type: "corp_capital_injection",
+        turn: intent.turn,
+        createdAt: intent.createdAt,
+        subjectType: "corporation",
+        subjectId: sub._id,
+        subjectName: sub.name,
+        amount: intent.amountSubsidiary,
+        anchorAmount: anchor,
+        currencyCode: subsidiaryCurrency,
+        counterpartyType: "corporation",
+        counterpartyId: parent._id,
+        meta: { kind: "subsidiary_capital_received", settlementKey: key },
+      },
+    ],
+    DEFAULT_TX_THRESHOLDS,
+    intent.turnLengthMinutes,
+    new Map()
+  );
+  const transition: BankingTransition = {
+    key,
+    retryCreditLegOnGuardFailure: true,
+    kind: "subsidiary_capital_injection",
+    turn: intent.turn,
+    currency: parentCurrency,
+    legs: [
+      {
+        kind: "debit",
+        amount: intent.amountParent,
+        valuation: { currencyCode: parentCurrency, localPerAnchor: intent.parentRate },
+        collection: "corporations",
+        filter: {
+          _id: oid(parent._id.toHexString()),
+          liquidCurrencyCode: intent.parentStampedCurrency ?? { $exists: false },
+          liquidCapital: {
+            $gte: intent.amountParent / SUBSIDIARY_CAPITAL_INJECTION_MAX_PCT_OF_PARENT_LIQUID,
+          },
+          ...corporateDiscretionaryCashGuard(),
+        },
+        path: "liquidCapital",
+        note: "Parent capital contribution",
+      },
+      {
+        kind: "credit",
+        amount: intent.amountSubsidiary,
+        valuation: { currencyCode: subsidiaryCurrency, localPerAnchor: intent.subsidiaryRate },
+        collection: "corporations",
+        filter: {
+          _id: oid(sub._id.toHexString()),
+          liquidCurrencyCode: intent.subsidiaryStampedCurrency ?? { $exists: false },
+        },
+        path: "liquidCapital",
+        note: "Subsidiary capital received",
+      },
+    ],
+    projections: [
+      {
+        collection: "corporations",
+        filter: { _id: oid(sub._id.toHexString()) },
+        update: { $set: { lastCapitalInjectionTurn: intent.turn } },
+        note: "Complete the reserved cooldown slot",
+      },
+      ...docs.map((doc, index) => ({
+        collection: "financialTxLog",
+        insert: { ...doc, _id: receiptId(`${key}:${index}`) },
+        note: "Capital contribution receipt",
+      })),
+      {
+        collection: "corporations",
+        filter: { _id: oid(sub._id.toHexString()), "capitalInjectionIntent.key": key },
+        update: { $set: { "capitalInjectionIntent.completed": true } },
+        note: "Complete the capital transfer receipt",
+      },
+    ],
+    event: { kind: "monetary.executed", command: "subsidiary.capitalInjection", amount: anchor },
+  };
+  let result = await settleTransition(db, transition);
+  if (result.status === "replayed" && result.error) result = await resumeSettlement(db, key);
+  if (result.status === "rejected" && result.appliedLegs.length === 0) {
+    await corporationsCollection(db).updateOne(
+      { _id: sub._id, "capitalInjectionIntent.key": key },
+      { $unset: { capitalInjectionIntent: "" } }
+    );
+    return fail(
+      "No capital moved. The parent must have sufficient unencumbered funds and both currencies must still match the quote.",
+      409
     );
   }
-
-  // Forex conversion: parent local → ₳ → subsidiary local.
-  const [parentFx, subFx] = await Promise.all([getCorpFxRate(db, parent), getCorpFxRate(db, sub)]);
-  const amountAnchor = corpLiquidCapitalToAnchor(amountLocal, parent, parentFx);
-  const amountInSubLocal = Math.round(anchorToCorpLiquidCapital(amountAnchor, sub, subFx));
-  if (!Number.isFinite(amountInSubLocal) || amountInSubLocal <= 0) {
-    return fail("Injection amount is too small after currency conversion.");
-  }
-
-  // Atomic debit on the parent (race-safe balance gate).
-  const debit = await atomicallyDebitCorpLiquidCapital(db, parent._id, amountLocal);
-  if (!debit.ok) {
-    return fail("Insufficient parent corporate funds.");
-  }
-
-  try {
-    const creditedBalance = await creditCorpLiquidCapital(db, sub._id, amountInSubLocal);
-    if (creditedBalance === null) {
-      await refundCorpLiquidCapital(db, parent._id, amountLocal);
-      return fail("Subsidiary corporation not found.", 404);
-    }
-  } catch (err) {
-    await refundCorpLiquidCapital(db, parent._id, amountLocal);
-    throw err;
-  }
-
-  await corporationsCollection(db).updateOne(
-    { _id: sub._id },
-    { $set: { lastCapitalInjectionTurn: turn, updatedAt: now } }
-  );
-
-  const parentCurrency = resolveCorpLiquidCurrencyCode(parent) ?? "USD";
-  const subCurrency = resolveCorpLiquidCurrencyCode(sub) ?? "USD";
-  await Promise.all([
-    emitTx(db, {
-      type: "corp_capital_injection",
-      turn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: parent._id,
-      subjectName: parent.name,
-      amount: -amountLocal,
-      balanceAfter: debit.newBalance,
-      currencyCode: parentCurrency,
-      counterpartyType: "corporation",
-      counterpartyId: sub._id,
-      counterpartyName: sub.name,
-      meta: { kind: "parent_capital_injection", subsidiaryId: sub._id.toString() },
-    }),
-    emitTx(db, {
-      type: "corp_capital_injection",
-      turn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: sub._id,
-      subjectName: sub.name,
-      amount: amountInSubLocal,
-      currencyCode: subCurrency,
-      counterpartyType: "corporation",
-      counterpartyId: parent._id,
-      counterpartyName: parent.name,
-      meta: { kind: "subsidiary_capital_received", parentId: parent._id.toString() },
-    }),
-  ]);
-
-  recordAudit({
-    source: "api",
-    action: "corp.capitalInjection",
-    category: "corp",
-    turn,
-    ts: now,
-    actor: { kind: "player", userId: callerUserId },
-    subject: { type: "corporation", id: parent._id, name: parent.name },
-    counterparty: { type: "corporation", id: sub._id, name: sub.name },
-    amount: -amountLocal,
-    currencyCode: parentCurrency,
-    refs: { corporationId: parent._id },
-    outcome: "ok",
-    meta: { subsidiaryId: sub._id, creditedSubsidiary: amountInSubLocal, subCurrency },
-  });
-
-  return { ok: true, debitedParent: amountLocal, creditedSubsidiary: amountInSubLocal };
+  if (result.error || (result.status !== "applied" && result.status !== "replayed"))
+    return fail(
+      "Capital injection is pending recovery; retry this amount to finish the reserved transfer.",
+      409
+    );
+  return {
+    ok: true,
+    debitedParent: intent.amountParent,
+    creditedSubsidiary: intent.amountSubsidiary,
+  };
 }

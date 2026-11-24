@@ -76,11 +76,11 @@ describe("sector money restatement for foreign-owned era-currency sectors", () =
     }
   );
 
-  it("a live-only map inflates the readback by the era rate (the bug being fixed)", () => {
+  it("a live-only map refuses missing historical-host quotes", () => {
     const sector = { countryId: "IT" } as Pick<CorporateSector, "countryId">;
     const stored = engineStoredRevenue(sector, 1778.55);
     const { toAnchor } = buildSectorCurrencyRestatement(usCorp, liveRows());
-    expect(toAnchor(stored, sector) / (1778.55 * TURNS_PER_DAY)).toBeCloseTo(833, 3);
+    expect(() => toAnchor(stored, sector)).toThrow(/Exchange rate unavailable/);
   });
 
   it("leaves domestic and live-row hosts untouched", () => {

@@ -124,6 +124,18 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     supplyAgreementUnpaidAnchor: fog(financials.supplyAgreementUnpaidAnchor ?? 0, factor),
     totalCosts: fog(financials.totalCosts, factor),
     income: fog(financials.income, factor),
+    ...(financials.realizedIncome != null
+      ? { realizedIncome: fog(financials.realizedIncome, factor) }
+      : {}),
+    ...(financials.realizedDividendPaid != null
+      ? { realizedDividendPaid: fog(financials.realizedDividendPaid, factor) }
+      : {}),
+    ...(financials.realizedRevenueBase != null
+      ? { realizedRevenueBase: fog(financials.realizedRevenueBase, factor) }
+      : {}),
+    realizedIncomeTurn: financials.realizedIncomeTurn,
+    historicalIncomeUnavailable: financials.historicalIncomeUnavailable,
+    historicalBondFeesUnavailable: financials.historicalBondFeesUnavailable,
     dividendRate: financials.dividendRate,
     effectiveDividendRate: financials.effectiveDividendRate,
     dividendPolicyRate: financials.dividendPolicyRate,
@@ -170,6 +182,13 @@ export function applyFogToBalanceSheet(balanceSheet: BalanceSheet, factor: numbe
     liabilities: {
       dailyCosts: fog(l.dailyCosts, factor),
       totalDebt: fog(l.totalDebt, factor),
+      ...(l.debtBreakdown
+        ? {
+            debtBreakdown: Object.fromEntries(
+              Object.entries(l.debtBreakdown).map(([key, value]) => [key, fog(value, factor)])
+            ),
+          }
+        : {}),
       dailyInterestCost: fog(l.dailyInterestCost, factor),
       bondCount: l.bondCount,
     },

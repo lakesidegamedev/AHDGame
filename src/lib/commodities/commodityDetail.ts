@@ -9,7 +9,11 @@ import {
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { getDb } from "@/lib/mongodb";
-import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import {
+  loadWorldBookTotals,
+  withFundedNationalBalances,
+} from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { flowsFromWorldMarket, worldSupplyFigures } from "./worldSupplyRules";
 import { fundedReachableBookEntries } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CommodityFlow as CommodityFlowDoc } from "@/lib/db/types/commodityFlow";
@@ -19,13 +23,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type {
-  CommodityPrice,
-  CommodityPriceHistory,
-  Corporation,
-  CorporateSector,
-  State,
-} from "@/lib/db/types";
+import type { CommodityPriceHistory, Corporation, CorporateSector, State } from "@/lib/db/types";
 import {
   COMMODITY_LABELS,
   COMMODITY_ICONS,
@@ -42,7 +40,6 @@ import {
   blendPrice,
 } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
-import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
@@ -255,6 +252,17 @@ export async function getCommodityDetailData(
           })
         : null;
 
+    // World supply and demand on the chart: the traded market (the country
+    // books, background economy included) on every turn that has one.
+    const historyWorld = worldMarket
+      ? await loadWorldBookTotals(db, {
+          commodities: [commodity],
+          fromTurn: Math.min(...history.map((h) => h.turn)),
+          toTurn: Math.max(...history.map((h) => h.turn)),
+          worldEpochId: gameState?.worldEpochId,
+        })
+      : null;
+
     let allSectors: CorporateSector[] = [];
     let allCorps: Pick<
       Corporation,
@@ -373,6 +381,8 @@ export async function getCommodityDetailData(
     // Per-corp FX normalizes sector revenue to ₳ for retail demand and
     // realized producer/consumer volumes. Unused on the light header path.
     const fxByCurrency = includeHeavy ? await loadFxRatesByCurrency(db) : new Map();
+    const worldPreset = includeHeavy ? await loadWorldPreset(db) : "modern";
+    if (includeHeavy) withAuthoredEraRates(fxByCurrency, worldPreset);
     const fxByCorpId = new Map<string, { code: CurrencyCode | undefined; rate: number }>();
     for (const c of allCorps) {
       fxByCorpId.set(c._id.toString(), {
@@ -396,7 +406,6 @@ export async function getCommodityDetailData(
     // scope as the corporation tab). Loaded once; the leaderboard aggregation
     // below runs every sector through `computeSectorCommodityUnits`, the exact
     // chain `computeCorpCommodityFlows` uses.
-    const worldPreset = includeHeavy ? await loadWorldPreset(db) : "modern";
     const eraUnitScale = getEraUnitScale(worldPreset);
     const [gameConfigDoc, gameStateDoc, stateResourceDocs] = includeHeavy
       ? await Promise.all([
@@ -422,12 +431,6 @@ export async function getCommodityDetailData(
             .toArray(),
         ])
       : [null, null, [] as { stateId: string; resources?: Record<string, number> | null }[]];
-    // Command-economy currencies are deliberately untraded and have no
-    // exchangeRates row; fill only the absent ones from the authored preset,
-    // exactly like the corporation commodities route. Live rates win.
-    if (includeHeavy) {
-      withAuthoredEraRates(fxByCurrency, worldPreset);
-    }
     const marketingBudgets =
       includeHeavy && commodity === "advertising"
         ? allCorps
@@ -974,7 +977,7 @@ export async function getCommodityDetailData(
 
     const detail = {
       commodity,
-      flows,
+      flows: flows && worldMarket ? flowsFromWorldMarket(flows, worldMarket) : flows,
       label: COMMODITY_LABELS[commodity],
       icon: COMMODITY_ICONS[commodity],
       colors: COMMODITY_COLORS[commodity],
@@ -982,8 +985,13 @@ export async function getCommodityDetailData(
       basePrice,
       priceCapBasis: await loadPriceCapBasis(db).catch(() => null),
       globalPrice: currentPrice?.globalPrice ?? basePrice,
-      globalSupply: currentPrice?.globalSupply ?? 0,
-      globalDemand: currentPrice?.globalDemand ?? 0,
+      // One world supply figure on every screen: the traded market. The price
+      // still reads the stored figure, which leaves out background sales; it
+      // is kept apart as the pricing input, never shown as world supply.
+      ...worldSupplyFigures(
+        { supply: currentPrice?.globalSupply ?? 0, demand: currentPrice?.globalDemand ?? 0 },
+        worldMarket
+      ),
       priceAttribution: currentPrice?.priceAttribution ?? null,
       scarcityBreakdown: buildScarcityBreakdown({
         scarcityMult: currentPrice?.scarcityMult,
@@ -995,6 +1003,7 @@ export async function getCommodityDetailData(
         demand: currentPrice?.globalDemand ?? 0,
         attribution: currentPrice?.priceAttribution ?? null,
         configuredMaxMove: priceConfigDoc?.producerPriceMaxMove,
+        ...(worldMarket ? { shownSupply: worldMarket.supply } : {}),
       }),
       priceChange:
         Math.round((((currentPrice?.globalPrice ?? basePrice) - basePrice) / basePrice) * 10000) /
@@ -1055,12 +1064,15 @@ export async function getCommodityDetailData(
           ? reachableBooksFor(reachableBooks, commodity)
           : undefined,
       turn: currentPrice?.turn ?? 0,
-      history: history.map((h: CommodityPriceHistory) => ({
-        turn: h.turn,
-        price: h.globalPrice,
-        supply: h.globalSupply,
-        demand: h.globalDemand,
-      })),
+      history: history.map((h: CommodityPriceHistory) => {
+        const world = historyWorld?.get(`${commodity}:${h.turn}`);
+        return {
+          turn: h.turn,
+          price: h.globalPrice,
+          supply: world ? world.supply : h.globalSupply,
+          demand: world ? world.demand : h.globalDemand,
+        };
+      }),
       suppliers,
       consumers,
       topProducers,

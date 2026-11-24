@@ -441,3 +441,29 @@ describe("MarketMoneyPanel unsold note on a mixed-output site", () => {
     expect(container.textContent).not.toContain("oversupplied");
   });
 });
+
+it("shows unavailable recorded tax assessments without inventing zero payments", () => {
+  render(
+    <MarketMoneyPanel
+      plants={plants}
+      sectorType="manufacturing"
+      corporation={{ _id: "corp", name: "Test Company" }}
+      financials={
+        {
+          corpOverheadShare: null,
+          taxableIncome: null,
+          federalTaxApprox: null,
+          stateTaxApprox: null,
+          federalTaxRate: 20,
+          stateTaxRate: 10,
+          taxAssessmentTurn: null,
+        } as never
+      }
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Details" }));
+  expect(screen.getByText("Income tax assessment turn")).toBeTruthy();
+  expect(screen.getByText("Federal tax assessed (20%)")).toBeTruthy();
+  expect(screen.getAllByText("n/a").length).toBeGreaterThanOrEqual(5);
+  expect(screen.queryByText("Mnull")).toBeNull();
+});

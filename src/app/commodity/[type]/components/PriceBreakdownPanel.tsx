@@ -51,7 +51,11 @@ export default function PriceBreakdownPanel({
       <p className="mt-2 text-xs text-muted">
         The premium builds up while a good is short and only eases back at a set pace once supply
         catches up, so a well supplied good can still sit near its top price for a while.{" "}
-        {premiumTrendSentence(breakdown.pressure, breakdown.maxMovePerTurn)}
+        {premiumTrendSentence(
+          breakdown.pressure,
+          breakdown.maxMovePerTurn,
+          breakdown.pricingLeavesOutBackground
+        )}
       </p>
     </section>
   );

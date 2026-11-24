@@ -1,7 +1,12 @@
 import type { Db } from "mongodb";
 import type { CommodityPrice } from "@/lib/db/types";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
-import type { NationalBalanceSource } from "@/lib/market/producerMarket/fundedCountryViewRules";
+import {
+  worldFundedMarket,
+  type FundedCountryMarket,
+  type NationalBalanceSource,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
+import { worldSupplyFigures } from "@/lib/commodities/worldSupplyRules";
 import {
   COMMODITY_TYPES,
   COMMODITY_LABELS,
@@ -12,6 +17,31 @@ import {
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+
+/**
+ * World supply and demand as traded (the funded country books summed,
+ * background economy included), per day (24 turns) like every quantity here.
+ * `pricingSupply` is what the price reads; it leaves out background sales.
+ */
+function publicWorldTotals(
+  data:
+    | {
+        globalSupply?: number;
+        globalDemand?: number;
+        fundedCountryBooks?: Record<string, FundedCountryMarket>;
+      }
+    | null
+    | undefined
+) {
+  const world = data?.fundedCountryBooks ? worldFundedMarket(data.fundedCountryBooks) : null;
+  return {
+    ...worldSupplyFigures(
+      { supply: data?.globalSupply ?? 0, demand: data?.globalDemand ?? 0 },
+      world
+    ),
+    quantityBasis: "per day (24 turns)" as const,
+  };
+}
 
 /** Which source a country's supply and demand came from; null with no price row. */
 function balanceSource(data: object | null | undefined): NationalBalanceSource | null {
@@ -27,7 +57,8 @@ export async function queryCommodities(db: Db, params: { country?: string }) {
   const rawPrices = await commodityPricesCollection(db).find({}).toArray();
   // A country's figures come from the funded country book of the prices' turn
   // when there is one (see fundedCountryViewRules).
-  const prices = country ? await withFundedNationalBalances(db, rawPrices) : rawPrices;
+  // World totals are the traded market, the sum of the same books.
+  const prices = await withFundedNationalBalances(db, rawPrices);
   const priceMap = new Map(prices.map((p) => [p.commodity, p]));
 
   const result = COMMODITY_TYPES.map((commodity) => {
@@ -46,8 +77,7 @@ export async function queryCommodities(db: Db, params: { country?: string }) {
       unit: COMMODITY_UNITS[commodity],
       basePrice,
       globalPrice: data?.globalPrice ?? basePrice,
-      globalSupply: data?.globalSupply ?? 0,
-      globalDemand: data?.globalDemand ?? 0,
+      ...publicWorldTotals(data),
       ...(country !== undefined && {
         nationalPrice,
         nationalSupply,
@@ -69,7 +99,7 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
   const commodity = key as CommodityType;
 
   const rawData = await commodityPricesCollection(db).findOne({ commodity });
-  const data = rawData && country ? (await withFundedNationalBalances(db, [rawData]))[0] : rawData;
+  const data = rawData ? (await withFundedNationalBalances(db, [rawData]))[0] : rawData;
 
   const basePrice = COMMODITY_BASE_PRICES[commodity];
 
@@ -123,8 +153,7 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
     unit: COMMODITY_UNITS[commodity],
     basePrice,
     globalPrice: data?.globalPrice ?? basePrice,
-    globalSupply: data?.globalSupply ?? 0,
-    globalDemand: data?.globalDemand ?? 0,
+    ...publicWorldTotals(data),
     ...(country !== undefined && {
       nationalPrice,
       nationalSupply,
