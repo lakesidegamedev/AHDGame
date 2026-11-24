@@ -1,0 +1,32 @@
+{
+  "governmentConfidence": {
+    "title": "Vertrauen in die Regierung",
+    "description": "Zeigt, wie sich das Vertrauen in die Regierung im Laufe der Zeit verändert und wie sich die Zustimmung der Bevölkerung und Regierungswechsel darauf auswirken.",
+    "unknownTurn": "Runde nicht verfügbar",
+    "bands": {
+      "secure": "Stabil",
+      "shaky": "Wackelig",
+      "crisis": "Krise",
+      "collapsed": "Zusammengebrochen"
+    },
+    "history": {
+      "title": "Verlauf des Regierungsvertrauens",
+      "points": "{count, plural, one {# erfasste Änderung} other {# erfasste Änderungen}}",
+      "notEnoughData": "Die Aufzeichnung beginnt mit dieser Aktualisierung. Ältere Werte wurden nicht gespeichert. Für einen Trend liegen daher noch zu wenige Daten vor.",
+      "retention": "Zeigt bis zu 500 der letzten Änderungen. Ältere Werte wurden nicht gespeichert und lassen sich nicht rekonstruieren.",
+      "unknownTurn": "Runde nicht verfügbar",
+      "turn": "Runde {turn}",
+      "value": "Vertrauen"
+    },
+    "reasons": {
+      "turn": "Rundenwechsel",
+      "budgetPass": "Haushalt verabschiedet",
+      "budgetDefeat": "Haushalt abgelehnt",
+      "lostVonc": "Vertrauensabstimmung verloren",
+      "lostKeyVote": "Wichtige Abstimmung verloren",
+      "ministerFired": "Minister entlassen",
+      "ministerResigned": "Minister zurückgetreten",
+      "governmentFormed": "Neue Regierung gebildet"
+    }
+  }
+}
