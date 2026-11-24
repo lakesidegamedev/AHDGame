@@ -20,3 +20,8 @@ the floor, so bills bought at the ask and valued at the bid can no longer turn
 an advance the bank never asked for into a loss.
 
 The bank treasury panel's cash floor now includes any outstanding advance.
+
+When a bank is closed in a currency that still uses savings pointers, savings
+accounts held there now reopen at the central bank once the closure settles.
+They used to stay frozen, so their owners could not deposit, withdraw or move
+the balance.
