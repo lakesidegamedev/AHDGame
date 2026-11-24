@@ -19,6 +19,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "Turn resume journal: a header per turn and plan chunks read by exact _id; only the last few turns are kept, so the prune scan is bounded.",
   producerPathClaims: "One claim per world and turn, inserted and read by its _id.",
   producerMarketOutcomes: "One document per world and turn, written and read by its _id.",
+  producerMarketCompanyBooks:
+    "One document per world, turn and good, written and read by its _id; only the last few turns are kept, so the prune scan is bounded.",
   producerHouseholdSource: "One document per world, written once and read by its _id.",
   producerWideEconomyBaseline: "One document per world, written once and read by its _id.",
   producerPublicCarry: "One document per world and turn, written and read by its _id.",

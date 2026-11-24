@@ -5,8 +5,9 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getAuthUser } from "@/lib/auth";
 import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCorporateHoldings";
 import {
-  computeCommodityOutputSharePercent,
+  commodityOutputPoint,
   findCommodityOutputBasisChange,
+  inferredBasis,
 } from "@/lib/corporations/corpCommoditySnapshot";
 import type { CorporationHistory } from "@/lib/db/types";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
@@ -159,18 +160,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         const outputUnits = row.commodityOutput?.[commodity] ?? 0;
         if (!(outputUnits > 0)) continue;
         const flow = flowByCommodityTurn.get(`${commodity}:${row.turn}`);
-        const globalSupplyUnits = flow?.supplyUnits ?? null;
-        const sharePercent =
-          globalSupplyUnits != null
-            ? computeCommodityOutputSharePercent(outputUnits, globalSupplyUnits)
-            : null;
-        points.push({
-          turn: row.turn,
-          outputUnits,
-          globalSupplyUnits,
-          sharePercent,
-          stockUnits: flow?.stockUnits ?? null,
-        });
+        points.push(commodityOutputPoint(row.turn, outputUnits, flow, inferredBasis(row)));
       }
       return {
         commodity,

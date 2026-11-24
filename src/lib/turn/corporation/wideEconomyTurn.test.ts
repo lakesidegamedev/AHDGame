@@ -256,7 +256,8 @@ describe("wider-economy funding", () => {
     wideSpend: number,
     extra: (wallet: string) => Record<string, unknown> = () => ({}),
     seed: (memory: ReturnType<typeof createInMemoryDb>) => void = () => {},
-    traders: Awaited<ReturnType<typeof backgroundTraders.loadBackgroundTraders>>["traders"] = []
+    traders: Awaited<ReturnType<typeof backgroundTraders.loadBackgroundTraders>>["traders"] = [],
+    env: Record<string, unknown> = {}
   ) {
     const f = fundedWorld();
     seed(f.memory);
@@ -292,9 +293,10 @@ describe("wider-economy funding", () => {
         exchangeRatesByCurrency: new Map([["USD", RATE]]),
         federalBudgets: [{ _id: new ObjectId(), countryId: "US", currencyCode: "USD" }],
       },
-      env: {},
+      env,
       seedHouseholds: false,
     } as unknown as Parameters<typeof runFundedProducerTurn>[1];
+    let result: Awaited<ReturnType<typeof runFundedProducerTurn>> | undefined;
     const spy = vi.spyOn(demandBuilder, "buildProducerTurnDemand").mockResolvedValue({
       preparedSectors: f.prepare(),
       walletScopes: f.scopes,
@@ -320,7 +322,7 @@ describe("wider-economy funding", () => {
       ...extra(wallet),
     } as unknown as Awaited<ReturnType<typeof demandBuilder.buildProducerTurnDemand>>);
     try {
-      await runFundedProducerTurn(f.memory as unknown as Db, input);
+      result = await runFundedProducerTurn(f.memory as unknown as Db, input);
     } finally {
       spy.mockRestore();
       traderSpy.mockRestore();
@@ -337,7 +339,8 @@ describe("wider-economy funding", () => {
     const returns = f.memory
       .collection("bankMoneyMoves")
       .docs.filter((m) => m.kind === "producer_background_return");
-    return { moves, wallets, returns, wallet, memory: f.memory, corrections };
+    const turnWarnings = result?.turnWarnings ?? [];
+    return { moves, wallets, returns, wallet, memory: f.memory, corrections, turnWarnings };
   }
 
   it("funds nothing and creates no wallet when there are no orders (stage 0)", async () => {
@@ -470,5 +473,66 @@ describe("wider-economy funding", () => {
       mints.filter((l) => l.filter?._id === id).reduce((n, l) => n + l.amount, 0);
     expect(credited(traderWallet)).toBeCloseTo(30 * RATE, 6);
     expect(credited(r.wallet)).toBeCloseTo(40 * RATE, 6);
+  });
+
+  it("stores who every unit came from, daily on the books and per turn per company, with no gap", async () => {
+    const publicWallet = producerWalletId("world", {
+      kind: "publicBuyer",
+      countryId: "US",
+      currency: "USD",
+    });
+    const r = await runWith(
+      0,
+      (wallet) => ({
+        funding: [{ countryId: "US", fundingLocal: 10_000 }],
+        publicBuyerOrders: [
+          {
+            id: "public-fs",
+            accountId: publicWallet,
+            commodity: "financial_services",
+            book: "world",
+            units: 1_000_000,
+            maximumUnitPrice: 4,
+            maximumSpend: 10_000,
+            countryId: "US",
+          },
+        ],
+        wideEconomyOffers: [
+          {
+            id: "wide-offer-fs",
+            accountId: wallet,
+            commodity: "financial_services",
+            book: "world",
+            units: 5,
+            unitPrice: 3.15,
+            countryId: "US",
+          },
+        ],
+      }),
+      () => {},
+      [],
+      { fundedBookStage: 1 }
+    );
+    const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+    const book = (outcome.books as Record<string, unknown>[]).find(
+      (b) => b.countryId === "US" && b.commodity === "financial_services"
+    ) as {
+      supply: number;
+      supplyBy: Record<string, number>;
+      demand: number;
+      demandBy: Record<string, number>;
+    };
+    const total = (split: Record<string, number>) =>
+      Object.values(split).reduce((n, v) => n + v, 0);
+    expect(total(book.supplyBy)).toBeCloseTo(book.supply, 6);
+    expect(total(book.demandBy)).toBeCloseTo(book.demand, 6);
+    // The background economy sold its 5 units: 5 per turn, 5 x 24 on the daily book.
+    expect(book.supplyBy.wideEconomy).toBeCloseTo(5 * TURNS_PER_DAY, 6);
+    expect(outcome.attributionGaps).toBeUndefined();
+    expect(r.turnWarnings.join(" ")).not.toContain("Market attribution gap");
+    // Company books are per turn: their sum times 24 is the company part of the daily book.
+    const [companyDoc] = r.memory.collection("producerMarketCompanyBooks").docs;
+    const offered = (companyDoc.rows as { offered: number }[]).reduce((n, c) => n + c.offered, 0);
+    expect(offered * TURNS_PER_DAY).toBeCloseTo(book.supplyBy.company!, 6);
   });
 });

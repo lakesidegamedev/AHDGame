@@ -19,7 +19,7 @@ describe("DemandDriverBanner", () => {
   it("omits an unavailable share instead of inventing zero percent", () => {
     render(<DemandDriverBanner demandDriver={driver} unit="campaigns" />);
 
-    expect(screen.getByText("100 campaigns/day")).toBeTruthy();
+    expect(screen.getByText("100 campaigns per turn")).toBeTruthy();
     expect(screen.queryByText(/% of total demand/)).toBeNull();
   });
 

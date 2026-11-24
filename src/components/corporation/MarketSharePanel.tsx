@@ -122,14 +122,18 @@ export function MarketSharePanel({
   const lines: LineSeries[] = [
     {
       label:
-        mode === "share" ? "Your share" : mode === "stockpile" ? "Global stockpile" : "Your output",
+        mode === "share"
+          ? "Your share"
+          : mode === "stockpile"
+            ? "Global stockpile"
+            : "Your output per turn",
       values: points.map(getPrimary),
       tone: "text-foreground",
     },
   ];
   if (mode === "output") {
     lines.push({
-      label: "Global supply",
+      label: "Global supply per turn",
       values: points.map((p) => p.globalSupplyUnits ?? 0),
       tone: "text-muted",
       dashed: true,
@@ -159,8 +163,8 @@ export function MarketSharePanel({
     >
       <p className="py-1 text-xs text-muted">
         Your corporation&rsquo;s share of global commodity output over time, by physical units
-        produced, not industry revenue. Output compares your production with global supply;
-        stockpile is the global shadow inventory from the market ledger.
+        produced, not industry revenue. Output compares your production with global supply, both per
+        turn; stockpile is the global shadow inventory from the market ledger.
       </p>
 
       {basisChange && (
@@ -168,9 +172,10 @@ export function MarketSharePanel({
           <span className="font-semibold text-warning">
             Reporting basis changed at turn {basisChange.turn}.
           </span>{" "}
-          Earlier points estimated output from revenue. From this turn onward, the chart uses
-          measured plant output. A step at this marker is a reporting correction, not production
-          disappearing.
+          {basisChange.to === "market-receipts-per-turn-v1"
+            ? "Earlier points were model estimates on their own scale, so they show no share. From this turn onward, output is what you offered on the market, per turn, the same unit as global supply."
+            : "Earlier points estimated output from revenue. From this turn onward, the chart uses measured plant output."}{" "}
+          A step at this marker is a reporting correction, not production disappearing.
         </p>
       )}
 
@@ -224,8 +229,8 @@ export function MarketSharePanel({
             <tr>
               <Th>Commodity</Th>
               <Th align="right">Share</Th>
-              <Th align="right">Your output</Th>
-              <Th align="right">Global supply</Th>
+              <Th align="right">Your output per turn</Th>
+              <Th align="right">Global supply per turn</Th>
             </tr>
           </thead>
           <tbody>

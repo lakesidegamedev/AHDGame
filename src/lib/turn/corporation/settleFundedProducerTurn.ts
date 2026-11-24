@@ -1,4 +1,28 @@
+import { logger } from "@/lib/observability/logger";
 import { wideEconomyLaneShortage } from "@/lib/market/producerMarket/wideEconomyRules";
+import {
+  COMPANY_BOOKS_KEPT_TURNS,
+  companyBooksId,
+  producerMarketCompanyBooksCollection,
+  type ProducerMarketCompanyBookRow,
+  type ProducerMarketCompanyBooksDoc,
+} from "@/lib/db/repositories/producerMarketCompanyBooks";
+import {
+  marketAttributionGaps,
+  scaleUnits,
+  type CountryBookAttribution,
+} from "@/lib/market/producerMarket/marketAttributionRules";
+
+/** A book row's attributed splits, on the price phase's basis. */
+function attributedBook(a: CountryBookAttribution | undefined) {
+  if (!a) return {};
+  return {
+    supplyBy: scaleUnits(a.supplyBy, TURNS_PER_DAY),
+    demandBy: scaleUnits(a.demandBy, TURNS_PER_DAY),
+    requestedBy: scaleUnits(a.requestedBy, TURNS_PER_DAY),
+    filledBy: scaleUnits(a.filledBy, TURNS_PER_DAY),
+  };
+}
 import type { FundedProducerTurnResult } from "@/lib/turn/corporation/fundedProducerTurn";
 import { nextPostureAnchors } from "@/lib/market/producerMarket/postureAnchorRules";
 import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
@@ -502,6 +526,31 @@ export async function publishFundedProducerTurn(
     laneClearingPrices[laneKeyOf(row.commodity, row.book)] = row.value / row.units;
     if (row.book === "world") clearingPrices[row.commodity] = row.value / row.units;
   }
+  // Every unit of the country books must have a named source and destination,
+  // so screens can show rows that add up to their totals. A gap means some
+  // volume was counted without an attributed account: say so loudly.
+  const attributionByRow = new Map(
+    (settled.result.countryBookAttribution ?? []).map((a) => [
+      JSON.stringify([a.countryId, a.commodity]),
+      a,
+    ])
+  );
+  const attributionGaps = settled.result.countryBooks
+    ? marketAttributionGaps(
+        settled.result.countryBooks,
+        settled.result.countryBookAttribution ?? []
+      )
+    : [];
+  if (attributionGaps.length > 0) {
+    const sample = attributionGaps
+      .slice(0, 5)
+      .map((g) => `${g.commodity} ${g.countryId} ${g.measure} ${g.total} vs ${g.attributed}`)
+      .join("; ");
+    logger.error(
+      "corporationTurn",
+      `${attributionGaps.length} market totals include unattributed volume: ${sample}`
+    );
+  }
   // Per-country funded book, on the price phase's per-turn basis. The price
   // phase reads it instead of the modelled clearing when the stage is on.
   const countryBooks =
@@ -519,6 +568,7 @@ export async function publishFundedProducerTurn(
           ...(row.spilloverRequested != null
             ? { spilloverRequested: row.spilloverRequested * TURNS_PER_DAY }
             : {}),
+          ...attributedBook(attributionByRow.get(JSON.stringify([row.countryId, row.commodity]))),
         }))
       : undefined;
   const tariffMeta = settled.result.close?.meta?.importTariffs as
@@ -584,6 +634,7 @@ export async function publishFundedProducerTurn(
         laneClearingPrices
       ),
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
+      ...(attributionGaps.length > 0 ? { attributionGaps } : {}),
       ...(settled.result.regionalBooks ? { regionalBuildBooks: settled.result.regionalBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       // Real shortage per lane, read by the next turns to size the wider
@@ -632,6 +683,49 @@ export async function publishFundedProducerTurn(
     } as never,
     { upsert: true }
   );
+  // Each company's part of the books, per turn, one document per good, so a
+  // commodity page lists exactly the companies its totals are made of.
+  if (countryBooks && settled.result.companyBooks) {
+    const byCommodity = new Map<string, ProducerMarketCompanyBookRow[]>();
+    for (const c of settled.result.companyBooks) {
+      const rows = byCommodity.get(c.commodity) ?? [];
+      rows.push({
+        countryId: c.countryId,
+        accountId: c.accountId,
+        offered: c.offered,
+        sold: c.sold,
+        requested: c.requested,
+        filled: c.filled,
+      });
+      byCommodity.set(c.commodity, rows);
+    }
+    const companyBooks = producerMarketCompanyBooksCollection<ProducerMarketCompanyBooksDoc>(
+      context.db
+    );
+    if (byCommodity.size > 0)
+      await companyBooks.bulkWrite(
+        [...byCommodity].map(([commodity, rows]) => {
+          const _id = companyBooksId(context.worldEpoch, context.turn, commodity);
+          return {
+            replaceOne: {
+              filter: { _id },
+              replacement: {
+                _id,
+                worldEpoch: context.worldEpoch,
+                turn: context.turn,
+                commodity,
+                rows,
+              },
+              upsert: true,
+            },
+          };
+        })
+      );
+    await companyBooks.deleteMany({
+      worldEpoch: context.worldEpoch,
+      turn: { $lte: context.turn - COMPANY_BOOKS_KEPT_TURNS },
+    });
+  }
 
   // Close and transition support settled with the market (see closeAtSettlement).
   const close = settled.result.close;
@@ -903,7 +997,15 @@ export async function publishFundedProducerTurn(
     headcountBySectorId,
     deferredDistributions,
     tradeReceipt: settled.result.tradeReceipt,
-    turnWarnings: [...(settled.result.turnWarnings ?? []), ...context.background.warnings],
+    turnWarnings: [
+      ...(settled.result.turnWarnings ?? []),
+      ...context.background.warnings,
+      ...(attributionGaps.length > 0
+        ? [
+            `Market attribution gap: ${attributionGaps.length} market totals include volume no screen row accounts for`,
+          ]
+        : []),
+    ],
   };
 }
 
