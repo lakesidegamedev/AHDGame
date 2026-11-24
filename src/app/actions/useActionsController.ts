@@ -22,12 +22,10 @@ import {
 import { getHomeCurrency, getTotalPersonalLiquidWealth } from "@/lib/currency/characterFunds";
 import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { campaignAnchorToLocal } from "@/lib/campaigns/rules/currency";
 import { adPurchaseCost } from "@/lib/campaignTargeting/rules";
 import { hasGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
-import { getActionImage } from "@/lib/images/actionImages";
+import { getActionArtEra, getActionImage } from "@/lib/images/actionImages";
 import { apiErrorText } from "@/lib/errors/catalog";
 import type { CampaignActionPrices } from "@/lib/actions/campaignActionPrices";
 import { CARDS } from "./actionsConstants";
@@ -321,12 +319,8 @@ export function useActionsController({
   // American photography, a DD player sees Volkskammer-era East German photography,
   // and anything without bespoke national art falls back to the era-generic set.
   // Resolved from the LIVE year, not the seed preset, so a 1953-seeded world
-  // sitting in 1985 gets 1985 art. Art tiers are discrete, which is exactly what
-  // `eraIdForYear` is for.
-  const era =
-    worldFlags.currentYear != null
-      ? eraIdForYear(worldFlags.currentYear)
-      : eraForPreset(worldFlags.preset);
+  // sitting in 1985 gets the art for its current era.
+  const era = getActionArtEra(worldFlags.currentYear, worldFlags.preset);
   const countryId = character?.countryId ?? null;
   // Deliberately not `getEraConfig().label` — that would pull the whole
   // landing-page era config (every era's copy and nation list) into this bundle.

@@ -12,7 +12,7 @@ vi.mock("@/contexts/AuthDataContext", () => ({
   useRefetchNav: () => () => undefined,
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
-vi.mock("next/dynamic", () => ({ default: () => () => null }));
+vi.mock("@/components/askDrawer/AskDrawerPanel", () => ({ AskDrawerPanel: () => null }));
 vi.mock("@/components/sidebarWidgets/ExperimentalSideTray", () => ({
   ExperimentalSideTray: ({ side, keirHidden }: { side: string; keirHidden: boolean }) => (
     <div data-testid="side-tray" data-side={side} data-keir-hidden={String(keirHidden)} />
@@ -42,11 +42,11 @@ describe("AskDrawer", () => {
     expect(screen.getAllByRole("button", { name: "Open Ask Keir" })).toHaveLength(2);
   });
 
-  it("moves experimental players with a character into the side tray, Keir included", () => {
+  it("moves experimental players with a character into the side tray, Keir included", async () => {
     auth.user = { experimentalFeatures: true, askDrawerSide: "left", askDrawerHidden: true };
     auth.navData = { hasCharacter: true };
     render(<AskDrawer />);
-    const tray = screen.getByTestId("side-tray");
+    const tray = await screen.findByTestId("side-tray");
     expect(tray.dataset.side).toBe("left");
     expect(tray.dataset.keirHidden).toBe("true");
     expect(screen.queryByRole("button", { name: "Open Ask Keir" })).toBeNull();
