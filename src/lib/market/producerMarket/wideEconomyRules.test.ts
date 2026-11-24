@@ -5,6 +5,7 @@ import {
   WIDE_ECONOMY_SUPPLY_HEADROOM,
   wideEconomyBaseline,
   wideEconomyOffers,
+  wideEconomyWeights,
   wideEconomyOrderId,
   wideEconomyOrders,
   type WideEconomyBaseline,
@@ -145,5 +146,56 @@ describe("unfilled wider-economy orders", () => {
     expect(outcomes).toEqual([
       expect.objectContaining({ commodity: "steel", requestedUnits: 3, deliveredUnits: 3 }),
     ]);
+  });
+});
+
+describe("splitting between countries", () => {
+  // A US state and a Japanese state of the same size in the anchor currency:
+  // 100 in dollars at 1 per anchor, 15,000 in yen at 150 per anchor.
+  const mixed = [
+    { stateId: "US_CA", countryId: "US", realGdp: 100, anchorGdp: 100 },
+    { stateId: "JP_TK", countryId: "JP", realGdp: 15_000, anchorGdp: 100 },
+  ];
+  const turnsOf = [[{ commodity: "steel", supply: 0, demand: 1000 }]];
+
+  it("splits by real GDP in the anchor currency, not in each country's own currency", () => {
+    const baseline = wideEconomyBaseline({ turns: turnsOf, states: mixed });
+    expect(baseline.weight).toEqual({ JP_TK: 0.5, US_CA: 0.5 });
+    const offers = wideEconomyOffers({
+      ...lineInput(
+        new Map([
+          ["US_CA", 100],
+          ["JP_TK", 15_000],
+        ])
+      ),
+      baseline,
+    });
+    const units = (c: string) => offers.find((o) => o.countryId === c)!.units;
+    expect(units("US")).toBeCloseTo(50, 9);
+    expect(units("JP")).toBeCloseTo(50, 9);
+  });
+
+  it("grows each state with its own real GDP, so exchange rates never read as growth", () => {
+    const baseline = wideEconomyBaseline({ turns: turnsOf, states: mixed });
+    const offers = wideEconomyOffers({
+      ...lineInput(
+        new Map([
+          ["US_CA", 100],
+          ["JP_TK", 16_500],
+        ])
+      ),
+      baseline,
+    });
+    expect(offers.find((o) => o.countryId === "JP")!.units).toBeCloseTo(55, 9);
+    expect(offers.find((o) => o.countryId === "US")!.units).toBeCloseTo(50, 9);
+  });
+
+  it("weighs an older baseline from its stored GDP at the given rates", () => {
+    expect(
+      wideEconomyWeights({ US_CA: 100, JP_TK: 45_000 }, { US_CA: "US", JP_TK: "JP" }, (c) =>
+        c === "JP" ? 150 : 1
+      )
+    ).toEqual({ JP_TK: 0.75, US_CA: 0.25 });
+    expect(wideEconomyWeights({ US_CA: 100 }, { US_CA: "US" }, () => null)).toEqual({});
   });
 });
