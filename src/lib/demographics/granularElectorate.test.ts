@@ -978,7 +978,7 @@ describe("campaign cell lean fold", () => {
     const plain = buildGranularElectorateSubstrate({ ...input, demographics: LEGACY_DEMOGRAPHICS });
     const folded = buildGranularElectorateSubstrate({
       ...input,
-      demographics: demographics as typeof LEGACY_DEMOGRAPHICS,
+      demographics: demographics as unknown as typeof LEGACY_DEMOGRAPHICS,
     });
     expect(plain?.campaignCells?.length).toBeGreaterThan(0);
     const deltas: Record<string, { economicLean?: number; socialLean?: number }> = {
