@@ -100,29 +100,40 @@ export function NavbarTopFlair({ bootLoading }: { bootLoading: boolean }) {
   }, [mode, pathname]);
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[2px] overflow-hidden"
-      aria-hidden
-    >
+    <>
+      {/* While a page loads, say so in words as well as with the bar. */}
       {mode === "indeterminate" && (
-        <div className="ahd-nav-flair-track absolute inset-0 overflow-hidden">
-          <div className="ahd-nav-flair-shimmer ahd-nav-flair-sweep" />
+        <div
+          role="status"
+          className="pointer-events-none fixed left-1/2 top-2 z-[100] -translate-x-1/2 rounded-full border border-card-border bg-card/95 px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted shadow-card"
+        >
+          Loading
         </div>
       )}
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[2px] overflow-hidden"
+        aria-hidden
+      >
+        {mode === "indeterminate" && (
+          <div className="ahd-nav-flair-track absolute inset-0 overflow-hidden">
+            <div className="ahd-nav-flair-shimmer ahd-nav-flair-sweep" />
+          </div>
+        )}
 
-      {(mode === "fill" || mode === "fill-fadeout") && (
-        <div
-          key={fillId}
-          className={`absolute inset-0 ahd-nav-flair-fill-layer ${
-            mode === "fill" ? "ahd-nav-flair-fill-once" : "ahd-nav-flair-fill-fadeout"
-          }`}
-          style={{ transformOrigin: "0 50%" }}
-          onAnimationEnd={() => {
-            if (mode === "fill") setMode("fill-fadeout");
-            else setMode("idle");
-          }}
-        />
-      )}
-    </div>
+        {(mode === "fill" || mode === "fill-fadeout") && (
+          <div
+            key={fillId}
+            className={`absolute inset-0 ahd-nav-flair-fill-layer ${
+              mode === "fill" ? "ahd-nav-flair-fill-once" : "ahd-nav-flair-fill-fadeout"
+            }`}
+            style={{ transformOrigin: "0 50%" }}
+            onAnimationEnd={() => {
+              if (mode === "fill") setMode("fill-fadeout");
+              else setMode("idle");
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
