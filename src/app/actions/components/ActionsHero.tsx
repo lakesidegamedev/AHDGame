@@ -176,8 +176,8 @@ export default function ActionsHero({
           </div>
 
           <div>
-            <dt className={LABEL_CLASS}>Donor base</dt>
-            <dd className={VALUE_CLASS}>Lv. {character.donorBaseLevel ?? 0}</dd>
+            <dt className={LABEL_CLASS}>Donor level</dt>
+            <dd className={VALUE_CLASS}>{character.donorBaseLevel ?? 0}</dd>
           </div>
         </dl>
 

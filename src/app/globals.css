@@ -1817,3 +1817,12 @@ html[data-cookie-consent] [data-cookie-consent-banner] {
       )
       right center / 12px 100% no-repeat scroll;
 }
+
+/* Disabled primary buttons read as switched off everywhere, including the
+   hand-built ones that only fade to 50%: a faded purple still looked active. */
+button.bg-primary:disabled,
+button[class*="bg-primary"]:disabled {
+  background-color: var(--card-border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
