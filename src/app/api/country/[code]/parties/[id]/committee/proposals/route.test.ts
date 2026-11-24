@@ -215,3 +215,72 @@ describe("proposal page data for a removal vote", () => {
     expect(view.proposingVoteSummary.yesNeeded).toBe(3);
   });
 });
+
+describe("removal vote cooldown", () => {
+  const committeeMember = new ObjectId();
+  const targetChair = new ObjectId();
+  const partyDoc = () => ({
+    ...source,
+    chairId: targetChair,
+    viceChairId: null,
+    treasurerId: null,
+    committeeIds: [committeeMember, new ObjectId(), new ObjectId()],
+  });
+
+  beforeEach(() => {
+    vi.mocked(findPartyBySequentialId).mockResolvedValue(partyDoc() as never);
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: "test", character: { _id: committeeMember, countryId: "US", party: "1" } },
+    } as never);
+    // Current turn is 10 (gameTime mock); the chair won their seat at turn 5.
+    db.collection("nationalPartyElections").find.mockReturnValue({
+      toArray: async () => [{ position: "chair", winnerId: targetChair, endTurn: 5 }],
+    });
+  });
+
+  it("refuses to open a removal vote inside 24 turns of the holder taking the seat", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "removeOfficeHolder",
+          role: "chair",
+          targetCharacterId: targetChair.toString(),
+        }),
+      }),
+      { params: Promise.resolve({ code: "us", id: "1" }) }
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain("took the National Chair seat at turn 5");
+    expect(body.error).toContain("from turn 29");
+    expect(db.collection("committeeProposals").insertOne).not.toHaveBeenCalled();
+    expect(notifyRemovalVoteOpened).not.toHaveBeenCalled();
+  });
+
+  it("lists the lock with its reason and unlock turn for the proposal form", async () => {
+    db.collection("committeeProposals")
+      .find.mockReturnValueOnce({ sort: () => ({ toArray: async () => [] }) })
+      .mockReturnValueOnce({ sort: () => ({ limit: () => ({ toArray: async () => [] }) }) })
+      .mockReturnValueOnce({ sort: () => ({ toArray: async () => [] }) });
+
+    const response = await GET(new Request("http://localhost/api/proposals"), {
+      params: Promise.resolve({ code: "us", id: "1" }),
+    });
+    const body = await response.json();
+
+    expect(body.removalLocks).toEqual([
+      {
+        characterId: targetChair.toString(),
+        role: "chair",
+        reason: "recently_seated",
+        sinceTurn: 5,
+        unlocksAtTurn: 29,
+        message: expect.stringContaining("from turn 29"),
+      },
+    ]);
+  });
+});
