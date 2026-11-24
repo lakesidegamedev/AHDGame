@@ -30,6 +30,45 @@ describe("RaceNotes", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("says where the sitting officeholder stands, even in another party's primary", () => {
+    renderWithElectionsMessages(
+      <>
+        <RaceNotes
+          election={full({
+            incumbent: {
+              name: "Chris Hansen",
+              party: "Democratic",
+              partyColor: null,
+              running: true,
+            },
+          })}
+          stage="primary"
+          turnsLeft={20}
+        />
+        <RaceNotes
+          election={full({
+            incumbent: {
+              name: "Ann Lee",
+              party: "Republican",
+              partyColor: null,
+              running: false,
+              notRunningReason: "Term limited",
+            },
+          })}
+          stage="general"
+          turnsLeft={20}
+        />
+      </>
+    );
+    const notes = screen.getAllByTestId("cm-incumbent-note").map((n) => n.textContent);
+    expect(notes[0]).toBe(
+      "Sitting officeholder Chris Hansen (Democratic) is running for re-election in their party's race."
+    );
+    expect(notes[1]).toBe(
+      "Sitting officeholder Ann Lee (Republican) is not on the ballot: Term limited."
+    );
+  });
+
   it("names a Hungarian by-election's district", () => {
     renderWithElectionsMessages(
       <RaceNotes

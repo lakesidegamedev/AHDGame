@@ -312,7 +312,7 @@ function SectorTable({
                     )}
                     <Td align="right" className={signTone(margin)}>
                       <span className="inline-flex items-center gap-2">
-                        <DivergingBar value={margin} className="hidden w-10 md:inline-block" />
+                        <DivergingBar value={margin} className="hidden w-10 2xl:inline-block" />
                         {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
                       </span>
                     </Td>
@@ -336,11 +336,7 @@ function SectorTable({
                         {/* The build-queue note under the count ("+12 building · done
                             turn 175") wraps inside a fixed width instead of widening
                             the whole table past the overview column. */}
-                        <Td
-                          align="right"
-                          wrap
-                          className="hidden w-[9.5rem] max-w-[9.5rem] md:table-cell"
-                        >
+                        <Td align="right" wrap className="hidden w-32 max-w-32 md:table-cell">
                           <PlantCount sector={s} className="block" />
                           <BuildQueueBadge
                             queue={s.buildQueueSummary}
