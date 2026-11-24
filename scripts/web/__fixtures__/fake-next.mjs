@@ -27,7 +27,7 @@ http
         "content-type": "application/json",
         "set-cookie": ["a=1; Path=/", "b=2; Path=/"],
       });
-      res.end(JSON.stringify({ port, role, method: req.method, body }));
+      res.end(JSON.stringify({ port, host, role, method: req.method, body }));
     });
   })
   .listen(port, host);
