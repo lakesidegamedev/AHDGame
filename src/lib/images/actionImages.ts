@@ -19,7 +19,14 @@
  * name (see `ACTION_ART_REVISIONS`) so the CDN cache never shows the old image.
  */
 
+import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
+import { eraForPreset } from "@/lib/seeds/presetSelector";
+
 const CDN_ACTIONS_BASE = "https://cdn.ahousedividedgame.com/static/actions";
+
+export function getActionArtEra(currentYear: number | null, preset: string): string {
+  return currentYear == null ? eraForPreset(preset) : eraIdForYear(currentYear);
+}
 
 export const ACTION_IMAGE_SLUGS = [
   "campaign",
