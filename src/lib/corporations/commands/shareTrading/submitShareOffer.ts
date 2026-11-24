@@ -3,6 +3,10 @@
  * submitShareOffer includes the source monetary authority spread in corporate escrow.
  */
 import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -276,6 +280,14 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       if (placerCurrency !== targetCurrency) {
         offerFxSpread = { fee: escrowEstimate.spreadFee, from: placerCurrency, to: targetCurrency };
       }
+
+      // The offer takes its cash now, as escrow, so the reserve is held here.
+      const reserveCheck = await checkCorpPurchaseReserve(db, {
+        corporation: placerCorp,
+        costLocal: escrowInPlacerCapital,
+        confirmed: parsed.data.overrideOperatingReserve === true,
+      });
+      if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
 
       // Atomic balance-gated escrow debit on placer corp's liquidCapital.
       const corpDebit = await atomicallyDebitCorpLiquidCapital(

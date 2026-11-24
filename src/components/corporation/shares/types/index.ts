@@ -4,6 +4,7 @@ import type {
   CorporationDetail,
 } from "@/components/corporation/CorporationPageTypes";
 import type { HoldingTerm, ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import type { OperatingReserveConfirmState } from "../OperatingReserveConfirm";
 
 export interface UseShareOrdersReturn {
   myOrders: MyShareOrder[];
@@ -88,6 +89,8 @@ export interface UseShareTradingReturn {
   handlePlaceOrder: () => Promise<void>;
   handleCancelOrder: (orderId: string) => Promise<void>;
   handleFillOrder: (orderId: string, orderType: "buy" | "sell", shares?: number) => Promise<void>;
+  /** A company purchase refused for the operating reserve, waiting on the CEO's confirm. */
+  reserveConfirm: OperatingReserveConfirmState;
   handlePublicIssuance: () => Promise<void>;
   handleConsolidateShares: () => Promise<void>;
   handleSelfIssuance: () => Promise<void>;

@@ -114,6 +114,23 @@ export interface ShareOrder {
   escrowAnchor?: number;
   status: "open" | "filled" | "cancelled";
   /**
+   * Corporate buy orders: the CEO confirmed placing it below the operating
+   * reserve, so the turn does not give its escrow back to restore the reserve.
+   */
+  operatingReserveOverride?: boolean;
+  /**
+   * Corporate buy orders: the last turn the order gave escrow back so the
+   * company kept its operating reserve, and why.
+   */
+  operatingReserveTrim?: {
+    turn: number;
+    sharesReleased: number;
+    releasedLocal: number;
+    reason: string;
+  };
+  /** Why the order was cancelled, when the game cancelled it. */
+  cancelReason?: string;
+  /**
    * Idempotency key of the latest fill attempt, stamped atomically by the
    * order-claim write. Lets the next fill resume a crashed attempt's audit rows.
    */

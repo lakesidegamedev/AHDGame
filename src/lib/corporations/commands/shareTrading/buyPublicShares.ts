@@ -74,6 +74,10 @@ import {
 import { applyFloatBuyCredit } from "@/lib/corporations/shareEscrowSettlement";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -99,7 +103,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       return errorResponse(parsed.status, parsed.error);
     }
 
-    const { shares, buyAsCorporation, payCurrency } = parsed.data;
+    const { shares, buyAsCorporation, payCurrency, overrideOperatingReserve } = parsed.data;
 
     if (buyAsCorporation) {
       // ── Corp buy path ─────────────────────────────────────────────
@@ -215,6 +219,16 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         buyingCurrency !== targetCurrency
           ? corpPurchaseEstimate.spendAmount
           : anchorToCorpLiquidCapital(cost, buyingCorp, fxRates[buyingCurrency] ?? 1);
+
+      // Operating reserve: company cash spent on shares may not leave less than
+      // a few turns of the plants' running bills unless the CEO confirms it,
+      // and may never exceed the cash on hand.
+      const reserveCheck = await checkCorpPurchaseReserve(db, {
+        corporation: buyingCorp,
+        costLocal: costInBuyerCapital,
+        confirmed: overrideOperatingReserve === true,
+      });
+      if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
 
       const now = new Date();
 

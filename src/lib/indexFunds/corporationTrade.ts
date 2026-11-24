@@ -42,6 +42,10 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { canRedeemSponsorUnits } from "./sponsorship/sponsorUnits";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import {
+  checkCorpPurchaseReserve,
+  corpPurchaseReserveResponse,
+} from "@/lib/corporations/operatingReserveGuard";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
@@ -52,7 +56,12 @@ export async function tradeCorporationFund(
   userId: string,
   characterId: ObjectId,
   fund: IndexFund,
-  order: { corporationId: string; operationId: string; units: number },
+  order: {
+    corporationId: string;
+    operationId: string;
+    units: number;
+    overrideOperatingReserve?: true;
+  },
   kind: "subscribe" | "redeem"
 ): Promise<Response> {
   if (kind === "subscribe" && fund.mandate?.mode === "picked_stocks") {
@@ -129,6 +138,14 @@ export async function tradeCorporationFund(
     kind === "subscribe" && spend
       ? spend.spendAmount
       : anchorToCorpLiquidCapital(amountAnchor, corporation, rate);
+  if (kind === "subscribe") {
+    const reserveCheck = await checkCorpPurchaseReserve(db, {
+      corporation,
+      costLocal: amountNative,
+      confirmed: order.overrideOperatingReserve === true,
+    });
+    if (!reserveCheck.ok) return finish(corpPurchaseReserveResponse(reserveCheck));
+  }
   const turn = await getCurrentTurn(db);
   await recordFundCommandQuote(db, command.key, {
     turn,
