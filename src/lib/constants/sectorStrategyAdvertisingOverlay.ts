@@ -165,7 +165,6 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
   retail: {
     ecommerce_fulfillment: {
       advertising: 0.07,
-      electronics: 0.05,
       freight: 0.2,
       real_estate_services: 0.03,
       software: 0.1,
@@ -272,22 +271,13 @@ export const ADVERTISING_INPUT_STANDARD_1991_DEMAND: Readonly<Record<string, Dem
   },
   retail: {
     advertising: 0.07,
-    building_materials: 0.02,
-    chemicals: 0.02,
     consulting_services: 0.02,
-    electronics: 0.049,
     energy: 0.039,
     financial_services: 0.029,
-    food: 0.088,
     freight: 0.049,
-    healthcare_services: 0.02,
-    oil: 0.02,
-    pharmaceuticals: 0.02,
     plastics: 0.024,
     real_estate_services: 0.024,
     software: 0.039,
-    steel: 0.02,
-    vehicles: 0.029,
   },
   technology: {
     advertising: 0.07,

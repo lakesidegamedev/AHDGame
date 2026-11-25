@@ -699,73 +699,13 @@ describe("computeRawSupplyDemand — suppressRetailConsumerDemand (Household Led
       on
     );
 
-  it("removes retail's duplicate input demand and can remove its output self-loop", () => {
-    const on = withSuppress(false);
-    const off = computeRawSupplyDemand(
-      [retail],
-      gdp,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      false,
-      undefined,
-      true,
-      false,
-      1,
-      undefined,
-      0
+  it("removes retail's duplicate input demand when the household ledger owns final demand", () => {
+    const withProxy = withSuppress(false);
+    const suppressed = withSuppress(true);
+    // Retail's consumer-input demand (e.g. freight) is present without suppression, gone with it.
+    expect(withProxy.global.get("freight")!.demand).toBeGreaterThan(
+      suppressed.global.get("freight")!.demand
     );
-    // A1: retail's consumer-input demand (e.g. food) is present without suppression, gone with it
-    expect(on.global.get("food")!.demand).toBeGreaterThan(off.global.get("food")!.demand);
-    // A2: once the transition reaches zero, Retail supply cannot create Retail
-    // demand. Only independent demand sources added by the caller remain.
-    expect(off.global.get("retail")!.demand).toBeLessThan(on.global.get("retail")!.demand);
-    // Supply side is untouched
-    expect(off.global.get("retail")!.supply).toBe(on.global.get("retail")!.supply);
-    expect(off.global.get("retail")!.supply).toBeGreaterThan(0);
-  });
-
-  it("does not let additional Retail supply manufacture demand after the unwind", () => {
-    const plantsRetail = {
-      sectorType: "retail" as const,
-      revenue: 50_000,
-      stateId: "S1",
-      producedUnits: 8_300_000,
-      capacityUnits: 8_300_000,
-    };
-    const low = computeRawSupplyDemand(
-      [{ ...plantsRetail, producedUnits: 1_000_000, capacityUnits: 1_000_000 }],
-      gdp,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      false,
-      undefined,
-      true,
-      true,
-      1,
-      undefined,
-      0
-    );
-    const high = computeRawSupplyDemand(
-      [plantsRetail],
-      gdp,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      false,
-      undefined,
-      true,
-      true,
-      1,
-      undefined,
-      0
-    );
-    expect(high.global.get("retail")!.supply).toBeGreaterThan(low.global.get("retail")!.supply);
-    expect(high.global.get("retail")!.demand).toBeCloseTo(low.global.get("retail")!.demand, 8);
   });
 
   it("is a no-op for non-retail sectors", () => {
@@ -836,22 +776,41 @@ describe("computeRawSupplyDemand - sector output demand modifiers", () => {
     );
   });
 
-  it("lowers retail output demand and its seller-margin bonus", () => {
-    const sector = {
+  it("lowers agriculture output demand and its seller-margin bonus", () => {
+    // A store's inputs give the state's food a buyer, so the shock has demand to cut.
+    const store = {
       sectorType: "retail",
       revenue: 1_000_000,
       stateId: "S1",
       countryId: "US",
     };
-    const gdp: GdpGrowthData = { nationalAverage: 0, byState: new Map([["S1", 0]]) };
-    const baseline = run(sector, undefined, gdp);
-    const rationed = run(sector, new Map([["US:retail", -10]]), gdp);
+    const farm = {
+      sectorType: "agriculture",
+      revenue: 1_000_000,
+      stateId: "S1",
+      countryId: "US",
+    };
+    const runBoth = (modifier?: Map<string, number>) =>
+      computeRawSupplyDemand(
+        [store, farm],
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        false,
+        undefined,
+        false,
+        false,
+        1,
+        modifier
+      );
+    const baseline = runBoth();
+    const rationed = runBoth(new Map([["US:agriculture", -10]]));
 
-    expect(rationed.global.get("retail")!.demand).toBeLessThan(
-      baseline.global.get("retail")!.demand
-    );
-    expect(computeCommoditySurplusBonus("retail", rationed.global)).toBeLessThan(
-      computeCommoditySurplusBonus("retail", baseline.global)
+    expect(rationed.global.get("food")!.demand).toBeLessThan(baseline.global.get("food")!.demand);
+    expect(computeCommoditySurplusBonus("agriculture", rationed.global)).toBeLessThan(
+      computeCommoditySurplusBonus("agriculture", baseline.global)
     );
   });
 });

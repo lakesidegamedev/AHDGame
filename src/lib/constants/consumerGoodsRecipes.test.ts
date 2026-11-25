@@ -20,7 +20,6 @@ describe("consumer goods product", () => {
   it("is a priced, labelled, shippable commodity of its own", () => {
     expect(COMMODITY_TYPES).toContain("consumer_goods");
     expect(COMMODITY_LABELS.consumer_goods).toBe("Consumer Goods");
-    expect(COMMODITY_LABELS.retail).not.toBe(COMMODITY_LABELS.consumer_goods);
     expect(COMMODITY_UNITS.consumer_goods).toBe("units");
     expect(FREIGHT_CLASS_BY_COMMODITY.consumer_goods).toBe("special");
     const ratio = COMMODITY_BASE_PRICES.consumer_goods / COMMODITY_BASE_PRICES.electronics;

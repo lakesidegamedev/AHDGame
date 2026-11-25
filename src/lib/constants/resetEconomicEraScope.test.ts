@@ -9,7 +9,7 @@ import { getStrategy, getEffectiveStrategyRates, getSectorStrategies } from "./s
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
-// Pre-1991-calibration recipe values (retail and defense standard carry the current shared trims). These fixtures
+// Pre-1991-calibration recipe values (retail and defense standard carry the current shared trims, and stores buy no resale goods). These fixtures
 // deliberately do not derive their expectations from the current recipe table.
 const LEGACY_INPUTS = {
   manufacturing: {
@@ -53,10 +53,7 @@ const LEGACY_INPUTS = {
     plastics: 0.06,
   },
   retail: {
-    food: 0.081,
-    electronics: 0.049,
     energy: 0.041,
-    vehicles: 0.033,
     freight: 0.049,
     advertising: 0.065,
     software: 0.041,

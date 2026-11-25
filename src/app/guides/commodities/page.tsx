@@ -89,7 +89,7 @@ export default function CommoditiesGuidePage() {
                 ["Financial Services", "Financial sector"],
                 ["Advertising & media", "Media"],
                 ["Vehicles", "Manufacturing, Defense"],
-                ["Consumer Goods", "Retail"],
+                ["Consumer Goods", "Manufacturing (Consumer Goods recipe)"],
                 ["Freight", "Logistics"],
                 ["Consulting Services", "Logistics"],
                 ["Iron Ore", "Extraction"],
@@ -266,10 +266,10 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
               with few. Each commodity is soft-capped at ±50 percentage points of contribution
               before stacking.
             </Callout>
-            <Callout label="Retail absorbs only 25% of negative penalties.">
-              Retail sectors have built-in resilience to input shortages. A shortage that hits a
-              manufacturing sector for −6.9% only hits a retail sector for −1.7% on the same
-              commodity. Positive bonuses from oversupply are unaffected.
+            <Callout label="Stores absorb only 25% of negative penalties.">
+              Retail sectors run stores, which have built-in resilience to input shortages. A
+              shortage that hits a manufacturing sector for −6.9% only hits a store sector for −1.7%
+              on the same commodity. Positive bonuses from oversupply are unaffected.
             </Callout>
           </section>
 
@@ -307,7 +307,7 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
                     ["Real Estate", "Real Estate Services", "0.45"],
                     ["Construction", "Construction Services", "0.45"],
                     ["Telecommunications", "Software", "0.20"],
-                    ["Retail", "Consumer Goods", "0.50"],
+                    ["Retail", "Nothing: stores resell what producers make", "none"],
                     ["Logistics", "Freight / Consulting Services", "0.45 / 0.25"],
                     [
                       "Extraction",
@@ -395,11 +395,17 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
           <section className="space-y-4">
             <SectionHeader id="retail-hub">6. Retail and household demand</SectionHeader>
             <p className="text-body text-muted leading-relaxed">
-              Retail supplies the Consumer Goods commodity. Its customers come from the household
-              consumption ledger, independently of how much Retail capacity exists. Population,
-              income, employment, consumer confidence, and prices determine what households buy.
-              Opening more stores therefore competes for existing demand instead of creating new
-              customers.
+              Retail sectors run stores. A store makes nothing: it buys finished goods from
+              producers at the market price and resells them to households in its state at cost plus
+              a markup (15% by default, never below 10% or above 15%). Households spend 60% of their
+              food money, all of their Consumer Goods money and 70% of their electronics money in
+              stores. Cars, medicines and everything else are bought direct from producers, and
+              stores never sell weapons or business goods. A store's capacity limits how much it can
+              resell each turn; whatever the stores in a state cannot serve is bought direct from
+              producers at the producer price, with no markup, so no producer loses a sale because
+              stores are missing. Population, income, employment, consumer confidence, and prices
+              determine what households buy, so opening more stores competes for existing demand
+              instead of creating new customers.
             </p>
             <FormulaBlock>{`Household demand = population × per-capita budget
   × employment factor
@@ -408,14 +414,15 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
   × commodity basket share
   × bounded price elasticity`}</FormulaBlock>
             <p className="text-body text-muted leading-relaxed">
-              Consumer purchases also create final demand for food, energy, vehicles, electronics,
-              healthcare, and other household goods and services. Those purchases are counted once
-              by households, not duplicated as a Retail-sector input proxy.
+              Consumer purchases create final demand for food, energy, vehicles, electronics,
+              consumer goods, healthcare, and other household goods and services. Those purchases
+              are counted once by households. A store's margin is its markup minus wages, site bills
+              and running supplies, and its page shows each of those rows.
             </p>
-            <Callout label="Retail can saturate.">
-              Excess stores lower seller fill and revenue. Shortages raise prices and create room
-              for competitors to build. Retail follows the same supply-and-demand discipline as
-              every other sector.
+            <Callout label="Stores can saturate.">
+              Excess stores split the same household demand between them, so each earns less.
+              Shortages raise prices and create room for competitors to build. Retail follows the
+              same supply-and-demand discipline as every other sector.
             </Callout>
           </section>
 
@@ -790,22 +797,21 @@ Examples:
                 strategies: [
                   {
                     name: "Standard",
-                    supply: "Consumer Goods 0.50",
-                    demand:
-                      "Food, Electronics, Energy, Vehicles, Freight, Advertising, Software, and others",
-                    note: "Mixed online and physical retail",
+                    supply: "None (resells goods)",
+                    demand: "Energy, Freight, Advertising, Software, and other running supplies",
+                    note: "Mixed online and physical stores",
                   },
                   {
                     name: "E-Commerce",
-                    supply: "Consumer Goods 0.35, Software 0.10",
-                    demand: "Software 0.10, Freight 0.12, Electronics, Advertising",
-                    note: "Online-first; co-produces software platforms",
+                    supply: "None (resells goods)",
+                    demand: "Software 0.10, Freight 0.12, Advertising",
+                    note: "Online-first stores",
                   },
                   {
                     name: "Brick & Mortar",
-                    supply: "Consumer Goods 0.55",
-                    demand: "Real Estate Services 0.12, Energy 0.12, Advertising, Food, Freight",
-                    note: "Highest retail output; physical infrastructure costs",
+                    supply: "None (resells goods)",
+                    demand: "Real Estate Services 0.12, Energy 0.12, Advertising, Freight",
+                    note: "Physical storefronts; highest infrastructure costs",
                   },
                 ],
               },
@@ -936,8 +942,8 @@ Examples:
                   "Renewables Focus (Energy) and vehicle strategies in Manufacturing both depend heavily on rare earth minerals (0.10 and 0.10 rates respectively). If both strategies are widely adopted, rare earth becomes one of the most contested commodities in the game. Extraction is the only supplier.",
                 ],
                 [
-                  "Retail smooths out sector imbalances.",
-                  "Retail consumes a basket of 21 of the 28 commodities at low rates, scaled by GDP. It is a constant baseline demand floor. In a contraction, retail demand shrinks and commodity shortages self-correct. In a boom, retail demand amplifies every existing imbalance.",
+                  "Stores are where households meet producers.",
+                  "A store buys groceries, consumer goods and electronics from producers and resells them to households. Producers of those goods sell more when households spend more, and stores earn only the markup. Where a state has too few stores, households buy direct from producers instead, so producers never lose the sale.",
                 ],
               ].map(([title, body]) => (
                 <li

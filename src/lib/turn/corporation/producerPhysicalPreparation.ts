@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { STORE_THROUGHPUT_BASIS } from "@/lib/stores/rules/storeRules";
 import { costPlusUnitCosts } from "@/lib/market/costPlusPricing/rules";
 import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
@@ -143,6 +144,8 @@ export type ProducerPhysicalEnv = Pick<
   householdSpendingPowerShare?: number;
   householdSpendingPowerRampTurns?: number;
   householdSpendingPowerStartTurn?: number;
+  /** gameConfig.storeMarkup, already kept inside its allowed band. */
+  storeMarkup?: number;
   /** gameConfig.wideEconomyPricingStage: >= 1 (absent = 1) the price counts wider-economy sales as supply. */
   wideEconomyPricingStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
@@ -358,7 +361,7 @@ export function prepareProducerPhysicalSector(input: {
   );
   // Automation levies are paid to the treasury at settlement, not folded into input rates.
   const tech = transitionTech;
-  const recipe = getEffectiveStrategyRates(
+  const strategyRates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
@@ -368,6 +371,11 @@ export function prepareProducerPhysicalSector(input: {
     lookups.hardwareInputReliefStartTurn,
     { advertisingInput: env.advertisingInput === true }
   );
+  // A store makes nothing; its capacity is sized against a fixed goods mix.
+  const recipe =
+    sector.sectorType === "retail"
+      ? { ...strategyRates, supply: { ...STORE_THROUGHPUT_BASIS } }
+      : strategyRates;
   const outputRateValueBasis = Object.values(recipe.supply).reduce<number>(
     (sum, value) => sum + (value ?? 0),
     0

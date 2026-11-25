@@ -9,6 +9,7 @@ import {
   advanceProducerCapacity,
   PRODUCER_CATCH_UP_TURNS,
 } from "@/lib/market/producerMarket/capacityRules";
+import { STORE_THROUGHPUT_MULTIPLE } from "@/lib/stores/rules/storeRules";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import type { ProductionPlan } from "@/lib/market/producerMarket/production";
 import type { ProducerQuotePolicy } from "@/lib/market/producerMarket/rules";
@@ -166,7 +167,9 @@ export function prepareProducerSector(input: {
       throw new Error("Missing valued producer market");
     return market;
   };
-  const outputs: ProductionPlan["outputs"][number][] = recipe.outputs.map(
+  // A store resells goods bought by households' orders; it offers nothing to the book.
+  const isStore = sector.sectorType === "retail";
+  const outputs: ProductionPlan["outputs"][number][] = (isStore ? [] : recipe.outputs).map(
     ({ commodity, unitsPerOutput }) => {
       const market = marketFor(commodity);
       return {
@@ -183,7 +186,7 @@ export function prepareProducerSector(input: {
   const currentOutputs = new Set(outputs.map((output) => output.commodity));
   const retained = new Map<string, typeof inventory.outputStock>();
   for (const stock of inventory.outputStock) {
-    if (stock.units === 0 || currentOutputs.has(stock.commodity)) continue;
+    if (isStore || stock.units === 0 || currentOutputs.has(stock.commodity)) continue;
     const rows = retained.get(stock.commodity) ?? [];
     rows.push(stock);
     retained.set(stock.commodity, rows);
@@ -225,12 +228,24 @@ export function prepareProducerSector(input: {
         maximumUnitPrice: marketFor(commodity).maximumInputUnitPrice,
       })),
       outputs,
+      ...(isStore
+        ? {
+            store: {
+              resaleValuePerRunUnit:
+                recipe.outputs.reduce(
+                  (sum, { commodity, unitsPerOutput }) =>
+                    sum + unitsPerOutput * marketFor(commodity).referenceUnitPrice,
+                  0
+                ) * STORE_THROUGHPUT_MULTIPLE,
+            },
+          }
+        : {}),
       labourCost: input.labourCost,
       otherOperatingCost: input.otherOperatingCost,
       labourRecipientAccountId: input.labourRecipientAccountId,
       operatingRecipientAccountId: input.operatingRecipientAccountId,
       inputStock: inventory.inputStock,
-      outputStock: inventory.outputStock,
+      outputStock: isStore ? [] : inventory.outputStock,
     },
   };
 }

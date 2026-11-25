@@ -123,7 +123,6 @@ export const COMMODITY_BASE_PRICES: Record<CommodityType, number> = {
   financial_services: 2000, // $/contract
   advertising: 150, // $/campaign-unit
   vehicles: 25000, // $/vehicle
-  retail: 150, // $/basket (consumer goods basket)
   freight: 3000, // $/TEU (twenty-foot equivalent container unit)
   consulting_services: 5000, // $/engagement
   iron: 120, // $/ton
@@ -155,7 +154,6 @@ export const COMMODITY_UNITS: Record<CommodityType, string> = {
   financial_services: "contracts",
   advertising: "campaigns",
   vehicles: "vehicles",
-  retail: "baskets",
   freight: "TEU",
   consulting_services: "engagements",
   iron: "tons",
@@ -220,7 +218,6 @@ export const COMMODITY_STABILIZER: Record<CommodityType, number> = {
   energy: 50000,
   chemicals: 50000,
   advertising: 50000,
-  retail: 50000,
   iron: 50000,
   oil: 50000,
   natural_gas: 50000,
@@ -625,7 +622,6 @@ export const COMMODITY_COLORS: Record<CommodityType, string> = {
   financial_services: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   advertising: "bg-pink-500/15 text-pink-400 border-pink-500/30",
   vehicles: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  retail: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   freight: "bg-orange-500/15 text-orange-400 border-orange-500/30",
   consulting_services: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
   iron: "bg-red-500/15 text-red-400 border-red-500/30",
@@ -686,7 +682,6 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "software", rate: 0.2 },
     { commodity: "network_services", rate: 0.4 },
   ],
-  retail: [{ commodity: "retail", rate: 0.5 }],
   logistics: [
     { commodity: "freight", rate: 0.45 },
     { commodity: "consulting_services", rate: 0.25 },

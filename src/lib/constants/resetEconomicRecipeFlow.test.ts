@@ -39,7 +39,6 @@ describe("1991 input rails agree while legacy presets retain their original valu
         true,
         1,
         undefined,
-        0,
         COMMODITY_BASE_PRICES,
         undefined,
         preset
@@ -90,7 +89,6 @@ describe("phased hardware demand reaches all physical input rails", () => {
         true,
         1,
         undefined,
-        0,
         COMMODITY_BASE_PRICES,
         undefined,
         "1991-default",

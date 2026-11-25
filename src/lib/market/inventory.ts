@@ -26,7 +26,6 @@ export const COMMODITY_SPOILAGE_PER_TURN: Record<CommodityType, number> = {
   network_services: 1,
   advertising: 1,
   freight: 1,
-  retail: 1,
   software: 0, // infinitely copyable once built; stock is licenses, not crates
   // Perishable goods.
   food: 0.04,

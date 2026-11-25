@@ -35,7 +35,6 @@ export const DEMAND_ELASTICITY: Partial<Record<CommodityType, DemandElasticity>>
   chemicals: { price: 0.6, income: 1.0 },
   network_services: { price: 0.6, income: 1.1 },
   plastics: { price: 0.7, income: 1.0 },
-  retail: { price: 0.8, income: 1.0 },
   building_materials: { price: 0.8, income: 1.2 },
   financial_services: { price: 0.9, income: 1.4 },
   software: { price: 1.0, income: 1.3 },
