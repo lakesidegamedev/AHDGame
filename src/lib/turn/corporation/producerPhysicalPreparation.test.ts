@@ -128,6 +128,30 @@ describe("physical producer preparation", () => {
     expect(plan.recentAskByOutput).toEqual({ "advertising|world": 10 });
   });
 
+  it("prices a cost-plus sector off last run's unit cost", () => {
+    const { input, sector } = fixture();
+    const auto = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(auto.outputs.every((o) => o.policy.kind === "automatic")).toBe(true);
+    Object.assign(sector, { pricingMode: "costPlus", pricingPosture: 0.1 });
+    const [output] = auto.outputs;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: 0,
+      capacityUnits: 10,
+      inputsConsumed: 600,
+      labourPaid: 300,
+      otherOperatingPaid: 100,
+      products: [{ commodity: output.commodity, book: output.book, producedUnits: 10 }],
+    };
+    const { plan } = prepareProducerPhysicalSector(input).prepared;
+    const produced = plan.outputs.filter((o) => o.unitsPerOutput > 0);
+    expect(produced.every((o) => o.policy.kind === "costPlus")).toBe(true);
+    expect(produced[0].policy).toEqual({ kind: "costPlus", markup: 0.1 });
+    expect(produced).toHaveLength(1);
+    expect(plan.costPlusUnitCostByOutput).toEqual({
+      [`${output.commodity}|${output.book}`]: 100,
+    });
+  });
+
   it("carries last turn's posted ask, sales and ask bracket into the plan", () => {
     const { input, sector } = fixture();
     sector.sectorType = "media";

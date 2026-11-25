@@ -125,3 +125,83 @@ export function costPlusPriceFactor(
   const fixed = Number.isFinite(fixedShare) ? Math.max(0, fixedShare) : 0;
   return (fixed + share * boundedIndex) * (1 + clampPricingPosture(markup));
 }
+
+/**
+ * Last run's operating cost per unit made, per output lane: inputs at what the
+ * plant paid, wages and site bills (arrears included), from its settled
+ * receipt. A plant with several outputs splits the bill by each output's value
+ * at the reference price. Wages and site bills are spread over no less than
+ * COST_PLUS_MIN_UTILISATION of a full run, so a throttled plant cannot price
+ * itself into a spiral. A lane that made nothing has no cost.
+ */
+export function costPlusUnitCosts(input: {
+  receipt: {
+    capacityUnits?: number;
+    inputsConsumed?: number;
+    labourPaid?: number;
+    labourArrears?: number;
+    otherOperatingPaid?: number;
+    otherOperatingArrears?: number;
+    products?: readonly { commodity: string; book: string; producedUnits?: number }[];
+  };
+  outputs: readonly {
+    commodity: string;
+    book: string;
+    unitsPerOutput: number;
+    referenceUnitPrice: number;
+  }[];
+}): Record<string, number> {
+  const num = (x: number | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  const r = input.receipt;
+  const inputs = Math.max(0, num(r.inputsConsumed));
+  const fixed = Math.max(
+    0,
+    num(r.labourPaid) +
+      num(r.labourArrears) +
+      num(r.otherOperatingPaid) +
+      num(r.otherOperatingArrears)
+  );
+  const made = (o: { commodity: string; book: string }) =>
+    Math.max(
+      0,
+      num(r.products?.find((p) => p.commodity === o.commodity && p.book === o.book)?.producedUnits)
+    );
+  const produced = input.outputs.filter((o) => o.unitsPerOutput > 0 && made(o) > 0);
+  const value = produced.reduce((sum, o) => sum + made(o) * Math.max(0, o.referenceUnitPrice), 0);
+  const costs: Record<string, number> = {};
+  for (const o of produced) {
+    const units = made(o);
+    const share =
+      value > 0
+        ? (units * Math.max(0, o.referenceUnitPrice)) / value
+        : produced.length > 0
+          ? 1 / produced.length
+          : 0;
+    const floorUnits =
+      COST_PLUS_MIN_UTILISATION * Math.max(0, num(r.capacityUnits)) * o.unitsPerOutput;
+    const unitCost = (inputs * share) / units + (fixed * share) / Math.max(units, floorUnits);
+    if (Number.isFinite(unitCost) && unitCost > 0) costs[`${o.commodity}|${o.book}`] = unitCost;
+  }
+  return costs;
+}
+
+/**
+ * The cost-plus ask: unit cost times (1 + markup), capped at the price ceiling.
+ * Without a cost (no settled run yet) the seller asks the market price.
+ */
+export function costPlusAsk(input: {
+  unitCost: number | undefined;
+  markup: number;
+  marketUnitPrice: number;
+  ceilingUnitPrice: number;
+}): { ask: number; basis: "cost" | "market"; capped: boolean } {
+  const unitCost = input.unitCost;
+  if (!(typeof unitCost === "number" && Number.isFinite(unitCost) && unitCost > 0))
+    return { ask: Math.max(0, input.marketUnitPrice), basis: "market", capped: false };
+  // The markup is the policy's own: a posture is clamped where the policy is built.
+  const markup = Number.isFinite(input.markup) && input.markup > -1 ? input.markup : 0;
+  const raw = unitCost * (1 + markup);
+  const ceiling = input.ceilingUnitPrice;
+  const capped = Number.isFinite(ceiling) && ceiling > 0 && raw > ceiling;
+  return { ask: capped ? ceiling : raw, basis: "cost", capped };
+}

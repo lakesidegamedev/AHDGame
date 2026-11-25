@@ -131,6 +131,8 @@ export interface PricingAsk {
   paidUnitPrice: number | null;
   /** The lane's clearing price: a market reading, not this plant's own sales. */
   marketUnitPrice: number | null;
+  /** Cost-plus basis of the ask; no unitCost = no cost history, so it asked the market. */
+  costPlus?: { markup: number; unitCost?: number; capped?: true };
 }
 
 /** Offer-weighted ask per output, beside what this plant was paid and its lane's clearing price. */
@@ -143,13 +145,21 @@ export function pricingAsks(
         askingUnitPrice?: number;
         soldUnits?: number;
         revenue?: number;
+        costPlus?: { markup: number; unitCost?: number; capped?: true };
       }[]
     | undefined,
   laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined
 ): PricingAsk[] {
   const rows = new Map<
     string,
-    { offered: number; askValue: number; sold: number; revenue: number; market: number | null }
+    {
+      offered: number;
+      askValue: number;
+      sold: number;
+      revenue: number;
+      market: number | null;
+      costPlus?: PricingAsk["costPlus"];
+    }
   >();
   for (const product of products ?? []) {
     const ask = product.askingUnitPrice;
@@ -170,6 +180,7 @@ export function pricingAsks(
         typeof product.revenue === "number" && product.revenue > 0 ? product.revenue : 0;
     }
     if (row.market == null && typeof market === "number" && market > 0) row.market = market;
+    if (!row.costPlus && product.costPlus) row.costPlus = product.costPlus;
     rows.set(product.commodity, row);
   }
   return [...rows]
@@ -179,6 +190,7 @@ export function pricingAsks(
       askingUnitPrice: row.askValue / row.offered,
       paidUnitPrice: row.sold > 0 ? row.revenue / row.sold : null,
       marketUnitPrice: row.market,
+      ...(row.costPlus ? { costPlus: row.costPlus } : {}),
     }));
 }
 

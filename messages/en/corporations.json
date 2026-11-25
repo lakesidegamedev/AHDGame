@@ -454,7 +454,7 @@
       "marketMode": "Market price",
       "costPlusMode": "Cost-plus",
       "notReady": "Available after a producing turn records operating costs",
-      "explanation": "Prices use recorded operating costs plus your markup. Material costs follow input prices. Cheaper competitors still sell first; unsold output can cause a loss.",
+      "explanation": "Your ask is last run's operating cost per unit made (inputs at what you paid, wages and site bills) plus your markup, capped at 3x the reference price. Until a run has settled, you ask the market price. Unsold stock is not marked down. Cheaper competitors still sell first; unsold output can cause a loss.",
       "saved": "Operating-cost price set with {markup} markup."
     },
     "loanFees": {

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { computeClearingFactors, costPlusPriceFactor } from "../clearing";
-import { COST_PLUS_MIN_UTILISATION, inputBasketCostIndex, recordCostPlusBasis } from "./rules";
+import {
+  COST_PLUS_MIN_UTILISATION,
+  costPlusAsk,
+  costPlusUnitCosts,
+  inputBasketCostIndex,
+  recordCostPlusBasis,
+} from "./rules";
 import { computeInputsCost } from "@/lib/corporations/physicalPnl";
 import { DEMAND_THROTTLE_FLOOR } from "@/lib/turn/corporation/rules/demandThrottle";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
@@ -191,5 +197,130 @@ describe("#4352 fixed-cost spread is bounded at the throttle floor", () => {
       turn: 5,
     });
     expect(basis?.fixedCostShare).toBeCloseTo(10);
+  });
+});
+
+describe("cost-plus unit cost and ask", () => {
+  const steel = { commodity: "steel", book: "world", unitsPerOutput: 1, referenceUnitPrice: 1000 };
+  const receipt = (made: number, bill: { inputs: number; wages: number; site: number }) => ({
+    capacityUnits: 100,
+    inputsConsumed: bill.inputs,
+    labourPaid: bill.wages,
+    otherOperatingPaid: bill.site,
+    products: [{ commodity: "steel", book: "world", producedUnits: made }],
+  });
+
+  it("is last run's inputs, wages and site bills per unit made", () => {
+    const costs = costPlusUnitCosts({
+      receipt: receipt(50, { inputs: 20000, wages: 15000, site: 5000 }),
+      outputs: [steel],
+    });
+    expect(costs["steel|world"]).toBeCloseTo(800);
+  });
+
+  it("follows cost changes from one run to the next", () => {
+    const before = costPlusUnitCosts({
+      receipt: receipt(50, { inputs: 20000, wages: 15000, site: 5000 }),
+      outputs: [steel],
+    })["steel|world"];
+    const after = costPlusUnitCosts({
+      receipt: receipt(50, { inputs: 30000, wages: 15000, site: 5000 }),
+      outputs: [steel],
+    })["steel|world"];
+    expect(after - before).toBeCloseTo(200);
+  });
+
+  it("counts unpaid wages and site bills as cost", () => {
+    const costs = costPlusUnitCosts({
+      receipt: {
+        ...receipt(50, { inputs: 0, wages: 0, site: 0 }),
+        labourArrears: 4000,
+        otherOperatingArrears: 1000,
+      },
+      outputs: [steel],
+    });
+    expect(costs["steel|world"]).toBeCloseTo(100);
+  });
+
+  it("spreads wages and site bills over no less than the minimum run", () => {
+    const costs = costPlusUnitCosts({
+      receipt: receipt(1, { inputs: 100, wages: 10000, site: 0 }),
+      outputs: [steel],
+    });
+    const floor = COST_PLUS_MIN_UTILISATION * 100;
+    expect(costs["steel|world"]).toBeCloseTo(100 + 10000 / floor);
+  });
+
+  it("splits a two-output bill by value at the reference price", () => {
+    const costs = costPlusUnitCosts({
+      receipt: {
+        capacityUnits: 10,
+        inputsConsumed: 3000,
+        labourPaid: 1000,
+        products: [
+          { commodity: "chemicals", book: "world", producedUnits: 10 },
+          { commodity: "plastics", book: "world", producedUnits: 1 },
+        ],
+      },
+      outputs: [
+        { commodity: "chemicals", book: "world", unitsPerOutput: 1, referenceUnitPrice: 100 },
+        { commodity: "plastics", book: "world", unitsPerOutput: 0.1, referenceUnitPrice: 1000 },
+      ],
+    });
+    // Equal value at reference, so each output carries half the 4,000 bill.
+    expect(costs["chemicals|world"]).toBeCloseTo(200);
+    expect(costs["plastics|world"]).toBeCloseTo(2000);
+  });
+
+  it("has no cost for an output that made nothing", () => {
+    expect(
+      costPlusUnitCosts({
+        receipt: receipt(0, { inputs: 10, wages: 10, site: 0 }),
+        outputs: [steel],
+      })
+    ).toEqual({});
+  });
+
+  it("applies the markup to the unit cost", () => {
+    const ask = costPlusAsk({
+      unitCost: 800,
+      markup: 0.1,
+      marketUnitPrice: 2000,
+      ceilingUnitPrice: 3000,
+    });
+    expect(ask.ask).toBeCloseTo(880);
+    expect(ask).toMatchObject({ basis: "cost", capped: false });
+    expect(
+      costPlusAsk({ unitCost: 800, markup: -0.1, marketUnitPrice: 2000, ceilingUnitPrice: 3000 })
+        .ask
+    ).toBeCloseTo(720);
+  });
+
+  it("ignores an invalid markup", () => {
+    expect(
+      costPlusAsk({
+        unitCost: 800,
+        markup: Number.NaN,
+        marketUnitPrice: 2000,
+        ceilingUnitPrice: 3000,
+      }).ask
+    ).toBeCloseTo(800);
+  });
+
+  it("caps the ask at the price ceiling", () => {
+    expect(
+      costPlusAsk({ unitCost: 3000, markup: 0.2, marketUnitPrice: 2000, ceilingUnitPrice: 3000 })
+    ).toEqual({ ask: 3000, basis: "cost", capped: true });
+  });
+
+  it("asks the market price without a cost history", () => {
+    expect(
+      costPlusAsk({
+        unitCost: undefined,
+        markup: 0.1,
+        marketUnitPrice: 2000,
+        ceilingUnitPrice: 3000,
+      })
+    ).toEqual({ ask: 2000, basis: "market", capped: false });
   });
 });
