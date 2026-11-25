@@ -6,6 +6,7 @@
 
 "use client";
 
+import { Archive } from "lucide-react";
 import type { InboxItem } from "@/lib/inbox/inboxItem";
 import { Avatar } from "./Avatar";
 import { CatChip } from "./CatChip";
@@ -16,103 +17,119 @@ interface RailItemProps {
   selected: boolean;
   compact: boolean;
   onSelect: () => void;
+  onArchive?: () => void;
 }
 
-export function RailItem({ item, selected, compact, onSelect }: RailItemProps) {
+export function RailItem({ item, selected, compact, onSelect, onArchive }: RailItemProps) {
   const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
   const eyebrow = item.label;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={[
-        "group relative w-full overflow-hidden text-left transition-colors",
-        "motion-reduce:transition-none",
-        compact ? "py-2.5 px-3" : "py-4 px-4",
-        selected
-          ? `bg-card-elevated ${category.border}`
-          : "border-b border-card-border hover:bg-card-elevated/50",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-current={selected ? "true" : undefined}
-    >
-      <span
-        className={`absolute inset-y-0 left-0 w-1 ${category.bar} ${item.unread ? "opacity-100" : "opacity-35"}`}
-        aria-hidden="true"
-      />
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onSelect}
+        className={[
+          "group relative w-full overflow-hidden text-left transition-colors",
+          "motion-reduce:transition-none",
+          compact ? "py-2.5 px-3" : "py-4 px-4",
+          onArchive ? "pr-12" : "",
+          selected
+            ? `bg-card-elevated ${category.border}`
+            : "border-b border-card-border hover:bg-card-elevated/50",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        aria-current={selected ? "true" : undefined}
+      >
+        <span
+          className={`absolute inset-y-0 left-0 w-1 ${category.bar} ${item.unread ? "opacity-100" : "opacity-35"}`}
+          aria-hidden="true"
+        />
 
-      <div className="flex items-start gap-3 pl-1">
-        {/* Lead icon */}
-        <div className="mt-0.5 shrink-0">
-          {item.kind === "mail" ? (
-            <Avatar name={item.counterpartName ?? "?"} />
-          ) : (
-            <CatChip category={item.category} size={compact ? "sm" : "md"} />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          {/* Type + time row */}
-          <div className="flex items-center gap-2">
-            <span
-              className={`truncate text-[10px] font-bold uppercase tracking-[0.14em] ${category.text}`}
-            >
-              {eyebrow}
-            </span>
-            {item.kind === "mail" && item.counterpartName && (
-              <span className="truncate text-[10px] text-muted">from {item.counterpartName}</span>
+        <div className="flex items-start gap-3 pl-1">
+          {/* Lead icon */}
+          <div className="mt-0.5 shrink-0">
+            {item.kind === "mail" ? (
+              <Avatar name={item.counterpartName ?? "?"} />
+            ) : (
+              <CatChip category={item.category} size={compact ? "sm" : "md"} />
             )}
-            <span className="ml-auto shrink-0 font-mono text-[10px] text-muted tabular-nums">
-              {item.time}
-            </span>
           </div>
 
-          {/* Title row */}
-          <div className="mt-1 flex items-start gap-1.5">
-            {item.unread && (
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            {/* Type + time row */}
+            <div className="flex items-center gap-2">
               <span
-                className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${category.bar}`}
-                aria-label="Unread"
-              />
-            )}
-            <p
-              className={[
-                "line-clamp-2 text-sm leading-snug",
-                item.unread ? "font-semibold text-foreground" : "font-normal text-muted",
-              ].join(" ")}
-            >
-              {item.title}
-            </p>
-          </div>
-
-          {/* Preview and signal */}
-          {!compact && (
-            <div className="mt-2 space-y-2">
-              <p className="line-clamp-2 text-xs leading-relaxed text-muted">
-                {previewSentence(item.body)}
-              </p>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${item.action ? URGENCY_VISUALS[item.urgency].wash : urgency.wash} ${item.action ? URGENCY_VISUALS[item.urgency].border : urgency.border} ${item.action ? URGENCY_VISUALS[item.urgency].text : urgency.text}`}
-                >
-                  {item.action ? "Needs you" : urgency.label}
-                </span>
-                {item.meta?.[0] && (
-                  <span className="truncate text-[10px] text-muted">
-                    <span className="font-medium text-foreground/70">{item.meta[0][0]}:</span>{" "}
-                    {item.meta[0][1]}
-                  </span>
-                )}
-              </div>
+                className={`truncate text-[10px] font-bold uppercase tracking-[0.14em] ${category.text}`}
+              >
+                {eyebrow}
+              </span>
+              {item.kind === "mail" && item.counterpartName && (
+                <span className="truncate text-[10px] text-muted">from {item.counterpartName}</span>
+              )}
+              <span className="ml-auto shrink-0 font-mono text-[10px] text-muted tabular-nums">
+                {item.turn ? `Turn ${item.turn} · ` : ""}
+                {item.time}
+              </span>
             </div>
-          )}
+
+            {/* Title row */}
+            <div className="mt-1 flex items-start gap-1.5">
+              {item.unread && (
+                <span
+                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${category.bar}`}
+                  aria-label="Unread"
+                />
+              )}
+              <p
+                className={[
+                  "line-clamp-2 text-sm leading-snug",
+                  item.unread ? "font-semibold text-foreground" : "font-normal text-muted",
+                ].join(" ")}
+              >
+                {item.title}
+              </p>
+            </div>
+
+            {/* Preview and signal */}
+            {!compact && (
+              <div className="mt-2 space-y-2">
+                <p className="line-clamp-2 text-xs leading-relaxed text-muted">
+                  {previewSentence(item.body)}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${item.action ? URGENCY_VISUALS[item.urgency].wash : urgency.wash} ${item.action ? URGENCY_VISUALS[item.urgency].border : urgency.border} ${item.action ? URGENCY_VISUALS[item.urgency].text : urgency.text}`}
+                  >
+                    {item.action ? "Needs you" : urgency.label}
+                  </span>
+                  {item.meta?.[0] && (
+                    <span className="truncate text-[10px] text-muted">
+                      <span className="font-medium text-foreground/70">{item.meta[0][0]}:</span>{" "}
+                      {item.meta[0][1]}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      {onArchive && (
+        <button
+          type="button"
+          className="absolute right-2 top-2 rounded p-2 text-muted hover:bg-card-elevated hover:text-foreground"
+          aria-label={`Archive ${item.title}`}
+          title="Archive"
+          onClick={onArchive}
+        >
+          <Archive className="h-4 w-4" aria-hidden />
+        </button>
+      )}
+    </div>
   );
 }
 

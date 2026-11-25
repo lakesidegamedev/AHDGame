@@ -17,6 +17,7 @@ export type InboxAction =
   | { type: "MARK_ALL_READ"; ids: string[] }
   | { type: "UNMARK_READ"; ids: string[] }
   | { type: "ARCHIVE"; id: string }
+  | { type: "UNARCHIVE"; id: string }
   | { type: "SNOOZE"; id: string };
 
 export const initialInboxState: InboxState = {
@@ -76,6 +77,12 @@ export function inboxReducer(state: InboxState, action: InboxAction): InboxState
         ...state,
         readIds: new Set([...state.readIds].filter((id) => !failed.has(id))),
       };
+    }
+
+    case "UNARCHIVE": {
+      const archivedIds = new Set(state.archivedIds);
+      archivedIds.delete(action.id);
+      return { ...state, archivedIds };
     }
 
     case "ARCHIVE":
