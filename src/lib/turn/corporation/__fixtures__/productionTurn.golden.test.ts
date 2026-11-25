@@ -280,7 +280,7 @@ describe("corporation turn golden capture", () => {
       if (op.updateOne.update.$set) delete op.updateOne.update.$set.corporateTaxAssessment;
     }
     expect(captureTurn(result as Parameters<typeof captureTurn>[0]).sha256).toBe(
-      "a090c65a86ff9e9839a3eb89d2b244c87c1923b0f8e9fa923e2be1a7157133e0"
+      "623d0f4404b59664a9f3181bd255c9bcbea1ba019d74a05a0931189e16987e90"
     );
   });
 

@@ -36,6 +36,7 @@ export const WIKI_LAST_UPDATED: Record<string, string> = {
   "commodity-coal": "2026-10-30",
   "commodity-construction-services": "2026-10-30",
   "commodity-consulting-services": "2026-10-30",
+  "commodity-consumer-goods": "2026-11-25",
   "commodity-electronics": "2026-10-30",
   "commodity-energy": "2026-10-30",
   "commodity-fertilizers": "2026-10-30",

@@ -46,6 +46,7 @@ export const COMMODITY_SPOILAGE_PER_TURN: Record<CommodityType, number> = {
   natural_gas: 0.01, // storage boil-off/leakage
   ordnance: 0.002,
   plastics: 0.002,
+  consumer_goods: 0.003, // furniture and appliances: slow obsolescence
 };
 
 /**

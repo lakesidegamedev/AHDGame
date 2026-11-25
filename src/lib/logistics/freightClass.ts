@@ -88,6 +88,7 @@ export const FREIGHT_CLASS_BY_COMMODITY: Record<CommodityType, FreightClass | nu
   rare_earth: "special",
   ordnance: "special",
   retail: "special",
+  consumer_goods: "special",
   // Grid and pipeline: wire and pipe, not trucks. No TEU, lossy over distance.
   energy: "grid",
   natural_gas: "grid",

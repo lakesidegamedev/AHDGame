@@ -7,7 +7,8 @@
  * base margins in band. The legacy engine booked the input as demand nobody
  * paid for; on the funded market companies pay for it from their own cash.
  *
- * Do not edit by hand; regenerate if the recipe changes.
+ * Raw-input shifts and the consumer goods method are kept in step here by hand;
+ * change a base recipe and its row here together, with the same total.
  */
 import type { CommodityType } from "./commodities";
 
@@ -20,9 +21,9 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
   agriculture: {
     industrial: {
       advertising: 0.07,
-      energy: 0.116,
-      fertilizers: 0.193,
-      oil: 0.077,
+      energy: 0.081,
+      fertilizers: 0.217,
+      oil: 0.088,
       plastics: 0.08,
       vehicles: 0.077,
     },
@@ -85,45 +86,58 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
     },
     building_materials: {
       advertising: 0.07,
-      energy: 0.107,
-      timber: 0.074,
+      energy: 0.075,
+      timber: 0.093,
       iron: 0.058,
       chemicals: 0.041,
       freight: 0.05,
+      natural_gas: 0.013,
+    },
+    consumer_goods: {
+      advertising: 0.07,
+      chemicals: 0.082,
+      electronics: 0.082,
+      energy: 0.055,
+      plastics: 0.136,
+      steel: 0.054,
+      timber: 0.136,
     },
     electronics_manufacturing: {
       advertising: 0.07,
       chemicals: 0.082,
-      energy: 0.163,
-      iron: 0.089,
+      energy: 0.114,
+      iron: 0.111,
       plastics: 0.089,
       rare_earth: 0.122,
+      natural_gas: 0.027,
     },
     heavy_metals: {
       advertising: 0.07,
-      coal: 0.109,
-      energy: 0.168,
+      coal: 0.132,
+      energy: 0.118,
       freight: 0.073,
-      iron: 0.168,
+      iron: 0.195,
       plastics: 0.027,
     },
     vehicle_assembly: {
       advertising: 0.07,
       electronics: 0.098,
-      energy: 0.074,
+      energy: 0.052,
       freight: 0.059,
-      iron: 0.071,
+      iron: 0.084,
       plastics: 0.071,
       real_estate_services: 0.015,
       steel: 0.157,
+      coal: 0.009,
     },
     vehicle_heavy_machinery: {
       advertising: 0.07,
-      energy: 0.096,
+      energy: 0.067,
       freight: 0.073,
-      iron: 0.116,
+      iron: 0.133,
       plastics: 0.048,
       steel: 0.212,
+      coal: 0.012,
     },
   },
   real_estate: {
@@ -224,8 +238,8 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
 export const ADVERTISING_INPUT_STANDARD_1991_DEMAND: Readonly<Record<string, Demand>> = {
   agriculture: {
     advertising: 0.07,
-    energy: 0.1,
-    fertilizers: 0.15,
+    energy: 0.07,
+    fertilizers: 0.18,
     freight: 0.08,
     plastics: 0.05,
     vehicles: 0.1,
@@ -239,13 +253,14 @@ export const ADVERTISING_INPUT_STANDARD_1991_DEMAND: Readonly<Record<string, Dem
   },
   manufacturing: {
     advertising: 0.07,
-    coal: 0.088,
+    coal: 0.101,
     electronics: 0.071,
-    energy: 0.142,
+    energy: 0.099,
     freight: 0.071,
-    iron: 0.097,
+    iron: 0.114,
     plastics: 0.049,
     real_estate_services: 0.027,
+    timber: 0.013,
   },
   real_estate: {
     advertising: 0.07,

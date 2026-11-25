@@ -51,7 +51,7 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   vehicles:
     "finished vehicles and heavy machinery: supplied by manufacturing (vehicle lines) and defense, demanded by logistics, energy, agriculture, and households.",
   retail:
-    "the consumer-goods basket: households buy it directly, alongside a legacy demand leg that mirrors local retail output scaled by GDP growth (half national, half state) and is being phased out.",
+    "the retail basket: households buy it directly, alongside a legacy demand leg that mirrors local retail output scaled by GDP growth (half national, half state) and is being phased out.",
   freight:
     "container-equivalent transportation capacity: produced by logistics, demanded by anyone moving physical goods.",
   consulting_services:
@@ -70,6 +70,8 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
     "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, vehicles, and construction.",
   network_services:
     "subscription-equivalent broadband and connectivity capacity: unique output of telecom sectors, with macro demand scaling with state GDP.",
+  consumer_goods:
+    "furniture, appliances and household items: made by manufacturing plants on the Consumer Goods recipe from plastics, timber, chemicals, electronics, steel and power. Stores and households do not buy it yet, so for now it sells only to other buyers that list it.",
 };
 
 const pct = (rate: number): string => `${(rate * 100).toFixed(0)}%`;

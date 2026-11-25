@@ -41,6 +41,7 @@ export const DEMAND_ELASTICITY: Partial<Record<CommodityType, DemandElasticity>>
   software: { price: 1.0, income: 1.3 },
   advertising: { price: 0.8, income: 1.2 },
   construction_services: { price: 0.8, income: 1.1 },
+  consumer_goods: { price: 1.0, income: 1.3 },
   electronics: { price: 1.2, income: 1.4 },
   consulting_services: { price: 1.2, income: 1.5 },
   vehicles: { price: 1.3, income: 1.5 },

@@ -110,7 +110,7 @@ describe("1991 reset calibration does not change other era presets", () => {
   );
 
   it("keeps 1991 recipes and entry fees scoped to the originating preset", () => {
-    expect(getStrategy("manufacturing", "standard", "1991-default").demand.energy).toBe(0.16);
+    expect(getStrategy("manufacturing", "standard", "1991-default").demand.energy).toBe(0.112);
     expect(getStrategy("manufacturing", "standard").demand.energy).toBe(0.18);
     expect(sectorEntryFeeAnchor("1991-default")).toBe(2_500);
   });

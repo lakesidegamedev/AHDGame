@@ -135,6 +135,7 @@ export const COMMODITY_BASE_PRICES: Record<CommodityType, number> = {
   ordnance: 4500, // $/lot (weapons system lot)
   plastics: 1000, // $/ton
   network_services: 1200, // $/subscription-equivalent
+  consumer_goods: 400, // $/unit (furniture, appliances, household items)
 };
 
 /** Unit labels for display (e.g., "tons", "MWh") */
@@ -166,6 +167,7 @@ export const COMMODITY_UNITS: Record<CommodityType, string> = {
   ordnance: "lots",
   plastics: "tons",
   network_services: "subscriptions",
+  consumer_goods: "units",
 };
 
 /**
@@ -222,6 +224,8 @@ export const COMMODITY_STABILIZER: Record<CommodityType, number> = {
   iron: 50000,
   oil: 50000,
   natural_gas: 50000,
+  // new product, starts with no buyers: small stabilizer so real flows show
+  consumer_goods: 20000,
 };
 
 /**
@@ -633,6 +637,7 @@ export const COMMODITY_COLORS: Record<CommodityType, string> = {
   ordnance: "bg-red-700/15 text-red-600 border-red-700/30",
   plastics: "bg-purple-500/15 text-purple-400 border-purple-500/30",
   network_services: "bg-sky-700/15 text-sky-600 border-sky-700/30",
+  consumer_goods: "bg-indigo-400/15 text-indigo-300 border-indigo-400/30",
 };
 
 export interface CommodityFlow {

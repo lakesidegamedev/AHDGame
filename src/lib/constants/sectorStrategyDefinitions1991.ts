@@ -6,13 +6,14 @@ export const DEFAULT_DEMAND_1991: Partial<
   Record<OperatingSectorType, Partial<Record<CommodityType, number>>>
 > = {
   manufacturing: {
-    energy: 0.16,
-    iron: 0.11,
-    coal: 0.1,
+    energy: 0.112,
+    iron: 0.13,
+    coal: 0.114,
     electronics: 0.08,
     freight: 0.08,
     real_estate_services: 0.03,
     plastics: 0.055,
+    timber: 0.014,
   },
   healthcare: {
     pharmaceuticals: 0.095,
@@ -36,12 +37,12 @@ export const DEFAULT_DEMAND_1991: Partial<
   construction: {
     building_materials: 0.1,
     steel: 0.1,
-    energy: 0.085,
+    energy: 0.059,
     vehicles: 0.05,
     financial_services: 0.035,
     rare_earth: 0.03,
-    natural_gas: 0.015,
-    timber: 0.05,
+    natural_gas: 0.023,
+    timber: 0.068,
     plastics: 0.035,
   },
   retail: {
