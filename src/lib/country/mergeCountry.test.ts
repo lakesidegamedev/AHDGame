@@ -811,8 +811,8 @@ describe("mergeCountry", () => {
       currentTurn: 412,
     });
     expect(corps.deleteOne.mock.calls.some((call) => call[0]._id === "shell")).toBe(false);
-    expect(corps.updateOne).toHaveBeenCalledWith(
-      { _id: "shell" },
+    expect(corps.updateMany).toHaveBeenCalledWith(
+      { _id: { $in: ["shell"] } },
       expect.objectContaining({
         $set: expect.objectContaining({ isPrimaryNationalCorporation: false }),
       })

@@ -286,8 +286,7 @@ it("retains a debt-backed corporate denomination without stopping a strict regio
   await expect(
     convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE", true)
   ).resolves.toBeUndefined();
-  expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
-    { _id: "borrower" },
-    { $set: { liquidCurrencyCode: "GBP" } }
-  );
+  expect(db.collectionMocks.corporations.bulkWrite).toHaveBeenCalledWith([
+    { updateOne: { filter: { _id: "borrower" }, update: { $set: { liquidCurrencyCode: "GBP" } } } },
+  ]);
 });

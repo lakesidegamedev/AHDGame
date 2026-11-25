@@ -536,6 +536,14 @@ async function mergeNationalCorporations(
     .toArray();
   const debtIds = new Set(indebted.map((loan) => String(loan.borrowerId)));
   const foldIds = absorbedIds.filter((id) => !debtIds.has(String(id)));
+  const deferredIds = absorbedIds.filter(
+    (id) => debtIds.has(String(id)) && String(id) !== String(survivor._id)
+  );
+  if (deferredIds.length)
+    await corps.updateMany(
+      { _id: { $in: deferredIds } },
+      { $set: { isPrimaryNationalCorporation: false, updatedAt: now } }
+    );
 
   const absorbedSectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: foldIds } })
@@ -558,13 +566,7 @@ async function mergeNationalCorporations(
 
   for (const shell of absorbed) {
     if (String(shell._id) === String(survivor._id)) continue;
-    if (debtIds.has(String(shell._id))) {
-      await corps.updateOne(
-        { _id: shell._id },
-        { $set: { isPrimaryNationalCorporation: false, updatedAt: now } }
-      );
-      continue;
-    }
+    if (debtIds.has(String(shell._id))) continue;
 
     for (const sector of absorbedSectors.filter(
       (row) => row.corporationId.toString() === shell._id.toString()
