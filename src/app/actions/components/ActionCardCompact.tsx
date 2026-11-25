@@ -14,47 +14,15 @@ import {
 const FLIPFLOP_AXIS_LABELS = { economic: "Economic", social: "Social" } as const;
 const NEUTRAL_BUTTON =
   "rounded-md border border-card-border bg-card-elevated text-foreground transition-colors hover:bg-card-muted";
-import type { ActionCardProps } from "../actionsTypes";
+import type { ActionCardProps, LoadingActionCardProps } from "../actionsTypes";
 import { FUND_LINE_TERMS, fundLineKind } from "../actionsConstants";
 import ActionExecuteRow from "./ActionExecuteRow";
 
-const ActionCardCompact = memo(function ActionCardCompact({
-  card,
-  character,
-  homeState,
-  executing,
-  flash: _flash,
-  flipflopStep,
-  flipflopAxis,
-  flipflopDir,
-  onExecute,
-  onOpenCampaignAction,
-  onFlipflop,
-  onFlipflopStepChange,
-  onFlipflopAxisChange,
-  onFlipflopDirChange,
-  campaignActionCost,
-  campaignFundCost,
-  campaignMaxed,
-  advertiseActionCost,
-  advertiseFundCost,
-  fundraiseActionCost,
-  buildDonorBaseActionCost,
-  buildDonorBaseFundCost,
-  fundraiseYield,
-  campaignCurrency,
-  displayCampaignFunds,
-  quotedFundCost,
-  displayPersonalWealth,
-  blockGdpScaledCosts,
-  forexEnabled,
-  convertCashOpen,
-  convertCashAmount,
-  onConvertCashOpenChange,
-  onConvertCashAmountChange,
-  onConvertCashExecute,
-  projection,
-}: ActionCardProps) {
+const ROW_COLUMNS = "grid grid-cols-1 gap-3 px-3 py-3 sm:grid-cols-[1fr_auto] sm:gap-4 sm:px-4";
+
+const ActionCardCompact = memo(function ActionCardCompact(
+  props: ActionCardProps | LoadingActionCardProps
+) {
   const {
     formatAmount,
     baseRates,
@@ -65,13 +33,70 @@ const ActionCardCompact = memo(function ActionCardCompact({
     currencyCode,
     inputSymbol,
   } = useCurrency();
+  // Self-funding requires confirmation of the Infamy cost.
+  const [convertConfirming, setConvertConfirming] = useState(false);
+  if ("loading" in props) {
+    return (
+      <div data-coach={`action-${props.card.type}`} className={ROW_COLUMNS}>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-body font-semibold text-foreground">{props.card.label}</span>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-body-sm text-muted">
+            <span>{props.card.effect}</span>
+            <span>Checking price</span>
+          </div>
+        </div>
+        <button
+          disabled
+          type="button"
+          className={`self-center w-full px-2.5 py-1.5 text-body-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto ${NEUTRAL_BUTTON}`}
+        >
+          {props.card.label}
+        </button>
+      </div>
+    );
+  }
+  const {
+    card,
+    character,
+    homeState,
+    executing,
+    flash: _flash,
+    flipflopStep,
+    flipflopAxis,
+    flipflopDir,
+    onExecute,
+    onOpenCampaignAction,
+    onFlipflop,
+    onFlipflopStepChange,
+    onFlipflopAxisChange,
+    onFlipflopDirChange,
+    campaignActionCost,
+    campaignFundCost,
+    campaignMaxed,
+    advertiseActionCost,
+    advertiseFundCost,
+    fundraiseActionCost,
+    buildDonorBaseActionCost,
+    buildDonorBaseFundCost,
+    fundraiseYield,
+    campaignCurrency,
+    displayCampaignFunds,
+    quotedFundCost,
+    displayPersonalWealth,
+    blockGdpScaledCosts,
+    forexEnabled,
+    convertCashOpen,
+    convertCashAmount,
+    onConvertCashOpenChange,
+    onConvertCashAmountChange,
+    onConvertCashExecute,
+    projection,
+  } = props;
   const personalAnchor = forexEnabled
     ? toInternalFrom(displayPersonalWealth, currencyCode)
     : displayPersonalWealth;
   const politicalLocal = (amount: number) =>
     forexEnabled ? campaignAnchorToLocal(amount, character.countryId ?? "US", baseRates) : amount;
-  // Self-funding confirm step: acknowledge the Infamy cost before submitting.
-  const [convertConfirming, setConvertConfirming] = useState(false);
   const isCampaign = card.type === "campaign";
   const isAdvertise = card.type === "advertise";
   const isFundraise = card.type === "fundraise";
@@ -155,7 +180,7 @@ const ActionCardCompact = memo(function ActionCardCompact({
       className={`transition-colors hover:bg-card-elevated ${blocked ? "opacity-60" : ""}`}
     >
       {/* One column on phones; on wider screens the buttons sit in a fixed right column */}
-      <div className="grid grid-cols-1 gap-3 px-3 py-3 sm:grid-cols-[1fr_auto] sm:gap-4 sm:px-4">
+      <div className={ROW_COLUMNS}>
         {/* Left column: name, category, effect and costs */}
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

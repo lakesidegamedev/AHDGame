@@ -58,7 +58,7 @@ export interface ActionCosts {
 export interface ActionsController {
   character: Character | null;
   homeState: ActionStateEconomics | null;
-  /** Character, world flags and quotes are all in: cards can render. */
+  /** Live prices and eligibility can be shown after the character and world data load. */
   ready: boolean;
   era: string;
   eraLabel: string;
@@ -500,8 +500,7 @@ export function useActionsController({
   return {
     character,
     homeState,
-    // Wait on world flags too: resolving art before the era is known would paint
-    // the 2019 fallback set for a frame and then swap it for the 1953 set.
+    // Live prices depend on the active world preset.
     ready: !loading && !!worldFlags.loaded && !!character && !!actionCosts,
     era,
     eraLabel,

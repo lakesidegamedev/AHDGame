@@ -2,13 +2,12 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import React, { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { campaignAnchorToLocal } from "@/lib/campaigns/rules/currency";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import { Skeleton } from "@/components/ui";
 import { CARDS } from "./actionsConstants";
 import type { ActionsViewMode } from "./actionsTypes";
 import ActionCard from "./components/ActionCard";
@@ -46,25 +45,36 @@ import CategoryHeading from "./components/CategoryHeading";
 
 const CATEGORIES = ["all", "influence", "money", "research"];
 const PAGE_CONTENT = "mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8 overflow-x-hidden";
+const VIEW_MODE_KEY = "actionsViewMode";
+
+function subscribeToViewMode(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function readViewMode(): ActionsViewMode | null {
+  const saved = localStorage.getItem(VIEW_MODE_KEY);
+  return saved === "cards" || saved === "compact" ? saved : null;
+}
 
 export interface InitialActionsHero {
   imageUrl: string;
   eraLabel: string;
+  era: string;
+  countryId?: string | null;
+  viewMode?: ActionsViewMode;
 }
 
 export default function ActionsClient({ initialHero }: { initialHero: InitialActionsHero | null }) {
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<ActionsViewMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("actionsViewMode") as ActionsViewMode) || "cards";
-    }
-    return "cards";
-  });
+  const [selectedViewMode, setViewMode] = useState<ActionsViewMode | null>(null);
+  const browserViewMode = useSyncExternalStore(subscribeToViewMode, readViewMode, () => null);
+  const viewMode = selectedViewMode ?? initialHero?.viewMode ?? browserViewMode ?? "cards";
 
   // The account's saved preference wins over this browser's.
   const adoptStoredViewMode = useCallback((mode: ActionsViewMode) => {
     setViewMode(mode);
-    localStorage.setItem("actionsViewMode", mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
   }, []);
   const controller = useActionsController({ viewMode, onStoredViewMode: adoptStoredViewMode });
   const { baseRates } = useCurrency();
@@ -73,7 +83,7 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
 
   const handleViewModeChange = useCallback((mode: ActionsViewMode) => {
     setViewMode(mode);
-    localStorage.setItem("actionsViewMode", mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
     fetchJson("/api/settings/actions-view-mode", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -105,7 +115,7 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
   const influence = character?.politicalInfluence ?? 0;
   const infamy = character?.infamy ?? 0;
   const influenceDecay = calculatePoliticalInfluenceDecay(influence).toFixed(2);
-  const controlsDisabled = !controller.ready || !character || !actionCosts;
+  const ready = controller.ready && character !== null && actionCosts !== null;
   const controls = (
     <div className="flex items-center justify-between gap-4">
       <CategoryFilter
@@ -113,13 +123,8 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
         counts={categoryCounts}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
-        disabled={controlsDisabled}
       />
-      <ViewToggle
-        viewMode={controlsDisabled ? "cards" : viewMode}
-        onViewModeChange={handleViewModeChange}
-        disabled={controlsDisabled}
-      />
+      <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} disabled={!ready} />
     </div>
   );
   const operationInfo = (
@@ -133,91 +138,70 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
     </p>
   );
 
-  // Wait on world flags too: resolving art before the era is known would paint
-  // the 2019 fallback set for a frame and then swap it for the 1953 set.
-  if (!controller.ready || !character || !actionCosts) {
-    return (
-      <div className="min-h-screen bg-background pb-12">
-        <main className={PAGE_CONTENT}>
-          <ActionsHeroLoading hero={initialHero} />
-          {controls}
-          {operationInfo}
-
-          {/* First category heading and its cards */}
-          <div className="space-y-2 border-b border-card-border pb-4">
-            <Skeleton className="h-7 w-40" />
-            <Skeleton className="h-4 w-80 max-w-full" />
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-card-border bg-card overflow-hidden">
-                <Skeleton className="h-40 w-full rounded-none" />
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-5/6" />
-                  <div className="flex items-center justify-between pt-1">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-8 w-24 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   const CardComponent = viewMode === "cards" ? ActionCard : ActionCardCompact;
   const listClass =
     viewMode === "cards"
       ? "mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
       : "mt-4 divide-y divide-card-border overflow-hidden rounded-xl border border-card-border bg-card";
-  const donorSummary = {
-    level: character.donorBaseLevel ?? 0,
-    fundraiseYield: actionCosts.fundraiseAmount,
-    currency: getHomeCurrency(character),
-    // Same local face value the Build Donor Network card shows.
-    upgradeCost: controller.forexEnabled
-      ? campaignAnchorToLocal(actionCosts.donorUpgradeCost, character.countryId ?? "US", baseRates)
-      : actionCosts.donorUpgradeCost,
+  const donorSummary = ready
+    ? {
+        level: character.donorBaseLevel ?? 0,
+        fundraiseYield: actionCosts.fundraiseAmount,
+        currency: getHomeCurrency(character),
+        // Same local face value the Build Donor Network card shows.
+        upgradeCost: controller.forexEnabled
+          ? campaignAnchorToLocal(
+              actionCosts.donorUpgradeCost,
+              character.countryId ?? "US",
+              baseRates
+            )
+          : actionCosts.donorUpgradeCost,
+      }
+    : null;
+  const renderCard = (card: (typeof controller.cards)[number], index: number) => {
+    if (ready) {
+      return (
+        <CardComponent key={card.type} {...actionCardProps(controller, card, index, viewMode)} />
+      );
+    }
+    const imageUrl =
+      viewMode === "cards" && initialHero ? getActionImage(card.imageSlug, initialHero) : null;
+    return <CardComponent key={card.type} card={card} imageUrl={imageUrl} loading />;
   };
-  const renderCard = (card: (typeof controller.cards)[number], index: number) => (
-    <CardComponent key={card.type} {...actionCardProps(controller, card, index, viewMode)} />
-  );
 
   return (
     <div className="min-h-screen bg-background pb-12">
       <main className={PAGE_CONTENT}>
-        {/* Hero Section */}
-        <ActionsHero
-          character={character}
-          imageUrl={heroImage}
-          eraLabel={eraLabel}
-          campaignFundsDisplay={controller.displayCampaignFundsStored}
-          campaignFundsCurrency={getHomeCurrency(character)}
-          influence={influence}
-          infamy={infamy}
-          influenceDecay={influenceDecay}
-        />
+        {ready ? (
+          <ActionsHero
+            character={character}
+            imageUrl={heroImage}
+            eraLabel={eraLabel}
+            campaignFundsDisplay={controller.displayCampaignFundsStored}
+            campaignFundsCurrency={getHomeCurrency(character)}
+            influence={influence}
+            infamy={infamy}
+            influenceDecay={influenceDecay}
+          />
+        ) : (
+          <ActionsHeroLoading hero={initialHero} />
+        )}
 
-        {/* Random events, debates and crises share one panel. It hides itself
-            until one of them has something to show. */}
-        <EventsPanel>
-          <PlayerEventCard />
-          <DebateCard imageUrl={debateImage} />
-          <CrisisActionCard />
-        </EventsPanel>
-
-        {/* Presidential endorsement nudge: renders nothing when the player has
-            no live presidential race at home or has already endorsed someone */}
-        <EndorsePresidentCard />
+        {ready && (
+          <>
+            <EventsPanel>
+              <PlayerEventCard />
+              <DebateCard imageUrl={debateImage} />
+              <CrisisActionCard />
+            </EventsPanel>
+            <EndorsePresidentCard />
+          </>
+        )}
 
         {/* While a turn processes, actions take seconds to confirm. Without
             this, a click that has not answered yet looks lost and players
             click again, paying twice. */}
-        {turnProcessing && (
+        {ready && turnProcessing && (
           <p
             role="status"
             className="sticky top-2 z-10 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-foreground"
@@ -258,7 +242,7 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
           </section>
         )}
       </main>
-      {controller.campaignAction && (
+      {ready && controller.campaignAction && (
         <CampaignActionModal
           action={controller.campaignAction}
           character={character}
