@@ -2,7 +2,7 @@
 
 import { formatCount } from "@/lib/ui/numbers";
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useRouter } from "next/navigation";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { CrisisV2Detail as Detail, CrisisV2ScarView } from "@/lib/crises/queries/crisisV2View";
