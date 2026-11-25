@@ -1013,7 +1013,7 @@ export async function processNppCorporationDecisions(
           fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
         }),
         techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          fxByCurrency: valuationFx,
         }),
         techLegacy,
         techCurrentYear,
