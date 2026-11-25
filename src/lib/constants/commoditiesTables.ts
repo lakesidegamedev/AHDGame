@@ -387,6 +387,9 @@ export const GOVT_HEALTHCARE_BUDGET_CATEGORIES = ["healthcare", "health"] as con
 export const GOVT_SPEND_CATEGORY_ALIASES: Readonly<Record<string, readonly string[]>> = {
   healthcare: GOVT_HEALTHCARE_BUDGET_CATEGORIES,
   defense: ["defense"],
+  education: ["education"],
+  infrastructure: ["infrastructure", "transport"],
+  other: ["other"],
 };
 
 /**
