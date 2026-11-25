@@ -367,7 +367,9 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // before seedOnly returns because these are reference rows, not gameplay
   // state. The runtime turn processor takes over price movement from here.
   // The `preset` arg is development's — commodity baselines are era-authored.
-  await guarded("seedCommodityPrices", () => seedCommodityPrices(db, resetReference, log, preset));
+  await guarded("seedCommodityPrices", () =>
+    seedCommodityPrices(db, resetReference, log, preset, { usePresetOpeningPrices: !seedOnly })
+  );
 
   // Forex layer: exchange rates + central banks + money-supply baselines +
   // indexes + the gameState flag.

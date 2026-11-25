@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { seedCommodityPrices } from "@/lib/admin/seed/seedCommodityPrices";
 import { applyFundedSwitch, fundedSwitchGameConfigUpdate } from "./fundedSwitch";
 
 /** String-keyed singleton and fixture documents. */
@@ -53,6 +54,57 @@ describe("funded switch gameConfig update", () => {
 });
 
 describe("applyFundedSwitch", () => {
+  it("carries the preset iron quote from fresh seed to funded opening", async () => {
+    const db = await worldDb({
+      worldEpochId: EPOCH,
+      currentTurn: 1,
+      preset: "2027-default",
+      producerOpening: { ...OPENING, turn: 1 },
+    });
+    const commodities = db.collection("commodityPrices");
+    const iron = { commodity: "iron" };
+
+    await seedCommodityPrices(db, true, () => {}, "2027-default", { usePresetOpeningPrices: true });
+    expect(await commodities.findOne(iron)).toMatchObject({ basePrice: 120, globalPrice: 95 });
+    expect(await commodities.findOne({ commodity: "steel" })).toMatchObject({
+      basePrice: 800,
+      globalPrice: 800,
+    });
+    await commodities.updateOne(iron, { $set: { globalPrice: 140, nationalPrices: { US: 150 } } });
+
+    const options = { expectedWorldEpoch: EPOCH, usePresetOpeningPrices: true };
+    const first = await applyFundedSwitch(db, options);
+    expect(first.producerMarketLiveFromTurn).toBe(2);
+    expect(await commodities.findOne(iron)).toMatchObject({
+      basePrice: 120,
+      globalPrice: 95,
+      nationalPrices: { US: 95 },
+    });
+    expect(await applyFundedSwitch(db, options)).toMatchObject({
+      status: "alreadyApplied",
+      pricesReset: 0,
+    });
+  });
+
+  it.each(["2019-default", "2027-default"])(
+    "keeps the base quote on a reference reseed or ordinary switch for %s",
+    async (preset) => {
+      const db = await worldDb({
+        worldEpochId: EPOCH,
+        currentTurn: 50,
+        preset,
+        producerOpening: OPENING,
+      });
+      const commodities = db.collection("commodityPrices");
+      const iron = { commodity: "iron" };
+      await seedCommodityPrices(db, true, () => {}, preset);
+      expect(await commodities.findOne(iron)).toMatchObject({ basePrice: 120, globalPrice: 120 });
+      await commodities.updateOne(iron, { $set: { globalPrice: 140 } });
+      await applyFundedSwitch(db, { expectedWorldEpoch: EPOCH });
+      expect(await commodities.findOne(iron)).toMatchObject({ basePrice: 120, globalPrice: 120 });
+    }
+  );
+
   it("writes the funded config and clears the transition stamps", async () => {
     const db = await worldDb(
       { worldEpochId: EPOCH, currentTurn: 50, producerOpening: OPENING },

@@ -1,6 +1,5 @@
 /**
- * Puts a world's commodity prices back at base before the funded market's first
- * turn. See openingPriceRules.ts for what moves and what stays.
+ * Restores commodity opening quotes before the funded market's first turn.
  *
  * Touches only `commodityPrices`: no money, inventories or capacity. Refuses
  * while a turn is processing. A second run finds every price already at base
@@ -10,6 +9,7 @@ import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commoditiesTables";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { eraScaledBasePrices } from "@/lib/commodities/rules/commodityMarket";
+import { getPresetCommodityOpeningPrice } from "@/lib/commodities/rules/openingPrice";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -37,6 +37,7 @@ export interface NormalizeOpeningPricesOptions {
   dryRun?: boolean;
   /** When given, the live world must be this one. */
   expectedWorldEpoch?: string;
+  usePresetOpeningPrices?: boolean;
 }
 
 export async function normalizeOpeningPrices(
@@ -92,7 +93,10 @@ export async function normalizeOpeningPrices(
   for (const doc of docs) {
     const real = baseTable[doc.commodity] ?? COMMODITY_BASE_PRICES[doc.commodity as never];
     if (!(typeof real === "number" && real > 0)) continue;
-    const patch = planOpeningPriceReset(doc, real, nominalIndex);
+    const openingPrice = options.usePresetOpeningPrices
+      ? getPresetCommodityOpeningPrice(doc.commodity, preset, real)
+      : real;
+    const patch = planOpeningPriceReset(doc, openingPrice, nominalIndex);
     pegsKept += patch.pegsKept;
     if (!patch.changed) continue;
     const update: Document = {};
