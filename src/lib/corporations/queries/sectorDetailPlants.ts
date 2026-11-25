@@ -511,6 +511,7 @@ export function buildSectorPlantsSection(args: {
         const minorInputPremiumAnchor = funded.minorInputPremiumAnchor;
         const inventoryWriteOffAnchor = funded.inventoryWriteOffAnchor;
         const managementOverheadAnchor = funded.managementOverheadAnchor ?? 0;
+        const dominanceCostAnchor = funded.dominanceCostAnchor ?? 0;
         return {
           overheadAnchor: 0,
           inventoryCarryAnchor: 0,
@@ -519,13 +520,15 @@ export function buildSectorPlantsSection(args: {
           minorInputPremiumAnchor,
           inventoryWriteOffAnchor,
           managementOverheadAnchor,
+          dominanceCostAnchor,
           managementOverheadRecorded: funded.managementOverheadAnchor != null,
           remainderAnchor:
             otherOperatingAnchor -
             siteRunningAnchor -
             minorInputPremiumAnchor -
             inventoryWriteOffAnchor -
-            managementOverheadAnchor,
+            managementOverheadAnchor -
+            dominanceCostAnchor,
         };
       })()
     : engine
@@ -757,6 +760,13 @@ export function buildSectorPlantsSection(args: {
         : {}),
       ...(internalSupplyChargeAnchor > 0 ? { internalSupplyChargeAnchor } : {}),
       ...(ownSiteMemoAnchor > 0 ? { ownSiteMemoAnchor } : {}),
+      ...(money.revenueEffects
+        ? {
+            salesRevenueAnchor: money.salesRevenueAnchor ?? 0,
+            revenueEffects: money.revenueEffects,
+            subsidyReceivedAnchor: money.subsidyReceivedAnchor ?? 0,
+          }
+        : {}),
       freightCostAnchor: money.freightCostAnchor ?? 0,
       freightIncomeAnchor: money.freightIncomeAnchor ?? 0,
       growthAndBuildAnchor: engine ? nonNeg(engineGrowthAnchor) : nonNeg(money.growthCostAnchor),

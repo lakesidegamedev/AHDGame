@@ -250,7 +250,7 @@ export async function computeIncomeStatement(
     ceoSalary +
     pensionContributionCost +
     pensionTopUpCost;
-  const operatingIncome = totalRevenue - operatingCosts;
+  const operatingIncome = totalRevenue + (totals.totalSubsidyReceived ?? 0) - operatingCosts;
 
   const domesticFederalRateByCountry = new Map<string, number>();
   const foreignFederalRateByCountry = new Map<string, number>();

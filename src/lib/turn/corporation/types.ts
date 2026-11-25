@@ -218,7 +218,7 @@ export interface CorporationLookups {
    * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
    */
   managementOverheadPpByCorpId?: Map<string, number>;
-  /** gameConfig.fundedOverheadStage; absent = off. */
+  /** gameConfig.fundedOverheadStage; absent = on (1), 0 = off. */
   fundedOverheadStage?: number;
   /** gameConfig.fundedHeadcountStage; absent = off. */
   fundedHeadcountStage?: number;
@@ -241,6 +241,13 @@ export interface CorporationLookups {
    * Running dominance cost (gameConfig.dominanceRunningCostScale): the scale and
    * each sector's control-group shares. Absent = off.
    */
+  /**
+   * Funded revenue effects (gameConfig.fundedRevenueEffects), monopoly charge
+   * (fundedMonopolyCharge) and dominance cost (fundedDominanceCost). Absent = on.
+   */
+  /** The funded market charges import tariffs itself (producerTariffStage >= 1). */
+  fundedTariffs?: boolean;
+  revenueEffects?: { enabled: boolean; monopolyCharge: boolean; dominanceCost: boolean };
   dominanceRunningCost?: {
     scale: number;
     localShareBySectorId: Map<string, number>;

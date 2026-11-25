@@ -145,6 +145,20 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     regulatoryBurden: fog(financials.regulatoryBurden, factor),
     currentGrowthRate: financials.currentGrowthRate,
     subsidyBenefit: fog(financials.subsidyBenefit, factor),
+    ...(financials.subsidyReceived != null
+      ? { subsidyReceived: fog(financials.subsidyReceived, factor) }
+      : {}),
+    ...(financials.revenueEffects
+      ? {
+          revenueEffects: financials.revenueEffects.map((e) => ({
+            ...e,
+            amount: fog(e.amount, factor),
+          })),
+        }
+      : {}),
+    ...(financials.dominanceCost != null
+      ? { dominanceCost: fog(financials.dominanceCost, factor) }
+      : {}),
   };
 }
 

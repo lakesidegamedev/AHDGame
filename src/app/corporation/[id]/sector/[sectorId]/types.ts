@@ -841,10 +841,17 @@ export interface PlantsData {
       minorInputPremiumAnchor?: number;
       inventoryWriteOffAnchor?: number;
       managementOverheadAnchor?: number;
+      dominanceCostAnchor?: number;
       managementOverheadRecorded?: boolean;
     };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
+    /** Funded turn: sales before revenue effects, ₳ per day. */
+    salesRevenueAnchor?: number;
+    /** Funded turn: the revenue effects that applied, in money. Sales plus these is revenue. */
+    revenueEffects?: { key: string; label: string; anchor: number }[];
+    /** Funded turn: government subsidy paid beside profit, ₳ per day. */
+    subsidyReceivedAnchor?: number;
     internalSupplyChargeAnchor?: number;
     /** Free transfers: own-site deliveries at this site's ask, ₳ per day. Not booked. */
     ownSiteMemoAnchor?: number;

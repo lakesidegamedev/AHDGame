@@ -81,6 +81,9 @@ function prepareProcessCorporationAccount(
   let corpGrowthNumer = 0;
   let corpGrowthDenom = 0;
   let corpCosts = 0;
+  // Government subsidy credited on funded turns. Not sales revenue: it carries
+  // no tax base and sits beside revenue in income.
+  let corpSubsidyReceived = 0;
   const siteCostParts = emptySiteCostParts();
   let corpHeadcount = 0;
   // Worker-morale accumulators (#84): revenue-weighted average sector wageLevel
@@ -171,6 +174,7 @@ function prepareProcessCorporationAccount(
     }
 
     corpRevenue += r.hourlyRevenue;
+    corpSubsidyReceived += r.fundedSubsidyReceived ?? 0;
     // Weight worker morale (wageLevel) by sector revenue for the R&D factor.
     corpWageWeighted += r.hourlyRevenue * (sector.wageLevel ?? 1);
     corpWageWeight += r.hourlyRevenue;
@@ -354,7 +358,7 @@ function prepareProcessCorporationAccount(
     (context.lookups.productLinesV2Enabled || context.lookups.mediaProductSlatesEnabled
       ? genericResearchSpend
       : hourlyRd);
-  const incomeBeforeCeo = corpRevenue - costsBeforeCeo;
+  const incomeBeforeCeo = corpRevenue + corpSubsidyReceived - costsBeforeCeo;
   const corpCountryId = corp.countryId;
 
   // Cap CEO salary: only pay what the corp can cover without going below zero.
@@ -394,7 +398,7 @@ function prepareProcessCorporationAccount(
     totalCorpCosts - corpCosts,
     totalCorpCosts
   );
-  const incomePreDividends = corpRevenue - totalCorpCosts;
+  const incomePreDividends = corpRevenue + corpSubsidyReceived - totalCorpCosts;
 
   // Corporate tax (territorial, per-sector): each sector pays its country's federal rate and its state's rate on its revenue-weighted apportioned share of corp income. Corp-level overhead is allocated across sectors by revenue share. Losing sectors pay 0; profitable sectors pay even if corp total is negative (nexus-based). Loss-making corps with all-negative sectors pay 0 in both tiers.
   let sectorMaintenanceTotal = 0;

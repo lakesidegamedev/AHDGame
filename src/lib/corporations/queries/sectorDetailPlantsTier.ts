@@ -872,6 +872,17 @@ export async function buildSectorDetailPlantsTier({
           : inputsAnchor,
         internalSupplyIncomeAnchor: sectorAmountAnchor(sector.plantsPnl?.internalSupplyIncome ?? 0),
         internalSupplyChargeAnchor: sectorAmountAnchor(sector.plantsPnl?.internalSupplyCharge ?? 0),
+        ...(sector.plantsPnl?.source === "funded" && Array.isArray(sector.plantsPnl.revenueEffects)
+          ? {
+              salesRevenueAnchor: sectorAmountAnchor(sector.plantsPnl.salesRevenue ?? 0),
+              revenueEffects: sector.plantsPnl.revenueEffects.map((line) => ({
+                key: line.key,
+                label: line.label,
+                anchor: sectorAmountAnchor(line.amount),
+              })),
+              subsidyReceivedAnchor: sectorAmountAnchor(sector.plantsPnl.subsidyReceived ?? 0),
+            }
+          : {}),
         freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
         freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
         fundedComplianceAnchor:

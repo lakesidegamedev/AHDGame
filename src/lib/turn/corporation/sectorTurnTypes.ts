@@ -59,6 +59,18 @@ export interface SectorTurnResult {
   fundedRegulatoryBurdenRate?: number;
   /** Dominance margin penalty (pp) a funded turn applies; recorded instead of the legacy one. */
   fundedDominancePenaltyPp?: number;
+  /** Percent state dominance adds to the funded site's operating costs. */
+  fundedDominanceCostPct?: number;
+  /** Fit, policy, event and monopoly legs a funded turn applies as revenue effects (points of sold revenue). */
+  fundedRevenueLegs?: import("@/lib/corporations/rules/revenueEffects").RevenueEffectLegs;
+  /** Subsidy points a funded turn pays as its own government credit. */
+  fundedSubsidyPp?: number;
+  /** Revenue the funded plant sold before effects, anchor per turn. */
+  fundedSalesRevenue?: number;
+  /** Revenue effects that applied on the funded turn, anchor per turn. */
+  fundedRevenueEffects?: import("@/lib/corporations/rules/revenueEffects").RevenueEffectLine[];
+  /** Government subsidy credited to the company on the funded turn, anchor per turn. */
+  fundedSubsidyReceived?: number;
   /** Hourly growth cost at full realization, rescaled onto funded revenue. */
   nameplateHourlyGrowthCost?: number;
   /** Hourly nameplate revenue the growth cost is realized against. */

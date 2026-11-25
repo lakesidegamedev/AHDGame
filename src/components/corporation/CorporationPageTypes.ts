@@ -681,6 +681,12 @@ export interface Financials {
   /** True when `currentGrowthRate` is measured realized revenue, not the legacy field. */
   growthRateIsRealized?: boolean;
   subsidyBenefit: number;
+  /** Government subsidy paid to the company on funded sectors. Not sales revenue. */
+  subsidyReceived?: number;
+  /** Named revenue effects that applied on funded sectors, already inside gross revenue. */
+  revenueEffects?: { key: string; label: string; amount: number }[];
+  /** State dominance cost on funded sectors, already inside sector maintenance. */
+  dominanceCost?: number;
 }
 
 /** Global / national / regional S&D weighting for commodity margin (percent of blend, sums to ~100). */

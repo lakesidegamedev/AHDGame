@@ -112,9 +112,9 @@ export function SectorMarginDrilldown({
     { label: "Economic model fit", value: sector.economicModelAlignmentModifier },
   ];
   const nationalRows: ModRow[] = [
-    { label: "Inflation", value: sector.inflationModifier },
-    { label: "National debt", value: sector.debtToGdpModifier },
-    { label: "Deficit spending", value: sector.deficitToGdpModifier },
+    { label: "Inflation (already in prices)", value: sector.inflationModifier },
+    { label: "National debt (already in prices)", value: sector.debtToGdpModifier },
+    { label: "Deficit spending (already in prices)", value: sector.deficitToGdpModifier },
   ];
 
   // The itemized rows are a subset of everything folded into the effective

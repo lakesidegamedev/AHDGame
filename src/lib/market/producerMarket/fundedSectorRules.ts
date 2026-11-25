@@ -16,6 +16,12 @@
  */
 
 import type { SiteCostParts } from "@/lib/corporations/rules/costBreakdown";
+import {
+  computeRevenueEffects,
+  subsidyReceived,
+  type RevenueEffectLegs,
+  type RevenueEffectLine,
+} from "@/lib/corporations/rules/revenueEffects";
 
 /** Sector fields only the funded settlement writes. */
 export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
@@ -87,6 +93,21 @@ export interface LegacySectorResultLike {
   fundedComplianceCost?: number;
   /** The legs of `costs` the company's cost record names, per turn. */
   costParts?: SiteCostParts;
+  /** State dominance: percent added to the site's operating costs. Absent = none. */
+  fundedDominanceCostPct?: number;
+  /**
+   * Fit, policy, event and monopoly legs, in points of sold revenue, that a
+   * funded turn turns into revenue effects. Absent = revenue effects off.
+   */
+  fundedRevenueLegs?: RevenueEffectLegs;
+  /** Subsidy legs in points of sold revenue, paid by the government on its own line. */
+  fundedSubsidyPp?: number;
+  /** Revenue the plant sold, before effects (set by `fundedSectorResult`). */
+  fundedSalesRevenue?: number;
+  /** Revenue effects that applied this turn, anchor per turn (set by `fundedSectorResult`). */
+  fundedRevenueEffects?: RevenueEffectLine[];
+  /** Subsidy the government pays the company this turn, anchor per turn, not sales revenue. */
+  fundedSubsidyReceived?: number;
 }
 
 /**
@@ -102,18 +123,32 @@ export interface LegacySectorResultLike {
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
-): T & { costParts: SiteCostParts } {
+): T &
+  Pick<
+    LegacySectorResultLike,
+    "fundedSalesRevenue" | "fundedRevenueEffects" | "fundedSubsidyReceived"
+  > & { costParts: SiteCostParts } {
   // Management allocations stay out of economic revenue, tax and valuation bases.
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
   const growthCost = fundedGrowthCost(legacy, revenue);
   const compliance = revenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
+  // State dominance raises the site's operating bill by a share of it.
+  const dominanceCost =
+    (producerCosts * Math.max(0, finite(legacy.fundedDominanceCostPct ?? 0))) / 100;
   const costs =
     producerCosts +
+    dominanceCost +
     growthCost +
     compliance +
     (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   const managementOverhead = (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
+  const effects = legacy.fundedRevenueLegs
+    ? computeRevenueEffects({ soldRevenue: revenue, legs: legacy.fundedRevenueLegs })
+    : null;
+  const effectsTotal = effects?.totalAmount ?? 0;
+  const totalRevenue = revenue + effectsTotal;
+  const subsidy = effects ? subsidyReceived(revenue, legacy.fundedSubsidyPp ?? 0) : 0;
   return {
     ...legacy,
     costParts: {
@@ -121,9 +156,10 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
       inputs: Math.max(0, finite(r.inputsConsumed ?? 0)),
       maintenance: Math.max(0, finite(r.siteOperating ?? 0)),
       managementOverhead,
+      dominanceCost,
       freight: 0,
     },
-    hourlyRevenue: revenue,
+    hourlyRevenue: totalRevenue,
     hourlyGrowthCost: growthCost,
     ...(legacy.growthInvestmentAnchor !== undefined
       ? { growthInvestmentAnchor: legacy.growthInvestmentAnchor > 0 ? growthCost : 0 }
@@ -131,7 +167,14 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
     regulatoryBurden: compliance,
     fundedComplianceCost: compliance,
     costs,
-    effectiveMargin: revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0,
+    effectiveMargin: totalRevenue > 0 ? ((totalRevenue - costs) / totalRevenue) * 100 : 0,
+    ...(effects
+      ? {
+          fundedSalesRevenue: revenue,
+          fundedRevenueEffects: effects.lines,
+          fundedSubsidyReceived: subsidy,
+        }
+      : {}),
   };
 }
 
@@ -214,6 +257,18 @@ export function fundedSectorOpsAll(
           : {}),
         plantsPnl: {
           ...(receipt.turn != null ? { turn: receipt.turn } : {}),
+          ...(result.fundedRevenueEffects
+            ? {
+                // Revenue below includes these effects; sales alone is the receipt's.
+                salesRevenue: daily(result.fundedSalesRevenue ?? 0),
+                revenueEffects: result.fundedRevenueEffects.map((line) => ({
+                  key: line.key,
+                  label: line.label,
+                  amount: daily(line.amount),
+                })),
+                subsidyReceived: daily(result.fundedSubsidyReceived ?? 0),
+              }
+            : {}),
           revenue: daily(result.hourlyRevenue),
           profit: daily(result.hourlyRevenue - result.costs),
           totalCost: daily(result.costs),
@@ -226,6 +281,7 @@ export function fundedSectorOpsAll(
           // Legs of totalCost the receipt does not carry; recorded so readers
           // itemise the cost instead of inferring it.
           managementOverhead: daily(result.costParts?.managementOverhead ?? 0),
+          dominanceCost: daily(result.costParts?.dominanceCost ?? 0),
           growthCost: daily(result.hourlyGrowthCost),
           ...((receipt.internalSupplyIncome ?? 0) > 0
             ? { internalSupplyIncome: daily(receipt.internalSupplyIncome!) }
