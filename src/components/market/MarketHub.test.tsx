@@ -169,7 +169,7 @@ describe("MarketHub", () => {
 
   it("renders the server commodity preview without fetching full listings on hydration", async () => {
     search = "";
-    render(<MarketHub previews={{ stocks: [], movers: [commodity("oil", 120)] }} />);
+    render(<MarketHub previews={{ stocks: [], movers: [commodity("oil", 120)], capped: [] }} />);
     expect(screen.getByRole("link", { name: /oil/ })).toBeTruthy();
     await waitFor(() => expect(calls.some((u) => u.startsWith("/api/bonds"))).toBe(true));
     expect(calls.some((u) => u.startsWith("/api/commodities"))).toBe(false);
