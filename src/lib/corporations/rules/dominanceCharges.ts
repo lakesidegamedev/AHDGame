@@ -1,15 +1,9 @@
 /**
- * What holding a market costs a funded site, in two separate charges.
- *
- * Monopoly charge: a cut of the site's sold revenue. The state part follows the
- * company's share of the site's own state and sector; the country part follows
- * its share of the whole country and sector, so it reaches every site there.
- * The two add.
- *
- * Dominance cost: extra operating cost on a site in a state the company
- * dominates. It follows the state share only; there is no country version.
- *
- * Pure: plain data in, plain data out.
+ * What holding a market costs a funded site. Monopoly charge: a cut of sold
+ * revenue; the state part follows the share of the site's state and sector,
+ * the country part the share of the country and sector, and the two add.
+ * Dominance cost: extra running cost on a site in a state the company
+ * dominates, by state share only. Pure: plain data in, plain data out.
  */
 import {
   DOMINANCE_COST_PCT_AT_FULL,

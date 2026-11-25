@@ -1,18 +1,10 @@
 /**
- * Revenue effects on a funded producer turn.
- *
- * A funded sector takes revenue, costs and margin from its settlement receipt,
- * so the legacy margin modifiers have nothing to act on. Fit, policy, event
- * and monopoly legs instead move the revenue the plant sold: each leg's size
- * in points is a percentage of sold revenue, positive credits the company and
- * negative removes from it. Together they are capped so stacked legs cannot
- * run away. Economy-wide legs (inflation, deficit, debt, default) are not
- * here: pricing already carries them.
- *
- * Subsidies are not a revenue effect. The government pays them, so they are
- * sized here but reported and credited on their own line.
- *
- * Pure: plain data in, plain data out.
+ * Revenue effects on a funded producer turn. Funded sectors take margin from
+ * the settlement receipt, so fit, policy, event and monopoly legs move sold
+ * revenue instead: each leg is a percentage of it, and the net is capped.
+ * Economy-wide legs (inflation, deficit, debt, default) are left to prices.
+ * Subsidies are sized here but credited on their own line, since the
+ * government pays them. Pure: plain data in, plain data out.
  */
 
 /** Cap on the net of all revenue effects, as a percentage of sold revenue. */
