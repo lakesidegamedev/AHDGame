@@ -694,3 +694,64 @@ describe("getCorporationSectorDetail", () => {
     }
   );
 });
+
+describe("getCorporationSectorDetail with a euro-country sibling", () => {
+  it("loads when the owner also runs a sector stored in an era-blind host currency", async () => {
+    // A US corp's French sector is stored in the host's era-blind currency,
+    // which has no live quote. Every page of that corp apportions costs across
+    // all its sectors, so each one has to read that sibling at the era rate.
+    const corporationId = new ObjectId();
+    const sectorId = new ObjectId();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      preset: "2027-default",
+    });
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [
+        { currencyCode: "USD", rate: 1 },
+        { currencyCode: "EUR", rate: 0.9 },
+      ],
+    });
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corporationId,
+      sequentialId: 7,
+      name: "Overseas Corp",
+      type: "manufacturing",
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+    });
+    const homeSector = {
+      _id: sectorId,
+      corporationId,
+      stateId: "MI",
+      countryId: "US",
+      sectorType: "manufacturing",
+      strategyId: "standard",
+      revenue: 1_000_000,
+    };
+    const frenchSector = {
+      _id: new ObjectId(),
+      corporationId,
+      stateId: "FR-IDF",
+      countryId: "FR",
+      sectorType: "manufacturing",
+      strategyId: "standard",
+      revenue: 2_000_000,
+    };
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue(homeSector);
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([homeSector, frenchSector]),
+    });
+
+    const response = await getCorporationSectorDetail(
+      new Request(`http://localhost/api/corporations/7/sectors/${sectorId.toHexString()}`),
+      { params: Promise.resolve({ id: "7", sectorId: sectorId.toHexString() }) }
+    );
+
+    expect(response.status).toBe(200);
+  });
+});

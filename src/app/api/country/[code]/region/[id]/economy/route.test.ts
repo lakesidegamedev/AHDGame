@@ -698,3 +698,81 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
     expect(owner!.marketShare).toBeGreaterThan(0);
   });
 });
+
+describe("GET region economy with a foreign owner in a euro country", () => {
+  it("loads a region whose sector is stored in an era-blind host currency", async () => {
+    // A US corp's French sector is stored in the host's era-blind currency,
+    // which has no live quote; the regional market view reads it at the era rate.
+    const { resetCorpFxRateCacheForTests } = await import("@/lib/currency/corporationCapital");
+    resetCorpFxRateCacheForTests();
+    const corpId = new ObjectId();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      preset: "2027-default",
+    });
+    db.collectionMocks.states.findOne.mockResolvedValue({
+      _id: "FR-IDF",
+      countryId: "FR",
+      name: "Paris",
+      gdp: 1_000_000_000,
+    });
+    db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
+    db.collectionMocks.tariffs.find.mockReturnValue({ toArray: async () => [] });
+    db.collectionMocks.stateResourceCapacity.findOne.mockResolvedValue(null);
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: async () => [
+        {
+          _id: new ObjectId(),
+          corporationId: corpId,
+          countryId: "FR",
+          stateId: "FR-IDF",
+          sectorType: "extraction",
+          revenue: 500_000,
+          targetGrowthRate: 0,
+          currentGrowthRate: 0,
+        },
+      ],
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({
+        toArray: async () => [
+          {
+            _id: corpId,
+            name: "Overseas Corp",
+            ceoId: new ObjectId(),
+            ceoType: "regular",
+            ceoVacant: false,
+            sequentialId: 43,
+            brandColor: "#fff",
+            logoUrl: null,
+            marketingStrength: 100,
+            countryOwnerId: null,
+            countryId: "US",
+            liquidCurrencyCode: "USD",
+          },
+        ],
+      }),
+    });
+    db.collectionMocks.exchangeRates.find.mockReturnValue({
+      toArray: async () => [
+        { currencyCode: "USD", rate: 1 },
+        { currencyCode: "EUR", rate: 0.9 },
+      ],
+    });
+    db.collectionMocks.characters.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({ toArray: async () => [] }),
+    });
+    db.collectionMocks.imperialCharacters.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({ toArray: async () => [] }),
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/country/FR/region/FR-IDF/economy"),
+      { params: Promise.resolve({ code: "FR", id: "FR-IDF" }) }
+    );
+
+    expect(response.status).toBe(200);
+  });
+});
