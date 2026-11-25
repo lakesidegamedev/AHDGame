@@ -98,7 +98,10 @@ import {
   loadNppProductProjectsV2,
 } from "@/lib/turn/npp/manufacturingProducts";
 
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import {
+  loadValuationFxRates,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
 import type { CapacityDecisionObservation } from "@/lib/corporations/capacityDecisionTelemetry/rules";
 import { type NppOperatorObservation } from "@/lib/corporations/nppOperatorTelemetry/rules";
 import {
@@ -200,7 +203,6 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
-import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
@@ -633,14 +635,10 @@ export async function processNppCorporationDecisions(
     priceRatioOf,
   });
 
-  // Local-per-₳ rates for every live currency, loaded once. NPP money constants
-  // are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
-  const fxByCurrency = new Map<string, number>();
-  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
-    if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
-      fxByCurrency.set(rate.currencyCode, rate.rate);
-    }
-  }
+  // Local-per-₳ rates, loaded once: live rates plus the authored era rates that
+  // cross-border sectors stored in a host's era-blind currency need. NPP money
+  // constants are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
+  const fxByCurrency: Map<string, number> = await loadValuationFxRates(db);
   const { retailExpansionPaused, ledgerShadow, bankingPolicy } = await loadNppBehaviorConfig(
     db,
     turn
