@@ -27,8 +27,13 @@ export function StatusPill({ status, size = "md" }: { status: string; size?: "sm
         fontWeight: 600,
         letterSpacing: "0.02em",
         color: c,
-        background: `color-mix(in srgb, ${c} 14%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${c} 32%, transparent)`,
+        // A veto is an outcome, not a loss or an error: neutral outlined label.
+        background:
+          meta.tone === "neutral" ? "transparent" : `color-mix(in srgb, ${c} 14%, transparent)`,
+        border:
+          meta.tone === "neutral"
+            ? "1px solid var(--card-border)"
+            : `1px solid color-mix(in srgb, ${c} 32%, transparent)`,
         whiteSpace: "nowrap",
       }}
     >

@@ -36,7 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
   active_both: "bg-yellow-500/20 text-yellow-400",
   enrolled: "bg-purple-500/20 text-purple-400",
   signed: "bg-emerald-500/20 text-emerald-400",
-  vetoed: "bg-red-500/20 text-red-400",
+  vetoed: "border border-card-border bg-transparent text-foreground",
   failed: "bg-red-500/20 text-red-400",
   withdrawn: "bg-muted/20 text-muted",
   cabinet_review: "bg-blue-500/20 text-blue-400",

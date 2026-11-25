@@ -219,6 +219,10 @@ export function BillTimeline({
             : null;
 
   const maxIdx = nodes.length - 1;
+  // A veto is an outcome, not a loss or an error: it reads in neutral ink.
+  const isVeto =
+    (variant === "state" && (stateStatus === "vetoed" || stateStatus === "override_failed")) ||
+    (variant !== "state" && (status === "vetoed" || status === "override_failed"));
 
   return (
     <div className="space-y-1.5">
@@ -241,7 +245,9 @@ export function BillTimeline({
               <div
                 className={`h-2.5 w-2.5 shrink-0 rounded-full transition-all ${
                   isFailedNode
-                    ? "bg-error"
+                    ? isVeto
+                      ? "border border-foreground bg-transparent"
+                      : "bg-error"
                     : isActive
                       ? "bg-primary ring-2 ring-primary/40"
                       : isFilled
@@ -281,7 +287,11 @@ export function BillTimeline({
 
       <div className="flex items-center justify-between text-[10px] text-muted pt-0.5">
         <GameMonthTime value={proposedAt} />
-        {failedNote && <span className="text-error/80 font-medium">{failedNote}</span>}
+        {failedNote && (
+          <span className={`font-medium ${isVeto ? "text-foreground" : "text-error/80"}`}>
+            {failedNote}
+          </span>
+        )}
         {isVoting && votingEndsOnTurn != null ? (
           <span className="text-yellow-400">Closes on turn {votingEndsOnTurn}</span>
         ) : (

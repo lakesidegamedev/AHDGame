@@ -188,7 +188,7 @@ export function StockMarketAdminPanel() {
           const flagged = corps
             .map((c) => {
               const badges: { label: string; color: "error" | "warning" }[] = [];
-              if (c.ceoVacant) badges.push({ label: "CEO vacant", color: "error" });
+              if (c.ceoVacant) badges.push({ label: "CEO vacant", color: "warning" });
               if (c.liquidCapital <= 0) badges.push({ label: "Insolvent", color: "error" });
               if (c.suspended) badges.push({ label: "Suspended", color: "warning" });
               if (c.bondDefaultActive) badges.push({ label: "Bond default", color: "warning" });

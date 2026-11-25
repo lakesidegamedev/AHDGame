@@ -279,7 +279,7 @@ function StateBillDetailContent() {
 
           {bill.vetoMessage && (
             <div className="mt-2 rounded-xl border border-error/40 bg-error/5 p-4">
-              <h3 className="text-sm text-error font-semibold">Veto message</h3>
+              <h3 className="text-sm text-foreground font-semibold">Veto message</h3>
               <p className="mt-1 text-sm italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
               <p className="mt-2 text-xs text-muted">
                 — {getRegionalBillAssentTitleForState(bill.countryId as CountryId, bill.stateId)}

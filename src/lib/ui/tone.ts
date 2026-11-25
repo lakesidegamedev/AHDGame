@@ -70,3 +70,18 @@ const SOLID: Record<Tone, string> = {
 export function toneSolid(tone: Tone): string {
   return SOLID[tone];
 }
+
+/**
+ * Approval and satisfaction ratings. Red is for money lost and errors, so a
+ * low rating is a warning (amber), a middling one is neutral, a healthy one is
+ * green. `lowBelow` is the line under which the rating counts as low.
+ */
+export function approvalTone(value: number, lowBelow = 40): Tone {
+  if (!Number.isFinite(value)) return "neutral";
+  if (value >= 50) return "gain";
+  return value < lowBelow ? "warning" : "neutral";
+}
+
+export function approvalText(value: number, lowBelow = 40): string {
+  return TEXT[approvalTone(value, lowBelow)];
+}

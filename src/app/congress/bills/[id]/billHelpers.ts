@@ -25,7 +25,7 @@ export const STATUS_COLORS: Record<string, string> = {
   cabinet_review: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   override_shugiin: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   signed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  vetoed: "bg-error/20 text-error border-error/30",
+  vetoed: "bg-transparent text-foreground border-card-border",
   failed: "bg-error/20 text-error border-error/30",
   withdrawn: "bg-card-elevated text-muted border-card-border",
 };

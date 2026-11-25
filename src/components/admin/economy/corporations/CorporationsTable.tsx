@@ -117,7 +117,7 @@ export function CorporationsTable({
                   </td>
                   <td className="px-4 py-3">
                     {row.ceoVacant ? (
-                      <span className="text-error font-medium">Vacant</span>
+                      <span className="text-warning font-medium">Vacant</span>
                     ) : (
                       <span>{row.ceoName ?? "—"}</span>
                     )}

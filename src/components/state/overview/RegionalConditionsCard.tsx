@@ -16,12 +16,13 @@ import {
   sumRegionalConditionMargins,
   REGIONAL_CONDITION_MARGIN_CAP,
 } from "@/lib/states/conditions/marginEffects";
+import { approvalText } from "@/lib/ui/tone";
 
 /** Overview shows the highest-impact drivers; the rest live on the full page. */
 const OVERVIEW_HEADLINE_MAX = 6;
 
 function approvalColor(v: number) {
-  return v >= 50 ? "text-success" : v >= 40 ? "text-warning" : "text-error";
+  return approvalText(v);
 }
 
 function signed(n: number, suffix = ""): string {
