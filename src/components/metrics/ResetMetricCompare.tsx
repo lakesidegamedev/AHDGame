@@ -15,6 +15,7 @@ import type {
   ResetMetricCountry,
   ResetMetricRow,
 } from "./ResetMetricBoard";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 const MAX_REGION_PEERS = 3;
 
@@ -282,12 +283,8 @@ export function ResetMetricCompare({
                 aria-pressed={on}
                 disabled={full}
                 onClick={() => toggleTarget(target.key)}
-                className={`rounded border px-2.5 py-1 font-mono text-body-xs transition-colors ${
-                  on
-                    ? "border-primary bg-primary/10 text-primary"
-                    : full
-                      ? "cursor-not-allowed border-card-border text-muted/40"
-                      : "border-card-border text-muted hover:border-muted hover:text-foreground"
+                className={`px-2.5 py-1 font-mono text-body-xs ${
+                  !on && full ? `${PILL_SHAPE} cursor-not-allowed text-muted/40` : pillClass(on)
                 }`}
               >
                 {target.name}

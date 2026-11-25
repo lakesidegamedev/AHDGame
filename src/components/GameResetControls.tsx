@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ResetSeedReadiness } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 const MIN_RESET_YEAR = 1953;
 const MAX_RESET_YEAR = 2027;
@@ -570,12 +571,8 @@ export function GameResetControls() {
                     ? undefined
                     : `Not available for a ${selectedYear ?? "…"} start — no such preset`
                 }
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "border-primary/60 bg-primary/15 text-primary"
-                    : target
-                      ? "border-card-border text-muted hover:border-foreground/30 hover:text-foreground"
-                      : "cursor-not-allowed border-card-border/60 text-muted/40"
+                className={`px-4 py-2 text-sm ${
+                  target ? pillClass(active) : `${PILL_SHAPE} cursor-not-allowed text-muted/40`
                 } ${loading !== null ? "opacity-50" : ""}`}
               >
                 {variant}

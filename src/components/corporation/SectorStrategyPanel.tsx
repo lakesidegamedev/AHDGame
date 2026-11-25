@@ -31,6 +31,7 @@ import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabu
 import type { SectorDetail } from "./CorporationPageTypes";
 import { StateFlag } from "./SectorRowComponents";
 import { resolveSectorStrategy, typeFacilityCount } from "./sectorTypeMetrics";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** The design shows the five heaviest inputs; past that the list stops scanning. */
 const MAX_DEMAND_ROWS = 5;
@@ -222,16 +223,10 @@ export function SectorStrategyPanel({
                       ? `${count} ${count === 1 ? "site" : "sites"} running ${strategy.name}, holding ${typeFacilityCount(running).toLocaleString("en-US")} ${plural}`
                       : `No active ${plural} are using the ${strategy.name} strategy. Switch one to it, or build one with this strategy.`
                   }
-                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
-                    on
-                      ? "bg-card-elevated font-medium text-foreground"
-                      : isActive
-                        ? "text-foreground hover:bg-card-elevated/60"
-                        : "text-muted hover:bg-card-elevated/60"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-xs ${pillClass(on)}`}
                 >
                   {strategy.name}
-                  <span className="font-mono text-xs tabular-nums text-muted">{count}</span>
+                  <span className="font-mono text-xs tabular-nums opacity-70">{count}</span>
                 </button>
               );
             })}

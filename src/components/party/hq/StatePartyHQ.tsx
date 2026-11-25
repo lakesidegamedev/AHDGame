@@ -15,6 +15,7 @@ import { orgTier, toneColor } from "./orgTier";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fmtMoney } from "./formatters";
+import { pillClass } from "@/components/ui/selectedState";
 
 export interface StatePartyHQProps {
   countryId: string;
@@ -473,7 +474,7 @@ export function StatePartyHQ({
                   type="button"
                   aria-pressed={repeatCount === value}
                   onClick={() => setRepeatCount(value)}
-                  className={`rounded border px-3 py-1 ${repeatCount === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+                  className={`px-3 py-1 ${pillClass(repeatCount === value)}`}
                 >
                   x{value}
                 </button>

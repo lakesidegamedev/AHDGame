@@ -5,6 +5,7 @@ import { ShareBar } from "@/components/alignment/ShareBar";
 import type { InfluenceTarget, OrgInfluenceView } from "@/lib/alignment/queries/orgInfluence";
 import { formatShare, formatShareDelta, roundToShareGrid } from "@/lib/alignment/normalize";
 import { useFundFormatter } from "../useFundFormatter";
+import { pillClass } from "@/components/ui/selectedState";
 
 export type SortMode = "cheapest" | "toJoin" | "flashpoint" | "members";
 
@@ -26,6 +27,13 @@ const VISIBLE_LIMIT = 25;
  * Absent data sorts last under every mode — never first, which would read as
  * "best" when it actually means "we could not price this at all".
  */
+function nationRowClass(selected: boolean): string {
+  const state = selected
+    ? "border-primary bg-card-muted"
+    : "border-transparent hover:bg-card-muted";
+  return `w-full space-y-1 rounded-lg border px-3 py-2 text-left transition-colors ${state}`;
+}
+
 function nullsLast(a: number | null, b: number | null): number {
   if (a === null && b === null) return 0;
   if (a === null) return 1;
@@ -162,9 +170,7 @@ export function NationsInPlay({
             type="button"
             onClick={() => setMode(m)}
             aria-pressed={mode === m}
-            className={`rounded px-2 py-1 text-body-xs transition-colors ${
-              mode === m ? "bg-card-muted text-foreground" : "text-muted hover:text-foreground"
-            }`}
+            className={`px-2.5 py-1 text-body-xs ${pillClass(mode === m)}`}
           >
             {SORTS[m].label}
           </button>
@@ -181,11 +187,7 @@ export function NationsInPlay({
               data-testid="nation-row"
               onClick={() => onSelect(t.entityId)}
               aria-current={selectedEntityId === t.entityId}
-              className={`w-full space-y-1 rounded-lg border px-3 py-2 text-left transition-colors ${
-                selectedEntityId === t.entityId
-                  ? "border-primary bg-card-muted"
-                  : "border-transparent hover:bg-card-muted"
-              }`}
+              className={nationRowClass(selectedEntityId === t.entityId)}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-body-sm text-foreground">{t.name}</span>

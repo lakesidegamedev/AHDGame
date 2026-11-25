@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui";
 import type { WhipDefianceItem, WhipDefianceSnapshot } from "@/lib/partyWhips/whipDefiance";
 import { whipIssuerRoleLabel } from "@/lib/partyWhips/issuerRole";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 function formatIssuedAt(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -136,10 +137,7 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
             </div>
           </div>
 
-          <div
-            role="tablist"
-            className="flex gap-1 w-fit rounded-lg border border-card-border bg-background p-1"
-          >
+          <div role="tablist" className={`${PILL_TRACK} w-fit`}>
             {(
               [
                 { key: "players", label: `Players (${data.playerCount})` },
@@ -152,11 +150,7 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
                 role="tab"
                 aria-selected={audience === tab.key}
                 onClick={() => setAudience(tab.key)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                  audience === tab.key
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-4 py-1.5 text-sm ${pillClass(audience === tab.key)}`}
               >
                 {tab.label}
               </button>

@@ -5,6 +5,7 @@ import { formatShare } from "@/lib/alignment/normalize";
 import { POLE_TEXT, ShareBar } from "@/components/alignment/ShareBar";
 import { alignmentColor } from "@/lib/constants/alignmentColors";
 import type { OrgInfluenceView } from "@/lib/alignment/queries/orgInfluence";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Weighting = "economy" | "nations";
 
@@ -43,11 +44,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
               type="button"
               onClick={() => setWeighting(w)}
               aria-pressed={weighting === w}
-              className={`rounded px-2 py-1 text-body-xs transition-colors ${
-                weighting === w
-                  ? "bg-card-muted text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`px-2.5 py-1 text-body-xs ${pillClass(weighting === w)}`}
             >
               {w === "economy" ? "by economy" : "by nations"}
             </button>

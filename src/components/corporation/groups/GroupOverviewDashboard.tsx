@@ -10,6 +10,7 @@ import { groupOverviewHistory } from "@/lib/corporations/groups/rules/overview";
 import type { GroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
 import type { GroupManagementView } from "./useGroupManagement";
 import styles from "./GroupPage.module.css";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 const colors = ["var(--gold)", "var(--info)", "var(--secondary)", "var(--success)"];
 const link =
   "inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium hover:bg-card-elevated";
@@ -95,18 +96,14 @@ export function GroupOverviewDashboard({
         <section className="min-w-0 rounded-xl border border-card-border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-semibold">{t("revenueTrend")}</h3>
-            <div
-              className="inline-flex rounded-lg border border-card-border p-1"
-              role="group"
-              aria-label={t("trendRange")}
-            >
+            <div className={PILL_TRACK} role="group" aria-label={t("trendRange")}>
               {([12, 24, 48] as const).map((turns) => (
                 <button
                   key={turns}
                   type="button"
                   aria-pressed={lookback === turns}
                   onClick={() => setLookback(turns)}
-                  className={`rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-info ${lookback === turns ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"}`}
+                  className={`px-2.5 py-1 text-xs focus-visible:outline-2 focus-visible:outline-info ${pillClass(lookback === turns)}`}
                 >
                   {t("turnRange", { count: turns })}
                 </button>

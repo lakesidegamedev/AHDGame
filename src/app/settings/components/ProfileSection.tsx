@@ -128,7 +128,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
 
       <Link
         href={profileHref}
-        className="mb-6 inline-flex items-center gap-2 rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-card-border"
+        className="mb-6 inline-flex items-center gap-2 rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-card-border"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path

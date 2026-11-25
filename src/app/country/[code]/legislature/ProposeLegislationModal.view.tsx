@@ -29,6 +29,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 
 import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
+import { pillClass } from "@/components/ui/selectedState";
 export function renderLegacyProposeLegislationModalView(
   context: LegacyProposeLegislationModalViewContext
 ): ReactNode {
@@ -223,11 +224,7 @@ export function renderLegacyProposeLegislationModalView(
                       role="tab"
                       aria-selected={tradeSubType === st}
                       onClick={() => setTradeSubType(st)}
-                      className={`rounded-md px-4 py-1.5 text-sm font-semibold capitalize transition-colors ${
-                        tradeSubType === st
-                          ? "bg-primary/15 text-foreground"
-                          : "text-muted hover:text-foreground"
-                      }`}
+                      className={`px-4 py-1.5 text-sm capitalize ${pillClass(tradeSubType === st)}`}
                     >
                       {st}
                     </button>

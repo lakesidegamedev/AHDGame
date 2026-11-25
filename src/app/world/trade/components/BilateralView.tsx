@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants/commoditiesCore";
 import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { directionMark, directionToneClass } from "../lib/ledgerFormat";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * Bilateral settlement between a reporter and a partner: directional export
@@ -175,11 +176,7 @@ function Picker({
               key={c.code}
               onClick={() => onPick(c.code)}
               aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11.5px] ${pillClass(active)}`}
             >
               <span
                 className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-[8px]"

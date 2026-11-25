@@ -1,6 +1,7 @@
 "use client";
 
 import type { ActionsViewMode } from "../actionsTypes";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface ViewToggleProps {
   viewMode: ActionsViewMode;
@@ -10,16 +11,12 @@ interface ViewToggleProps {
 
 export default function ViewToggle({ viewMode, onViewModeChange, disabled }: ViewToggleProps) {
   return (
-    <div className="flex shrink-0 items-center rounded-lg border border-card-border bg-card p-0.5">
+    <div className="flex shrink-0 items-center rounded-full bg-card-muted p-0.5">
       <button
         onClick={() => onViewModeChange("cards")}
         aria-pressed={viewMode === "cards"}
         disabled={disabled}
-        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
-          viewMode === "cards"
-            ? "border border-card-border bg-card-elevated text-foreground"
-            : "border border-transparent text-muted hover:text-foreground"
-        }`}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-body-sm ${pillClass(viewMode === "cards")}`}
         title="Card view"
       >
         {/* Grid icon */}
@@ -42,11 +39,7 @@ export default function ViewToggle({ viewMode, onViewModeChange, disabled }: Vie
         onClick={() => onViewModeChange("compact")}
         aria-pressed={viewMode === "compact"}
         disabled={disabled}
-        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
-          viewMode === "compact"
-            ? "border border-card-border bg-card-elevated text-foreground"
-            : "border border-transparent text-muted hover:text-foreground"
-        }`}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-body-sm ${pillClass(viewMode === "compact")}`}
         title="Compact view"
       >
         {/* List icon */}

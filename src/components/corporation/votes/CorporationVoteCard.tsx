@@ -6,6 +6,7 @@ import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import { LEGAL_STRUCTURES } from "@/lib/constants/legalStructures";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { InlineStatus, SmallButton } from "../dense/DenseKit";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface VotingIdentity {
   kind: "character" | "corporation";
@@ -321,11 +322,9 @@ export function CorporationVoteCard({
                     disabled={ident.hasVoted}
                     onClick={() => setSelectedIdentityId(ident.id)}
                     aria-pressed={isSelected}
-                    className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${
+                    className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${pillClass(
                       isSelected
-                        ? "border-foreground bg-foreground font-medium text-background"
-                        : "border-card-border text-foreground hover:bg-card-elevated"
-                    }`}
+                    )}`}
                   >
                     {ident.name} ({ident.votingPower.toLocaleString("en-US")})
                   </button>

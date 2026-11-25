@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StateOrganizationTab } from "./StateOrganizationTab";
 import { campaignPageHref } from "@/lib/campaignManager/links";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 interface Props {
   activePresidentialCandidacy: {
@@ -28,9 +29,7 @@ export function PresidentialElectionPanel({ activePresidentialCandidacy }: Props
           role="tab"
           aria-selected={sub === "stateOrg"}
           onClick={() => setSub("stateOrg")}
-          className={`rounded px-3 py-1.5 transition-colors ${
-            sub === "stateOrg" ? "bg-primary/10 text-primary" : "text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1.5 ${pillClass(sub === "stateOrg")}`}
         >
           Campaign presence
         </button>
@@ -44,12 +43,10 @@ export function PresidentialElectionPanel({ activePresidentialCandidacy }: Props
             if (!cmDisabled) setSub("campaignManager");
           }}
           title={cmDisabled ? INELIGIBLE_TOOLTIP : undefined}
-          className={`rounded px-3 py-1.5 transition-colors ${
+          className={`px-3 py-1.5 ${
             cmDisabled
-              ? "cursor-not-allowed text-muted/50"
-              : sub === "campaignManager"
-                ? "bg-primary/10 text-primary"
-                : "text-muted hover:text-foreground"
+              ? `${PILL_SHAPE} cursor-not-allowed text-muted/50`
+              : pillClass(sub === "campaignManager")
           }`}
         >
           Campaign manager

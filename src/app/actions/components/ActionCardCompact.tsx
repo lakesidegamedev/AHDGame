@@ -10,6 +10,7 @@ import {
   convertCashConversion,
   isFundraiseEligible,
 } from "@/lib/actions";
+import { pillClass } from "@/components/ui/selectedState";
 
 const FLIPFLOP_AXIS_LABELS = { economic: "Economic", social: "Social" } as const;
 const NEUTRAL_BUTTON =
@@ -291,11 +292,7 @@ const ActionCardCompact = memo(function ActionCardCompact(
                       key={dir}
                       onClick={() => onFlipflopDirChange(dir)}
                       aria-pressed={flipflopDir === dir}
-                      className={`flex-1 rounded-md border px-2 py-1.5 text-body-sm font-semibold transition-colors sm:flex-none ${
-                        flipflopDir === dir
-                          ? "border-foreground/50 bg-card-muted text-foreground"
-                          : "border-card-border bg-card-elevated text-foreground hover:bg-card-muted"
-                      }`}
+                      className={`flex-1 px-2 py-1.5 text-body-sm sm:flex-none ${pillClass(flipflopDir === dir)}`}
                     >
                       {label}
                     </button>

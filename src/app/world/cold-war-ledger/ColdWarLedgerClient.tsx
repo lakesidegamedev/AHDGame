@@ -7,6 +7,7 @@ import type { AlignmentStatus } from "@/lib/alignment/project";
 import type { LedgerRow, WorldAlignmentView } from "@/lib/alignment/queries/worldAlignment";
 import { ShareBar, POLE_TEXT } from "@/components/alignment/ShareBar";
 import { alignmentColor } from "@/lib/constants/alignmentColors";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** Band label + the semantic token it renders in. */
 const BAND: Record<AlignmentStatus, { label: string; text: string }> = {
@@ -101,11 +102,7 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
             type="button"
             aria-pressed={filter === chip.key}
             onClick={() => setFilter(chip.key)}
-            className={`rounded-full border px-3 py-1 text-body-sm transition-colors ${
-              filter === chip.key
-                ? "border-muted bg-card-elevated text-foreground"
-                : "border-card-border text-muted hover:text-foreground"
-            }`}
+            className={`px-3 py-1 text-body-sm ${pillClass(filter === chip.key)}`}
           >
             {chip.label}
           </button>

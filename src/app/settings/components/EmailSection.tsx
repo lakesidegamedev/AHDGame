@@ -70,7 +70,7 @@ export function EmailSection({ email, hasPassword }: Props) {
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-muted mb-1">{t("page.email")}</label>
-          <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+          <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
             {hasRealEmail ? email : t("email.noneOnFile")}
           </div>
         </div>
@@ -84,7 +84,7 @@ export function EmailSection({ email, hasPassword }: Props) {
       <div>
         <label className="block text-xs font-medium text-muted mb-1">{t("page.email")}</label>
         <div className="flex items-center gap-2">
-          <div className="flex-1 rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+          <div className="flex-1 rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
             {hasRealEmail ? email : t("email.noneOnFile")}
           </div>
           {!editing && (

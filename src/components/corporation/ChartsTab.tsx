@@ -13,6 +13,7 @@ import { MarketSharePanel } from "./MarketSharePanel";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { DenseSection, MiniSparkline, TableScroll, Td, Th, signTone } from "./dense/DenseKit";
 import { DenseLineChart, type LineSeries } from "./dense/DenseLineChart";
+import { pillClass } from "@/components/ui/selectedState";
 
 type ChartMetric =
   | "marketCap"
@@ -89,6 +90,10 @@ interface MetricSeries {
   format: (v: number) => string;
   /** Change column: percent change, or percentage points for a rate. */
   changeIn: "pct" | "pp";
+}
+
+function metricLinkClass(selected: boolean): string {
+  return `text-left text-foreground hover:underline ${selected ? "font-semibold" : ""}`;
 }
 
 export default function ChartsTab({
@@ -321,9 +326,7 @@ export default function ChartsTab({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => selectMetric(m.key)}
-                      className={`text-left hover:underline ${
-                        selected ? "font-semibold text-foreground" : "text-foreground"
-                      }`}
+                      className={metricLinkClass(selected)}
                     >
                       {m.label}
                     </button>
@@ -388,11 +391,7 @@ export default function ChartsTab({
             role="radio"
             aria-checked={active}
             onClick={() => selectMetric(m.key)}
-            className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs transition-colors ${
-              active
-                ? "border-foreground bg-foreground font-semibold text-background"
-                : "border-card-border text-muted hover:bg-card-elevated hover:text-foreground"
-            }`}
+            className={`h-7 px-2.5 text-xs ${pillClass(active)}`}
           >
             {m.label}
           </button>

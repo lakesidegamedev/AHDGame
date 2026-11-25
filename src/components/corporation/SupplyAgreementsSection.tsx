@@ -35,6 +35,7 @@ import {
   type ContractPriceValue,
 } from "./ContractPriceFields";
 import { agreementDeliveryStatus } from "@/lib/corporations/supplyExchange/rules/deliveryStatus";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface SupplyAgreement {
   _id: string;
@@ -987,11 +988,9 @@ export default function SupplyAgreementsSection({
                     setBuyerQuery("");
                     setStateId("");
                   }}
-                  className={`inline-flex h-7 items-center rounded-md border px-2.5 text-xs transition-colors ${
+                  className={`inline-flex h-7 items-center px-2.5 text-xs ${pillClass(
                     proposalRole === value
-                      ? "border-foreground bg-foreground font-medium text-background"
-                      : "border-card-border text-muted hover:text-foreground"
-                  }`}
+                  )}`}
                 >
                   {label}
                 </button>

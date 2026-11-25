@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ElectricityNetworkMode } from "@/lib/electricityNetwork/rules/types";
+import { pillClass } from "@/components/ui/selectedState";
 export function ElectricityNetworkCard() {
   const [mode, setMode] = useState<ElectricityNetworkMode | null>(null),
     [busy, setBusy] = useState(false),
@@ -73,7 +74,7 @@ export function ElectricityNetworkCard() {
             disabled={!mode || busy}
             aria-pressed={mode === value}
             onClick={() => void change(value)}
-            className={`rounded border px-3 py-1 text-body-sm disabled:opacity-50 ${mode === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 text-body-sm disabled:opacity-50 ${pillClass(mode === value)}`}
           >
             {label}
           </button>

@@ -12,6 +12,7 @@ import { STRATEGIC_REGIONS, groupRegionsByTheater, getRegion } from "@/lib/milit
 import { MAP_FILTERS } from "@/lib/military/config";
 import { coverageStatus, commandsOfRegion } from "@/lib/military/calc";
 import { SectionCard, Badge } from "../../dossier";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Tone = "muted" | "gov" | "up" | "down" | "warning" | "info" | "success";
 
@@ -106,11 +107,7 @@ export function RegionAssignment({
               type="button"
               onClick={() => dispatch({ type: "SET_FILTER", filter: f.id })}
               aria-pressed={active}
-              className={`rounded-md border px-2 py-1 text-[10px] font-semibold tracking-wide ${
-                active
-                  ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
-                  : "border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`px-2 py-1 text-[10px] tracking-wide ${pillClass(active)}`}
             >
               {f.label}
             </button>

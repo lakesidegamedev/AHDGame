@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CorporationDefenceView } from "./CorporationPageTypes";
 import { DenseSection, InlineStatus, SmallButton, TableScroll, Td, Th } from "./dense/DenseKit";
+import { pillClass } from "@/components/ui/selectedState";
 
 const GRADE_LABEL = ["None", "Legacy", "Modernised", "Cutting-edge"];
 
@@ -393,11 +394,7 @@ export default function DefenceContractsTab({
                                       disabled={busyId === c._id || n === c.assignedFactories}
                                       onClick={() => void setFactories(c._id, n)}
                                       aria-pressed={n === c.assignedFactories}
-                                      className={`inline-flex h-6 min-w-6 items-center justify-center rounded border px-1.5 font-mono text-[11px] ${
-                                        n === c.assignedFactories
-                                          ? "border-foreground bg-foreground font-medium text-background"
-                                          : "border-card-border text-foreground hover:bg-card-elevated disabled:opacity-60"
-                                      }`}
+                                      className={`inline-flex h-6 min-w-6 items-center justify-center px-1.5 font-mono text-[11px] disabled:opacity-60 ${pillClass(n === c.assignedFactories)}`}
                                     >
                                       {n}
                                     </button>

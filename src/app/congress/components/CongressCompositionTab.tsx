@@ -7,6 +7,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { LEADER_BADGE_SHORT, getSenateClassLabel } from "./CongressConstants";
 import type { ChamberTab, SenateClassFilter, LeaderStrip } from "./CongressConstants";
+import { pillClass } from "@/components/ui/selectedState";
 
 function mapToCompositionData(
   data: CongressMembersResponse | null,
@@ -64,7 +65,7 @@ function SenateClassFilterControls({
       >
         Filter by class:
       </span>
-      <div className="flex rounded-lg border border-card-border overflow-hidden text-sm">
+      <div className="flex gap-1 text-sm">
         {([0, 1, 2, 3] as SenateClassFilter[]).map((cls) => {
           const tooltips: Record<number, string> = {
             0: "Show all senate members",
@@ -79,11 +80,7 @@ function SenateClassFilterControls({
               aria-pressed={isSelected}
               title={tooltips[cls]}
               onClick={() => setSenateClassFilter(cls)}
-              className={`px-3 py-1.5 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
-                isSelected
-                  ? "bg-secondary/20 text-foreground border border-secondary/40"
-                  : "bg-card text-muted hover:text-foreground focus-visible:-ring-offset-2"
-              }`}
+              className={`px-3 py-1.5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${pillClass(isSelected)}`}
             >
               {cls === 0 ? "All" : `Class ${getSenateClassLabel(cls)}`}
             </button>

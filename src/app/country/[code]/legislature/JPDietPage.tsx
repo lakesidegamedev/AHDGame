@@ -33,6 +33,7 @@ import type { LegislatureBillStatusFilter } from "@/lib/legislature/billStatusFi
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { NoConfidenceProposeControl } from "@/components/legislature/NoConfidenceProposeControl";
+import { pillClass } from "@/components/ui/selectedState";
 
 const DIET_HERO = {
   image: "/api/images/hero/national-diet",
@@ -408,7 +409,7 @@ export function JPDietPage({ countryId }: Props) {
         )}
 
         {/* Sub-tab bar */}
-        <div className="mb-6 flex rounded-lg border border-card-border overflow-x-auto overflow-y-hidden">
+        <div className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-card-border pb-2">
           {visibleTabs.map(({ key, label }) => (
             <button
               key={key}
@@ -416,11 +417,7 @@ export function JPDietPage({ countryId }: Props) {
               aria-selected={activeTab === key}
               aria-controls="diet-content"
               onClick={() => setActiveTab(key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                activeTab === key
-                  ? "bg-card-border text-foreground"
-                  : "bg-card text-muted hover:text-foreground"
-              }`}
+              className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${pillClass(activeTab === key)}`}
             >
               {label}
             </button>

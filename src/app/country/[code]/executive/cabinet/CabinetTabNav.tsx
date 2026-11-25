@@ -1,5 +1,7 @@
 "use client";
 
+import { PILL_SELECTED, PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
+
 export type CabinetTabKey = "overview" | "admin";
 
 /**
@@ -17,14 +19,13 @@ export function CabinetTabNav({
   onChange: (tab: CabinetTabKey) => void;
 }) {
   return (
-    <nav className="flex overflow-x-auto border-b border-card-border" aria-label="Cabinet sections">
+    <nav
+      className="flex gap-1 overflow-x-auto border-b border-card-border pb-2"
+      aria-label="Cabinet sections"
+    >
       <button
         onClick={() => onChange("overview")}
-        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-          active === "overview"
-            ? "border-b-2 border-primary font-medium text-foreground"
-            : "text-muted hover:text-foreground"
-        }`}
+        className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(active === "overview")}`}
         aria-current={active === "overview" ? "page" : undefined}
       >
         Overview
@@ -32,10 +33,8 @@ export function CabinetTabNav({
       {showAdmin && (
         <button
           onClick={() => onChange("admin")}
-          className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-            active === "admin"
-              ? "border-b-2 border-error font-medium text-error"
-              : "text-error/70 hover:text-error"
+          className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${PILL_SHAPE} ${
+            active === "admin" ? PILL_SELECTED : "text-error/70 hover:text-error"
           }`}
           aria-current={active === "admin" ? "page" : undefined}
         >

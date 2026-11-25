@@ -10,6 +10,7 @@ import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles"
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { partyMemberOfficeLabels } from "./partyMemberRole";
 import { stateRoleLabel } from "@/lib/parties/rules/stateRoles";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 function memberRoleLabel(
   party: PartyData,
@@ -64,11 +65,7 @@ export function MembersPanel({ party }: { party: PartyData }) {
             onChange={(e) => setSearch(e.target.value)}
             className="rounded-md border border-card-border bg-background px-3 py-1.5 text-body"
           />
-          <div
-            className="flex overflow-hidden rounded-md border border-card-border text-body"
-            role="tablist"
-            aria-label="Filter roster"
-          >
+          <div className={`${PILL_TRACK} text-body`} role="tablist" aria-label="Filter roster">
             <FilterButton
               label="All"
               count={party.members.length}
@@ -196,9 +193,7 @@ function FilterButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`px-3 py-1.5 transition-colors ${
-        active ? "bg-card-border text-foreground" : "bg-card text-muted hover:text-foreground"
-      }`}
+      className={`px-3 py-1.5 ${pillClass(active)}`}
     >
       {label}
       <span className="ml-1.5 text-body-sm tabular-nums text-muted">{count}</span>
