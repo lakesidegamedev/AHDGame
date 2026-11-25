@@ -29,7 +29,7 @@ export function ForexChartTimeframeTabs({
           id={`${idPrefix}-tf-${tf}`}
           aria-selected={value === tf}
           onClick={() => onChange(tf)}
-          className={`whitespace-nowrap px-2.5 py-1.5 text-xs ${pillClass(value === tf)}`}
+          className={`whitespace-nowrap px-2.5 py-1.5 text-body-sm ${pillClass(value === tf)}`}
         >
           {FOREX_CHART_TIMEFRAME_LABELS[tf]}
         </button>

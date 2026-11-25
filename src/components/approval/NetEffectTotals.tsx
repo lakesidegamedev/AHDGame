@@ -16,7 +16,7 @@ export function NetEffectTotals({
   netMargin: number;
 }) {
   return (
-    <div className="flex gap-4 text-right text-xs">
+    <div className="flex gap-4 text-right text-body-sm">
       <div>
         <div className="text-body-sm font-medium text-muted">{approvalLabel}</div>
         <div className={signedClass(netApproval)}>

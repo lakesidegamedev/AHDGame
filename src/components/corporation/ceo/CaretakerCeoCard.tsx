@@ -135,27 +135,27 @@ export function CaretakerCeoCard({
       disabledReason="Cooling down after you resumed control."
     >
       <div className="space-y-2">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {isCaretakerRun
             ? "An autonomous NPP caretaker is running this corporation on your behalf. You remain the owner and can resume control immediately. After an owner-initiated handoff, a cooldown of three real days applies before you can hand it back to a caretaker."
             : "Hand day-to-day operation to an autonomous NPP caretaker. It runs the corporation under the same bounded rules as any AI-run corp. You stay the owner and can resume control immediately. After this owner-initiated handoff, a cooldown of three real days applies before you can hand it back to a caretaker."}
         </p>
         {isCaretakerRun ? (
           <>
-            <label className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <label className="flex flex-wrap items-center gap-2 text-body-sm text-muted">
               Mandate
               <select
                 aria-label="Caretaker mandate"
                 value={mandate}
                 disabled={busy}
                 onChange={(event) => void setMandate(event.target.value as "active" | "passive")}
-                className="h-7 rounded-md border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 rounded-md border border-card-border bg-background px-1.5 text-body-sm text-foreground focus:border-foreground focus:outline-none"
               >
                 <option value="active">Active: pursue guarded profitable opportunities</option>
                 <option value="passive">Passive: make no new discretionary commitments</option>
               </select>
             </label>
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               Passive stops new plants, capacity, technology, marketing, logistics, R&amp;D,
               dividends, and bond investments. Existing debt and operating costs still settle.
             </p>

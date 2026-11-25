@@ -81,14 +81,14 @@ export function DemographicsManager() {
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted" htmlFor="reseed-country">
+            <label className="text-body-sm text-muted" htmlFor="reseed-country">
               Reseed target
             </label>
             <select
               id="reseed-country"
               value={reseedCountry}
               onChange={(e) => setReseedCountry(e.target.value)}
-              className="rounded-lg border border-card-border bg-background px-2 py-2 text-sm"
+              className="rounded-lg border border-card-border bg-background px-2 py-2 text-body"
             >
               {RESEED_COUNTRIES.map((c) => (
                 <option key={c} value={c}>
@@ -101,7 +101,7 @@ export function DemographicsManager() {
               aria-label="Reseed era"
               value={reseedEra}
               onChange={(e) => setReseedEra(e.target.value)}
-              className="rounded-lg border border-card-border bg-background px-2 py-2 text-sm"
+              className="rounded-lg border border-card-border bg-background px-2 py-2 text-body"
             >
               {RESEED_ERAS.map((e) => (
                 <option key={e} value={e}>
@@ -113,14 +113,14 @@ export function DemographicsManager() {
           <button
             onClick={handleReseedDemographics}
             disabled={reseedLoading}
-            className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20 disabled:opacity-50 transition-colors"
+            className="rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-body font-medium text-green-400 hover:bg-green-500/20 disabled:opacity-50 transition-colors"
             title="Re-derive demographics and region leans for the selected country and era. Snapshots before writing."
           >
             {reseedLoading ? "Reseeding..." : `Reseed ${reseedCountry} ${reseedEra}`}
           </button>
           {reseedMessage && (
             <span
-              className={`text-sm ${reseedMessage.startsWith("✓") ? "text-green-400" : "text-red-400"}`}
+              className={`text-body ${reseedMessage.startsWith("✓") ? "text-green-400" : "text-red-400"}`}
             >
               {reseedMessage}
             </span>
@@ -129,7 +129,7 @@ export function DemographicsManager() {
 
         {/* Overwrite Defaults — Danger Zone accordion */}
         <details className="group mt-6 border-t border-card-border pt-4">
-          <summary className="cursor-pointer list-none flex items-center gap-2 text-xs font-medium text-muted hover:text-foreground py-1 select-none">
+          <summary className="cursor-pointer list-none flex items-center gap-2 text-body-sm font-medium text-muted hover:text-foreground py-1 select-none">
             <svg
               className="h-3 w-3 transition-transform group-open:rotate-90"
               fill="none"
@@ -141,8 +141,10 @@ export function DemographicsManager() {
             Danger zone
           </summary>
           <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/5 p-4">
-            <p className="text-sm font-medium text-red-400 mb-1">Overwrite default demographics</p>
-            <p className="text-sm text-muted mb-4">
+            <p className="text-body font-medium text-red-400 mb-1">
+              Overwrite default demographics
+            </p>
+            <p className="text-body text-muted mb-4">
               Save current demographics as the new defaults. When the game is reset, demographics
               will revert to these values.
             </p>
@@ -150,19 +152,19 @@ export function DemographicsManager() {
             {!showOverwriteConfirm ? (
               <button
                 onClick={() => setShowOverwriteConfirm(true)}
-                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+                className="rounded-lg bg-orange-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-orange-700"
               >
                 Overwrite default demographics
               </button>
             ) : (
               <div className="space-y-4">
                 <div className="rounded-lg border border-orange-500/30 bg-orange-500/20 p-4">
-                  <p className="mb-3 text-sm font-medium text-orange-300">
+                  <p className="mb-3 text-body font-medium text-orange-300">
                     This will save all current state demographics as the new defaults. These values
                     will be used when the game is reset.
                   </p>
                   <div className="mb-3">
-                    <label className="mb-1 block text-sm text-muted">
+                    <label className="mb-1 block text-body text-muted">
                       Type <span className="font-mono font-bold text-orange-400">OVERWRITE</span> to
                       confirm:
                     </label>
@@ -170,7 +172,7 @@ export function DemographicsManager() {
                       type="text"
                       value={overwriteConfirmText}
                       onChange={(e) => setOverwriteConfirmText(e.target.value)}
-                      className="w-48 rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-mono"
+                      className="w-48 rounded-lg border border-card-border bg-background px-3 py-2 text-body font-mono"
                       placeholder="OVERWRITE"
                       disabled={overwriteLoading}
                     />
@@ -179,14 +181,14 @@ export function DemographicsManager() {
                     <button
                       onClick={handleOverwriteDefaults}
                       disabled={overwriteLoading || overwriteConfirmText !== "OVERWRITE"}
-                      className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
+                      className="rounded-lg bg-orange-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
                     >
                       {overwriteLoading ? "Saving..." : "Confirm overwrite"}
                     </button>
                     <button
                       onClick={() => closeOverwrite()}
                       disabled={overwriteLoading}
-                      className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium transition-colors hover:bg-background disabled:opacity-50"
+                      className="rounded-lg border border-card-border px-4 py-2 text-body font-medium transition-colors hover:bg-background disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -196,7 +198,7 @@ export function DemographicsManager() {
             )}
 
             {overwriteMessage && (
-              <div className={`mt-4 rounded-lg p-3 text-sm ${getMessageStyle(overwriteMessage)}`}>
+              <div className={`mt-4 rounded-lg p-3 text-body ${getMessageStyle(overwriteMessage)}`}>
                 {overwriteMessage}
               </div>
             )}

@@ -118,8 +118,8 @@ export default function RegionalBreakdown({
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-card-elevated/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-foreground">Regional breakdown</h2>
-          <span className="text-xs text-muted px-2 py-0.5 rounded-full bg-card-elevated">
+          <h2 className="text-heading font-bold text-foreground">Regional breakdown</h2>
+          <span className="text-body-sm text-muted px-2 py-0.5 rounded-full bg-card-elevated">
             {stateIds.length} regions
             {economyOnly.length > 0 ? ` + ${economyOnly.length} countries` : ""}
           </span>
@@ -136,9 +136,9 @@ export default function RegionalBreakdown({
       </button>
       {isOpen && (
         <div className="relative overflow-x-auto border-t border-card-border/50 px-6 pb-4">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[640px] text-body">
             <thead>
-              <tr className="border-b border-card-border text-left text-xs font-semibold text-muted">
+              <tr className="border-b border-card-border text-left text-body-sm font-semibold text-muted">
                 <th className="py-2 font-semibold">Region</th>
                 <th className="py-2 text-right font-semibold">Price</th>
                 <th className="py-2 text-right font-semibold">Supply</th>
@@ -159,7 +159,7 @@ export default function RegionalBreakdown({
                 <tbody key={country}>
                   <tr>
                     <td colSpan={6} className="pb-1 pt-4">
-                      <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-body-sm font-bold uppercase tracking-wider text-muted-foreground">
                         <CountryFlag country={country as CountryId} size="sm" />
                         {resolveCountryName(country as CountryId)}
                         <span className="font-normal normal-case tracking-normal text-muted">
@@ -251,7 +251,7 @@ export default function RegionalBreakdown({
                           onClick={() =>
                             setExpanded((prev) => ({ ...prev, [country]: !isExpanded }))
                           }
-                          className="text-xs font-medium text-primary hover:underline"
+                          className="text-body-sm font-medium text-primary hover:underline"
                         >
                           {isExpanded ? "Show fewer" : `Show all ${ids.length} regions`}
                         </button>
@@ -265,7 +265,7 @@ export default function RegionalBreakdown({
               <tbody>
                 <tr>
                   <td colSpan={6} className="pb-1 pt-4">
-                    <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-body-sm font-bold uppercase tracking-wider text-muted-foreground">
                       Other countries
                       <span className="font-normal normal-case tracking-normal text-muted">
                         national totals, no regional data
@@ -300,7 +300,7 @@ export default function RegionalBreakdown({
                         onClick={() =>
                           setExpanded((prev) => ({ ...prev, __economyOnly: !economyOnlyExpanded }))
                         }
-                        className="text-xs font-medium text-primary hover:underline"
+                        className="text-body-sm font-medium text-primary hover:underline"
                       >
                         {economyOnlyExpanded
                           ? "Show fewer"

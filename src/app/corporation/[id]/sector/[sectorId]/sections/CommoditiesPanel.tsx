@@ -96,10 +96,10 @@ function CommodityItem({
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-body">
         <Link
           href={`/commodity/${flow.commodity}`}
-          className={`inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border ${flow.colors} hover:opacity-80 transition-opacity shrink-0`}
+          className={`inline-flex items-center justify-center w-6 h-6 rounded text-body-sm font-bold border ${flow.colors} hover:opacity-80 transition-opacity shrink-0`}
         >
           {flow.icon}
         </Link>
@@ -113,7 +113,7 @@ function CommodityItem({
           )}
         </Link>
         <span
-          className={`font-medium tabular-nums text-xs shrink-0 ${isDemand ? "text-error" : "text-success"}`}
+          className={`font-medium tabular-nums text-body-sm shrink-0 ${isDemand ? "text-error" : "text-success"}`}
         >
           {flow.units >= 1000
             ? `${(flow.units / 1000).toFixed(1)}K`
@@ -124,7 +124,7 @@ function CommodityItem({
         </span>
       </div>
       <div className="ml-8 mt-0.5 space-y-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm">
           <span className="text-muted tabular-nums">{flow.weight}% weight</span>
           <span
             className={`tabular-nums ${getPriceToneClass(displayGlobal, displayBase, isDemand)}`}
@@ -147,7 +147,7 @@ function CommodityItem({
             <InfoTooltip
               trigger={
                 <span
-                  className={`text-[10px] font-medium tabular-nums ${
+                  className={`text-body-sm font-medium tabular-nums ${
                     flow.priceImpact > 0 ? "text-success" : "text-error"
                   }`}
                 >
@@ -162,10 +162,10 @@ function CommodityItem({
             </InfoTooltip>
           </div>
         )}
-        {flow.priceImpact === 0 && <span className="text-[10px] text-muted">balanced</span>}
+        {flow.priceImpact === 0 && <span className="text-body-sm text-muted">balanced</span>}
         {isDemand && flow.inputAvailability != null && flow.inputAvailability < 0.98 && (
           <div
-            className={`text-[10px] font-medium tabular-nums ${
+            className={`text-body-sm font-medium tabular-nums ${
               flow.inputAvailability < 0.6 ? "text-error" : "text-warning"
             }`}
             title={`The world market only supplies ${Math.round(flow.inputAvailability * 100)}% of the demand for this input. That is a global shortage, not something about your state or region. Whichever input is hardest to get caps what you can make, so lock in supply or switch inputs.`}
@@ -178,7 +178,7 @@ function CommodityItem({
             <InfoTooltip
               trigger={
                 <span
-                  className={`text-[10px] font-medium tabular-nums ${
+                  className={`text-body-sm font-medium tabular-nums ${
                     flow.soldFraction + (flow.ownSite?.share ?? 0) >= 0.995
                       ? "text-success"
                       : flow.soldFraction + (flow.ownSite?.share ?? 0) >= 0.7
@@ -209,7 +209,7 @@ function CommodityItem({
           flow.realizationPriceOverBase != null &&
           Math.abs(flow.realizationFactor - 1) >= 0.005 && (
             <div
-              className={`text-[10px] font-medium tabular-nums ${
+              className={`text-body-sm font-medium tabular-nums ${
                 flow.realizationFactor > 1 ? "text-success" : "text-error"
               }`}
               title={`Market price is ${flow.realizationPriceOverBase.toFixed(2)}× the normal price as of last turn, so what you earn here is multiplied by ${flow.realizationFactor}. Shortages pay more, gluts pay less.`}
@@ -224,7 +224,7 @@ function CommodityItem({
             report, #gameplay-advisors 2026-07-29. Put both on the row. */}
         {!isDemand && capacityRow && (
           <div className="rounded border border-card-border/60 bg-card-elevated/40 px-2 py-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] tabular-nums">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body-sm tabular-nums">
               <span className="text-muted">
                 you <span className="font-semibold text-foreground">{fmtUnits(flow.units)}</span>
               </span>
@@ -273,7 +273,7 @@ function CommodityItem({
             <InfoTooltip
               trigger={
                 <span
-                  className={`text-[10px] font-medium tabular-nums ${
+                  className={`text-body-sm font-medium tabular-nums ${
                     flow.capacityMultiplier <= 0
                       ? "text-muted"
                       : flow.capacityMultiplier < 0.5
@@ -313,11 +313,11 @@ export default function CommoditiesPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="text-lg font-bold text-foreground mb-1">Commodity flows</h2>
-      <p className="text-xs text-muted mb-2">
+      <h2 className="text-heading font-bold text-foreground mb-1">Commodity flows</h2>
+      <p className="text-body-sm text-muted mb-2">
         What this sector produces and consumes daily, with per-commodity impact on margins.
       </p>
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         G = global price, N = national price, R = regional price. Numbers are shown in the sector
         currency.
       </p>
@@ -363,7 +363,7 @@ export default function CommoditiesPanel({
       </div>
 
       {commodities.throughput && (
-        <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-sm">
+        <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-body">
           <InfoTooltip
             trigger={
               <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
@@ -372,7 +372,7 @@ export default function CommoditiesPanel({
             }
             width={300}
           >
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               The value at right is a projection from the latest world-market balances. The throttle
               applied last turn can differ when regional deliveries or internal supply improve what
               reaches your plant. The throttle phases in over 5 game years and never cuts you below{" "}
@@ -416,7 +416,7 @@ export default function CommoditiesPanel({
       )}
 
       {commodities.priceRealization && (
-        <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-sm">
+        <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-body">
           <InfoTooltip
             trigger={
               <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
@@ -425,7 +425,7 @@ export default function CommoditiesPanel({
             }
             width={300}
           >
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               Your realized revenue is scaled by the market price of what you sell, using last
               turn&apos;s prices weighted by your output mix. Selling into a shortage pays a premium
               (up to +100%); selling into a glut discounts your revenue (down to −30%). Expand where
@@ -456,7 +456,7 @@ export default function CommoditiesPanel({
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-sm">
+      <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-body">
         <InfoTooltip
           trigger={
             <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
@@ -465,7 +465,7 @@ export default function CommoditiesPanel({
           }
           width={280}
         >
-          <p className="text-muted text-xs">
+          <p className="text-muted text-body-sm">
             Sum of input and output commodity effects, blended across global, national, and regional
             supply and demand. Raw D/S above 3x continues to worsen, but margin pressure uses a
             softened effective ratio.

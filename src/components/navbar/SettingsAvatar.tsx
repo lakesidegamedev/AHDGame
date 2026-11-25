@@ -15,7 +15,7 @@ export function AvatarInitial({
   highlighted?: boolean;
 }) {
   const initial = (name.trim().charAt(0) || "?").toUpperCase();
-  const dims = size === "sm" ? "h-8 w-8 text-xs" : "h-9 w-9 text-sm";
+  const dims = size === "sm" ? "h-8 w-8 text-body-sm" : "h-9 w-9 text-body";
   return (
     <span
       aria-hidden="true"

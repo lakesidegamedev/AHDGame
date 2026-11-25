@@ -21,14 +21,14 @@ export function BgFoundingConstituencyPicker({
   const areas = new Map(BG_1990_LIST_DISTRICTS.map((row) => [row.id, row.label]));
   return (
     <div className="mb-4">
-      <label htmlFor="bg-founding-constituency" className="mb-2 block text-sm font-medium">
+      <label htmlFor="bg-founding-constituency" className="mb-2 block text-body font-medium">
         {t("constituencyLabel")}
       </label>
       <select
         id="bg-founding-constituency"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-body"
       >
         <option value="">{t("automatic")}</option>
         {BG_1990_CONSTITUENCIES.filter(
@@ -44,7 +44,7 @@ export function BgFoundingConstituencyPicker({
           </option>
         ))}
       </select>
-      <p className="mt-2 text-sm text-muted-foreground">{t("filingNote")}</p>
+      <p className="mt-2 text-body text-muted-foreground">{t("filingNote")}</p>
     </div>
   );
 }

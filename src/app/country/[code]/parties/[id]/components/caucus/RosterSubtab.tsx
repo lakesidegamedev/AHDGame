@@ -18,7 +18,7 @@ export function RosterSubtab({
   return (
     <div className="rounded-lg border border-card-border bg-card p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-muted">Roster</h3>
+        <h3 className="text-body-lg font-semibold text-muted">Roster</h3>
         <div className="flex gap-1">
           {(
             [
@@ -43,15 +43,15 @@ export function RosterSubtab({
         </div>
       </div>
       {!roster ? (
-        <p className="text-sm italic text-muted">Loading roster...</p>
+        <p className="text-body italic text-muted">Loading roster...</p>
       ) : roster.length === 0 ? (
-        <p className="text-sm italic text-muted">No members of this type.</p>
+        <p className="text-body italic text-muted">No members of this type.</p>
       ) : (
         <ul className="divide-y divide-card-border">
           {roster.map((entry) => (
             <li key={entry.membershipId} className="flex items-center justify-between gap-3 py-2">
               <div>
-                <div className="text-sm font-medium">{entry.name}</div>
+                <div className="text-body font-medium">{entry.name}</div>
                 <div className="text-body-sm text-muted">
                   {entry.memberType === "character" ? "Player" : "NPP"} |{" "}
                   {displayCanadianRegionCode(entry.homeState)}

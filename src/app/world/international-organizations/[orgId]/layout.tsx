@@ -34,11 +34,11 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <Link
           href="/world/international-organizations"
-          className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground"
+          className="mb-4 inline-flex items-center gap-1.5 text-body-sm font-medium text-muted hover:text-foreground"
         >
           ← All organizations
         </Link>
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
           Could not load this organization. Try refreshing.
         </div>
       </div>
@@ -53,7 +53,7 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <Link
           href="/world/international-organizations"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-body-sm font-medium text-muted hover:text-foreground"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path

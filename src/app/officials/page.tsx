@@ -86,7 +86,7 @@ export default async function OfficialsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Officials & vacancies</h1>
+        <h1 className="text-display font-bold">Officials & vacancies</h1>
         <p className="mt-2 text-muted">View current elected officials and vacant offices</p>
       </div>
 

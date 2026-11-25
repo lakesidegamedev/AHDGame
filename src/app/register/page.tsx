@@ -69,7 +69,7 @@ export default async function RegisterPage() {
         actions={
           <Link
             href="/login"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-card-border bg-card px-5 text-sm font-medium transition-all hover:bg-card-elevated"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-card-border bg-card px-5 text-body font-medium transition-all hover:bg-card-elevated"
           >
             I already have an account
           </Link>

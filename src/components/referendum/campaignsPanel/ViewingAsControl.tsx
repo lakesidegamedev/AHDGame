@@ -23,7 +23,7 @@ export function ViewingAsControl({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-[var(--ref-gold)]">
+      <span className="mr-1 text-body-sm font-bold uppercase tracking-wider text-[var(--ref-gold)]">
         Viewing as
       </span>
       {ROLES.map((r) => (
@@ -31,7 +31,7 @@ export function ViewingAsControl({
           key={r.id}
           href={hrefFor(r.id)}
           aria-current={active === r.id ? "true" : undefined}
-          className={`px-2.5 py-1 text-[11px] ${pillClass(active === r.id)}`}
+          className={`px-2.5 py-1 text-body-sm ${pillClass(active === r.id)}`}
         >
           {r.label}
         </Link>

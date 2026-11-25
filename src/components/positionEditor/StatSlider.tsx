@@ -30,7 +30,7 @@ export function StatSlider({
         : "var(--secondary)";
   return (
     <div className="flex items-center gap-3 py-1">
-      <span className="w-40 shrink-0 text-xs text-muted">{label}</span>
+      <span className="w-40 shrink-0 text-body-sm text-muted">{label}</span>
       <input
         type="range"
         min={min}
@@ -48,9 +48,9 @@ export function StatSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="ahd-num w-20 rounded-md border border-card-border bg-background px-2 py-1 text-right text-sm tabular-nums focus:border-primary focus:outline-none"
+        className="ahd-num w-20 rounded-md border border-card-border bg-background px-2 py-1 text-right text-body tabular-nums focus:border-primary focus:outline-none"
       />
-      {suffix ? <span className="w-6 text-xs text-muted">{suffix}</span> : null}
+      {suffix ? <span className="w-6 text-body-sm text-muted">{suffix}</span> : null}
     </div>
   );
 }

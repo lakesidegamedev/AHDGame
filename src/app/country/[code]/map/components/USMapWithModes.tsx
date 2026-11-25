@@ -100,8 +100,8 @@ function PresidentialResultsPanel({
   return (
     <div className="mt-6 rounded-xl border border-card-border bg-card p-4 sm:p-6">
       <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-base sm:text-lg font-semibold">Presidential results</h3>
-        <span className="text-xs sm:text-sm text-muted">
+        <h3 className="text-body-lg sm:text-body-lg font-semibold">Presidential results</h3>
+        <span className="text-body-sm sm:text-body text-muted">
           {totalEV} votes · {evNeeded} to win
         </span>
       </div>
@@ -119,7 +119,9 @@ function PresidentialResultsPanel({
                 className="h-full flex items-center justify-center relative group"
                 style={{ width: `${pct}%`, backgroundColor: color }}
               >
-                {pct > 8 && <span className="text-white font-bold text-sm tabular-nums">{ev}</span>}
+                {pct > 8 && (
+                  <span className="text-white font-bold text-body tabular-nums">{ev}</span>
+                )}
                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
               </div>
             );
@@ -131,7 +133,7 @@ function PresidentialResultsPanel({
             className="absolute top-0 bottom-0 w-0.5 bg-foreground/40 pointer-events-none"
             style={{ left: `${(evNeeded / totalEV) * 100}%` }}
           >
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-foreground/60 whitespace-nowrap">
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-body-sm font-bold text-foreground/60 whitespace-nowrap">
               {evNeeded}
             </div>
           </div>
@@ -147,11 +149,11 @@ function PresidentialResultsPanel({
             return (
               <div key={candidateId} className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: color }} />
-                <span className="text-sm font-semibold">{name}</span>
-                <span className="text-sm font-bold tabular-nums" style={{ color }}>
+                <span className="text-body font-semibold">{name}</span>
+                <span className="text-body font-bold tabular-nums" style={{ color }}>
                   {ev}
                 </span>
-                {isWinner && <span className="text-yellow-400 text-sm">★</span>}
+                {isWinner && <span className="text-yellow-400 text-body">★</span>}
               </div>
             );
           })}
@@ -511,7 +513,7 @@ export function USMapWithModes({
         <header className="mb-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <BackButton iconOnly />
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            <h1 className="text-heading sm:text-heading font-bold tracking-tight">
               {t("pageTitle", { country: config.name })}
             </h1>
           </div>
@@ -748,7 +750,7 @@ export function USMapWithModes({
                         </tbody>
                       </table>
                       {!regions.length && (
-                        <p className="p-6 text-sm text-muted">{t("noResults")}</p>
+                        <p className="p-6 text-body text-muted">{t("noResults")}</p>
                       )}
                     </div>
                   ) : (
@@ -826,7 +828,7 @@ export function USMapWithModes({
                             +
                           </button>
                           <button
-                            className="ml-2 text-xs"
+                            className="ml-2 text-body-sm"
                             onClick={() => {
                               setZoom(1);
                               setResetKey((k) => k + 1);
@@ -849,7 +851,7 @@ export function USMapWithModes({
                             </button>
                           ))}
                           {!regions.length && (
-                            <p className="text-xs text-muted">{t("noResults")}</p>
+                            <p className="text-body-sm text-muted">{t("noResults")}</p>
                           )}
                         </div>
                       )}
@@ -888,13 +890,13 @@ export function USMapWithModes({
                   {mode === "logistics" && (
                     <div className="space-y-3 px-5 pb-4">
                       {freightOverCapacity.length > 0 && (
-                        <details open className="text-sm">
+                        <details open className="text-body">
                           <summary className="cursor-pointer font-medium text-amber-400">
                             Haul above capacity ({freightOverCapacity.length})
                           </summary>
                           <div className="mt-2 max-h-56 overflow-auto">
                             <table className="mt-2 w-full tabular-nums">
-                              <thead className="text-left text-xs text-muted">
+                              <thead className="text-left text-body-sm text-muted">
                                 <tr>
                                   <th scope="col">State</th>
                                   <th scope="col" className="text-right">
@@ -923,7 +925,7 @@ export function USMapWithModes({
                           </div>
                         </details>
                       )}
-                      <p className="text-xs text-muted">
+                      <p className="text-body-sm text-muted">
                         {freightHaulLoadCaption(Object.keys(freightData.states).length > 0)}
                       </p>
                     </div>

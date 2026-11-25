@@ -107,13 +107,17 @@ export function GovernmentContractsBoard({
     <section className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">{countryName}</p>
-          <h1 className={embedded ? "text-xl font-bold" : "text-3xl font-bold"}>{t("heading")}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted">{t("intro")}</p>
+          <p className="text-body-sm font-semibold uppercase tracking-wider text-muted">
+            {countryName}
+          </p>
+          <h1 className={embedded ? "text-heading font-bold" : "text-display font-bold"}>
+            {t("heading")}
+          </h1>
+          <p className="mt-2 max-w-2xl text-body text-muted">{t("intro")}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           {embedded && (
-            <Link className="text-sm text-primary" href={href(tab, type, 1)}>
+            <Link className="text-body text-primary" href={href(tab, type, 1)}>
               {t("openBoard")}
             </Link>
           )}
@@ -127,7 +131,7 @@ export function GovernmentContractsBoard({
         </div>
       </header>
       {access?.enabled === false && (
-        <p role="status" className="rounded-xl border border-warning bg-warning/10 p-4 text-sm">
+        <p role="status" className="rounded-xl border border-warning bg-warning/10 p-4 text-body">
           {t("featureDisabled")}
         </p>
       )}
@@ -142,8 +146,8 @@ export function GovernmentContractsBoard({
       )}
       {accessError && !error && (
         <div role="alert" className="rounded-xl border border-card-border bg-card p-4">
-          <p className="text-sm text-muted">{t("actionsLoadFailed")}</p>
-          <button type="button" className="mt-2 text-sm text-primary" onClick={reload}>
+          <p className="text-body text-muted">{t("actionsLoadFailed")}</p>
+          <button type="button" className="mt-2 text-body text-primary" onClick={reload}>
             {t("retry")}
           </button>
         </div>
@@ -169,17 +173,17 @@ export function GovernmentContractsBoard({
             key={key}
             href={href(key, type, 1)}
             aria-current={tab === key ? "page" : undefined}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? "bg-primary text-white" : "text-muted hover:text-foreground"}`}
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-body font-semibold ${tab === key ? "bg-primary text-white" : "text-muted hover:text-foreground"}`}
           >
             {t(`tabs.${key}`)}
           </Link>
         ))}
       </nav>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-3 text-sm">
+        <label className="flex items-center gap-3 text-body">
           <span className="whitespace-nowrap">{t("type")}</span>
           <select
-            className="min-w-0 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="min-w-0 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
             value={type}
             onChange={(e) => router.push(href(tab, e.target.value, 1))}
           >
@@ -191,7 +195,7 @@ export function GovernmentContractsBoard({
             ))}
           </select>
         </label>
-        <label className="flex min-w-0 max-w-full flex-wrap items-center gap-3 text-sm">
+        <label className="flex min-w-0 max-w-full flex-wrap items-center gap-3 text-body">
           <span>{t("viewerFilter")}</span>
           <select
             className={`${inputClass} min-w-0 max-w-full sm:w-auto`}
@@ -209,9 +213,11 @@ export function GovernmentContractsBoard({
             ))}
           </select>
         </label>
-        {listing && <p className="text-sm text-muted">{t("results", { count: listing.total })}</p>}
+        {listing && (
+          <p className="text-body text-muted">{t("results", { count: listing.total })}</p>
+        )}
       </div>
-      {supplier !== "all" && <p className="text-sm text-muted">{t("viewerFilterHint")}</p>}
+      {supplier !== "all" && <p className="text-body text-muted">{t("viewerFilterHint")}</p>}
       {error ? (
         <div role="alert" className="rounded-xl border border-error/30 bg-card p-5">
           <p>{error}</p>
@@ -220,13 +226,13 @@ export function GovernmentContractsBoard({
           </button>
         </div>
       ) : !listing ? (
-        <p role="status" className="p-6 text-sm text-muted">
+        <p role="status" className="p-6 text-body text-muted">
           {t("loading")}
         </p>
       ) : !listing.tenders.length ? (
         <div className="rounded-xl border border-card-border bg-card p-8 text-center">
           <h2 className="font-semibold">{t(`empty.${tab}`)}</h2>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             {page > listing.totalPages ? t("pageOutOfRange") : t("emptyHint")}
           </p>
         </div>
@@ -238,17 +244,17 @@ export function GovernmentContractsBoard({
               <article key={row._id} className="rounded-xl border border-card-border bg-card p-5">
                 <div className="flex flex-wrap justify-between gap-3">
                   <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    <span className="text-body-sm font-semibold uppercase tracking-wide text-muted">
                       {t(`types.${row.terms.type}`)}
                     </span>
-                    <h2 className="mt-1 text-lg font-semibold">{row.title}</h2>
+                    <h2 className="mt-1 text-heading font-semibold">{row.title}</h2>
                   </div>
-                  <span className="self-start rounded-full border border-card-border px-3 py-1 text-xs">
+                  <span className="self-start rounded-full border border-card-border px-3 py-1 text-body-sm">
                     {t(`tabs.${row.tab}`)}
                   </span>
                 </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{row.description}</p>
-                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                <p className="mt-2 whitespace-pre-wrap text-body text-muted">{row.description}</p>
+                <dl className="mt-4 grid gap-3 text-body sm:grid-cols-3">
                   <div>
                     <dt className="text-muted">{t("closesTurn")}</dt>
                     <dd>{row.closesTurn}</dd>
@@ -276,15 +282,15 @@ export function GovernmentContractsBoard({
                 </dl>
                 {row.terms.type === "extraction" && <ExtractionScope row={row} />}
                 {row.awardReason && (
-                  <p className="mt-3 text-sm">
+                  <p className="mt-3 text-body">
                     {t("awardReason")}: {row.awardReason}
                   </p>
                 )}
                 {row.cancellationReason && (
-                  <p className="mt-3 text-sm text-muted">{row.cancellationReason}</p>
+                  <p className="mt-3 text-body text-muted">{row.cancellationReason}</p>
                 )}
                 <button
-                  className="mt-4 text-sm font-semibold text-primary"
+                  className="mt-4 text-body font-semibold text-primary"
                   aria-expanded={selected === row._id}
                   onClick={() => setSelected(selected === row._id ? null : row._id)}
                 >
@@ -308,21 +314,21 @@ export function GovernmentContractsBoard({
           className="flex items-center justify-between gap-3 border-t border-card-border pt-4"
         >
           {page > 1 ? (
-            <Link className="text-sm text-primary" href={href(tab, type, page - 1)}>
+            <Link className="text-body text-primary" href={href(tab, type, page - 1)}>
               {t("previous")}
             </Link>
           ) : (
-            <span className="text-sm text-muted">{t("previous")}</span>
+            <span className="text-body text-muted">{t("previous")}</span>
           )}
-          <span className="text-sm text-muted">
+          <span className="text-body text-muted">
             {t("page", { page, total: listing.totalPages })}
           </span>
           {page < listing.totalPages ? (
-            <Link className="text-sm text-primary" href={href(tab, type, page + 1)}>
+            <Link className="text-body text-primary" href={href(tab, type, page + 1)}>
               {t("next")}
             </Link>
           ) : (
-            <span className="text-sm text-muted">{t("next")}</span>
+            <span className="text-body text-muted">{t("next")}</span>
           )}
         </nav>
       )}
@@ -342,7 +348,7 @@ function ExtractionScope({
   const t = useTranslations("corporations.governmentContracts");
   if (row.terms.type !== "extraction") return null;
   return (
-    <div className="mt-3 space-y-2 text-sm text-muted">
+    <div className="mt-3 space-y-2 text-body text-muted">
       <p>
         {row.capacityQuote
           ? t("capacityQuantity", {
@@ -432,16 +438,16 @@ function TenderDetails({
   return (
     <div className="mt-4 space-y-4 border-t border-card-border pt-4">
       {showTitle && (
-        <h2 className="text-lg font-semibold">
-          {row.title} <span className="text-sm text-muted">({t(`tabs.${row.tab}`)})</span>
+        <h2 className="text-heading font-semibold">
+          {row.title} <span className="text-body text-muted">({t(`tabs.${row.tab}`)})</span>
         </h2>
       )}
       {terms.type === "defence" ? (
-        <p className="text-sm">
+        <p className="text-body">
           {t("defenceTerms", { amount: terms.maximumPricePerLot, country: countryId })}
         </p>
       ) : (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-body">
           <p className="font-semibold">{t("extractionPayment")}</p>
           {showTitle && (
             <>
@@ -467,10 +473,10 @@ function TenderDetails({
           <p className="text-muted">{t("exchangeNote")}</p>
         </div>
       )}
-      {row.tab === "active" && <p className="text-sm text-muted">{t("sealed")}</p>}
+      {row.tab === "active" && <p className="text-body text-muted">{t("sealed")}</p>}
       <h3 className="font-semibold">{row.tab === "active" ? t("yourBid") : t("submittedBids")}</h3>
       {row.bids.length === 0 ? (
-        <p className="text-sm text-muted">{t("noBids")}</p>
+        <p className="text-body text-muted">{t("noBids")}</p>
       ) : (
         <ul className="divide-y divide-card-border">
           {row.bids.map((b) => (
@@ -480,15 +486,17 @@ function TenderDetails({
             >
               <span>
                 {b.corporationName}
-                {b.withdrawn && <span className="ml-2 text-xs text-muted">{t("withdrawn")}</span>}
+                {b.withdrawn && (
+                  <span className="ml-2 text-body-sm text-muted">{t("withdrawn")}</span>
+                )}
               </span>
-              <span className="text-sm">
+              <span className="text-body">
                 {terms.type === "defence"
                   ? `${b.amount.toLocaleString()} ${t("localPerLot", { country: countryId })}`
                   : (extractionMoney(b.amount, row) ?? t("currencyUnavailable"))}
               </span>
               {row.canManage && row.tab === "closed" && !b.withdrawn && (
-                <label className="flex gap-2 text-sm">
+                <label className="flex gap-2 text-body">
                   <input
                     type="radio"
                     name={`winner-${row._id}`}
@@ -509,8 +517,8 @@ function TenderDetails({
       )}
       {!!row.bidHistory?.length && (
         <details className="rounded-lg border border-card-border p-4">
-          <summary className="cursor-pointer text-sm font-semibold">{t("bidHistory")}</summary>
-          <ul className="mt-3 space-y-2 text-sm text-muted">
+          <summary className="cursor-pointer text-body font-semibold">{t("bidHistory")}</summary>
+          <ul className="mt-3 space-y-2 text-body text-muted">
             {row.bidHistory.map((b) => (
               <li key={b.corporationId + ":" + b.revision}>
                 {t("historyEntry", {
@@ -533,7 +541,7 @@ function TenderDetails({
       )}
       {row.canManage && (row.tab === "active" || row.tab === "closed") && (
         <div className="space-y-3 rounded-lg border border-card-border p-4">
-          <label className="block text-sm">
+          <label className="block text-body">
             {t("publicReason")}
             <textarea
               className={inputClass}
@@ -545,7 +553,7 @@ function TenderDetails({
             />
           </label>
           {warning && row.status !== "awarding" && (
-            <div role="alert" className="space-y-2 rounded-lg border border-warning p-3 text-sm">
+            <div role="alert" className="space-y-2 rounded-lg border border-warning p-3 text-body">
               <p>
                 {t(warning.basis === "owner" ? "ownerWarning" : "stakeWarning", {
                   stake: warning.stakeShare * 100,
@@ -587,7 +595,7 @@ function TenderDetails({
             {row.status !== "awarding" && (
               <button
                 disabled={busy || reason.trim().length < 10}
-                className="text-sm text-error disabled:opacity-50"
+                className="text-body text-error disabled:opacity-50"
                 onClick={() => void action("cancel", { reason })}
               >
                 {t("cancelTender")}
@@ -597,10 +605,10 @@ function TenderDetails({
         </div>
       )}
       {row.tab === "awarded" && (
-        <p className="text-sm">{t("contractReference", { id: row.contractId })}</p>
+        <p className="text-body">{t("contractReference", { id: row.contractId })}</p>
       )}
       {row.tab === "awarded" && row.selfDealing && (
-        <p className="text-sm text-warning">
+        <p className="text-body text-warning">
           {t("selfDealing", {
             name: row.selfDealing.ministerName ?? "",
             penalty: row.selfDealing.favorabilityPenalty,
@@ -608,7 +616,7 @@ function TenderDetails({
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-error">
+        <p role="alert" className="text-body text-error">
           {error}
           <button type="button" className="ml-3 text-primary" onClick={reload}>
             {t("retry")}

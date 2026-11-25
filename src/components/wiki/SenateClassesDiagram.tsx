@@ -12,15 +12,17 @@ export function SenateClassesDiagram() {
 
   return (
     <div className="my-6 rounded-lg border border-card-border bg-card/40 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-foreground">Senate staggered classes</h4>
-      <p className="mb-4 text-xs text-muted">
+      <h4 className="mb-3 text-body font-semibold text-foreground">Senate staggered classes</h4>
+      <p className="mb-4 text-body-sm text-muted">
         One-third of the Senate is up for election every 4 days. Each class has a 12-day term.
       </p>
       <div className="flex flex-wrap gap-4">
         {classes.map((c) => (
           <div key={c.name} className={`rounded-lg ${c.color} px-4 py-3`}>
             <div className="font-medium text-foreground">{c.name}</div>
-            <div className="text-xs text-muted">Elections every 12 days (offset {c.offset})</div>
+            <div className="text-body-sm text-muted">
+              Elections every 12 days (offset {c.offset})
+            </div>
           </div>
         ))}
       </div>

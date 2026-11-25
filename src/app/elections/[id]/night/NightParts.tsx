@@ -18,7 +18,7 @@ import { FOG_NIGHT_FILL, GREY_FILL } from "./nightMapModel";
 
 const MONO_LABEL: CSSProperties = {
   fontFamily: FONT.mono,
-  fontSize: 10.5,
+  fontSize: 12,
   letterSpacing: ".1em",
   textTransform: "uppercase",
   color: BLEND.mutedDim,
@@ -65,7 +65,7 @@ export function LiveBug({ settled }: { settled: boolean }) {
         gap: 7,
         padding: "4px 10px",
         fontFamily: FONT.mono,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: ".16em",
         color: settled ? BLEND.gold : "#ffffff",
@@ -113,7 +113,7 @@ export function NightHeader({
           instead of squeezing the title until it overflows underneath them. */}
       <div style={{ minWidth: 0, flex: "1 1 14rem" }}>
         <div style={{ ...MONO_LABEL, letterSpacing: ".18em" }}>Election night</div>
-        <h1 style={{ margin: 0, fontSize: 19, fontWeight: 600, letterSpacing: "-0.01em" }}>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: "-0.01em" }}>
           {title}
         </h1>
       </div>
@@ -129,8 +129,8 @@ export function NightHeader({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ textAlign: "right" }}>
-      <dt style={{ ...MONO_LABEL, fontSize: 9.5 }}>{label}</dt>
-      <dd style={{ margin: 0, fontFamily: FONT.mono, fontSize: 17, fontWeight: 600 }}>{value}</dd>
+      <dt style={{ ...MONO_LABEL, fontSize: 12 }}>{label}</dt>
+      <dd style={{ margin: 0, fontFamily: FONT.mono, fontSize: 16, fontWeight: 600 }}>{value}</dd>
     </div>
   );
 }
@@ -166,7 +166,7 @@ export function RaceBar({ view }: { view: NightView }) {
       >
         {a ? <RaceSide c={a} winner={view.winnerId === a.id} align="left" /> : <span />}
         <div style={{ ...MONO_LABEL, textAlign: "center", paddingBottom: 4 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: BLEND.ink, letterSpacing: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: BLEND.ink, letterSpacing: 0 }}>
             {view.evNeeded}
           </div>
           to win
@@ -229,7 +229,7 @@ export function RaceBar({ view }: { view: NightView }) {
         />
       </div>
       {rest.some((c) => c.ev > 0) ? (
-        <div style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}>
+        <div style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
           {rest
             .filter((c) => c.ev > 0)
             .map((c) => `${c.name} ${c.ev}`)
@@ -257,7 +257,7 @@ function RaceSide({
           alignItems: "center",
           gap: 7,
           justifyContent: align === "left" ? "flex-start" : "flex-end",
-          fontSize: 13.5,
+          fontSize: 14,
           fontWeight: 500,
           minWidth: 0,
         }}
@@ -333,7 +333,7 @@ export function NightMapLegend({ candidates }: { candidates: NightCandidateView[
         alignItems: "center",
         gap: "6px 16px",
         fontFamily: FONT.mono,
-        fontSize: 10,
+        fontSize: 12,
         color: BLEND.mutedDim,
       }}
     >
@@ -389,11 +389,11 @@ export function CallAlertBanner({
         <div style={{ ...MONO_LABEL, color: BLEND.gold, letterSpacing: ".14em" }}>Projected</div>
         <div
           className="night-alert__title"
-          style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.2 }}
+          style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.2 }}
         >
           {alert.candidateName} wins {alert.stateName}
         </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 11.5, color: BLEND.muted, marginTop: 2 }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted, marginTop: 2 }}>
           {alert.ev} electoral votes
           {cand ? ` / ${cand.name} ${cand.ev} of ${view.evNeeded}` : ""}
         </div>
@@ -431,19 +431,19 @@ export function NextClosing({
               gap: 10,
             }}
           >
-            <span style={{ fontFamily: FONT.mono, fontSize: 22, fontWeight: 600 }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 20, fontWeight: 600 }}>
               {next.label}
             </span>
-            <span style={{ fontFamily: FONT.mono, fontSize: 13, color: BLEND.caution }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.caution }}>
               in {formatCountdown(msUntil(next.at, night, progress, windowRealMs))}
             </span>
           </div>
-          <div style={{ marginTop: 6, fontSize: 13, color: BLEND.muted, lineHeight: 1.45 }}>
+          <div style={{ marginTop: 6, fontSize: 12, color: BLEND.muted, lineHeight: 1.45 }}>
             {next.stateNames.join(", ")}
           </div>
         </>
       ) : (
-        <div style={{ fontSize: 13.5, color: BLEND.muted }}>Polls have closed in every state.</div>
+        <div style={{ fontSize: 14, color: BLEND.muted }}>Polls have closed in every state.</div>
       )}
     </Block>
   );
@@ -473,7 +473,7 @@ export function CandidateTotals({ view }: { view: NightView }) {
               style={{
                 flex: 1,
                 minWidth: 0,
-                fontSize: 13.5,
+                fontSize: 14,
                 fontWeight: 500,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -496,7 +496,7 @@ export function CandidateTotals({ view }: { view: NightView }) {
               }}
             />
           </div>
-          <div style={{ marginTop: 4, fontFamily: FONT.mono, fontSize: 11, color: BLEND.mutedDim }}>
+          <div style={{ marginTop: 4, fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDim }}>
             {Math.round(c.votes).toLocaleString("en-US")} votes / {c.ev} EV called
           </div>
         </div>
@@ -518,7 +518,7 @@ export function NightFeed({
   const list = (
     <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
       {items.length === 0 ? (
-        <li style={{ fontSize: 13, color: BLEND.mutedDim }}>
+        <li style={{ fontSize: 12, color: BLEND.mutedDim }}>
           {settled ? "Every state has been called." : "Polls have not closed yet."}
         </li>
       ) : null}
@@ -538,7 +538,7 @@ export function NightFeed({
               flex: "none",
               width: 64,
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               color: BLEND.mutedDim,
               paddingTop: 2,
             }}
@@ -547,7 +547,7 @@ export function NightFeed({
           </span>
           <span
             style={{
-              fontSize: 13,
+              fontSize: 12,
               lineHeight: 1.4,
               color: i.kind === "call" ? BLEND.ink : BLEND.muted,
             }}
@@ -611,17 +611,17 @@ export function KeyRaces({ races }: { races: NightKeyRace[] }) {
               padding: "6px 10px",
               background: BLEND.inset,
               border: `1px solid ${r.status === "too_close" ? BLEND.caution : BLEND.hairlineStrong}`,
-              fontSize: 12.5,
+              fontSize: 12,
             }}
           >
             <b style={{ fontWeight: 600 }}>{r.name}</b>
-            <span style={{ fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
               {r.ev} EV
             </span>
             <span
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 11,
+                fontSize: 12,
                 color: r.status === "too_close" ? BLEND.caution : BLEND.mutedDim,
               }}
             >
@@ -673,7 +673,7 @@ export function SettledPanel({
     color: BLEND.ink,
     textDecoration: "none",
     fontFamily: FONT.sans,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
   };
@@ -690,7 +690,7 @@ export function SettledPanel({
       {winner ? (
         <>
           <div style={{ ...MONO_LABEL, color: BLEND.gold }}>Winner</div>
-          <div style={{ fontSize: 24, fontWeight: 600, marginTop: 2 }}>{winner.name}</div>
+          <div style={{ fontSize: 20, fontWeight: 600, marginTop: 2 }}>{winner.name}</div>
           <p style={{ margin: "4px 0 0", fontSize: 14, color: BLEND.muted }}>
             {winner.ev} electoral votes, {view.evNeeded} needed. All {view.totalStates} states
             called, 100% reporting.
@@ -699,7 +699,7 @@ export function SettledPanel({
       ) : (
         <>
           <div style={{ ...MONO_LABEL, color: BLEND.caution }}>Contingent election</div>
-          <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>
+          <div style={{ fontSize: 20, fontWeight: 600, marginTop: 2 }}>
             {houseWinnerId
               ? `The House elects ${candidateName(houseWinnerId)}`
               : deadlocked

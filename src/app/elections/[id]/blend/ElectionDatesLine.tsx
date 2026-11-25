@@ -45,7 +45,7 @@ export function ElectionDatesLine({ election }: { election: ElectionDetail }) {
         display: "grid",
         gridTemplateColumns: "auto 1fr",
         gap: "4px 14px",
-        fontSize: 12.5,
+        fontSize: 12,
       }}
     >
       {rows.map((r) => (

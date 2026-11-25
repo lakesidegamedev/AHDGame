@@ -103,16 +103,16 @@ export function EmergencyMechanicPanel({
           </svg>
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{config.name}</h2>
-          <p className="mt-1 text-sm text-muted">{config.description}</p>
-          <p className="mt-1 text-xs text-error">
+          <h2 className="text-heading font-semibold text-foreground">{config.name}</h2>
+          <p className="mt-1 text-body text-muted">{config.description}</p>
+          <p className="mt-1 text-body-sm text-error">
             Cost: 1 {actionCopy.singular} - Duration: {config.duration} turns
           </p>
         </div>
       </div>
 
       {config.regionMetricThreshold && eligibleRegions.length === 0 && (
-        <div className="mb-3 rounded-lg border border-muted/30 bg-card-elevated p-3 text-sm text-muted">
+        <div className="mb-3 rounded-lg border border-muted/30 bg-card-elevated p-3 text-body text-muted">
           No regions currently meet the threshold for this emergency action.
         </div>
       )}
@@ -122,7 +122,7 @@ export function EmergencyMechanicPanel({
           <div className="flex-1">
             <label
               htmlFor="emergency-region-select"
-              className="mb-1 block text-xs font-medium text-muted"
+              className="mb-1 block text-body-sm font-medium text-muted"
             >
               {config.regionMetricThreshold ? "Eligible region" : "Target region"}
             </label>
@@ -132,7 +132,7 @@ export function EmergencyMechanicPanel({
               disabled={!canDeclare}
               onChange={(event) => setSelectedRegion(event.target.value)}
               className={[
-                "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm text-foreground",
+                "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body text-foreground",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                 !canDeclare ? "cursor-not-allowed opacity-50" : "",
               ]
@@ -165,7 +165,7 @@ export function EmergencyMechanicPanel({
           </Button>
           {feedback && (
             <span
-              className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+              className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
             >
               {feedback.message}
             </span>
@@ -174,7 +174,7 @@ export function EmergencyMechanicPanel({
       </div>
 
       {!canDeclare && canAct && (
-        <p className="mt-3 text-xs text-muted">
+        <p className="mt-3 text-body-sm text-muted">
           No {actionCopy.plural} remaining. {MINISTERIAL_ACTION_RESET_HINT}
         </p>
       )}

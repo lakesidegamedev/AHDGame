@@ -69,14 +69,14 @@ export function TreasuryOverview({
                   />
                 </svg>
               </div>
-              <div className="text-sm font-bold text-muted">National war chest</div>
+              <div className="text-body font-bold text-muted">National war chest</div>
             </div>
 
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-foreground tabular-nums tracking-tight">
+              <div className="text-display sm:text-display font-bold text-foreground tabular-nums tracking-tight">
                 {fmt(party.treasury, party.countryId)}
               </div>
-              <p className="text-xs text-muted mt-2 max-w-md leading-relaxed">
+              <p className="text-body-sm text-muted mt-2 max-w-md leading-relaxed">
                 {party.treasury > 100000
                   ? "A formidable war chest. The party can fund operations across all 50 states."
                   : party.treasury > 30000
@@ -88,15 +88,15 @@ export function TreasuryOverview({
 
           {(isInParty || isAdmin) && (
             <div className="flex flex-col sm:items-end gap-1 rounded-lg border border-card-border/50 bg-background/50 p-4 min-w-[180px]">
-              <span className="text-xs font-medium text-muted">Net income</span>
+              <span className="text-body-sm font-medium text-muted">Net income</span>
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-bold tabular-nums ${netIncome >= 0 ? "text-success" : "text-error"}`}
+                  className={`text-heading font-bold tabular-nums ${netIncome >= 0 ? "text-success" : "text-error"}`}
                 >
                   {netIncome >= 0 ? "+" : "-"}
                   {fmt(Math.abs(netIncome), party.countryId)}
                 </span>
-                <span className="text-xs text-muted font-medium">/ hr</span>
+                <span className="text-body-sm text-muted font-medium">/ hr</span>
               </div>
 
               {netIncome < 0 && (
@@ -121,8 +121,8 @@ export function TreasuryOverview({
       {(isInParty || isAdmin) && revenue > 0 && totalSpending > 0 && (
         <div className="px-6 py-4 border-b border-card-border/40 bg-card/50">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-muted">Budget allocation</div>
-            <div className="text-xs font-medium text-muted tabular-nums">
+            <div className="text-body-sm font-semibold text-muted">Budget allocation</div>
+            <div className="text-body-sm font-medium text-muted tabular-nums">
               Total revenue: {fmt(revenue, party.countryId)}/hr
             </div>
           </div>
@@ -163,7 +163,7 @@ export function TreasuryOverview({
             />
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-4 text-xs font-medium text-muted">
+          <div className="mt-3 flex flex-wrap gap-4 text-body-sm font-medium text-muted">
             {gotvPct > 0 && (
               <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary-foreground border border-primary/20">
                 <span className="h-2 w-2 rounded-full bg-primary" />
@@ -198,7 +198,7 @@ export function TreasuryOverview({
 
       {/* Financial Summary */}
       <div className="divide-y divide-card-border/40">
-        <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+        <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
           <span className="text-foreground font-medium flex items-center gap-2">
             National tax rate
             <Tooltip text="The percentage of each member's hourly income collected by the national party. Set by the party chair." />
@@ -208,7 +208,7 @@ export function TreasuryOverview({
           </span>
         </div>
 
-        <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+        <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
           <span className="text-foreground font-medium flex items-center gap-2">
             Revenue / hr
             <Tooltip text="Estimated hourly income deposited into this treasury, based on membership and tax rate." />
@@ -221,11 +221,11 @@ export function TreasuryOverview({
               {fmt(Math.abs(party.expectedHourlyIncome), party.countryId)}
             </span>
           ) : (
-            <span className="text-muted text-xs italic">Members only</span>
+            <span className="text-muted text-body-sm italic">Members only</span>
           )}
         </div>
 
-        <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+        <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
           <span className="text-foreground font-medium flex items-center gap-2">
             GOTV spending / hr
             <Tooltip text="Amount automatically spent each turn to boost voter turnout among aligned demographics." />
@@ -234,11 +234,11 @@ export function TreasuryOverview({
             {party.gotvBudgetPercent > 0 ? (
               <div className="flex items-center gap-2">
                 <span>-{fmt(party.gotvEstimatedSpend, party.countryId)}</span>
-                <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
+                <span className="text-body-sm text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
                   {party.gotvBudgetPercent}%
                 </span>
                 {gotvTargetLabel && (
-                  <span className="text-xs text-muted hidden sm:inline-block">
+                  <span className="text-body-sm text-muted hidden sm:inline-block">
                     · {gotvTargetLabel}
                   </span>
                 )}
@@ -250,7 +250,7 @@ export function TreasuryOverview({
         </div>
 
         {party.suppressionBudgetPercent > 0 && (
-          <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+          <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
             <span className="text-foreground font-medium flex items-center gap-2">
               Suppression spending / hr
               <Tooltip text="Amount automatically spent each turn on voter intimidation / misinformation to reduce opponent turnout." />
@@ -258,11 +258,11 @@ export function TreasuryOverview({
             <span className="tabular-nums font-medium text-error">
               <div className="flex items-center gap-2">
                 <span>-{fmt(party.suppressionEstimatedSpend, party.countryId)}</span>
-                <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
+                <span className="text-body-sm text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
                   {party.suppressionBudgetPercent}%
                 </span>
                 {suppressionTargetLabel && (
-                  <span className="text-xs text-muted hidden sm:inline-block">
+                  <span className="text-body-sm text-muted hidden sm:inline-block">
                     · {suppressionTargetLabel}
                   </span>
                 )}
@@ -272,7 +272,7 @@ export function TreasuryOverview({
         )}
 
         {party.registrationBudgetPercent > 0 && (
-          <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+          <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
             <span className="text-foreground font-medium flex items-center gap-2">
               Voter registration spending / hr
               <Tooltip text="Amount automatically spent each turn on voter registration drives." />
@@ -280,7 +280,7 @@ export function TreasuryOverview({
             <span className="tabular-nums font-medium text-error">
               <div className="flex items-center gap-2">
                 <span>-{fmt(party.registrationEstimatedSpend, party.countryId)}</span>
-                <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
+                <span className="text-body-sm text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
                   {party.registrationBudgetPercent}%
                 </span>
               </div>
@@ -293,7 +293,7 @@ export function TreasuryOverview({
             const atPsCap =
               party.politicalStrength + NATIONAL_PASSIVE_PS_PER_TURN >= party.effectivePsCap;
             return (
-              <div className="px-6 py-4 flex items-center justify-between text-sm group hover:bg-card-elevated/20 transition-colors">
+              <div className="px-6 py-4 flex items-center justify-between text-body group hover:bg-card-elevated/20 transition-colors">
                 <span className="text-foreground font-medium flex items-center gap-2">
                   Political Strength purchases / hr
                   <Tooltip text="Treasury money spent each turn buying Political Strength (PS) for the national party, up to your PS budget. Nothing is spent while the party's PS is already at its maximum." />
@@ -301,12 +301,12 @@ export function TreasuryOverview({
                 <span className="tabular-nums font-medium text-error">
                   <div className="flex items-center gap-2">
                     {atPsCap && psSpend <= 0 && (
-                      <span className="text-xs font-normal text-muted px-1.5 py-0.5 rounded bg-warning/10 border border-warning/30">
+                      <span className="text-body-sm font-normal text-muted px-1.5 py-0.5 rounded bg-warning/10 border border-warning/30">
                         PS full
                       </span>
                     )}
                     <span>-{fmt(psSpend, party.countryId)}</span>
-                    <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
+                    <span className="text-body-sm text-muted px-1.5 py-0.5 rounded bg-card-elevated border border-card-border/50">
                       {fmt(party.psInvestmentBudget, party.countryId)}
                     </span>
                   </div>
@@ -315,7 +315,7 @@ export function TreasuryOverview({
             );
           })()}
 
-        <div className="px-6 py-4 flex items-center justify-between text-sm font-bold bg-card-muted/20">
+        <div className="px-6 py-4 flex items-center justify-between text-body font-bold bg-card-muted/20">
           <span className="flex items-center gap-2">
             Net income / hr
             <Tooltip text="Revenue minus get-out-the-vote, suppression, voter registration, and Political Strength spending. The actual amount added to the treasury each turn." />
@@ -326,7 +326,7 @@ export function TreasuryOverview({
               {fmt(Math.abs(netIncome), party.countryId)} / hr
             </span>
           ) : (
-            <span className="text-muted text-xs italic">Members only</span>
+            <span className="text-muted text-body-sm italic">Members only</span>
           )}
         </div>
       </div>

@@ -26,7 +26,7 @@ export function CommodityBoardBody({
           <Link
             href={`/commodity/${row.commodity}`}
             onClick={onNavigate}
-            className="flex items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+            className="flex items-center gap-2 rounded px-1 py-1 text-body-sm hover:bg-white/5"
           >
             <span className="min-w-0 flex-1 truncate text-foreground">{row.label}</span>
             {row.series.length > 1 && (

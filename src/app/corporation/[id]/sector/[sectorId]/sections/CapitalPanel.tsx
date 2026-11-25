@@ -14,7 +14,7 @@ function fmt(n: number | null | undefined, digits = 2): string {
 function TileInfo({ children }: { children: ReactNode }) {
   return (
     <InfoTooltip trigger={<span className="cursor-help text-muted">ⓘ</span>} width={260}>
-      <p className="text-muted text-xs normal-case">{children}</p>
+      <p className="text-muted text-body-sm normal-case">{children}</p>
     </InfoTooltip>
   );
 }
@@ -40,12 +40,12 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h2 className="text-lg font-bold text-foreground">Capital &amp; unit economics</h2>
+        <h2 className="text-heading font-bold text-foreground">Capital &amp; unit economics</h2>
         {coverage != null && (
           <InfoTooltip
             trigger={
               <span
-                className={`text-xs font-semibold tabular-nums underline decoration-dotted underline-offset-2 ${
+                className={`text-body-sm font-semibold tabular-nums underline decoration-dotted underline-offset-2 ${
                   coverage >= 0.999
                     ? "text-success"
                     : coverage >= 0.8
@@ -58,14 +58,14 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
             }
             width={280}
           >
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               How much of the output you need your equipment can actually make. Below 100% means
               people want more than you can produce, so invest.
             </p>
           </InfoTooltip>
         )}
       </div>
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         This sector owns the equipment it produces with. Your growth budget is <b>investment</b>: it
         builds more capacity. Stop investing and that capacity slowly wears out, and your output
         falls with it.
@@ -79,8 +79,8 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
               Productive capacity: the most output this sector&apos;s capital can produce per day.
             </TileInfo>
           </div>
-          <div className="text-sm font-bold tabular-nums mt-0.5">
-            {fmt(capital.stock, 0)} <span className="text-[10px] text-muted">units/day</span>
+          <div className="text-body font-bold tabular-nums mt-0.5">
+            {fmt(capital.stock, 0)} <span className="text-body-sm text-muted">units/day</span>
           </div>
         </div>
         <div className="rounded-lg border border-card-border bg-background/40 p-3">
@@ -90,8 +90,9 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
               What your revenue base implies you&apos;d produce at full throughput today.
             </TileInfo>
           </div>
-          <div className="text-sm font-bold tabular-nums mt-0.5">
-            {fmt(capital.impliedUnits, 0)} <span className="text-[10px] text-muted">units/day</span>
+          <div className="text-body font-bold tabular-nums mt-0.5">
+            {fmt(capital.impliedUnits, 0)}{" "}
+            <span className="text-body-sm text-muted">units/day</span>
           </div>
         </div>
         <div className="rounded-lg border border-card-border bg-background/40 p-3">
@@ -101,8 +102,9 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
               Productive capacity required by today&apos;s potential output. The remainder is spare.
             </TileInfo>
           </div>
-          <div className="text-sm font-bold tabular-nums mt-0.5">
-            {fmt(capital.capacityUsed, 0)} <span className="text-[10px] text-muted">units/day</span>
+          <div className="text-body font-bold tabular-nums mt-0.5">
+            {fmt(capital.capacityUsed, 0)}{" "}
+            <span className="text-body-sm text-muted">units/day</span>
           </div>
         </div>
         <div className="rounded-lg border border-card-border bg-background/40 p-3">
@@ -113,16 +115,16 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
               cover this to stand still.
             </TileInfo>
           </div>
-          <div className="text-sm font-bold tabular-nums mt-0.5">
+          <div className="text-body font-bold tabular-nums mt-0.5">
             −{(capital.depreciationPerTurn * 100).toFixed(2)}
-            <span className="text-[10px] text-muted">%/turn</span>
+            <span className="text-body-sm text-muted">%/turn</span>
           </div>
         </div>
       </div>
 
       <div className="text-body-sm font-medium text-muted mb-1">Profit and loss on one unit</div>
       <AnchorUnitNote className="mb-2" />
-      <div className="space-y-1 text-sm">
+      <div className="space-y-1 text-body">
         <div className="flex justify-between tabular-nums">
           <span className="text-muted">Market price / unit</span>
           <span className="font-medium">₳ {fmt(unit.price)}</span>
@@ -150,7 +152,7 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
             }
             width={300}
           >
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               Price minus labour, inputs and the cost of your equipment, for each unit you make. The
               market sets this, not you. It moves when input prices spike, wages rise, or your
               machines sit idle.
@@ -177,7 +179,7 @@ export default function CapitalPanel({ capital }: CapitalPanelProps) {
       </div>
 
       {coverage == null && unit.margin == null && (
-        <p className="mt-3 text-[11px] italic text-muted">
+        <p className="mt-3 text-body-sm italic text-muted">
           Capacity and unit economics appear after the next turn.
         </p>
       )}

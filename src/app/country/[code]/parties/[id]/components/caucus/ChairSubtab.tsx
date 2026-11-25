@@ -142,7 +142,7 @@ export function ChairSubtab({
 
   if (!isChair) {
     return (
-      <div className="rounded-lg border border-card-border bg-card p-5 text-center text-sm text-muted">
+      <div className="rounded-lg border border-card-border bg-card p-5 text-center text-body text-muted">
         Only the Caucus Chair can edit settings here. View positions, the roster, and caucus details
         via the other sub-tabs.
       </div>
@@ -316,14 +316,14 @@ export function ChairSubtab({
     <div className="space-y-4">
       {/* Settings */}
       <div className="space-y-3 rounded-lg border border-card-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-muted">Caucus settings</h3>
+        <h3 className="text-body-lg font-semibold text-muted">Caucus settings</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-body-sm text-muted">
             Name
             <input
               value={name}
               onChange={(e) => dispatch({ type: "SET_NAME", value: e.target.value })}
-              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             />
           </label>
           <label className="text-body-sm text-muted">
@@ -335,7 +335,7 @@ export function ChairSubtab({
                 onChange={(e) => dispatch({ type: "SET_COLOR", value: e.target.value })}
                 className="h-9 w-12 rounded border border-card-border bg-background"
               />
-              <span className="font-mono text-xs normal-case tracking-normal">{color}</span>
+              <span className="font-mono text-body-sm normal-case tracking-normal">{color}</span>
             </div>
           </label>
         </div>
@@ -344,7 +344,7 @@ export function ChairSubtab({
           <input
             value={motto}
             onChange={(e) => dispatch({ type: "SET_MOTTO", value: e.target.value })}
-            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             maxLength={120}
           />
         </label>
@@ -356,7 +356,7 @@ export function ChairSubtab({
             onChange={(e) => dispatch({ type: "SET_DISCORD_INVITE_URL", value: e.target.value })}
             placeholder="https://discord.gg/your-invite"
             aria-invalid={hasDiscordValidationError}
-            className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm normal-case tracking-normal ${
+            className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-body normal-case tracking-normal ${
               hasDiscordValidationError ? "border-error/60" : "border-card-border"
             }`}
           />
@@ -366,7 +366,7 @@ export function ChairSubtab({
           <textarea
             value={description}
             onChange={(e) => dispatch({ type: "SET_DESCRIPTION", value: e.target.value })}
-            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             rows={2}
             maxLength={500}
           />
@@ -397,7 +397,7 @@ export function ChairSubtab({
             type="button"
             onClick={saveMeta}
             disabled={savingMeta || hasDiscordValidationError}
-            className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+            className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
           >
             {savingMeta ? "Saving..." : "Save changes"}
           </button>
@@ -408,8 +408,8 @@ export function ChairSubtab({
       <div className="space-y-3 rounded-lg border border-card-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-muted">Recruit NPP to caucus</h3>
-            <p className="mt-2 text-sm text-muted">
+            <h3 className="text-body-lg font-semibold text-muted">Recruit NPP to caucus</h3>
+            <p className="mt-2 text-body text-muted">
               Caucus recruitment is gated by the Chair&apos;s relationship with that NPP.
               Relationship must be at least 60, and the caucus goes on a 12-hour cooldown after a
               successful NPP recruitment.
@@ -428,7 +428,7 @@ export function ChairSubtab({
             value={selectedRecruitNppId}
             onChange={(e) => dispatch({ type: "SET_SELECTED_RECRUIT_NPP", id: e.target.value })}
             disabled={loadingRecruitableNpps || recruitableNpps.length === 0}
-            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal disabled:opacity-50"
+            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal disabled:opacity-50"
           >
             {recruitableNpps.length === 0 ? (
               <option value="">
@@ -450,7 +450,7 @@ export function ChairSubtab({
           <div className="rounded-lg border border-card-border bg-background/50 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold">{selectedRecruitNpp.name}</div>
+                <div className="text-body font-semibold">{selectedRecruitNpp.name}</div>
                 <div className="mt-1 text-body-sm text-muted">
                   {displayCanadianRegionCode(selectedRecruitNpp.homeState)}
                   {selectedRecruitNpp.currentOfficeLabel
@@ -489,7 +489,7 @@ export function ChairSubtab({
               !selectedRecruitNpp.eligible ||
               !selectedRecruitNppId
             }
-            className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+            className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
           >
             {recruitingNpp ? "Recruiting..." : "Recruit NPP"}
           </button>
@@ -499,8 +499,8 @@ export function ChairSubtab({
       {/* Fund transfers */}
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="space-y-3 rounded-lg border border-card-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-muted">Send to caucus member</h3>
-          <p className="text-sm text-muted">
+          <h3 className="text-body-lg font-semibold text-muted">Send to caucus member</h3>
+          <p className="text-body text-muted">
             Move caucus funds directly to an active player member&apos;s campaign account.
           </p>
           <p className="text-body-sm text-muted">
@@ -532,7 +532,7 @@ export function ChairSubtab({
               value={selectedMemberId}
               onChange={(e) => dispatch({ type: "SET_SELECTED_MEMBER", id: e.target.value })}
               disabled={loadingMembers || memberOptions.length === 0}
-              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal disabled:opacity-50"
+              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal disabled:opacity-50"
             >
               {memberOptions.length === 0 ? (
                 <option value="">
@@ -556,7 +556,7 @@ export function ChairSubtab({
               value={memberSendAmount}
               onChange={(e) => dispatch({ type: "SET_MEMBER_SEND_AMOUNT", value: e.target.value })}
               placeholder="1000"
-              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             />
           </label>
           <div className="text-body-sm text-muted">
@@ -572,7 +572,7 @@ export function ChairSubtab({
                 !selectedMemberId ||
                 Number(memberSendAmount) < 1000
               }
-              className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+              className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
             >
               {sendingFunds ? "Sending..." : "Send funds"}
             </button>
@@ -580,8 +580,8 @@ export function ChairSubtab({
         </div>
 
         <div className="space-y-3 rounded-lg border border-card-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-muted">Transfer to national party</h3>
-          <p className="text-sm text-muted">
+          <h3 className="text-body-lg font-semibold text-muted">Transfer to national party</h3>
+          <p className="text-body text-muted">
             Return caucus treasury funds to the parent National Party treasury.
           </p>
           <label className="block text-body-sm text-muted">
@@ -595,7 +595,7 @@ export function ChairSubtab({
                 dispatch({ type: "SET_NATIONAL_TRANSFER_AMOUNT", value: e.target.value })
               }
               placeholder="1000"
-              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+              className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             />
           </label>
           <div className="text-body-sm text-muted">
@@ -606,7 +606,7 @@ export function ChairSubtab({
               type="button"
               onClick={transferFundsToNationalParty}
               disabled={transferringFunds || Number(nationalTransferAmount) < 1000}
-              className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+              className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
             >
               {transferringFunds ? "Transferring..." : "Transfer funds"}
             </button>
@@ -616,9 +616,9 @@ export function ChairSubtab({
 
       {/* Policy positions */}
       <div className="space-y-3 rounded-lg border border-card-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-muted">Key policy positions</h3>
+        <h3 className="text-body-lg font-semibold text-muted">Key policy positions</h3>
         {detail.positions.length === 0 ? (
-          <p className="text-sm italic text-muted">
+          <p className="text-body italic text-muted">
             No positions yet - add the caucus&apos;s stated stances below.
           </p>
         ) : (
@@ -638,7 +638,7 @@ export function ChairSubtab({
                   {position.weight}
                 </span>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">
+                  <div className="text-body font-semibold">
                     {position.topic} <span className="text-muted">to</span>{" "}
                     <span className="text-primary">{position.stance}</span>
                   </div>
@@ -663,14 +663,14 @@ export function ChairSubtab({
               value={newTopic}
               onChange={(e) => dispatch({ type: "SET_NEW_TOPIC", value: e.target.value })}
               placeholder="Topic (e.g. Tax policy)"
-              className="rounded-md border border-card-border bg-background px-3 py-2 text-sm"
+              className="rounded-md border border-card-border bg-background px-3 py-2 text-body"
               maxLength={80}
             />
             <input
               value={newStance}
               onChange={(e) => dispatch({ type: "SET_NEW_STANCE", value: e.target.value })}
               placeholder="Stance (e.g. Cut and flatten)"
-              className="rounded-md border border-card-border bg-background px-3 py-2 text-sm"
+              className="rounded-md border border-card-border bg-background px-3 py-2 text-body"
               maxLength={80}
             />
           </div>
@@ -678,7 +678,7 @@ export function ChairSubtab({
             value={newNote}
             onChange={(e) => dispatch({ type: "SET_NEW_NOTE", value: e.target.value })}
             placeholder="Optional one-line elaboration"
-            className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-body"
             maxLength={280}
           />
           <div className="flex items-center gap-2">
@@ -688,7 +688,7 @@ export function ChairSubtab({
                   key={weight}
                   type="button"
                   onClick={() => dispatch({ type: "SET_NEW_WEIGHT", value: weight })}
-                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  className={`rounded-md border px-3 py-1.5 text-body-sm font-semibold transition-colors ${
                     newWeight === weight
                       ? "border-primary bg-primary/15 text-primary"
                       : "border-card-border text-muted hover:text-foreground"
@@ -702,7 +702,7 @@ export function ChairSubtab({
               type="button"
               onClick={addPosition}
               disabled={!newTopic.trim() || !newStance.trim() || addingPosition}
-              className="ml-auto rounded-md border border-primary/60 bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+              className="ml-auto rounded-md border border-primary/60 bg-primary/15 px-3 py-1.5 text-body-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
             >
               {addingPosition ? "Adding..." : "Add position"}
             </button>

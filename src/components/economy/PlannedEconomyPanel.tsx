@@ -98,13 +98,13 @@ export function PlannedEconomyPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-bold text-foreground">Planned economy</h3>
+            <h3 className="text-body-lg font-bold text-foreground">Planned economy</h3>
             <Badge color={view.regime === "command" ? "warning" : "info"} variant="subtle">
               {view.regimeLabel}
             </Badge>
             <Tooltip content={view.regimeExplainer} label="About this economic regime" />
           </div>
-          <p className="mt-1.5 text-[11px] leading-snug text-muted">{view.regimeExplainer}</p>
+          <p className="mt-1.5 text-body-sm leading-snug text-muted">{view.regimeExplainer}</p>
         </div>
       </div>
 
@@ -118,9 +118,7 @@ export function PlannedEconomyPanel({
                 label={`About ${m.label}`}
               />
             </div>
-            <div className="mt-0.5 text-[15px] font-bold tabular-nums text-foreground">
-              {m.value}
-            </div>
+            <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">{m.value}</div>
             <IndexBar value={m.bar} />
           </div>
         ))}

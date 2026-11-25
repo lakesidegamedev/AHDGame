@@ -93,16 +93,16 @@ export function InfluenceQueueDisplay({
   return (
     <div className="mt-4 rounded-lg border border-card-border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold">
+        <h3 className="text-body-lg font-semibold">
           Action queue {queue.length > 0 && `(${queue.length})`}
         </h3>
         {queue.length > 0 && !results && (
-          <button onClick={onClear} className="text-xs text-muted hover:text-red-400">
+          <button onClick={onClear} className="text-body-sm text-muted hover:text-red-400">
             Clear all
           </button>
         )}
         {results && (
-          <button onClick={onClear} className="text-xs text-muted hover:text-primary">
+          <button onClick={onClear} className="text-body-sm text-muted hover:text-primary">
             New queue
           </button>
         )}
@@ -114,7 +114,7 @@ export function InfluenceQueueDisplay({
           {results.map((r, i) => (
             <div
               key={i}
-              className={`rounded-md px-3 py-2 text-xs ${
+              className={`rounded-md px-3 py-2 text-body-sm ${
                 r.outcome === "success"
                   ? "bg-green-500/20 text-green-400"
                   : r.outcome === "backfire"
@@ -138,7 +138,7 @@ export function InfluenceQueueDisplay({
             {queue.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-xs"
+                className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-body-sm"
               >
                 <div className="flex-1 min-w-0">
                   <span className="font-medium">{item.actionName}</span>
@@ -158,14 +158,14 @@ export function InfluenceQueueDisplay({
 
           {/* Total cost */}
           <div className="rounded-md bg-background p-3 mb-3">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-body-sm">
               <span className="text-muted">Total action points:</span>
               <span className={totalActions > availableActions ? "text-red-400 font-medium" : ""}>
                 {totalActions} / {availableActions}
               </span>
             </div>
             {(totalFunds > 0 || availableFunds > 0) && (
-              <div className="flex items-center justify-between text-xs mt-1">
+              <div className="flex items-center justify-between text-body-sm mt-1">
                 <span className="text-muted">Total funds:</span>
                 <span
                   className={
@@ -183,7 +183,7 @@ export function InfluenceQueueDisplay({
           <button
             onClick={onExecute}
             disabled={executing || !canAfford || queue.length === 0}
-            className="w-full rounded-lg py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-lg py-2 text-body font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: partyColor }}
           >
             {executing
@@ -203,7 +203,7 @@ function ResultsSummary({ results }: { results: QueueResult[] }) {
   const errors = results.filter((r) => r.outcome === "error").length;
 
   return (
-    <div className="rounded-md bg-background p-2 text-xs text-muted">
+    <div className="rounded-md bg-background p-2 text-body-sm text-muted">
       <span className="font-medium">Summary:</span>{" "}
       {successes > 0 && <span className="text-green-400">{successes} success </span>}
       {failures > 0 && <span className="text-yellow-400">{failures} failure </span>}

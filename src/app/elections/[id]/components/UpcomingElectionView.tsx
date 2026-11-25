@@ -31,12 +31,14 @@ export function UpcomingElectionView({
       {election.prevElectionId && (
         <div className="rounded-xl border border-card-border bg-card p-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">Previous election results</p>
-            <p className="text-xs text-muted mt-0.5">View how this race concluded last cycle</p>
+            <p className="text-body font-medium">Previous election results</p>
+            <p className="text-body-sm text-muted mt-0.5">
+              View how this race concluded last cycle
+            </p>
           </div>
           <Link
             href={`/elections/${election.prevElectionId}`}
-            className="shrink-0 rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-card-elevated/80 transition-colors"
+            className="shrink-0 rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-body text-muted hover:text-foreground hover:bg-card-elevated/80 transition-colors"
           >
             View results →
           </Link>
@@ -66,15 +68,17 @@ export function UpcomingElectionView({
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-card-border p-8 text-center">
-          <p className="text-sm text-muted">No candidates have declared yet.</p>
-          <p className="text-xs text-muted/60 mt-1">Candidates can enter once the primary opens.</p>
+          <p className="text-body text-muted">No candidates have declared yet.</p>
+          <p className="text-body-sm text-muted/60 mt-1">
+            Candidates can enter once the primary opens.
+          </p>
         </div>
       )}
 
       {countryHasFeature("usUi", election.countryId) &&
         election.electionType === "president" &&
         election.myCharId && (
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             You can still build Campaign Presence on this page before the primary opens.
           </p>
         )}

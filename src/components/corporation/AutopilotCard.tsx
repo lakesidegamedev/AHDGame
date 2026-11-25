@@ -76,15 +76,15 @@ export function AutopilotCard({
       }
     >
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {on
             ? "Autopilot sets budgets and dividends each turn, grows plants that sell in small steps once the extra capacity should pay for itself, reduces active capacity at demand-limited plants that lose money, restores it when buyers return, and opens new plants when it has cash to spare. It never sells the plant or its paid capacity. It may adjust active capacity at eligible plants, so a hand-set level there may change next turn. Everything else still works as normal."
             : "Let the corporation run itself. Autopilot sets budgets and dividends, grows plants that sell, reduces active capacity at demand-limited plants that lose money, restores it when buyers return, and opens new plants when it has cash to spare. It never sells the plant or its paid capacity. It may adjust active capacity at eligible plants, so a hand-set level there may change next turn. It also never borrows, picks research, retools, sells or closes plants, or buys rivals; it tells you here when one of those is worth doing. You stay CEO, but a top-10 corporation on autopilot earns the standard CEO influence, not the major tier."}
         </p>
         {!on && confirming && (
           <div className="space-y-2 border-y border-card-border py-2">
-            <p className="text-sm font-medium">Before you turn autopilot on</p>
-            <p className="text-xs text-muted">
+            <p className="text-body font-medium">Before you turn autopilot on</p>
+            <p className="text-body-sm text-muted">
               Autopilot may spend part of the corporation&apos;s cash on new plants. It does this
               gradually: each turn it commits at most {CAPEX_PERCENT}% of the cash above the
               reserve, and adds at most {STEP_PERCENT}% to any one plant, only where the plant is
@@ -105,7 +105,7 @@ export function AutopilotCard({
         )}
         {on && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-card-border py-2">
-            <p className="min-w-0 flex-1 text-xs text-muted">
+            <p className="min-w-0 flex-1 text-body-sm text-muted">
               Autopilot may spend up to {CAPEX_PERCENT}% of the cash above the reserve on new plants
               each turn, at most {STEP_PERCENT}% of a plant&apos;s capacity at a time, and only
               where they should pay off. Builds take many turns to come online.
@@ -116,7 +116,7 @@ export function AutopilotCard({
           </div>
         )}
         {on && autopilot.advisories.length === 0 && (
-          <p className="text-xs text-muted">Nothing needs you right now.</p>
+          <p className="text-body-sm text-muted">Nothing needs you right now.</p>
         )}
         {on && autopilot.advisories.length > 0 && (
           <ul className="divide-y divide-card-border border-y border-card-border">
@@ -126,10 +126,10 @@ export function AutopilotCard({
               return (
                 <li key={advisory.kind} className="flex flex-wrap items-start gap-x-4 gap-y-1 py-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-warning">{copy.title}</p>
-                    <p className="text-xs text-muted">{copy.body(advisory.subject)}</p>
+                    <p className="text-body font-medium text-warning">{copy.title}</p>
+                    <p className="text-body-sm text-muted">{copy.body(advisory.subject)}</p>
                     {turns > 0 && (
-                      <p className="text-[11px] text-muted">
+                      <p className="text-body-sm text-muted">
                         For {turns} {turns === 1 ? "hour" : "hours"}
                       </p>
                     )}

@@ -82,24 +82,24 @@ export function EconomyMasthead({
               {identity.registry}
             </div>
             <h1
-              className={`mt-1.5 text-2xl font-bold leading-[1.1] tracking-tight text-white sm:text-3xl`}
+              className={`mt-1.5 text-heading font-bold leading-[1.1] tracking-tight text-white sm:text-display`}
             >
               {identity.title}
               {identity.titleEn && (
-                <span className="ml-2 align-middle text-lg font-semibold text-white/55 sm:text-xl">
+                <span className="ml-2 align-middle text-heading font-semibold text-white/55 sm:text-heading">
                   ({identity.titleEn})
                 </span>
               )}
             </h1>
             <div
-              className="mt-0.5 flex items-center gap-2 text-sm"
+              className="mt-0.5 flex items-center gap-2 text-body"
               style={{ color: "color-mix(in srgb, var(--stat-soft) 90%, transparent)" }}
             >
               {identity.office}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold text-white"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-body-sm font-semibold text-white"
                 style={{
                   borderColor: "color-mix(in srgb, var(--stat) 40%, transparent)",
                   background: "color-mix(in srgb, var(--stat) 25%, transparent)",
@@ -107,16 +107,16 @@ export function EconomyMasthead({
               >
                 National rollup
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-xs font-medium text-white/80">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/80">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-success" aria-hidden />
                 Live · turn {currentTurn}
               </span>
-              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/10 bg-black px-2.5 py-0.5 text-xs font-medium text-white/60">
+              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/10 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/60">
                 Public record
               </span>
               {verdict && (
                 <span
-                  className="inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.14em]"
+                  className="inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 font-mono text-body-sm font-bold tracking-[0.14em]"
                   style={{
                     borderColor: "color-mix(in srgb, var(--stat) 55%, transparent)",
                     background: "color-mix(in srgb, var(--stat) 10%, transparent)",
@@ -128,13 +128,13 @@ export function EconomyMasthead({
               )}
               <Link
                 href={budgetUrl(countryId)}
-                className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white hover:bg-white/20"
+                className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-2.5 py-0.5 text-body-sm font-semibold text-white hover:bg-white/20"
               >
                 National budget &rarr;
               </Link>
               <Link
                 href={`/country/${countryId.toLowerCase()}/government-contracts`}
-                className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white hover:bg-white/20"
+                className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-2.5 py-0.5 text-body-sm font-semibold text-white hover:bg-white/20"
               >
                 Government Contracts &rarr;
               </Link>
@@ -146,7 +146,7 @@ export function EconomyMasthead({
         {verdict && reasoning && (
           <div className="relative mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-white/10 pt-3.5">
             <span className="text-body-sm font-medium text-white/45">Verdict</span>
-            <span className="text-[11.5px] text-white/65">{reasoning}</span>
+            <span className="text-body-sm text-white/65">{reasoning}</span>
           </div>
         )}
       </div>

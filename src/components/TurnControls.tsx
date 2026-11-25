@@ -72,7 +72,7 @@ function ControlBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:scale-105 ${cls[variant]}`}
+      className={`rounded-lg border px-4 py-2.5 text-body font-semibold transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:scale-105 ${cls[variant]}`}
     >
       {children}
     </button>
@@ -98,7 +98,7 @@ function StatusBadge({
   return (
     <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 ${bgTint}`}>
       <span className={`h-2.5 w-2.5 rounded-full ${color} ${pulse ? "animate-pulse" : ""}`} />
-      <span className={`text-sm font-semibold ${textColor}`}>{label}</span>
+      <span className={`text-body font-semibold ${textColor}`}>{label}</span>
     </div>
   );
 }
@@ -325,7 +325,7 @@ export function TurnControls() {
       {isProcessing && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/95 backdrop-blur-sm px-10">
           <div className="w-full max-w-sm space-y-3">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-body">
               <span className="font-medium text-foreground">
                 {operationMode === "batch" ? "Processing turns…" : "Processing turn…"}
               </span>
@@ -339,7 +339,7 @@ export function TurnControls() {
               />
             </div>
 
-            <p className="truncate text-xs text-muted">
+            <p className="truncate text-body-sm text-muted">
               {operationMode === "batch" && batchProgress
                 ? `Turn ${batchProgress.completed} of ${batchProgress.total}${
                     currentPhase ? ` · ${currentPhase}` : ""
@@ -354,13 +354,15 @@ export function TurnControls() {
       <div className="border-b border-card-border bg-gradient-to-r from-primary/5 to-transparent px-6 py-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Game clock</h2>
-            <p className="text-xs text-muted">Real-time turn management</p>
+            <h2 className="text-heading font-bold text-foreground">Game clock</h2>
+            <p className="text-body-sm text-muted">Real-time turn management</p>
           </div>
           {gameState && (
             <div className="text-right">
-              <div className="text-3xl font-bold text-primary">Turn {gameState.currentTurn}</div>
-              <div className="text-sm text-muted">
+              <div className="text-display font-bold text-primary">
+                Turn {gameState.currentTurn}
+              </div>
+              <div className="text-body text-muted">
                 {rawTurnToLarpDate(gameState.currentTurn, gameState.startingYear, {
                   preIterationTurns: gameState.preIterationTurns,
                 })}
@@ -419,7 +421,7 @@ export function TurnControls() {
               color="bg-yellow-500"
               pulse
             />
-            <div className="ml-auto flex flex-col items-end text-xs text-muted">
+            <div className="ml-auto flex flex-col items-end text-body-sm text-muted">
               {gameState.isProcessing && gameState.processingPhase && (
                 <span>
                   Phase: {gameState.processingPhase}
@@ -458,12 +460,12 @@ export function TurnControls() {
 
       {gameState?.pauseKind === "auto-drift" && (
         <div className="border-b border-card-border bg-error/5 px-6 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-error">
+          <div className="text-body-sm font-semibold uppercase tracking-wider text-error">
             Cron auto-paused
           </div>
-          <div className="mt-1 text-sm text-error/90">{gameState.pauseReason}</div>
+          <div className="mt-1 text-body text-error/90">{gameState.pauseReason}</div>
           {gameState.pausedAt && (
-            <div className="mt-0.5 text-[11px] text-error/70">
+            <div className="mt-0.5 text-body-sm text-error/70">
               Paused at {formatDate(gameState.pausedAt)}
             </div>
           )}
@@ -474,17 +476,17 @@ export function TurnControls() {
           once Forex is enabled and the legacy "Enable Forex" button hides. */}
       <div className="border-b border-card-border px-6 py-4">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-muted">Feature toggles</h3>
-          <span className="text-[10px] text-muted">Global game settings</span>
+          <h3 className="text-body-lg font-semibold text-muted">Feature toggles</h3>
+          <span className="text-body-sm text-muted">Global game settings</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* Fast mode */}
           <div className="flex items-center justify-between rounded-lg border border-card-border bg-background/40 px-4 py-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Fast mode</span>
+                <span className="text-body font-semibold text-foreground">Fast mode</span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-body-sm font-semibold ${
                     gameState?.fastMode
                       ? "bg-purple-500/15 text-purple-400"
                       : "bg-muted/15 text-muted"
@@ -493,7 +495,7 @@ export function TurnControls() {
                   {gameState?.fastMode ? "30m turns" : "60m turns"}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 {gameState?.fastMode
                   ? "Turns process every 30 minutes. Click to return to 60-minute cycles."
                   : "Default 60-minute cycles. Click to speed up to 30-minute turns."}
@@ -517,9 +519,9 @@ export function TurnControls() {
           <div className="flex items-center justify-between rounded-lg border border-card-border bg-background/40 px-4 py-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Random events</span>
+                <span className="text-body font-semibold text-foreground">Random events</span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-body-sm font-semibold ${
                     gameState?.playerRandomEventsEnabled
                       ? "bg-amber-500/15 text-amber-500"
                       : "bg-muted/15 text-muted"
@@ -528,7 +530,7 @@ export function TurnControls() {
                   {gameState?.playerRandomEventsEnabled ? "Enabled" : "Disabled"}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 {gameState?.playerRandomEventsEnabled
                   ? "Approved event templates fire each turn. Disabling stops new offers; pending events still resolve."
                   : "Player random events are off. Approved templates fire on the next turn cycle once enabled."}
@@ -656,12 +658,12 @@ export function TurnControls() {
               )
             }
             disabled={loading}
-            className="w-14 border-r border-card-border bg-transparent px-3 py-2 text-center text-sm font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 disabled:opacity-40"
+            className="w-14 border-r border-card-border bg-transparent px-3 py-2 text-center text-body font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 disabled:opacity-40"
           />
           <button
             onClick={handleBatchTurns}
             disabled={loading || !batchCount}
-            className="px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
+            className="px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
           >
             Batch
           </button>
@@ -713,11 +715,11 @@ export function TurnControls() {
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          <span className="text-base font-semibold text-green-400">
+          <span className="text-body-lg font-semibold text-green-400">
             {lastCompletion.turns === 1
               ? "Turn complete"
               : `${lastCompletion.turns} turns complete`}
-            <span className="ml-2 text-sm opacity-70">({lastCompletion.durationSeconds}s)</span>
+            <span className="ml-2 text-body opacity-70">({lastCompletion.durationSeconds}s)</span>
           </span>
         </div>
       )}
@@ -725,7 +727,7 @@ export function TurnControls() {
       {/* Message */}
       {message && (
         <div className="px-6 py-3">
-          <span className={`rounded-lg px-3 py-2 text-sm ${getMessageStyle(message)}`}>
+          <span className={`rounded-lg px-3 py-2 text-body ${getMessageStyle(message)}`}>
             {message}
           </span>
         </div>
@@ -734,7 +736,7 @@ export function TurnControls() {
       {/* Help */}
       {showHelp && (
         <div className="border-t border-card-border bg-background/50 px-6 py-4">
-          <p className="text-sm leading-relaxed text-muted">
+          <p className="text-body leading-relaxed text-muted">
             <strong className="text-foreground">Start/Pause cron:</strong> Toggle automatic turn
             processing. <strong className="text-foreground">Pause/Resume corp:</strong> Block sector
             splits/attacks (shares still allowed).{" "}

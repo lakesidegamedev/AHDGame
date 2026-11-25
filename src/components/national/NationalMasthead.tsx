@@ -60,22 +60,22 @@ export function NationalMasthead({
             >
               {id.registry}
             </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h1 className="mt-1 text-heading font-bold tracking-tight text-white sm:text-display">
               {id.name}
             </h1>
             <div
-              className="mt-0.5 flex flex-wrap items-center gap-2 text-base"
+              className="mt-0.5 flex flex-wrap items-center gap-2 text-body-lg"
               style={{ color: hexToRgba(id.accentSoft, 0.92) }}
             >
               {id.native}
             </div>
             {divisionName && (
-              <div className="mt-1.5 text-lg font-semibold text-white/95">{divisionName}</div>
+              <div className="mt-1.5 text-heading font-semibold text-white/95">{divisionName}</div>
             )}
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold text-white"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-sm font-semibold text-white"
                 style={{
                   borderColor: hexToRgba(id.accent, 0.45),
                   background: hexToRgba(id.accent, 0.16),
@@ -84,7 +84,7 @@ export function NationalMasthead({
                 National corporation
               </span>
               <span
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-sm font-medium"
                 style={{
                   borderColor: hexToRgba(id.accent, 0.5),
                   background: hexToRgba(id.accent, 0.1),
@@ -93,10 +93,10 @@ export function NationalMasthead({
               >
                 Wholly state-owned
               </span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-xs font-medium text-white/80">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/80">
                 HQ {id.hqCity}
               </span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/10 bg-black px-2.5 py-0.5 text-xs font-medium text-white/60">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/10 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/60">
                 Not listed · No tradable equity
               </span>
               {children}

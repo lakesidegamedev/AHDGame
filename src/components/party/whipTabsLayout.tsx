@@ -93,7 +93,7 @@ export function WhipTabsLayout({
               role="tab"
               aria-selected={subTarget === t.key}
               onClick={() => setSubTarget(t.key)}
-              className={`whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(subTarget === t.key)}`}
+              className={`whitespace-nowrap px-4 py-1.5 text-body ${pillClass(subTarget === t.key)}`}
             >
               {t.label}
             </button>
@@ -107,7 +107,7 @@ export function WhipTabsLayout({
               <button
                 key={c.key}
                 onClick={() => setUserSelectedChamberKey(c.key)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                className={`px-3 py-1 rounded-full text-body-sm font-medium border transition-colors ${
                   chamberKey === c.key
                     ? "bg-primary/20 border-primary text-primary"
                     : "bg-card border-card-border text-muted hover:text-foreground"

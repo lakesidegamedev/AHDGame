@@ -49,25 +49,25 @@ const MemberListRow = memo(function MemberListRow({
                 : `/character/${member.sequentialId ?? member.characterId}`
             }
             title={member.characterName}
-            className="text-sm font-medium text-primary underline hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded transition-colors"
+            className="text-body font-medium text-primary underline hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded transition-colors"
           >
             {member.characterName}
           </Link>
           {member.isNPP && (
-            <span className="rounded-full bg-card-border/60 px-2 py-0.5 text-[10px] text-muted">
+            <span className="rounded-full bg-card-border/60 px-2 py-0.5 text-body-sm text-muted">
               <NppAbbr />
             </span>
           )}
           {leaderBadge && (
             <span
-              className="inline-flex items-center rounded-md border border-warning/40 bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning uppercase tracking-wide"
+              className="inline-flex items-center rounded-md border border-warning/40 bg-warning/20 px-1.5 py-0.5 text-body-sm font-semibold text-warning uppercase tracking-wide"
               title={leaderBadge}
             >
               {leaderBadge}
             </span>
           )}
         </div>
-        <div className="text-xs text-muted mt-0.5">
+        <div className="text-body-sm text-muted mt-0.5">
           <span className="font-medium">{member.region}</span>
         </div>
       </div>
@@ -79,7 +79,7 @@ const MemberListRow = memo(function MemberListRow({
       />
       {showSeats && (
         <span
-          className="text-xs tabular-nums font-semibold shrink-0"
+          className="text-body-sm tabular-nums font-semibold shrink-0"
           style={{ color: member.partyColor }}
         >
           {member.seatsHeld} seat{member.seatsHeld !== 1 ? "s" : ""}
@@ -202,15 +202,15 @@ export function LegislatureCompositionSection({
       <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-sm">{chamberLabel} composition</h2>
-            <p className="text-xs text-muted mt-0.5">{subtitle}</p>
+            <h2 className="font-semibold text-body">{chamberLabel} composition</h2>
+            <p className="text-body-sm text-muted mt-0.5">{subtitle}</p>
           </div>
           <div className="flex items-center gap-3">
             {showToggle && (
               <div className="flex rounded-lg border border-card-border overflow-hidden">
                 <button
                   onClick={() => setViewMode("parties")}
-                  className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  className={`px-2.5 py-1 text-body-sm font-medium transition-colors ${
                     viewMode === "parties"
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted hover:text-foreground"
@@ -220,7 +220,7 @@ export function LegislatureCompositionSection({
                 </button>
                 <button
                   onClick={() => setViewMode("coalitions")}
-                  className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  className={`px-2.5 py-1 text-body-sm font-medium transition-colors ${
                     viewMode === "coalitions"
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted hover:text-foreground"
@@ -230,16 +230,16 @@ export function LegislatureCompositionSection({
                 </button>
               </div>
             )}
-            <span className="text-[10px] text-muted tabular-nums">{filledSeats} filled</span>
+            <span className="text-body-sm text-muted tabular-nums">{filledSeats} filled</span>
           </div>
         </div>
         {isEmpty ? (
           <div className="py-8 text-center space-y-3">
-            <p className="text-sm font-medium text-muted">Waiting for elections to conclude</p>
-            <p className="text-xs text-muted/70">Seats will appear once elections conclude.</p>
+            <p className="text-body font-medium text-muted">Waiting for elections to conclude</p>
+            <p className="text-body-sm text-muted/70">Seats will appear once elections conclude.</p>
             <Link
               href="/elections"
-              className="inline-block mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary transition-colors"
+              className="inline-block mt-3 rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary transition-colors"
             >
               View upcoming elections →
             </Link>
@@ -284,14 +284,14 @@ export function LegislatureCompositionSection({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label={`Search by name, ${regionLabel.toLowerCase()}, or party`}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-body placeholder:text-muted focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         </div>
 
         {extraControls}
 
         <div className="flex items-center gap-2 ml-auto">
-          <label htmlFor="legislature-sort-select" className="text-xs text-muted">
+          <label htmlFor="legislature-sort-select" className="text-body-sm text-muted">
             Sort by:
           </label>
           <select
@@ -299,7 +299,7 @@ export function LegislatureCompositionSection({
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as MemberSortOption)}
             aria-label="Sort members"
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {resolvedSortOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -313,14 +313,14 @@ export function LegislatureCompositionSection({
       {/* Member list */}
       {allSortedMembers.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-12 text-center">
-          <p className="text-sm text-muted">No members found.</p>
+          <p className="text-body text-muted">No members found.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-card-border bg-background/40">
-            <h2 className="text-sm font-semibold">
+            <h2 className="text-body font-semibold">
               Members
-              <span className="ml-2 text-xs font-normal text-muted">
+              <span className="ml-2 text-body-sm font-normal text-muted">
                 {isBlocList
                   ? `${allSortedMembers.length} ${allSortedMembers.length === 1 ? "party bloc" : "party blocs"} holding ${blocSeatTotal} seats`
                   : `${allSortedMembers.length} seated`}
@@ -329,7 +329,7 @@ export function LegislatureCompositionSection({
               </span>
             </h2>
             {isBlocList && (
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 This chamber is modelled as party blocs, not individual legislators. Each row is one
                 bloc and its leader, and the seat count is how many of the chamber&apos;s seats the
                 bloc holds. A party can appear more than once when it holds seats through separate
@@ -348,23 +348,23 @@ export function LegislatureCompositionSection({
             ))}
           </div>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-card-border/40 bg-background/40 text-sm">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-card-border/40 bg-background/40 text-body">
               <button
                 onClick={() => setCurrentPage(Math.max(1, validPage - 1))}
                 disabled={validPage === 1}
                 aria-label={`Go to previous page (page ${Math.max(1, validPage - 1)} of ${totalPages})`}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:focus-visible:ring-offset-0"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:focus-visible:ring-offset-0"
               >
                 ← Previous
               </button>
-              <span className="text-xs text-muted" aria-live="polite">
+              <span className="text-body-sm text-muted" aria-live="polite">
                 Page {validPage} of {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, validPage + 1))}
                 disabled={validPage === totalPages}
                 aria-label={`Go to next page (page ${Math.min(totalPages, validPage + 1)} of ${totalPages})`}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:focus-visible:ring-offset-0"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:focus-visible:ring-offset-0"
               >
                 Next →
               </button>

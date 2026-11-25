@@ -204,7 +204,7 @@ export function PoliticsTab({
       aria-labelledby="politics-lean-title"
       className="rounded-xl border border-card-border bg-card p-5 sm:p-6"
     >
-      <h2 id="politics-lean-title" className="text-heading-lg font-semibold text-foreground">
+      <h2 id="politics-lean-title" className="text-heading font-semibold text-foreground">
         Lean and organization
       </h2>
       <div className="mt-6 grid gap-x-12 gap-y-10 lg:grid-cols-2">
@@ -350,7 +350,7 @@ export function PoliticsTab({
   const officialsSections = (
     <section aria-labelledby="politics-officials-title">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h2 id="politics-officials-title" className="text-heading-lg font-semibold text-foreground">
+        <h2 id="politics-officials-title" className="text-heading font-semibold text-foreground">
           Officials
         </h2>
         <p className="text-body-sm text-muted">
@@ -446,10 +446,7 @@ export function PoliticsTab({
       )}
 
       <section aria-labelledby="politics-operations-title" className="space-y-4">
-        <h2
-          id="politics-operations-title"
-          className="text-heading-lg font-semibold text-foreground"
-        >
+        <h2 id="politics-operations-title" className="text-heading font-semibold text-foreground">
           Party operations
         </h2>
         {agendaBanner}

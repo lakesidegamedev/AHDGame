@@ -87,7 +87,7 @@ export default function CommodityRegionMap({
 
   if (!mapConfig?.hasRegionMap || !mapConfig.geoUrl || !mapConfig.featureIdToStateId) {
     return (
-      <div className="text-center text-muted text-sm py-8">
+      <div className="text-center text-muted text-body py-8">
         Regional map not yet available for this country.
       </div>
     );
@@ -232,14 +232,14 @@ export default function CommodityRegionMap({
       {/* Hover tooltip */}
       {hoveredData && tooltipPos && (
         <div
-          className="absolute pointer-events-none z-20 px-3 py-2 rounded-lg text-xs bg-popover/95 border border-card-border shadow-xl backdrop-blur-md text-popover-foreground min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+          className="absolute pointer-events-none z-20 px-3 py-2 rounded-lg text-body-sm bg-popover/95 border border-card-border shadow-xl backdrop-blur-md text-popover-foreground min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
           style={{
             left: tooltipPos.x + 16,
             top: tooltipPos.y - 16,
             transform: "translateY(-50%)",
           }}
         >
-          <div className="font-bold text-sm mb-1">{hoveredData.name}</div>
+          <div className="font-bold text-body mb-1">{hoveredData.name}</div>
           <div className="space-y-0.5">
             {hoveredData.capacity > 0 && (
               <div className="flex justify-between gap-4">

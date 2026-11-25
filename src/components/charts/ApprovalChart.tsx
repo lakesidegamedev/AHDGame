@@ -42,7 +42,7 @@ export function ApprovalChart({ history }: Props) {
 
   if (history.length < 2) {
     return (
-      <div className="flex h-24 items-center justify-center text-sm text-muted">
+      <div className="flex h-24 items-center justify-center text-body text-muted">
         Not enough data yet — check back after the next turn.
       </div>
     );
@@ -205,7 +205,7 @@ export function ApprovalChart({ history }: Props) {
 
       {/* Tooltip */}
       {hoveredPoint && (
-        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
+        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-body-sm shadow-card">
           <span className="text-muted">Turn {hoveredPoint.turn} · </span>
           <span className="font-semibold tabular-nums" style={{ color }}>
             {hoveredPoint.approval.toFixed(1)}%

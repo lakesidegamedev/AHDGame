@@ -300,7 +300,7 @@ export default function MarketMoneyPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-      <h2 className="flex items-center gap-2 text-heading-sm font-bold text-foreground">
+      <h2 className="flex items-center gap-2 text-heading font-bold text-foreground">
         <Coins className="h-4 w-4 text-muted" aria-hidden />
         Market and money
       </h2>
@@ -383,7 +383,7 @@ export default function MarketMoneyPanel({
 
       {/* Units chain ────────────────────────────────────────────────────────*/}
       {settlement && (
-        <p className="mb-2 text-body-xs text-muted">
+        <p className="mb-2 text-body-sm text-muted">
           Settled turn {settlement.turn} · quantities per financial day
         </p>
       )}
@@ -543,7 +543,7 @@ export default function MarketMoneyPanel({
                 <div key={r.key} className="flex items-center justify-between text-body-sm">
                   <span className="text-muted">
                     {r.label}{" "}
-                    <span className="text-[11px] tabular-nums opacity-70">
+                    <span className="text-body-sm tabular-nums opacity-70">
                       {r.pp > 0 ? "+" : ""}
                       {r.pp.toFixed(1)}pp
                     </span>
@@ -597,7 +597,7 @@ export default function MarketMoneyPanel({
             help="Revenue minus every cost line above, exactly. A line shown with a + is a credit, so it adds back instead of taking away. Corporation-level costs and tax are settled on the corporation page."
           />
         </div>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Per turn ({TURNS_PER_DAY} per financial day) · {money(pnl.revenueAnchor / TURNS_PER_DAY)}{" "}
           revenue · {money(pnl.profitAnchor / TURNS_PER_DAY)} operating profit
         </p>
@@ -694,7 +694,7 @@ export default function MarketMoneyPanel({
             </>
           )}
         </dl>
-        <p className="mt-2 text-body-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           A plus sign marks a credit. Operating cost lines reconcile to booked operating profit.
           Company overhead and income tax assessments are shown separately.
         </p>
@@ -729,7 +729,7 @@ function UnitTile({
       <InfoTooltip
         width={260}
         trigger={
-          <span className="cursor-help border-b border-dotted border-muted/40 text-sm font-semibold text-foreground">
+          <span className="cursor-help border-b border-dotted border-muted/40 text-body font-semibold text-foreground">
             {label}
           </span>
         }
@@ -739,7 +739,7 @@ function UnitTile({
       </InfoTooltip>
       <p className={`mt-1 text-body-lg font-bold tabular-nums ${toneClass}`}>{value}</p>
       {chip && (
-        <span className="mt-1 inline-flex rounded-full border border-success/30 bg-success/10 px-1.5 py-0 text-body-xs font-semibold text-success">
+        <span className="mt-1 inline-flex rounded-full border border-success/30 bg-success/10 px-1.5 py-0 text-body-sm font-semibold text-success">
           {chip}
         </span>
       )}

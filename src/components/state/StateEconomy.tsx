@@ -264,7 +264,7 @@ function useStateEconomyContext({ stateId, countryId }: { stateId: string; count
     return {
       kind: "render" as const,
       node: (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-body">
           Failed to load economy data.
         </div>
       ),
@@ -388,10 +388,10 @@ function CollapsibleSection({
     <details className="group space-y-2.5">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-card-border bg-card px-4 py-3 transition-colors hover:border-foreground/30 [&::-webkit-details-marker]:hidden">
         <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-sm font-bold text-foreground">{title}</span>
-          {subtitle && <span className="text-xs font-normal text-muted">· {subtitle}</span>}
+          <span className="text-body font-bold text-foreground">{title}</span>
+          {subtitle && <span className="text-body-sm font-normal text-muted">· {subtitle}</span>}
         </span>
-        <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted">
+        <span className="flex shrink-0 items-center gap-1.5 text-body-sm font-medium text-muted">
           <span className="group-open:hidden">Show</span>
           <span className="hidden group-open:inline">Hide</span>
           <svg
@@ -519,12 +519,12 @@ function MarketSharePie({ owners }: { owners: SectorOwner[] }) {
         x={cx}
         y={cy - 4}
         textAnchor="middle"
-        className="fill-foreground text-sm font-bold"
+        className="fill-foreground text-body font-bold"
         fontSize="14"
       >
         {owners.reduce((sum, o) => sum + o.marketShare, 0).toFixed(0)}%
       </text>
-      <text x={cx} y={cy + 10} textAnchor="middle" className="fill-muted text-[9px]" fontSize="9">
+      <text x={cx} y={cy + 10} textAnchor="middle" className="fill-muted text-body-sm" fontSize="9">
         owned
       </text>
     </svg>

@@ -438,7 +438,7 @@ export function GameResetControls() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-        <label className="mb-2 block text-sm font-medium">Starting conditions</label>
+        <label className="mb-2 block text-body font-medium">Starting conditions</label>
 
         <div className="mb-3 flex items-end justify-between gap-4">
           <div>
@@ -460,9 +460,9 @@ export function GameResetControls() {
                 onBlur={() => setYearDraft(null)}
                 disabled={loading !== null}
                 aria-label="Reset year"
-                className="w-[6ch] [appearance:textfield] rounded-md border border-transparent bg-transparent px-1 text-2xl font-semibold tabular-nums hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-[6ch] [appearance:textfield] rounded-md border border-transparent bg-transparent px-1 text-heading font-semibold tabular-nums hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
-              <label className="flex items-baseline gap-1 text-base text-muted">
+              <label className="flex items-baseline gap-1 text-body-lg text-muted">
                 Week
                 <input
                   type="number"
@@ -485,7 +485,7 @@ export function GameResetControls() {
               </label>
             </div>
           </div>
-          <p className="text-right text-xs text-muted">
+          <p className="text-right text-body-sm text-muted">
             Base world: <span className="font-medium text-foreground">{selectedYear}</span>
             <br />
             {lowerEra === upperEra
@@ -542,7 +542,7 @@ export function GameResetControls() {
                   type="button"
                   onClick={() => pickYear(year)}
                   disabled={loading !== null}
-                  className={`rounded px-1.5 py-1 text-[11px] font-semibold tabular-nums transition-colors ${
+                  className={`rounded px-1.5 py-1 text-body-sm font-semibold tabular-nums transition-colors ${
                     selectedYear === year
                       ? "bg-primary/15 text-primary"
                       : "text-muted hover:text-foreground"
@@ -571,7 +571,7 @@ export function GameResetControls() {
                     ? undefined
                     : `Not available for a ${selectedYear ?? "…"} start — no such preset`
                 }
-                className={`px-4 py-2 text-sm ${
+                className={`px-4 py-2 text-body ${
                   target ? pillClass(active) : `${PILL_SHAPE} cursor-not-allowed text-muted/40`
                 } ${loading !== null ? "opacity-50" : ""}`}
               >
@@ -582,7 +582,7 @@ export function GameResetControls() {
         </div>
 
         {selectedPresetData && (
-          <p className="mt-3 text-xs text-muted">
+          <p className="mt-3 text-body-sm text-muted">
             {noStartingParties
               ? `${selectedYear} world data with no starting parties in player countries. Their political offices start vacant for player-created parties and elections. Background countries keep their modeled parties and governments.`
               : noStartingNpps
@@ -595,23 +595,23 @@ export function GameResetControls() {
       {/* ── Iteration Selector ──────────────────────────────────────── */}
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
         <div className="mb-3 flex items-center gap-3">
-          <span className="text-sm font-medium">Current iteration:</span>
+          <span className="text-body font-medium">Current iteration:</span>
           {currentIteration ? (
-            <span className="rounded-md bg-primary/20 px-2.5 py-1 text-sm font-semibold text-primary">
+            <span className="rounded-md bg-primary/20 px-2.5 py-1 text-body font-semibold text-primary">
               {currentIteration.type} {currentIteration.number}
             </span>
           ) : (
-            <span className="text-sm text-muted italic">Not set</span>
+            <span className="text-body text-muted italic">Not set</span>
           )}
         </div>
 
-        <label className="mb-2 block text-sm font-medium">New Iteration (applied on reset)</label>
+        <label className="mb-2 block text-body font-medium">New Iteration (applied on reset)</label>
         <div className="flex items-center gap-3">
           <select
             value={iterationType}
             onChange={(e) => setIterationType(e.target.value as IterationType)}
             disabled={loading !== null}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="Alpha">Alpha</option>
             <option value="Beta">Beta</option>
@@ -623,10 +623,10 @@ export function GameResetControls() {
             value={iterationNumber}
             onChange={(e) => setIterationNumber(e.target.value)}
             disabled={loading !== null}
-            className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             placeholder="#"
           />
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             → {iterationType} {iterationNumber || "?"}
           </span>
           <button
@@ -652,7 +652,7 @@ export function GameResetControls() {
                 setMessage("Network error setting iteration");
               }
             }}
-            className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+            className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
           >
             Set now
           </button>
@@ -661,7 +661,7 @@ export function GameResetControls() {
 
       {loading && (
         <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-body">
             <span className="font-medium text-foreground">{RESET_CONFIG[loading].title}</span>
             <span className="text-muted tabular-nums">{resetProgress}%</span>
           </div>
@@ -671,13 +671,13 @@ export function GameResetControls() {
               style={{ width: `${resetProgress}%` }}
             />
           </div>
-          <p className="text-xs text-muted truncate">{resetStage}</p>
+          <p className="text-body-sm text-muted truncate">{resetStage}</p>
         </div>
       )}
 
       {message && (
         <div
-          className={`whitespace-pre-line rounded-lg border p-3 text-sm ${
+          className={`whitespace-pre-line rounded-lg border p-3 text-body ${
             isError
               ? "border-red-500/30 bg-red-500/10 text-red-400"
               : "border-green-500/30 bg-green-500/10 text-green-400"
@@ -689,8 +689,8 @@ export function GameResetControls() {
 
       {logs.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-          <p className="mb-2 text-sm font-medium">Bootstrap logs</p>
-          <ul className="space-y-1 text-xs font-mono text-muted">
+          <p className="mb-2 text-body font-medium">Bootstrap logs</p>
+          <ul className="space-y-1 text-body-sm font-mono text-muted">
             {logs.map((line, index) => (
               <li key={index}>{line}</li>
             ))}
@@ -699,18 +699,18 @@ export function GameResetControls() {
       )}
 
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-        <p className="text-sm font-semibold">Reset modes</p>
+        <p className="text-body font-semibold">Reset modes</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
-            <p className="text-sm font-medium text-yellow-200">Reset only</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
+            <p className="text-body font-medium text-yellow-200">Reset only</p>
+            <p className="mt-1 text-body-sm leading-relaxed text-muted">
               Use this when you only want to clear live gameplay state and restore the selected
               preset. It does not rebuild the full world bootstrap collections.
             </p>
           </div>
           <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-            <p className="text-sm font-medium text-red-200">Reset + bootstrap</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
+            <p className="text-body font-medium text-red-200">Reset + bootstrap</p>
+            <p className="mt-1 text-body-sm leading-relaxed text-muted">
               Use this when the game world itself needs to be rebuilt after reset. Historical mode
               restores occupied offices; vacant mode leaves offices open for fresh play.
             </p>
@@ -722,12 +722,12 @@ export function GameResetControls() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-medium">{RESET_CONFIG.reset.title}</p>
-            <p className="mt-1 text-sm text-muted">{RESET_CONFIG.reset.description}</p>
+            <p className="mt-1 text-body text-muted">{RESET_CONFIG.reset.description}</p>
           </div>
           <button
             onClick={() => handleReset("reset")}
             disabled={loading !== null}
-            className="min-h-[44px] shrink-0 rounded-lg border border-yellow-500/50 bg-yellow-500/10 px-4 py-2 text-sm font-medium text-yellow-300 transition-colors hover:bg-yellow-500/20 disabled:opacity-50"
+            className="min-h-[44px] shrink-0 rounded-lg border border-yellow-500/50 bg-yellow-500/10 px-4 py-2 text-body font-medium text-yellow-300 transition-colors hover:bg-yellow-500/20 disabled:opacity-50"
           >
             {loading === "reset" ? "Running..." : "Reset only"}
           </button>
@@ -744,7 +744,7 @@ export function GameResetControls() {
                   ? "Reset + no NPPs"
                   : RESET_CONFIG.resetAndBootstrap.title}
             </p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               {noStartingParties
                 ? `Rebuilds the ${selectedYear} world with vacant political offices and no starting parties in player countries.`
                 : noStartingNpps
@@ -755,7 +755,7 @@ export function GameResetControls() {
           <button
             onClick={() => handleReset("resetAndBootstrap")}
             disabled={loading !== null}
-            className="min-h-[44px] shrink-0 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+            className="min-h-[44px] shrink-0 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-2 text-body font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
           >
             {loading === "resetAndBootstrap"
               ? "Running..."
@@ -772,14 +772,14 @@ export function GameResetControls() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-medium">{RESET_CONFIG.resetAndBootstrapVacant.title}</p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               {RESET_CONFIG.resetAndBootstrapVacant.description}
             </p>
           </div>
           <button
             onClick={() => handleReset("resetAndBootstrapVacant")}
             disabled={loading !== null}
-            className="min-h-[44px] shrink-0 rounded-lg border border-orange-500/50 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-300 transition-colors hover:bg-orange-500/20 disabled:opacity-50"
+            className="min-h-[44px] shrink-0 rounded-lg border border-orange-500/50 bg-orange-500/10 px-4 py-2 text-body font-medium text-orange-300 transition-colors hover:bg-orange-500/20 disabled:opacity-50"
           >
             {loading === "resetAndBootstrapVacant" ? "Running..." : "Reset + vacant"}
           </button>
@@ -789,8 +789,8 @@ export function GameResetControls() {
       <hr className="border-card-border" />
 
       <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-5 sm:p-6">
-        <p className="mb-2 text-sm font-semibold text-red-400">Extreme danger</p>
-        <ul className="mb-4 space-y-1 text-sm text-red-300/80">
+        <p className="mb-2 text-body font-semibold text-red-400">Extreme danger</p>
+        <ul className="mb-4 space-y-1 text-body text-red-300/80">
           <li>• Deletes all player accounts (admin, moderator, and banned accounts kept)</li>
           <li>• Deletes all characters permanently (including admin characters)</li>
           <li>• Clears all game data, logs, and elections</li>
@@ -799,7 +799,7 @@ export function GameResetControls() {
         <button
           onClick={() => handleReset("fullReset")}
           disabled={loading !== null}
-          className="min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
         >
           {loading === "fullReset" ? "Deleting..." : "Delete all data"}
         </button>

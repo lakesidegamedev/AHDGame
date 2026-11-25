@@ -32,11 +32,11 @@ export function NavbarNotificationPanel({
   return (
     <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-card-border bg-card shadow-modal overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
-        <span className="text-sm font-semibold">{t("common.notifications")}</span>
+        <span className="text-body font-semibold">{t("common.notifications")}</span>
         <Link
           href="/notifications"
           onClick={onClose}
-          className="text-xs text-primary hover:text-primary/80 transition-colors"
+          className="text-body-sm text-primary hover:text-primary/80 transition-colors"
         >
           {t("notifications.openInbox")}
         </Link>
@@ -44,7 +44,7 @@ export function NavbarNotificationPanel({
       {hasActionRequired && (
         <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-card-border">
           <span className="ahd-bell-pulse h-2 w-2 shrink-0 rounded-full bg-primary" />
-          <span className="text-xs text-fg-2">
+          <span className="text-body-sm text-fg-2">
             {t("notifications.awaitingInput", {
               count: previews.filter(
                 (n) => !n.read && isActionRequiredType(n.type as NotificationType)
@@ -55,7 +55,7 @@ export function NavbarNotificationPanel({
       )}
       <div className={`py-1 ${NOTIFICATION_LIST_CLASS}`}>
         {previews.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted">{t("notifications.empty")}</p>
+          <p className="px-4 py-6 text-center text-body text-muted">{t("notifications.empty")}</p>
         ) : (
           [...previews]
             .sort(
@@ -66,7 +66,7 @@ export function NavbarNotificationPanel({
             .map((n) => (
               <div
                 key={n._id}
-                className={`group flex items-start gap-2 px-4 py-3 text-sm transition-colors hover:bg-card-elevated ${n.read ? "opacity-60" : ""}`}
+                className={`group flex items-start gap-2 px-4 py-3 text-body transition-colors hover:bg-card-elevated ${n.read ? "opacity-60" : ""}`}
               >
                 {!n.read && (
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
@@ -77,7 +77,7 @@ export function NavbarNotificationPanel({
                   className="flex-1 min-w-0"
                 >
                   {!n.read && isActionRequiredType(n.type as NotificationType) && (
-                    <span className="mb-0.5 inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary bg-primary/10">
+                    <span className="mb-0.5 inline-block rounded px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-primary bg-primary/10">
                       {t("notifications.needsYou")}
                     </span>
                   )}
@@ -86,7 +86,7 @@ export function NavbarNotificationPanel({
                   >
                     {n.title}
                   </p>
-                  <p className="text-xs text-muted line-clamp-1 mt-0.5">{n.message}</p>
+                  <p className="text-body-sm text-muted line-clamp-1 mt-0.5">{n.message}</p>
                 </Link>
                 <div className="flex items-center gap-1 shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
                   {!n.read && (

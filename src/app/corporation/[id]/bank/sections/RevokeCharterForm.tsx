@@ -49,7 +49,7 @@ export function RevokeCharterForm({
   return (
     <BankPanel kind="supervision" title="Revoke charter" className="max-w-2xl">
       <div className="space-y-2 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Central bank chair of this currency, or an admin. The CEO cannot self-revoke.
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -59,7 +59,7 @@ export function RevokeCharterForm({
             placeholder="Reason"
             maxLength={500}
             aria-label="Revocation reason"
-            className="h-8 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+            className="h-8 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
           />
           <SmallButton tone="danger" onClick={() => void revoke()} disabled={busy}>
             {busy ? "Revoking..." : "Revoke charter"}

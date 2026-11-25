@@ -18,7 +18,7 @@ export function DiscordContact({
 }: DiscordContactProps) {
   if (!discordId) {
     if (compact) return null;
-    return <span className="text-[11px] text-muted">No Discord linked</span>;
+    return <span className="text-body-sm text-muted">No Discord linked</span>;
   }
 
   const created = discordCreatedAt ? new Date(discordCreatedAt) : null;
@@ -32,7 +32,7 @@ export function DiscordContact({
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex max-w-full items-center gap-1.5 text-[11px] text-[#5865F2] hover:underline"
+      className="inline-flex max-w-full items-center gap-1.5 text-body-sm text-[#5865F2] hover:underline"
       title={age ? `Discord account ${age}` : "Open Discord profile"}
     >
       <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

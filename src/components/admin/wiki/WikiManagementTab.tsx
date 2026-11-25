@@ -333,8 +333,8 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
       {isAdmin && (
         <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
           <div>
-            <h3 className="text-sm font-medium text-foreground">Wiki access</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-medium text-foreground">Wiki access</h3>
+            <p className="text-body-sm text-muted">
               {wikiDisabled
                 ? "Wiki is disabled — non-admin users are redirected away from /wiki"
                 : "Wiki is enabled — all users can access wiki pages"}
@@ -365,7 +365,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
           type="button"
           onClick={handleSyncPriorSubmissions}
           disabled={syncing}
-          className="rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-200 hover:bg-blue-500/20 disabled:opacity-50"
+          className="rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-body font-medium text-blue-200 hover:bg-blue-500/20 disabled:opacity-50"
         >
           {syncing ? "Syncing…" : "Sync prior submissions"}
         </button>
@@ -374,7 +374,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
             type="button"
             onClick={handleBackfillGameStamp}
             disabled={backfilling}
-            className="rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary/20 disabled:opacity-50"
+            className="rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2 text-body font-medium text-secondary hover:bg-secondary/20 disabled:opacity-50"
           >
             {backfilling ? "Backfilling…" : "Backfill game stamp"}
           </button>
@@ -385,7 +385,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
               type="button"
               onClick={() => handleReseed(false)}
               disabled={!!reseedMode}
-              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-body font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
             >
               {reseedMode === "reseed" ? "Reseeding…" : "Reseed wiki"}
             </button>
@@ -393,7 +393,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
               type="button"
               onClick={() => handleReseed(true)}
               disabled={!!reseedMode}
-              className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+              className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-body font-medium text-red-200 hover:bg-red-500/20 disabled:opacity-50"
             >
               {reseedMode === "force" ? "Force reseeding…" : "Force reseed"}
             </button>
@@ -402,26 +402,26 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
         <button
           type="button"
           onClick={startCreate}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
         >
           Create page
         </button>
       </div>
 
       {reseedMessage && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-body text-green-200">
           {reseedMessage}
         </div>
       )}
 
       {syncMessage && (
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-body text-blue-200">
           {syncMessage}
         </div>
       )}
 
       {backfillMessage && (
-        <div className="rounded-lg border border-secondary/30 bg-secondary/10 px-4 py-3 text-sm text-secondary">
+        <div className="rounded-lg border border-secondary/30 bg-secondary/10 px-4 py-3 text-body text-secondary">
           {backfillMessage}
         </div>
       )}
@@ -462,7 +462,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
       />
 
       {isAdmin ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Wiki pages are stored in MongoDB. Use{" "}
           <strong className="text-foreground">Reseed wiki</strong> to insert/refresh seed-owned
           pages from <code className="rounded bg-card-elevated px-1">src/lib/seeds/wiki</code>{" "}
@@ -471,7 +471,7 @@ export function WikiManagementTab({ isAdmin = true }: WikiManagementTabProps = {
           seed-owned pages. Manually created pages are never touched by reseed.
         </p>
       ) : (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Create, edit, and archive wiki pages. Reseed and wiki access controls are admin-only.
         </p>
       )}

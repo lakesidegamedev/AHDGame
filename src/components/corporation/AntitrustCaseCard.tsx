@@ -126,7 +126,7 @@ export function AntitrustCaseCard({ corpId }: { corpId: string }) {
       )}
       {orders && hasOrders && (
         <DenseSection title="Antitrust orders">
-          <div className="space-y-2 py-1 text-sm">
+          <div className="space-y-2 py-1 text-body">
             {orders.industryOrder && (
               <p>
                 Bring this group under {orders.industryOrder.thresholdPercent}% of the{" "}
@@ -142,7 +142,7 @@ export function AntitrustCaseCard({ corpId }: { corpId: string }) {
               </p>
             ))}
             {orders.forcedSales.length > 0 && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Sell, spin off or release control before the deadline. After it, the controlling
                 stake is sold down to half at book value.
               </p>
@@ -171,17 +171,17 @@ function CaseSection({
   return (
     <DenseSection title="Competition case">
       <div className="space-y-2 py-1">
-        <p className="text-sm">
+        <p className="text-body">
           This group holds {view.sharePercent}% of the {view.sectorType} industry in{" "}
           {view.countryId}, above the {view.thresholdPercent}% the Competition Act allows.
         </p>
         {decided ? (
-          <p className="text-sm font-medium">
+          <p className="text-body font-medium">
             {view.decision === "order" ? "Decided: breakup ordered" : "Decided: dismissed"}, applied
             next turn.
           </p>
         ) : (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {authority} decides by turn {view.decideByTurn}. Undecided, the case follows the
             measured share then.
           </p>

@@ -73,13 +73,13 @@ export function StatePickerModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or code…"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
-          <p className="text-[11px] text-muted mt-1">{footnote}</p>
+          <p className="text-body-sm text-muted mt-1">{footnote}</p>
         </div>
         <div className="overflow-y-auto flex-1 p-2">
           {filtered.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-muted">No state matches that search.</p>
+            <p className="px-3 py-4 text-body text-muted">No state matches that search.</p>
           ) : (
             filtered.map((s) => {
               const canAfford = !unaffordable(s);
@@ -90,7 +90,7 @@ export function StatePickerModal({
                   type="button"
                   disabled={!canAfford || isCurrent || busy}
                   onClick={() => onPick(s.id)}
-                  className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2 ${
+                  className={`w-full text-left rounded-lg border px-3 py-2 text-body transition-colors flex items-center justify-between gap-2 ${
                     isCurrent
                       ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
                       : canAfford
@@ -99,9 +99,9 @@ export function StatePickerModal({
                   }`}
                 >
                   <span className="font-medium">
-                    {s.name} <span className="text-muted text-xs">({s.id})</span>
+                    {s.name} <span className="text-muted text-body-sm">({s.id})</span>
                   </span>
-                  <span className="text-xs text-muted tabular-nums">
+                  <span className="text-body-sm text-muted tabular-nums">
                     {isCurrent ? "current" : trailingFor(s)}
                   </span>
                 </button>

@@ -60,7 +60,7 @@ export function TierSelector({
       {TIERS.map((tier) => {
         const isActive = tier.id === activeTier;
         const isClickable = !isActive && !!onTierChange;
-        const baseClasses = `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        const baseClasses = `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body-sm font-medium transition-colors ${
           isClickable ? "cursor-pointer hover:bg-[var(--card-muted)]" : "cursor-default"
         } ${!isActive && !isClickable ? "opacity-40" : ""}`;
         const accentStyle = isActive

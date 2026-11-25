@@ -131,7 +131,7 @@ function DeadlineCountdown({ deadlineIso }: { deadlineIso: string }) {
     (!label.includes("h") && parseInt(label, 10) <= 60 && !Number.isNaN(parseInt(label, 10)));
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tabular-nums ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-body-sm font-medium tabular-nums ${
         urgent
           ? "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
           : "border-card-border bg-card-elevated text-muted"
@@ -165,7 +165,7 @@ function EffectChips({ effects, max = 4 }: { effects: CrisisEffect[]; max?: numb
         <CrisisEffectChip key={i} effect={e} />
       ))}
       {overflow > 0 && (
-        <span className="rounded-full border border-card-border px-2 py-0.5 text-[11px] text-muted">
+        <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted">
           +{overflow} more
         </span>
       )}
@@ -182,7 +182,7 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
   const countryName = useCountryDisplayName();
   const preset = useActivePreset();
   return (
-    <li className="flex items-center gap-2 text-xs">
+    <li className="flex items-center gap-2 text-body-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={getCountryFlagUrlForEra(r.countryId, preset, 40)}
@@ -193,7 +193,7 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
         {countryName(r.countryId as CountryId)}
       </span>
       {r.responseRole ? (
-        <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted">
+        <span className="rounded-full border border-card-border px-1.5 py-0.5 text-body-sm uppercase tracking-wide text-muted">
           {roleLabel(r.responseRole)}
         </span>
       ) : null}
@@ -220,7 +220,7 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
         </span>
       ) : null}
       <span className="ml-auto flex items-center gap-1.5 shrink-0">
-        <span className="rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary">
+        <span className="rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-body-sm font-medium text-primary">
           {r.optionLabel}
         </span>
         {effects.length > 0 && (
@@ -231,7 +231,7 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
                 return `${view.target} ${view.amount}`;
               })
               .join(" · ")}
-            className="cursor-help text-[10px] text-muted tabular-nums"
+            className="cursor-help text-body-sm text-muted tabular-nums"
           >
             {effects.length} effect{effects.length === 1 ? "" : "s"}
           </span>
@@ -260,9 +260,9 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-body-sm font-medium text-primary">Campaign cycle {brief.cycle}</p>
-          <p className="text-sm font-semibold text-foreground">{brief.stageLabel}</p>
+          <p className="text-body font-semibold text-foreground">{brief.stageLabel}</p>
         </div>
-        <p className="text-[11px] text-muted">{brief.stageTurns} turns in this stage</p>
+        <p className="text-body-sm text-muted">{brief.stageTurns} turns in this stage</p>
       </div>
       <div className="grid grid-cols-5 gap-1">
         {CAMPAIGN_STAGES.map((stage, index) => (
@@ -281,21 +281,21 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-md border border-card-border bg-card p-2.5">
           <p className="text-body-sm font-medium text-muted">Intelligence estimate</p>
-          <p className="mt-1 text-xs font-medium text-foreground">
+          <p className="mt-1 text-body-sm font-medium text-foreground">
             {campaignLabel(brief.intelligence.riskBand)} risk
           </p>
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             Range {brief.intelligence.estimatedRiskMin} to {brief.intelligence.estimatedRiskMax},{" "}
             {brief.intelligence.confidence} confidence
           </p>
         </div>
         <div className="rounded-md border border-card-border bg-card p-2.5">
           <p className="text-body-sm font-medium text-muted">National memory</p>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Credibility {Math.round(brief.countryMemory.credibility)} · War weariness{" "}
             {Math.round(brief.countryMemory.warWeariness)}
           </p>
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             Military {Math.round(brief.countryMemory.militaryCommitment)} · Relief{" "}
             {Math.round(brief.countryMemory.humanitarianCommitment)}
           </p>
@@ -304,12 +304,12 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
       <div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-body-sm font-medium text-muted">National capacity</p>
-          <p className="text-[10px] text-muted">{treasuryLabel}</p>
+          <p className="text-body-sm text-muted">{treasuryLabel}</p>
         </div>
         <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
           {capacity.map(([label, value]) => (
             <div key={label}>
-              <div className="flex justify-between text-[9px] text-muted">
+              <div className="flex justify-between text-body-sm text-muted">
                 <span>{label}</span>
                 <span>{Math.round(value)}</span>
               </div>
@@ -322,7 +322,7 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
             </div>
           ))}
         </div>
-        <p className="mt-1.5 text-[10px] leading-relaxed text-muted">
+        <p className="mt-1.5 text-body-sm leading-relaxed text-muted">
           Readiness comes from your formations. Logistics reflects support equipment across your
           formations; refit them from military stores to raise it. Mandate is government approval;
           intelligence combines readiness and logistics. Crisis spending uses treasury surplus
@@ -334,14 +334,14 @@ function CampaignBriefPanel({ brief }: { brief: CampaignBrief }) {
           {scars.map(([key, band]) => (
             <span
               key={key}
-              className="rounded-full border border-warning/25 bg-warning/5 px-2 py-0.5 text-[10px] text-warning"
+              className="rounded-full border border-warning/25 bg-warning/5 px-2 py-0.5 text-body-sm text-warning"
             >
               {campaignLabel(key)}: {band}
             </span>
           ))}
         </div>
       ) : (
-        <p className="text-[10px] text-muted">No major lasting damage has accumulated yet.</p>
+        <p className="text-body-sm text-muted">No major lasting damage has accumulated yet.</p>
       )}
     </div>
   );
@@ -371,7 +371,7 @@ function OptionPreview({
   const turns = option.durationReductionTurns;
 
   return (
-    <div className="mt-1.5 space-y-0.5 text-xs text-foreground/90">
+    <div className="mt-1.5 space-y-0.5 text-body-sm text-foreground/90">
       <div>{costs.length > 0 ? costs.join(" + ") : "No fixed treasury cost listed."}</div>
       {turns != null && turns > 0 && (
         <div>
@@ -526,7 +526,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
         }`}
       />
       <div className="px-5 py-4 border-b border-card-border flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-1">
+        <h2 className="text-body font-semibold text-foreground flex items-center gap-1">
           Crisis response
           <Tooltip content="Interactive crises let players choose a response. Each option has different mechanical effects and political consequences." />
         </h2>
@@ -541,11 +541,11 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
         {/* Active decision node */}
         {!resolved && currentNode && (
           <div>
-            <h3 className="text-sm font-medium text-foreground">{currentNode.title}</h3>
-            <p className="text-xs text-muted mt-0.5 mb-3">{currentNode.description}</p>
+            <h3 className="text-body-lg font-medium text-foreground">{currentNode.title}</h3>
+            <p className="text-body-sm text-muted mt-0.5 mb-3">{currentNode.description}</p>
 
             {!multiResponder && (
-              <div className="mb-3 space-y-1 text-xs text-muted">
+              <div className="mb-3 space-y-1 text-body-sm text-muted">
                 <p>
                   {currentNode.type === "collective"
                     ? "Each eligible responder can contribute once."
@@ -564,7 +564,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
             )}
 
             {multiResponder && (
-              <div className="text-[11px] text-muted -mt-2 mb-3 space-y-1">
+              <div className="text-body-sm text-muted -mt-2 mb-3 space-y-1">
                 <p>
                   Each nation&rsquo;s leader responds for their own country. The combined choices
                   determine the global outcome.
@@ -583,7 +583,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
 
             {currentNode.type === "collective" && (
               <div className="mb-3">
-                <div className="flex items-center justify-between text-xs mb-1">
+                <div className="flex items-center justify-between text-body-sm mb-1">
                   <span className="text-muted">Response fund</span>
                   <span className="tabular-nums">
                     ${interaction.collectiveCurrent.toLocaleString("en-US")} / $
@@ -599,7 +599,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                   />
                 </div>
                 {interaction.contributors.length > 0 && (
-                  <p className="text-xs text-muted mt-1">
+                  <p className="text-body-sm text-muted mt-1">
                     {interaction.contributors.length} contributor
                     {interaction.contributors.length === 1 ? "" : "s"}
                   </p>
@@ -639,30 +639,30 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                           isSubmitting ? "animate-pulse" : ""
                         }`}
                       >
-                        <div className="text-sm font-medium text-foreground">{option.label}</div>
-                        <div className="text-xs text-muted mt-0.5">{option.description}</div>
+                        <div className="text-body font-medium text-foreground">{option.label}</div>
+                        <div className="text-body-sm text-muted mt-0.5">{option.description}</div>
                         <OptionPreview option={option} currency={responseCurrency} />
                         <div className="mt-1 flex flex-wrap gap-1">
                           {option.campaignCommitment ? (
-                            <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted">
+                            <span className="rounded-full border border-card-border px-1.5 py-0.5 text-body-sm uppercase tracking-wide text-muted">
                               {campaignLabel(option.campaignCommitment.kind)} commitment
                             </span>
                           ) : null}
                           {option.responseVisibility === "covert" ? (
-                            <span className="rounded-full border border-warning/30 bg-warning/5 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-warning">
+                            <span className="rounded-full border border-warning/30 bg-warning/5 px-1.5 py-0.5 text-body-sm uppercase tracking-wide text-warning">
                               Covert
                             </span>
                           ) : null}
                         </div>
                         {availability?.eligible === false ? (
-                          <ul className="mt-2 space-y-0.5 text-[10px] text-error">
+                          <ul className="mt-2 space-y-0.5 text-body-sm text-error">
                             {availability.reasons.map((reason) => (
                               <li key={reason}>{reason}</li>
                             ))}
                           </ul>
                         ) : null}
                         {option.collectiveContribution ? (
-                          <div className="text-xs text-primary mt-1">
+                          <div className="text-body-sm text-primary mt-1">
                             Contribute ${option.collectiveContribution.toLocaleString("en-US")}
                           </div>
                         ) : null}
@@ -678,12 +678,12 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
               )}
 
             {multiResponder && alreadyResponded ? (
-              <p className="text-xs text-success mt-2">
+              <p className="text-body-sm text-success mt-2">
                 Your nation has responded. Other leaders may still respond for theirs.
               </p>
             ) : (
               !canInteract && (
-                <p className="text-xs text-muted mt-2">
+                <p className="text-body-sm text-muted mt-2">
                   Requires: {describeRoleRequirement(currentNode)}
                 </p>
               )
@@ -695,20 +695,20 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
         {resolved && (
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-full border border-card-border bg-card-elevated text-muted">
+              <span className="text-body-sm px-2 py-0.5 rounded-full border border-card-border bg-card-elevated text-muted">
                 {interaction.resolutionOutcome === "auto"
                   ? "Response window closed"
                   : "Response complete"}
               </span>
             </div>
             {terminalNode?.outcomeMessage ? (
-              <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
+              <p className="text-body text-foreground/80 mt-2 leading-relaxed">
                 {terminalNode.outcomeMessage}
               </p>
             ) : terminalNode ? (
               <div className="mt-2">
-                <p className="text-sm font-medium text-foreground">{terminalNode.title}</p>
-                <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                <p className="text-body font-medium text-foreground">{terminalNode.title}</p>
+                <p className="text-body-sm text-muted mt-0.5 leading-relaxed">
                   {terminalNode.description}
                 </p>
               </div>
@@ -716,19 +716,19 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
             {interaction.globalResponseOutcome ? (
               <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 p-3">
                 <p className="text-body-sm font-medium text-primary">Global outcome</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
+                <p className="mt-1 text-body font-semibold text-foreground">
                   {interaction.globalResponseOutcome.label}
                 </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                <p className="mt-0.5 text-body-sm leading-relaxed text-muted">
                   {interaction.globalResponseOutcome.description}
                 </p>
-                <p className="mt-2 text-[11px] text-muted">
+                <p className="mt-2 text-body-sm text-muted">
                   {interaction.globalResponseOutcome.respondedCountries} of{" "}
                   {interaction.globalResponseOutcome.eligibleCountries} eligible governments
                   responded
                 </p>
                 {interaction.globalResponseOutcome.civilianLossResult ? (
-                  <p className="mt-1 text-[11px] text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     <HoverTooltip
                       content={
                         interaction.globalResponseOutcome.civilianLossResult.regions
@@ -749,7 +749,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                   </p>
                 ) : null}
                 {interaction.globalResponseOutcome.campaignStageAfter ? (
-                  <p className="mt-1 text-[11px] text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     Campaign stage: {/* An unchanged stage reads "stayed at X", not "X to X". */}
                     {(interaction.globalResponseOutcome.campaignStageBefore ?? "posture") ===
                     interaction.globalResponseOutcome.campaignStageAfter
@@ -765,7 +765,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                       ([axis, value]) => (
                         <span
                           key={axis}
-                          className="rounded-full border border-card-border bg-card px-2 py-0.5 text-[10px] text-muted"
+                          className="rounded-full border border-card-border bg-card px-2 py-0.5 text-body-sm text-muted"
                         >
                           {axis.replaceAll("_", " ")} {value > 0 ? "+" : ""}
                           {value}
@@ -805,7 +805,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
         {interaction.resolutionPath.length > 0 && (
           <div className="pt-3 border-t border-card-border">
             <p className="text-body-sm font-medium text-muted mb-1.5">Decision history</p>
-            <ul className="text-xs text-muted space-y-0.5">
+            <ul className="text-body-sm text-muted space-y-0.5">
               {buildDecisionHistory(interaction.decisionTree, interaction.resolutionPath).map(
                 (line, i) => (
                   <li key={i} className="flex gap-1.5">
@@ -818,7 +818,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-600">{error}</p>}
+        {error && <p className="text-body-sm text-rose-600">{error}</p>}
       </div>
     </div>
   );
@@ -852,7 +852,9 @@ function AidSlider({
 
   if (ctx.alreadyPledged) {
     return (
-      <p className="text-xs text-muted">Your country has already pledged aid to this crisis.</p>
+      <p className="text-body-sm text-muted">
+        Your country has already pledged aid to this crisis.
+      </p>
     );
   }
   return (
@@ -867,13 +869,13 @@ function AidSlider({
         disabled={disabled}
         className="w-full accent-primary"
       />
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-body-sm">
         <span className="text-muted">Pledge</span>
         <span className="tabular-nums font-medium text-foreground">
           {(pct * 100).toFixed(2)}% of GDP · {fmt(amountLocal)}
         </span>
       </div>
-      <p className="text-xs text-success">
+      <p className="text-body-sm text-success">
         Diplomatic standing +{approval.toFixed(1)}% if the legislature approves.
       </p>
       <FiscalBadge fromSurplus={fromSurplus} addedToDebt={addedToDebt} fmt={fmt} />
@@ -881,14 +883,14 @@ function AidSlider({
         <button
           onClick={() => onPledge(pct)}
           disabled={disabled || amountLocal <= 0}
-          className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-medium text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-body font-medium text-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Pledge aid
         </button>
         <button
           onClick={onDecline}
           disabled={disabled}
-          className="rounded-lg border border-card-border px-3 py-2 text-sm text-muted disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg border border-card-border px-3 py-2 text-body text-muted disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Decline
         </button>
@@ -907,18 +909,20 @@ function FiscalBadge({
   fmt: (n: number) => string;
 }) {
   if (addedToDebt <= 0) {
-    return <p className="text-xs text-success">Funded from your {fmt(fromSurplus)} surplus.</p>;
+    return (
+      <p className="text-body-sm text-success">Funded from your {fmt(fromSurplus)} surplus.</p>
+    );
   }
   if (fromSurplus > 0) {
     return (
-      <p className="text-xs text-warning">
+      <p className="text-body-sm text-warning">
         {fmt(fromSurplus)} from surplus, {fmt(addedToDebt)} added to national debt (covered at next
         bond issuance).
       </p>
     );
   }
   return (
-    <p className="text-xs text-warning">
+    <p className="text-body-sm text-warning">
       Adds {fmt(addedToDebt)} to national debt — financed at next bond issuance.
     </p>
   );

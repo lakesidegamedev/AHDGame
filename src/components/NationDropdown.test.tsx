@@ -77,7 +77,7 @@ describe("NationDropdown - National Details sub-sections", () => {
     // CollapsibleNavSection renders them as a styled <div>.
     for (const h of ["Government", "Politics", "Other"]) {
       const header = (await screen.findAllByText(h)).find(
-        (el) => el.tagName === "DIV" && el.className.includes("text-[11px]")
+        (el) => el.tagName === "DIV" && el.className.includes("text-body-sm")
       );
       expect(header).toBeTruthy();
     }

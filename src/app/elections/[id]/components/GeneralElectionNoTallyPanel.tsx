@@ -73,7 +73,7 @@ export function GeneralElectionNoTallyPanel({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card overflow-hidden">
-        <div className="px-4 py-2 sm:px-5 sm:py-2.5 flex items-center justify-between text-xs font-medium bg-info/10 border-b border-info/20 text-info">
+        <div className="px-4 py-2 sm:px-5 sm:py-2.5 flex items-center justify-between text-body-sm font-medium bg-info/10 border-b border-info/20 text-info">
           <span className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
             General election — Awaiting first turn
@@ -87,9 +87,9 @@ export function GeneralElectionNoTallyPanel({
               <PieChart slices={pieSlices} size={120} />
             </div>
             <div className="flex-1 min-w-0 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
-                  <tr className="text-left text-sm font-semibold text-foreground border-b border-card-border">
+                  <tr className="text-left text-body font-semibold text-foreground border-b border-card-border">
                     <th className="pb-1.5 font-medium">Candidate</th>
                     <th className="pb-1.5 font-medium text-right w-20">Votes</th>
                     <th className="pb-1.5 font-medium text-right w-14">%</th>
@@ -123,29 +123,29 @@ export function GeneralElectionNoTallyPanel({
                                   {c.characterName}
                                 </Link>
                                 {c.isYou && (
-                                  <span className="rounded-full bg-primary/20 border border-primary/40 px-1.5 py-0.5 text-[10px] text-primary shrink-0">
+                                  <span className="rounded-full bg-primary/20 border border-primary/40 px-1.5 py-0.5 text-body-sm text-primary shrink-0">
                                     You
                                   </span>
                                 )}
                                 {c.isNPP && (
-                                  <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-purple-400 shrink-0">
+                                  <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-body-sm text-purple-400 shrink-0">
                                     <NppAbbr />
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11px] text-muted">{c.partyName}</div>
+                              <div className="text-body-sm text-muted">{c.partyName}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-2.5 text-right text-xs text-muted">—</td>
-                        <td className="py-2.5 pl-1 text-right text-xs text-muted">—</td>
+                        <td className="py-2.5 text-right text-body-sm text-muted">—</td>
+                        <td className="py-2.5 pl-1 text-right text-body-sm text-muted">—</td>
                         {canEndorse && (
                           <td className="py-2.5 pl-1 text-right">
                             {!c.isYou && (
                               <button
                                 onClick={() => handleEndorse(c.id)}
                                 disabled={endorsing}
-                                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                                className={`rounded-md px-2 py-0.5 text-body-sm font-medium transition-colors ${
                                   endorsedCandidateId === c.id
                                     ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
                                     : "bg-primary/10 text-primary border border-primary/30"
@@ -168,17 +168,17 @@ export function GeneralElectionNoTallyPanel({
 
       {totalSeats && (
         <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
-          <div className="text-sm font-semibold mb-1">
+          <div className="text-body font-semibold mb-1">
             Seats up for election · {totalSeats} total
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Projected seat allocation will appear once vote counting begins. Seats are awarded
             proportionally to vote share.
           </p>
         </div>
       )}
 
-      <div className="rounded-xl border border-dashed border-card-border p-4 sm:p-5 text-center text-sm text-muted">
+      <div className="rounded-xl border border-dashed border-card-border p-4 sm:p-5 text-center text-body text-muted">
         Vote totals and the trend graph will appear once the next game turn processes.
       </div>
     </div>

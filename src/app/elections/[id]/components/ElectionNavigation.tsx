@@ -41,14 +41,14 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
 
   return (
     <>
-      <div className="mb-6 flex items-center gap-2 text-sm">
+      <div className="mb-6 flex items-center gap-2 text-body">
         <BackButton fallbackLabel="Back to Elections" fallbackHref={fallbackElectionsHref} />
         <span className="text-card-border">/</span>
         <span className="min-w-0 truncate font-medium">{scopeText}</span>
         {showLiveResults && (
           <Link
             href={`/elections/${election.id}/results`}
-            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-body-sm font-medium text-primary transition-colors hover:bg-primary/20"
           >
             {election.status === "active" && (
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -65,7 +65,7 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
           {election.prevElectionId ? (
             <Link
               href={buildElectionUrl(election.prevElectionId)}
-              className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
+              className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -81,7 +81,7 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
           {election.nextElectionId ? (
             <Link
               href={buildElectionUrl(election.nextElectionId)}
-              className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
+              className="flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
             >
               Next
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

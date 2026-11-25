@@ -138,11 +138,11 @@ export function EventItem({
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className={`text-body-xs font-semibold tracking-wider uppercase ${t.text}`}>
+                <span className={`text-body-sm font-semibold tracking-wider uppercase ${t.text}`}>
                   {label}
                 </span>
                 {status === "decision" && (
-                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-body-xs font-semibold text-warning">
+                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-body-sm font-semibold text-warning">
                     Your decision
                   </span>
                 )}
@@ -199,10 +199,10 @@ export function EventOutcomeRow({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-body-xs font-semibold tracking-wider text-muted uppercase">
+          <span className="text-body-sm font-semibold tracking-wider text-muted uppercase">
             Recent {label.toLowerCase()}
           </span>
-          {when && <span className="text-body-xs text-muted">· {when}</span>}
+          {when && <span className="text-body-sm text-muted">· {when}</span>}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-body font-medium text-foreground">{title}</span>

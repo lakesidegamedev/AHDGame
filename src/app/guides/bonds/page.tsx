@@ -34,7 +34,7 @@ export default function BondsGuidePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -43,8 +43,8 @@ export default function BondsGuidePage() {
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Bonds</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Bonds</h1>
+          <p className="mt-2 text-body text-muted">
             How bonds work, from the basics through credit ratings, defaults, and strategy
           </p>
         </div>
@@ -55,7 +55,7 @@ export default function BondsGuidePage() {
           {/* ── 1. What Is a Bond ── */}
           <section className="space-y-4">
             <SectionHeader id="what-is-a-bond">1. What is a bond?</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A bond is a loan. You lend money to a government or corporation; in return they pay
               you a fixed interest rate (the <strong className="text-foreground">coupon</strong>)
               every turn until the bond matures, at which point they return your original principal.
@@ -79,8 +79,8 @@ export default function BondsGuidePage() {
                   key={term}
                   className="rounded-xl border border-card-border bg-card p-4 space-y-1.5"
                 >
-                  <p className="text-sm font-semibold text-foreground">{term}</p>
-                  <p className="text-sm text-muted leading-relaxed">{def}</p>
+                  <p className="text-body font-semibold text-foreground">{term}</p>
+                  <p className="text-body text-muted leading-relaxed">{def}</p>
                 </div>
               ))}
             </div>
@@ -94,12 +94,12 @@ export default function BondsGuidePage() {
           {/* ── 2. Sovereign Bonds ── */}
           <section className="space-y-4">
             <SectionHeader id="sovereign-bonds">2. Sovereign bonds</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Sovereign bonds are issued by national governments to finance their budget deficit.
               They are the safest bonds in the game: governments cannot default.
             </p>
             <SubHeader>How they are issued</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               New bonds are issued automatically every{" "}
               <strong className="text-foreground">12 turns (quarterly)</strong>. The issuance has
               two parts: one quarter of the annual deficit, plus a rollover that refinances bonds
@@ -107,7 +107,7 @@ export default function BondsGuidePage() {
               even a country running a surplus issues new bonds to replace the ones coming due.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Property</th>
@@ -134,7 +134,7 @@ export default function BondsGuidePage() {
               </table>
             </div>
             <SubHeader>What the coupon pays you</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A bond issued when the prime rate is 5% pays a 5% annual coupon, which is{" "}
               <strong className="text-foreground">$50 per year per $1,000 bond</strong>, paid
               proportionally each turn. The coupon is fixed at issuance and never changes for the
@@ -151,14 +151,14 @@ export default function BondsGuidePage() {
           {/* ── 3. Corporate Bonds ── */}
           <section className="space-y-4">
             <SectionHeader id="corporate-bonds">3. Corporate bonds</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Corporate bonds are issued by player-founded corporations to raise capital. They work
               the same as sovereign bonds (fixed coupon, fixed maturity, tradeable on the market),
               but they carry <strong className="text-foreground">default risk</strong>. A
               corporation that runs out of cash cannot pay its bondholders.
             </p>
             <SubHeader>How the coupon is set</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Corporate bond coupons are{" "}
               <strong className="text-foreground">
                 prime rate + rating-tier spread + a fixed corporate issuance premium
@@ -168,7 +168,7 @@ export default function BondsGuidePage() {
               issues equally (sovereign/treasury bonds do not use it).
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Rating</th>
@@ -223,7 +223,7 @@ export default function BondsGuidePage() {
               </table>
             </div>
             <SubHeader>Maturity choices</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               New corporate bonds must mature in{" "}
               <strong className="text-foreground">2, 5, or 7</strong> game years (96, 240, or 336
               turns). Bonds issued earlier at shorter maturities remain on the books until they
@@ -246,17 +246,17 @@ export default function BondsGuidePage() {
           {/* ── 4. Price / Rate Relationship ── */}
           <section className="space-y-4">
             <SectionHeader id="price-rate">4. The price/rate relationship</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               This is the most important mechanic to understand. Bond market prices and interest
               rates always move in <strong className="text-foreground">opposite directions</strong>.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Here is why: imagine you hold a bond paying $50/year (5% coupon on a $1,000 bond). The
               central bank then raises rates to 8%. New bonds now pay $80/year. Nobody would pay
               $1,000 for your bond paying $50 when they can get $80 from a new one. The price of
               your bond must fall until the yield is competitive.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               In short: a bond&apos;s market price is the present value of every remaining coupon
               payment plus the final payoff, discounted at today&apos;s interest rate. A higher rate
               makes those future dollars worth less right now, so price falls; a lower rate makes
@@ -279,7 +279,7 @@ Example: sovereign bond, coupon locked at 5%, 1 year remaining:
 
 The further from maturity, the bigger the price swing for the same rate change.`}</FormulaBlock>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">
@@ -337,14 +337,14 @@ The further from maturity, the bigger the price swing for the same rate change.`
           {/* ── 5. Sovereign Ratings ── */}
           <section className="space-y-4">
             <SectionHeader id="sovereign-ratings">5. Sovereign credit ratings</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Sovereign bonds are guaranteed against default, but the country&apos;s
               <strong className="text-foreground"> credit rating</strong> still matters - it
               determines the interest rate at which the government borrows, which sets the coupon
               rate on new bonds. Higher debt relative to GDP means more expensive borrowing.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Debt-to-GDP</th>
@@ -387,13 +387,13 @@ The further from maturity, the bigger the price swing for the same rate change.`
           {/* ── 6. Corporate Ratings ── */}
           <section className="space-y-4">
             <SectionHeader id="corporate-ratings">6. Corporate credit ratings</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Corporate credit ratings are calculated from four financial components. The score
               updates every turn, so a corporation&apos;s rating can improve or deteriorate over
               time, and so can the market price of its bonds.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Component</th>
@@ -441,7 +441,7 @@ The further from maturity, the bigger the price swing for the same rate change.`
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Scores are smoothed using a{" "}
               <strong className="text-foreground">75% new / 25% previous</strong> blend to prevent
               wild single-turn swings. A company cannot jump from AAA to CCC in one turn, but
@@ -460,7 +460,7 @@ The further from maturity, the bigger the price swing for the same rate change.`
           {/* ── 7. Defaults ── */}
           <section className="space-y-4">
             <SectionHeader id="defaults">7. Defaults &amp; recovery</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A corporate bond defaults when the corporation&apos;s{" "}
               <strong className="text-foreground">cash (liquid capital) goes negative</strong> after
               paying its coupon obligations{" "}
@@ -471,7 +471,7 @@ The further from maturity, the bigger the price swing for the same rate change.`
               turn.
             </p>
             <SubHeader>What happens on default</SubHeader>
-            <ul className="space-y-2 text-sm text-muted">
+            <ul className="space-y-2 text-body text-muted">
               <li className="flex gap-2">
                 <span className="text-red-400 font-bold shrink-0">1.</span>
                 <span>
@@ -497,7 +497,7 @@ The further from maturity, the bigger the price swing for the same rate change.`
               </li>
             </ul>
             <SubHeader>CEO recovery option: refinance</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Instead of dissolving, the CEO can refinance defaulted debt. Existing holders roll
               into a new bond at par (units preserved, full face-value claim restored), and the old
               defaulted paper is retired. This is a debt-for-debt swap. The corporation does not
@@ -510,12 +510,12 @@ The further from maturity, the bigger the price swing for the same rate change.`
               to the 2× equity debt cap.
             </p>
             <SubHeader>If the corporation dissolves</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Bondholders have priority over shareholders in dissolution. Assets are liquidated and
               distributed:
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Scenario</th>
@@ -556,10 +556,10 @@ The further from maturity, the bigger the price swing for the same rate change.`
           {/* ── 8. How to Evaluate a Bond ── */}
           <section className="space-y-4">
             <SectionHeader id="buying-bonds">8. How to evaluate a bond</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The questions to ask before buying, in order:
             </p>
-            <ul className="space-y-3 text-sm text-muted">
+            <ul className="space-y-3 text-body text-muted">
               {[
                 [
                   "What is the coupon relative to the current effective rate?",
@@ -629,8 +629,8 @@ The further from maturity, the bigger the price swing for the same rate change.`
                   key={title}
                   className="rounded-xl border border-card-border bg-card p-4 space-y-1.5"
                 >
-                  <p className="text-sm font-semibold text-foreground">{title}</p>
-                  <p className="text-sm text-muted leading-relaxed">{body}</p>
+                  <p className="text-body font-semibold text-foreground">{title}</p>
+                  <p className="text-body text-muted leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>

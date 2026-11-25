@@ -35,26 +35,26 @@ export function ChangelogPostCard({
     <>
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <span
-          className={`font-mono text-sm font-bold ${isLatest ? "text-primary" : "text-foreground"}`}
+          className={`font-mono text-body font-bold ${isLatest ? "text-primary" : "text-foreground"}`}
         >
           v{post.version}
         </span>
-        <span className="text-xs text-muted">{formatDate(post.date)}</span>
-        <span className="text-xs text-muted">·</span>
-        <span className="text-xs text-muted">{minutes} min read</span>
+        <span className="text-body-sm text-muted">{formatDate(post.date)}</span>
+        <span className="text-body-sm text-muted">·</span>
+        <span className="text-body-sm text-muted">{minutes} min read</span>
         {post.era && (
-          <span className="rounded-full border border-card-border bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+          <span className="rounded-full border border-card-border bg-background px-2 py-0.5 text-body-sm font-medium uppercase tracking-wide text-muted">
             {post.era}
           </span>
         )}
         {isLatest && (
-          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-medium text-primary">
             Latest
           </span>
         )}
       </div>
-      <h2 className="text-base font-semibold text-foreground">{post.title}</h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{post.summary}</p>
+      <h2 className="text-body-lg font-semibold text-foreground">{post.title}</h2>
+      <p className="mt-1 text-body leading-relaxed text-muted">{post.summary}</p>
     </>
   );
 
@@ -69,7 +69,7 @@ export function ChangelogPostCard({
       {linkToPost ? (
         <Link href={`/changelog/${post.slug}`} className="group block">
           {header}
-          <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:underline">
+          <span className="mt-2 inline-flex items-center gap-1 text-body-sm font-medium text-primary group-hover:underline">
             Read the full post
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -83,7 +83,7 @@ export function ChangelogPostCard({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="mt-2 text-xs font-medium text-primary hover:underline"
+            className="mt-2 text-body-sm font-medium text-primary hover:underline"
           >
             {expanded ? "Hide notes" : "Show notes"}
           </button>
@@ -101,7 +101,7 @@ export function ChangelogPostCard({
           return (
             <span
               key={badge}
-              className={`rounded-full border px-2 py-0.5 text-xs font-medium ${style.classes}`}
+              className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${style.classes}`}
             >
               {style.label}
             </span>
@@ -118,7 +118,7 @@ export function ChangelogPostCard({
             return (
               <span
                 key={area}
-                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${style.classes}`}
+                className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${style.classes}`}
               >
                 {style.label}
               </span>

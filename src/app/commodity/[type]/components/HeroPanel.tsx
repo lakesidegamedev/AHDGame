@@ -135,7 +135,7 @@ export default function HeroPanel({
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <button
                 onClick={() => onSelectExchange(null)}
-                className={`rounded-lg border px-3 py-1 text-xs font-bold transition-colors ${
+                className={`rounded-lg border px-3 py-1 text-body-sm font-bold transition-colors ${
                   activeCountry === null
                     ? "bg-white/20 border-white/40 text-white"
                     : "bg-black/50 border-white/10 text-white/80 hover:text-white"
@@ -147,7 +147,7 @@ export default function HeroPanel({
                 <button
                   key={countryId}
                   onClick={() => onSelectExchange(countryId)}
-                  className={`rounded-lg border px-3 py-1 text-xs font-bold transition-colors ${
+                  className={`rounded-lg border px-3 py-1 text-body-sm font-bold transition-colors ${
                     activeCountry === countryId
                       ? "bg-white/20 border-white/40 text-white"
                       : "bg-black/50 border-white/10 text-white/80 hover:text-white"
@@ -162,15 +162,15 @@ export default function HeroPanel({
           {/* Bottom row */}
           <div className="flex items-end gap-3">
             <span
-              className={`inline-flex items-center justify-center w-11 h-11 rounded-xl border text-base font-bold shadow-md ${data.colors}`}
+              className={`inline-flex items-center justify-center w-11 h-11 rounded-xl border text-body-lg font-bold shadow-md ${data.colors}`}
             >
               {data.icon}
             </span>
             <div className="min-w-0">
-              <p className="text-xs text-white/70 drop-shadow italic mb-0.5">
+              <p className="text-body-sm text-white/70 drop-shadow italic mb-0.5">
                 Base: {basePriceDisplay}/{data.unit.replace(/s$/, "")}
               </p>
-              <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+              <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                 {data.label}
               </h1>
             </div>
@@ -184,9 +184,9 @@ export default function HeroPanel({
       <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">{priceBasisLabel}</span>
-          <span className="text-base font-bold tabular-nums">{priceDisplay}</span>
+          <span className="text-body-lg font-bold tabular-nums">{priceDisplay}</span>
           <span
-            className={`text-xs tabular-nums ${
+            className={`text-body-sm tabular-nums ${
               marketScope.priceChange > 0
                 ? "text-error"
                 : marketScope.priceChange < 0
@@ -197,11 +197,11 @@ export default function HeroPanel({
             {marketScope.priceChange > 0 ? "+" : ""}
             {marketScope.priceChange}% vs original base
           </span>
-          {capNote && <span className="text-[10px] text-muted">At cap: {capNote}</span>}
+          {capNote && <span className="text-body-sm text-muted">At cap: {capNote}</span>}
           {capTarget && (
-            <span className="text-[10px] text-muted">At cap: {cappedGoodNote(capTarget)}</span>
+            <span className="text-body-sm text-muted">At cap: {cappedGoodNote(capTarget)}</span>
           )}
-          <span className="mt-1 text-[10px] text-muted">{marketScope.marketCaption}</span>
+          <span className="mt-1 text-body-sm text-muted">{marketScope.marketCaption}</span>
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">
@@ -209,17 +209,17 @@ export default function HeroPanel({
           </span>
           {activeCountry ? (
             <>
-              <span className="text-base font-bold tabular-nums text-foreground">
+              <span className="text-body-lg font-bold tabular-nums text-foreground">
                 {marketScope.regionCount}
               </span>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 {COUNTRY_DISPLAY_LABELS[activeCountry].regionLabelPlural}
               </span>
             </>
           ) : (
             <>
               <span
-                className={`text-base font-bold tabular-nums ${
+                className={`text-body-lg font-bold tabular-nums ${
                   data.annualPriceChange > 0
                     ? "text-success"
                     : data.annualPriceChange < 0
@@ -230,7 +230,7 @@ export default function HeroPanel({
                 {data.annualPriceChange > 0 ? "+" : ""}
                 {data.annualPriceChange.toFixed(2)}%
               </span>
-              <span className="text-xs text-muted">48-turn annualized</span>
+              <span className="text-body-sm text-muted">48-turn annualized</span>
             </>
           )}
         </div>
@@ -238,18 +238,18 @@ export default function HeroPanel({
           <span className="text-body-sm font-medium text-muted">
             {activeCountry ? "National supply" : "Global supply"}
           </span>
-          <span className="text-base font-bold tabular-nums text-success">
+          <span className="text-body-lg font-bold tabular-nums text-success">
             {formatWholeUnits(marketScope.supply, data.unit)}
           </span>
-          <span className="text-xs text-muted">{t("supplyOfferedPerDay")}</span>
-          <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
+          <span className="text-body-sm text-muted">{t("supplyOfferedPerDay")}</span>
+          <span className="text-body-sm text-muted" title={t("supplyOfferedExplanation")}>
             {t("supplyIncludesStock")}
           </span>
           {!activeCountry && (
-            <span className="text-[10px] text-muted">{t("supplyWorldIncludes")}</span>
+            <span className="text-body-sm text-muted">{t("supplyWorldIncludes")}</span>
           )}
           {funded && funded.imports > 0 ? (
-            <span className="text-[10px] text-muted">
+            <span className="text-body-sm text-muted">
               plus {formatUnits(funded.imports, data.unit)} imported
             </span>
           ) : null}
@@ -258,24 +258,24 @@ export default function HeroPanel({
           <span className="text-body-sm font-medium text-muted">
             {activeCountry ? "National demand" : "Global demand"}
           </span>
-          <span className="text-base font-bold tabular-nums text-error">
+          <span className="text-body-lg font-bold tabular-nums text-error">
             {formatWholeUnits(marketScope.demand, data.unit)}
           </span>
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             {marketScope.demandBasis === "funded_orders" ? "ordered per turn" : "per turn"}
           </span>
           {funded && funded.exports > 0 ? (
-            <span className="text-[10px] text-muted">
+            <span className="text-body-sm text-muted">
               plus {formatUnits(funded.exports, data.unit)} exported
             </span>
           ) : null}
           {marketScope.filled !== null ? (
-            <span className="text-[10px] text-muted">
+            <span className="text-body-sm text-muted">
               {formatUnits(marketScope.filled, data.unit)} received
             </span>
           ) : null}
           {marketScope.spilloverRequested > 0 ? (
-            <span className="text-[10px] text-muted" title={t("substitutionOrdersExplanation")}>
+            <span className="text-body-sm text-muted" title={t("substitutionOrdersExplanation")}>
               {t("substitutionOrders", {
                 units: formatUnits(marketScope.spilloverRequested, data.unit),
               })}
@@ -285,20 +285,20 @@ export default function HeroPanel({
         {trade?.sold != null && soldShare != null ? (
           <div className="flex flex-1 flex-col px-5 py-3 min-w-max" data-testid="hero-sold">
             <span className="text-body-sm font-medium text-muted">Local producers sold</span>
-            <span className="text-base font-bold tabular-nums text-foreground">
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
               {formatUnits(trade.sold, data.unit)}
             </span>
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               {Math.round(soldShare * 100)}% of offers, at home and abroad
             </span>
           </div>
         ) : (
           <div className="flex flex-1 flex-col px-5 py-3 min-w-max" data-testid="hero-gap">
             <span className="text-body-sm font-medium text-muted">Offers vs orders</span>
-            <span className="text-base font-bold tabular-nums text-foreground">
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
               {gap === 0 ? "Even" : formatUnits(Math.abs(gap), data.unit)}
             </span>
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               {gap > 0
                 ? importsKnown
                   ? "more offered, counting imports"

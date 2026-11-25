@@ -104,16 +104,16 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-        <h3 className="text-sm font-semibold text-foreground">Patreon management</h3>
-        <p className="mt-1 text-sm text-muted">
+        <h3 className="text-body-lg font-semibold text-foreground">Patreon management</h3>
+        <p className="mt-1 text-body text-muted">
           Search for a player account, link a Patreon user ID, and set or clear supporter status.
         </p>
 
         <div className="mt-4">
-          <label className="block text-xs font-medium text-muted mb-1.5">Player</label>
+          <label className="block text-body-sm font-medium text-muted mb-1.5">Player</label>
           {selected ? (
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-sm">
+              <div className="flex-1 rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-body">
                 <span className="font-medium">{selected.username}</span>
                 {selected.characterName && (
                   <span className="ml-2 text-muted">({selected.characterName})</span>
@@ -129,7 +129,7 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
                   setMessage("");
                   setError("");
                 }}
-                className="rounded-md border border-card-border bg-card px-3 py-2 text-xs text-muted hover:text-foreground"
+                className="rounded-md border border-card-border bg-card px-3 py-2 text-body-sm text-muted hover:text-foreground"
               >
                 Clear
               </button>
@@ -147,14 +147,14 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
 
       {selected && (
         <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-          <h4 className="text-sm font-semibold text-foreground">Set status</h4>
+          <h4 className="text-body font-semibold text-foreground">Set status</h4>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="space-y-1">
-              <span className="block text-xs font-medium text-muted">Tier</span>
+              <span className="block text-body-sm font-medium text-muted">Tier</span>
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value as typeof tier)}
-                className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm"
+                className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-body"
               >
                 <option value="">None</option>
                 <option value="supporter">Supporter</option>
@@ -163,21 +163,21 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-xs font-medium text-muted">Patreon user ID</span>
+              <span className="block text-body-sm font-medium text-muted">Patreon user ID</span>
               <input
                 value={patreonUserId}
                 onChange={(e) => setPatreonUserId(e.target.value)}
-                className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm"
+                className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-body"
                 placeholder="Optional webhook link"
               />
             </label>
           </div>
           <label className="mt-4 block space-y-1">
-            <span className="block text-xs font-medium text-muted">Reason</span>
+            <span className="block text-body-sm font-medium text-muted">Reason</span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm"
+              className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-body"
               placeholder="Optional admin note"
             />
           </label>
@@ -186,7 +186,7 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
               type="button"
               onClick={() => void saveStatus(tier || null)}
               disabled={loading}
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               Save
             </button>
@@ -194,13 +194,13 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
               type="button"
               onClick={() => void saveStatus(null)}
               disabled={loading}
-              className="rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm font-medium text-foreground disabled:opacity-60"
+              className="rounded-xl border border-card-border bg-background px-4 py-2.5 text-body font-medium text-foreground disabled:opacity-60"
             >
               Clear
             </button>
           </div>
           {(error || message) && (
-            <p className={`mt-4 text-sm ${error ? "text-error" : "text-success"}`}>
+            <p className={`mt-4 text-body ${error ? "text-error" : "text-success"}`}>
               {error || message}
             </p>
           )}

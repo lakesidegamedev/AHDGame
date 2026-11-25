@@ -53,8 +53,8 @@ export function HealPartyElections() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal party elections</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal party elections</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Fixes state, national, and committee party elections missing required fields (startTurn,
           endTurn, durationTurns, countryId). Elections without these fields display incorrectly or
           cause cross-country conflicts.
@@ -70,7 +70,7 @@ export function HealPartyElections() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           {diagnostic.status === "ok" ? (
             <p className="text-success">{diagnostic.message}</p>
           ) : (
@@ -84,7 +84,7 @@ export function HealPartyElections() {
               </div>
               {diagnostic.elections.length > 0 && (
                 <div className="mt-2 max-h-48 overflow-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-body-sm">
                     <thead>
                       <tr className="text-left text-muted border-b border-card-border">
                         <th className="pb-1">Type</th>
@@ -100,7 +100,7 @@ export function HealPartyElections() {
                         <tr key={e._id}>
                           <td className="py-1">
                             <span
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getTypeColor(e.type)}`}
+                              className={`rounded px-1.5 py-0.5 text-body-sm font-medium ${getTypeColor(e.type)}`}
                             >
                               {e.type}
                             </span>

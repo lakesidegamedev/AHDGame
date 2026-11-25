@@ -132,7 +132,7 @@ function PartyCard({ party, countryId, regionId, flavor }: PartyCardProps) {
             >
               {party.partyName}
             </Link>
-            <div className="text-xs text-muted">{party.partyAbbreviation}</div>
+            <div className="text-body-sm text-muted">{party.partyAbbreviation}</div>
           </div>
         </div>
       </div>
@@ -142,12 +142,12 @@ function PartyCard({ party, countryId, regionId, flavor }: PartyCardProps) {
           <OrgDonut value={party.organization} color={party.partyColor} />
           <div className="flex-1 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Organization</span>
+              <span className="text-body font-medium">Organization</span>
               <div className="flex items-center gap-1.5">
-                <span className={`text-lg font-bold leading-none ${orgLabel.color}`}>
+                <span className={`text-heading font-bold leading-none ${orgLabel.color}`}>
                   {party.organization.toFixed(1)}%
                 </span>
-                <span className={`text-xs ${orgLabel.color}`}>{orgLabel.label}</span>
+                <span className={`text-body-sm ${orgLabel.color}`}>{orgLabel.label}</span>
               </div>
             </div>
             <div className="h-1.5 rounded-full bg-card-elevated overflow-hidden">
@@ -162,7 +162,7 @@ function PartyCard({ party, countryId, regionId, flavor }: PartyCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-body-sm">
           <span className="text-muted">Chair</span>
           {party.chairName && party.chairCharacterId ? (
             <Link
@@ -178,7 +178,7 @@ function PartyCard({ party, countryId, regionId, flavor }: PartyCardProps) {
 
         {flavor && (
           <div className="pt-3 border-t border-card-border">
-            <p className="text-[11px] text-muted/70 leading-relaxed italic">{flavor}</p>
+            <p className="text-body-sm text-muted/70 leading-relaxed italic">{flavor}</p>
           </div>
         )}
       </div>
@@ -198,7 +198,7 @@ function AccordionToggle({
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
+      className="w-full flex items-center justify-between px-5 py-3 text-body font-medium text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
     >
       <span>{label}</span>
       <svg
@@ -247,11 +247,11 @@ export function RegionPartiesTab({
             />
           </svg>
           <p className="font-medium">No party organizations in this {regionNoun}</p>
-          {config.emptyStateHint && <p className="text-sm mt-1">{config.emptyStateHint}</p>}
+          {config.emptyStateHint && <p className="text-body mt-1">{config.emptyStateHint}</p>}
           {config.emptyStateLink && (
             <Link
               href={config.emptyStateLink.href}
-              className="mt-4 inline-block text-sm text-primary hover:text-primary/80 transition-colors"
+              className="mt-4 inline-block text-body text-primary hover:text-primary/80 transition-colors"
             >
               {config.emptyStateLink.label}
             </Link>
@@ -287,9 +287,9 @@ export function RegionPartiesTab({
               d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
             />
           </svg>
-          <h2 className="text-lg font-semibold">{heading}</h2>
+          <h2 className="text-heading font-semibold">{heading}</h2>
         </div>
-        <p className="text-sm text-muted leading-relaxed">{description}</p>
+        <p className="text-body text-muted leading-relaxed">{description}</p>
       </div>
 
       {top3.length > 0 ? (
@@ -305,7 +305,7 @@ export function RegionPartiesTab({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted px-1">
+        <p className="text-body text-muted px-1">
           No parties have active organization in this {regionNoun}.
         </p>
       )}
@@ -353,13 +353,13 @@ export function RegionPartiesTab({
                     />
                     <Link
                       href={regionPartyUrl(countryId, regionId, party.partyId)}
-                      className="text-sm font-medium hover:text-primary transition-colors"
+                      className="text-body font-medium hover:text-primary transition-colors"
                     >
                       {party.partyName}
                     </Link>
-                    <span className="text-xs text-muted">{party.partyAbbreviation}</span>
+                    <span className="text-body-sm text-muted">{party.partyAbbreviation}</span>
                   </div>
-                  <span className="text-xs text-muted">No organization</span>
+                  <span className="text-body-sm text-muted">No organization</span>
                 </div>
               ))}
             </div>

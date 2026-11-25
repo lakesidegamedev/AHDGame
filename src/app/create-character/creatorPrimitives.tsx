@@ -24,7 +24,7 @@ export function FieldCaption({
         {children}
         {required && <span className="text-error"> *</span>}
       </span>
-      {hint && <span className="text-body-xs text-muted/70">{hint}</span>}
+      {hint && <span className="text-body-sm text-muted/70">{hint}</span>}
     </div>
   );
 }
@@ -61,7 +61,7 @@ export function StepPanel({
       <header className="flex items-start gap-3 border-b border-card-border/70 px-4 py-3">
         <span
           aria-hidden
-          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border font-mono text-body-xs font-bold ${
+          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border font-mono text-body-sm font-bold ${
             complete
               ? "border-success/40 bg-success/10 text-success"
               : "border-card-border bg-card-muted text-muted"
@@ -72,11 +72,11 @@ export function StepPanel({
         <div className="min-w-0">
           <h2
             id={`creator-step-${step}`}
-            className="flex flex-wrap items-baseline gap-2 text-heading-sm font-semibold leading-tight"
+            className="flex flex-wrap items-baseline gap-2 text-heading font-semibold leading-tight"
           >
             {title}
             {complete && (
-              <span className="rounded border border-success/40 bg-success/10 px-1.5 font-mono text-body-xs font-semibold uppercase tracking-[0.1em] text-success">
+              <span className="rounded border border-success/40 bg-success/10 px-1.5 font-mono text-body-sm font-semibold uppercase tracking-[0.1em] text-success">
                 Done
               </span>
             )}
@@ -131,7 +131,7 @@ export function ChipGroup<T extends string>({
               <span className="block leading-tight">{opt.label}</span>
               {opt.note && (
                 <span
-                  className={`mt-0.5 block font-mono text-body-xs leading-tight ${
+                  className={`mt-0.5 block font-mono text-body-sm leading-tight ${
                     selected ? "text-foreground/70" : "text-muted/70"
                   }`}
                 >

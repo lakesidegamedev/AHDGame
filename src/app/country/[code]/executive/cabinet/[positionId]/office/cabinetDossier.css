@@ -16,7 +16,7 @@
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-weight: 700;
-  font-size: 10px;
+  font-size: var(--text-body-sm);
 }
 [data-cabinet-dossier] .tabular {
   font-variant-numeric: tabular-nums;

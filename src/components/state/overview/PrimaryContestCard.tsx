@@ -22,7 +22,7 @@ export function ContestedPrimariesCard({ vm }: { vm: OverviewViewModel }) {
       aria-labelledby="overview-primaries-title"
       className="rounded-xl border border-card-border bg-card p-5 sm:p-6"
     >
-      <h2 id="overview-primaries-title" className="text-heading-sm font-semibold text-foreground">
+      <h2 id="overview-primaries-title" className="text-heading font-semibold text-foreground">
         Contested primaries
       </h2>
       {rows.length === 0 ? (

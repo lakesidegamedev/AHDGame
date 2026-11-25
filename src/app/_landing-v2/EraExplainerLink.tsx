@@ -29,7 +29,7 @@ export function EraExplainerLink({
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4 transition-colors ${TONE_CLASSES[tone]}`}
+          className={`inline-flex items-center gap-1.5 text-body font-medium underline underline-offset-4 transition-colors ${TONE_CLASSES[tone]}`}
         >
           {link.label}
           <span aria-hidden="true">→</span>

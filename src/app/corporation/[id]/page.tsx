@@ -816,28 +816,28 @@ function useCorporationDetailPageContext() {
               accept surface). */}
             {isPendingCeo && (
               <div className="mb-6 rounded-xl border border-warning/40 bg-warning/10 p-4">
-                <div className="mb-1 text-sm font-semibold text-warning">
+                <div className="mb-1 text-body font-semibold text-warning">
                   You&apos;ve been appointed CEO of {corporation.name}
                 </div>
-                <p className="mb-3 text-xs text-muted">
+                <p className="mb-3 text-body-sm text-muted">
                   The treasury has nominated you to lead this National Corporation. You may only
                   hold one CEO position at a time.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={handleAcceptCeo}
-                    className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-success/90"
+                    className="rounded-lg bg-success px-4 py-2 text-body font-medium text-background transition-colors hover:bg-success/90"
                   >
                     Accept position
                   </button>
                   <button
                     onClick={handleDeclineCeo}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                    className="rounded-lg border border-card-border px-4 py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
                   >
                     Decline
                   </button>
                 </div>
-                <InlineError error={error} className="mt-3 text-xs text-error" />
+                <InlineError error={error} className="mt-3 text-body-sm text-error" />
               </div>
             )}
             <NationalCorporationView corpId={id} />
@@ -854,7 +854,7 @@ function useCorporationDetailPageContext() {
         <div className="min-h-screen bg-background pb-16" data-replay-block>
           <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
             <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-              <h2 className="text-lg font-semibold text-error">
+              <h2 className="text-heading font-semibold text-error">
                 {error || "Corporation not found"}
               </h2>
               {errorRef && (
@@ -871,7 +871,7 @@ function useCorporationDetailPageContext() {
                     setErrorRef(null);
                     void fetchCorporation();
                   }}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   Retry
                 </button>

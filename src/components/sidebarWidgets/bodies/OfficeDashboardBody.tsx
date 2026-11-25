@@ -56,9 +56,9 @@ export function OfficeDashboardBody({
   ].filter((stat) => stat.value !== null);
   return (
     <div className="space-y-2.5">
-      <span className="block truncate text-sm font-semibold text-foreground">{data.name}</span>
+      <span className="block truncate text-body font-semibold text-foreground">{data.name}</span>
       {data.approval !== null && (
-        <div className="space-y-1 text-xs">
+        <div className="space-y-1 text-body-sm">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-muted">{t("approval")}</span>
             <span className="font-semibold tabular-nums text-foreground">
@@ -79,8 +79,8 @@ export function OfficeDashboardBody({
               key={stat.id}
               className="min-w-0 rounded-md border border-card-border bg-background/40 px-2 py-1.5"
             >
-              <dt className="truncate text-[10px] text-muted">{stat.label}</dt>
-              <dd className={`truncate text-[13px] font-semibold tabular-nums ${stat.tone}`}>
+              <dt className="truncate text-body-sm text-muted">{stat.label}</dt>
+              <dd className={`truncate text-body-sm font-semibold tabular-nums ${stat.tone}`}>
                 {stat.value}
               </dd>
             </div>

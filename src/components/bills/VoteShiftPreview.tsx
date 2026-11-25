@@ -44,13 +44,13 @@ export function VoteShiftPreview({
     // No ideology on this bill (or a vote that predates the ledger): neither
     // button moves the voter, and claiming a position match would be false.
     return (
-      <p className={`text-xs text-muted ${className}`.trim()}>
+      <p className={`text-body-sm text-muted ${className}`.trim()}>
         This vote does not move your positions.
       </p>
     );
   }
   return (
-    <div className={`space-y-0.5 text-xs text-muted ${className}`.trim()}>
+    <div className={`space-y-0.5 text-body-sm text-muted ${className}`.trim()}>
       <p>
         <span className="font-semibold text-success">Aye:</span>{" "}
         {describeVote(preview.aye, currentVote === "for")}

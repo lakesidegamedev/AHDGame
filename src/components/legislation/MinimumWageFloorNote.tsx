@@ -11,7 +11,7 @@ export default function MinimumWageFloorNote({ kaitz }: { kaitz?: number | null 
   const t = useTranslations("legislation.minimumWageFloor");
   if (typeof kaitz !== "number") return null;
   return (
-    <p className="text-xs text-muted">
+    <p className="text-body-sm text-muted">
       {kaitz > 0 ? t("sets", { percent: Math.round(kaitz * 100) }) : t("none")}
     </p>
   );

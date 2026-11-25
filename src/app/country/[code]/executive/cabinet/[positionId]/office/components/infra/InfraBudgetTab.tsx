@@ -35,7 +35,7 @@ export function InfraBudgetTab({
           <div>
             <div className="dossier-label text-muted">Committed / turn</div>
             <div
-              className={`tabular mt-1 text-2xl font-bold ${over ? "text-error" : "text-foreground"}`}
+              className={`tabular mt-1 text-heading font-bold ${over ? "text-error" : "text-foreground"}`}
             >
               {fmtMoneyM(currencySymbol, infraSummary.committedSpend)}
             </div>
@@ -43,7 +43,7 @@ export function InfraBudgetTab({
           <div className="text-right">
             <div className="dossier-label text-muted">{over ? "Over budget" : "Unallocated"}</div>
             <div
-              className={`tabular mt-1 text-2xl font-bold ${over ? "text-error" : "text-success"}`}
+              className={`tabular mt-1 text-heading font-bold ${over ? "text-error" : "text-success"}`}
             >
               {fmtMoneyAbs(currencySymbol, Math.abs(remaining))}
             </div>
@@ -56,7 +56,7 @@ export function InfraBudgetTab({
             height={10}
           />
         </div>
-        <div className="mt-1 flex justify-between text-[11px] text-muted">
+        <div className="mt-1 flex justify-between text-body-sm text-muted">
           <span>{Math.round(use * 100)}% committed</span>
           {over ? (
             <span className="font-semibold text-error">Overspend → budget-balance penalty</span>
@@ -64,7 +64,7 @@ export function InfraBudgetTab({
             <span>Discretionary budget: {fmtMoneyAbs(currencySymbol, envelope)}</span>
           )}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+        <div className="mt-3 grid grid-cols-2 gap-3 text-body-sm">
           <div className="flex justify-between rounded-lg border border-card-border bg-card-muted px-3 py-2">
             <span className="text-muted">Construction</span>
             <span className="tabular text-foreground">
@@ -83,12 +83,12 @@ export function InfraBudgetTab({
       <SectionCard title="By region" sub="Projects per regional grid">
         <div className="space-y-2">
           {regionEntries.length === 0 && (
-            <div className="text-[12px] text-muted">No projects in the pipeline.</div>
+            <div className="text-body-sm text-muted">No projects in the pipeline.</div>
           )}
           {regionEntries.map(([regionId, counts]) => (
             <div
               key={regionId}
-              className="flex items-center justify-between border-b border-card-border py-2 text-[12px] last:border-0"
+              className="flex items-center justify-between border-b border-card-border py-2 text-body-sm last:border-0"
             >
               <span className="text-foreground">
                 {displayCanadianRegionCode(siteName[regionId] ?? regionId)}

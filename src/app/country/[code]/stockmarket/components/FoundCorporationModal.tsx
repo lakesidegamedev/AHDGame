@@ -306,23 +306,23 @@ export function FoundCorporationModal({
     >
       <div className="flex w-full max-w-md max-h-[85dvh] flex-col overflow-hidden rounded-xl border border-card-border bg-card shadow-modal animate-in zoom-in-95 duration-200">
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <h2 id="found-corporation-title" className="text-xl font-bold text-foreground mb-1">
+          <h2 id="found-corporation-title" className="text-heading font-bold text-foreground mb-1">
             Found a corporation
           </h2>
-          <p className="text-sm text-muted mb-4">
+          <p className="text-body text-muted mb-4">
             A flat <span className="text-foreground font-semibold">{fmt(foundingFeeLocal)}</span>{" "}
             founding fee plus any extra treasury commitment is deducted from your personal funds.
             Headquarters will be set to your home state.
           </p>
 
           {foundError && (
-            <div className="mb-4 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+            <div className="mb-4 rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error">
               {foundError}
             </div>
           )}
 
           {onFoundingCooldown && (
-            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body text-warning">
               You can found a corporation in {foundingCooldownTurnsRemaining} turns.
             </div>
           )}
@@ -336,7 +336,7 @@ export function FoundCorporationModal({
                 <button
                   type="button"
                   onClick={() => setFoundingMode("private")}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
                     foundingMode === "private"
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-card-border text-muted hover:bg-card-elevated"
@@ -347,7 +347,7 @@ export function FoundCorporationModal({
                 <button
                   type="button"
                   onClick={() => setFoundingMode("public")}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
                     foundingMode === "public"
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-card-border text-muted hover:bg-card-elevated"
@@ -356,7 +356,7 @@ export function FoundCorporationModal({
                   Public IPO
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 {foundingMode === "private"
                   ? "You own 100% of shares. Treasury, income, and other financials are hidden from non-CEO viewers."
                   : "Issue shares to the public float. Your ownership is reduced but you keep majority control. The float's proceeds flow into the treasury as those shares are bought by investors, not at founding."}
@@ -372,7 +372,7 @@ export function FoundCorporationModal({
                 value={foundName}
                 onChange={(e) => setFoundName(e.target.value)}
                 placeholder="e.g. Acme Industries"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
                 maxLength={60}
               />
             </div>
@@ -389,9 +389,9 @@ export function FoundCorporationModal({
                 }
                 placeholder="e.g. ACME"
                 maxLength={5}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-mono uppercase tracking-wider focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-mono uppercase tracking-wider focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
               />
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 1–5 letters (A–Z). Shown on the stock exchange. Cannot be changed later.
               </p>
             </div>
@@ -404,7 +404,7 @@ export function FoundCorporationModal({
                 <select
                   value={foundType}
                   onChange={(e) => setFoundType(e.target.value as OperatingSectorType | "")}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none cursor-pointer appearance-none"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none cursor-pointer appearance-none"
                 >
                   <option value="" disabled>
                     Select sector…
@@ -430,7 +430,7 @@ export function FoundCorporationModal({
                   </svg>
                 </div>
               </div>
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 Sectors matching this type earn a +5% margin bonus; mismatched sectors take a −15%
                 penalty.
               </p>
@@ -444,7 +444,7 @@ export function FoundCorporationModal({
                 <select
                   value={secondaryType}
                   onChange={(e) => setSecondaryType(e.target.value as OperatingSectorType | "")}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none cursor-pointer appearance-none"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none cursor-pointer appearance-none"
                 >
                   <option value="">None</option>
                   {OPERATING_SECTOR_CHOICES.filter(({ key }) => key !== foundType).map(
@@ -470,13 +470,13 @@ export function FoundCorporationModal({
                   </svg>
                 </div>
               </div>
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 Gives matching sectors a half-strength +2.5% bonus (instead of the −15% mismatch
                 penalty). In exchange, the sprawl penalty doubles. Can be changed later, but that
                 triggers a 48-turn cooldown and a 24-turn −10% margin penalty on every sector.
               </p>
               {secondaryMatchesPrimary && (
-                <p className="mt-1.5 text-xs text-error">
+                <p className="mt-1.5 text-body-sm text-error">
                   Secondary sector must be different from the primary sector.
                 </p>
               )}
@@ -487,7 +487,7 @@ export function FoundCorporationModal({
                 Starting treasury
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2 text-sm text-muted pointer-events-none">
+                <span className="absolute left-3 top-2 text-body text-muted pointer-events-none">
                   {currencySymbol}
                 </span>
                 <input
@@ -505,10 +505,10 @@ export function FoundCorporationModal({
                   min={minCapitalLocal}
                   max={maxCapitalLocal}
                   step={treasuryStepLocal}
-                  className="w-full rounded-lg border border-card-border bg-background pl-7 pr-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all tabular-nums"
+                  className="w-full rounded-lg border border-card-border bg-background pl-7 pr-3 py-2 text-body focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all tabular-nums"
                 />
               </div>
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 Cash seeded into the corporation&apos;s treasury at founding. Any amount above the{" "}
                 {fmt(minCapitalLocal)} baseline is paid from your personal funds on top of the
                 founding fee. Higher treasury means higher starting share price (treasury ÷{" "}
@@ -516,12 +516,12 @@ export function FoundCorporationModal({
                 {fmt(minCapitalLocal)} – {fmt(maxCapitalLocal)}.
               </p>
               {capitalTooLow && (
-                <p className="mt-1.5 text-xs text-error">
+                <p className="mt-1.5 text-body-sm text-error">
                   Minimum starting treasury is {fmt(minCapitalLocal)}.
                 </p>
               )}
               {capitalTooHigh && (
-                <p className="mt-1.5 text-xs text-error">
+                <p className="mt-1.5 text-body-sm text-error">
                   Maximum starting treasury is {fmt(maxCapitalLocal)}.
                 </p>
               )}
@@ -530,14 +530,14 @@ export function FoundCorporationModal({
             {foundingMode === "public" && (
               <div>
                 {underwritingBanks.length > 0 && (
-                  <label className="mb-3 block text-xs text-muted">
+                  <label className="mb-3 block text-body-sm text-muted">
                     <span className="mb-1 block font-bold uppercase tracking-wider">
                       IPO underwriter (optional)
                     </span>
                     <select
                       value={underwriterCorporationId}
                       onChange={(event) => setUnderwriterCorporationId(event.target.value)}
-                      className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
                     >
                       <option value="">Market pool only</option>
                       {underwritingBanks.map((bank) => (
@@ -553,7 +553,7 @@ export function FoundCorporationModal({
                   </label>
                 )}
                 <div className="mb-3 rounded-lg border border-card-border bg-card-elevated p-3">
-                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <label className="flex items-start gap-2 text-body cursor-pointer">
                     <input
                       type="checkbox"
                       checked={dualClass}
@@ -568,7 +568,7 @@ export function FoundCorporationModal({
                     />
                     <span>
                       <span className="font-medium text-foreground">Dual-class supershares</span>
-                      <span className="block text-xs text-muted mt-0.5">
+                      <span className="block text-body-sm text-muted mt-0.5">
                         Keep voting control while offering up to {SUPERSHARE_IPO_MAX_FLOAT_PCT}% of
                         the company. Founder shares become ordinary shares when sold.
                       </span>
@@ -588,7 +588,7 @@ export function FoundCorporationModal({
                         onChange={(e) => setSuperMultiplier(Number(e.target.value))}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-muted">
+                      <div className="flex justify-between text-body-sm text-muted">
                         <span>{SUPERSHARE_MIN_MULTIPLIER}×</span>
                         <span>{SUPERSHARE_MAX_MULTIPLIER}×</span>
                       </div>
@@ -611,10 +611,10 @@ export function FoundCorporationModal({
                         setFloatPct(next);
                         if (next <= IPO_MAX_FLOAT_PCT) setHighFloatAck(false);
                       }}
-                      className="w-16 rounded-md border border-card-border bg-background px-2 py-1 text-right text-sm tabular-nums focus:border-primary/60 focus:outline-none"
+                      className="w-16 rounded-md border border-card-border bg-background px-2 py-1 text-right text-body tabular-nums focus:border-primary/60 focus:outline-none"
                       aria-label="Share offered to the public (%)"
                     />
-                    <span className="text-xs text-muted">%</span>
+                    <span className="text-body-sm text-muted">%</span>
                   </div>
                 </div>
                 <input
@@ -630,12 +630,12 @@ export function FoundCorporationModal({
                   }}
                   className="w-full"
                 />
-                <div className="flex justify-between text-xs text-muted">
+                <div className="flex justify-between text-body-sm text-muted">
                   <span>{IPO_MIN_FLOAT_PCT}%</span>
                   <span>{maxFloatPct}%</span>
                 </div>
                 {requiresHighFloatAck && (
-                  <label className="mt-3 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs cursor-pointer">
+                  <label className="mt-3 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-body-sm cursor-pointer">
                     <input
                       type="checkbox"
                       checked={highFloatAck}
@@ -654,7 +654,7 @@ export function FoundCorporationModal({
                   </label>
                 )}
                 {ipoPreview && (
-                  <div className="mt-3 rounded-lg border border-card-border bg-card-elevated p-3 text-xs space-y-1">
+                  <div className="mt-3 rounded-lg border border-card-border bg-card-elevated p-3 text-body-sm space-y-1">
                     <div className="flex justify-between">
                       <span className="text-muted">Founder ownership after IPO</span>
                       <span
@@ -696,7 +696,7 @@ export function FoundCorporationModal({
                         {fmt(treasuryLocal)}
                       </span>
                     </div>
-                    <p className="pt-1 text-[11px] leading-snug text-muted">
+                    <p className="pt-1 text-body-sm leading-snug text-muted">
                       Only your starting treasury is funded at founding. IPO proceeds arrive in the
                       treasury as the float is bought by investors.
                     </p>
@@ -705,7 +705,7 @@ export function FoundCorporationModal({
               </div>
             )}
 
-            <div className="rounded-lg border border-card-border bg-card-elevated p-3 text-xs space-y-1">
+            <div className="rounded-lg border border-card-border bg-card-elevated p-3 text-body-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted">Founding fee (personal)</span>
                 <span className="font-semibold tabular-nums">{fmt(foundingFeeLocal)}</span>
@@ -750,7 +750,7 @@ export function FoundCorporationModal({
               onClose();
               setFoundError("");
             }}
-            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors hover:bg-card-elevated"
+            className="rounded-lg border border-card-border px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors hover:bg-card-elevated"
           >
             Cancel
           </button>
@@ -758,7 +758,7 @@ export function FoundCorporationModal({
             type="button"
             onClick={handleFound}
             disabled={disabled}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border shadow-sm"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border shadow-sm"
           >
             {founding ? "Founding..." : "Found corporation"}
           </button>

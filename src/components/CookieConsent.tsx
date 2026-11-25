@@ -102,7 +102,7 @@ export function CookieConsentBanner() {
         className="fixed inset-x-2 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-[150] mx-auto max-h-[40vh] max-w-3xl overflow-y-auto rounded-xl border border-card-border bg-card shadow-modal sm:inset-x-4 sm:bottom-[calc(5rem+env(safe-area-inset-bottom))] sm:max-h-none sm:overflow-visible"
       >
         <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4">
-          <div className="flex-1 text-xs leading-snug text-muted sm:text-sm sm:leading-relaxed">
+          <div className="flex-1 text-body-sm leading-snug text-muted sm:text-body sm:leading-relaxed">
             <p className="mb-0.5 font-semibold text-foreground sm:mb-1">We use cookies</p>
             <p>
               We use essential cookies to keep you signed in and the game running. With your

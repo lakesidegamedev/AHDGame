@@ -96,7 +96,7 @@ export function CollegeSnake({
           alignItems: "baseline",
           marginBottom: 5,
           fontFamily: FONT.mono,
-          fontSize: 11,
+          fontSize: 12,
         }}
       >
         <span style={{ color: left.color, fontWeight: 600 }}>
@@ -138,7 +138,7 @@ export function CollegeSnake({
                 background: state.fill || FOG_FILL,
                 color: state.ink,
                 fontFamily: FONT.mono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 overflow: "hidden",
                 outline: state.id === tipping ? `2px solid ${BLEND.ink}` : undefined,

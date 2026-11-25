@@ -54,13 +54,13 @@ export function DuplicateGroupsView({
             onClick={() =>
               onSetExpandedGroups(allExpanded ? new Set() : new Set(pagedGroups.map((_, i) => i)))
             }
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
           >
             {allExpanded ? "Collapse all" : "Expand all"}
           </button>
         </div>
       )}
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         An account&apos;s CURRENT IP, cookie, device key and fingerprint stop matching 30 days after
         they were last observed. Values the account has since rotated away from keep matching for 90
         days, and are labelled &quot;(past)&quot;, so changing a fingerprint no longer removes an
@@ -97,22 +97,22 @@ export function DuplicateGroupsView({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-400">
+            <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-body-sm font-semibold text-amber-400">
               Group {(page - 1) * groupsPerPage + gi + 1}
             </span>
-            <span className="text-sm text-muted">{group.members.length} accounts</span>
+            <span className="text-body text-muted">{group.members.length} accounts</span>
             {typeof group.newestEvidenceMs === "number" && (
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 newest evidence {Math.max(1, Math.round(group.newestEvidenceMs / 86_400_000))}d old
               </span>
             )}
             {group.sharedIps.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {isModeratorContext ? "Network:" : "IP:"}
                 </span>
                 {isModeratorContext ? (
-                  <span className="rounded border border-card-border bg-card px-2 py-0.5 text-xs text-muted">
+                  <span className="rounded border border-card-border bg-card px-2 py-0.5 text-body-sm text-muted">
                     Hidden ({group.sharedIps.length} shared
                     {group.sharedIps.length === 1 ? " IP" : " IPs"})
                   </span>
@@ -120,7 +120,7 @@ export function DuplicateGroupsView({
                   group.sharedIps.map((ip) => (
                     <span
                       key={ip}
-                      className="rounded bg-card px-2 py-0.5 font-mono text-xs text-foreground border border-card-border"
+                      className="rounded bg-card px-2 py-0.5 font-mono text-body-sm text-foreground border border-card-border"
                     >
                       {ip}
                     </span>
@@ -129,7 +129,7 @@ export function DuplicateGroupsView({
               </div>
             )}
             {group.sharedFingerprints.length > 0 && (
-              <span className="rounded bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-400 border border-red-500/30">
+              <span className="rounded bg-red-500/15 px-2 py-0.5 text-body-sm font-medium text-red-400 border border-red-500/30">
                 {group.sharedFingerprints.length === 1
                   ? "Fingerprint match"
                   : `${group.sharedFingerprints.length} fingerprint matches`}
@@ -137,7 +137,7 @@ export function DuplicateGroupsView({
             )}
             {group.sharedHistoricalFingerprints.length > 0 && (
               <span
-                className="rounded bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-300 border border-red-500/20"
+                className="rounded bg-red-500/10 px-2 py-0.5 text-body-sm font-medium text-red-300 border border-red-500/20"
                 title="These accounts shared a browser fingerprint within the last 90 days and have since rotated away from it. Without this, a group formed only by a rotated fingerprint would show no evidence in this header at all."
               >
                 {group.sharedHistoricalFingerprints.length === 1
@@ -147,7 +147,7 @@ export function DuplicateGroupsView({
             )}
             {group.sharedHistoricalIps.length > 0 && (
               <span
-                className="rounded bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-300 border border-orange-500/20"
+                className="rounded bg-orange-500/10 px-2 py-0.5 text-body-sm font-medium text-orange-300 border border-orange-500/20"
                 title="These accounts shared an IP within the last 90 days but are not on it now."
               >
                 {group.sharedHistoricalIps.length === 1
@@ -157,7 +157,7 @@ export function DuplicateGroupsView({
             )}
             {group.sharedDevices.length > 0 && (
               <span
-                className="rounded bg-pink-500/15 px-2 py-0.5 text-xs font-medium text-pink-400 border border-pink-500/30"
+                className="rounded bg-pink-500/15 px-2 py-0.5 text-body-sm font-medium text-pink-400 border border-pink-500/30"
                 title="Accounts share a localStorage device key (survives cookie clears)"
               >
                 {group.sharedDevices.length === 1
@@ -168,7 +168,7 @@ export function DuplicateGroupsView({
           </button>
           {group.cgnatSuspect && (
             <div
-              className="border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs text-yellow-300"
+              className="border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-body-sm text-yellow-300"
               title="Mobile/cellular IPs are routinely shared across thousands of unrelated users via carrier-grade NAT (cgNAT). Without a fingerprint, device key, or behavioral overlap, this group is likely a false positive."
             >
               <span className="font-semibold">Likely cgNAT (mobile carrier):</span> shared IP is the
@@ -187,18 +187,18 @@ export function DuplicateGroupsView({
                     {/* Character & match badges */}
                     <div className="flex flex-wrap items-center gap-2 min-w-[140px]">
                       {user.isAdmin && (
-                        <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs font-medium text-yellow-400">
+                        <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-body-sm font-medium text-yellow-400">
                           Admin
                         </span>
                       )}
                       {user.isBanned && (
-                        <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-xs font-medium text-red-400">
+                        <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-body-sm font-medium text-red-400">
                           Banned
                         </span>
                       )}
                       {user.matchReasons.includes("ip") && (
                         <span
-                          className="rounded bg-orange-500/15 px-1.5 py-0.5 text-xs font-medium text-orange-400 border border-orange-500/30"
+                          className="rounded bg-orange-500/15 px-1.5 py-0.5 text-body-sm font-medium text-orange-400 border border-orange-500/30"
                           title="Shares an IP address with another account in this group"
                         >
                           IP match
@@ -206,7 +206,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.matchReasons.includes("fingerprint") && (
                         <span
-                          className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs font-medium text-red-400 border border-red-500/30"
+                          className="rounded bg-red-500/15 px-1.5 py-0.5 text-body-sm font-medium text-red-400 border border-red-500/30"
                           title="Shares a browser fingerprint with another account in this group"
                         >
                           Fingerprint
@@ -214,7 +214,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.matchReasons.includes("fingerprint-past") && (
                         <span
-                          className="rounded bg-red-500/10 px-1.5 py-0.5 text-xs font-medium text-red-300 border border-red-500/20"
+                          className="rounded bg-red-500/10 px-1.5 py-0.5 text-body-sm font-medium text-red-300 border border-red-500/20"
                           title="Shared a browser fingerprint with another account in this group within the last 90 days, but has since rotated away from it"
                         >
                           Fingerprint (past)
@@ -222,7 +222,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.matchReasons.includes("ip-past") && (
                         <span
-                          className="rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-medium text-orange-300 border border-orange-500/20"
+                          className="rounded bg-orange-500/10 px-1.5 py-0.5 text-body-sm font-medium text-orange-300 border border-orange-500/20"
                           title="Shared an IP with another account in this group within the last 90 days, but is not on it now"
                         >
                           IP (past)
@@ -230,7 +230,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.weakMatch && (
                         <span
-                          className="rounded bg-yellow-500/15 px-1.5 py-0.5 text-xs font-medium text-yellow-400 border border-yellow-500/30"
+                          className="rounded bg-yellow-500/15 px-1.5 py-0.5 text-body-sm font-medium text-yellow-400 border border-yellow-500/30"
                           title="A shared IP is the ONLY thing linking this account to the group. Shared IPs are routinely reused by carrier NAT, VPNs, DHCP reassignment and household networks. Confirm with fingerprint, device-key or behavioural evidence before treating this account as an alt."
                         >
                           Weak match
@@ -238,7 +238,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.matchReasons.includes("tracking") && (
                         <span
-                          className="rounded bg-purple-500/15 px-1.5 py-0.5 text-xs font-medium text-purple-400 border border-purple-500/30"
+                          className="rounded bg-purple-500/15 px-1.5 py-0.5 text-body-sm font-medium text-purple-400 border border-purple-500/30"
                           title="Shares a browser tracking cookie with another account in this group"
                         >
                           Same browser
@@ -246,7 +246,7 @@ export function DuplicateGroupsView({
                       )}
                       {user.matchReasons.includes("device") && (
                         <span
-                          className="rounded bg-pink-500/15 px-1.5 py-0.5 text-xs font-medium text-pink-400 border border-pink-500/30"
+                          className="rounded bg-pink-500/15 px-1.5 py-0.5 text-body-sm font-medium text-pink-400 border border-pink-500/30"
                           title="Shares a localStorage device key with another account in this group (survives cookie clears)"
                         >
                           Same device
@@ -254,7 +254,7 @@ export function DuplicateGroupsView({
                       )}
                       {(user.lastDevice === "mobile" || user.lastDevice === "tablet") && (
                         <span
-                          className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-xs font-medium text-cyan-400 border border-cyan-500/30"
+                          className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-body-sm font-medium text-cyan-400 border border-cyan-500/30"
                           title={`Last login from a ${user.lastDevice} device — mobile/cellular IPs are often shared across many users via carrier NAT.`}
                         >
                           {user.lastDevice === "mobile" ? "Mobile" : "Tablet"}
@@ -265,14 +265,14 @@ export function DuplicateGroupsView({
                           href={`/character/${user.characterId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`font-medium hover:text-primary transition-colors ${user.characterName ? "" : "text-muted italic text-sm"}`}
+                          className={`font-medium hover:text-primary transition-colors ${user.characterName ? "" : "text-muted italic text-body"}`}
                         >
                           {user.characterName || "(No character)"}
                         </a>
                       ) : (
                         <span
                           className={
-                            user.characterName ? "font-medium" : "text-muted italic text-sm"
+                            user.characterName ? "font-medium" : "text-muted italic text-body"
                           }
                         >
                           {user.characterName || "(No character)"}
@@ -281,23 +281,23 @@ export function DuplicateGroupsView({
                     </div>
 
                     {/* Party */}
-                    <span className={`text-sm ${getPartyTextColor(user.party)}`}>
+                    <span className={`text-body ${getPartyTextColor(user.party)}`}>
                       {user.party ? getPartyLabel(user.party) : "—"}
                     </span>
 
                     {/* Username / email — admin only */}
                     {!isModeratorContext && (
                       <div className="min-w-[160px]">
-                        <div className="text-sm font-medium">{user.username}</div>
-                        <div className="text-xs text-muted">{user.email}</div>
+                        <div className="text-body font-medium">{user.username}</div>
+                        <div className="text-body-sm text-muted">{user.email}</div>
                       </div>
                     )}
 
                     {/* IPs */}
                     {isModeratorContext ? (
-                      <span className="text-xs text-muted">Network details hidden</span>
+                      <span className="text-body-sm text-muted">Network details hidden</span>
                     ) : (
-                      <div className="flex gap-4 text-xs">
+                      <div className="flex gap-4 text-body-sm">
                         <div>
                           <span className="text-muted">Reg: </span>
                           <span className="font-mono break-all">{user.registrationIp || "—"}</span>
@@ -312,7 +312,7 @@ export function DuplicateGroupsView({
                     {/* VPN badge */}
                     {user.vpnFlag !== null && user.vpnFlag !== undefined && (
                       <span
-                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${
+                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-body-sm font-medium ${
                           user.vpnFlag
                             ? "bg-red-500/20 text-red-400"
                             : "bg-green-500/20 text-green-400"
@@ -324,7 +324,7 @@ export function DuplicateGroupsView({
 
                     {/* IP Details panel (admin only) */}
                     {!isModeratorContext && user.ipDetails && (
-                      <div className="w-full rounded-lg border border-card-border bg-background/50 p-3 text-xs space-y-1.5">
+                      <div className="w-full rounded-lg border border-card-border bg-background/50 p-3 text-body-sm space-y-1.5">
                         {/* The address is named explicitly, and flagged when it
                             is not the account's current one or not what links
                             this group. Without that, a moderator reads the city
@@ -343,7 +343,7 @@ export function DuplicateGroupsView({
                           </span>
                           {user.ipDetails.ip !== user.lastKnownIp && (
                             <span
-                              className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-xs font-normal text-yellow-400"
+                              className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-body-sm font-normal text-yellow-400"
                               title="This describes an address the account is no longer using, so it does not describe where this account connects from now."
                             >
                               not the current IP
@@ -351,7 +351,7 @@ export function DuplicateGroupsView({
                           )}
                           {!group.sharedIps.includes(user.ipDetails.ip) && (
                             <span
-                              className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-xs font-normal text-yellow-400"
+                              className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-body-sm font-normal text-yellow-400"
                               title="This is not one of the addresses linking the accounts in this group."
                             >
                               not a group link
@@ -410,7 +410,7 @@ export function DuplicateGroupsView({
 
                     {/* Fingerprint — show value only for admin */}
                     {!isModeratorContext && (user.lastFingerprint || user.lastFingerprintKey) && (
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-body-sm">
                         <span className="text-muted">FP:</span>
                         <span className="font-mono text-primary break-all">
                           {user.lastFingerprint}
@@ -422,13 +422,13 @@ export function DuplicateGroupsView({
                     )}
 
                     {/* Last login */}
-                    <span className="text-xs text-muted">
+                    <span className="text-body-sm text-muted">
                       {user.lastLogin ? formatDate(user.lastLogin) : "Never"}
                     </span>
 
                     {/* Last logout */}
                     {user.lastLogout && (
-                      <span className="text-xs text-muted">
+                      <span className="text-body-sm text-muted">
                         Logout: {formatDate(user.lastLogout)}
                       </span>
                     )}

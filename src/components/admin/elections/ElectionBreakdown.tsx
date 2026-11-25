@@ -89,8 +89,8 @@ export function ElectionBreakdown({
       <div className="mb-2 text-body-sm font-medium text-muted">
         {isGlobal ? "Elections by country" : "Elections by type"}
       </div>
-      <div className="text-[11px]">
-        <div className="grid grid-cols-[1fr_40px_40px_44px] gap-2 border-b border-card-border pb-1 text-[9px] font-semibold uppercase text-muted">
+      <div className="text-body-sm">
+        <div className="grid grid-cols-[1fr_40px_40px_44px] gap-2 border-b border-card-border pb-1 text-body-sm font-semibold uppercase text-muted">
           <span />
           <span className="text-right">Pri</span>
           <span className="text-right">Gen</span>

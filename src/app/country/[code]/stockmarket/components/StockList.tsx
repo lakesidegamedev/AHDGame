@@ -313,7 +313,7 @@ export function StockList({
 
   const renderNonTradableBadge = () => (
     <div
-      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-muted/10 text-muted"
+      className="inline-flex items-center px-2 py-0.5 rounded-md text-body-sm font-bold bg-muted/10 text-muted"
       title="State enterprise with no tradable shares"
     >
       Non-tradable
@@ -325,7 +325,7 @@ export function StockList({
     const safe = finitePriceChange(value);
     return (
       <div
-        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${
+        className={`inline-flex items-center px-2 py-0.5 rounded-md text-body-sm font-bold ${
           safe > 0
             ? "bg-success/10 text-success"
             : safe < 0
@@ -355,7 +355,7 @@ export function StockList({
             {listing.tickerSymbol}
           </Link>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-body-sm text-muted">—</span>
         )}
       </td>
       <td className="px-4 py-3">
@@ -375,20 +375,20 @@ export function StockList({
             <span className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
               {listing.name}
             </span>
-            <div className="flex items-center gap-2 text-xs text-muted">
+            <div className="flex items-center gap-2 text-body-sm text-muted">
               {listing.exchange && (
-                <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border uppercase text-[9px] tracking-wide font-semibold">
+                <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border uppercase text-body-sm tracking-wide font-semibold">
                   {listing.exchange}
                 </span>
               )}
               {listing.isNatcorp && !nested && (
-                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-[9px] tracking-wide font-semibold">
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-body-sm tracking-wide font-semibold">
                   State-Owned
                 </span>
               )}
               {listing.isSubsidiary && (
                 <span
-                  className="px-1.5 py-0.5 rounded-md bg-muted/40 border border-card-border text-muted-foreground uppercase text-[9px] tracking-wide font-semibold"
+                  className="px-1.5 py-0.5 rounded-md bg-muted/40 border border-card-border text-muted-foreground uppercase text-body-sm tracking-wide font-semibold"
                   title={
                     listing.subsidiaryParentName
                       ? `Subsidiary — ${listing.subsidiaryParentName}`
@@ -399,12 +399,12 @@ export function StockList({
                 </span>
               )}
               {listing.ceoType === "character" && (
-                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 uppercase text-[9px] tracking-wide font-semibold whitespace-nowrap">
+                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 uppercase text-body-sm tracking-wide font-semibold whitespace-nowrap">
                   Player-run
                 </span>
               )}
               {listing.ceoType === "npp" && (
-                <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border text-muted uppercase text-[9px] tracking-wide font-semibold whitespace-nowrap">
+                <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border text-muted uppercase text-body-sm tracking-wide font-semibold whitespace-nowrap">
                   NPP-run
                 </span>
               )}
@@ -422,7 +422,7 @@ export function StockList({
                     : "Shares you own";
                 return (
                   <span
-                    className="px-1.5 py-0.5 rounded-md bg-primary/15 border border-primary/30 text-primary uppercase text-[9px] tracking-wide font-semibold whitespace-nowrap"
+                    className="px-1.5 py-0.5 rounded-md bg-primary/15 border border-primary/30 text-primary uppercase text-body-sm tracking-wide font-semibold whitespace-nowrap"
                     title={`${pnlText}. See Portfolio for the full position.`}
                   >
                     You: {own.shares.toLocaleString("en-US")}
@@ -432,7 +432,7 @@ export function StockList({
             </div>
             {/* Diligence line: CEO, HQ, sector growth. Plain text (not a link)
                 because this cell already sits inside the corporation link. */}
-            <div className="truncate text-[11px] text-muted/80">
+            <div className="truncate text-body-sm text-muted/80">
               {listing.ceo ? `CEO ${listing.ceo.name}` : "No CEO"}
               {listing.headquartersStateName ? ` · ${listing.headquartersStateName}` : ""}
               {listing.avgSectorGrowth !== 0 &&
@@ -491,25 +491,25 @@ export function StockList({
             <span className="font-medium tabular-nums text-foreground">
               {(listing.publicFloat ?? 0).toLocaleString("en-US")}
             </span>
-            <span className="text-[10px] text-muted">
+            <span className="text-body-sm text-muted">
               ({Math.round(((listing.publicFloat ?? 0) / listing.totalShares) * 100)}%)
             </span>
           </div>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-body-sm text-muted">—</span>
         )}
       </td>
       <td className="px-4 py-3 text-right">
         {listingTradable(listing) && (listing.publicFloat ?? 0) > 0 ? (
           <Link
             href={`/corporation/${listing.sequentialId ?? listing._id}?tab=shares&trade=1`}
-            className="inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+            className="inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-body-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
             aria-label={`Trade ${listing.tickerSymbol ?? listing.name}`}
           >
             Trade
           </Link>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-body-sm text-muted">—</span>
         )}
       </td>
     </tr>
@@ -534,7 +534,7 @@ export function StockList({
           }}
         >
           <td className="px-4 py-3">
-            <span className="text-xs text-muted">—</span>
+            <span className="text-body-sm text-muted">—</span>
           </td>
           <td className="px-4 py-3">
             <div className="flex items-center gap-3">
@@ -563,8 +563,8 @@ export function StockList({
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-foreground truncate">{group.countryName}</span>
-                <div className="flex items-center gap-2 text-xs text-muted">
-                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-[9px] tracking-wide font-semibold">
+                <div className="flex items-center gap-2 text-body-sm text-muted">
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-body-sm tracking-wide font-semibold">
                     State-Owned
                   </span>
                   <span>{group.members.length} enterprises</span>
@@ -573,7 +573,7 @@ export function StockList({
             </div>
           </td>
           <td className="px-4 py-3 text-right">
-            <span className="text-xs text-muted">—</span>
+            <span className="text-body-sm text-muted">—</span>
           </td>
           <td className="px-4 py-3 text-right">
             {renderPriceChangeBadge(
@@ -610,12 +610,12 @@ export function StockList({
                 <span className="font-medium tabular-nums text-foreground">
                   {group.publicFloat.toLocaleString("en-US")}
                 </span>
-                <span className="text-[10px] text-muted">
+                <span className="text-body-sm text-muted">
                   ({Math.round((group.publicFloat / group.totalShares) * 100)}%)
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-muted">—</span>
+              <span className="text-body-sm text-muted">—</span>
             )}
           </td>
           <td className="px-4 py-3" />
@@ -637,7 +637,7 @@ export function StockList({
             placeholder="Search corporations..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
           />
           <svg
             className="absolute left-3 top-2.5 h-4 w-4 text-muted"
@@ -660,7 +660,7 @@ export function StockList({
             <button
               key={opt.field}
               onClick={() => handleSort(opt.field)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                 sortField === opt.field
                   ? "bg-primary/10 text-primary border border-primary/20"
                   : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
@@ -674,7 +674,7 @@ export function StockList({
 
       <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-4 py-3 text-muted text-body-sm font-medium w-[80px]">Ticker</th>
@@ -732,7 +732,7 @@ export function StockList({
 
         {totalPages > 1 && (
           <div className="flex flex-col gap-3 border-t border-card-border bg-card-elevated/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted tabular-nums">
+            <p className="text-body-sm text-muted tabular-nums">
               Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, totalCount)}{" "}
               of {totalCount}
             </p>
@@ -741,18 +741,18 @@ export function StockList({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs font-medium text-muted tabular-nums px-1">
+              <span className="text-body-sm font-medium text-muted tabular-nums px-1">
                 Page {safePage} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Next
               </button>

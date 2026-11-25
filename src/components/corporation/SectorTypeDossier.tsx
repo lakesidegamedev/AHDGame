@@ -94,23 +94,23 @@ export function SectorTypeDossier({
     <section className="min-w-0">
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-card-border pb-1.5">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-body font-semibold text-foreground">
             {facilityCount.toLocaleString("en-US")} {siteWord} in {stateCount}{" "}
             {stateCount === 1 ? "state" : "states"}
           </h2>
-          <span className="text-xs text-muted">{label} division</span>
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">{label} division</span>
+          <span className="text-body-sm text-muted">
             {financialsRedacted ? "revenue not disclosed" : `${revenueShare}% of corp revenue`}
           </span>
         </div>
       </div>
-      <p className="max-w-3xl py-1.5 text-xs text-muted">{SECTOR_TYPE_BRIEFING[sectorType]}</p>
+      <p className="max-w-3xl py-1.5 text-body-sm text-muted">{SECTOR_TYPE_BRIEFING[sectorType]}</p>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 pt-1 sm:grid-cols-5">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="min-w-0" title={kpi.help}>
-            <dt className="truncate text-[11px] text-muted">{kpi.label}</dt>
+            <dt className="truncate text-body-sm text-muted">{kpi.label}</dt>
             <dd
-              className={`mt-0.5 truncate font-mono text-sm font-medium tabular-nums ${
+              className={`mt-0.5 truncate font-mono text-body font-medium tabular-nums ${
                 kpi.tone === "success"
                   ? "text-success"
                   : kpi.tone === "error"
@@ -120,7 +120,7 @@ export function SectorTypeDossier({
             >
               {kpi.value}
             </dd>
-            {kpi.sub && <dd className="truncate text-[11px] text-muted">{kpi.sub}</dd>}
+            {kpi.sub && <dd className="truncate text-body-sm text-muted">{kpi.sub}</dd>}
           </div>
         ))}
       </dl>

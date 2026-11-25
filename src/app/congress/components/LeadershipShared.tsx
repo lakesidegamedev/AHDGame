@@ -48,12 +48,12 @@ export function ElectionDropdown({
   return (
     <div className="rounded-lg border border-card-border bg-card overflow-hidden">
       <details className="group" open>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium hover:bg-background/50">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-body font-medium hover:bg-background/50">
           <span>
             {roleLabel} — Active candidacies ({candidacies.length})
             {canVote ? " — vote for one below" : viewOnlyLabel ? ` — ${viewOnlyLabel}` : ""}
           </span>
-          <span className="text-xs text-muted font-normal tabular-nums">
+          <span className="text-body-sm text-muted font-normal tabular-nums">
             {partySeats} seats · plurality wins
           </span>
         </summary>
@@ -79,7 +79,7 @@ export function ElectionDropdown({
                       href={
                         c.nomineeId ? `/character/${c.nomineeSequentialId ?? c.nomineeId}` : "#"
                       }
-                      className="text-sm font-medium hover:text-primary"
+                      className="text-body font-medium hover:text-primary"
                     >
                       {c.nomineeName}
                       <span className="text-muted ml-1">
@@ -87,7 +87,7 @@ export function ElectionDropdown({
                       </span>
                     </Link>
                   </div>
-                  <span className="text-xs tabular-nums font-medium shrink-0">
+                  <span className="text-body-sm tabular-nums font-medium shrink-0">
                     {c.votesFor} votes
                   </span>
                   {c.isMyCandidate && (
@@ -97,7 +97,7 @@ export function ElectionDropdown({
                           onWithdraw();
                         }
                       }}
-                      className="shrink-0 rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs text-red-400 hover:bg-red-500/20"
+                      className="shrink-0 rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-body-sm text-red-400 hover:bg-red-500/20"
                     >
                       Withdraw
                     </button>
@@ -106,18 +106,18 @@ export function ElectionDropdown({
                     <button
                       onClick={() => onVote(c.id)}
                       disabled={isMyVote}
-                      className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${isMyVote ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-400 hover:bg-green-500/30"}`}
+                      className={`shrink-0 rounded px-2 py-1 text-body-sm font-medium ${isMyVote ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-400 hover:bg-green-500/30"}`}
                     >
                       {isMyVote ? "✓ Voted" : "Vote"}
                     </button>
                   )}
                   {!canVote && isMyVote && (
-                    <span className="shrink-0 text-xs text-primary font-medium">✓ Voted</span>
+                    <span className="shrink-0 text-body-sm text-primary font-medium">✓ Voted</span>
                   )}
                 </div>
                 {c.voteByParty && c.voteByParty.length > 0 && (
                   <div className="px-4 pb-3 pt-0">
-                    <p className="mb-1.5 text-[11px] font-medium text-muted">Breakdown by party</p>
+                    <p className="mb-1.5 text-body-sm font-medium text-muted">Breakdown by party</p>
                     <VoteTallyTable
                       voteByParty={c.voteByParty}
                       chamberLabel={`${roleLabel} — ${c.nomineeName}`}

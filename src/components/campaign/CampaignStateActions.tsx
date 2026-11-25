@@ -152,7 +152,7 @@ export function CampaignStateActions({
                 {error ? (
                   <p
                     role="alert"
-                    style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.negative }}
+                    style={{ margin: "8px 0 0", fontSize: 12, color: BLEND.negative }}
                   >
                     {error}
                   </p>

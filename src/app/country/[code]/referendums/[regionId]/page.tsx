@@ -387,11 +387,11 @@ export default async function ReferendumDetailPage({
     resolved.nextCycle != null
       ? referendumDetailUrl(countryId, regionId, resolved.nextCycle)
       : null;
-  const navBtn = "rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm";
+  const navBtn = "rounded-lg border border-card-border bg-card px-3 py-1.5 text-body";
 
   return (
     <div className="mx-auto max-w-[1280px] px-7 pb-20 pt-6">
-      <nav className="mb-3 flex items-center gap-2 text-[11.5px]">
+      <nav className="mb-3 flex items-center gap-2 text-body-sm">
         <Link href={referendumsUrl(countryId)} className="text-muted hover:text-foreground">
           Referendums
         </Link>
@@ -442,7 +442,7 @@ export default async function ReferendumDetailPage({
         ) : (
           <span className={`${navBtn} cursor-not-allowed text-muted/40`}>Next ›</span>
         )}
-        <span className="ml-2 text-xs text-muted">
+        <span className="ml-2 text-body-sm text-muted">
           Referendum {resolved.cycle} of {resolved.totalCycles}
         </span>
       </div>
@@ -455,7 +455,7 @@ export default async function ReferendumDetailPage({
             {ref.status === "campaigning" ? (
               <>
                 {ref.kind !== "peace_agreement" && (
-                  <p className="text-xs text-muted">{t("campaignBaselineHelp")}</p>
+                  <p className="text-body-sm text-muted">{t("campaignBaselineHelp")}</p>
                 )}
                 <TugOfWar
                   yesShare={ref.yesShare}
@@ -465,7 +465,7 @@ export default async function ReferendumDetailPage({
                   noLabel={labels.no}
                 />
                 <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     Campaign under way.
                     {ref.campaignCloseTurn != null &&
                       ` The vote is held on turn ${ref.campaignCloseTurn}${
@@ -480,8 +480,8 @@ export default async function ReferendumDetailPage({
               </>
             ) : (
               <>
-                <h2 className="mb-2 text-sm font-semibold text-muted">Result</h2>
-                <p className="text-sm text-foreground">
+                <h2 className="mb-2 text-body font-semibold text-muted">Result</h2>
+                <p className="text-body text-foreground">
                   {statusSummary(
                     ref,
                     regionName,
@@ -489,7 +489,7 @@ export default async function ReferendumDetailPage({
                   )}
                 </p>
                 {ref.result && (
-                  <p className="mt-2 text-xs text-muted">
+                  <p className="mt-2 text-body-sm text-muted">
                     Final: {Math.round(ref.result.finalYesShare)}% Yes · turnout{" "}
                     {Math.round(ref.result.turnout)}% · resolved turn {ref.result.resolvedTurn}
                   </p>

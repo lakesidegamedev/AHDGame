@@ -39,14 +39,14 @@ export function EconomySummary({
       aria-labelledby="overview-economy-title"
       className="rounded-xl border border-card-border bg-card p-5 sm:p-6"
     >
-      <h2 id="overview-economy-title" className="text-heading-sm font-semibold text-foreground">
+      <h2 id="overview-economy-title" className="text-heading font-semibold text-foreground">
         Economy
       </h2>
       <dl className="mt-3 space-y-3">
         <div>
           <dt className="text-body-sm text-muted">Gross state product</dt>
           <dd className="flex items-baseline gap-2">
-            <span className="text-heading-lg font-semibold tabular-nums text-foreground">
+            <span className="text-heading font-semibold tabular-nums text-foreground">
               {economy.gdp > 0 ? formatGDP(economy.gdp, getCurrencyPrefix(vm.countryId)) : "None"}
             </span>
             {showDelta && (

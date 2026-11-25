@@ -148,7 +148,7 @@ function KeirWithAlert({
         <span
           aria-hidden
           data-keir-alert
-          className="absolute -right-2 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold leading-none text-black shadow"
+          className="absolute -right-2 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-body-sm font-bold leading-none text-black shadow"
         >
           !
         </span>
@@ -727,11 +727,11 @@ export function AskDrawerPanel({
             <KeirWithAlert mood={keirMood} alerting={alerting} avatar />
           )}
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-semibold leading-tight tracking-tight text-foreground">
+            <div className="truncate text-body font-semibold leading-tight tracking-tight text-foreground">
               Ask Keir
             </div>
             {view === "thread" && turns.length > 0 && (
-              <div className="truncate text-[11px] leading-tight text-muted" aria-live="polite">
+              <div className="truncate text-body-sm leading-tight text-muted" aria-live="polite">
                 {busy ? (lastTurn?.answer ? "Answering" : "Researching") : (planLabel ?? "Ready")}
               </div>
             )}
@@ -788,7 +788,7 @@ export function AskDrawerPanel({
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
       >
         {unavailable && (
-          <div className="mb-4 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-[13px] text-foreground">
+          <div className="mb-4 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-body-sm text-foreground">
             {unavailable}
           </div>
         )}
@@ -799,17 +799,17 @@ export function AskDrawerPanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search threads"
-              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-base text-foreground placeholder:text-muted focus:border-primary sm:text-[13px] focus:outline-none"
+              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-lg text-foreground placeholder:text-muted focus:border-primary sm:text-body-sm focus:outline-none"
             />
             <div className="flex-1">
               {convs.length === 0 && (
-                <p className="py-8 text-center text-[13px] text-muted">
+                <p className="py-8 text-center text-body-sm text-muted">
                   {search ? "No threads match." : "No threads yet. Your questions show up here."}
                 </p>
               )}
               {groupThreads(convs, !!search.trim()).map((group) => (
                 <section key={group.label} className="mb-3">
-                  <h4 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  <h4 className="mb-1 px-2 text-body-sm font-semibold uppercase tracking-[0.14em] text-muted">
                     {group.label}
                   </h4>
                   {group.items.map((c) => (
@@ -832,7 +832,7 @@ export function AskDrawerPanel({
                             }
                           }}
                           onBlur={() => finishRename(true)}
-                          className="my-1 min-w-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-[13px]"
+                          className="my-1 min-w-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-body-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-body-sm"
                         />
                       ) : (
                         <button
@@ -841,11 +841,11 @@ export function AskDrawerPanel({
                           className="min-w-0 flex-1 py-2 text-left sm:py-1.5"
                           title={c.title || "Untitled"}
                         >
-                          <span className="block truncate text-[14px] text-foreground sm:text-[13px]">
+                          <span className="block truncate text-body text-foreground sm:text-body-sm">
                             {c.title || "Untitled"}
                           </span>
                           {search.trim() && c.snippet && (
-                            <span className="block truncate text-[12px] text-muted">
+                            <span className="block truncate text-body-sm text-muted">
                               {c.snippet}
                             </span>
                           )}
@@ -878,7 +878,7 @@ export function AskDrawerPanel({
                               onClick={() => remove(c)}
                               onBlur={() => setConfirmDelete(null)}
                               autoFocus
-                              className="rounded-md bg-red-600 px-2 py-1 text-[11px] font-semibold text-white"
+                              className="rounded-md bg-red-600 px-2 py-1 text-body-sm font-semibold text-white"
                               aria-label="Confirm delete thread"
                             >
                               Delete
@@ -906,7 +906,7 @@ export function AskDrawerPanel({
               <button
                 type="button"
                 onClick={onSwapSide}
-                className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-foreground"
+                className="inline-flex items-center gap-1.5 text-body-sm text-muted hover:text-foreground"
               >
                 <Icon d={ICONS.swap} className="h-3.5 w-3.5" />
                 Move to the {side === "right" ? "left" : "right"} side
@@ -916,10 +916,10 @@ export function AskDrawerPanel({
         ) : turns.length === 0 ? (
           <div className="pt-4">
             <KeirWithAlert mood={keirMood} alerting={alerting} scale={2} />
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
+            <h2 className="mt-3 text-heading font-semibold tracking-tight text-foreground">
               Ask about this page
             </h2>
-            <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
+            <p className="mt-1.5 text-body leading-relaxed text-muted">
               Answers from the game&apos;s live code, rules and data, with sources.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -929,7 +929,7 @@ export function AskDrawerPanel({
                   type="button"
                   onClick={() => void submit(s)}
                   disabled={busy || outOfEnergy || !!unavailable}
-                  className="rounded-md border border-card-border bg-card-elevated/40 px-3 py-1.5 text-left text-[13px] text-muted transition-colors hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
+                  className="rounded-md border border-card-border bg-card-elevated/40 px-3 py-1.5 text-left text-body-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
                 >
                   {s}
                 </button>
@@ -989,7 +989,7 @@ export function AskDrawerPanel({
               placeholder={turns.length ? "Ask a follow-up" : "Ask about any part of the game"}
               aria-label="Your question"
               // 16px on phones: iOS zooms into any focused field smaller than that.
-              className="min-h-[44px] flex-1 resize-none bg-transparent text-base text-foreground sm:text-[14px] placeholder:text-muted focus:outline-none"
+              className="min-h-[44px] flex-1 resize-none bg-transparent text-body-lg text-foreground sm:text-body placeholder:text-muted focus:outline-none"
             />
             {busy ? (
               <button
@@ -1026,7 +1026,7 @@ export function AskDrawerPanel({
                   ? "Ask reads this page when you ask. Click to stop."
                   : "Ask cannot see this page. Click to share it."
               }
-              className={`inline-flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${sharePage ? "text-foreground" : "text-muted"}`}
+              className={`inline-flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-body-sm ${sharePage ? "text-foreground" : "text-muted"}`}
             >
               <Icon d={ICONS.page} className="h-3 w-3 shrink-0" />
               <span className={`max-w-[9rem] truncate ${sharePage ? "" : "line-through"}`}>
@@ -1040,7 +1040,7 @@ export function AskDrawerPanel({
                 onChange={(e) => setMode(e.target.value as ModeId)}
                 aria-label="Answer mode"
                 title={MODES.find((m) => m.id === mode)?.hint}
-                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-[11px]"
+                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-body-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-body-sm"
               >
                 {MODES.map((m) => (
                   <option key={m.id} value={m.id}>

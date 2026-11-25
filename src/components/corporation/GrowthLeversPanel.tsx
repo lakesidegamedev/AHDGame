@@ -127,7 +127,7 @@ export function GrowthLeversPanel({
   const levers = buildGrowthLevers(sectors);
   return (
     <DenseSection title="What grows this corporation">
-      <div className="space-y-3 text-xs leading-relaxed">
+      <div className="space-y-3 text-body-sm leading-relaxed">
         <p className="text-muted">
           Sectors do not grow on their own. Revenue rises when you add plants that can sell their
           output, cut what each plant costs to run, or take plants from rivals.

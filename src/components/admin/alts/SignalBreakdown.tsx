@@ -57,7 +57,7 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
       <div>
         <div className="mb-2 flex items-baseline justify-between gap-3">
           <h4 className="text-body-sm font-medium text-muted">Why this score</h4>
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             {positive.length} signal{positive.length === 1 ? "" : "s"} · aggregated by noisy-OR
           </span>
         </div>
@@ -78,9 +78,9 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
             );
           })}
         </div>
-        <div className="mt-1.5 flex items-baseline justify-between text-[10px] tabular-nums text-muted">
+        <div className="mt-1.5 flex items-baseline justify-between text-body-sm tabular-nums text-muted">
           <span>0%</span>
-          <span className="text-xs font-semibold" style={{ color: confidenceHex(total) }}>
+          <span className="text-body-sm font-semibold" style={{ color: confidenceHex(total) }}>
             = {formatPct(total)} ring confidence
           </span>
           <span>100%</span>
@@ -99,9 +99,9 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
             >
               <div className="flex items-center gap-2">
                 <TierDot tier={meta.tier} />
-                <span className="min-w-0 truncate text-sm font-medium">{meta.label}</span>
+                <span className="min-w-0 truncate text-body font-medium">{meta.label}</span>
                 <span
-                  className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  className="rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide"
                   style={{
                     backgroundColor: `${TIER_HEX[meta.tier]}1f`,
                     color: TIER_HEX[meta.tier],
@@ -110,9 +110,9 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
                   {TIER_LABEL[meta.tier]}
                 </span>
                 <span className="ml-auto flex flex-shrink-0 items-baseline gap-2">
-                  <span className="font-mono text-[11px] text-muted">w {c.weight.toFixed(2)}</span>
+                  <span className="font-mono text-body-sm text-muted">w {c.weight.toFixed(2)}</span>
                   <span
-                    className="min-w-[3rem] text-right text-xs font-semibold tabular-nums"
+                    className="min-w-[3rem] text-right text-body-sm font-semibold tabular-nums"
                     style={{ color: TIER_HEX[meta.tier] }}
                   >
                     +{formatPctPrecise(c.contribution)}
@@ -126,13 +126,13 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
                 />
               </div>
               {c.evidence && (
-                <p className="ml-4 text-xs leading-relaxed text-muted">{c.evidence}</p>
+                <p className="ml-4 text-body-sm leading-relaxed text-muted">{c.evidence}</p>
               )}
             </li>
           );
         })}
         {positive.length === 0 && (
-          <li className="rounded-lg border border-dashed border-card-border px-3 py-4 text-center text-sm text-muted">
+          <li className="rounded-lg border border-dashed border-card-border px-3 py-4 text-center text-body text-muted">
             No positively-weighted signals contributed.
           </li>
         )}
@@ -141,7 +141,7 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
       {/* False-positive guards — VISIBLE per acceptance criterion */}
       {guards.length > 0 && (
         <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+          <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-emerald-400">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -156,8 +156,11 @@ export function SignalBreakdown({ confidence, contributions, guards = [] }: Sign
             {guards.map((g, i) => {
               const meta = signalMeta(g.type);
               return (
-                <li key={`${g.type}-${i}`} className="flex items-start gap-2 text-xs text-muted">
-                  <span className="mt-px rounded bg-emerald-500/10 px-1 font-mono text-[10px] leading-4 text-emerald-400/90">
+                <li
+                  key={`${g.type}-${i}`}
+                  className="flex items-start gap-2 text-body-sm text-muted"
+                >
+                  <span className="mt-px rounded bg-emerald-500/10 px-1 font-mono text-body-sm leading-4 text-emerald-400/90">
                     ×0
                   </span>
                   <span className="leading-relaxed">

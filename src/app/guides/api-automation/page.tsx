@@ -12,7 +12,7 @@ export const metadata: Metadata = publicPageMetadata({
 export default function ApiAutomationGuidePage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
         <Link href="/guides" className="hover:text-foreground transition-colors">
           Guides
         </Link>
@@ -20,12 +20,12 @@ export default function ApiAutomationGuidePage() {
         <span className="text-foreground">API automation</span>
       </nav>
 
-      <h1 className="text-3xl font-bold">API automation guide</h1>
-      <p className="mt-2 text-sm text-muted">Last updated: September 3, 2026 (UTC)</p>
+      <h1 className="text-display font-bold">API automation guide</h1>
+      <p className="mt-2 text-body text-muted">Last updated: September 3, 2026 (UTC)</p>
 
       <section className="mt-8 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">What this covers</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-heading font-semibold">What this covers</h2>
+        <p className="text-body text-muted">
           A House Divided exposes a read API (world state, markets, elections, politicians) and a
           narrow set of write endpoints for money movement, so players can build Discord bots,
           trading dashboards, and portfolio trackers on top of the live simulation. This page covers
@@ -44,14 +44,14 @@ export default function ApiAutomationGuidePage() {
       </section>
 
       <section className="mt-6 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">What you can read</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-heading font-semibold">What you can read</h2>
+        <p className="text-body text-muted">
           Public-scope keys can read the live game clock, countries and regions, national metrics
           and budgets, governments, elections, legislation, referendums, international
           organizations, trade restrictions and flows, sovereign risk, historical economic and
           fiscal series, conflicts, corporations, stocks, bonds, commodities, funds, and forex.
         </p>
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Start with <code>/api/public/v1/meta</code> for the machine-readable route catalog. The
           catalog is tested against the route tree, so it cannot silently omit an implemented v1
           endpoint. OpenAPI clients can load the complete contract from{" "}
@@ -60,8 +60,8 @@ export default function ApiAutomationGuidePage() {
       </section>
 
       <section className="mt-8 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">What API keys can do</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-heading font-semibold">What API keys can do</h2>
+        <p className="text-body text-muted">
           View endpoints accept any personal API key (public or private scope) sent in the{" "}
           <code>X-API-Key</code> header. Write endpoints require a <code>private</code> scope key.
           To check which scope a key has and what it is allowed to do, call{" "}
@@ -69,8 +69,8 @@ export default function ApiAutomationGuidePage() {
           operations, and usage metadata, and never returns the secret itself.
         </p>
         <div className="mt-2 space-y-2">
-          <p className="text-sm font-medium">Allowed via automation:</p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+          <p className="text-body font-medium">Allowed via automation:</p>
+          <ul className="list-disc space-y-1 pl-5 text-body text-muted">
             <li>Campaign donations</li>
             <li>Character-to-character fund transfers</li>
             <li>Forex limit orders and market exchanges</li>
@@ -78,8 +78,8 @@ export default function ApiAutomationGuidePage() {
           </ul>
         </div>
         <div className="mt-2 space-y-2">
-          <p className="text-sm font-medium">Not permitted via automation:</p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+          <p className="text-body font-medium">Not permitted via automation:</p>
+          <ul className="list-disc space-y-1 pl-5 text-body text-muted">
             <li>Political actions (campaign, advertise, fundraise, polls, etc.)</li>
             <li>Economy attacks and sector captures</li>
             <li>Election endorsements</li>
@@ -89,15 +89,15 @@ export default function ApiAutomationGuidePage() {
       </section>
 
       <section className="mt-6 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">Rate limits</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-heading font-semibold">Rate limits</h2>
+        <p className="text-body text-muted">
           Read endpoints are limited per key, per endpoint, in a one-minute window. The base
           allowance is 60 requests per minute. Supporter+ keys get 1.5x that (90/min) and
           Supporter++ keys 3x (180/min), applied automatically to every key the account owns for as
           long as the pledge is active. Write endpoints keep their own limits: 20/min for transfers
           and 30/min for forex.
         </p>
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Every response carries <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>,
           and <code>X-RateLimit-Reset</code>, so read your live allowance from the headers rather
           than hardcoding it. Over the limit you get HTTP 429 with a <code>Retry-After</code>{" "}
@@ -106,8 +106,8 @@ export default function ApiAutomationGuidePage() {
       </section>
 
       <section className="mt-6 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">Security checklist</h2>
-        <ul className="list-disc space-y-2 pl-5 text-sm text-muted">
+        <h2 className="text-heading font-semibold">Security checklist</h2>
+        <ul className="list-disc space-y-2 pl-5 text-body text-muted">
           <li>Store keys in environment variables, never in public repos.</li>
           <li>Use one key per app or bot for easier revocation.</li>
           <li>Revoke keys immediately if leaked or shared accidentally.</li>
@@ -116,15 +116,15 @@ export default function ApiAutomationGuidePage() {
       </section>
 
       <section className="mt-6 space-y-3 rounded-2xl border border-card-border bg-card/70 p-6">
-        <h2 className="text-xl font-semibold">Getting started</h2>
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-muted">
+        <h2 className="text-heading font-semibold">Getting started</h2>
+        <ol className="list-decimal space-y-2 pl-5 text-body text-muted">
           <li>Create a key from Settings → API Keys.</li>
           <li>Copy it once and save it in your bot/app secret store.</li>
           <li>
             For all API endpoints, send your key in the <code>X-API-Key</code> header.
           </li>
         </ol>
-        <p className="text-sm">
+        <p className="text-body">
           Return to{" "}
           <Link className="text-primary underline" href="/settings">
             Settings

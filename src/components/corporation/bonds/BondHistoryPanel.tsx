@@ -157,7 +157,7 @@ function TurnRows({ turn, entries }: { turn: number; entries: BondHistoryEntry[]
             aria-expanded={open}
             className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline"
           >
-            <span aria-hidden className="w-2 text-[9px] text-muted">
+            <span aria-hidden className="w-2 text-body-sm text-muted">
               {open ? "▼" : "▶"}
             </span>
             Turn {turn}
@@ -204,7 +204,7 @@ function TurnRows({ turn, entries }: { turn: number; entries: BondHistoryEntry[]
                       <Td>
                         <span className="text-foreground">{entryLabel(e)}</span>
                         {e.units != null && (
-                          <span className="ml-2 font-mono text-[11px] text-muted">
+                          <span className="ml-2 font-mono text-body-sm text-muted">
                             {e.units.toLocaleString("en-US")} units
                             {e.couponRate != null && ` at ${e.couponRate}%`}
                           </span>
@@ -224,7 +224,7 @@ function TurnRows({ turn, entries }: { turn: number; entries: BondHistoryEntry[]
                       >
                         {formatAmount(e.amount, e.currencyCode)}
                         {e.bondAmount != null && e.bondCurrency && (
-                          <span className="ml-2 text-[11px] text-muted">
+                          <span className="ml-2 text-body-sm text-muted">
                             ({formatAmount(e.bondAmount, e.bondCurrency)})
                           </span>
                         )}
@@ -287,7 +287,7 @@ export default function BondHistoryPanel({ corpId, refreshKey }: BondHistoryPane
         />
       }
     >
-      <p className="py-1 text-xs text-muted">
+      <p className="py-1 text-body-sm text-muted">
         Income and payments from this corporation&apos;s bond activity, one row per turn. Open a
         turn for the underlying events. History is kept for the financial ledger window (
         {windowTurns} turns, about 7 days).
@@ -304,7 +304,7 @@ export default function BondHistoryPanel({ corpId, refreshKey }: BondHistoryPane
       )}
 
       {!loading && !error && grouped.length === 0 && (
-        <div className="flex flex-wrap items-center gap-3 py-2 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-3 py-2 text-body-sm text-muted">
           <span>
             {totalTurns === 0
               ? direction === "all"
@@ -349,7 +349,7 @@ export default function BondHistoryPanel({ corpId, refreshKey }: BondHistoryPane
               >
                 Previous
               </SmallButton>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 Page {serverPage} of {pageCount}, {totalTurns} {totalTurns === 1 ? "turn" : "turns"}
               </span>
               <SmallButton

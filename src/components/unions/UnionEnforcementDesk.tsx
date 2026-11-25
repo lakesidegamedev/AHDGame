@@ -103,17 +103,20 @@ export function UnionEnforcementDesk({
   }
 
   return (
-    <section aria-label="Union enforcement" className="rounded-xl border border-border p-4 text-sm">
+    <section
+      aria-label="Union enforcement"
+      className="rounded-xl border border-border p-4 text-body"
+    >
       <h2 className="font-semibold">Government union enforcement</h2>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Investigate a domestic union for one action point, raid an exposed or high heat cell for
         two, or change the standing detection posture once per turn.
       </p>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Crackdown costs {crackdownCostPerTurn.toLocaleString("en-US")} from the treasury each turn
         and lowers labor approval by {crackdownApprovalPenalty} points while active.
       </p>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Exposed cells:{" "}
         {exposedUnionIds.length
           ? exposedUnionIds
@@ -122,7 +125,7 @@ export function UnionEnforcementDesk({
           : "none detected"}
         .
       </p>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Crackdown costs the treasury 0.1% of GDP per year and reduces government approval by two
         points while active.
       </p>
@@ -214,7 +217,7 @@ export function UnionEnforcementDesk({
         </button>
       </div>
       {result && (
-        <p role="status" className="mt-2 text-xs">
+        <p role="status" className="mt-2 text-body-sm">
           {result}
         </p>
       )}

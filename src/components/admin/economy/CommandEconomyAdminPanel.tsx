@@ -70,12 +70,12 @@ export function CommandEconomyAdminPanel() {
   }, [fetchData]);
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading command-economy state…</div>;
+    return <div className="text-body text-muted">Loading command-economy state…</div>;
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/30 bg-error/5 p-4 text-sm text-error">
+      <div className="rounded-xl border border-error/30 bg-error/5 p-4 text-body text-error">
         {error}
       </div>
     );
@@ -85,7 +85,7 @@ export function CommandEconomyAdminPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3 text-body">
         <span className="font-semibold text-foreground">Command economy</span>
         <Badge color={data.enabled ? "success" : "default"} variant="subtle">
           {data.enabled ? "Enabled" : "Disabled"}
@@ -111,27 +111,27 @@ export function CommandEconomyAdminPanel() {
         <button
           type="button"
           onClick={fetchData}
-          className="ml-auto text-xs font-semibold text-primary hover:underline"
+          className="ml-auto text-body-sm font-semibold text-primary hover:underline"
         >
           Refresh
         </button>
       </div>
 
       {!data.enabled && data.rows.length === 0 ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Flag is off and no planned-economy fields are persisted. Enable{" "}
           <span className="font-semibold text-foreground">commandEconomyEnabled</span> in Feature
           Gates, then advance a turn to populate overhang / shortage readouts.
         </p>
       ) : data.rows.length === 0 ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           No scheduled planned economies are active for year {data.currentYear ?? "—"}.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-body">
             <thead>
-              <tr className="border-b border-card-border text-sm font-semibold text-foreground">
+              <tr className="border-b border-card-border text-body font-semibold text-foreground">
                 <th className="px-3 py-2">Country</th>
                 <th className="px-3 py-2">Regime</th>
                 <th className="px-3 py-2 text-right">Mktz</th>

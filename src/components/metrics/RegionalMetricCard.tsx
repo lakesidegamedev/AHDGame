@@ -115,11 +115,11 @@ export function RegionalMetricCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="truncate text-[13px] font-semibold text-foreground">{name}</h3>
+              <h3 className="truncate text-body-lg font-semibold text-foreground">{name}</h3>
               {def?.description && (
                 <InfoTooltip
                   trigger={
-                    <span className="cursor-default select-none text-[13px] leading-none text-muted/50 hover:text-muted">
+                    <span className="cursor-default select-none text-body-sm leading-none text-muted/50 hover:text-muted">
                       ⓘ
                     </span>
                   }
@@ -134,11 +134,13 @@ export function RegionalMetricCard({
               )}
             </div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-2xl font-bold tabular-nums text-foreground">{fmt(value)}</span>
+              <span className="text-heading font-bold tabular-nums text-foreground">
+                {fmt(value)}
+              </span>
               <TrendChip trend={trend} value={value} isHigherBetter={isHigherBetter} />
               {diffPct != null && Math.abs(diffPct) >= 0.05 && (
                 <span
-                  className={`whitespace-nowrap text-[11px] font-medium tabular-nums ${
+                  className={`whitespace-nowrap text-body-sm font-medium tabular-nums ${
                     Math.abs(diffPct) < 2 ? "text-muted" : diffGood ? "text-success" : "text-error"
                   }`}
                 >
@@ -160,7 +162,7 @@ export function RegionalMetricCard({
         {hasNatAvg && (
           <div className="mt-3">
             <ComparisonBar value={value} avg={nationalAverage} isHigherBetter={isHigherBetter} />
-            <div className="mt-1 flex justify-between text-[10px] text-muted">
+            <div className="mt-1 flex justify-between text-body-sm text-muted">
               <span>0</span>
               <span>nat&apos;l avg {fmt(nationalAverage)}</span>
               <span>{fmt(nationalAverage * 2)}</span>
@@ -178,11 +180,11 @@ export function RegionalMetricCard({
                 {score !== null && <HealthRing score={score} size={58} label="/100" />}
                 <div className="min-w-0 flex-1">
                   <div className="text-body-sm font-medium text-muted">Quality score</div>
-                  <div className="mt-1 text-[12px] text-foreground">
+                  <div className="mt-1 text-body-sm text-foreground">
                     {isHigherBetter ? "↑ Higher is better" : "↓ Lower is better"}
                   </div>
                   {threshold && (
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-body-sm">
                       <div className="rounded bg-card-muted px-2 py-1">
                         <div className="text-muted">Target</div>
                         <div className="font-bold tabular-nums text-success">
@@ -198,7 +200,7 @@ export function RegionalMetricCard({
                     </div>
                   )}
                   {threshold && (
-                    <div className="mt-1.5 text-[10px] leading-snug text-muted">
+                    <div className="mt-1.5 text-body-sm leading-snug text-muted">
                       {fmt(value)} scored against target {fmt(threshold.best)} / worst{" "}
                       {fmt(threshold.worst)}
                     </div>
@@ -244,7 +246,7 @@ export function RegionalMetricCard({
                   }
                   fmt={fmt}
                 />
-                <div className="mt-3 flex items-center justify-between rounded-lg bg-card-muted px-3 py-2 text-[12px]">
+                <div className="mt-3 flex items-center justify-between rounded-lg bg-card-muted px-3 py-2 text-body-sm">
                   <span className="text-muted">
                     This {regionLabelPlural.replace(/s$/, "")}&apos;s rank
                   </span>
@@ -255,7 +257,7 @@ export function RegionalMetricCard({
               </div>
             ) : (
               def?.description && (
-                <div className="rounded-lg border border-card-border bg-card p-3.5 text-[11px] leading-snug text-muted">
+                <div className="rounded-lg border border-card-border bg-card p-3.5 text-body-sm leading-snug text-muted">
                   {def.description}
                 </div>
               )
@@ -266,7 +268,7 @@ export function RegionalMetricCard({
             <div className="mt-4 flex justify-end">
               <Link
                 href={detailHref}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-[12px] font-semibold text-primary hover:bg-primary/20"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary hover:bg-primary/20"
               >
                 View full metric page
                 <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">

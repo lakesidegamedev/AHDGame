@@ -260,7 +260,7 @@ export function BudgetAuthoringPanel({ countryCode }: { countryCode: string }) {
             </label>
           ))}
         </div>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           Tax changes phase in at one percentage point per turn.
         </p>
       </section>
@@ -303,7 +303,7 @@ export function BudgetAuthoringPanel({ countryCode }: { countryCode: string }) {
                         </option>
                       ))}
                     </select>
-                    <span className="text-xs leading-snug text-muted md:col-start-2">
+                    <span className="text-body-sm leading-snug text-muted md:col-start-2">
                       {
                         lever.levels.find(
                           (level) => level.level === (programLevels[lever.id] ?? lever.currentLevel)

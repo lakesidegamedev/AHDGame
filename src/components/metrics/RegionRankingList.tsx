@@ -35,7 +35,7 @@ export function RegionRankingList({
   picked,
 }: RegionRankingListProps) {
   if (ranked.length === 0) {
-    return <p className="text-[11px] text-muted">No regional data.</p>;
+    return <p className="text-body-sm text-muted">No regional data.</p>;
   }
   const vals = ranked.map((r) => r.value);
   const lo = Math.min(...vals);
@@ -59,13 +59,13 @@ export function RegionRankingList({
             } ${clickable ? "hover:border-primary/40" : "cursor-default"}`}
           >
             <span
-              className="w-6 shrink-0 text-center text-[11px] font-bold tabular-nums"
+              className="w-6 shrink-0 text-center text-body-sm font-bold tabular-nums"
               style={{ color: hex }}
             >
               #{rv.rank}
             </span>
             <span
-              className="w-20 shrink-0 truncate text-[12px] font-medium text-foreground sm:w-24"
+              className="w-20 shrink-0 truncate text-body-sm font-medium text-foreground sm:w-24"
               title={rv.regionName}
             >
               {shortName}
@@ -77,7 +77,7 @@ export function RegionRankingList({
               />
             </span>
             <span
-              className="ml-auto shrink-0 text-[12px] font-bold tabular-nums sm:ml-0"
+              className="ml-auto shrink-0 text-body-sm font-bold tabular-nums sm:ml-0"
               style={{ color: hex }}
             >
               {fmt(rv.value)}

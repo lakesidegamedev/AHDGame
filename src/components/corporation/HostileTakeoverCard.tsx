@@ -129,10 +129,10 @@ export function HostileTakeoverCard({
       <OperatingReserveConfirmDialog state={reserveConfirm} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-body-lg font-semibold text-foreground">
             Hostile takeover: merge subsidiary
           </h3>
-          <p className="text-xs text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             Your corporation holds {ownershipPct.toFixed(1)}% of outstanding shares. You can absorb
             this company and pay minority holders a{" "}
             {Math.round(HOSTILE_TAKEOVER_PREMIUM_RATE * 100)}% premium ({formatPrice(pricePerShare)}{" "}
@@ -143,31 +143,31 @@ export function HostileTakeoverCard({
           type="button"
           onClick={() => void handleMerge()}
           disabled={busy || outstandingBonds > 0}
-          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           title={outstandingBonds > 0 ? "Outstanding bonds must be resolved first" : undefined}
         >
           {busy ? "Working…" : "Merge corporation"}
         </button>
       </div>
-      {err && <p className="text-xs text-error">{err}</p>}
+      {err && <p className="text-body-sm text-error">{err}</p>}
 
       {outstandingBonds > 0 && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
-          <p className="text-xs text-foreground">
+          <p className="text-body-sm text-foreground">
             This subsidiary has <span className="font-semibold">{outstandingBonds}</span>{" "}
             outstanding bond
             {outstandingBonds !== 1 ? "s" : ""} totaling{" "}
             <span className="font-semibold">{formatPrice(outstandingBondDebt)}</span>. You must pay
             off these bonds before merging.
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Parent liquid capital: {formatPrice(parentLiquidCapital)} {parentLiquidCurrencyCode}
           </p>
           <button
             type="button"
             onClick={handlePayoffBonds}
             disabled={payoffBusy || !canAffordPayoff}
-            className="rounded-lg bg-warning px-3 py-1.5 text-xs font-semibold text-white hover:bg-warning/90 disabled:opacity-50"
+            className="rounded-lg bg-warning px-3 py-1.5 text-body-sm font-semibold text-white hover:bg-warning/90 disabled:opacity-50"
           >
             {payoffBusy
               ? "Paying off…"
@@ -175,7 +175,7 @@ export function HostileTakeoverCard({
                 ? `Pay off bonds (${formatPrice(outstandingBondDebt)})`
                 : `Insufficient capital (need ${formatPrice(outstandingBondDebt)})`}
           </button>
-          {payoffErr && <p className="text-xs text-error">{payoffErr}</p>}
+          {payoffErr && <p className="text-body-sm text-error">{payoffErr}</p>}
         </div>
       )}
     </div>

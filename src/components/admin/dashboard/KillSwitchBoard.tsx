@@ -441,14 +441,14 @@ function MaintenanceCard({
       <span className="flex items-center justify-between gap-2">
         <span className="text-body-sm font-semibold text-foreground">Maintenance mode</span>
         <span
-          className={`shrink-0 rounded-full px-2 py-px text-body-xs font-bold tracking-wider uppercase ${
+          className={`shrink-0 rounded-full px-2 py-px text-body-sm font-bold tracking-wider uppercase ${
             mode ? MAINTENANCE_META[mode].cls : "bg-muted/15 text-muted"
           }`}
         >
           {busy ? "…" : mode ? MAINTENANCE_META[mode].pill : "—"}
         </span>
       </span>
-      <span className="text-body-xs leading-relaxed text-muted">
+      <span className="text-body-sm leading-relaxed text-muted">
         Off = normal · partial blocks registration · full locks the site.
       </span>
       <div className="mt-0.5 flex gap-1.5" role="group" aria-label="Set maintenance mode">
@@ -459,7 +459,7 @@ function MaintenanceCard({
             onClick={() => onSelect(m)}
             disabled={busy || mode === null}
             aria-pressed={mode === m}
-            className={`flex-1 cursor-pointer rounded-md border px-2 py-1 text-body-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex-1 cursor-pointer rounded-md border px-2 py-1 text-body-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               mode === m
                 ? activeCls
                 : "border-card-border text-muted hover:border-foreground/30 hover:text-foreground"
@@ -520,14 +520,14 @@ function SwitchCard({
       <span className="flex items-center justify-between gap-2">
         <span className="text-body-sm font-semibold text-foreground">{label}</span>
         <span
-          className={`shrink-0 rounded-full px-2 py-px text-body-xs font-bold tracking-wider uppercase ${
+          className={`shrink-0 rounded-full px-2 py-px text-body-sm font-bold tracking-wider uppercase ${
             unknown ? "bg-muted/15 text-muted" : pillCls
           }`}
         >
           {busy ? "…" : unknown ? "—" : pill}
         </span>
       </span>
-      <span className="text-body-xs leading-relaxed text-muted">{desc}</span>
+      <span className="text-body-sm leading-relaxed text-muted">{desc}</span>
     </button>
   );
 }

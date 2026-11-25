@@ -31,7 +31,7 @@ interface DetectionHealthPanelProps {
 }
 
 const CARD_CLS = "rounded-xl border border-card-border bg-card p-4";
-const LABEL_CLS = "text-[11px] font-medium uppercase tracking-wide text-muted";
+const LABEL_CLS = "text-body-sm font-medium uppercase tracking-wide text-muted";
 
 function StatTile({
   label,
@@ -55,8 +55,8 @@ function StatTile({
   return (
     <div className="rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2.5">
       <div className={LABEL_CLS}>{label}</div>
-      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${toneCls}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] leading-snug text-muted">{hint}</div>}
+      <div className={`mt-0.5 text-heading font-semibold tabular-nums ${toneCls}`}>{value}</div>
+      {hint && <div className="mt-0.5 text-body-sm leading-snug text-muted">{hint}</div>}
     </div>
   );
 }
@@ -67,7 +67,7 @@ function ReliabilityBins({ report }: { report: CalibrationReport }) {
   const populated = report.bins.filter((b) => b.count > 0);
   if (populated.length === 0) {
     return (
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         No dispositioned rings to plot yet — confirm or dismiss some clusters and this fills in.
       </p>
     );
@@ -76,7 +76,7 @@ function ReliabilityBins({ report }: { report: CalibrationReport }) {
     <div className="space-y-2">
       {populated.map((bin) => (
         <div key={bin.lower} className="flex items-center gap-3">
-          <div className="w-20 shrink-0 text-[11px] tabular-nums text-muted">
+          <div className="w-20 shrink-0 text-body-sm tabular-nums text-muted">
             {formatPct(bin.lower)}–{formatPct(bin.upper)}
           </div>
           <div className="flex-1 space-y-1">
@@ -90,7 +90,7 @@ function ReliabilityBins({ report }: { report: CalibrationReport }) {
                   }}
                 />
               </div>
-              <span className="w-24 shrink-0 text-[11px] tabular-nums text-muted">
+              <span className="w-24 shrink-0 text-body-sm tabular-nums text-muted">
                 predicted {formatPct(bin.meanPredicted)}
               </span>
             </div>
@@ -104,12 +104,12 @@ function ReliabilityBins({ report }: { report: CalibrationReport }) {
                   }}
                 />
               </div>
-              <span className="w-24 shrink-0 text-[11px] tabular-nums text-muted">
+              <span className="w-24 shrink-0 text-body-sm tabular-nums text-muted">
                 observed {formatPct(bin.observedRate)}
               </span>
             </div>
           </div>
-          <div className="w-32 shrink-0 text-right text-[11px] tabular-nums text-muted">
+          <div className="w-32 shrink-0 text-right text-body-sm tabular-nums text-muted">
             {bin.confirmedCount}/{bin.count} confirmed
             {bin.lowSample && (
               <span
@@ -138,14 +138,14 @@ function CalibrationSection({ report }: { report: CalibrationReport }) {
   return (
     <div className={`${CARD_CLS} space-y-4`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight">Confidence calibration</h3>
-        <span className="text-[11px] text-muted">
+        <h3 className="text-body-lg font-semibold tracking-tight">Confidence calibration</h3>
+        <span className="text-body-sm text-muted">
           {report.confirmedTotal} confirmed / {report.dismissedTotal} dismissed rings
         </span>
       </div>
 
       <p
-        className={`rounded-lg border px-3 py-2 text-sm leading-snug ${
+        className={`rounded-lg border px-3 py-2 text-body leading-snug ${
           report.lowConfidence
             ? "border-yellow-400/25 bg-yellow-500/10 text-yellow-200"
             : "border-card-border/70 bg-card-elevated/40 text-foreground"
@@ -189,19 +189,19 @@ function CalibrationSection({ report }: { report: CalibrationReport }) {
       <div>
         <div className={`${LABEL_CLS} mb-2`}>Auto-open threshold</div>
         {report.recommendedClusterThreshold !== null ? (
-          <p className="rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
+          <p className="rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-2 text-body text-blue-200">
             Currently {formatPct(report.currentClusterThreshold)}. The best F1 over dispositioned
             rings is at <strong>{formatPct(report.recommendedClusterThreshold)}</strong> — apply it
             in the scoring config if you agree.
           </p>
         ) : (
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Currently {formatPct(report.currentClusterThreshold)} — no better threshold found in the
             sweep{report.lowConfidence ? " (too few dispositioned rings to recommend one)" : ""}.
           </p>
         )}
         <div className="mt-2 overflow-x-auto">
-          <table className="w-full min-w-[28rem] text-left text-xs">
+          <table className="w-full min-w-[28rem] text-left text-body-sm">
             <thead className="text-muted">
               <tr>
                 <th className="py-1 pr-3 font-medium">Threshold</th>
@@ -221,7 +221,7 @@ function CalibrationSection({ report }: { report: CalibrationReport }) {
                   >
                     <td className="py-1 pr-3">
                       {formatPct(point.threshold)}
-                      {isCurrent && <span className="ml-1 text-[10px] uppercase">current</span>}
+                      {isCurrent && <span className="ml-1 text-body-sm uppercase">current</span>}
                     </td>
                     <td className="py-1 pr-3">{formatPct(point.precision)}</td>
                     <td className="py-1 pr-3">{formatPct(point.recall)}</td>
@@ -242,7 +242,7 @@ function CalibrationSection({ report }: { report: CalibrationReport }) {
             .filter((s) => s.occurrences > 0)
             .slice(0, 10)
             .map((s) => (
-              <div key={s.signal} className="flex items-center gap-3 text-xs">
+              <div key={s.signal} className="flex items-center gap-3 text-body-sm">
                 <span className="w-44 shrink-0 truncate text-foreground" title={s.signal}>
                   {signalMeta(s.signal).label}
                 </span>
@@ -258,19 +258,19 @@ function CalibrationSection({ report }: { report: CalibrationReport }) {
                   {s.lift.toFixed(2)}
                 </span>
                 {s.lowConfidence && (
-                  <span className="text-[10px] uppercase text-yellow-400">thin</span>
+                  <span className="text-body-sm uppercase text-yellow-400">thin</span>
                 )}
               </div>
             ))}
           {report.signalPrecision.every((s) => s.occurrences === 0) && (
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               No signals have appeared in a dispositioned ring yet.
             </p>
           )}
         </div>
       </div>
 
-      <details className="text-xs text-muted">
+      <details className="text-body-sm text-muted">
         <summary className="cursor-pointer select-none">How this is computed</summary>
         <p className="mt-2 leading-relaxed">{report.method}</p>
       </details>
@@ -285,8 +285,8 @@ function MetricsSection({ report }: { report: MetricsReport }) {
   return (
     <div className={`${CARD_CLS} space-y-4`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight">Pipeline health</h3>
-        <span className="text-[11px] text-muted">
+        <h3 className="text-body-lg font-semibold tracking-tight">Pipeline health</h3>
+        <span className="text-body-sm text-muted">
           {latest ? `last run ${formatRelativeTime(latest.at)}` : "no runs recorded yet"}
         </span>
       </div>
@@ -296,7 +296,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
           {report.warnings.map((warning) => (
             <li
               key={warning}
-              className="rounded-lg border border-yellow-400/25 bg-yellow-500/10 px-3 py-2 text-sm leading-snug text-yellow-200"
+              className="rounded-lg border border-yellow-400/25 bg-yellow-500/10 px-3 py-2 text-body leading-snug text-yellow-200"
             >
               {warning}
             </li>
@@ -344,7 +344,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
                 const mid = (i + 0.5) / 10;
                 return (
                   <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                    <span className="text-[10px] tabular-nums text-muted">{count || ""}</span>
+                    <span className="text-body-sm tabular-nums text-muted">{count || ""}</span>
                     <div
                       className="w-full rounded-t"
                       style={{
@@ -353,7 +353,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
                         opacity: count === 0 ? 0.15 : 0.85,
                       }}
                     />
-                    <span className="text-[10px] tabular-nums text-muted">{i * 10}</span>
+                    <span className="text-body-sm tabular-nums text-muted">{i * 10}</span>
                   </div>
                 );
               })}
@@ -361,7 +361,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
           </div>
         </>
       ) : (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           No scoring runs have been recorded yet. The hourly cron writes one record per pass — this
           fills in after the next run.
         </p>
@@ -374,7 +374,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
           </div>
           <div className="space-y-1">
             {declining.map((trend) => (
-              <div key={trend.type} className="flex items-center gap-3 text-xs">
+              <div key={trend.type} className="flex items-center gap-3 text-body-sm">
                 <span className="w-44 shrink-0 truncate text-foreground" title={trend.type}>
                   {signalMeta(trend.type).label}
                 </span>
@@ -385,7 +385,7 @@ function MetricsSection({ report }: { report: MetricsReport }) {
                   {trend.delta.toFixed(2)}
                 </span>
                 {trend.wentSilent && (
-                  <span className="text-[10px] uppercase text-red-400">silent</span>
+                  <span className="text-body-sm uppercase text-red-400">silent</span>
                 )}
               </div>
             ))}
@@ -446,7 +446,7 @@ export function DetectionHealthPanel({ notify }: DetectionHealthPanelProps) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-sm text-red-400">
+      <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-body text-red-400">
         {error}
       </div>
     );

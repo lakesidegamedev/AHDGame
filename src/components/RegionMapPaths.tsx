@@ -163,7 +163,7 @@ export function RegionMapPaths({
   if (shapes.length === 0) {
     if (failed || (geo && geo.features?.length)) {
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted text-sm">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted text-body">
           <span>The map could not be loaded.</span>
           <button
             type="button"
@@ -180,7 +180,7 @@ export function RegionMapPaths({
       );
     }
     return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-sm">
+      <div className="w-full h-full flex items-center justify-center text-muted text-body">
         Loading map…
       </div>
     );
@@ -248,7 +248,7 @@ export function RegionMapPaths({
 
       {tooltipPos && tooltipContent.length > 0 && (
         <div
-          className="pointer-events-none absolute z-50 rounded-lg border border-card-border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute z-50 rounded-lg border border-card-border bg-background/95 px-3 py-2 text-body-sm shadow-lg backdrop-blur-sm"
           style={{
             left: tooltipPos.x + 12,
             top: tooltipPos.y + (flipTooltip ? -12 : -8),

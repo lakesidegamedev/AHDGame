@@ -207,21 +207,25 @@ export function NationalizationProvisionEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-xs text-muted">State-ownership provisions</label>
+        <label className="block text-body-sm text-muted">State-ownership provisions</label>
         {value.length < MAX_PROVISIONS && (
-          <button type="button" onClick={addRow} className="text-xs text-primary hover:underline">
+          <button
+            type="button"
+            onClick={addRow}
+            className="text-body-sm text-primary hover:underline"
+          >
             + Add provision
           </button>
         )}
       </div>
       {value.length === 0 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           No provisions yet — add a nationalize, privatize, or designation.
         </p>
       )}
       {value.some((r) => r.type === "nationalize") && stateOwnership && (
         <p
-          className={`rounded-lg border px-3 py-2 text-xs leading-snug ${
+          className={`rounded-lg border px-3 py-2 text-body-sm leading-snug ${
             stateOwnership.status.inDangerZone
               ? "border-warning/40 bg-warning/10 text-warning"
               : "border-card-border bg-card-muted text-muted"
@@ -252,7 +256,7 @@ export function NationalizationProvisionEditor({
                     method: "ipo",
                   });
               }}
-              className="flex-1 rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+              className="flex-1 rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
             >
               <option value="nationalize">Nationalize a corporation/sector</option>
               {privatizeAvailable && <option value="privatize">Privatize a state holding</option>}
@@ -261,7 +265,7 @@ export function NationalizationProvisionEditor({
             <button
               type="button"
               onClick={() => removeRow(i)}
-              className="text-xs text-error hover:underline"
+              className="text-body-sm text-error hover:underline"
             >
               Remove
             </button>
@@ -276,7 +280,7 @@ export function NationalizationProvisionEditor({
               onChange={(e) =>
                 setRow(i, { type: "designate_strategic_sector", sectorType: e.target.value })
               }
-              className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+              className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
             >
               <option value="">— Select sector type —</option>
               {OPERATING_SECTOR_TYPES.map((t) => (
@@ -293,7 +297,7 @@ export function NationalizationProvisionEditor({
       ))}
 
       {hasNatPriv && (
-        <p className="text-[11px] text-amber-400">
+        <p className="text-body-sm text-amber-400">
           Passing this bill will require a <span className="font-semibold">{passRule.label}</span>
           {passRule.rule === "twoThirds" ? " of votes cast in each chamber" : ""}.
         </p>
@@ -379,14 +383,14 @@ function NationalizeRow({
               : { type: "nationalize", targetKind: "corporation" }
           );
         }}
-        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
       >
         <option value="corporation">Whole corporation</option>
         <option value="sector">A sector — industry-wide</option>
       </select>
 
       {kind === "corporation" && (
-        <p className="rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-[11px] text-warning">
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-body-sm text-warning">
           Nationalizing a whole corporation will{" "}
           <span className="font-semibold">destroy the corporation</span>: its domestic sectors are
           nationalized into the National Corporation, and any foreign sectors are taken by the state
@@ -406,7 +410,7 @@ function NationalizeRow({
             search(e.target.value);
           }}
           placeholder="Search a corporation…"
-          className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
         />
       )}
 
@@ -426,7 +430,7 @@ function NationalizeRow({
                 setQ(c.name);
                 setResults([]);
               }}
-              className="block w-full px-3 py-1.5 text-left text-sm hover:bg-card-elevated"
+              className="block w-full px-3 py-1.5 text-left text-body hover:bg-card-elevated"
             >
               {c.name}
             </button>
@@ -437,7 +441,7 @@ function NationalizeRow({
       {kind === "corporation" && row.targetCorporationId && (
         <div className="rounded-lg border border-card-border bg-card-muted p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-foreground">
+            <span className="text-body font-semibold text-foreground">
               {detail?.name ?? row.targetCorpName}
             </span>
             {detail && (
@@ -449,7 +453,7 @@ function NationalizeRow({
 
           {detail ? (
             <>
-              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-body-sm sm:grid-cols-3">
                 <Metric label="CEO" value={detail.ceoVacant ? "Vacant" : (detail.ceoName ?? "—")} />
                 <Metric
                   label="Revenue/turn"
@@ -476,14 +480,14 @@ function NationalizeRow({
                     {detail.triggers.map((t) => (
                       <span
                         key={t}
-                        className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[11px] text-gold"
+                        className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-body-sm text-gold"
                       >
                         {TRIGGER_REASON[t] ?? t}
                       </span>
                     ))}
                   </div>
                   {!detail.executivelyTakeable && (
-                    <p className="mt-1.5 text-[11px] text-muted">
+                    <p className="mt-1.5 text-body-sm text-muted">
                       Solvent private corporation — only the legislature can nationalize it (this
                       bill).
                     </p>
@@ -492,7 +496,7 @@ function NationalizeRow({
               )}
             </>
           ) : (
-            <p className="mt-1 text-xs text-success">Selected: {row.targetCorpName}</p>
+            <p className="mt-1 text-body-sm text-success">Selected: {row.targetCorpName}</p>
           )}
         </div>
       )}
@@ -560,7 +564,7 @@ function SectorTakeoverRow({
         onChange={(e) =>
           onChange({ ...row, targetKind: "sector", targetSectorType: e.target.value || undefined })
         }
-        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
       >
         <option value="">— Select sector type —</option>
         {OPERATING_SECTOR_TYPES.map((t) => (
@@ -570,7 +574,7 @@ function SectorTakeoverRow({
         ))}
       </select>
 
-      <label className="block text-xs text-muted">
+      <label className="block text-body-sm text-muted">
         Nationalize{" "}
         <span className="font-semibold text-foreground">{Math.round(fraction * 100)}%</span> of each
         holding
@@ -597,7 +601,7 @@ function SectorTakeoverRow({
             key={s}
             type="button"
             onClick={() => onChange({ ...row, targetKind: "sector", sectorScope: s })}
-            className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+            className={`rounded-full border px-2.5 py-0.5 text-body-sm ${
               scope === s
                 ? "border-gold/40 bg-gold/15 text-gold"
                 : "border-card-border text-muted hover:text-foreground"
@@ -609,7 +613,7 @@ function SectorTakeoverRow({
       </div>
 
       {sectorType && preview && (
-        <div className="rounded-lg border border-card-border bg-card-muted p-3 text-xs">
+        <div className="rounded-lg border border-card-border bg-card-muted p-3 text-body-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold text-foreground">
               {preview.affectedCount} corporation{preview.affectedCount === 1 ? "" : "s"} affected
@@ -627,7 +631,7 @@ function SectorTakeoverRow({
                 <li key={c.corporationId} className="flex items-center justify-between gap-3">
                   <span className="truncate text-foreground">
                     {c.name}{" "}
-                    <span className="text-[10px] text-muted">
+                    <span className="text-body-sm text-muted">
                       · {c.sectorCount} in {c.regionCount} region{c.regionCount === 1 ? "" : "s"}
                     </span>
                   </span>
@@ -639,7 +643,7 @@ function SectorTakeoverRow({
             </ul>
           )}
           {preview.affectedCount === 0 && scope !== "unowned" && (
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               No corporation currently holds this sector type.
             </p>
           )}
@@ -698,7 +702,7 @@ function PrivatizeRow({
         onChange={(e) =>
           onChange({ ...row, sourceNationalCorporationId: e.target.value, selections: [] })
         }
-        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+        className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
       >
         <option value="">— Source national corporation —</option>
         {natCorps.map((c) => (
@@ -710,14 +714,16 @@ function PrivatizeRow({
       {sectors.length > 0 && (
         <div className="max-h-32 overflow-y-auto rounded-lg border border-card-border p-1">
           {sectors.map((s) => (
-            <label key={s.sectorId} className="flex items-center gap-2 px-2 py-1 text-sm">
+            <label key={s.sectorId} className="flex items-center gap-2 px-2 py-1 text-body">
               <input
                 type="checkbox"
                 checked={row.selections.some((sel) => sel.sectorId === s.sectorId)}
                 onChange={() => toggleSector(s.sectorId)}
               />
               <span className="capitalize">{s.sectorType}</span>
-              <span className="text-xs text-muted">· {displayCanadianRegionCode(s.stateId)}</span>
+              <span className="text-body-sm text-muted">
+                · {displayCanadianRegionCode(s.stateId)}
+              </span>
             </label>
           ))}
         </div>
@@ -729,18 +735,18 @@ function PrivatizeRow({
           maxLength={60}
           onChange={(e) => onChange({ ...row, newCorpName: e.target.value })}
           placeholder="New corp name"
-          className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+          className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
         />
         <select
           value={row.method}
           onChange={(e) => onChange({ ...row, method: e.target.value as "ipo" | "auction" })}
-          className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
+          className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-body"
         >
           <option value="ipo">IPO float</option>
           <option value="auction">Auction</option>
         </select>
       </div>
-      <label className="block text-xs text-muted">
+      <label className="block text-body-sm text-muted">
         Carve fraction per sector:{" "}
         {Math.round((row.selections[0]?.carveFraction ?? DEFAULT_BILL_CARVE_FRACTION) * 100)}%
         <Slider
@@ -760,7 +766,7 @@ function PrivatizeRow({
           className="mt-1.5 w-full"
         />
       </label>
-      <p className="text-[11px] text-muted">
+      <p className="text-body-sm text-muted">
         Applies to every selected sector. The anti-monopoly limit — a spin-out may not exceed 30% of
         a region&apos;s sector market — is checked when the bill is enacted, so a small holding may
         be carved in full while a dominant one is capped lower.
@@ -774,7 +780,7 @@ function PrivatizeRow({
             onChange({ ...row, reservePrice: parseFloat(e.target.value) || undefined })
           }
           placeholder="Reserve price"
-          className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 font-mono text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 font-mono text-body"
         />
       )}
     </div>

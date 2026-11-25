@@ -12,10 +12,10 @@ interface ElectionInfoBoxProps {
 export function ElectionInfoBox({ election, totalVotes }: ElectionInfoBoxProps) {
   return (
     <aside className="mb-8 float-right ml-6 w-80 rounded-xl border-2 border-card-border bg-card p-5 shadow-lg">
-      <h2 className="mb-4 border-b-2 border-primary/30 pb-2 text-sm font-bold text-foreground">
+      <h2 className="mb-4 border-b-2 border-primary/30 pb-2 text-body font-bold text-foreground">
         {election.label}
       </h2>
-      <dl className="space-y-3 text-sm">
+      <dl className="space-y-3 text-body">
         <div className="flex justify-between items-baseline">
           <dt className="font-semibold text-muted">Date</dt>
           <dd className="text-foreground font-medium">{formatDate(election.endTime)}</dd>
@@ -55,7 +55,7 @@ export function ElectionInfoBox({ election, totalVotes }: ElectionInfoBoxProps) 
         {election.generalResults?.finalized && (
           <div className="mt-4 pt-3 border-t border-card-border">
             <div className="flex items-center justify-center gap-2 rounded-lg bg-success/10 border border-success/25 px-3 py-2">
-              <span className="text-success text-xs font-bold">✓ FINALIZED</span>
+              <span className="text-success text-body-sm font-bold">✓ FINALIZED</span>
             </div>
           </div>
         )}

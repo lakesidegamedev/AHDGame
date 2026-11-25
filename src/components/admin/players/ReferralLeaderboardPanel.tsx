@@ -210,7 +210,7 @@ export function ReferralLeaderboardPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading referral rankings…</span>
+          <span className="text-body text-muted">Loading referral rankings…</span>
         </div>
       </div>
     );
@@ -225,12 +225,12 @@ export function ReferralLeaderboardPanel() {
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-heading-sm font-semibold text-foreground">Referral tracker</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">Referral tracker</h3>
           <p className="mt-1 text-body-sm text-muted">
             Rankings count completed referrals — when an invited player finishes character setup.
           </p>
           {contestMode && contestStartedAt != null && (
-            <p className="mt-2 text-body-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Contest tracking since{" "}
               <span className="font-medium text-foreground">
                 <LocalTime
@@ -292,7 +292,7 @@ export function ReferralLeaderboardPanel() {
           <Button variant="primary" onClick={handleAwardContest} isLoading={actionLoading}>
             Award top 3 now
           </Button>
-          <p className="text-xs text-muted sm:ml-2 sm:self-center">
+          <p className="text-body-sm text-muted sm:ml-2 sm:self-center">
             Runs automatically when a new iteration starts: the top 3 get Supporter for the whole
             next iteration. Paying supporters keep their own plan.
           </p>
@@ -300,7 +300,7 @@ export function ReferralLeaderboardPanel() {
       )}
 
       {awarded && (
-        <div className="mb-4 rounded-lg border border-card-border bg-card-muted/30 p-3 text-sm">
+        <div className="mb-4 rounded-lg border border-card-border bg-card-muted/30 p-3 text-body">
           {awarded.length === 0 ? (
             <p className="text-muted">No qualifying referrers. The contest restarted.</p>
           ) : (
@@ -337,7 +337,7 @@ export function ReferralLeaderboardPanel() {
         <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
           {/* Desktop */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="bg-background/50">
                 <tr>
                   <th className="w-10 px-2 py-3" aria-hidden />
@@ -397,7 +397,7 @@ export function ReferralLeaderboardPanel() {
                               <p className="truncate font-medium text-foreground">
                                 {row.displayName}
                               </p>
-                              <p className="truncate text-body-xs text-muted">@{row.username}</p>
+                              <p className="truncate text-body-sm text-muted">@{row.username}</p>
                             </button>
                           </td>
                           <td className="px-4 py-3 align-middle">
@@ -490,7 +490,7 @@ export function ReferralLeaderboardPanel() {
                             <p className="truncate font-medium text-foreground">
                               {row.displayName}
                             </p>
-                            <p className="truncate text-body-xs text-muted">@{row.username}</p>
+                            <p className="truncate text-body-sm text-muted">@{row.username}</p>
                           </div>
                         </div>
                         <div className="flex flex-col gap-0.5">

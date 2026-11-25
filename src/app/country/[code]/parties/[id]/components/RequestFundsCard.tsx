@@ -114,7 +114,9 @@ export function RequestFundsCard({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       {msg && (
-        <div className={`px-6 py-3 border-b border-card-border/40 text-sm ${getMessageStyle(msg)}`}>
+        <div
+          className={`px-6 py-3 border-b border-card-border/40 text-body ${getMessageStyle(msg)}`}
+        >
           {msg}
         </div>
       )}
@@ -129,7 +131,7 @@ export function RequestFundsCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          <div className="text-xs font-semibold text-muted">Request funds</div>
+          <div className="text-body-sm font-semibold text-muted">Request funds</div>
         </div>
         <p className="text-body-sm text-muted mb-3">
           Request campaign funds from the party treasury. Your request goes to Pending Transactions
@@ -168,25 +170,25 @@ export function RequestFundsCard({
             placeholder="Amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-36 bg-background py-2 text-sm"
+            className="w-36 bg-background py-2 text-body"
           />
           <Input
             type="text"
             placeholder="Note (optional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="flex-1 min-w-48 bg-background py-2 text-sm"
+            className="flex-1 min-w-48 bg-background py-2 text-body"
             maxLength={280}
           />
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Requesting…" : "Request"}
           </button>
         </div>
-        <div className="mt-1 text-xs text-muted">
+        <div className="mt-1 text-body-sm text-muted">
           Min. {partySymbol}1,000 · Sent to your campaign funds on approval
         </div>
       </div>

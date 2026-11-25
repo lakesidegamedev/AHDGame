@@ -95,20 +95,20 @@ export function CeoCorporationSettingsModal({
       bodyClassName="p-5 md:p-6"
     >
       {uploadError && (
-        <p className="rounded-sm border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+        <p className="rounded-sm border border-error/30 bg-error/10 px-3 py-2 text-body text-error">
           {uploadError}
         </p>
       )}
 
-      <p className="mb-6 text-sm text-muted">{t("intro")}</p>
+      <p className="mb-6 text-body text-muted">{t("intro")}</p>
       <div className="grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
           <section className="space-y-4">
-            <h3 className="text-sm font-semibold">{t("profile")}</h3>
+            <h3 className="text-body-lg font-semibold">{t("profile")}</h3>
             <div>
               <label
                 htmlFor={`${formId}-description`}
-                className="block text-sm font-medium text-foreground mb-1"
+                className="block text-body font-medium text-foreground mb-1"
               >
                 Description
               </label>
@@ -117,7 +117,7 @@ export function CeoCorporationSettingsModal({
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="Describe your corporation"
-                className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none resize-none"
+                className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none resize-none"
                 rows={3}
                 maxLength={500}
               />
@@ -127,7 +127,7 @@ export function CeoCorporationSettingsModal({
               <div>
                 <label
                   htmlFor={`${formId}-primary`}
-                  className="block text-sm font-medium text-foreground mb-1"
+                  className="block text-body font-medium text-foreground mb-1"
                 >
                   Primary sector type
                 </label>
@@ -139,7 +139,7 @@ export function CeoCorporationSettingsModal({
                     setEditPrimaryType(val);
                     if (editSecondaryType === val) setEditSecondaryType("");
                   }}
-                  className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+                  className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
                 >
                   {OPERATING_SECTOR_CHOICES.map(({ key, label }) => (
                     <option key={key} value={key}>
@@ -147,7 +147,7 @@ export function CeoCorporationSettingsModal({
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted mt-1">
+                <p className="text-body-sm text-muted mt-1">
                   Sectors of this type earn 5% more margin. Sectors of any other type earn 15% less.
                 </p>
               </div>
@@ -155,7 +155,7 @@ export function CeoCorporationSettingsModal({
               <div>
                 <label
                   htmlFor={`${formId}-secondary`}
-                  className="block text-sm font-medium text-foreground mb-1"
+                  className="block text-body font-medium text-foreground mb-1"
                 >
                   Secondary sector focus
                 </label>
@@ -163,7 +163,7 @@ export function CeoCorporationSettingsModal({
                   id={`${formId}-secondary`}
                   value={editSecondaryType}
                   onChange={(e) => setEditSecondaryType(e.target.value as OperatingSectorType | "")}
-                  className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+                  className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
                 >
                   <option value="">None</option>
                   {OPERATING_SECTOR_CHOICES.filter(({ key }) => key !== editPrimaryType).map(
@@ -174,7 +174,7 @@ export function CeoCorporationSettingsModal({
                     )
                   )}
                 </select>
-                <p className="text-xs text-muted mt-1">
+                <p className="text-body-sm text-muted mt-1">
                   Sectors of this type earn 2.5% more margin. It doubles the sprawl penalty once you
                   run more than 15 sectors; logistics spending reduces it.
                 </p>
@@ -183,7 +183,7 @@ export function CeoCorporationSettingsModal({
 
             {(editPrimaryType !== corporation.type ||
               (editSecondaryType || null) !== (corporation.secondaryType ?? null)) && (
-              <div className="rounded-sm border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
+              <div className="rounded-sm border border-warning/30 bg-warning/5 p-3 text-body-sm text-warning">
                 Changing sector focus cuts margin by <strong>10%</strong> on every sector for 24
                 turns, then blocks another change for 72 turns.
               </div>
@@ -191,7 +191,7 @@ export function CeoCorporationSettingsModal({
 
             {corporation.typeSwitchCooldownUntilTurn != null &&
               corporation.typeSwitchCooldownUntilTurn > corporation.currentTurn && (
-                <p className="text-xs text-warning">
+                <p className="text-body-sm text-warning">
                   Type switch on cooldown (
                   {corporation.typeSwitchCooldownUntilTurn - corporation.currentTurn} turn
                   {corporation.typeSwitchCooldownUntilTurn - corporation.currentTurn === 1
@@ -211,11 +211,11 @@ export function CeoCorporationSettingsModal({
           </div>
         </div>
         <aside className="min-w-0 space-y-6 md:border-l md:border-card-border md:pl-6">
-          <h3 className="text-sm font-semibold">{t("brand")}</h3>
+          <h3 className="text-body-lg font-semibold">{t("brand")}</h3>
           <div>
             <label
               htmlFor={`${formId}-color`}
-              className="block text-sm font-medium text-foreground mb-1"
+              className="block text-body font-medium text-foreground mb-1"
             >
               Brand color
             </label>
@@ -227,13 +227,13 @@ export function CeoCorporationSettingsModal({
                 onChange={(e) => setEditBrandColor(e.target.value)}
                 className="h-10 w-14 cursor-pointer rounded-sm border border-card-border bg-background p-1"
               />
-              <span className="text-sm text-muted font-mono">{editBrandColor}</span>
+              <span className="text-body text-muted font-mono">{editBrandColor}</span>
               <span
                 className="inline-block h-6 w-6 rounded-sm border border-card-border"
                 style={{ backgroundColor: editBrandColor }}
               />
             </div>
-            <p className="text-xs text-muted mt-1">
+            <p className="text-body-sm text-muted mt-1">
               Displayed on market share charts and sector cards
             </p>
           </div>
@@ -252,11 +252,11 @@ export function CeoCorporationSettingsModal({
                 />
               ) : (
                 <div className="h-14 w-14 shrink-0 rounded-sm border border-dashed border-card-border bg-card-elevated flex items-center justify-center">
-                  <span className="text-xs text-muted">None</span>
+                  <span className="text-body-sm text-muted">None</span>
                 </div>
               )}
               <div className="flex flex-col gap-1.5 min-w-0">
-                <label className="cursor-pointer rounded-sm border border-card-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-card-elevated transition-colors text-center">
+                <label className="cursor-pointer rounded-sm border border-card-border px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-card-elevated transition-colors text-center">
                   {uploadingLogo
                     ? "Uploading..."
                     : corporation.logoUrl
@@ -270,7 +270,7 @@ export function CeoCorporationSettingsModal({
                     onChange={onLogoUpload}
                   />
                 </label>
-                <p className="text-[10px] text-muted">
+                <p className="text-body-sm text-muted">
                   {UPLOAD_IMAGE_HINTS.corporationLogo.short}. Max 2 MB.
                 </p>
               </div>
@@ -291,7 +291,7 @@ export function CeoCorporationSettingsModal({
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-sm border border-card-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-card-elevated transition-colors">
+              <label className="cursor-pointer rounded-sm border border-card-border px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-card-elevated transition-colors">
                 {uploadingHeader
                   ? "Uploading..."
                   : corporation.headerImageUrl
@@ -310,25 +310,25 @@ export function CeoCorporationSettingsModal({
                   type="button"
                   onClick={onClearBanner}
                   disabled={uploadingHeader || uploadingLogo}
-                  className="rounded-sm border border-error/30 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/10 transition-colors disabled:opacity-50"
+                  className="rounded-sm border border-error/30 px-3 py-1.5 text-body-sm font-medium text-error hover:bg-error/10 transition-colors disabled:opacity-50"
                 >
                   Remove banner
                 </button>
               )}
             </div>
-            <p className="mt-1.5 text-[10px] text-muted">
+            <p className="mt-1.5 text-body-sm text-muted">
               {UPLOAD_IMAGE_HINTS.corporationBanner.short}. Max 4 MB.
             </p>
           </section>
         </aside>
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-card-border pt-4">
-        <p className="text-xs text-muted">{t("saveHint")}</p>
+        <p className="text-body-sm text-muted">{t("saveHint")}</p>
         <button
           type="button"
           onClick={onSaveSettings}
           disabled={saving}
-          className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-sm bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {saving ? "Saving..." : "Save settings"}
         </button>
@@ -584,8 +584,8 @@ function RenameCorporationSection({
 
   return (
     <section>
-      <h3 className="text-sm font-semibold text-foreground mb-1">Rename corporation</h3>
-      <p className="text-xs text-muted mb-3">
+      <h3 className="text-body-lg font-semibold text-foreground mb-1">Rename corporation</h3>
+      <p className="text-body-sm text-muted mb-3">
         Change your corporation&apos;s name. This costs{" "}
         <strong className="text-foreground">{costDisplay}</strong> from liquid capital and{" "}
         <strong className="text-foreground">
@@ -595,18 +595,18 @@ function RenameCorporationSection({
       </p>
 
       {renameError && (
-        <div className="mb-3 rounded-sm border border-error/30 bg-error/10 p-3 text-sm text-error">
+        <div className="mb-3 rounded-sm border border-error/30 bg-error/10 p-3 text-body text-error">
           {renameError}
         </div>
       )}
       {renameSuccess && (
-        <div className="mb-3 rounded-sm border border-success/30 bg-success/10 p-3 text-sm text-success">
+        <div className="mb-3 rounded-sm border border-success/30 bg-success/10 p-3 text-body text-success">
           {renameSuccess}
         </div>
       )}
 
       {onCooldown && (
-        <p className="mb-3 text-xs text-warning">
+        <p className="mb-3 text-body-sm text-warning">
           Rename on cooldown ({cooldownRemaining} turn{cooldownRemaining === 1 ? "" : "s"}{" "}
           remaining).
         </p>
@@ -614,7 +614,7 @@ function RenameCorporationSection({
 
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="block text-body font-medium text-foreground mb-1">
             New name
             <input
               type="text"
@@ -628,10 +628,10 @@ function RenameCorporationSection({
               placeholder={corporation.name}
               maxLength={60}
               disabled={onCooldown || renaming}
-              className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none disabled:opacity-50"
+              className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none disabled:opacity-50"
             />
           </label>
-          <p className="mt-1 text-[10px] text-muted">2 to 60 characters</p>
+          <p className="mt-1 text-body-sm text-muted">2 to 60 characters</p>
         </div>
 
         {!showConfirm ? (
@@ -639,19 +639,19 @@ function RenameCorporationSection({
             type="button"
             onClick={handlePreview}
             disabled={!nameValid || isSameName || onCooldown || renaming}
-            className="rounded-sm border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-card-elevated transition-colors disabled:opacity-50"
+            className="rounded-sm border border-card-border px-4 py-2 text-body font-medium text-foreground hover:bg-card-elevated transition-colors disabled:opacity-50"
           >
             Preview rename cost
           </button>
         ) : (
           <div className="rounded-sm border border-warning/30 bg-warning/5 p-4 space-y-2">
-            <p className="text-sm font-medium text-foreground">Confirm rename</p>
-            <p className="text-xs text-muted">
+            <p className="text-body font-medium text-foreground">Confirm rename</p>
+            <p className="text-body-sm text-muted">
               <strong className="text-foreground">&quot;{corporation.name}&quot;</strong>
               {" → "}
               <strong className="text-foreground">&quot;{newName.trim()}&quot;</strong>
             </p>
-            <ul className="text-xs text-muted space-y-1">
+            <ul className="text-body-sm text-muted space-y-1">
               <li>
                 Liquid capital cost: <strong className="text-foreground">{costDisplay}</strong>
               </li>
@@ -670,7 +670,7 @@ function RenameCorporationSection({
                 type="button"
                 onClick={handleConfirmRename}
                 disabled={renaming}
-                className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                className="rounded-sm bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {renaming ? "Renaming..." : "Confirm rename"}
               </button>
@@ -678,7 +678,7 @@ function RenameCorporationSection({
                 type="button"
                 onClick={() => setShowConfirm(false)}
                 disabled={renaming}
-                className="rounded-sm border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-card-elevated transition-colors disabled:opacity-50"
+                className="rounded-sm border border-card-border px-4 py-2 text-body font-medium text-foreground hover:bg-card-elevated transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

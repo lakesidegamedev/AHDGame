@@ -157,14 +157,14 @@ export function RunningMateSelector({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-muted">
+      <span className="text-body-sm text-muted">
         Running mate:{" "}
         <span className="font-medium text-foreground">
           {currentRunningMateName || "None selected"}
         </span>
       </span>
       {pendingRunningMateName && (
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           Invited {pendingRunningMateName}, waiting for them to accept
         </span>
       )}
@@ -174,14 +174,14 @@ export function RunningMateSelector({
 
       <Modal open={open} title="Invite a running mate" onClose={() => setOpen(false)}>
         <div className="space-y-4">
-          <div className="rounded-lg border border-info/30 bg-info/10 p-3 text-sm text-info">
+          <div className="rounded-lg border border-info/30 bg-info/10 p-3 text-body text-info">
             Choose any eligible player from your country, regardless of party. Search by player name
             or filter by party to narrow the list. They get an invitation and join your ticket only
             once they accept.
           </div>
 
           {errorMessage && (
-            <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+            <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error">
               {errorMessage}
             </div>
           )}
@@ -213,15 +213,15 @@ export function RunningMateSelector({
                             }`}
                           >
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">
+                              <p className="truncate text-body font-medium text-foreground">
                                 {character.name}
                               </p>
-                              <p className="text-xs text-muted">
+                              <p className="text-body-sm text-muted">
                                 {displayCanadianRegionCode(character.homeState)}
                               </p>
                             </div>
                             <span
-                              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium"
                               style={{
                                 borderColor: `${color}60`,
                                 backgroundColor: `${color}18`,
@@ -241,7 +241,7 @@ export function RunningMateSelector({
                       })}
                     </div>
                   ) : (
-                    <div className="px-3 py-4 text-sm text-muted">
+                    <div className="px-3 py-4 text-body text-muted">
                       No players match that search yet.
                     </div>
                   )}
@@ -250,7 +250,7 @@ export function RunningMateSelector({
 
               {searchQuery.trim().length > 0 &&
                 filteredCharacters.length > suggestedCharacters.length && (
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     {filteredCharacters.length} matching players found. Keep typing to narrow the
                     list.
                   </p>
@@ -261,7 +261,7 @@ export function RunningMateSelector({
               <button
                 type="button"
                 onClick={() => setPartyFilter(null)}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-full border px-2.5 py-1 text-body-sm font-medium transition-colors ${
                   partyFilter === null
                     ? "border-primary/50 bg-primary/20 text-primary"
                     : "border-card-border text-muted hover:text-foreground"
@@ -278,7 +278,7 @@ export function RunningMateSelector({
                     key={party}
                     type="button"
                     onClick={() => setPartyFilter(party)}
-                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm font-medium transition-colors"
                     style={{
                       borderColor: isSelected ? `${color}80` : `${color}40`,
                       backgroundColor: isSelected ? `${color}30` : `${color}15`,
@@ -300,10 +300,10 @@ export function RunningMateSelector({
 
           <div className="rounded-lg border border-card-border bg-card-elevated p-3">
             <p className="text-body-sm font-medium text-muted">Selected running mate</p>
-            <p className="mt-1 text-sm font-medium text-foreground">
+            <p className="mt-1 text-body font-medium text-foreground">
               {selectedCharacter?.name ?? currentRunningMateName ?? "None selected"}
             </p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               {selectedCharacter
                 ? `${partyLabel(selectedCharacter.party, selectedCharacter.partyName)} - ${selectedCharacter.homeState}`
                 : "Choose a player from the matches above or browse below."}
@@ -312,11 +312,11 @@ export function RunningMateSelector({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-body font-medium text-foreground">
                 {searchQuery.trim() ? "Matching players" : "Eligible players"}
               </p>
               {!searchQuery.trim() && filteredCharacters.length > browseCharacters.length && (
-                <p className="text-xs text-muted">
+                <p className="text-body-sm text-muted">
                   Showing the first {browseCharacters.length} players. Search to narrow faster.
                 </p>
               )}
@@ -324,15 +324,15 @@ export function RunningMateSelector({
 
             <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
               {loading ? (
-                <div className="py-4 text-sm text-muted">Loading eligible players...</div>
+                <div className="py-4 text-body text-muted">Loading eligible players...</div>
               ) : searchQuery.trim() ? (
                 suggestedCharacters.length === 0 && (
-                  <div className="rounded-lg border border-card-border bg-card p-3 text-sm text-muted">
+                  <div className="rounded-lg border border-card-border bg-card p-3 text-body text-muted">
                     No matching players to select.
                   </div>
                 )
               ) : browseCharacters.length === 0 ? (
-                <div className="rounded-lg border border-card-border bg-card p-3 text-sm text-muted">
+                <div className="rounded-lg border border-card-border bg-card p-3 text-body text-muted">
                   No players match the current party filter.
                 </div>
               ) : (
@@ -352,15 +352,15 @@ export function RunningMateSelector({
                       }`}
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
+                        <p className="truncate text-body font-medium text-foreground">
                           {character.name}
                         </p>
-                        <p className="text-xs text-muted">
+                        <p className="text-body-sm text-muted">
                           {displayCanadianRegionCode(character.homeState)}
                         </p>
                       </div>
                       <span
-                        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium"
                         style={{
                           borderColor: `${color}60`,
                           backgroundColor: `${color}18`,

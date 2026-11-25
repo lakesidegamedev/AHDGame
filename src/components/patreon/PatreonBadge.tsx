@@ -78,7 +78,7 @@ export function PatreonBadge({
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] shadow-sm ${
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-body-sm font-bold uppercase tracking-[0.18em] shadow-sm ${
         isPlusPlus
           ? "border-violet-300/70 bg-gradient-to-r from-violet-300 via-fuchsia-200 to-amber-200 text-violet-950 ring-1 ring-violet-400/40"
           : isPlus

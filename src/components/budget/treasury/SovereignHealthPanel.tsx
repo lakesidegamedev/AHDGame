@@ -93,7 +93,7 @@ function Signal({ label, value, gold }: { label: string; value: string; gold?: b
     <div className="rounded-md bg-card-muted px-2.5 py-1.5">
       <div className="text-body-sm font-medium text-muted">{label}</div>
       <div
-        className={`mt-0.5 font-mono text-body-xs font-bold tabular-nums ${gold ? "text-gold" : "text-foreground"}`}
+        className={`mt-0.5 font-mono text-body-sm font-bold tabular-nums ${gold ? "text-gold" : "text-foreground"}`}
       >
         {value}
       </div>
@@ -148,10 +148,10 @@ function ConsolidationNotice({
       role="status"
       data-testid="consolidation-package"
     >
-      <div className="text-body-xs font-semibold">
+      <div className="text-body-sm font-semibold">
         Austerity package · fiscal year {summary.fiscalYear}
       </div>
-      <div className="mt-0.5 text-body-xs leading-snug text-foreground/80">
+      <div className="mt-0.5 text-body-sm leading-snug text-foreground/80">
         Worth {sharePct(summary.sizeGdpShare)} of GDP: {sharePct(summary.taxShare, 0)} from tax
         rises and {sharePct(summary.cutShare, 0)} from spending cuts. It cost the government{" "}
         {summary.approvalCost.toFixed(1)} points of approval when enacted;{" "}
@@ -179,11 +179,11 @@ export function SovereignHealthPanel({
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-foreground">Sovereign health</div>
-          <div className="text-body-xs text-muted">How close you are to defaulting</div>
+          <div className="text-body font-semibold text-foreground">Sovereign health</div>
+          <div className="text-body-sm text-muted">How close you are to defaulting</div>
         </div>
         <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${TONE_BADGE[tone]}`}
+          className={`shrink-0 rounded-full border px-2 py-0.5 text-body-sm font-semibold ${TONE_BADGE[tone]}`}
         >
           {headline}
         </span>
@@ -198,7 +198,7 @@ export function SovereignHealthPanel({
             <Fragment key={node.label}>
               <div className="flex flex-col items-center gap-1">
                 <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-body-sm font-bold ${
                     active
                       ? `${TONE_BG[tone]} text-background`
                       : passed
@@ -209,7 +209,7 @@ export function SovereignHealthPanel({
                   {i + 1}
                 </div>
                 <span
-                  className={`text-[10px] font-medium ${active ? TONE_TEXT[tone] : "text-muted"}`}
+                  className={`text-body-sm font-medium ${active ? TONE_TEXT[tone] : "text-muted"}`}
                 >
                   {node.label}
                 </span>
@@ -252,8 +252,8 @@ export function SovereignHealthPanel({
           className={`mt-3 rounded-md border px-3 py-2 ${TONE_BADGE[ceilingSignalTone]}`}
           role="status"
         >
-          <div className="text-body-xs font-semibold">{ceiling.title}</div>
-          <div className="mt-0.5 text-body-xs leading-snug text-foreground/80">
+          <div className="text-body-sm font-semibold">{ceiling.title}</div>
+          <div className="mt-0.5 text-body-sm leading-snug text-foreground/80">
             {ceiling.detail}
           </div>
         </div>

@@ -58,8 +58,8 @@ export default function WageLevelPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Wage level</h2>
-      <p className="text-xs text-muted mb-4">
+      <h2 className="mb-1 text-heading font-bold text-foreground">Wage level</h2>
+      <p className="text-body-sm text-muted mb-4">
         What this sector pays its workers, as a multiple of the market baseline for this industry.
         {floorBinds
           ? " A national minimum-wage floor is in force here, so your effective pay is lifted above 1.00× no matter what you set (see the floor tag below)."
@@ -69,7 +69,7 @@ export default function WageLevelPanel({
       </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
         <span
-          className="text-xs text-muted"
+          className="text-body-sm text-muted"
           title="Your chosen wage lever for this sector, versus the industry baseline. This is the number you control with the slider."
         >
           Your setting:{" "}
@@ -80,7 +80,7 @@ export default function WageLevelPanel({
         {baselineVsMedian != null && (
           <>
             <span
-              className="text-xs text-muted"
+              className="text-body-sm text-muted"
               title="How this industry's standard pay compares with the median across all industries. It does not include your setting."
             >
               Industry baseline:{" "}
@@ -89,7 +89,7 @@ export default function WageLevelPanel({
               </span>
             </span>
             <span
-              className="text-xs text-muted"
+              className="text-body-sm text-muted"
               title="Your setting times the industry baseline, against the median across all industries. A minimum-wage floor can lift real pay above this."
             >
               Your pay:{" "}
@@ -101,7 +101,7 @@ export default function WageLevelPanel({
         )}
         {floorBinds && (
           <span
-            className="rounded-md bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning"
+            className="rounded-md bg-warning/15 px-2 py-0.5 text-body-sm font-medium text-warning"
             title="A national minimum-wage law forces labour costs up by this much here, regardless of your wage setting."
           >
             Minimum-wage floor: +{Math.round(sector.minWageUplift! * 100)}% labour cost
@@ -109,7 +109,7 @@ export default function WageLevelPanel({
         )}
       </div>
       {sector.unionWageDemand != null && (
-        <div className="mb-4 rounded-lg border border-dashed border-info/30 bg-info/10 p-3 text-xs">
+        <div className="mb-4 rounded-lg border border-dashed border-info/30 bg-info/10 p-3 text-body-sm">
           <span className="font-medium text-info">
             {sector.unionId ? (
               <Link href={`/unions/${sector.unionId}`} className="hover:underline">
@@ -152,25 +152,25 @@ export default function WageLevelPanel({
                   )
                 )
               }
-              className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
-            <span className="text-sm text-muted">×</span>
+            <span className="text-body text-muted">×</span>
             <button
               onClick={onSave}
               disabled={wageSaving}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {wageSaving ? "Saving..." : "Set wage"}
             </button>
           </div>
           {preview && formatCost && (
-            <p className="text-xs text-muted" role="status">
+            <p className="text-body-sm text-muted" role="status">
               Wage bill at {draft.toFixed(2)}×: about {formatCost(preview.projected)} per turn, now{" "}
               {formatCost(preview.current)}. An estimate: output and other costs held constant.
             </p>
           )}
           {wageMessage && (
-            <p className={`text-xs font-medium ${wageError ? "text-error" : "text-success"}`}>
+            <p className={`text-body-sm font-medium ${wageError ? "text-error" : "text-success"}`}>
               {wageMessage}
             </p>
           )}

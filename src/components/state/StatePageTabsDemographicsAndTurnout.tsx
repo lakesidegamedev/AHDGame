@@ -177,7 +177,7 @@ function KpiCell({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-3 shadow-card">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-base font-bold text-foreground">{children}</div>
+      <div className="mt-1 text-body-lg font-bold text-foreground">{children}</div>
     </div>
   );
 }
@@ -208,18 +208,18 @@ function KpiStrip({
           {economicLean !== null || socialLean !== null ? (
             <div className="flex flex-wrap items-center gap-1">
               {leanDisplay && (
-                <span className="mr-1 text-sm font-semibold">{leanDisplay.label}</span>
+                <span className="mr-1 text-body font-semibold">{leanDisplay.label}</span>
               )}
               {economicLean !== null && (
                 <span
-                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(leanDisplay?.economicTone ?? economicLean)}`}
+                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-body-sm font-semibold ${leanTextClass(leanDisplay?.economicTone ?? economicLean)}`}
                 >
                   Econ {fmtLean(economicLean)}
                 </span>
               )}
               {socialLean !== null && (
                 <span
-                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(leanDisplay?.socialTone ?? socialLean)}`}
+                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-body-sm font-semibold ${leanTextClass(leanDisplay?.socialTone ?? socialLean)}`}
                 >
                   Soc {fmtLean(socialLean)}
                 </span>
@@ -231,7 +231,7 @@ function KpiStrip({
         </KpiCell>
         <KpiCell label="Turnout">{avgTurnout !== null ? `${avgTurnout.toFixed(1)}%` : "—"}</KpiCell>
       </div>
-      {mediaPullLine && <p className="text-xs text-muted">{mediaPullLine}</p>}
+      {mediaPullLine && <p className="text-body-sm text-muted">{mediaPullLine}</p>}
     </>
   );
 }
@@ -283,7 +283,7 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
           <h4 className="text-body-sm font-medium text-muted">{title}</h4>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-body-sm">
             <thead className="bg-card-muted/50 border-b border-card-border uppercase text-muted font-semibold">
               <tr>
                 <th className="px-4 py-2">Group</th>
@@ -314,7 +314,7 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
                   <td className="px-4 py-2 text-right">
                     {r.turnout ? (
                       <span
-                        className={`text-[10px] font-semibold ${
+                        className={`text-body-sm font-semibold ${
                           r.turnout.modifier > 0
                             ? "text-success"
                             : r.turnout.modifier < 0
@@ -356,10 +356,10 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: r.color }}
                 />
-                <span className="flex-1 truncate text-[11px] text-foreground/75" title={r.label}>
+                <span className="flex-1 truncate text-body-sm text-foreground/75" title={r.label}>
                   {r.label}
                 </span>
-                <span className="text-[11px] tabular-nums text-muted">{r.pct}%</span>
+                <span className="text-body-sm tabular-nums text-muted">{r.pct}%</span>
               </div>
             ))}
           </div>
@@ -369,7 +369,10 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
         <div className="space-y-1.5">
           {rows.map((r) => (
             <div key={r.label} className="flex items-center gap-2">
-              <span className="w-24 shrink-0 truncate text-xs text-foreground/75" title={r.label}>
+              <span
+                className="w-24 shrink-0 truncate text-body-sm text-foreground/75"
+                title={r.label}
+              >
                 {r.label}
               </span>
               <div className="h-2 flex-1 rounded-full bg-card-border/40 overflow-hidden">
@@ -378,7 +381,7 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
                   style={{ width: `${Math.min(r.pct, 100)}%`, backgroundColor: r.color }}
                 />
               </div>
-              <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted">
+              <span className="w-8 shrink-0 text-right text-body-sm tabular-nums text-muted">
                 {r.pct}%
               </span>
             </div>
@@ -465,7 +468,7 @@ function ElectorateBucketsSection({ profile }: { profile: BucketProfileSection[]
       >
         <div className="flex items-center gap-2">
           <span className="text-body-sm font-medium text-muted">Electorate</span>
-          <span className="rounded-full bg-card-border/50 px-1.5 py-0.5 text-[10px] text-muted tabular-nums">
+          <span className="rounded-full bg-card-border/50 px-1.5 py-0.5 text-body-sm text-muted tabular-nums">
             {buckets.length} groups
           </span>
         </div>
@@ -486,7 +489,7 @@ function ElectorateBucketsSection({ profile }: { profile: BucketProfileSection[]
               <button
                 key={sec.dim}
                 onClick={() => setDim(sec.dim)}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                className={`rounded-lg px-2.5 py-1 text-body-sm font-semibold transition-colors ${
                   sec.dim === section.dim
                     ? "bg-primary/15 text-primary"
                     : "text-muted hover:text-foreground"
@@ -496,13 +499,13 @@ function ElectorateBucketsSection({ profile }: { profile: BucketProfileSection[]
               </button>
             ))}
           </div>
-          <div className="bg-card-muted/30 px-4 py-2 text-[11px] text-muted/70 border-b border-card-border">
+          <div className="bg-card-muted/30 px-4 py-2 text-body-sm text-muted/70 border-b border-card-border">
             The groups the election model actually counts. Shares are of this region&apos;s
             electorate and add up to 100% within each cut.
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-body-sm">
               <thead className="bg-card-muted/50 border-b border-card-border uppercase text-muted font-semibold">
                 <tr>
                   <th className="px-4 py-2 w-1/4">{section.dimLabel}</th>
@@ -531,7 +534,7 @@ function ElectorateBucketsSection({ profile }: { profile: BucketProfileSection[]
                           />
                         </div>
                         <span
-                          className={`text-[10px] font-semibold tabular-nums w-8 text-right ${leanTextClass(b.economicLean)}`}
+                          className={`text-body-sm font-semibold tabular-nums w-8 text-right ${leanTextClass(b.economicLean)}`}
                         >
                           {fmtLean(b.economicLean)}
                         </span>
@@ -563,7 +566,7 @@ function NoElectorateSubstrateNotice() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-card">
       <p className="text-body-sm font-medium text-muted mb-2">Electorate</p>
-      <p className="text-xs text-muted/80">
+      <p className="text-body-sm text-muted/80">
         No electorate breakdown for this region yet. It appears once the region has census data.
       </p>
     </div>
@@ -632,7 +635,7 @@ export function DemographicsAndTurnoutTab({
               />
             </svg>
             <p className="font-medium">No census or polling data</p>
-            <p className="text-sm mt-1">
+            <p className="text-body mt-1">
               Census and polling demographics have not been configured for this region.
             </p>
           </div>
@@ -707,7 +710,7 @@ export function DemographicsAndTurnoutTab({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setViewMode("chart")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "chart"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -727,7 +730,7 @@ export function DemographicsAndTurnoutTab({
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "table"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -747,7 +750,7 @@ export function DemographicsAndTurnoutTab({
             </button>
             <button
               onClick={() => setViewMode("combined")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "combined"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -768,7 +771,7 @@ export function DemographicsAndTurnoutTab({
             </button>
           </div>
           {turnoutData && (
-            <div className="text-[10px] text-muted">
+            <div className="text-body-sm text-muted">
               Turnout updated:{" "}
               <LocalTime value={turnoutData.lastUpdated!} options={{ dateStyle: "medium" }} />
             </div>
@@ -816,7 +819,7 @@ export function DemographicsAndTurnoutTab({
           {turnoutData && (
             <div className="rounded-xl border border-card-border bg-card-muted/30 p-4 shadow-card">
               <p className="text-body-sm font-medium text-muted mb-2">How to read turnout data</p>
-              <ul className="text-xs text-muted/80 space-y-1">
+              <ul className="text-body-sm text-muted/80 space-y-1">
                 <li>
                   <strong>Turnout %</strong> = Baseline + GOTV modifier (expected turnout for this
                   group)
@@ -907,7 +910,7 @@ export function DemographicsAndTurnoutTab({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setViewMode("chart")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "chart"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -927,7 +930,7 @@ export function DemographicsAndTurnoutTab({
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "table"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -947,7 +950,7 @@ export function DemographicsAndTurnoutTab({
             </button>
             <button
               onClick={() => setViewMode("combined")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "combined"
                   ? "bg-primary/15 text-primary"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
@@ -968,7 +971,7 @@ export function DemographicsAndTurnoutTab({
             </button>
           </div>
           {turnoutData && (
-            <div className="text-[10px] text-muted">
+            <div className="text-body-sm text-muted">
               Turnout updated:{" "}
               <LocalTime value={turnoutData.lastUpdated!} options={{ dateStyle: "medium" }} />
             </div>
@@ -996,7 +999,7 @@ export function DemographicsAndTurnoutTab({
           {turnoutData && (
             <div className="rounded-xl border border-card-border bg-card-muted/30 p-4 shadow-card">
               <p className="text-body-sm font-medium text-muted mb-2">How to read turnout data</p>
-              <ul className="text-xs text-muted/80 space-y-1">
+              <ul className="text-body-sm text-muted/80 space-y-1">
                 <li>
                   <strong>Turnout %</strong> = Baseline + GOTV modifier (expected turnout for this
                   demographic)

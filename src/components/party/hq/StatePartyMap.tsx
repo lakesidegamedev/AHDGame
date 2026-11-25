@@ -50,7 +50,7 @@ export function StatePartyMap({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <div className="mb-2 flex items-center gap-2 text-xs text-muted">
+      <div className="mb-2 flex items-center gap-2 text-body-sm text-muted">
         <span>{legendLabel} %</span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-2 w-4 rounded" style={{ background: orgFill(10) }} />

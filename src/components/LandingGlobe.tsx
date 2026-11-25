@@ -301,7 +301,7 @@ export function LandingGlobe({
           style={{ display: "none" }}
           className={`pointer-events-none absolute left-0 top-0 ${markersFromSm ? "hidden sm:block" : ""}`}
         >
-          <div className="rounded-lg border border-white/15 bg-black/55 px-2.5 py-1 text-center text-[11px] leading-tight text-white/90 backdrop-blur-sm">
+          <div className="rounded-lg border border-white/15 bg-black/55 px-2.5 py-1 text-center text-body-sm leading-tight text-white/90 backdrop-blur-sm">
             <div className="font-semibold uppercase tracking-wide">{marker.label}</div>
             <div className="text-white/60">{playerCounts?.[id] ?? 0} playing</div>
           </div>

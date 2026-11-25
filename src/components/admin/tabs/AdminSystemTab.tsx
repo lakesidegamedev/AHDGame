@@ -103,10 +103,10 @@ export function AdminSystemTab({ activeSub }: AdminSystemTabProps) {
               />
             </svg>
             <div>
-              <h3 className="text-sm font-semibold text-yellow-500 sm:text-base">
+              <h3 className="text-body-lg font-semibold text-yellow-500 sm:text-body-lg">
                 Caution: Destructive actions
               </h3>
-              <p className="mt-0.5 text-xs text-muted sm:mt-1 sm:text-sm">
+              <p className="mt-0.5 text-body-sm text-muted sm:mt-1 sm:text-body">
                 These actions can permanently delete data. Understand the consequences before
                 proceeding.
               </p>

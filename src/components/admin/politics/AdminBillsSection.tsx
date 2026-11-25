@@ -119,15 +119,15 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={proposeBillHref}
-          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 transition-colors"
         >
           Propose bill (Admin override)
         </Link>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-lg font-semibold">Legislation management</h2>
-        <div className="flex gap-1 rounded-lg border border-card-border overflow-hidden text-sm">
+        <h2 className="text-heading font-semibold">Legislation management</h2>
+        <div className="flex gap-1 rounded-lg border border-card-border overflow-hidden text-body">
           {["all", "active", "active_other", "enrolled", "signed", "failed", "vetoed"].map((s) => (
             <button
               key={s}
@@ -146,14 +146,14 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
 
       {message && (
         <div
-          className={`rounded-lg border px-4 py-3 text-sm ${message.startsWith("Error") ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-green-500/30 bg-green-500/10 text-green-400"}`}
+          className={`rounded-lg border px-4 py-3 text-body ${message.startsWith("Error") ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-green-500/30 bg-green-500/10 text-green-400"}`}
         >
           {message}
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-body">
           Loading…
         </div>
       ) : bills.length === 0 ? (
@@ -177,20 +177,20 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                       href={`/congress/bills/${bill.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-sm hover:text-primary transition-colors"
+                      className="font-semibold text-body hover:text-primary transition-colors"
                     >
                       {bill.title}
                     </a>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_COLORS[bill.status] ?? "bg-muted/20 text-muted"}`}
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${STATUS_COLORS[bill.status] ?? "bg-muted/20 text-muted"}`}
                     >
                       {STATUS_LABELS[bill.status] ?? bill.status}
                     </span>
-                    <span className="text-[10px] text-muted capitalize">
+                    <span className="text-body-sm text-muted capitalize">
                       {bill.originChamber} bill
                     </span>
                     {bill.legislationTypeName && (
-                      <span className="text-[10px] text-cyan-400/90">
+                      <span className="text-body-sm text-cyan-400/90">
                         {bill.legislationTypeName}
                         {bill.effectDirection != null && bill.effectDirection !== 0 && (
                           <span className="ml-0.5 text-muted">
@@ -201,10 +201,10 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted mt-1">
+                  <p className="text-body-sm text-muted mt-1">
                     Sponsor: {bill.sponsorName} · Proposed <LocalTime value={bill.proposedAt} />
                   </p>
-                  <div className="text-xs text-muted mt-1 flex gap-4 flex-wrap">
+                  <div className="text-body-sm text-muted mt-1 flex gap-4 flex-wrap">
                     <span>
                       Origin: ✓{bill.votesFor} ✗{bill.votesAgainst} –{bill.votesAbstain}
                     </span>
@@ -225,7 +225,7 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                   {["active", "active_other"].includes(bill.status) && (
                     <button
                       onClick={() => runAction(bill.id, "force_advance_chamber")}
-                      className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                      className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-body-sm font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors"
                     >
                       Advance chamber
                     </button>
@@ -233,7 +233,7 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                   {["active", "active_other"].includes(bill.status) && (
                     <button
                       onClick={() => runAction(bill.id, "force_enroll")}
-                      className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+                      className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-body-sm font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
                     >
                       Send to president
                     </button>
@@ -242,13 +242,13 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                     <>
                       <button
                         onClick={() => runAction(bill.id, "force_sign")}
-                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                       >
                         Force sign
                       </button>
                       <button
                         onClick={() => runAction(bill.id, "force_veto")}
-                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
                       >
                         Force veto
                       </button>
@@ -257,14 +257,14 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
                   {!["signed", "withdrawn"].includes(bill.status) && (
                     <button
                       onClick={() => runAction(bill.id, "force_fail")}
-                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-xs font-medium text-muted hover:bg-muted/20 transition-colors"
+                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-body-sm font-medium text-muted hover:bg-muted/20 transition-colors"
                     >
                       Fail
                     </button>
                   )}
                   <button
                     onClick={() => runAction(bill.id, "reset")}
-                    className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                    className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
                   >
                     Reset
                   </button>

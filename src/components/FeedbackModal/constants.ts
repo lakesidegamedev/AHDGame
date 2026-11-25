@@ -1,7 +1,7 @@
 import type { SuggestionCategory, SuggestionGameSystem } from "@/lib/db/types";
 
 export const inputBase =
-  "w-full rounded-lg border border-card-border bg-background px-4 py-2.5 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors duration-150";
+  "w-full rounded-lg border border-card-border bg-background px-4 py-2.5 text-body placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors duration-150";
 
 export const BUG_CATEGORY_LABELS: Record<string, string> = {
   ui_ux: "UI / UX",

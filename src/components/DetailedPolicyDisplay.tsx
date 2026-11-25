@@ -73,9 +73,9 @@ function MarkerPill({ group, toPercent, side, compact }: MarkerPillProps) {
   // Keep marker within visible bounds so it doesn't clip at edges
   const rawPct = toPercent(group.position);
   const leftPct = Math.max(4, Math.min(96, rawPct));
-  const pillH = compact ? "h-4 min-w-[16px] text-[8px]" : "h-5 min-w-[20px] text-[9px]";
+  const pillH = compact ? "h-4 min-w-[16px] text-body-sm" : "h-5 min-w-[20px] text-body-sm";
   const connH = compact ? "h-1" : "h-1.5";
-  const deltaClass = compact ? "text-[8px]" : "text-[9px]";
+  const deltaClass = compact ? "text-body-sm" : "text-body-sm";
 
   const pill = (
     <div
@@ -174,14 +174,14 @@ export function DetailedPolicyDisplay({
       ? "rounded-lg border-0 bg-transparent p-0"
       : "rounded-2xl border border-card-border bg-card p-6";
   const titleClass = compact
-    ? "text-[10px] font-semibold uppercase tracking-widest text-muted mb-2"
-    : "text-[11px] font-semibold uppercase tracking-widest text-muted mb-4";
+    ? "text-body-sm font-semibold uppercase tracking-widest text-muted mb-2"
+    : "text-body-sm font-semibold uppercase tracking-widest text-muted mb-4";
   const spaceClass = compact ? "space-y-3" : "space-y-7";
   const rowClass = compact ? "mb-2" : "mb-3";
   const trackClass = compact ? "h-2" : "h-2.5";
   const thumbSize = compact ? "h-3.5 w-3.5" : "h-5 w-5";
-  const labelClass = compact ? "text-xs font-medium" : "text-sm font-medium";
-  const axisClass = compact ? "text-[10px] text-muted mt-0.5" : "text-[10px] text-muted mt-1";
+  const labelClass = compact ? "text-body-sm font-medium" : "text-body font-medium";
+  const axisClass = compact ? "text-body-sm text-muted mt-0.5" : "text-body-sm text-muted mt-1";
   const markerAreaH = compact ? "h-7" : "h-9";
 
   const partyMarker = markers?.find((m) => m.label === "Party");
@@ -203,7 +203,7 @@ export function DetailedPolicyDisplay({
                     Left: stronger redistribution and public-sector emphasis. Right: lower taxes and
                     market-oriented policy. Center: balanced.
                   </p>
-                  <p className="mt-2 text-[11px] text-foreground/80">
+                  <p className="mt-2 text-body-sm text-foreground/80">
                     Labels from left to right: Extremely Left, Left, Centrist, Right, Extremely
                     Right.
                   </p>
@@ -273,7 +273,7 @@ export function DetailedPolicyDisplay({
                     Liberal: socially progressive. Traditional: socially conservative. Moderate:
                     between the two.
                   </p>
-                  <p className="mt-2 text-[11px] text-foreground/80">
+                  <p className="mt-2 text-body-sm text-foreground/80">
                     Labels from liberal to traditional: Far Liberal, Liberal, Moderate, Traditional,
                     Far Traditional.
                   </p>
@@ -339,9 +339,9 @@ export function DetailedPolicyDisplay({
       {hasMarkers && (partyMarker || stateMarker) && (
         <div className="mt-4 flex gap-4 justify-center">
           {partyMarker && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted">
+            <span className="flex items-center gap-1.5 text-body-sm text-muted">
               <span
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ring-1 ring-black/20"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-body-sm font-bold text-white ring-1 ring-black/20"
                 style={{ backgroundColor: partyMarker.color ?? "#a1a1aa" }}
               >
                 P
@@ -350,9 +350,9 @@ export function DetailedPolicyDisplay({
             </span>
           )}
           {stateMarker && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted">
+            <span className="flex items-center gap-1.5 text-body-sm text-muted">
               <span
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ring-1 ring-black/20"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-body-sm font-bold text-white ring-1 ring-black/20"
                 style={{ backgroundColor: stateMarker.color ?? "#38bdf8" }}
               >
                 R

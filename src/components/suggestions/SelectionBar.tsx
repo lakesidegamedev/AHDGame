@@ -16,7 +16,7 @@ export function SelectionBar({ selectedCount, onMerge, onDelete, onCancel }: Sel
 
   return (
     <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-card-border bg-card px-5 py-3 shadow-xl">
-      <span className="text-sm font-medium text-foreground">{selectedCount} selected</span>
+      <span className="text-body font-medium text-foreground">{selectedCount} selected</span>
       <div className="h-5 w-px bg-card-border" />
       {selectedCount >= 2 && (
         <Button
@@ -30,7 +30,7 @@ export function SelectionBar({ selectedCount, onMerge, onDelete, onCancel }: Sel
               setMerging(false);
             }
           }}
-          className="px-3 py-1.5 text-sm"
+          className="px-3 py-1.5 text-body"
         >
           Merge
         </Button>
@@ -46,7 +46,7 @@ export function SelectionBar({ selectedCount, onMerge, onDelete, onCancel }: Sel
             setDeleting(false);
           }
         }}
-        className="px-3 py-1.5 text-sm"
+        className="px-3 py-1.5 text-body"
       >
         Delete
       </Button>
@@ -54,7 +54,7 @@ export function SelectionBar({ selectedCount, onMerge, onDelete, onCancel }: Sel
       <button
         type="button"
         onClick={onCancel}
-        className="text-sm text-muted hover:text-foreground transition-colors"
+        className="text-body text-muted hover:text-foreground transition-colors"
       >
         Cancel
       </button>

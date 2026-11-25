@@ -27,7 +27,7 @@ export function GovModifierChip({
   if (!regionalExecutive) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-5 opacity-70">
-        <h3 className="text-sm font-semibold text-muted">Regional executive</h3>
+        <h3 className="text-body-lg font-semibold text-muted">Regional executive</h3>
         <p className="mt-2 text-body-sm">No comparable executive office in this country.</p>
       </div>
     );
@@ -46,7 +46,7 @@ export function GovModifierChip({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-body text-muted">{regionalExecutive.label}</h3>
+      <h3 className="text-body-lg text-muted">{regionalExecutive.label}</h3>
       <div className="mt-2 flex items-center gap-2">
         <span
           className="inline-flex items-center gap-1.5 text-body font-semibold"

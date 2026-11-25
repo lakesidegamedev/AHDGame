@@ -66,11 +66,11 @@ export function CapitalInjectionPanel({
 
   return (
     <div className="space-y-1.5 py-1">
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         Transfer personal cash into the treasury. Private corporations only.
       </p>
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted">{sym}</span>
+        <span className="text-body-sm text-muted">{sym}</span>
         <input
           type="number"
           min={1}
@@ -79,7 +79,7 @@ export function CapitalInjectionPanel({
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0"
           aria-label="Capital injection amount"
-          className="h-7 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+          className="h-7 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
         />
         <SmallButton
           tone="primary"

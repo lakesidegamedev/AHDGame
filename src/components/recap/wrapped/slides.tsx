@@ -40,7 +40,7 @@ function Label({
 }) {
   return (
     <p
-      className="mb-4 text-[14px] font-medium text-white/55"
+      className="mb-4 text-body font-medium text-white/55"
       style={anim(motion, "ahdw-rise", 450, delay)}
     >
       {children}
@@ -124,7 +124,7 @@ function Sub({
 }) {
   return (
     <p
-      className="mt-3 text-[17px] font-medium leading-snug text-white/75"
+      className="mt-3 text-body-lg font-medium leading-snug text-white/75"
       style={anim(motion, "ahdw-rise", 500, delay)}
     >
       {children}
@@ -148,7 +148,7 @@ function Facts({
       {shown.map((item, i) => (
         <p
           key={i}
-          className="text-[15px] leading-snug text-white/70"
+          className="text-body leading-snug text-white/70"
           style={anim(motion, "ahdw-rise", 450, delay + i * 120)}
         >
           {item}
@@ -199,10 +199,10 @@ function OpenSlide({ recap, accent, motion }: SlideProps) {
         </Hero>
       )}
       <div className="mt-8" style={anim(motion, "ahdw-rise", 550, 900)}>
-        <p className="text-[34px] font-bold leading-none tracking-[-0.03em] text-white">
+        <p className="text-display font-bold leading-none tracking-[-0.03em] text-white">
           {recap.name}
         </p>
-        <p className="mt-2 text-[16px] text-white/60">
+        <p className="mt-2 text-body-lg text-white/60">
           {[recap.party, recap.countryName].filter(Boolean).join(" · ")}
         </p>
       </div>
@@ -240,10 +240,10 @@ function WorldSlide({ recap, motion }: SlideProps) {
       <div className="flex flex-col gap-5">
         {rows.map(([n, label], i) => (
           <div key={label} style={anim(motion, "ahdw-rise", 500, 120 + i * 160)}>
-            <p className="text-[44px] font-extrabold leading-none tracking-[-0.04em] tabular-nums text-white">
+            <p className="text-display font-extrabold leading-none tracking-[-0.04em] tabular-nums text-white">
               <Count value={n} motion={motion} />
             </p>
-            <p className="mt-1 text-[15px] text-white/60">{label}</p>
+            <p className="mt-1 text-body text-white/60">{label}</p>
           </div>
         ))}
       </div>
@@ -288,7 +288,7 @@ function StripSlide({ recap, accent, motion }: SlideProps) {
             motion={motion}
             height={190}
           />
-          <div className="mt-2 flex justify-between text-[12px] tabular-nums text-white/45">
+          <div className="mt-2 flex justify-between text-body-sm tabular-nums text-white/45">
             <span>{recap.arrived?.year}</span>
             {won && <span>White ticks are races you won</span>}
             <span>{recap.departed?.year}</span>
@@ -362,7 +362,7 @@ function GuessSlide({ recap, accent, motion, player }: SlideProps) {
                 type="button"
                 onClick={() => choose(t)}
                 disabled={revealed}
-                className="flex items-center justify-between rounded-xl border px-5 py-4 text-left text-[18px] font-semibold transition-colors"
+                className="flex items-center justify-between rounded-xl border px-5 py-4 text-left text-heading font-semibold transition-colors"
                 style={{
                   borderColor: right ? accent : "rgba(255,255,255,.22)",
                   color: right ? accent : wrong ? "rgba(255,255,255,.4)" : "#fff",
@@ -372,7 +372,7 @@ function GuessSlide({ recap, accent, motion, player }: SlideProps) {
               >
                 <span>{actionLabel(t)}</span>
                 {revealed && (
-                  <span className="text-[14px] font-medium tabular-nums text-white/60">
+                  <span className="text-body font-medium tabular-nums text-white/60">
                     {plural(recap.actions.byType[t] ?? 0, "time")}
                   </span>
                 )}
@@ -383,7 +383,7 @@ function GuessSlide({ recap, accent, motion, player }: SlideProps) {
       ) : null}
       {revealed && (
         <div className="mt-7">
-          <p className="text-[16px] text-white/75" style={anim(motion, "ahdw-rise", 450, 0)}>
+          <p className="text-body-lg text-white/75" style={anim(motion, "ahdw-rise", 450, 0)}>
             {picked == null ? "Time's up. " : picked === top ? "Correct. " : "Not quite. "}
             {top ? (
               <>
@@ -395,7 +395,7 @@ function GuessSlide({ recap, accent, motion, player }: SlideProps) {
             <ul className="mt-5 flex flex-col gap-3">
               {breakdown.map(([t, n], i) => (
                 <li key={t} style={anim(motion, "ahdw-rise", 400, 150 + i * 90)}>
-                  <div className="flex justify-between text-[14px]">
+                  <div className="flex justify-between text-body">
                     <span className="text-white/85">{actionLabel(t)}</span>
                     <span className="tabular-nums text-white/55">{fmt(n)}</span>
                   </div>
@@ -482,11 +482,11 @@ function RaceBlock({
   }
   return (
     <section>
-      <p className="text-[13px] text-white/50" style={anim(motion, "ahdw-rise", 400, delay)}>
+      <p className="text-body-sm text-white/50" style={anim(motion, "ahdw-rise", 400, delay)}>
         {heading}
       </p>
       <p
-        className="mb-4 mt-1 text-[22px] font-bold leading-tight tracking-[-0.02em]"
+        className="mb-4 mt-1 text-heading font-bold leading-tight tracking-[-0.02em]"
         style={anim(motion, "ahdw-rise", 450, delay + 60)}
       >
         {race.label}
@@ -494,7 +494,7 @@ function RaceBlock({
       </p>
       <RaceBars race={trimmed} accent={accent} motion={motion} delay={delay + 120} />
       <p
-        className="mt-3 text-[15px] font-medium text-white/80"
+        className="mt-3 text-body font-medium text-white/80"
         style={anim(motion, "ahdw-rise", 450, delay + 900)}
       >
         {marginLine(race)}
@@ -600,29 +600,29 @@ function RivalSlide({ recap, accent, motion }: SlideProps) {
       <Title motion={motion} color={rivalColor}>
         {rival.name}
       </Title>
-      <p className="mt-2 text-[15px] text-white/55" style={anim(motion, "ahdw-rise", 450, 150)}>
+      <p className="mt-2 text-body text-white/55" style={anim(motion, "ahdw-rise", 450, 150)}>
         {rival.partyName}
       </p>
       <div className="mt-8 grid grid-cols-2 gap-6" style={anim(motion, "ahdw-rise", 500, 400)}>
         <div>
           <p
-            className="text-[64px] font-extrabold leading-none tabular-nums tracking-[-0.04em]"
+            className="text-display font-extrabold leading-none tabular-nums tracking-[-0.04em]"
             style={{ color: accent }}
           >
             <Count value={rival.ahead} motion={motion} />
           </p>
-          <p className="mt-1 text-[14px] text-white/60">
+          <p className="mt-1 text-body text-white/60">
             {rival.ahead === 1 ? "time" : "times"} you finished ahead
           </p>
         </div>
         <div>
           <p
-            className="text-[64px] font-extrabold leading-none tabular-nums tracking-[-0.04em]"
+            className="text-display font-extrabold leading-none tabular-nums tracking-[-0.04em]"
             style={{ color: rivalColor }}
           >
             <Count value={rival.behind} motion={motion} />
           </p>
-          <p className="mt-1 text-[14px] text-white/60">
+          <p className="mt-1 text-body text-white/60">
             {rival.behind === 1 ? "time" : "times"} {first} did
           </p>
         </div>
@@ -631,7 +631,7 @@ function RivalSlide({ recap, accent, motion }: SlideProps) {
         {rival.history.map((h, i) => (
           <li
             key={i}
-            className="flex items-baseline gap-3 text-[14px]"
+            className="flex items-baseline gap-3 text-body"
             style={anim(motion, "ahdw-rise", 400, 900 + i * 110)}
           >
             <span className="w-10 shrink-0 tabular-nums text-white/45">{h.year ?? ""}</span>
@@ -692,13 +692,13 @@ function LawSlide({ recap, accent, motion }: SlideProps) {
         {sig ? "Your signature bill" : "The vote that came down to you"}
       </Label>
       <h2
-        className="line-clamp-3 text-balance text-[28px] font-bold leading-[1.08] tracking-[-0.03em]"
+        className="line-clamp-3 text-balance text-display font-bold leading-[1.08] tracking-[-0.03em]"
         style={anim(motion, "ahdw-rise", 500, 80)}
       >
         {featured.title}
       </h2>
       <p
-        className="mt-3 text-[16px] font-medium text-white/75"
+        className="mt-3 text-body-lg font-medium text-white/75"
         style={anim(motion, "ahdw-rise", 450, 200)}
       >
         <span style={{ color: featured.passed ? accent : "#fff" }}>
@@ -715,7 +715,7 @@ function LawSlide({ recap, accent, motion }: SlideProps) {
           motion={motion}
           delay={350}
         />
-        <p className="mt-3 text-[12px] text-white/45" style={anim(motion, "ahdw-fade", 400, 1300)}>
+        <p className="mt-3 text-body-sm text-white/45" style={anim(motion, "ahdw-fade", 400, 1300)}>
           Each dot is 1% of the vote: filled for, ringed against.{" "}
           {featured.yourVote ? "Yours is in color." : ""}
         </p>
@@ -823,16 +823,16 @@ function StandingSlide({ recap, accent, motion }: SlideProps) {
                 className="flex items-baseline gap-4 border-t border-white/10 py-3 last:border-b"
                 style={anim(motion, "ahdw-rise", 450, 400 + i * 140)}
               >
-                <span className="w-8 shrink-0 text-[15px] tabular-nums text-white/45">
+                <span className="w-8 shrink-0 text-body tabular-nums text-white/45">
                   {row.rank}
                 </span>
                 <span
-                  className="min-w-0 flex-1 truncate text-[17px] font-semibold"
+                  className="min-w-0 flex-1 truncate text-body-lg font-semibold"
                   style={{ color: row.you ? accent : "rgba(255,255,255,.75)" }}
                 >
                   {row.name}
                 </span>
-                <span className="shrink-0 text-[15px] tabular-nums text-white/60">
+                <span className="shrink-0 text-body tabular-nums text-white/60">
                   {fmt(row.value)}
                 </span>
               </li>
@@ -909,7 +909,7 @@ function AwardsSlide({ recap, accent, motion }: SlideProps) {
             style={anim(motion, "ahdw-rise", 500, 150 + i * 220)}
           >
             <span
-              className="w-7 shrink-0 pt-0.5 text-[22px] font-extrabold tabular-nums leading-none"
+              className="w-7 shrink-0 pt-0.5 text-heading font-extrabold tabular-nums leading-none"
               style={{
                 color: a.scope === "world" && a.rank === 1 ? accent : "rgba(255,255,255,.4)",
               }}
@@ -917,10 +917,10 @@ function AwardsSlide({ recap, accent, motion }: SlideProps) {
               {a.rank}
             </span>
             <span>
-              <span className="block text-[19px] font-semibold leading-tight tracking-[-0.015em] text-white">
+              <span className="block text-heading font-semibold leading-tight tracking-[-0.015em] text-white">
                 {a.title}
               </span>
-              <span className="mt-0.5 block text-[14px] text-white/55">{a.detail}</span>
+              <span className="mt-0.5 block text-body text-white/55">{a.detail}</span>
             </span>
           </li>
         ))}

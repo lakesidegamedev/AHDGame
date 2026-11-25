@@ -12,7 +12,7 @@ import {
 export function StanceBadge({ stance }: { stance: "endorse" | "oppose" }) {
   return (
     <span
-      className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+      className={`rounded-md px-2 py-0.5 text-body-sm font-medium ${
         stance === "endorse" ? "bg-success/15 text-success" : "bg-error/15 text-error"
       }`}
     >
@@ -119,10 +119,10 @@ export function UnionAtAGlance({
   return (
     <section className="space-y-3 rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted">Shops at a glance</h2>
+        <h2 className="text-body font-semibold text-muted">Shops at a glance</h2>
         <div className="h-px flex-1 bg-card-border" />
       </div>
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         {sectors.length} {sectors.length === 1 ? "shop" : "shops"} in this industry: this union
         holds {held}, rival unions hold {rival}, and {sectors.length - held - rival}{" "}
         {sectors.length - held - rival === 1 ? "has" : "have"} no union yet.
@@ -138,7 +138,7 @@ export function UnionAtAGlance({
               <button
                 type="button"
                 onClick={() => onOpenSectors(status)}
-                className="flex items-center gap-2 rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-card-elevated"
+                className="flex items-center gap-2 rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium transition-colors hover:bg-card-elevated"
               >
                 <span className="font-mono tabular-nums text-foreground">{count}</span>
                 <span className="text-muted">
@@ -230,11 +230,11 @@ export function UndergroundOrganizePanel({
   return (
     <section className="space-y-4 rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted">Organize underground</h2>
+        <h2 className="text-body font-semibold text-muted">Organize underground</h2>
         <div className="h-px flex-1 bg-card-border" />
       </div>
 
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         The ban froze this union&apos;s treasury and leadership, but the cells kept meeting. Anyone
         in {countryName} can run quiet cell work or a loud mass drive. Both build hidden strength
         that converts to legal strength at half if the ban is ever repealed. Noise brings attention:
@@ -242,7 +242,7 @@ export function UndergroundOrganizePanel({
         prolong a live wildcat crisis by one turn per drive.
       </p>
 
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-body">
         <div>
           <span className="text-muted">Built underground:</span>{" "}
           <span className="font-semibold tabular-nums">
@@ -280,7 +280,7 @@ export function UndergroundOrganizePanel({
             return (
               <span
                 key={level}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
+                className={`rounded-md border px-2 py-0.5 text-body-sm font-semibold ${
                   active ? tone : "border-card-border bg-card-elevated text-muted"
                 }`}
               >
@@ -289,7 +289,7 @@ export function UndergroundOrganizePanel({
             );
           })}
         </div>
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           You never see the exact number. Quiet work and idle turns cool the trail.
         </p>
       </div>
@@ -301,11 +301,11 @@ export function UndergroundOrganizePanel({
             aria-describedby="underground-action-cost underground-quiet-effect"
             disabled={actionPending || actionsLoading || cannotAfford}
             onClick={() => onDrive("quiet")}
-            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="w-fit rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             Quiet cell work
           </button>
-          <span id="underground-quiet-effect" className="text-[11px] text-muted">
+          <span id="underground-quiet-effect" className="text-body-sm text-muted">
             +{quietGain} strength · low heat{exposed && " · halved while exposed"}
           </span>
         </div>
@@ -315,24 +315,24 @@ export function UndergroundOrganizePanel({
             aria-describedby="underground-action-cost underground-mass-effect"
             disabled={actionPending || actionsLoading || cannotAfford}
             onClick={() => onDrive("mass")}
-            className="w-fit rounded-lg border border-card-border px-4 py-2 text-sm font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
+            className="w-fit rounded-lg border border-card-border px-4 py-2 text-body font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
           >
             Mass drive
           </button>
-          <span id="underground-mass-effect" className="text-[11px] text-muted">
+          <span id="underground-mass-effect" className="text-body-sm text-muted">
             +{massGain} strength · high heat
             {exposed && " · halved while exposed"}
           </span>
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <span id="underground-action-cost" className="text-[11px] text-muted">
+        <span id="underground-action-cost" className="text-body-sm text-muted">
           Costs {underground.actionCost} action points
           {actionsLoading ? " · checking your action points" : ` · you have ${myActions}`} · one
           drive per turn
         </span>
         {cannotAfford && (
-          <span className="text-[11px] font-medium text-error">
+          <span className="text-body-sm font-medium text-error">
             Not enough action points. They refresh each turn.
           </span>
         )}
@@ -350,7 +350,7 @@ export function ActionResult({ result }: { result: { ok: boolean; text: string }
       // A refusal is an error, not a status update: screen readers should
       // interrupt for it rather than queue it behind whatever else is talking.
       role={result.ok ? "status" : "alert"}
-      className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
+      className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-body font-medium ${
         result.ok
           ? "border-success/30 bg-success/10 text-success"
           : "border-error/30 bg-error/10 text-error"
@@ -382,8 +382,8 @@ export function StatCell({
         {label}
         {hint && <Tooltip content={hint} label={`What ${label} means`} />}
       </span>
-      <span className="text-base font-bold tabular-nums">{value}</span>
-      {sub && <span className={`text-[11px] font-medium ${sub.toneClass}`}>{sub.label}</span>}
+      <span className="text-body-lg font-bold tabular-nums">{value}</span>
+      {sub && <span className={`text-body-sm font-medium ${sub.toneClass}`}>{sub.label}</span>}
     </div>
   );
 }

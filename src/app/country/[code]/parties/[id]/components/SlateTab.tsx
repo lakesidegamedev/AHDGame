@@ -390,7 +390,7 @@ export function SlateTab({
   return (
     <div className="space-y-4">
       {scopeState && (
-        <div className="rounded-xl border border-card-border bg-card p-3 flex items-center gap-3 text-xs">
+        <div className="rounded-xl border border-card-border bg-card p-3 flex items-center gap-3 text-body-sm">
           <span className="rounded-full border border-card-border px-2 py-0.5 text-muted">
             Scope locked
           </span>
@@ -444,8 +444,8 @@ export function SlateTab({
 
 function PanelStub({ children, error = false }: { children: React.ReactNode; error?: boolean }) {
   const cls = error
-    ? "rounded-xl border border-error/30 bg-error/5 p-5 text-xs text-error"
-    : "rounded-xl border border-card-border bg-card p-5 text-xs text-muted";
+    ? "rounded-xl border border-error/30 bg-error/5 p-5 text-body-sm text-error"
+    : "rounded-xl border border-card-border bg-card p-5 text-body-sm text-muted";
   return <div className={cls}>{children}</div>;
 }
 
@@ -509,7 +509,7 @@ function CountryMap({
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
         <div>
-          <h3 className="text-sm font-semibold">Slate by state</h3>
+          <h3 className="text-body-lg font-semibold">Slate by state</h3>
           <p className="text-body-sm text-muted mt-0.5">
             Hover for a breakdown; click to drill into races for that state.
           </p>
@@ -595,7 +595,7 @@ function CountryMap({
         )}
         {renderMode !== "usa_paths" && hovered && hoveredEntry && (
           <div className="absolute top-2 right-2 rounded-lg border border-card-border bg-card p-3 shadow-lg pointer-events-none min-w-[200px]">
-            <div className="text-sm font-bold mb-1">{hoveredEntry.name}</div>
+            <div className="text-body font-bold mb-1">{hoveredEntry.name}</div>
             <div className="space-y-0.5 text-body-sm">
               <RowKV k="Players" v={(hoveredPresence?.players ?? 0).toString()} />
               <RowKV k="NPPs" v={(hoveredPresence?.npps ?? 0).toString()} />
@@ -637,7 +637,7 @@ function StateListSelector({
               type="button"
               key={s}
               onClick={() => onSelect(s)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                 isSelected
                   ? "border-primary/60 bg-primary/10 text-foreground"
                   : "border-card-border bg-background text-muted hover:text-foreground"
@@ -768,7 +768,7 @@ function RaceSlatePanel({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold">{formatSlateRaceTitle(item)}</span>
+            <span className="text-body font-semibold">{formatSlateRaceTitle(item)}</span>
             <span
               className={`rounded-full border px-2 py-0.5 text-body-sm ${PRIORITY_COLOR[item.priority]}`}
             >
@@ -792,7 +792,7 @@ function RaceSlatePanel({
               writeSlateExpandedPreference(shouldExpand);
               if (shouldExpand && !detail && !loading) void fetchDetail();
             }}
-            className="rounded-md border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-md border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
           >
             {expanded ? "Hide slate" : "Show slate"}
           </button>
@@ -800,7 +800,7 @@ function RaceSlatePanel({
             <button
               type="button"
               onClick={() => setPickerOpen((open) => !open)}
-              className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+              className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors"
             >
               {pickerOpen ? "Cancel" : "Assign candidates"}
             </button>
@@ -828,20 +828,20 @@ function RaceSlatePanel({
             />
           )}
 
-          {loading && <p className="text-xs text-muted">Loading slate...</p>}
-          <InlineError error={error} className="text-xs text-error" />
+          {loading && <p className="text-body-sm text-muted">Loading slate...</p>}
+          <InlineError error={error} className="text-body-sm text-error" />
           {error && (
             <button
               type="button"
               onClick={() => void fetchDetail()}
-              className="rounded-md border border-card-border px-3 py-1.5 text-xs text-muted hover:text-foreground"
+              className="rounded-md border border-card-border px-3 py-1.5 text-body-sm text-muted hover:text-foreground"
             >
               Retry slate
             </button>
           )}
 
           {detail && detail.candidates.length === 0 && (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               No one is assigned to this race yet. Party leaders can assign players or NPPs here;
               the assignments will persist into future cycles until manually changed.
             </p>
@@ -881,7 +881,7 @@ function RaceSlatePanel({
                               ? `/politicians/npp/${c.candidateId}`
                               : `/character/${c.candidateId}`
                           }
-                          className="text-sm font-medium hover:text-primary truncate"
+                          className="text-body font-medium hover:text-primary truncate"
                         >
                           {c.candidateName}
                         </Link>

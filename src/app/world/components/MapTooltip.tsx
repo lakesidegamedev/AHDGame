@@ -28,7 +28,7 @@ export default function MapTooltip({
 }: MapTooltipProps) {
   return (
     <div
-      className="absolute pointer-events-none z-20 px-4 py-3 rounded-xl text-xs bg-popover/95 border border-card-border shadow-2xl backdrop-blur-md text-popover-foreground flex flex-col gap-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-150"
+      className="absolute pointer-events-none z-20 px-4 py-3 rounded-xl text-body-sm bg-popover/95 border border-card-border shadow-2xl backdrop-blur-md text-popover-foreground flex flex-col gap-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-150"
       style={{
         left: position.x + 20,
         top: position.y - 20,
@@ -36,12 +36,12 @@ export default function MapTooltip({
       }}
     >
       <div className="flex items-center justify-between gap-4">
-        <span className="font-bold text-sm tracking-tight">{countryLabel}</span>
+        <span className="font-bold text-body tracking-tight">{countryLabel}</span>
         {access.tone === "active" && (
           <span className="text-body-sm font-medium text-success">Live</span>
         )}
         {access.econOnly && (
-          <span className="text-[10px] uppercase font-bold text-secondary tracking-wider">
+          <span className="text-body-sm uppercase font-bold text-secondary tracking-wider">
             View only
           </span>
         )}
@@ -55,14 +55,14 @@ export default function MapTooltip({
         <span className="text-muted-foreground font-medium">{access.label}</span>
       </div>
       {access.econOnly && (
-        <div className="text-[10px] text-muted-foreground mt-0.5">
+        <div className="text-body-sm text-muted-foreground mt-0.5">
           Browse every page. You cannot act here yet.
         </div>
       )}
       {filterHighlight && (
         <div className="text-muted-foreground mt-0.5">
           <span className="font-medium text-foreground">{filterHighlight.value}</span>
-          <span className="text-[10px] block mt-0.5">{filterHighlight.label}</span>
+          <span className="text-body-sm block mt-0.5">{filterHighlight.label}</span>
         </div>
       )}
       {corpsCount !== undefined && corpsCount > 0 && (
@@ -81,7 +81,7 @@ export default function MapTooltip({
         </div>
       )}
       {showClickHint && (
-        <span className="text-[10px] text-muted-foreground mt-1 italic">Click to enter</span>
+        <span className="text-body-sm text-muted-foreground mt-1 italic">Click to enter</span>
       )}
     </div>
   );

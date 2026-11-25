@@ -48,9 +48,9 @@ export function useConfirmDialog(): {
 
   const dialog = (
     <Modal open={options !== null} title={options?.title ?? ""} onClose={cancel}>
-      <p className="whitespace-pre-line text-sm text-muted">{options?.message}</p>
+      <p className="whitespace-pre-line text-body text-muted">{options?.message}</p>
       {options?.confirmDisabledReason ? (
-        <p className="mt-3 text-sm font-semibold text-error">{options.confirmDisabledReason}</p>
+        <p className="mt-3 text-body font-semibold text-error">{options.confirmDisabledReason}</p>
       ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={cancel}>

@@ -260,7 +260,7 @@ export function CrisisBoard({ side }: { side: Side }) {
                 margin: 0,
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 32,
+                fontSize: 30,
                 lineHeight: 1.05,
                 color: "#f3f1ea",
               }}
@@ -271,7 +271,7 @@ export function CrisisBoard({ side }: { side: Side }) {
               style={{
                 margin: "8px 0 0",
                 maxWidth: 560,
-                fontSize: 13,
+                fontSize: 12,
                 lineHeight: 1.5,
                 color: "#9595a4",
               }}
@@ -297,7 +297,7 @@ export function CrisisBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: crisisDefconColor(defcon),
                 }}
@@ -327,7 +327,7 @@ export function CrisisBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: pcColor(pc),
                 }}
@@ -353,13 +353,13 @@ export function CrisisBoard({ side }: { side: Side }) {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 24 }}>{out.icon}</span>
+              <span style={{ fontSize: 20 }}>{out.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     fontFamily: headingFont,
                     fontWeight: 700,
-                    fontSize: 21,
+                    fontSize: 20,
                     color: out.color,
                   }}
                 >
@@ -530,7 +530,7 @@ export function CrisisBoard({ side }: { side: Side }) {
                     style={{ font: `700 13px ${mono}`, color: nerveColor(nerve, cfg.nerveDefiant) }}
                   >
                     {nerve}
-                    <span style={{ fontSize: 9, color: "#6b6b7a" }}>/100</span>
+                    <span style={{ fontSize: 12, color: "#6b6b7a" }}>/100</span>
                   </span>
                 </div>
                 <div
@@ -578,7 +578,7 @@ export function CrisisBoard({ side }: { side: Side }) {
                   </span>
                   <span style={{ font: `700 13px ${mono}`, color: credColor(cred) }}>
                     {cred}
-                    <span style={{ fontSize: 9, color: "#6b6b7a" }}>/100</span>
+                    <span style={{ fontSize: 12, color: "#6b6b7a" }}>/100</span>
                   </span>
                 </div>
                 <div

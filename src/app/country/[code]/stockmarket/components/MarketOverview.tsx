@@ -284,7 +284,7 @@ export function MarketOverview({
           background: { color: "transparent" },
           textColor: muted,
           fontFamily: "inherit",
-          fontSize: 11,
+          fontSize: 12,
         },
         grid: { vertLines: { color: border }, horzLines: { color: border } },
         localization: { timeFormatter: (time: Time) => turnLabel(Number(time)) },
@@ -670,15 +670,15 @@ export function MarketOverview({
       <div className="px-4 pt-4 pb-3 border-b border-card-border">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h3 className="text-sm font-semibold text-muted">
+            <h3 className="text-body-lg font-semibold text-muted">
               {exchangeLabel} · listed market cap
             </h3>
-            <p className="basis-full text-xs text-muted">
+            <p className="basis-full text-body-sm text-muted">
               The combined value of the companies listed here, which are the game&apos;s modelled
               corporations. It is not the whole national stock market and is not comparable to GDP.
             </p>
             {/* Holds its line while loading so the chart below does not jump. */}
-            <div className="min-h-5 text-sm tabular-nums">
+            <div className="min-h-5 text-body tabular-nums">
               {!loading && last && (
                 <>
                   <span className="font-mono font-bold text-foreground">
@@ -708,7 +708,7 @@ export function MarketOverview({
                     ? "Full recorded history"
                     : `Last ${r.turns} turns in the game calendar (48 turns per year)`
                 }
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
                   range === r.key
                     ? "bg-primary/10 text-primary border-primary/20"
                     : "bg-card-elevated border-card-border text-muted hover:text-foreground hover:bg-card-elevated/80"
@@ -722,7 +722,7 @@ export function MarketOverview({
               disabled={!canUseLogScale}
               aria-pressed={effectiveLogScale}
               title="Logarithmic price scale keeps large historical spikes visible"
-              className="px-2.5 py-1 rounded-md text-xs font-medium border border-card-border text-muted"
+              className="px-2.5 py-1 rounded-md text-body-sm font-medium border border-card-border text-muted"
             >
               {effectiveLogScale ? "Log scale" : "Linear scale"}
             </button>
@@ -731,7 +731,7 @@ export function MarketOverview({
               onClick={() => setShowMa20((v) => !v)}
               aria-pressed={showMa20}
               title="20-candle moving average of closes"
-              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
                 showMa20
                   ? "bg-primary/10 text-primary border-primary/20"
                   : "bg-card-elevated border-card-border text-muted hover:text-foreground"
@@ -743,7 +743,7 @@ export function MarketOverview({
               onClick={() => setShowMa50((v) => !v)}
               aria-pressed={showMa50}
               title="50-candle moving average of closes"
-              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
                 showMa50
                   ? "bg-primary/10 text-primary border-primary/20"
                   : "bg-card-elevated border-card-border text-muted hover:text-foreground"
@@ -774,7 +774,7 @@ export function MarketOverview({
                     : { kind: "sector", sector: key as OperatingSectorType }
                 );
               }}
-              className="px-2 py-1 rounded-md text-xs font-medium border bg-card-elevated border-card-border text-muted hover:text-foreground max-w-44"
+              className="px-2 py-1 rounded-md text-body-sm font-medium border bg-card-elevated border-card-border text-muted hover:text-foreground max-w-44"
             >
               <option value="">Compare…</option>
               <optgroup label="Exchanges">
@@ -793,7 +793,7 @@ export function MarketOverview({
               </optgroup>
             </select>
             {compareLabel && (
-              <span className="text-[11px] text-muted">
+              <span className="text-body-sm text-muted">
                 vs {compareLabel} · {compareCoverage ?? "loading coverage"} ·{" "}
                 <button onClick={() => setCompare(null)} className="text-primary hover:underline">
                   clear
@@ -801,14 +801,14 @@ export function MarketOverview({
               </span>
             )}
             {compareError && (
-              <span className="text-[11px] text-error">Comparison series unavailable</span>
+              <span className="text-body-sm text-error">Comparison series unavailable</span>
             )}
           </div>
         </div>
       </div>
 
       <div className="px-4 pt-3">
-        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-success" />
             <span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-error" />
@@ -834,7 +834,7 @@ export function MarketOverview({
             </span>
           )}
         </div>
-        <p className="mb-2 min-h-4 text-xs text-muted">
+        <p className="mb-2 min-h-4 text-body-sm text-muted">
           {last && (
             <>
               Through {marketTurnLabel(last.endTurn ?? last.turn, meta?.calendar ?? null, true)}
@@ -860,13 +860,13 @@ export function MarketOverview({
           <div
             ref={tooltipRef}
             style={{ display: "none" }}
-            className="pointer-events-none absolute z-10 rounded-lg border border-card-border bg-card-elevated px-2.5 py-1.5 text-xs shadow-lg whitespace-normal"
+            className="pointer-events-none absolute z-10 rounded-lg border border-card-border bg-card-elevated px-2.5 py-1.5 text-body-sm shadow-lg whitespace-normal"
           />
           {loading && candles.length === 0 && (
             <Skeleton className="absolute inset-0 h-full w-full" />
           )}
           {!loading && noChart && (
-            <p className="absolute inset-0 flex items-center justify-center bg-card px-4 text-center text-sm text-muted">
+            <p className="absolute inset-0 flex items-center justify-center bg-card px-4 text-center text-body text-muted">
               {failed
                 ? "Market data could not be refreshed. Try again shortly."
                 : candles.length === 0
@@ -877,18 +877,18 @@ export function MarketOverview({
         </div>
         {/* Below the chart: these arrive with the data and would push it down. */}
         {(meta?.invalidVolumeTrades ?? 0) > 0 && (
-          <p className="mt-2 text-xs text-warning">
+          <p className="mt-2 text-body-sm text-warning">
             Turnover incomplete: {meta?.invalidVolumeTrades} invalid trade records excluded.
           </p>
         )}
         {(meta?.missingTurns ?? 0) + (meta?.invalidPriceTurns ?? 0) > 0 && (
-          <p className="mt-2 text-xs text-warning">
+          <p className="mt-2 text-body-sm text-warning">
             History coverage: {meta?.missingTurns ?? 0} missing turns;{" "}
             {meta?.invalidPriceTurns ?? 0} invalid valuations excluded.
           </p>
         )}
         {candles.some((c) => c.notes?.length) && (
-          <details className="mt-2 text-xs text-muted">
+          <details className="mt-2 text-body-sm text-muted">
             <summary className="cursor-pointer">
               Valuation and coverage events ({candles.filter((c) => c.notes?.length).length})
             </summary>
@@ -908,7 +908,7 @@ export function MarketOverview({
           </details>
         )}
       </div>
-      <div className="px-4 py-2 text-[11px] text-muted border-t border-card-border mt-3">
+      <div className="px-4 py-2 text-body-sm text-muted border-t border-card-border mt-3">
         Game-calendar ranges: 4 turns per month, 48 per year. Raw listed capitalization in anchor
         units,{" "}
         {bucketed

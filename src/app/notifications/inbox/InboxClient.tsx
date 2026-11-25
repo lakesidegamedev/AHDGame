@@ -156,9 +156,9 @@ function InboxRailRows({
     const unread = group.filter((item) => item.unread).length;
     return (
       <details key={first.id} className="border-b border-card-border">
-        <summary className="cursor-pointer px-4 py-3 text-sm text-foreground">
+        <summary className="cursor-pointer px-4 py-3 text-body text-foreground">
           <span className={unread ? "font-semibold" : undefined}>{first.title}</span>
-          <span className="ml-2 text-xs text-muted">
+          <span className="ml-2 text-body-sm text-muted">
             {group.length} notifications{unread > 0 ? ` · ${unread} unread` : ""}
           </span>
         </summary>
@@ -176,7 +176,7 @@ function MonoCount({ n }: { n: number | null }) {
   return (
     <span
       aria-hidden={n === null}
-      className="ml-1.5 inline-block min-w-6 rounded bg-card-elevated px-1 text-center font-mono text-[10px] tabular-nums text-muted"
+      className="ml-1.5 inline-block min-w-6 rounded bg-card-elevated px-1 text-center font-mono text-body-sm tabular-nums text-muted"
     >
       {n ?? "\u00a0"}
     </span>
@@ -450,11 +450,11 @@ export function InboxClient() {
   if (error) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
-        <p className="text-sm text-error">{error}</p>
+        <p className="text-body text-error">{error}</p>
         <button
           type="button"
           onClick={refetch}
-          className="text-sm text-primary underline underline-offset-2"
+          className="text-body text-primary underline underline-offset-2"
         >
           Try again
         </button>
@@ -475,8 +475,8 @@ export function InboxClient() {
             {eyebrow?.seat ? <span className="mx-1.5 opacity-40">·</span> : null}
             {eyebrow?.seat}
           </p>
-          <h1 className="text-2xl font-bold text-foreground">Inbox</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-heading font-bold text-foreground">Inbox</h1>
+          <p className="mt-1 text-body text-muted">
             {loading ? (
               <span
                 className="inline-block h-3 w-32 animate-pulse rounded bg-muted/30"
@@ -512,14 +512,14 @@ export function InboxClient() {
           type="button"
           onClick={() => void handleMarkAllRead()}
           disabled={loading || counts.all === 0 || markingAll}
-          className="shrink-0 rounded-lg border border-card-border bg-card px-3.5 py-1.5 text-sm font-medium text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
+          className="shrink-0 rounded-lg border border-card-border bg-card px-3.5 py-1.5 text-body font-medium text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
         >
           {markingAll ? "Marking…" : "Mark all read"}
         </button>
       </div>
 
       {state.seg === "notifs" && !loading && (
-        <label className="mb-3 flex w-fit items-center gap-2 text-sm text-muted">
+        <label className="mb-3 flex w-fit items-center gap-2 text-body text-muted">
           <input
             type="checkbox"
             checked={priorityOnly}
@@ -535,11 +535,11 @@ export function InboxClient() {
           role="alert"
           className="mb-5 flex items-center gap-3 rounded-xl border border-error/30 bg-error/10 px-4 py-3"
         >
-          <p className="flex-1 text-sm text-error">{markAllError}</p>
+          <p className="flex-1 text-body text-error">{markAllError}</p>
           <button
             type="button"
             onClick={() => void handleMarkAllRead()}
-            className="shrink-0 text-sm font-medium text-error underline underline-offset-2"
+            className="shrink-0 text-body font-medium text-error underline underline-offset-2"
           >
             Try again
           </button>
@@ -575,7 +575,7 @@ export function InboxClient() {
                 setShowHistory(false);
               }}
               className={[
-                "flex items-center rounded-full border px-3.5 py-1 text-sm font-medium transition-colors motion-reduce:transition-none",
+                "flex items-center rounded-full border px-3.5 py-1 text-body font-medium transition-colors motion-reduce:transition-none",
                 active
                   ? seg === "action"
                     ? "border-error/30 bg-error/10 text-error"
@@ -600,7 +600,7 @@ export function InboxClient() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your inbox"
             aria-label="Search your inbox"
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-foreground placeholder:text-muted sm:w-64"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-foreground placeholder:text-muted sm:w-64"
           />
           <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-1.5">
             {(["all", ...presentCategories] as const).map((cat) => {
@@ -611,7 +611,7 @@ export function InboxClient() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1 text-body-sm font-medium transition-colors ${
                     active
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : "border-card-border bg-card text-muted hover:text-foreground"
@@ -665,7 +665,7 @@ export function InboxClient() {
                 <p className="text-body-sm font-medium text-muted">
                   {showHistory ? "Available history" : "Working set"}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="mt-0.5 text-body-sm text-muted">
                   <span className="font-mono tabular-nums text-foreground">{railItems.length}</span>{" "}
                   {hiddenCount > 0 ? `of ${visibleItems.length} items` : "items"}
                 </p>
@@ -676,7 +676,7 @@ export function InboxClient() {
                   onClick={() =>
                     dispatch({ type: "SET_DENSITY", density: compact ? "comfortable" : "compact" })
                   }
-                  className="rounded-md border border-card-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted transition-colors hover:border-primary/30 hover:text-foreground"
+                  className="rounded-md border border-card-border px-2 py-1 text-body-sm font-semibold uppercase tracking-wide text-muted transition-colors hover:border-primary/30 hover:text-foreground"
                   aria-label={compact ? "Use comfortable density" : "Use compact density"}
                 >
                   {compact ? "Roomy" : "Compact"}
@@ -685,7 +685,7 @@ export function InboxClient() {
                   <button
                     type="button"
                     onClick={() => setShowHistory((current) => !current)}
-                    className="rounded-md border border-primary/25 bg-primary/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/10"
+                    className="rounded-md border border-primary/25 bg-primary/5 px-2 py-1 text-body-sm font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/10"
                   >
                     {showHistory ? "Recent" : `Show older (${hiddenCount})`}
                   </button>
@@ -693,11 +693,11 @@ export function InboxClient() {
               </div>
             </div>
 
-            <p className="border-b border-card-border px-4 py-2 text-xs text-muted">
+            <p className="border-b border-card-border px-4 py-2 text-body-sm text-muted">
               Shows up to the latest {INBOX_NOTIFICATION_LIMIT} notifications.
             </p>
             {archiveError && (
-              <p role="alert" className="px-4 py-2 text-xs text-error">
+              <p role="alert" className="px-4 py-2 text-body-sm text-error">
                 Couldn’t archive the item. Try again.
               </p>
             )}
@@ -745,7 +745,7 @@ export function InboxClient() {
             <button
               type="button"
               onClick={() => setMobileReader(false)}
-              className="flex w-full items-center gap-1.5 border-b border-card-border px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground lg:hidden"
+              className="flex w-full items-center gap-1.5 border-b border-card-border px-4 py-2.5 text-body font-medium text-muted hover:text-foreground lg:hidden"
             >
               <span aria-hidden>←</span> Back to inbox
             </button>

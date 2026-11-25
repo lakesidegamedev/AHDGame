@@ -38,17 +38,17 @@ export function MixTab({
       <SectionCard title="By region" sub="Each regional grid's generation mix">
         <div className="space-y-3">
           {regionEntries.length === 0 && (
-            <div className="text-[12px] text-muted">No plants in service.</div>
+            <div className="text-body-sm text-muted">No plants in service.</div>
           )}
           {regionEntries.map(([regionId, bySource]) => {
             const total = Object.values(bySource).reduce((s, c) => s + c, 0);
             return (
               <div key={regionId}>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-foreground">
+                  <span className="text-body-sm font-medium text-foreground">
                     {displayCanadianRegionCode(siteName[regionId] ?? regionId)}
                   </span>
-                  <span className="tabular text-[11px] text-muted">{fmtCapacity(total)}</span>
+                  <span className="tabular text-body-sm text-muted">{fmtCapacity(total)}</span>
                 </div>
                 <MixBar bySource={bySource} total={total} />
               </div>

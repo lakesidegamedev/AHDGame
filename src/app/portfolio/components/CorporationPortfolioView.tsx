@@ -192,7 +192,7 @@ export default function CorporationPortfolioView({
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+      <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-body text-error">
         {error}
       </div>
     );
@@ -244,7 +244,7 @@ export default function CorporationPortfolioView({
   const viewCorpLink = (
     <Link
       href={`/corporation/${corpRouteId}`}
-      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:border-muted/40 hover:bg-card-elevated"
+      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 text-body-sm font-medium text-foreground transition-colors hover:border-muted/40 hover:bg-card-elevated"
     >
       <svg
         width="12"
@@ -384,8 +384,8 @@ function CorpOverviewPane({
         <div className="rounded-xl border border-card-border bg-card p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Portfolio value over time</h2>
-              <p className="text-xs text-muted">
+              <h2 className="text-body font-semibold text-foreground">Portfolio value over time</h2>
+              <p className="text-body-sm text-muted">
                 {chartView === "total"
                   ? seriesView === "total"
                     ? "Total net worth history"
@@ -452,10 +452,10 @@ function CorpCashPane({ cashOnHand }: { cashOnHand: number }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-sm">
       <span className="block text-body-sm font-medium text-muted mb-1">Liquid capital</span>
-      <span className="block text-2xl font-bold text-foreground tabular-nums">
+      <span className="block text-heading font-bold text-foreground tabular-nums">
         {formatAmount(cashOnHand)}
       </span>
-      <p className="mt-3 text-xs text-muted">
+      <p className="mt-3 text-body-sm text-muted">
         The corporation&apos;s on-hand balance used for payroll, dividends, bond service, and new
         investment. Earnings from business activity land here.
       </p>
@@ -478,7 +478,7 @@ function CorpStocksTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-body">
           <thead className="bg-card-elevated border-b border-card-border">
             <tr>
               <th className="px-4 py-3 text-muted text-body-sm font-medium w-[40%]">Corporation</th>
@@ -551,7 +551,7 @@ function CorpStocksTable({
                         {h.unrealizedPnl >= 0 ? "+" : ""}
                         {formatAmount(norm(h.unrealizedPnl, h.currencyCode), h.currencyCode)}
                         {h.unrealizedPnlPct !== null && (
-                          <span className="block text-[10px] opacity-75">
+                          <span className="block text-body-sm opacity-75">
                             {formatSignedPercent(h.unrealizedPnlPct)}
                           </span>
                         )}
@@ -564,7 +564,7 @@ function CorpStocksTable({
                     {sp(norm(h.sharePrice, h.currencyCode), h.currencyCode)}
                     {h.isPrivate && (
                       <span
-                        className="block text-[10px] opacity-75"
+                        className="block text-body-sm opacity-75"
                         title="Private shares have no market price. This is an estimated valuation."
                       >
                         valuation
@@ -579,7 +579,7 @@ function CorpStocksTable({
                       <button
                         type="button"
                         onClick={() => onSell(h)}
-                        className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                        className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-1 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors"
                       >
                         Sell
                       </button>
@@ -614,8 +614,8 @@ function CorpBondsTable({
     <>
       {totalCouponIncomePerTurn > 0 && (
         <div className="rounded-xl border border-success/20 bg-success/5 px-4 py-3 flex items-center justify-between">
-          <span className="text-xs text-muted">Income per turn from bond coupons</span>
-          <span className="text-sm font-bold text-success tabular-nums">
+          <span className="text-body-sm text-muted">Income per turn from bond coupons</span>
+          <span className="text-body font-bold text-success tabular-nums">
             +{formatAmount(totalCouponIncomePerTurn)}
           </span>
         </div>
@@ -624,13 +624,13 @@ function CorpBondsTable({
         {hasImfFacility && (
           <div className="px-4 py-2 border-b border-card-border bg-primary/5">
             <p className="text-body-sm font-medium text-foreground">IMF facility</p>
-            <p className="text-[10px] text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               Loan receivable from restructuring. Not a tradable bond.
             </p>
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-4 py-3 text-muted text-body-sm font-medium w-[30%]">Bond</th>
@@ -676,7 +676,7 @@ function CorpBondsTable({
                               {b.issuerName}
                             </span>
                             {b.defaulted && (
-                              <span className="text-[9px] bg-error/10 text-error px-1.5 py-0.5 rounded border border-error/20 font-bold uppercase">
+                              <span className="text-body-sm bg-error/10 text-error px-1.5 py-0.5 rounded border border-error/20 font-bold uppercase">
                                 Defaulted
                               </span>
                             )}
@@ -703,7 +703,7 @@ function CorpBondsTable({
                           {!isImf && (
                             <Link
                               href={`/bond/${b.bondId}`}
-                              className="text-xs font-medium text-primary hover:underline"
+                              className="text-body-sm font-medium text-primary hover:underline"
                             >
                               Trade
                             </Link>
@@ -711,7 +711,7 @@ function CorpBondsTable({
                           {isImf && (
                             <Link
                               href={corpHref}
-                              className="text-xs font-medium text-primary hover:underline"
+                              className="text-body-sm font-medium text-primary hover:underline"
                             >
                               Borrower
                             </Link>
@@ -720,7 +720,7 @@ function CorpBondsTable({
                             <button
                               type="button"
                               onClick={() => onSell(b)}
-                              className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                              className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-1 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors"
                             >
                               Sell
                             </button>

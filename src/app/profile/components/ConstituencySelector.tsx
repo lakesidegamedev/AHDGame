@@ -96,7 +96,7 @@ export function ConstituencySelector() {
     <div className="rounded-md border border-card-border p-5">
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-heading-sm font-semibold text-foreground">
+          <h2 className="text-heading font-semibold text-foreground">
             {data.officeType === "primeMinister" ? t("pmTitle") : t("commonsTitle")}
           </h2>
           <p className="text-body-sm text-muted">
@@ -134,10 +134,10 @@ export function ConstituencySelector() {
                   setOpen(false);
                   setMessage(null);
                 }}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground hover:bg-card-border/50"
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-body text-foreground hover:bg-card-border/50"
               >
                 <span>{option.name}</span>
-                <span className="shrink-0 text-xs text-muted">{option.id}</span>
+                <span className="shrink-0 text-body-sm text-muted">{option.id}</span>
               </button>
             ))}
           </div>

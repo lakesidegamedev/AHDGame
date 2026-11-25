@@ -113,14 +113,14 @@ export default function SupplyChainTab({
       .filter(Boolean)
       .join(", ") || "Location not recorded";
   const selectClass =
-    "min-w-0 rounded border border-card-border bg-background px-2 py-1.5 text-xs text-foreground";
+    "min-w-0 rounded border border-card-border bg-background px-2 py-1.5 text-body-sm text-foreground";
   const select = (
     label: string,
     value: string,
     values: { id: string; label: string }[],
     onChange: (v: string) => void
   ) => (
-    <label className="flex flex-col gap-1 text-xs text-muted">
+    <label className="flex flex-col gap-1 text-body-sm text-muted">
       {label}
       <select
         aria-label={label}
@@ -141,14 +141,14 @@ export default function SupplyChainTab({
     <section className="space-y-5" aria-label="Supply chain">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-card-border pb-3">
         <div>
-          <h2 className="text-lg font-semibold">Supply chain</h2>
-          <p className="mt-1 text-xs text-muted">
+          <h2 className="text-heading font-semibold">Supply chain</h2>
+          <p className="mt-1 text-body-sm text-muted">
             Actual suppliers and customers from the last completed turn. Open-market relationships
             can change each turn.
           </p>
         </div>
         <button
-          className="rounded border border-card-border px-3 py-1.5 text-xs hover:bg-card-elevated disabled:opacity-50"
+          className="rounded border border-card-border px-3 py-1.5 text-body-sm hover:bg-card-elevated disabled:opacity-50"
           disabled={load.loading}
           onClick={() => setRevision((v) => v + 1)}
         >
@@ -156,37 +156,37 @@ export default function SupplyChainTab({
         </button>
       </div>
       {load.loading ? (
-        <p role="status" className="animate-pulse py-8 text-sm text-muted">
+        <p role="status" className="animate-pulse py-8 text-body text-muted">
           Loading settled trades...
         </p>
       ) : load.error ? (
-        <div role="alert" className="rounded border border-error/30 bg-error/10 p-4 text-sm">
+        <div role="alert" className="rounded border border-error/30 bg-error/10 p-4 text-body">
           {load.error}
           <button className="ml-3 underline" onClick={() => setRevision((v) => v + 1)}>
             Try again
           </button>
         </div>
       ) : data?.turn == null ? (
-        <p className="py-6 text-sm text-muted">
+        <p className="py-6 text-body text-muted">
           No completed market settlement is available in this world yet.
         </p>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded border border-card-border p-3">
-              <p className="text-xs text-muted">Input purchases</p>
-              <p className="mt-1 text-xl font-semibold">{formatAmount(totals("suppliers"))}</p>
+              <p className="text-body-sm text-muted">Input purchases</p>
+              <p className="mt-1 text-heading font-semibold">{formatAmount(totals("suppliers"))}</p>
             </div>
             <div className="rounded border border-card-border p-3">
-              <p className="text-xs text-muted">Sales receipts</p>
-              <p className="mt-1 text-xl font-semibold text-success">
+              <p className="text-body-sm text-muted">Sales receipts</p>
+              <p className="mt-1 text-heading font-semibold text-success">
                 {formatAmount(totals("customers"))}
               </p>
             </div>
             <div className="rounded border border-card-border p-3">
-              <p className="text-xs text-muted">Completed turn</p>
-              <p className="mt-1 text-xl font-semibold">{data.turn}</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">Completed turn</p>
+              <p className="mt-1 text-heading font-semibold">{data.turn}</p>
+              <p className="text-body-sm text-muted">
                 Totals follow your filters; internal deliveries excluded.
               </p>
             </div>
@@ -201,7 +201,7 @@ export default function SupplyChainTab({
               <button
                 key={view}
                 aria-pressed={filters.view === view}
-                className={`px-3 py-1.5 text-xs ${pillClass(filters.view === view)}`}
+                className={`px-3 py-1.5 text-body-sm ${pillClass(filters.view === view)}`}
                 onClick={() => setFilters({ ...filters, view })}
               >
                 {label}
@@ -209,7 +209,7 @@ export default function SupplyChainTab({
             ))}
           </div>
           <fieldset className="rounded border border-card-border p-3">
-            <legend className="px-1 text-xs text-muted">Filter your sites</legend>
+            <legend className="px-1 text-body-sm text-muted">Filter your sites</legend>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {select(
                 "Country",
@@ -250,7 +250,7 @@ export default function SupplyChainTab({
               )}
             </div>
             <button
-              className="mt-3 text-xs text-muted underline"
+              className="mt-3 text-body-sm text-muted underline"
               onClick={() => setFilters({ ...initialFilters, view: filters.view })}
             >
               Clear filters
@@ -266,7 +266,7 @@ export default function SupplyChainTab({
               bySite={filters.view === "sites"}
             />
           ))}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Trade values exclude tariffs, taxes and other operating costs. Internal deliveries move
             goods between your sites without a company cash payment. Units and totals here are for
             this one turn. Sector pages show the same flows as a daily rate, which is 24 turns.

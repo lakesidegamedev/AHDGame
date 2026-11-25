@@ -64,7 +64,7 @@ export function useActingLock(scope: CabinetLeverScope): string | null {
 export function ActingLockNote({ reason }: { reason: string | null }) {
   if (!reason) return null;
   return (
-    <p className="mt-2 flex items-start gap-2 text-xs text-muted" role="note">
+    <p className="mt-2 flex items-start gap-2 text-body-sm text-muted" role="note">
       <svg
         className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gov-soft"
         viewBox="0 0 24 24"

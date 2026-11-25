@@ -156,13 +156,13 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
                 (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
               }}
             />
-            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+            <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
               International Monetary Fund
             </h1>
             {data?.imfCorp ? (
               <Link
                 href={`/corporation/${data.imfCorp.sequentialId ?? data.imfCorp.id}`}
-                className="ml-1 inline-flex items-center gap-1 rounded-full border border-white/30 bg-black/70 px-2.5 py-1 text-xs font-medium text-white/95 transition-colors hover:bg-black/50"
+                className="ml-1 inline-flex items-center gap-1 rounded-full border border-white/30 bg-black/70 px-2.5 py-1 text-body-sm font-medium text-white/95 transition-colors hover:bg-black/50"
                 title="Open IMF corporation page"
               >
                 <svg
@@ -179,7 +179,7 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
               </Link>
             ) : null}
           </div>
-          <p className="mt-2 max-w-2xl text-sm text-white/90 drop-shadow sm:text-base">
+          <p className="mt-2 max-w-2xl text-body text-white/90 drop-shadow sm:text-body-lg">
             Sovereign-bailout facility, board oversight, and global crisis response.
           </p>
         </div>
@@ -188,32 +188,34 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
       <HeroStatsStrip variant="overlay">
         <div className="flex min-w-[140px] flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Liquid capital</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">{liquid ?? "—"}</span>
+          <span className="text-heading font-bold tabular-nums text-foreground">
+            {liquid ?? "—"}
+          </span>
         </div>
         <div className="flex min-w-[160px] flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Managing director</span>
           {data?.managingDirector ? (
             <Link
               href={`/character/${data.managingDirector.sequentialId ?? data.managingDirector.characterId}`}
-              className="text-sm font-semibold text-foreground hover:text-primary"
+              className="text-body font-semibold text-foreground hover:text-primary"
             >
               {data.managingDirector.name}
             </Link>
           ) : (
-            <span className="text-sm text-muted">{data?.imfCorp ? "Vacant" : "—"}</span>
+            <span className="text-body text-muted">{data?.imfCorp ? "Vacant" : "—"}</span>
           )}
         </div>
         <div className="flex min-w-[180px] flex-1 flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Board members</span>
           {board.length === 0 ? (
-            <span className="text-sm italic text-muted">None seeded</span>
+            <span className="text-body italic text-muted">None seeded</span>
           ) : (
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {board.map((b) => (
                 <Link
                   key={b.characterId}
                   href={`/character/${b.sequentialId ?? b.characterId}`}
-                  className="inline-flex items-center rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                  className="inline-flex items-center rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-body-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                 >
                   {b.name}
                 </Link>
@@ -223,19 +225,19 @@ function ImfHero({ data }: { data: OverviewResponse | null }) {
         </div>
         <div className="flex min-w-[120px] flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Active bailouts</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">
+          <span className="text-heading font-bold tabular-nums text-foreground">
             {data?.activeSovereignBailouts.length ?? 0}
           </span>
         </div>
         <div className="flex min-w-[120px] flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Open board decisions</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">
+          <span className="text-heading font-bold tabular-nums text-foreground">
             {data?.pendingBoardOverrides.length ?? 0}
           </span>
         </div>
         <div className="flex min-w-[160px] flex-col justify-between p-4">
           <span className="text-body-sm font-medium text-muted">Lifetime received</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">
+          <span className="text-heading font-bold tabular-nums text-foreground">
             {data?.totalReceivedAnchor ? formatCapital(data.totalReceivedAnchor, "USD") : "—"}
           </span>
         </div>

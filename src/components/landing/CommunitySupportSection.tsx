@@ -47,7 +47,7 @@ function DiscordMemberStat({ stats, loading }: { stats: DiscordStats | null; loa
   return (
     <div className="mt-5">
       <p className="flex items-baseline gap-2">
-        <span className="text-heading-lg font-semibold tabular-nums tracking-tight text-foreground">
+        <span className="text-heading font-semibold tabular-nums tracking-tight text-foreground">
           {formatCount(stats.memberCount)}
         </span>
         <span className="text-body text-muted">members</span>
@@ -85,7 +85,7 @@ function ExternalCta({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto ${emphasisClasses}`}
+      className={`mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4.5 text-body font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto ${emphasisClasses}`}
     >
       {children}
       <span aria-hidden="true">→</span>
@@ -153,7 +153,7 @@ export function CommunitySupportSection({
         <div className="mt-8 grid grid-cols-1 gap-x-12 gap-y-12 lg:grid-cols-2">
           {/* Discord */}
           <article>
-            <h3 className="flex items-center gap-2.5 text-heading-sm font-semibold text-foreground">
+            <h3 className="flex items-center gap-2.5 text-body-lg font-semibold text-foreground">
               <DiscordGlyph className="h-5 w-5 shrink-0" />
               Discord
             </h3>
@@ -173,7 +173,7 @@ export function CommunitySupportSection({
 
           {/* Patreon */}
           <article className="store-purchase-cta">
-            <h3 className="flex items-center gap-2.5 text-heading-sm font-semibold text-foreground">
+            <h3 className="flex items-center gap-2.5 text-body-lg font-semibold text-foreground">
               <PatreonGlyph className="h-5 w-5 shrink-0" />
               Patreon
             </h3>

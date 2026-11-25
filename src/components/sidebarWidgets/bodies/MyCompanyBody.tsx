@@ -21,7 +21,7 @@ function TrendRow({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-2 text-[11px]">
+    <div className="flex items-center gap-2 text-body-sm">
       <span className={`h-0.5 w-3 shrink-0 rounded-full bg-current ${swatch}`} aria-hidden="true" />
       <span className="w-20 shrink-0 truncate text-muted">{name}</span>
       <TrendSparkline
@@ -46,10 +46,10 @@ export function MyCompanyBody({ data, compact }: { data: MyCompanyWidgetData; co
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-semibold text-foreground">{data.name}</span>
-        {data.ticker && <span className="shrink-0 text-xs text-muted">{data.ticker}</span>}
+        <span className="truncate text-body font-semibold text-foreground">{data.name}</span>
+        {data.ticker && <span className="shrink-0 text-body-sm text-muted">{data.ticker}</span>}
       </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-body-sm">
         <dt className="text-muted">{t("cash")}</dt>
         <dd className="text-right font-medium tabular-nums text-foreground">
           {money(data.cash, data.currencyCode)}
@@ -83,7 +83,7 @@ export function MyCompanyBody({ data, compact }: { data: MyCompanyWidgetData; co
       </dl>
       {!compact && (showSharePrice || showCash || showIncome) && (
         <figure className="space-y-1.5 border-t border-card-border pt-2">
-          <figcaption className="text-[11px] font-medium text-fg-2">
+          <figcaption className="text-body-sm font-medium text-fg-2">
             {t("recentTurns", { count })}
           </figcaption>
           {showSharePrice && (
@@ -110,7 +110,7 @@ export function MyCompanyBody({ data, compact }: { data: MyCompanyWidgetData; co
             />
           )}
           {showIncome && (
-            <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex items-center gap-2 text-body-sm">
               <span className="w-[5.75rem] shrink-0 truncate text-muted">{t("incomeTrend")}</span>
               <div className="min-w-0 flex-1">
                 <BarStrip

@@ -71,7 +71,7 @@ function CategoryBar({
         return (
           <div
             key={c}
-            className="flex items-center justify-center text-[10px] font-semibold text-white"
+            className="flex items-center justify-center text-body-sm font-semibold text-white"
             style={{ width: `${pct}%`, backgroundColor: meta.color }}
             title={`${meta.label}: ${summary.counts[c]} (${pct.toFixed(0)}%)${
               delta ? ` ${delta > 0 ? "+" : ""}${delta} vs before` : ""
@@ -93,7 +93,7 @@ function CategoryLegend({
   before?: CompositionSummary;
 }) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm">
       {LEAN_CATEGORIES.map((c: LeanCategory) => {
         const meta = LEAN_CATEGORY_META[c];
         const delta = before ? summary.counts[c] - before.counts[c] : 0;
@@ -145,7 +145,7 @@ export function DistrictCompositionSummary({
         <span className="text-body-sm font-medium text-muted">
           {title ?? "Statewide composition"}
         </span>
-        <span className="text-[11px] text-muted">
+        <span className="text-body-sm text-muted">
           Projected seats:{" "}
           <span style={{ color: POOL_COLORS.left }} className="font-semibold">
             L {proj.left}
@@ -174,7 +174,7 @@ export function DistrictCompositionSummary({
       <CategoryLegend summary={summary} before={beforeSummary} />
 
       {caps && (
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex items-center gap-2 text-body-sm">
           <span className="text-muted">Efficiency gap</span>
           <span className={gapOver ? "font-semibold text-error" : "font-semibold text-foreground"}>
             {(gap * 100).toFixed(1)}%

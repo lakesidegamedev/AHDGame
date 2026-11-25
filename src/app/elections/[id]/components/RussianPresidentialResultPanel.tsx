@@ -46,21 +46,21 @@ export function RussianPresidentialResultPanel({
             )}
       </p>
       {result && (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           {t("participation", {
             participants: result.participants,
             registered: result.registeredVoters,
           })}
         </p>
       )}
-      <p className="text-sm text-muted">{t("rules")}</p>
+      <p className="text-body text-muted">{t("rules")}</p>
       <ul className="space-y-2">
         {candidates.map((candidate) => (
           <li key={candidate.id} className="flex justify-between gap-4">
             <span>
               {candidate.characterName} ({candidate.partyName})
               {candidate.runningMateName && (
-                <span className="block text-sm text-muted">
+                <span className="block text-body text-muted">
                   {t("runningMate", { name: candidate.runningMateName })}
                 </span>
               )}

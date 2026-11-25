@@ -9,7 +9,7 @@ const STEP = {
   padding: "0 10px",
   borderRadius: 7,
   fontFamily: FONT.sans,
-  fontSize: 12.5,
+  fontSize: 12,
   fontWeight: 600,
   background: "transparent",
   border: `1px solid ${BLEND.hairlineStrong}`,

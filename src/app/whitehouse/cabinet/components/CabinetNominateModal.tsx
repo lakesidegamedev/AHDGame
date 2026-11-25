@@ -94,15 +94,15 @@ export function CabinetNominateModal({
 
   return (
     <Modal open={open} title={title} onClose={onCancel}>
-      <p className="text-sm text-muted mb-4">{description}</p>
-      <label htmlFor="cabinet-position" className="block text-sm font-medium mb-2">
+      <p className="text-body text-muted mb-4">{description}</p>
+      <label htmlFor="cabinet-position" className="block text-body font-medium mb-2">
         Position
       </label>
       <select
         id="cabinet-position"
         value={selectedPositionId}
         onChange={(e) => onPositionChange(e.target.value)}
-        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
       >
         <option value="">Select position</option>
         {eligiblePositions.map((p) => (
@@ -120,13 +120,13 @@ export function CabinetNominateModal({
       </select>
       {npps.length > 0 && onModeChange && (
         <fieldset className="mb-4">
-          <legend className="block text-sm font-medium mb-2">Nominee</legend>
+          <legend className="block text-body font-medium mb-2">Nominee</legend>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onModeChange("character")}
               aria-pressed={mode === "character"}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
                 mode === "character"
                   ? "border-primary/50 bg-primary/10 text-primary"
                   : "border-card-border bg-card text-muted hover:bg-card-elevated"
@@ -138,7 +138,7 @@ export function CabinetNominateModal({
               type="button"
               onClick={() => onModeChange("npp")}
               aria-pressed={mode === "npp"}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
                 mode === "npp"
                   ? "border-primary/50 bg-primary/10 text-primary"
                   : "border-card-border bg-card text-muted hover:bg-card-elevated"
@@ -151,14 +151,14 @@ export function CabinetNominateModal({
       )}
       {mode === "npp" && npps.length > 0 ? (
         <>
-          <label htmlFor="cabinet-nominee-npp" className="block text-sm font-medium mb-2">
+          <label htmlFor="cabinet-nominee-npp" className="block text-body font-medium mb-2">
             {nomineeLabel} (NPP)
           </label>
           <select
             id="cabinet-nominee-npp"
             value={selectedNppId}
             onChange={(e) => onNppChange?.(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
           >
             <option value="">Select NPP</option>
             {npps.map((n) => (
@@ -170,14 +170,14 @@ export function CabinetNominateModal({
         </>
       ) : (
         <>
-          <label htmlFor="cabinet-nominee" className="block text-sm font-medium mb-2">
+          <label htmlFor="cabinet-nominee" className="block text-body font-medium mb-2">
             {nomineeLabel}
           </label>
           <select
             id="cabinet-nominee"
             value={selectedCharId}
             onChange={(e) => onCharChange(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
           >
             <option value="">Select character</option>
             {characters.map((c) => (
@@ -191,7 +191,7 @@ export function CabinetNominateModal({
       {message && (
         <p
           role="alert"
-          className={`text-sm mb-4 ${message.startsWith("✓") ? "text-success" : "text-error"}`}
+          className={`text-body mb-4 ${message.startsWith("✓") ? "text-success" : "text-error"}`}
         >
           {message}
         </p>
@@ -199,7 +199,7 @@ export function CabinetNominateModal({
       <div className="flex justify-end gap-3">
         <button
           onClick={onCancel}
-          className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated"
+          className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated"
         >
           Cancel
         </button>
@@ -210,7 +210,7 @@ export function CabinetNominateModal({
             !selectedPositionId ||
             (mode === "npp" && npps.length > 0 ? !selectedNppId : !selectedCharId)
           }
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {submitLabel}
         </button>

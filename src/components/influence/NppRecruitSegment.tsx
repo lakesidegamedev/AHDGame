@@ -56,7 +56,7 @@ export function NppRecruitSegment({
 
   if (!st) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-4 text-body text-muted">
         No eligible states for recruitment.
       </div>
     );
@@ -80,17 +80,17 @@ export function NppRecruitSegment({
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Recruit a new NPP</h3>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+          <h3 className="text-body-lg font-semibold">Recruit a new NPP</h3>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-body-sm text-primary">
             {actionPoints} AP · {formatLocalFunds(treasury, currency)}
           </span>
         </div>
-        <p className="mb-3 text-xs leading-relaxed text-muted">
+        <p className="mb-3 text-body-sm leading-relaxed text-muted">
           Recruit a non-player politician to expand the slate. Greater state organization yields
           stronger recruits and unlocks more slots.
         </p>
 
-        <label className="mb-1 block text-xs font-medium text-muted">Recruit in state</label>
+        <label className="mb-1 block text-body-sm font-medium text-muted">Recruit in state</label>
         <div className="mb-4 flex flex-wrap gap-2">
           {states.map((s) => {
             const sel = s.stateId === stateId;
@@ -108,8 +108,10 @@ export function NppRecruitSegment({
                   sel ? "border-primary bg-primary/10" : "border-card-border hover:bg-card-elevated"
                 } ${s.inFrontier === false ? "opacity-40" : ""}`}
               >
-                <span className="text-xs font-bold">{displayCanadianRegionCode(s.stateId)}</span>
-                <span className="text-[10px] text-muted">
+                <span className="text-body-sm font-bold">
+                  {displayCanadianRegionCode(s.stateId)}
+                </span>
+                <span className="text-body-sm text-muted">
                   {s.inFrontier === false ? "out of reach" : `${s.stateOrg.toFixed(0)}%`}
                 </span>
               </button>
@@ -120,23 +122,23 @@ export function NppRecruitSegment({
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-lg border border-card-border bg-card-elevated p-3">
             <div className="text-body-sm font-medium text-muted">Slots</div>
-            <div className="text-lg font-bold">
+            <div className="text-heading font-bold">
               {st.currentNPPs}{" "}
-              <span className="text-xs font-normal text-muted">/ {st.maxSlots}</span>
+              <span className="text-body-sm font-normal text-muted">/ {st.maxSlots}</span>
             </div>
-            <div className="text-[11px] text-muted">{avail} available</div>
+            <div className="text-body-sm text-muted">{avail} available</div>
           </div>
           <div className="rounded-lg border border-card-border bg-card-elevated p-3">
             <div className="text-body-sm font-medium text-muted">Recruit quality</div>
-            <div className={`text-lg font-bold ${q.tone}`}>{q.label}</div>
-            <div className="text-[11px] text-muted">driven by {st.stateOrg.toFixed(0)}% org</div>
+            <div className={`text-heading font-bold ${q.tone}`}>{q.label}</div>
+            <div className="text-body-sm text-muted">driven by {st.stateOrg.toFixed(0)}% org</div>
           </div>
           <div className="rounded-lg border border-card-border bg-card-elevated p-3">
             <div className="text-body-sm font-medium text-muted">Cost</div>
-            <div className="text-lg font-bold">
-              {st.actionCost} <span className="text-xs font-normal text-muted">AP</span>
+            <div className="text-heading font-bold">
+              {st.actionCost} <span className="text-body-sm font-normal text-muted">AP</span>
             </div>
-            <div className="text-[11px] text-green-400">
+            <div className="text-body-sm text-green-400">
               + {formatLocalFunds(recruitFund, currency)}
             </div>
           </div>
@@ -146,7 +148,7 @@ export function NppRecruitSegment({
           type="button"
           onClick={handle}
           disabled={disabled}
-          className="mt-4 w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="mt-4 w-full rounded-lg bg-primary py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {st.inFrontier === false
             ? `${st.stateName} is out of your party's reach`
@@ -163,9 +165,9 @@ export function NppRecruitSegment({
       </div>
 
       <div className="rounded-xl border border-card-border bg-card p-4">
-        <h3 className="mb-2 text-sm font-semibold">How recruitment works</h3>
+        <h3 className="mb-2 text-body-lg font-semibold">How recruitment works</h3>
         <NppSlotTierTable currentOrg={st.stateOrg} className="mb-3" />
-        <ul className="ml-4 list-disc space-y-1 text-xs text-muted">
+        <ul className="ml-4 list-disc space-y-1 text-body-sm text-muted">
           <li>
             <b>Slots</b> scale with state organization per the table above — build org to open more.
           </li>

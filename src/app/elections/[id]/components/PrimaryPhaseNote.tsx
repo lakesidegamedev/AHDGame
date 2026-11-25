@@ -43,7 +43,7 @@ export function PrimaryPhaseNote({
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <p className="text-xs text-muted/90">
+        <p className="text-body-sm text-muted/90">
           <span className="font-medium text-warning">Primary Phase.</span>{" "}
           {isUSPresidential
             ? "Shares show projected delegate share from the live state-by-state primary map. Top candidate per party advances."
@@ -53,11 +53,11 @@ export function PrimaryPhaseNote({
       </div>
 
       <details className="group mt-1.5 pl-5">
-        <summary className="cursor-pointer list-none text-[11px] font-medium text-warning/80 hover:text-warning">
+        <summary className="cursor-pointer list-none text-body-sm font-medium text-warning/80 hover:text-warning">
           <span className="group-open:hidden">How primary scoring works</span>
           <span className="hidden group-open:inline">Hide scoring detail</span>
         </summary>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-muted/80">
+        <p className="mt-1.5 text-body-sm leading-relaxed text-muted/80">
           {isUSPresidential
             ? "Pre-stagger projections use policy alignment (40) + favorability (25) + party influence (20) + national influence (15). Once the final 6 turns begin, awarded delegates stay locked while uncalled states keep projecting forward. Your own Campaign Presence (built on this page) multiplies vote weight in that state (about +19% at level 10, approaching +25% with further investment), separate from party-wide org."
             : "A lead in points can produce a much wider lead in the estimate. Once votes are counted, the share shows those votes. The score reflects how closely each candidate matches the region and party, along with favorability, influence, and any campaign or non-player adjustments."}

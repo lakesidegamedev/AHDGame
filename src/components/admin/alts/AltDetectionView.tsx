@@ -194,13 +194,13 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
     <SuspectPeekProvider context={context} onMemberBanned={handleMemberBanned} notify={notify}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">Alt detection</h2>
-          <span className="rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-0.5 text-[11px] font-medium text-muted">
+          <h2 className="text-heading font-semibold tracking-tight">Alt detection</h2>
+          <span className="rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-0.5 text-body-sm font-medium text-muted">
             Ranked by confidence
           </span>
           {!isAdmin && (
             <span
-              className="rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400"
+              className="rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-body-sm font-medium text-blue-400"
               title="Moderator view: scoring config, un-redacted network details, and confirm are admin-only."
             >
               Moderator view
@@ -210,7 +210,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
             <button
               onClick={() => setShowHealth((v) => !v)}
               aria-pressed={showHealth}
-              className="ml-auto inline-flex h-8 items-center rounded-lg border border-card-border px-3 text-xs text-foreground transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+              className="ml-auto inline-flex h-8 items-center rounded-lg border border-card-border px-3 text-body-sm text-foreground transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
               title="Confidence calibration against moderator dispositions, plus scoring-pipeline health."
             >
               {showHealth ? "Back to triage" : "Detection health"}
@@ -224,7 +224,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
           opposite of the Users tab's duplicate groups, which drop evidence
           older than 30 days, so the two surfaces must not be read the same way.
           Remove this note when the pruning work lands. */}
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Rings persist until a moderator dispositions them — there is no staleness cutoff on this
           view yet, so a cluster&apos;s evidence may be months old. Check each link&apos;s date
           before acting. (The duplicate-account groups on the Users tab work differently: those drop
@@ -238,7 +238,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
             <div className="space-y-3">
               <button
                 onClick={() => setSelectedId(null)}
-                className="flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+                className="flex items-center gap-1.5 rounded-md text-body text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
               >
                 <svg
                   className="h-4 w-4"
@@ -256,7 +256,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
                 </svg>
                 Back to ranked list
               </button>
-              <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-sm text-red-400">
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-body text-red-400">
                 {detailError}
                 <div>
                   <button
@@ -266,7 +266,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
                       setSelectedId(null);
                       setTimeout(() => setSelectedId(id), 0);
                     }}
-                    className="mt-3 inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-xs text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
+                    className="mt-3 inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body-sm text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
                   >
                     Retry
                   </button>
@@ -319,7 +319,7 @@ export default function AltDetectionView({ context = "admin" }: AltDetectionView
             {toasts.map((t) => (
               <div
                 key={t.id}
-                className={`animate-fade-in rounded-lg border px-4 py-2.5 text-sm shadow-modal backdrop-blur-sm motion-reduce:animate-none ${
+                className={`animate-fade-in rounded-lg border px-4 py-2.5 text-body shadow-modal backdrop-blur-sm motion-reduce:animate-none ${
                   t.kind === "success"
                     ? "border-green-500/40 bg-green-500/15 text-green-300"
                     : t.kind === "error"

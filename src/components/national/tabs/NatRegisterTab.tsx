@@ -10,7 +10,7 @@ import { concentrationStatus } from "@/lib/nationalization/concentrationStatus";
 import { SOCI_DANGER_ZONE } from "@/lib/nationalization/constants";
 import { natMoney as money } from "../natMoney";
 
-const LABEL = "text-[10px] font-semibold uppercase tracking-wide text-muted";
+const LABEL = "text-body-sm font-semibold uppercase tracking-wide text-muted";
 const PER_PAGE = 10;
 const TIER_TONE: Record<string, string> = {
   fair: "border-success/30 bg-success/10 text-success",
@@ -21,7 +21,7 @@ const TIER_TONE: Record<string, string> = {
 function Pill({ children, className }: { children: ReactNode; className: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${className}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-medium ${className}`}
     >
       {children}
     </span>
@@ -46,7 +46,7 @@ function StatTile({ label, value, tone }: { label: string; value: string; tone?:
     <div className="rounded-xl border border-card-border bg-card p-3.5">
       <div className={LABEL}>{label}</div>
       <div
-        className={`mt-1 text-xl font-bold tabular-nums ${tone === "error" ? "text-error" : "text-foreground"}`}
+        className={`mt-1 text-heading font-bold tabular-nums ${tone === "error" ? "text-error" : "text-foreground"}`}
       >
         {value}
       </div>
@@ -69,7 +69,7 @@ function Pager({
   const btn =
     "rounded-md border border-card-border px-2 py-1 text-muted transition-colors hover:bg-card-elevated disabled:cursor-default disabled:opacity-40";
   return (
-    <div className="flex items-center justify-between gap-2 border-t border-card-border px-4 py-2.5 text-[12px]">
+    <div className="flex items-center justify-between gap-2 border-t border-card-border px-4 py-2.5 text-body-sm">
       <span className="text-muted tabular-nums">
         {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, total)} of {total}
       </span>
@@ -160,9 +160,9 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-body-sm font-bold text-gold">
               {identity.glyph}
             </span>
-            <h2 className="text-sm font-semibold text-foreground">State ownership register</h2>
+            <h2 className="text-body font-semibold text-foreground">State ownership register</h2>
           </div>
-          <span className="text-[11px] text-muted">{identity.registry}</span>
+          <span className="text-body-sm text-muted">{identity.registry}</span>
         </div>
 
         {rows.length === 0 ? (
@@ -199,8 +199,8 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
       {/* ── Assumed bonds ────────────────────────────────────────────────── */}
       <div className="overflow-hidden rounded-xl border border-card-border bg-card">
         <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Assumed bonds</h2>
-          <span className="text-[11px] text-muted">state services coupons · no default</span>
+          <h2 className="text-body font-semibold text-foreground">Assumed bonds</h2>
+          <span className="text-body-sm text-muted">state services coupons · no default</span>
         </div>
         {vm.assumedBonds.length === 0 ? (
           <p className="px-4 py-3 text-body-sm text-muted">No bonds assumed.</p>
@@ -218,16 +218,16 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
                 key={b.id}
                 className="grid grid-cols-2 items-center gap-2 border-b border-card-border px-4 py-2.5 last:border-0 sm:grid-cols-12"
               >
-                <div className="col-span-2 text-[13px] text-foreground sm:col-span-4">
+                <div className="col-span-2 text-body-sm text-foreground sm:col-span-4">
                   {b.issuer ?? "State enterprise"}
                 </div>
-                <div className="text-right text-[13px] font-semibold tabular-nums text-foreground sm:col-span-3">
+                <div className="text-right text-body-sm font-semibold tabular-nums text-foreground sm:col-span-3">
                   {money(b.principal, b.currencyCode)}
                 </div>
-                <div className="text-right text-[13px] tabular-nums text-muted sm:col-span-2">
+                <div className="text-right text-body-sm tabular-nums text-muted sm:col-span-2">
                   {b.couponRate.toFixed(1)}%
                 </div>
-                <div className="hidden text-right text-[12px] tabular-nums text-muted sm:col-span-2 sm:block">
+                <div className="hidden text-right text-body-sm tabular-nums text-muted sm:col-span-2 sm:block">
                   {b.maturityTurn != null ? `turn ${b.maturityTurn}` : "—"}
                 </div>
                 <div className="col-span-2 flex justify-end sm:col-span-1">
@@ -251,8 +251,8 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
       {/* ── Political ledger ─────────────────────────────────────────────── */}
       <div className="overflow-hidden rounded-xl border border-card-border bg-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-card-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Political ledger</h2>
-          <span className="text-[11px] text-muted">
+          <h2 className="text-body font-semibold text-foreground">Political ledger</h2>
+          <span className="text-body-sm text-muted">
             every taking moves approval, legitimacy &amp; unrest
           </span>
         </div>
@@ -261,19 +261,19 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
         <div className="flex flex-col gap-3 border-b border-card-border bg-card-muted p-4 sm:flex-row sm:items-center">
           <div>
             <div className={LABEL}>Governing ideology</div>
-            <div className="text-sm font-semibold text-gold">{standing.ideologyStance} bloc</div>
+            <div className="text-body font-semibold text-gold">{standing.ideologyStance} bloc</div>
           </div>
-          <p className="flex-1 text-[12px] leading-snug text-muted">{standing.ideologyNote}</p>
+          <p className="flex-1 text-body-sm leading-snug text-muted">{standing.ideologyNote}</p>
           <div className="flex gap-2">
             <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-1.5 text-center">
               <div className={`whitespace-nowrap ${LABEL}`}>Nationalize</div>
-              <div className="text-[13px] font-bold text-success">
+              <div className="text-body-sm font-bold text-success">
                 {standing.nationalizeCapital}
               </div>
             </div>
             <div className="rounded-lg border border-error/30 bg-error/5 px-3 py-1.5 text-center">
               <div className={`whitespace-nowrap ${LABEL}`}>Privatize</div>
-              <div className="text-[13px] font-bold text-error">{standing.privatizeCapital}</div>
+              <div className="text-body-sm font-bold text-error">{standing.privatizeCapital}</div>
             </div>
           </div>
         </div>
@@ -301,22 +301,22 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
                 className="grid grid-cols-2 items-center gap-2 border-b border-card-border px-4 py-2.5 last:border-0 sm:grid-cols-12"
               >
                 <div className="col-span-2 sm:col-span-4">
-                  <div className="text-[13px] font-medium text-foreground">{r.firm}</div>
-                  <div className="text-[11px] text-muted">
+                  <div className="text-body-sm font-medium text-foreground">{r.firm}</div>
+                  <div className="text-body-sm text-muted">
                     {r.tierLabel ? `${r.tierLabel} · ` : ""}
                     {r.triggerShort}
                   </div>
                 </div>
-                <div className="text-right text-[13px] font-semibold tabular-nums sm:col-span-2">
+                <div className="text-right text-body-sm font-semibold tabular-nums sm:col-span-2">
                   <Delta v={r.approvalDelta} />
                 </div>
-                <div className="text-right text-[13px] font-semibold tabular-nums sm:col-span-2">
+                <div className="text-right text-body-sm font-semibold tabular-nums sm:col-span-2">
                   <Delta v={r.legitimacyDelta} />
                 </div>
-                <div className="text-right text-[13px] font-semibold tabular-nums sm:col-span-2">
+                <div className="text-right text-body-sm font-semibold tabular-nums sm:col-span-2">
                   <Delta v={r.unrestDelta} invert />
                 </div>
-                <div className="text-right text-[13px] font-semibold tabular-nums sm:col-span-2">
+                <div className="text-right text-body-sm font-semibold tabular-nums sm:col-span-2">
                   <Delta v={r.confidenceDelta} />
                 </div>
               </div>
@@ -332,14 +332,14 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
           <div className="lg:w-72 lg:shrink-0">
             <div className={LABEL}>State ownership concentration</div>
             <div className="mt-1 flex items-end gap-2">
-              <span className={`text-5xl font-bold tabular-nums ${sociTone}`}>{soci}</span>
-              <span className="mb-1.5 text-sm text-muted">%</span>
-              <span className="mb-2 ml-1 text-xs text-muted">{sociStatus.label}</span>
+              <span className={`text-display font-bold tabular-nums ${sociTone}`}>{soci}</span>
+              <span className="mb-1.5 text-body text-muted">%</span>
+              <span className="mb-2 ml-1 text-body-sm text-muted">{sociStatus.label}</span>
             </div>
             <div className="mt-3">
               <Meter value={soci} baseline={SOCI_DANGER_ZONE} />
             </div>
-            <div className="mt-1.5 flex justify-between text-[10px] text-muted">
+            <div className="mt-1.5 flex justify-between text-body-sm text-muted">
               <span>0 · private</span>
               <span>danger zone {SOCI_DANGER_ZONE}</span>
               <span>100</span>
@@ -349,8 +349,8 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
           <div className="hidden w-px self-stretch bg-card-border lg:block" />
 
           <div className="flex-1">
-            <p className="text-[13px] leading-snug text-muted">{sociStatus.note}</p>
-            <p className="mt-3 text-[11px] text-muted">
+            <p className="text-body-sm leading-snug text-muted">{sociStatus.note}</p>
+            <p className="mt-3 text-body-sm text-muted">
               Concentration is the state&apos;s share of national corporate revenue. It drives the
               escalating cost of each taking and falls only as the private economy grows or assets
               are privatized.
@@ -365,16 +365,18 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
           <div className="lg:w-72 lg:shrink-0">
             <div className={LABEL}>Investor confidence index</div>
             <div className="mt-1 flex items-end gap-2">
-              <span className="text-5xl font-bold tabular-nums text-error">{conf}</span>
-              <span className="mb-1.5 text-sm text-muted">/ 100</span>
+              <span className="text-display font-bold tabular-nums text-error">{conf}</span>
+              <span className="mb-1.5 text-body text-muted">/ 100</span>
               {trend > 0 && (
-                <span className="mb-2 ml-1 text-xs text-success">+{trend.toFixed(1)}/turn</span>
+                <span className="mb-2 ml-1 text-body-sm text-success">
+                  +{trend.toFixed(1)}/turn
+                </span>
               )}
             </div>
             <div className="mt-3">
               <Meter value={conf} baseline={baseline} />
             </div>
-            <div className="mt-1.5 flex justify-between text-[10px] text-muted">
+            <div className="mt-1.5 flex justify-between text-body-sm text-muted">
               <span>0 · expropriation fear</span>
               <span>baseline {baseline}</span>
               <span>100</span>
@@ -384,7 +386,7 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
           <div className="hidden w-px self-stretch bg-card-border lg:block" />
 
           <div className="flex-1">
-            <div className="mb-2 text-[13px] text-muted">
+            <div className="mb-2 text-body-sm text-muted">
               One decaying signal feeds three live systems:
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -393,13 +395,13 @@ export function NatRegisterTab({ vm }: { vm: NationalCorporationViewModel }) {
                   key={e.label}
                   className="rounded-lg border border-card-border bg-card-muted p-3"
                 >
-                  <div className="text-lg font-bold tabular-nums text-error">{e.value}</div>
-                  <div className="mt-0.5 text-[12px] font-semibold text-foreground">{e.label}</div>
-                  <div className="mt-1 text-[11px] leading-snug text-muted">{e.desc}</div>
+                  <div className="text-heading font-bold tabular-nums text-error">{e.value}</div>
+                  <div className="mt-0.5 text-body-sm font-semibold text-foreground">{e.label}</div>
+                  <div className="mt-1 text-body-sm leading-snug text-muted">{e.desc}</div>
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[11px] text-muted">
+            <p className="mt-3 text-body-sm text-muted">
               Confidence heals toward baseline each turn. Fair-value buyouts barely move it;
               outright seizures cut deep. That is the systemic deterrent against overusing
               nationalization.
@@ -431,8 +433,8 @@ function RegisterRowView({
         className="grid w-full grid-cols-2 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-card-elevated lg:grid-cols-12"
       >
         <div className="col-span-2 lg:col-span-3">
-          <div className="text-[13px] font-semibold text-foreground">{r.firm}</div>
-          <div className="text-[11px] text-muted">
+          <div className="text-body-sm font-semibold text-foreground">{r.firm}</div>
+          <div className="text-body-sm text-muted">
             {TAKING_KIND_LABEL[r.kind]} · {r.sectorLabel} · turn {r.turn}
           </div>
         </div>
@@ -442,13 +444,13 @@ function RegisterRowView({
         <div className="flex items-center gap-1.5 lg:col-span-2">
           {r.tierKey && <Pill className={TIER_TONE[r.tierKey]}>{r.tierLabel}</Pill>}
           {r.pathLabel && (
-            <span className="hidden text-[10px] text-muted sm:inline">{r.pathLabel}</span>
+            <span className="hidden text-body-sm text-muted sm:inline">{r.pathLabel}</span>
           )}
         </div>
-        <div className="text-right text-[13px] font-bold tabular-nums text-foreground lg:col-span-2">
+        <div className="text-right text-body-sm font-bold tabular-nums text-foreground lg:col-span-2">
           {r.compensationLocal == null ? "—" : money(r.compensationLocal, ccy)}
         </div>
-        <div className="hidden text-right text-[13px] font-bold tabular-nums text-error lg:col-span-2 lg:block">
+        <div className="hidden text-right text-body-sm font-bold tabular-nums text-error lg:col-span-2 lg:block">
           {r.debtLocal == null ? "—" : money(r.debtLocal, ccy)}
         </div>
         <div className="hidden justify-end lg:col-span-1 lg:flex">
@@ -506,16 +508,18 @@ function StandTile({
     <div className="p-3.5">
       <div className={LABEL}>{label}</div>
       <div className="mt-1 flex items-end gap-2">
-        <span className="text-2xl font-bold tabular-nums text-foreground">
+        <span className="text-heading font-bold tabular-nums text-foreground">
           {value == null ? "N/A" : value}
         </span>
         {delta != null && delta !== 0 && (
-          <span className={`mb-1 text-[11px] tabular-nums ${good ? "text-success" : "text-error"}`}>
+          <span
+            className={`mb-1 text-body-sm tabular-nums ${good ? "text-success" : "text-error"}`}
+          >
             net {delta > 0 ? "+" : ""}
             {Math.round(delta)} from takings
           </span>
         )}
-        {note && <span className="mb-1 text-[11px] text-muted">{note}</span>}
+        {note && <span className="mb-1 text-body-sm text-muted">{note}</span>}
       </div>
     </div>
   );
@@ -525,7 +529,7 @@ function DetailCell({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className={LABEL}>{label}</div>
-      <div className="mt-0.5 text-[12px] text-foreground">{value}</div>
+      <div className="mt-0.5 text-body-sm text-foreground">{value}</div>
     </div>
   );
 }

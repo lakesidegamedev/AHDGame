@@ -20,7 +20,7 @@ export function HoldingTermSelector({
   const t = useTranslations("profile.stockHoldings");
   return (
     <fieldset className="space-y-2 rounded-lg border border-card-border p-3">
-      <legend className="px-1 text-sm font-medium">{t("bucket")}</legend>
+      <legend className="px-1 text-body font-medium">{t("bucket")}</legend>
       <div className="grid grid-cols-2 gap-2">
         {(["short", "long"] as const).map((value) => (
           <button
@@ -29,16 +29,16 @@ export function HoldingTermSelector({
             aria-pressed={term === value}
             disabled={!availableHoldingShares(terms, value)}
             onClick={() => onChange(value)}
-            className={`rounded-lg border p-2 text-left text-xs disabled:opacity-50 ${term === value ? "border-primary bg-primary/10" : "border-card-border"}`}
+            className={`rounded-lg border p-2 text-left text-body-sm disabled:opacity-50 ${term === value ? "border-primary bg-primary/10" : "border-card-border"}`}
           >
             <span className="block font-medium">{t(value)}</span>
             {t("shares", { count: availableHoldingShares(terms, value) })}
           </button>
         ))}
       </div>
-      <p className="text-xs text-muted">{t(term === "short" ? "shortTax" : "longTax")}</p>
+      <p className="text-body-sm text-muted">{t(term === "short" ? "shortTax" : "longTax")}</p>
       {term === "short" && (
-        <ul className="space-y-1 text-xs text-muted">
+        <ul className="space-y-1 text-body-sm text-muted">
           {terms.shortTermLots.map((lot) => (
             <li key={lot.acquiredTurn}>
               {t("purchaseTurn", {
@@ -56,7 +56,7 @@ export function HoldingTermSelector({
 export function HoldingTermSummary({ terms, turn }: { terms: ShareHoldingTerms; turn: number }) {
   const t = useTranslations("profile.stockHoldings");
   return (
-    <div className="space-y-1 text-xs text-muted">
+    <div className="space-y-1 text-body-sm text-muted">
       {(["short", "long"] as const).map((term) => (
         <p key={term}>
           {t(term)}: {t("shares", { count: availableHoldingShares(terms, term) })}

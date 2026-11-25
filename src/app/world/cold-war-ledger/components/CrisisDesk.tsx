@@ -25,11 +25,11 @@ export function CrisisDesk({ crises }: { crises: LedgerCrisis[] }) {
         {crises.map((c) => (
           <li key={c.id} className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-body-sm font-semibold text-foreground">
+              <h3 className="text-body-lg font-semibold text-foreground">
                 {c.targetName} &middot; {c.title}
               </h3>
               <span
-                className={`font-mono text-body-xs tabular-nums ${
+                className={`font-mono text-body-sm tabular-nums ${
                   c.turnsRemaining <= 3 ? "text-warning" : "text-muted"
                 }`}
               >
@@ -37,7 +37,7 @@ export function CrisisDesk({ crises }: { crises: LedgerCrisis[] }) {
               </span>
             </div>
             <p className="mt-1 text-body-sm text-muted">{c.headline}</p>
-            <p className="mt-3 font-mono text-body-xs tabular-nums text-foreground">
+            <p className="mt-3 font-mono text-body-sm tabular-nums text-foreground">
               moves up to {c.movementCap} a turn
               <span className="text-muted"> · normally {PER_NATION_TURN_CAP}</span>
             </p>

@@ -47,8 +47,8 @@ export default function CommodityChart({
   if (history.length < 2) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6 mb-6">
-        <h2 className="text-lg font-bold text-foreground mb-4">Chart</h2>
-        <div className="text-center text-muted text-sm py-12">
+        <h2 className="text-heading font-bold text-foreground mb-4">Chart</h2>
+        <div className="text-center text-muted text-body py-12">
           Chart data will appear after a few turns have been processed.
         </div>
       </div>
@@ -63,10 +63,10 @@ export default function CommodityChart({
     <div className="rounded-xl border border-card-border bg-card p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground">
+          <h2 className="text-heading font-bold text-foreground">
             {view === "price" ? "Price over time" : "Supply & demand over time"}
           </h2>
-          {scopeLabel && <p className="text-xs text-muted mt-0.5">{scopeLabel}</p>}
+          {scopeLabel && <p className="text-body-sm text-muted mt-0.5">{scopeLabel}</p>}
         </div>
         <div className="flex items-center gap-2">
           {/* Time range selector */}
@@ -75,7 +75,7 @@ export default function CommodityChart({
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-body-sm font-medium transition-colors ${
                   timeRange === range
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted hover:text-foreground"
@@ -89,7 +89,7 @@ export default function CommodityChart({
           <div className="flex bg-card-elevated rounded-lg p-0.5 border border-card-border">
             <button
               onClick={() => setView("price")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-md text-body-sm font-medium transition-colors ${
                 view === "price"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground"
@@ -99,7 +99,7 @@ export default function CommodityChart({
             </button>
             <button
               onClick={() => setView("supply_demand")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-md text-body-sm font-medium transition-colors ${
                 view === "supply_demand"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground"
@@ -112,7 +112,7 @@ export default function CommodityChart({
       </div>
       {view === "price" ? (
         priceScale === null ? (
-          <p className="py-12 text-center text-sm text-muted">
+          <p className="py-12 text-center text-body text-muted">
             Price history is unavailable until the currency rate is known.
           </p>
         ) : (

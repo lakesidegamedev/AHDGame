@@ -41,7 +41,7 @@ export function CharacterSwitchBanner() {
   return (
     <div
       role="alert"
-      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-warning/40 bg-card px-4 py-2 text-sm text-foreground shadow-lg"
+      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-warning/40 bg-card px-4 py-2 text-body text-foreground shadow-lg"
       data-testid="character-switch-banner"
     >
       <span>{switched.name ? t("messageNamed", { name: switched.name }) : t("message")}</span>

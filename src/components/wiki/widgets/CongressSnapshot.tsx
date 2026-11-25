@@ -49,7 +49,7 @@ export function CongressSnapshot() {
   if (error || !data) {
     return (
       <div className="rounded-xl border border-card-border bg-card/40 p-6">
-        <p className="text-sm text-muted">{error || "No data available"}</p>
+        <p className="text-body text-muted">{error || "No data available"}</p>
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function CongressSnapshot() {
         <span>🏛️</span>
         <span>Current Congress</span>
       </h3>
-      <div className="space-y-2 text-sm">
+      <div className="space-y-2 text-body">
         <div>
           <span className="font-medium text-foreground">House: </span>
           <span className="text-muted">{formatCounts(data.house)}</span>
@@ -83,7 +83,7 @@ export function CongressSnapshot() {
           <span className="text-muted">{formatCounts(data.senate)}</span>
         </div>
       </div>
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-4 text-body-sm text-muted">
         Updated {minutesAgo === 0 ? "just now" : `${minutesAgo} min ago`}
       </p>
     </Link>

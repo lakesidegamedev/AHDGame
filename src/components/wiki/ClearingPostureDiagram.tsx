@@ -41,8 +41,8 @@ export function ClearingPostureDiagram() {
 
   return (
     <div className="my-6 overflow-x-auto rounded-lg border border-card-border bg-card/40 p-4">
-      <h4 className="mb-1 text-sm font-semibold text-foreground">Cheapest sellers clear first</h4>
-      <p className="mb-4 text-xs text-muted">
+      <h4 className="mb-1 text-body font-semibold text-foreground">Cheapest sellers clear first</h4>
+      <p className="mb-4 text-body-sm text-muted">
         Buyers want {DEMAND} units this turn, but three sellers each offer 100. Demand fills the
         lowest-posture sellers first, so the premium seller is left holding unsold stock.
       </p>
@@ -50,13 +50,13 @@ export function ClearingPostureDiagram() {
       <div className="space-y-3">
         {filled.map((s) => (
           <div key={s.name} className="flex items-center gap-3">
-            <span className="w-32 shrink-0 text-xs font-medium text-foreground">{s.name}</span>
-            <span className="w-16 shrink-0 text-xs text-muted">₳{s.price}</span>
+            <span className="w-32 shrink-0 text-body-sm font-medium text-foreground">{s.name}</span>
+            <span className="w-16 shrink-0 text-body-sm text-muted">₳{s.price}</span>
             <div className="relative h-6 flex-1 min-w-[160px] max-w-[280px] overflow-hidden rounded bg-card-border">
               <div className={`h-full ${s.color}`} style={{ width: `${s.pct}%` }} aria-hidden />
               {s.pct < 100 && (
                 <div
-                  className="absolute inset-y-0 flex items-center pl-1 text-[10px] font-medium text-muted"
+                  className="absolute inset-y-0 flex items-center pl-1 text-body-sm font-medium text-muted"
                   style={{ left: `${s.pct}%` }}
                 >
                   unsold
@@ -64,7 +64,7 @@ export function ClearingPostureDiagram() {
               )}
             </div>
             <span
-              className={`w-24 shrink-0 text-right text-xs font-semibold ${
+              className={`w-24 shrink-0 text-right text-body-sm font-semibold ${
                 s.pct === 100 ? "text-success" : s.pct === 0 ? "text-error" : "text-amber-500"
               }`}
             >
@@ -74,7 +74,7 @@ export function ClearingPostureDiagram() {
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-4 text-body-sm text-muted">
         <span className="font-semibold text-foreground">Your posture is the decision.</span>{" "}
         Undercutting sells you out first (thinner margin, fuller sales). Skimming for a premium
         earns more per unit but risks unsold output in a glut. In a genuine shortage everyone sells

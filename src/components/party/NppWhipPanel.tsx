@@ -405,11 +405,11 @@ export function NppWhipPanel({
       <div className="rounded-lg border border-card-border bg-card px-4 py-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               NPP Whips can be executed up to two times per bill or vote target. Each target keeps
               its own chamber-specific two-whip limit.
             </p>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Soft bill whips add advisory pressure to autonomous NPP voting. Leadership,
               government, and cabinet NPP whips continue to use the current immediate hard-whip
               resolution path.
@@ -423,7 +423,7 @@ export function NppWhipPanel({
                   key={mode}
                   type="button"
                   onClick={() => setWhipMode(mode)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  className={`rounded-md px-3 py-1.5 text-body-sm font-semibold transition-colors ${
                     active ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -448,7 +448,7 @@ export function NppWhipPanel({
               {showStateSelector && (
                 <div>
                   {noEligibleStates ? (
-                    <p className="text-sm text-muted italic">
+                    <p className="text-body text-muted italic">
                       No eligible states. State legislature whips are managed by State Chairs in
                       states with active party members.
                     </p>
@@ -457,7 +457,7 @@ export function NppWhipPanel({
                       value={selectedState}
                       onChange={(e) => setSelectedState(e.target.value)}
                       aria-label="Select state"
-                      className="w-full max-w-xs rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                      className="w-full max-w-xs rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                     >
                       <option value="">Select a state...</option>
                       {(eligibleStates ? sortByRegionLabel(eligibleStates, (s) => s.name) : []).map(
@@ -473,9 +473,11 @@ export function NppWhipPanel({
               )}
 
               {showStateSelector && !selectedState && !noEligibleStates ? (
-                <p className="text-sm text-muted italic">Select a state to view whippable bills</p>
+                <p className="text-body text-muted italic">
+                  Select a state to view whippable bills
+                </p>
               ) : bills.length === 0 ? (
-                <p className="text-sm text-muted italic">
+                <p className="text-body text-muted italic">
                   No bills to whip here. This room lists a bill only while your party holds NPP
                   (AI-controlled) legislators in this chamber and that bill is in an open vote.
                 </p>
@@ -492,7 +494,7 @@ export function NppWhipPanel({
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h4 className="font-medium text-sm">
+                          <h4 className="font-medium text-body">
                             <Link
                               href={`${legislatureUrl(effectiveCountryId)}?highlight=${item.bill.id}`}
                               className="hover:text-primary transition-colors"
@@ -501,11 +503,11 @@ export function NppWhipPanel({
                             </Link>
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted capitalize">
+                            <span className="text-body-sm text-muted capitalize">
                               {item.bill.status}
                             </span>
                             {whip.existingWhips.length > 0 && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary">
+                              <span className="text-body-sm px-2 py-0.5 rounded bg-primary/20 text-primary">
                                 {summarizeBillWhips(whip.existingWhips)} (
                                 {whip.existingWhips.length}
                                 /2)
@@ -518,14 +520,14 @@ export function NppWhipPanel({
                             onClick={() => handleBillWhip(item.bill.id, chamberKey, "for")}
                             disabled={!whip.canWhip || whippingId === item.bill.id}
                             title={!whip.canWhip ? "Maximum whip attempts reached" : undefined}
-                            className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {whippingId === item.bill.id ? "Issuing..." : "Whip FOR"}
                           </button>
                           <button
                             onClick={() => handleBillWhip(item.bill.id, chamberKey, "against")}
                             disabled={!whip.canWhip || whippingId === item.bill.id}
-                            className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {whippingId === item.bill.id ? "Issuing..." : "Whip AGAINST"}
                           </button>
@@ -540,7 +542,7 @@ export function NppWhipPanel({
         }}
         renderLeadership={() => {
           if (leadershipItems.length === 0) {
-            return <p className="text-sm text-muted italic">No active leadership elections.</p>;
+            return <p className="text-body text-muted italic">No active leadership elections.</p>;
           }
           return (
             <div className="space-y-3">
@@ -577,9 +579,9 @@ export function NppWhipPanel({
                     key={election.id}
                     className="rounded-lg border border-card-border bg-card p-4"
                   >
-                    <h4 className="font-medium text-sm mb-3">{headerLabel}</h4>
+                    <h4 className="font-medium text-body mb-3">{headerLabel}</h4>
                     {whip.existingWhips.length > 0 && (
-                      <div className="text-xs text-muted mb-2">
+                      <div className="text-body-sm text-muted mb-2">
                         Whips issued: {whip.existingWhips.length}/2
                       </div>
                     )}
@@ -590,7 +592,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "for", "pmAppointmentVote")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_for`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_for` ? "Issuing..." : "Whip FOR"}
                         </button>
@@ -599,7 +601,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "against", "pmAppointmentVote")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_against`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_against`
                             ? "Issuing..."
@@ -613,7 +615,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "for", "noConfidenceVote")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_for`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_for`
                             ? "Issuing..."
@@ -624,7 +626,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "against", "noConfidenceVote")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_against`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_against`
                             ? "Issuing..."
@@ -638,7 +640,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "for", "speakerVacateMotion")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_for`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_for`
                             ? "Issuing..."
@@ -649,7 +651,7 @@ export function NppWhipPanel({
                             handleGovernmentVoteWhip(election.id, "against", "speakerVacateMotion")
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_against`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_against`
                             ? "Issuing..."
@@ -668,7 +670,7 @@ export function NppWhipPanel({
                             )
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_for`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_for`
                             ? "Issuing..."
@@ -684,7 +686,7 @@ export function NppWhipPanel({
                             )
                           }
                           disabled={!whip.canWhip || whippingId === `cv_${election.id}_against`}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_against`
                             ? "Issuing..."
@@ -710,7 +712,7 @@ export function NppWhipPanel({
                                     ? "Already whipped for this candidate"
                                     : undefined
                               }
-                              className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {whippingId === whipKey
                                 ? "Issuing..."
@@ -730,7 +732,7 @@ export function NppWhipPanel({
         }}
         renderCabinet={() => {
           if (cabinetItems.length === 0) {
-            return <p className="text-sm text-muted italic">{t("noActiveNominations")}</p>;
+            return <p className="text-body text-muted italic">{t("noActiveNominations")}</p>;
           }
           return (
             <div className="space-y-3">
@@ -741,7 +743,7 @@ export function NppWhipPanel({
                 };
                 return (
                   <div key={item.id} className="rounded-lg border border-card-border bg-card p-4">
-                    <h4 className="font-medium text-sm mb-3">
+                    <h4 className="font-medium text-body mb-3">
                       <Link
                         href={
                           item.targetType === "scotusNomination"
@@ -754,7 +756,7 @@ export function NppWhipPanel({
                       </Link>
                     </h4>
                     {whip.existingWhips.length > 0 && (
-                      <div className="text-xs text-muted mb-2">
+                      <div className="text-body-sm text-muted mb-2">
                         Whips issued: {whip.existingWhips.length}/2
                       </div>
                     )}
@@ -762,14 +764,14 @@ export function NppWhipPanel({
                       <button
                         onClick={() => handleCabinetWhip(item, "for")}
                         disabled={!whip.canWhip || whippingId === `cab_${item.id}_for`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {whippingId === `cab_${item.id}_for` ? "Issuing..." : "Whip FOR"}
                       </button>
                       <button
                         onClick={() => handleCabinetWhip(item, "against")}
                         disabled={!whip.canWhip || whippingId === `cab_${item.id}_against`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {whippingId === `cab_${item.id}_against` ? "Issuing..." : "Whip AGAINST"}
                       </button>

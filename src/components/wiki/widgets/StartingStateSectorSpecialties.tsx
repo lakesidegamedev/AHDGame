@@ -107,8 +107,8 @@ function MiniMetric({ label, value, detail }: { label: string; value: string; de
   return (
     <div className="rounded-md border border-card-border bg-card-elevated/55 p-3">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-lg font-semibold leading-tight text-foreground">{value}</div>
-      {detail && <p className="mt-1 text-xs leading-relaxed text-muted">{detail}</p>}
+      <div className="mt-1 text-heading font-semibold leading-tight text-foreground">{value}</div>
+      {detail && <p className="mt-1 text-body-sm leading-relaxed text-muted">{detail}</p>}
     </div>
   );
 }
@@ -121,7 +121,7 @@ export function SectorSpecialtySummaryChips({ countryId }: { countryId: Starting
         .map((entry) => (
           <span
             key={entry.sector}
-            className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs text-muted"
+            className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm text-muted"
           >
             <span className="font-medium text-foreground">
               {OPERATING_SECTOR_TYPE_LABELS[entry.sector]}
@@ -151,9 +151,11 @@ export function SectorSpecialtyPanel({ countryId }: { countryId: StartingCountry
             <BarChart2 className="h-3.5 w-3.5" aria-hidden="true" />
             Starting sector specialties
           </div>
-          <h4 className="mt-1 text-lg font-semibold text-foreground">Regional margin bonuses</h4>
+          <h4 className="mt-1 text-heading font-semibold text-foreground">
+            Regional margin bonuses
+          </h4>
         </div>
-        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted">
           +{STATE_PRIMARY_SECTOR_MARGIN_BONUS}pp primary / +{STATE_SECONDARY_SECTOR_MARGIN_BONUS}pp
           secondary
         </span>
@@ -178,17 +180,17 @@ export function SectorSpecialtyPanel({ countryId }: { countryId: StartingCountry
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-medium text-foreground">{row.region.name}</div>
-              <div className="font-mono text-xs text-muted">{row.region._id}</div>
+              <div className="font-mono text-body-sm text-muted">{row.region._id}</div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded border border-card-border bg-card/45 px-3 py-2">
                 <div className="text-body-sm font-medium text-primary">
                   Primary +{STATE_PRIMARY_SECTOR_MARGIN_BONUS}pp
                 </div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
+                <div className="mt-1 text-body font-semibold text-foreground">
                   {OPERATING_SECTOR_TYPE_LABELS[row.primary]}
                 </div>
-                <div className="mt-1 text-xs text-muted">
+                <div className="mt-1 text-body-sm text-muted">
                   {formatSectorWeight(row.primaryWeight)} local sector seed share
                 </div>
               </div>
@@ -196,10 +198,10 @@ export function SectorSpecialtyPanel({ countryId }: { countryId: StartingCountry
                 <div className="text-body-sm font-medium text-muted">
                   Secondary +{STATE_SECONDARY_SECTOR_MARGIN_BONUS}pp
                 </div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
+                <div className="mt-1 text-body font-semibold text-foreground">
                   {OPERATING_SECTOR_TYPE_LABELS[row.secondary]}
                 </div>
-                <div className="mt-1 text-xs text-muted">
+                <div className="mt-1 text-body-sm text-muted">
                   {formatSectorWeight(row.secondaryWeight)} local sector seed share
                 </div>
               </div>
@@ -217,7 +219,7 @@ export function SectorSpecialtyPanel({ countryId }: { countryId: StartingCountry
             {rows.slice(featuredRows.length).map((row) => (
               <div
                 key={row.region._id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-card-border bg-card-elevated/45 px-3 py-2 text-xs"
+                className="flex flex-wrap items-center justify-between gap-2 rounded border border-card-border bg-card-elevated/45 px-3 py-2 text-body-sm"
               >
                 <span className="font-medium text-foreground">{row.region.name}</span>
                 <span className="text-muted">

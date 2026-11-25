@@ -88,7 +88,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading registration controls...</span>
+          <span className="text-body text-muted">Loading registration controls...</span>
         </div>
       </div>
     );
@@ -100,13 +100,13 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
       <section>
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold">Registration</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold">Registration</h3>
+            <p className="text-body-sm text-muted">
               Master kill-switch for all new player registration (email, Google, Discord).
             </p>
           </div>
           <span
-            className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+            className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
             style={{
               background: registration?.enabled
                 ? "rgba(34, 197, 94, 0.15)"
@@ -122,7 +122,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
             type="button"
             onClick={toggleRegistration}
             disabled={regToggling}
-            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
             style={{ background: registration?.enabled ? "var(--warning)" : "var(--success)" }}
           >
             {regToggling
@@ -133,7 +133,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
           </button>
         )}
         {!registration?.enabled && registration?.disabledBy && (
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             Closed by <span className="font-medium text-foreground">{registration.disabledBy}</span>
             {registration.disabledAt && (
               <>
@@ -154,8 +154,8 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
       <section>
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold">IP collision check</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold">IP collision check</h3>
+            <p className="text-body-sm text-muted">
               When enabled, new registrations are blocked if they reuse an existing account&apos;s
               registration IP, browser tracking cookie, or exact fingerprint. IP allowance rows only
               bypass the IP-based part of the block. Manual IP bans always apply regardless of this
@@ -163,7 +163,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
             </p>
           </div>
           <span
-            className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+            className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
             style={{
               background: collision?.enabled
                 ? "rgba(234, 179, 8, 0.15)"
@@ -179,7 +179,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
             type="button"
             onClick={toggleCollision}
             disabled={colToggling}
-            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
             style={{ background: collision?.enabled ? "var(--muted)" : "var(--warning)" }}
           >
             {colToggling
@@ -190,7 +190,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
           </button>
         )}
         {collision?.enabled && collision?.enabledBy && (
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             Enabled by <span className="font-medium text-foreground">{collision.enabledBy}</span>
             {collision.enabledAt && (
               <>
@@ -206,7 +206,7 @@ export function RegistrationControlsPanel({ canChange = true }: { canChange?: bo
       </section>
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-body-sm text-error">
           {error}
         </div>
       )}

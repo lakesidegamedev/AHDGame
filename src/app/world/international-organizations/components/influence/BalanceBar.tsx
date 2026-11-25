@@ -36,7 +36,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
       className="space-y-2 rounded-lg border border-card-border bg-card p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-body-sm font-semibold text-foreground">World standing</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">World standing</h3>
         <div className="flex gap-1">
           {(["economy", "nations"] as const).map((w) => (
             <button
@@ -44,7 +44,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
               type="button"
               onClick={() => setWeighting(w)}
               aria-pressed={weighting === w}
-              className={`px-2.5 py-1 text-body-xs ${pillClass(weighting === w)}`}
+              className={`px-2.5 py-1 text-body-sm ${pillClass(weighting === w)}`}
             >
               {w === "economy" ? "by economy" : "by nations"}
             </button>
@@ -60,7 +60,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
         size="lead"
       />
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-xs">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm">
         {view.poles.map((p) => (
           <span
             key={p.id}

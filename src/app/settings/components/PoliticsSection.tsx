@@ -79,14 +79,14 @@ export function PoliticsSection({ character, onCharacterUpdate, onReelectionChan
   return (
     <>
       <div className="flex flex-wrap justify-end gap-2 mb-4">
-        <span className="rounded-full bg-secondary/15 px-3 py-1 text-sm font-medium text-secondary">
+        <span className="rounded-full bg-secondary/15 px-3 py-1 text-body font-medium text-secondary">
           {t("politics.actionsCount", { count: character.actions })}
         </span>
-        <span className="rounded-full bg-primary/15 px-3 py-1 text-sm font-medium text-primary">
+        <span className="rounded-full bg-primary/15 px-3 py-1 text-body font-medium text-primary">
           {t("politics.voucherCount", { count: availableVouchers })}
         </span>
       </div>
-      <p className="text-sm text-muted mb-6">{t("politics.intro")}</p>
+      <p className="text-body text-muted mb-6">{t("politics.intro")}</p>
       {policyMsg && (
         <MessageBanner
           ok={policyMsg.ok}
@@ -107,8 +107,8 @@ export function PoliticsSection({ character, onCharacterUpdate, onReelectionChan
           className="mt-0.5 h-4 w-4 rounded border-card-border bg-background text-primary focus:ring-primary"
         />
         <span className="flex-1">
-          <span className="block text-sm font-medium">{t("politics.useVoucher")}</span>
-          <span className="mt-1 block text-xs text-muted">{t("politics.useVoucherHint")}</span>
+          <span className="block text-body font-medium">{t("politics.useVoucher")}</span>
+          <span className="mt-1 block text-body-sm text-muted">{t("politics.useVoucherHint")}</span>
         </span>
       </label>
       <div className="grid gap-4 md:grid-cols-2">
@@ -131,7 +131,7 @@ export function PoliticsSection({ character, onCharacterUpdate, onReelectionChan
       </div>
 
       <div className="border-t border-card-border pt-6 mt-6">
-        <h3 className="text-sm font-medium mb-3">{t("politics.electionPreferences")}</h3>
+        <h3 className="text-body-lg font-medium mb-3">{t("politics.electionPreferences")}</h3>
         <label className="flex items-start gap-3 cursor-pointer group">
           <input
             type="checkbox"
@@ -140,10 +140,10 @@ export function PoliticsSection({ character, onCharacterUpdate, onReelectionChan
             className="mt-0.5 h-4 w-4 rounded border-card-border bg-background text-primary focus:ring-primary"
           />
           <div className="flex-1">
-            <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+            <span className="text-body text-foreground group-hover:text-primary transition-colors">
               {t("politics.autoReelection")}
             </span>
-            <p className="mt-0.5 text-xs text-muted">{t("politics.autoReelectionHint")}</p>
+            <p className="mt-0.5 text-body-sm text-muted">{t("politics.autoReelectionHint")}</p>
           </div>
         </label>
       </div>

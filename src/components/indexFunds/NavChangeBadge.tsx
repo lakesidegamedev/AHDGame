@@ -2,13 +2,13 @@
 
 export function NavChangeBadge({ value }: { value: number | null }) {
   if (value === null || !Number.isFinite(value)) {
-    return <span className="text-xs text-muted">—</span>;
+    return <span className="text-body-sm text-muted">—</span>;
   }
   const positive = value > 0;
   const negative = value < 0;
   return (
     <div
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-body-sm font-bold ${
         positive
           ? "bg-success/10 text-success"
           : negative

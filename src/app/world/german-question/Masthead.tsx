@@ -39,7 +39,7 @@ function useCountdown(nextTurnAt: string | null): string | null {
 function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div>
-      <div className="font-mono text-body-xs font-semibold tracking-widest text-muted">{label}</div>
+      <div className="font-mono text-body-sm font-semibold tracking-widest text-muted">{label}</div>
       <div className={`text-display font-bold leading-tight ${tone}`}>{value}</div>
     </div>
   );
@@ -53,10 +53,10 @@ export function Masthead({ view }: { view: DossierView }) {
   return (
     <div className="overflow-hidden rounded-lg border border-card-border bg-background shadow-panel">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-card-border bg-card-muted px-5 py-2">
-        <span className="font-mono text-body-xs font-semibold tracking-widest text-gold">
+        <span className="font-mono text-body-sm font-semibold tracking-widest text-gold">
           ◆ FLASH · FOUR-POWER MATTER — ALL DELEGATIONS
         </span>
-        <span className="font-mono text-body-xs tracking-wider text-gold-muted">
+        <span className="font-mono text-body-sm tracking-wider text-gold-muted">
           OPEN LOG · TURN {view.turn}
           {countdown ? ` · TICK IN ${countdown}` : ""}
         </span>
@@ -64,7 +64,7 @@ export function Masthead({ view }: { view: DossierView }) {
 
       <div className="flex flex-wrap">
         <div className="min-w-[320px] flex-1 px-6 py-6">
-          <p className="mb-1.5 font-mono text-body-xs font-semibold tracking-widest text-gold-muted">
+          <p className="mb-1.5 font-mono text-body-sm font-semibold tracking-widest text-gold-muted">
             STANDING CRISIS · NO EXPIRY · GAME-WIDE
           </p>
           <h1 className="text-display font-bold leading-none text-foreground">
@@ -88,7 +88,7 @@ export function Masthead({ view }: { view: DossierView }) {
             <Stat label="LADDER HEAT" value={`${view.heat}/5`} tone="text-warning" />
             <div className="hidden w-px self-stretch bg-card-border sm:block" />
             <div>
-              <div className="font-mono text-body-xs font-semibold tracking-widest text-muted">
+              <div className="font-mono text-body-sm font-semibold tracking-widest text-muted">
                 STANDING
               </div>
               <div
@@ -104,7 +104,7 @@ export function Masthead({ view }: { view: DossierView }) {
 
         <div className="flex w-full shrink-0 flex-col gap-3 border-card-border bg-card-muted px-5 py-5 lg:w-[336px] lg:border-l">
           <div>
-            <div className="font-mono text-body-xs font-bold tracking-wider text-muted">
+            <div className="font-mono text-body-sm font-bold tracking-wider text-muted">
               BONN&apos;S OWN DRIFT · LAST TICK
             </div>
             <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
@@ -112,12 +112,12 @@ export function Masthead({ view }: { view: DossierView }) {
                 {view.drift.last >= 0 ? "+" : ""}
                 {view.drift.last.toFixed(1)}
               </span>
-              <span className="font-mono text-body-xs text-muted">
+              <span className="font-mono text-body-sm text-muted">
                 toward {view.drift.last >= 0 ? "reunification" : "NATO"} ·{" "}
                 {view.drift.revealed ? view.drift.band : "band undisclosed"}
               </span>
             </div>
-            <div className="mt-1.5 font-mono text-body-xs leading-relaxed text-muted">
+            <div className="mt-1.5 font-mono text-body-sm leading-relaxed text-muted">
               {view.drift.history.length > 0
                 ? `last ${view.drift.history.length} ticks ${view.drift.history
                     .map((d) => `${d >= 0 ? "+" : ""}${d.toFixed(1)}`)
@@ -129,13 +129,13 @@ export function Masthead({ view }: { view: DossierView }) {
           <div className="h-px bg-card-border" />
 
           <div>
-            <div className="font-mono text-body-xs font-bold tracking-wider text-muted">
+            <div className="font-mono text-body-sm font-bold tracking-wider text-muted">
               NEXT TICK
             </div>
-            <div className="mt-1.5 text-heading-lg font-bold leading-none text-foreground">
+            <div className="mt-1.5 text-heading font-bold leading-none text-foreground">
               {countdown ?? "—"}
             </div>
-            <div className="mt-1 font-mono text-body-xs text-muted">
+            <div className="mt-1 font-mono text-body-sm text-muted">
               turn {view.turn} · DEFCON {view.defcon}
             </div>
           </div>
@@ -143,7 +143,7 @@ export function Masthead({ view }: { view: DossierView }) {
           <div className="h-px bg-card-border" />
 
           <div>
-            <div className="font-mono text-body-xs font-bold tracking-wider text-muted">
+            <div className="font-mono text-body-sm font-bold tracking-wider text-muted">
               {seat ? `${seat.name} · ON HAND` : "NO DELEGATION · ON HAND"}
             </div>
             <div className="mt-1.5 flex flex-col gap-1 font-mono text-body-sm font-semibold text-foreground">
@@ -171,7 +171,7 @@ export function Masthead({ view }: { view: DossierView }) {
 
       <SplitBar eastPct={view.eastPct} height="lg" thresholds />
 
-      <div className="flex flex-wrap justify-between gap-2 bg-card-muted px-5 pb-2.5 pt-1.5 font-mono text-body-xs text-muted">
+      <div className="flex flex-wrap justify-between gap-2 bg-card-muted px-5 pb-2.5 pt-1.5 font-mono text-body-sm text-muted">
         <span>15% · INDEPENDENCE LOCKED</span>
         <span className="hidden sm:inline">
           NO CLOCK — RESOLVES WHEN A THRESHOLD BREAKS, OR ON WAR

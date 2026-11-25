@@ -69,7 +69,7 @@ function Sparkline({ bars }: { bars: SparklineBarVM[] }) {
           paddingTop: 14,
           borderTop: `1px solid ${BLEND.hairlineStrong}`,
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
           color: BLEND.mutedDim,
         }}
       >
@@ -116,7 +116,7 @@ function Sparkline({ bars }: { bars: SparklineBarVM[] }) {
         style={{
           marginTop: 7,
           fontFamily: FONT.mono,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: ".1em",
           color: BLEND.mutedDimmer,
         }}
@@ -159,7 +159,7 @@ function ContributeBlock({
             padding: "9px 11px",
             font: "inherit",
             fontFamily: FONT.mono,
-            fontSize: 13,
+            fontSize: 12,
             color: BLEND.ink,
           }}
         />
@@ -172,7 +172,7 @@ function ContributeBlock({
             background: "transparent",
             padding: "9px 16px",
             fontFamily: FONT.mono,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: ".08em",
             fontWeight: 700,
             color: busy ? BLEND.muted : BLEND.ink,
@@ -182,7 +182,7 @@ function ContributeBlock({
           {busy ? "SENDING" : "SEND"}
         </button>
       </div>
-      <div style={{ marginTop: 7, fontFamily: FONT.sans, fontSize: 13, color: BLEND.mutedDimmer }}>
+      <div style={{ marginTop: 7, fontFamily: FONT.sans, fontSize: 12, color: BLEND.mutedDimmer }}>
         {balanceLabel}
       </div>
     </div>
@@ -270,10 +270,10 @@ export function BlendMoneySection({
           { label: "Actions spent", value: String(money.cumulative.actionsSpent) },
         ].map((c) => (
           <div key={c.label}>
-            <div style={{ fontFamily: FONT.sans, fontSize: 13, color: BLEND.mutedDim }}>
+            <div style={{ fontFamily: FONT.sans, fontSize: 12, color: BLEND.mutedDim }}>
               {c.label}
             </div>
-            <div style={{ marginTop: 3, fontFamily: FONT.mono, fontSize: 15 }}>{c.value}</div>
+            <div style={{ marginTop: 3, fontFamily: FONT.mono, fontSize: 14 }}>{c.value}</div>
           </div>
         ))}
       </div>
@@ -320,7 +320,7 @@ export function BlendMoneySection({
               style={{
                 marginTop: 10,
                 fontFamily: FONT.sans,
-                fontSize: 13,
+                fontSize: 12,
                 color: BLEND.negative,
               }}
             >

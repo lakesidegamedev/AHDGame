@@ -39,7 +39,7 @@ export function EndorsementBadges({ endorsements }: { endorsements: EndorsementC
             {label}
           </>
         );
-        const cls = `flex items-center gap-0.5 text-[10px] transition-colors ${tone}`;
+        const cls = `flex items-center gap-0.5 text-body-sm transition-colors ${tone}`;
         return href ? (
           <Link key={`${label}-${i}`} href={href} className={cls} title={`Endorsed by ${label}`}>
             {inner}

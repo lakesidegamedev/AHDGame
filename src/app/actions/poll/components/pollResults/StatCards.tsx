@@ -70,7 +70,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
             </Tooltip>
           </dt>
           <dd className="mt-1">
-            <div className="text-heading-lg font-semibold tabular-nums">
+            <div className="text-heading font-semibold tabular-nums">
               {formatNum(totalEstimatedVoters)}
             </div>
             <div className="mt-1 text-body-sm text-muted">
@@ -87,7 +87,7 @@ export function StatCards({ poll }: { poll: StoredPoll }) {
             </Tooltip>
           </dt>
           <dd className="mt-1">
-            <div className="text-heading-lg font-semibold tabular-nums text-secondary">
+            <div className="text-heading font-semibold tabular-nums text-secondary">
               {formatNum(totalPotentialVoters)}
             </div>
             <div className="mt-1 text-body-sm text-muted">

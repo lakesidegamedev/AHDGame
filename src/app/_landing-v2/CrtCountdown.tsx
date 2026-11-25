@@ -95,12 +95,10 @@ function pad(value: number) {
 function Cell({ value, label }: { value: number; label: string }) {
   return (
     <span className="flex flex-col items-center gap-0.5">
-      <span className="ahd-crt-digits font-mono text-2xl font-bold leading-none tabular-nums sm:text-3xl">
+      <span className="ahd-crt-digits font-mono text-heading font-bold leading-none tabular-nums sm:text-display">
         {pad(value)}
       </span>
-      <span className="font-mono text-[0.55rem] uppercase tracking-[0.2em] opacity-70">
-        {label}
-      </span>
+      <span className="font-mono text-body-sm uppercase tracking-[0.2em] opacity-70">{label}</span>
     </span>
   );
 }
@@ -124,16 +122,22 @@ export function CrtCountdown({ remaining }: { remaining: Remaining | null }) {
         className="ahd-crt-panel inline-flex flex-col gap-2 rounded-lg px-4 py-3"
         data-glitch={remaining.glitch}
       >
-        <span className="ahd-crt-flicker font-mono text-[0.6rem] uppercase tracking-[0.3em]">
+        <span className="ahd-crt-flicker font-mono text-body-sm uppercase tracking-[0.3em]">
           {t("countdown.label")}
         </span>
         <div className="flex items-end gap-3" aria-hidden="true">
           <Cell value={remaining.days} label={t("countdown.days")} />
-          <span className="ahd-crt-digits pb-3 font-mono text-xl leading-none opacity-60">:</span>
+          <span className="ahd-crt-digits pb-3 font-mono text-heading leading-none opacity-60">
+            :
+          </span>
           <Cell value={remaining.hours} label={t("countdown.hrs")} />
-          <span className="ahd-crt-digits pb-3 font-mono text-xl leading-none opacity-60">:</span>
+          <span className="ahd-crt-digits pb-3 font-mono text-heading leading-none opacity-60">
+            :
+          </span>
           <Cell value={remaining.minutes} label={t("countdown.min")} />
-          <span className="ahd-crt-digits pb-3 font-mono text-xl leading-none opacity-60">:</span>
+          <span className="ahd-crt-digits pb-3 font-mono text-heading leading-none opacity-60">
+            :
+          </span>
           <Cell value={remaining.seconds} label={t("countdown.sec")} />
         </div>
         {/* Screen readers get a single settled string, polite, so the per-second

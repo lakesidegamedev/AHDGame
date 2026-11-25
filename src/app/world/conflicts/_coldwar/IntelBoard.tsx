@@ -184,7 +184,7 @@ export function IntelBoard({ side }: { side: Side }) {
                 margin: 0,
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 32,
+                fontSize: 30,
                 lineHeight: 1,
                 color: "#f3f1ea",
               }}
@@ -195,7 +195,7 @@ export function IntelBoard({ side }: { side: Side }) {
               style={{
                 margin: "8px 0 0",
                 maxWidth: 580,
-                fontSize: 13,
+                fontSize: 12,
                 lineHeight: 1.5,
                 color: "#9595a4",
               }}
@@ -227,7 +227,7 @@ export function IntelBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: agentColor,
                 }}
@@ -261,7 +261,7 @@ export function IntelBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: standingColor,
                 }}
@@ -355,7 +355,7 @@ export function IntelBoard({ side }: { side: Side }) {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <span style={{ fontSize: 17, filter: r ? "none" : "grayscale(1) opacity(.6)" }}>
+                    <span style={{ fontSize: 16, filter: r ? "none" : "grayscale(1) opacity(.6)" }}>
                       {nn.flag}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -368,7 +368,7 @@ export function IntelBoard({ side }: { side: Side }) {
                         {statusLabel}
                       </div>
                     </div>
-                    <span style={{ fontSize: 13 }}>{icon}</span>
+                    <span style={{ fontSize: 12 }}>{icon}</span>
                   </div>
                 </div>
               );
@@ -470,7 +470,7 @@ function Dossier({
           borderBottom: `1px solid ${cfg.dossierBorder}`,
         }}
       >
-        <span style={{ fontSize: 28, filter: revealed ? "none" : "grayscale(1) opacity(.7)" }}>
+        <span style={{ fontSize: 30, filter: revealed ? "none" : "grayscale(1) opacity(.7)" }}>
           {n.flag}
         </span>
         <div style={{ flex: 1 }}>
@@ -479,7 +479,7 @@ function Dossier({
               margin: 0,
               fontFamily: headingFont,
               fontWeight: 700,
-              fontSize: 22,
+              fontSize: 20,
               color: "#f3f1ea",
             }}
           >

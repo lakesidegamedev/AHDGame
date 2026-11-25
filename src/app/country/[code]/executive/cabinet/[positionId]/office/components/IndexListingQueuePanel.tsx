@@ -61,7 +61,7 @@ export function IndexListingQueuePanel({ canAct }: { canAct: boolean }) {
 
   return (
     <DenseSection title="Index listing requests">
-      <div className="space-y-2 py-1 text-xs">
+      <div className="space-y-2 py-1 text-body-sm">
         {data?.seat && (
           <>
             <p className="font-medium text-foreground">
@@ -81,7 +81,7 @@ export function IndexListingQueuePanel({ canAct }: { canAct: boolean }) {
                         >
                           {petition.corporationName}
                         </Link>
-                        <span className="ml-2 text-xs text-muted">
+                        <span className="ml-2 text-body-sm text-muted">
                           filed turn {petition.filedAtTurn}, decide by {petition.deadlineAtTurn},
                           contribution{" "}
                           <AnchorAmount>

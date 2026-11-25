@@ -41,15 +41,15 @@ export function MyRaceBody({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-semibold text-foreground">
+        <span className="truncate text-body font-semibold text-foreground">
           {data.region ? `${data.office} · ${data.region}` : data.office}
         </span>
-        {timing && <span className="shrink-0 text-xs text-muted">{timing}</span>}
+        {timing && <span className="shrink-0 text-body-sm text-muted">{timing}</span>}
       </div>
       {data.myPct === null ? (
         <Empty>{t("noVotes")}</Empty>
       ) : (
-        <div className="space-y-2 text-xs">
+        <div className="space-y-2 text-body-sm">
           <ShareRow
             label={t("you")}
             pct={data.myPct}

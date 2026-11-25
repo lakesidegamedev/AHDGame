@@ -94,7 +94,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
           ? "bg-zinc-500/20 text-zinc-400"
           : "bg-green-500/20 text-green-400";
     return (
-      <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${cls}`}>
+      <span className={`text-body-sm font-semibold uppercase px-1.5 py-0.5 rounded ${cls}`}>
         {s}
       </span>
     );
@@ -107,7 +107,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
           <button
             key={s}
             onClick={() => dispatch({ type: "SET_STATUS_FILTER", filter: s })}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-lg text-body-sm font-medium transition-colors ${
               statusFilter === s
                 ? "bg-primary/20 text-primary border border-primary/30"
                 : "text-muted hover:text-foreground"
@@ -118,9 +118,9 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
         ))}
       </div>
 
-      {loading && <p className="text-sm text-muted py-4 text-center">Loading reports…</p>}
+      {loading && <p className="text-body text-muted py-4 text-center">Loading reports…</p>}
       {!loading && reports.length === 0 && (
-        <p className="text-sm text-muted py-4 text-center">No reports found.</p>
+        <p className="text-body text-muted py-4 text-center">No reports found.</p>
       )}
 
       {!loading &&
@@ -140,7 +140,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2 flex-wrap">
                       {statusBadge(report.status)}
-                      <span className="text-xs text-muted">
+                      <span className="text-body-sm text-muted">
                         <LocalTime
                           value={report.createdAt}
                           options={{
@@ -155,10 +155,10 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
                     </div>
                     {report.mail ? (
                       <>
-                        <p className="text-sm font-medium text-foreground truncate">
+                        <p className="text-body font-medium text-foreground truncate">
                           {report.mail.subject}
                         </p>
-                        <p className="text-xs text-muted">
+                        <p className="text-body-sm text-muted">
                           From{" "}
                           <Link
                             href={`/character/${report.mail.fromCharacterSequentialId}`}
@@ -178,7 +178,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
                         </p>
                       </>
                     ) : (
-                      <p className="text-xs text-muted italic">Mail deleted</p>
+                      <p className="text-body-sm text-muted italic">Mail deleted</p>
                     )}
                   </div>
                 </button>
@@ -187,7 +187,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
                   href={viewHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+                  className="shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/15"
                 >
                   View conversation ↗
                 </Link>
@@ -196,23 +196,23 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
               {isExpanded && (
                 <div className="border-t border-card-border/50 px-4 pb-4 pt-4 space-y-3">
                   {report.adminNote && (
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       <span className="font-semibold">Staff note:</span> {report.adminNote}
                     </p>
                   )}
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Open the conversation page to read the full thread and take moderation action.
                   </p>
                   <Link
                     href={viewHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex text-sm font-medium text-primary hover:underline"
+                    className="inline-flex text-body font-medium text-primary hover:underline"
                   >
                     Open reported conversation ↗
                   </Link>
                   {backHref && (
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Or return to{" "}
                       <Link href={backHref} className="text-primary hover:underline">
                         mail reports list

@@ -56,7 +56,7 @@ export function CeoDrawCapPanel({
   return (
     <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
       <SectionLabel>CEO treasury-draw cap</SectionLabel>
-      <p className="mt-1 text-body-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         The most the CEO may draw from the people&apos;s budget per turn. Set to 0 to freeze draws.
         Current: {natMoney(currentCap, currency)}.
       </p>

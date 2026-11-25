@@ -11,7 +11,7 @@ import { GroupSupplyForecast } from "./GroupSupplyForecast";
 import { GroupParticipation } from "./GroupParticipation";
 import type { GroupManagementView, useGroupManagement } from "./useGroupManagement";
 const button =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-info";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-info";
 export function GroupSupplyChain({
   data,
   busy,
@@ -37,12 +37,12 @@ export function GroupSupplyChain({
       {data.supplyAgreementsEnabled && (
         <section className="rounded-xl border border-card-border bg-card p-5 space-y-3">
           <h3 className="font-semibold">{t("agreementsTitle")}</h3>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             {t("agreementsNote", { percent: Math.round(SUPPLY_AGREEMENT_PRICE_BAND * 100) })}
           </p>
           {agreementMember ? (
             <>
-              <label className="block text-sm">
+              <label className="block text-body">
                 {t("agreementsCorporation")}
                 <select
                   className="block mt-2 rounded border border-card-border bg-card p-2"
@@ -59,7 +59,7 @@ export function GroupSupplyChain({
               <SupplyAgreementsSection key={agreementMember.id} corpId={agreementMember.id} />
             </>
           ) : (
-            <p className="text-sm text-muted">{t("agreementsCeoOnly")}</p>
+            <p className="text-body text-muted">{t("agreementsCeoOnly")}</p>
           )}
         </section>
       )}
@@ -68,8 +68,8 @@ export function GroupSupplyChain({
   if (!data.supplyEngineEnabled)
     return (
       <div className="space-y-5">
-        <h2 className="text-xl font-semibold">{t("supplyTitle")}</h2>
-        <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm">
+        <h2 className="text-heading font-semibold">{t("supplyTitle")}</h2>
+        <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-body">
           <h3 className="font-semibold">
             {t(data.internalSupplyEnabled ? "activeSupply.title" : "activeSupply.unavailable")}
           </h3>
@@ -77,7 +77,7 @@ export function GroupSupplyChain({
         </aside>
         {agreementMember ? (
           <section className="rounded-xl border border-card-border bg-card p-5 space-y-4">
-            <label className="block text-sm">
+            <label className="block text-body">
               {t("activeSupply.corporation")}
               <select
                 aria-label={t("activeSupply.corporation")}
@@ -95,18 +95,18 @@ export function GroupSupplyChain({
             <InternalSupplyPanel key={agreementMember.id} corpId={agreementMember.id} />
           </section>
         ) : (
-          <p className="text-sm text-muted">{t("ownCeoOnly")}</p>
+          <p className="text-body text-muted">{t("ownCeoOnly")}</p>
         )}
-        <p className="text-sm text-muted">{t("activeSupply.limits")}</p>
+        <p className="text-body text-muted">{t("activeSupply.limits")}</p>
         {agreements}
       </div>
     );
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold">{t("supplyTitle")}</h2>
-        <p className="text-sm text-muted">{t("marketPrice")}</p>
-        <p className="text-xs text-muted">
+        <h2 className="text-heading font-semibold">{t("supplyTitle")}</h2>
+        <p className="text-body text-muted">{t("marketPrice")}</p>
+        <p className="text-body-sm text-muted">
           {t("supplyUI.currentPolicy", { policy: t("policies." + data.settings.supplyPolicy) })}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -126,7 +126,7 @@ export function GroupSupplyChain({
               />
               <span>
                 <span className="block">{t("policies." + option)}</span>
-                <span className="mt-1 block text-xs font-normal text-muted">
+                <span className="mt-1 block text-body-sm font-normal text-muted">
                   {t("supplyUI.description." + option)}
                 </span>
               </span>
@@ -136,7 +136,7 @@ export function GroupSupplyChain({
       </div>
       {changed && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gold/25 bg-gold/5 p-4">
-          <p className="flex-1 text-sm">{t("supplyUI.previewNote")}</p>
+          <p className="flex-1 text-body">{t("supplyUI.previewNote")}</p>
           <button
             className={button}
             disabled={busy || !data.canManage}
@@ -152,14 +152,14 @@ export function GroupSupplyChain({
         </div>
       )}
       {!data.supplyEngineEnabled && (
-        <p className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm text-muted">
+        <p className="rounded-lg border border-info/25 bg-info/5 p-4 text-body text-muted">
           {t("enginePending")}
         </p>
       )}
       {policy === "members" && data.settings.supplyPolicy === "members" && (
         <>
           <section className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-            <label className="block text-sm">
+            <label className="block text-body">
               {t("chainDiscount")}
               <select
                 className="block mt-2 rounded border border-card-border bg-card p-2"
@@ -190,11 +190,11 @@ export function GroupSupplyChain({
                   ))}
               </select>
             </label>
-            <p className="text-xs text-muted">{t("chainDiscountNote")}</p>
+            <p className="text-body-sm text-muted">{t("chainDiscountNote")}</p>
           </section>
           <div>
             <h3 className="font-semibold">{t("participation")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("supplyUI.participationHelp")}</p>
+            <p className="mt-1 text-body text-muted">{t("supplyUI.participationHelp")}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {data.members
@@ -211,20 +211,20 @@ export function GroupSupplyChain({
           </div>
         </>
       )}
-      <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm">
+      <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-body">
         <h3 className="font-semibold">{t("supplyUI.guardrails")}</h3>
         <p className="mt-1 text-muted">{t("supplySafeguards")}</p>
       </aside>
       {policy === "members" && data.settings.supplyPolicy !== "members" && (
-        <p className="text-sm text-muted">{t("supplyUI.applyFirst")}</p>
+        <p className="text-body text-muted">{t("supplyUI.applyFirst")}</p>
       )}
       <GroupSupplyForecast data={data} policy={policy} />
       <GroupSupplyConnections data={data} />
-      <p className="text-sm text-muted">{t("supplyUI.noAutomaticPlayerSupply")}</p>
+      <p className="text-body text-muted">{t("supplyUI.noAutomaticPlayerSupply")}</p>
       <section className="rounded-xl border border-card-border bg-card p-5">
         <h3 className="font-semibold">{t("supplyUI.assumptions")}</h3>
-        <p className="mt-2 text-sm text-muted">{t("forecastAssumptions")}</p>
-        <p className="mt-2 text-xs text-muted">{t("supplyUI.noScenario")}</p>
+        <p className="mt-2 text-body text-muted">{t("forecastAssumptions")}</p>
+        <p className="mt-2 text-body-sm text-muted">{t("supplyUI.noScenario")}</p>
       </section>
       {agreements}
     </div>

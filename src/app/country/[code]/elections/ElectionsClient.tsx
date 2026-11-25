@@ -410,8 +410,8 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
             {effectiveView === "map" && (
               <div className="rounded-xl border border-card-border bg-card p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-foreground">Election map</h2>
-                  <span className="text-xs text-muted">
+                  <h2 className="text-body font-semibold text-foreground">Election map</h2>
+                  <span className="text-body-sm text-muted">
                     Click a {regionLabel.toLowerCase()} to see its races
                   </span>
                 </div>
@@ -460,7 +460,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
             <div className="pt-2">
               <Link
                 href={`/country/${code.toLowerCase()}`}
-                className="text-sm text-muted transition-colors hover:text-foreground"
+                className="text-body text-muted transition-colors hover:text-foreground"
               >
                 &larr; Back to {countryName}
               </Link>

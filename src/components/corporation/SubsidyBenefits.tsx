@@ -112,7 +112,9 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
   }
 
   if (applicableSubsidies.length === 0) {
-    return <p className="py-1 text-xs text-muted">No active subsidies benefit this corporation.</p>;
+    return (
+      <p className="py-1 text-body-sm text-muted">No active subsidies benefit this corporation.</p>
+    );
   }
 
   return (
@@ -120,7 +122,7 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
       <tbody>
         {applicableSubsidies.map(({ s, covered }) => (
           <tr key={s.id}>
-            <td className="border-b border-card-border/60 py-1.5 pr-2 text-xs text-muted">
+            <td className="border-b border-card-border/60 py-1.5 pr-2 text-body-sm text-muted">
               {[
                 getCountryClientConfig(s.countryId as CountryId).name,
                 s.scope === "state" && s.stateId ? s.stateId : null,
@@ -135,7 +137,7 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
               {s.targetStrategyId ? ` (${s.targetStrategyId})` : ""}
               {s.domesticOnly ? ", domestic only" : ""}
             </td>
-            <td className="whitespace-nowrap border-b border-card-border/60 py-1.5 text-right font-mono text-[13px] text-success">
+            <td className="whitespace-nowrap border-b border-card-border/60 py-1.5 text-right font-mono text-body-sm text-success">
               +7.5% margin on {covered.length} of {sectors.length}{" "}
               {sectors.length === 1 ? "sector" : "sectors"}
             </td>

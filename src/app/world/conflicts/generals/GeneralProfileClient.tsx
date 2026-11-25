@@ -140,7 +140,7 @@ export function GeneralProfileClient({
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: headingFont,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: 700,
                 color: MIL_COLOR.gold,
               }}
@@ -152,7 +152,7 @@ export function GeneralProfileClient({
                 style={{
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 22,
+                  fontSize: 20,
                   color: MIL_COLOR.textStrong,
                   lineHeight: 1,
                 }}
@@ -241,7 +241,7 @@ export function GeneralProfileClient({
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: headingFont,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: 700,
                 color: spec.accent,
               }}
@@ -253,7 +253,7 @@ export function GeneralProfileClient({
                 style={{
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 22,
+                  fontSize: 20,
                   color: MIL_COLOR.textStrong,
                   lineHeight: 1,
                 }}
@@ -311,7 +311,7 @@ export function GeneralProfileClient({
                 <div
                   style={{
                     fontFamily: headingFont,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: 700,
                     marginTop: 2,
                     color: s.c,
@@ -426,7 +426,7 @@ export function GeneralProfileClient({
                   color: active ? "#fff" : MIL_COLOR.textMuted,
                   padding: "8px 12px 12px",
                   fontFamily: MIL_FONT.sans,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -454,7 +454,7 @@ export function GeneralProfileClient({
                               marginBottom: 3,
                             }}
                           >
-                            <span style={{ fontSize: 11.5, color: MIL_COLOR.textMuted }}>
+                            <span style={{ fontSize: 12, color: MIL_COLOR.textMuted }}>
                               {m.label}
                             </span>
                             <span

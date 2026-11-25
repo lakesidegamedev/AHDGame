@@ -83,8 +83,8 @@ export function NatMandatesTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-xl border border-card-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-heading-sm font-semibold text-foreground">Public-service mandates</h2>
-          <p className="mt-1 text-body-xs text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Public-service mandates</h2>
+          <p className="mt-1 text-body-sm text-muted">
             Mandates trade operating margin for public value. Price control lowers consumer prices
             and lifts the mapped state metric ({Math.abs(SOE_PRICE_CONTROL_PENALTY)} pts margin,{" "}
             {SOE_PRICE_CONTROL_BONUS_MULTIPLIER}× value); an employment guarantee sets a worker
@@ -93,7 +93,7 @@ export function NatMandatesTab({
           </p>
         </div>
         <span
-          className={`shrink-0 self-start whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-xs font-medium ${
+          className={`shrink-0 self-start whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-sm font-medium ${
             canEdit
               ? "border-gold/40 bg-gold/10 text-gold"
               : "border-card-border bg-card-muted text-muted"
@@ -126,11 +126,11 @@ export function NatMandatesTab({
                       <span className="text-body-sm font-semibold text-foreground">
                         {OPERATING_SECTOR_TYPE_LABELS[m.sectorType]}
                       </span>
-                      <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-[10px] font-medium text-muted">
+                      <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-body-sm font-medium text-muted">
                         {m.stateName}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-[11px] text-muted">
+                    <div className="mt-0.5 text-body-sm text-muted">
                       maps to{" "}
                       <span className="font-mono text-gold/80">
                         {m.mappedMetrics.join(" · ") || "—"}
@@ -242,8 +242,8 @@ function PostureToggle({
   return (
     <label className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
       <div className="text-right">
-        <div className="whitespace-nowrap text-[11px] font-medium text-foreground">{label}</div>
-        <div className="text-[10px] text-muted">{hint}</div>
+        <div className="whitespace-nowrap text-body-sm font-medium text-foreground">{label}</div>
+        <div className="text-body-sm text-muted">{hint}</div>
       </div>
       <button
         type="button"

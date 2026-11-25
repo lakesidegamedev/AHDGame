@@ -31,13 +31,13 @@ export function VoteShareCalculator() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       {/* Title */}
-      <h3 className="text-xl font-bold text-foreground mb-6">Vote share calculator</h3>
+      <h3 className="text-body-lg font-bold text-foreground mb-6">Vote share calculator</h3>
 
       {/* Input Sliders */}
       <div className="space-y-6 mb-8">
         {/* Your Influence */}
         <div className="space-y-2">
-          <label htmlFor="influence-slider" className="block text-sm font-medium text-foreground">
+          <label htmlFor="influence-slider" className="block text-body font-medium text-foreground">
             Your influence: <span className="text-muted">{influence}</span>
           </label>
           <Slider
@@ -55,7 +55,7 @@ export function VoteShareCalculator() {
         <div className="space-y-2">
           <label
             htmlFor="favorability-slider"
-            className="block text-sm font-medium text-foreground"
+            className="block text-body font-medium text-foreground"
           >
             Your favorability: <span className="text-muted">{favorability}</span>
           </label>
@@ -72,7 +72,7 @@ export function VoteShareCalculator() {
 
         {/* Your Ad Spend */}
         <div className="space-y-2">
-          <label htmlFor="adspend-slider" className="block text-sm font-medium text-foreground">
+          <label htmlFor="adspend-slider" className="block text-body font-medium text-foreground">
             Your Ad Spend ($M): <span className="text-muted">{adSpend}</span>
           </label>
           <Slider
@@ -88,7 +88,7 @@ export function VoteShareCalculator() {
 
         {/* Opponent Influence */}
         <div className="space-y-2">
-          <label htmlFor="opponent-slider" className="block text-sm font-medium text-foreground">
+          <label htmlFor="opponent-slider" className="block text-body font-medium text-foreground">
             Opponent influence: <span className="text-muted">{opponentInfluence}</span>
           </label>
           <Slider
@@ -106,14 +106,16 @@ export function VoteShareCalculator() {
       {/* Result Display */}
       <div className="bg-muted/30 rounded-lg p-6 mb-4 text-center">
         <div className="mb-2">
-          <span className="text-sm font-medium text-muted">Estimated vote share</span>
+          <span className="text-body font-medium text-muted">Estimated vote share</span>
         </div>
-        <div className={`text-5xl font-bold mb-2 ${getColorClass()}`}>{voteShare.toFixed(1)}%</div>
-        <div className={`text-lg font-semibold ${getColorClass()}`}>{getStatusText()}</div>
+        <div className={`text-display font-bold mb-2 ${getColorClass()}`}>
+          {voteShare.toFixed(1)}%
+        </div>
+        <div className={`text-heading font-semibold ${getColorClass()}`}>{getStatusText()}</div>
       </div>
 
       {/* Disclaimer */}
-      <div className="text-sm text-muted italic">
+      <div className="text-body text-muted italic">
         This is a simplified estimation. Actual elections involve many more factors.
       </div>
     </div>

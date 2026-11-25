@@ -21,9 +21,9 @@ export default function FundedBuildDemand({
   const fullMix = fullMixBuildRoom(rows);
   return (
     <section className="rounded-lg border border-border p-3" aria-label={t("title")}>
-      <h3 className="text-body-sm font-semibold">{t("title")}</h3>
+      <h3 className="text-body-lg font-semibold">{t("title")}</h3>
       <div className="overflow-x-auto">
-        <table className="mt-2 w-full table-fixed text-left text-body-xs sm:table-auto">
+        <table className="mt-2 w-full table-fixed text-left text-body-sm sm:table-auto">
           <caption className="sr-only">{t("caption")}</caption>
           <thead>
             <tr className="align-bottom text-muted">
@@ -73,13 +73,13 @@ export default function FundedBuildDemand({
         </table>
       </div>
       {sized && (
-        <p className="mt-2 text-body-xs font-semibold">
+        <p className="mt-2 text-body-sm font-semibold">
           {t("fullMix", {
             count: fullMix == null ? t("unknown") : number(Math.floor(fullMix / unitsPerFacility)),
           })}
         </p>
       )}
-      <p className="mt-1 text-body-xs text-muted">{t("scopeNote")}</p>
+      <p className="mt-1 text-body-sm text-muted">{t("scopeNote")}</p>
     </section>
   );
 }

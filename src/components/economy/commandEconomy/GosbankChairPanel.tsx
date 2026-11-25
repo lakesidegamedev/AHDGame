@@ -105,7 +105,7 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="flex items-center text-sm font-bold text-foreground">
+        <h3 className="flex items-center text-body-lg font-bold text-foreground">
           Gosbank chair
           <Tooltip content={CE_TERMS.gosbank} label="About Gosbank" />
         </h3>
@@ -113,14 +113,14 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
           State credit
         </Badge>
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-muted">
+      <p className="mt-1 text-body-sm leading-snug text-muted">
         Fund the plan with directed credit. Printing money you do not have builds an overhang and
         empties the shelves, so choose your favourites.
       </p>
 
       <div className="mt-4 space-y-4">
         <div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="font-semibold text-foreground">Credit aggressiveness</span>
             <span className="tabular-nums text-muted">{aggr}%</span>
           </div>
@@ -130,12 +130,12 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
             value={aggr}
             onChange={(e) => setAggr(Number(e.target.value))}
           />
-          <p className="mt-1 text-[10px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Restrained on the left, flood the enterprises on the right.
           </p>
         </div>
         <div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="flex items-center font-semibold text-foreground">
               Budget softness
               <Tooltip content={CE_TERMS.budgetSoftness} label="About budget softness" />
@@ -149,14 +149,14 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
             value={soft}
             onChange={(e) => setSoft(Number(e.target.value))}
           />
-          <p className="mt-1 text-[10px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Hard budgets let insolvent enterprises fold. Soft budgets bail everyone and keep the
             losses on the books.
           </p>
         </div>
 
         <div className="rounded-lg border border-card-border bg-card-muted/40 p-3">
-          <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          <label className="flex items-center gap-2 text-body-sm font-semibold text-foreground">
             <input
               type="checkbox"
               checked={useSectorCredit}
@@ -168,7 +168,7 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
             <div className="mt-3 space-y-2">
               {dashboard.soes.map((s) => (
                 <div key={s.sector} className="flex items-center gap-3">
-                  <span className="w-32 shrink-0 truncate text-[11px] text-muted">
+                  <span className="w-32 shrink-0 truncate text-body-sm text-muted">
                     {s.sectorLabel}
                   </span>
                   <Slider
@@ -179,14 +179,14 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
                       setWeights((w) => ({ ...w, [s.sector]: Number(e.target.value) }))
                     }
                   />
-                  <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-muted">
+                  <span className="w-10 shrink-0 text-right text-body-sm tabular-nums text-muted">
                     {weights[s.sector] ?? 0}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-1.5 text-[10px] text-muted">
+            <p className="mt-1.5 text-body-sm text-muted">
               Off: credit flows automatically toward the sectors missing their plan.
             </p>
           )}
@@ -209,24 +209,24 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
           <Readout label="Upkeep" value={compactOrNa(g.upkeepLastTurn)} tip={CE_TERMS.upkeep} />
         )}
       </div>
-      <p className="mt-2 text-[11px] leading-snug text-warning">{g.costLabel}</p>
+      <p className="mt-2 text-body-sm leading-snug text-warning">{g.costLabel}</p>
       {/* The one thing the lever cannot switch off. Shown only when the floor
           actually paid out, and stated hardest at zero credit, which is where a
           chair would otherwise read the presses as a bug. */}
       {hasUpkeep && (
-        <p className="mt-1 text-[11px] leading-snug text-muted">
+        <p className="mt-1 text-body-sm leading-snug text-muted">
           {g.creditAggressiveness <= 0
             ? "Credit is set to zero, so none of this is new investment. Enterprises still have to replace plant that wore out, and that bill prints money. To stop it you have to close enterprises, not cut credit."
             : "Part of this credit only replaced plant that wore out. That part is paid whatever you set credit to."}
         </p>
       )}
 
-      <InlineError error={error} className="mt-3 text-xs text-error" />
+      <InlineError error={error} className="mt-3 text-body-sm text-error" />
       <div className="mt-4 flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? "Saving..." : "Set credit policy"}
         </Button>
-        <span className="text-[10px] text-muted">
+        <span className="text-body-sm text-muted">
           Current stance {pct(g.creditAggressiveness)} credit, {pct(g.budgetSoftness)} softness
         </span>
       </div>
@@ -234,18 +234,18 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
       {dashboard.viewerRoles.canSetRepression && (
         <div className="mt-5 rounded-lg border border-card-border bg-card-muted/40 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-xs font-bold text-foreground">Internal repression</h4>
+            <h4 className="text-body-sm font-bold text-foreground">Internal repression</h4>
             <Badge color="warning" variant="subtle">
               Stay the course
             </Badge>
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">
+          <p className="mt-1 text-body-sm leading-snug text-muted">
             Force the second economy down to slow reform. It hides the black market, it does not
             fill the shelves, and the harder you push amid shortage the more legitimacy it costs.
           </p>
 
           <div className="mt-3">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-body-sm">
               <span className="font-semibold text-foreground">Repression level</span>
               <span className="tabular-nums text-muted">{repression}%</span>
             </div>
@@ -256,7 +256,7 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
               value={repression}
               onChange={(e) => setRepression(Number(e.target.value))}
             />
-            <p className="mt-1 text-[10px] text-muted">None on the left, heavy on the right.</p>
+            <p className="mt-1 text-body-sm text-muted">None on the left, heavy on the right.</p>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg border border-card-border bg-card-muted/30 p-3 text-center">
@@ -266,21 +266,21 @@ export function GosbankChairPanel({ dashboard, onSaved }: Props) {
             />
             <div>
               <div className="text-body-sm font-medium text-muted">Legitimacy cost / turn</div>
-              <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">
+              <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">
                 {rep.legitimacyCostPerTurn == null || !Number.isFinite(rep.legitimacyCostPerTurn)
                   ? "n/a"
                   : rep.legitimacyCostPerTurn.toFixed(2)}
               </div>
             </div>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-warning">{rep.costLabel}</p>
+          <p className="mt-2 text-body-sm leading-snug text-warning">{rep.costLabel}</p>
 
-          <InlineError error={repError} className="mt-3 text-xs text-error" />
+          <InlineError error={repError} className="mt-3 text-body-sm text-error" />
           <div className="mt-3 flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={saveRepression} disabled={savingRep}>
               {savingRep ? "Saving..." : "Set repression"}
             </Button>
-            <span className="text-[10px] text-muted">In force {pct(rep.level)}</span>
+            <span className="text-body-sm text-muted">In force {pct(rep.level)}</span>
           </div>
         </div>
       )}
@@ -297,10 +297,10 @@ function PressureReadout({ base, effective }: { base: number | null; effective: 
         Black market pressure
         <Tooltip content={CE_TERMS.blackMarketPressure} label="About black market pressure" />
       </div>
-      <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">
+      <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">
         {fmt(effective)}
         {base != null && effective != null && base > effective && (
-          <span className="ml-1 text-[10px] font-normal text-muted">from {fmt(base)}</span>
+          <span className="ml-1 text-body-sm font-normal text-muted">from {fmt(base)}</span>
         )}
       </div>
     </div>
@@ -324,7 +324,7 @@ function Readout({ label, value, tip }: { label: string; value: string; tip?: st
         {label}
         {tip && <Tooltip content={tip} label={`About ${label}`} />}
       </div>
-      <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{value}</div>
+      <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">{value}</div>
     </div>
   );
 }

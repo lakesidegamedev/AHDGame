@@ -116,7 +116,7 @@ export function EconomicTrendsChart({
     return (
       <div>
         {controls}
-        <div className="flex h-24 items-center justify-center text-sm text-muted">
+        <div className="flex h-24 items-center justify-center text-body text-muted">
           Not enough data yet. Check back after the next turn.
         </div>
       </div>
@@ -328,7 +328,7 @@ export function EconomicTrendsChart({
 
         {/* Tooltip */}
         {hoveredPoint && (
-          <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
+          <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-body-sm shadow-card">
             <span className="text-muted">Turn {hoveredPoint.turn} · </span>
             <span className="font-semibold tabular-nums" style={{ color: config.color }}>
               {hoveredPoint.rate.toFixed(2)}
@@ -354,7 +354,7 @@ function GdpModeToggle({
         <button
           key={m}
           onClick={() => onChange(m)}
-          className={`rounded px-2.5 py-1 text-xs font-medium transition-all capitalize ${
+          className={`rounded px-2.5 py-1 text-body-sm font-medium transition-all capitalize ${
             mode === m
               ? "bg-card text-foreground shadow-card border border-card-border"
               : "text-muted hover:text-foreground"
@@ -378,7 +378,7 @@ function ViewToggle({
     <div className="flex items-center gap-0.5 rounded-md border border-card-border bg-card-muted p-0.5">
       <button
         onClick={() => onChange("chart")}
-        className={`rounded px-2.5 py-1 text-xs font-medium transition-all ${
+        className={`rounded px-2.5 py-1 text-body-sm font-medium transition-all ${
           view === "chart"
             ? "bg-card text-foreground shadow-card border border-card-border"
             : "text-muted hover:text-foreground"
@@ -388,7 +388,7 @@ function ViewToggle({
       </button>
       <button
         onClick={() => onChange("table")}
-        className={`rounded px-2.5 py-1 text-xs font-medium transition-all ${
+        className={`rounded px-2.5 py-1 text-body-sm font-medium transition-all ${
           view === "table"
             ? "bg-card text-foreground shadow-card border border-card-border"
             : "text-muted hover:text-foreground"
@@ -425,7 +425,7 @@ function SeriesTable({
 
   return (
     <div className="mt-3 overflow-x-auto rounded-lg border border-card-border">
-      <table className="w-full text-xs">
+      <table className="w-full text-body-sm">
         <thead>
           <tr className="border-b border-card-border bg-card-muted">
             <th className="px-3 py-2 text-left font-medium text-muted">Turn</th>
@@ -503,7 +503,7 @@ function SeriesToggle({
             key={s}
             onClick={() => onChange(s)}
             disabled={!hasData}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+            className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-all ${
               isActive
                 ? "bg-card-elevated text-foreground shadow-card border border-card-border"
                 : hasData

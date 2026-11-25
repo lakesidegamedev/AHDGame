@@ -23,7 +23,7 @@ export function DemocraticHealthBlock({
         style={{
           margin: "9px 0 0",
           fontFamily: FONT.sans,
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.5,
           color: BLEND.muted,
         }}
@@ -53,19 +53,19 @@ export function DemocraticHealthBlock({
       </div>
       <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>Ruling party drag</span>
+          <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>Ruling party drag</span>
           <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.negative }}>
             -{Math.max(0, data.partyPenaltyPct).toFixed(1)}%
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>Sitting President drag</span>
+          <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>Sitting President drag</span>
           <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.negative }}>
             -{Math.max(0, data.currentRulerPenaltyPct).toFixed(1)}%
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>Annual GDP growth drag</span>
+          <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>Annual GDP growth drag</span>
           <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.negative }}>
             -{Math.max(0, data.economicDragPctPoints).toFixed(2)} pts
           </span>
@@ -76,7 +76,7 @@ export function DemocraticHealthBlock({
           style={{
             margin: "9px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             color: BLEND.mutedDim,
           }}
         >
@@ -88,7 +88,7 @@ export function DemocraticHealthBlock({
           style={{
             margin: "9px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             color: BLEND.mutedDim,
           }}
         >

@@ -306,8 +306,8 @@ export function RelocateButton({
             aria-label="Relocation cooldown"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-foreground">Relocation cooldown</h3>
-            <p className="mt-3 text-sm text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Relocation cooldown</h3>
+            <p className="mt-3 text-body text-muted">
               Relocation has a 3-day cooldown after each move. {cooldownWaitCopy}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -331,16 +331,16 @@ export function RelocateButton({
             aria-label="Choose a new playable home"
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-foreground">
+            <h3 className="text-body-lg font-semibold text-foreground">
               Choose {targetName} as your new home?
             </h3>
-            <p className="mt-3 text-sm text-muted">
+            <p className="mt-3 text-body text-muted">
               Your former home became a background country in the federation settlement. This choice
               has no relocation fee. Your character, starting nationality, and wallet stay intact. A
               held corporation needs its own headquarters choice.
             </p>
             {error && (
-              <p role="alert" className="mt-3 text-sm text-error">
+              <p role="alert" className="mt-3 text-body text-error">
                 {error}
               </p>
             )}
@@ -368,9 +368,11 @@ export function RelocateButton({
             aria-label="Relocate to another state"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-foreground">Relocate to {targetName}?</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">
+              Relocate to {targetName}?
+            </h3>
 
-            <div className="mt-3 space-y-2 text-sm text-muted">
+            <div className="mt-3 space-y-2 text-body text-muted">
               <p className="font-semibold text-foreground">The following will happen:</p>
               <ul className="list-disc space-y-1 pl-5">
                 {leavesParty && (
@@ -434,19 +436,19 @@ export function RelocateButton({
                   {RELOCATION_COOLDOWN_TURNS} turns).
                 </li>
               </ul>
-              <p className="pt-2 text-xs">
+              <p className="pt-2 text-body-sm">
                 Campaign funds, personal cash, savings, actions, policies, and career history are
                 preserved.
               </p>
             </div>
 
             {hasCeoCorp && (
-              <div className="mt-4 space-y-3 rounded-lg border border-card-border bg-background/50 p-4 text-sm">
+              <div className="mt-4 space-y-3 rounded-lg border border-card-border bg-background/50 p-4 text-body">
                 <div>
                   <p className="font-semibold text-foreground">
                     Your corporation - {corp!.corpName}
                   </p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     What do you want to do with your corporation when you relocate?
                   </p>
                 </div>
@@ -465,7 +467,7 @@ export function RelocateButton({
                     }`}
                   >
                     <p className="font-medium text-foreground">Move corp</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-body-sm text-muted">
                       Relocate your character and headquarters together so the CEO role stays with
                       you.
                     </p>
@@ -483,24 +485,24 @@ export function RelocateButton({
                     }`}
                   >
                     <p className="font-medium text-foreground">Abandon corp</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-body-sm text-muted">
                       Relocate without moving headquarters. This will vacate your CEO role.
                     </p>
                   </button>
                 </div>
 
                 {choosingMoveCorp && hasPlayerCeoCorp && (
-                  <div className="rounded-lg border border-card-border bg-card-muted/60 p-3 text-sm">
+                  <div className="rounded-lg border border-card-border bg-card-muted/60 p-3 text-body">
                     <p className="mb-1 font-semibold text-foreground">
                       Move {corp!.corpName} with you
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Current HQ: <strong>{corp!.currentHqState}</strong> -&gt; {targetName}.
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Cost: <strong>{formatAmount(corpCost)}</strong>
                       {corpCrossCountry && (
-                        <span className="ml-2 inline-block rounded bg-warning/20 px-2 py-0.5 text-[10px] font-medium text-warning">
+                        <span className="ml-2 inline-block rounded bg-warning/20 px-2 py-0.5 text-body-sm font-medium text-warning">
                           2x cross-country
                         </span>
                       )}
@@ -513,7 +515,7 @@ export function RelocateButton({
                           checked={payment === "cash"}
                           onChange={() => setPayment("cash")}
                         />
-                        <div className="text-xs">
+                        <div className="text-body-sm">
                           <div className="font-medium text-foreground">Liquid capital</div>
                           <div className="text-muted">
                             {formatAmount(corp!.liquidCapitalAnchor)} available
@@ -528,7 +530,7 @@ export function RelocateButton({
                           checked={payment === "bond"}
                           onChange={() => setPayment("bond")}
                         />
-                        <div className="text-xs">
+                        <div className="text-body-sm">
                           <div className="font-medium text-foreground">Bond issuance</div>
                           <div className="text-muted">
                             {bondCooldownTurns !== null
@@ -544,9 +546,9 @@ export function RelocateButton({
                 )}
 
                 {choosingMoveCorp && hasImperialCeoCorp && (
-                  <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm">
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-body">
                     <p className="font-semibold text-foreground">Move {corp!.corpName} with you</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-body-sm text-muted">
                       Your corporation will relocate from <strong>{corp!.currentHqState}</strong> to{" "}
                       <strong>{targetName}</strong> with no relocation cost.
                     </p>
@@ -554,9 +556,9 @@ export function RelocateButton({
                 )}
 
                 {choosingAbandonCorp && (
-                  <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm">
+                  <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-body">
                     <p className="font-semibold text-foreground">Abandon {corp!.corpName}</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-body-sm text-muted">
                       You will relocate without moving the corporation, and you will be removed as
                       CEO as part of the relocation.
                     </p>
@@ -566,7 +568,7 @@ export function RelocateButton({
             )}
 
             {error && (
-              <p role="alert" className="mt-2 text-sm text-error">
+              <p role="alert" className="mt-2 text-body text-error">
                 {error}
               </p>
             )}
@@ -594,7 +596,7 @@ export function RelocateButton({
                     {loading ? "Relocating..." : "Relocate & abandon corporation"}
                   </Button>
                 ) : (
-                  <p className="self-center text-xs text-muted">
+                  <p className="self-center text-body-sm text-muted">
                     Choose whether to move or abandon your corporation to continue.
                   </p>
                 )

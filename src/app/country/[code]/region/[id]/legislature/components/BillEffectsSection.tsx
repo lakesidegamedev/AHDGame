@@ -51,7 +51,7 @@ export function BillEffectsSection({ provisions }: { provisions: BillProvisionDi
     <div className="mt-3 pt-3 border-t border-card-border/40">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-body-sm text-muted hover:text-foreground transition-colors"
       >
         <svg
           className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
@@ -75,7 +75,7 @@ export function BillEffectsSection({ provisions }: { provisions: BillProvisionDi
               {allMetricEffects.map(({ name, direction, isGood }) => (
                 <span
                   key={name}
-                  className={`inline-flex items-center gap-0.5 text-xs ${isGood ? "text-success" : "text-error"}`}
+                  className={`inline-flex items-center gap-0.5 text-body-sm ${isGood ? "text-success" : "text-error"}`}
                 >
                   {direction === "up" ? (
                     <svg
@@ -104,7 +104,7 @@ export function BillEffectsSection({ provisions }: { provisions: BillProvisionDi
             </div>
           )}
           {(totalCostPerCapita > 0 || hasGdpMultiplier) && (
-            <div className="text-xs text-muted">
+            <div className="text-body-sm text-muted">
               <span className="font-medium text-foreground/80">Cost: </span>
               {totalCostPerCapita > 0 && (
                 <span>${totalCostPerCapita.toLocaleString("en-US")}/person/yr</span>

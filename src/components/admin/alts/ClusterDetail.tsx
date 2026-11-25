@@ -52,7 +52,7 @@ const STATUS_STYLE: Record<AltClusterStatus, string> = {
 
 /** Shared panel chrome + the small overline heading every section wears. */
 const PANEL_CLS = "rounded-xl border border-card-border bg-card p-4 shadow-card";
-const OVERLINE_CLS = "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted";
+const OVERLINE_CLS = "text-body-sm font-semibold uppercase tracking-[0.14em] text-muted";
 
 export function ClusterDetailView({
   detail,
@@ -93,7 +93,7 @@ export function ClusterDetailView({
       {/* Back */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+        className="flex items-center gap-1.5 rounded-md text-body text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -115,27 +115,27 @@ export function ClusterDetailView({
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className={OVERLINE_CLS}>Suspected ring</div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2 className="text-heading font-semibold tracking-tight">
                 {detail.size} account{detail.size === 1 ? "" : "s"}
               </h2>
               <span
-                className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLE[detail.status]}`}
+                className={`rounded-md px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${STATUS_STYLE[detail.status]}`}
               >
                 {STATUS_LABEL[detail.status]}
               </span>
             </div>
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               {confidenceLabel(detail.confidence)} confidence ring.{" "}
               {detail.signalSummary.length > 0 &&
                 `Top signal: ${signalMeta(detail.signalSummary[0].type).label}.`}
             </p>
-            {loading && <p className="text-xs text-muted">Refreshing…</p>}
+            {loading && <p className="text-body-sm text-muted">Refreshing…</p>}
           </div>
         </div>
       </div>
 
       {/* Report-only / stale-compute banner */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300/90">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-body-sm text-amber-300/90">
         <svg
           className="h-4 w-4 flex-shrink-0"
           fill="none"
@@ -211,7 +211,7 @@ export function ClusterDetailView({
                     </div>
                   </div>
                   {m.banned && (
-                    <span className="ml-auto rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                    <span className="ml-auto rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-red-400">
                       Banned
                     </span>
                   )}
@@ -249,7 +249,7 @@ export function ClusterDetailView({
           <button
             onClick={() => setShowConfig((s) => !s)}
             aria-expanded={showConfig}
-            className="flex items-center gap-1.5 rounded-md text-sm font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+            className="flex items-center gap-1.5 rounded-md text-body font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
           >
             <svg
               className={`h-3.5 w-3.5 transition-transform motion-reduce:transition-none ${showConfig ? "rotate-90" : ""}`}

@@ -255,7 +255,7 @@ export function OrgsBoard() {
                 margin: "3px 0 0",
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 17,
+                fontSize: 16,
                 color: "#f3f1ea",
               }}
             >
@@ -397,7 +397,7 @@ export function OrgsBoard() {
                     margin: 0,
                     fontFamily: headingFont,
                     fontWeight: 700,
-                    fontSize: 27,
+                    fontSize: 30,
                     lineHeight: 1.08,
                     color: "#f3f1ea",
                   }}
@@ -447,7 +447,7 @@ export function OrgsBoard() {
             <p
               style={{
                 margin: "14px 0 0",
-                fontSize: 12.5,
+                fontSize: 12,
                 lineHeight: 1.55,
                 color: "#9595a4",
                 maxWidth: 680,
@@ -545,7 +545,7 @@ export function OrgsBoard() {
                         style={{
                           fontFamily: headingFont,
                           fontWeight: 700,
-                          fontSize: 23,
+                          fontSize: 20,
                           color: "#f3f1ea",
                           marginTop: 4,
                         }}
@@ -582,7 +582,7 @@ export function OrgsBoard() {
                         key={c.name}
                         style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 11 }}
                       >
-                        <span style={{ fontSize: 17 }}>{c.flag}</span>
+                        <span style={{ fontSize: 16 }}>{c.flag}</span>
                         <span
                           style={{ width: 104, font: "600 11.5px system-ui", color: "#e8e8ee" }}
                         >
@@ -708,7 +708,7 @@ export function OrgsBoard() {
                     textAlign: "center",
                   }}
                 >
-                  <div style={{ fontSize: 26, marginBottom: 8 }}>🕊</div>
+                  <div style={{ fontSize: 30, marginBottom: 8 }}>🕊</div>
                   <div style={{ font: "600 14px system-ui", color: "#cfcfda" }}>
                     No joint military command
                   </div>

@@ -84,7 +84,7 @@ export function MarketTickNote({
   return (
     <TurnStatusLink
       enabled={statusLink}
-      className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted sm:text-xs"
+      className="inline-flex shrink-0 items-center gap-1 text-body-sm text-muted sm:text-body-sm"
     >
       <span
         className="inline-flex items-center gap-1"

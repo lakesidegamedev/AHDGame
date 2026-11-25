@@ -231,7 +231,7 @@ export function NppRecruitmentPanel({
 
   if (!status || !isLeader) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
         Only party leadership can recruit NPP candidates.
       </div>
     );
@@ -258,7 +258,7 @@ export function NppRecruitmentPanel({
       {/* Cooldown bar */}
       {hasCooldown && status.cooldownUntil && (
         <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-body">
             <span className="font-medium">Recruitment on cooldown</span>
             <span className="text-muted">
               {cooldownHours} hour{cooldownHours !== 1 ? "s" : ""} remaining
@@ -269,13 +269,13 @@ export function NppRecruitmentPanel({
                 indeterminate pulsing bar */}
             <div className="h-full bg-primary/60 rounded-full animate-pulse w-full" />
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Available after {clock.formatAbsoluteDeadline(status.cooldownUntil)}
           </p>
         </div>
       )}
 
-      <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-sm">
+      <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-body">
         <div className="flex justify-between">
           <span className="text-muted">Party NPP capacity</span>
           <span>
@@ -286,19 +286,19 @@ export function NppRecruitmentPanel({
           <span className="text-muted">Active members</span>
           <span>{status.activeMemberCount ?? 0}</span>
         </div>
-        <p className="pt-1 text-xs text-muted">
+        <p className="pt-1 text-body-sm text-muted">
           5 NPPs per active member for the first 5, then 4, 3 and 2 per member as the party grows,
           up to 6 per region in this country (at least 25). Members need 2 game actions in the last
           14 days.
         </p>
         {status.blockedReason && !hasCooldown && (
-          <p className="pt-1 text-xs text-warning">{status.blockedReason}</p>
+          <p className="pt-1 text-body-sm text-warning">{status.blockedReason}</p>
         )}
       </div>
 
       {/* State NPP info (state panel only) */}
       {!isNational && (
-        <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-body">
           <div className="flex justify-between">
             <span className="text-muted">Slots used</span>
             <span>
@@ -333,7 +333,7 @@ export function NppRecruitmentPanel({
 
       {/* Cost display (state panel only — national uses the recruit segment above) */}
       {!isNational && (
-        <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-4 space-y-1 text-body">
           <p className="font-medium mb-2">Recruitment cost</p>
           <div className="flex justify-between">
             <span className="text-muted">Action points</span>
@@ -352,7 +352,7 @@ export function NppRecruitmentPanel({
               {status.nppActionPoints ?? 0}
               {status.nppActionPointCap != null && ` / ${status.nppActionPointCap}`}
               {status.nppActionPointRegen != null && (
-                <span className="ml-1 text-xs">(+{status.nppActionPointRegen}/turn)</span>
+                <span className="ml-1 text-body-sm">(+{status.nppActionPointRegen}/turn)</span>
               )}
             </span>
           </div>
@@ -368,7 +368,7 @@ export function NppRecruitmentPanel({
         <button
           onClick={handleRecruit}
           disabled={!canRecruitNow || recruiting}
-          className="w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-6 py-2.5 rounded-lg text-body font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
         >
           {recruiting
             ? "Recruiting..."
@@ -380,7 +380,7 @@ export function NppRecruitmentPanel({
 
       {/* Growth frontier: explain the block rather than leaving a dead button. */}
       {!isNational && status.inFrontier === false && (
-        <p className="text-sm text-muted italic">
+        <p className="text-body text-muted italic">
           Your party is not established in or next to this region. Build a presence in a nearby
           region first.
         </p>
@@ -388,7 +388,7 @@ export function NppRecruitmentPanel({
 
       {/* No slots message for state panel */}
       {!isNational && !hasCooldown && status.inFrontier !== false && stateAvailableSlots === 0 && (
-        <p className="text-sm text-muted italic">No recruitment slots available in this state.</p>
+        <p className="text-body text-muted italic">No recruitment slots available in this state.</p>
       )}
     </div>
   );

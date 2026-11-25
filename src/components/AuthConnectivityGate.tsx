@@ -60,7 +60,7 @@ export function AuthConnectivityGate() {
     return (
       <div
         role="alert"
-        className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-center text-sm text-foreground"
+        className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-center text-body text-foreground"
       >
         <span className="font-medium">{copy.headline}.</span>{" "}
         <span className="text-muted">{copy.subtext}</span>{" "}
@@ -82,28 +82,30 @@ export function AuthConnectivityGate() {
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-3">
               <div className="h-px flex-1 bg-card-border" />
-              <span className="text-5xl sm:text-6xl font-black tabular-nums text-foreground">
+              <span className="text-display sm:text-display font-black tabular-nums text-foreground">
                 {copy.code}
               </span>
               <div className="h-px flex-1 bg-card-border" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">{copy.headline}</h1>
+            <h1 className="text-heading sm:text-heading font-bold text-foreground">
+              {copy.headline}
+            </h1>
           </div>
           <div className="space-y-2">
-            <p className="text-sm text-muted max-w-md mx-auto font-medium">{copy.flavor}</p>
-            <p className="text-xs text-muted/80 max-w-md mx-auto">{copy.subtext}</p>
+            <p className="text-body text-muted max-w-md mx-auto font-medium">{copy.flavor}</p>
+            <p className="text-body-sm text-muted/80 max-w-md mx-auto">{copy.subtext}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
               type="button"
               onClick={onRetry}
-              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="rounded-lg bg-primary px-6 py-2.5 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Try again
             </button>
             <Link
               href="/"
-              className="rounded-lg border border-card-border bg-card-elevated px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-background transition-colors"
+              className="rounded-lg border border-card-border bg-card-elevated px-6 py-2.5 text-body font-semibold text-foreground hover:bg-background transition-colors"
             >
               Return home
             </Link>

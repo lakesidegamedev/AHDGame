@@ -18,7 +18,7 @@ export function WikiTrustStrip({ content, slug }: { content: string; slug: strin
 
   return (
     <div
-      className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 text-xs ${
+      className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 text-body-sm ${
         status.stale
           ? "border-warning/40 bg-warning/10 text-foreground"
           : "border-card-border bg-card/40 text-muted"

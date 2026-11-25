@@ -43,9 +43,9 @@ export function RestrictedOfficeNotice({
           <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 1 1 6 0v3H9V7z" />
         </svg>
       </div>
-      <h2 className="mt-4 text-lg font-semibold text-foreground">Office records restricted</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted">{explanation}</p>
-      <p className="mx-auto mt-3 max-w-md text-sm text-muted">
+      <h2 className="mt-4 text-heading font-semibold text-foreground">Office records restricted</h2>
+      <p className="mx-auto mt-2 max-w-md text-body text-muted">{explanation}</p>
+      <p className="mx-auto mt-3 max-w-md text-body text-muted">
         Departmental figures, standing orders and programme detail are not published outside the
         office.
       </p>

@@ -83,7 +83,7 @@ export function TransitionPanel({
   };
 
   return (
-    <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5 text-xs">
+    <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5 text-body-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold text-foreground">Market transition</span>
         <span className="tabular-nums text-muted">
@@ -102,7 +102,7 @@ export function TransitionPanel({
           <>
             <select
               aria-label="Convert to industry"
-              className="rounded border border-card-border bg-background px-2 py-1 text-xs text-foreground"
+              className="rounded border border-card-border bg-background px-2 py-1 text-body-sm text-foreground"
               value={target}
               onChange={(e) => {
                 setTarget(e.target.value as OperatingSectorType);
@@ -119,7 +119,7 @@ export function TransitionPanel({
             {confirming ? (
               <button
                 type="button"
-                className="rounded bg-warning px-2.5 py-1 text-xs font-semibold text-background disabled:opacity-60"
+                className="rounded bg-warning px-2.5 py-1 text-body-sm font-semibold text-background disabled:opacity-60"
                 onClick={convert}
                 disabled={busy}
               >
@@ -130,7 +130,7 @@ export function TransitionPanel({
             ) : (
               <button
                 type="button"
-                className="rounded border border-warning/40 px-2.5 py-1 text-xs font-semibold text-foreground"
+                className="rounded border border-warning/40 px-2.5 py-1 text-body-sm font-semibold text-foreground"
                 onClick={() => setConfirming(true)}
               >
                 Convert
@@ -140,14 +140,14 @@ export function TransitionPanel({
         )}
         <button
           type="button"
-          className="rounded border border-warning/40 px-2.5 py-1 text-xs font-semibold text-foreground disabled:opacity-60"
+          className="rounded border border-warning/40 px-2.5 py-1 text-body-sm font-semibold text-foreground disabled:opacity-60"
           onClick={mothball}
           disabled={mothballing}
         >
           {mothballing ? "Mothballing" : "Mothball (no upkeep)"}
         </button>
       </div>
-      {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+      {error && <p className="mt-1.5 text-body-sm text-danger">{error}</p>}
     </div>
   );
 }

@@ -188,8 +188,8 @@ export function ExecutiveTabsClient({
         <div data-testid="executive-admin-tab" className="space-y-8">
           <section data-testid="executive-admin-appoint">
             <div className="mb-4">
-              <h2 className="text-sm font-semibold text-muted">Executive appointment</h2>
-              <p className="mt-1 text-xs text-muted">
+              <h2 className="text-body font-semibold text-muted">Executive appointment</h2>
+              <p className="mt-1 text-body-sm text-muted">
                 Admin override: directly appoint or vacate the head of government, bypassing the
                 chamber vote.
               </p>
@@ -232,7 +232,7 @@ function TabButton({
       onClick={onClick}
       // shrink-0 + nowrap so the strip scrolls instead of squeezing the labels
       // into unreadable slivers on a phone.
-      className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${className}`}
+      className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${className}`}
       aria-current={active ? "page" : undefined}
     >
       {children}

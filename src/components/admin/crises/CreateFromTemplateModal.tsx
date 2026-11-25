@@ -40,7 +40,7 @@ export function CreateFromTemplateModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-card border border-border rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Create crisis from template</h3>
+          <h3 className="text-body-lg font-bold">Create crisis from template</h3>
           <button onClick={onClose} className="text-muted hover:text-foreground">
             ✕
           </button>
@@ -48,9 +48,9 @@ export function CreateFromTemplateModal({
 
         {/* Template selection */}
         <div>
-          <label className="block text-sm text-muted mb-1">Template</label>
+          <label className="block text-body text-muted mb-1">Template</label>
           <select
-            className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-background px-2 py-1 text-body"
             value={selectedTemplate}
             onChange={(e) => {
               const key = e.target.value;
@@ -70,7 +70,7 @@ export function CreateFromTemplateModal({
             ))}
           </select>
           {selectedTemplate && (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               {ALL_CRISIS_TEMPLATES[selectedTemplate].description}
             </p>
           )}
@@ -80,7 +80,7 @@ export function CreateFromTemplateModal({
             committing a one-click crisis blind. */}
         {selectedTemplate && (
           <div className="rounded border border-border/60 bg-background/40 p-3 space-y-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-body-sm">
               <span className="rounded bg-card-elevated border border-border px-1.5 py-0.5 text-muted">
                 Duration:{" "}
                 {(() => {
@@ -101,7 +101,7 @@ export function CreateFromTemplateModal({
               </p>
               <ul className="space-y-0.5">
                 {ALL_CRISIS_TEMPLATES[selectedTemplate].effects.map((e, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs">
+                  <li key={i} className="flex items-center gap-2 text-body-sm">
                     <span
                       className={`font-mono tabular-nums ${
                         e.value < 0 ? "text-red-400" : "text-green-400"
@@ -126,7 +126,7 @@ export function CreateFromTemplateModal({
         {/* Target countries for non-global templates */}
         {selectedTemplate && ALL_CRISIS_TEMPLATES[selectedTemplate].scope !== "global" && (
           <div>
-            <label className="block text-sm text-muted mb-1">
+            <label className="block text-body text-muted mb-1">
               Target countries
               {ALL_CRISIS_TEMPLATES[selectedTemplate].scope === "country" && (
                 <span className="text-amber-400"> *</span>
@@ -134,7 +134,7 @@ export function CreateFromTemplateModal({
             </label>
             <div className="flex flex-wrap gap-3">
               {registered.map((countryId) => (
-                <label key={countryId} className="flex items-center gap-1.5 text-sm">
+                <label key={countryId} className="flex items-center gap-1.5 text-body">
                   <input
                     type="checkbox"
                     checked={templateTargetCountries.includes(countryId)}
@@ -156,11 +156,11 @@ export function CreateFromTemplateModal({
         {/* Region IDs for regional templates */}
         {selectedTemplate && ALL_CRISIS_TEMPLATES[selectedTemplate].scope === "region" && (
           <div>
-            <label className="block text-sm text-muted mb-1">
+            <label className="block text-body text-muted mb-1">
               Region IDs (comma-separated state slugs)
             </label>
             <input
-              className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              className="w-full rounded border border-border bg-background px-2 py-1 text-body"
               value={templateRegionIds}
               onChange={(e) => setTemplateRegionIds(e.target.value)}
               placeholder="e.g. CA, TX, London"
@@ -171,9 +171,9 @@ export function CreateFromTemplateModal({
         {/* Duration override */}
         {selectedTemplate && (
           <div>
-            <label className="block text-sm text-muted mb-1">
+            <label className="block text-body text-muted mb-1">
               Duration (turns)
-              <span className="ml-1 text-xs opacity-60">
+              <span className="ml-1 text-body-sm opacity-60">
                 — defaults to{" "}
                 {getTemplateDuration(
                   ALL_CRISIS_TEMPLATES[selectedTemplate],
@@ -185,7 +185,7 @@ export function CreateFromTemplateModal({
             <input
               type="number"
               min="1"
-              className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              className="w-full rounded border border-border bg-background px-2 py-1 text-body"
               value={templateDuration}
               onChange={(e) => setTemplateDuration(e.target.value)}
               placeholder="Override duration, or leave blank for indefinite"
@@ -196,14 +196,14 @@ export function CreateFromTemplateModal({
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
           <button
             onClick={onCancel}
-            className="rounded border border-border px-4 py-1.5 text-sm hover:border-foreground/40"
+            className="rounded border border-border px-4 py-1.5 text-body hover:border-foreground/40"
           >
             Cancel
           </button>
           <button
             onClick={onSubmit}
             disabled={templateSubmitting || !selectedTemplate}
-            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
+            className="rounded border border-primary bg-primary px-4 py-1.5 text-body text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {templateSubmitting ? "Creating..." : "Create from template"}
           </button>

@@ -28,7 +28,7 @@ function ModifierChip({ modifier }: { modifier: ActiveModifier }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium " +
+          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-body-sm font-medium " +
           TONE_CLASSES[tone] +
           (isAddress ? " border-dashed" : "")
         }
@@ -43,7 +43,7 @@ function ModifierChip({ modifier }: { modifier: ActiveModifier }) {
         {margin != null && (
           <span
             className={
-              "tabular-nums text-[10px] font-medium opacity-90 " +
+              "tabular-nums text-body-sm font-medium opacity-90 " +
               (margin === 0
                 ? "text-slate-500"
                 : marginPositive
@@ -57,7 +57,7 @@ function ModifierChip({ modifier }: { modifier: ActiveModifier }) {
         )}
       </button>
       {open && (
-        <span className="block max-w-md space-y-1 rounded-md border border-card-border bg-card-muted/40 px-3 py-2 text-xs text-muted">
+        <span className="block max-w-md space-y-1 rounded-md border border-card-border bg-card-muted/40 px-3 py-2 text-body-sm text-muted">
           {lines.map((line, i) => (
             <span key={i} className="block">
               {line}
@@ -81,7 +81,7 @@ export function ModifierList({
   // An effect that rounds to nothing (a bank backstop of -0.00005) is noise, not a chip.
   const modifiers = allModifiers.filter((m) => displayEffect(m.effect) !== null);
   if (modifiers.length === 0) {
-    return <p className="text-sm italic text-[var(--muted)]">{emptyText}</p>;
+    return <p className="text-body italic text-[var(--muted)]">{emptyText}</p>;
   }
   return (
     <div className="flex flex-wrap gap-2">

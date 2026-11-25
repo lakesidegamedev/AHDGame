@@ -70,7 +70,7 @@ function Mini({ label, value, tone }: { label: string; value: string; tone?: "go
     <div className="rounded-md bg-card px-2.5 py-1.5">
       <div className="text-body-sm font-medium text-muted">{label}</div>
       <div
-        className={`mt-0.5 font-mono text-body-xs font-bold tabular-nums ${tone === "gold" ? "text-gold" : "text-foreground"}`}
+        className={`mt-0.5 font-mono text-body-sm font-bold tabular-nums ${tone === "gold" ? "text-gold" : "text-foreground"}`}
       >
         {value}
       </div>
@@ -126,13 +126,13 @@ export function BudgetBreakdownPanel({
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-foreground">{title}</div>
-          <div className="truncate text-body-xs text-muted">
+          <div className="truncate text-body font-semibold text-foreground">{title}</div>
+          <div className="truncate text-body-sm text-muted">
             {isRev ? "Where receipts come from" : "Where outlays go"} · total {money(total)}
           </div>
         </div>
         {hover && (
-          <span className="shrink-0 text-body-xs font-semibold text-gold">
+          <span className="shrink-0 text-body-sm font-semibold text-gold">
             {hover.label}: {money(hover.value)}
           </span>
         )}
@@ -158,7 +158,7 @@ export function BudgetBreakdownPanel({
                       {l.label}
                     </span>
                     {l.soeLink && (
-                      <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[9px] font-semibold text-gold">
+                      <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-body-sm font-semibold text-gold">
                         National corp →
                       </span>
                     )}
@@ -167,9 +167,11 @@ export function BudgetBreakdownPanel({
                 <div className="shrink-0 text-right">
                   <span className="font-mono text-body-sm font-semibold tabular-nums text-foreground">
                     {money(l.amount)}
-                    {l.perTurn && <span className="text-[10px] font-normal text-muted">/turn</span>}
+                    {l.perTurn && (
+                      <span className="text-body-sm font-normal text-muted">/turn</span>
+                    )}
                   </span>
-                  <div className="text-[10px] tabular-nums text-muted">
+                  <div className="text-body-sm tabular-nums text-muted">
                     {l.perTurn ? "—" : `${pct.toFixed(1)}%`}
                   </div>
                 </div>
@@ -232,10 +234,10 @@ export function BudgetBreakdownPanel({
                         {corpGlyph}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-body-xs font-semibold text-gold">
+                        <span className="block text-body-sm font-semibold text-gold">
                           Open the national corporation
                         </span>
-                        <span className="block text-[11px] text-muted">
+                        <span className="block text-body-sm text-muted">
                           See the state enterprise behind this line
                         </span>
                       </span>
@@ -260,10 +262,10 @@ export function BudgetBreakdownPanel({
                       className="mt-2 flex items-center gap-2.5 rounded-lg border border-card-border bg-card-muted px-3 py-2 transition-colors hover:bg-card-elevated"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-body-xs font-semibold text-foreground">
+                        <span className="block text-body-sm font-semibold text-foreground">
                           State ownership register
                         </span>
-                        <span className="block text-[11px] text-muted">
+                        <span className="block text-body-sm text-muted">
                           Every nationalization and privatization this country has made
                         </span>
                       </span>
@@ -289,9 +291,9 @@ export function BudgetBreakdownPanel({
                       <div className="mb-1 text-body-sm font-medium text-muted">
                         What this line is made of
                       </div>
-                      <p className="text-body-xs text-foreground">{l.parts[0]!.label}</p>
+                      <p className="text-body-sm text-foreground">{l.parts[0]!.label}</p>
                       {l.parts[0]!.note && (
-                        <p className="mt-0.5 text-[11px] leading-snug text-muted">
+                        <p className="mt-0.5 text-body-sm leading-snug text-muted">
                           {l.parts[0]!.note}
                         </p>
                       )}
@@ -307,10 +309,10 @@ export function BudgetBreakdownPanel({
                         {l.parts.map((part, partIdx) => (
                           <li key={`${part.label}-${partIdx}`} className="px-2.5 py-1.5">
                             <div className="flex items-baseline justify-between gap-3">
-                              <span className="text-body-xs text-foreground">{part.label}</span>
-                              <span className="shrink-0 font-mono text-body-xs tabular-nums text-foreground">
+                              <span className="text-body-sm text-foreground">{part.label}</span>
+                              <span className="shrink-0 font-mono text-body-sm tabular-nums text-foreground">
                                 {money(part.amount)}
-                                <span className="ml-1.5 text-[10px] text-muted">
+                                <span className="ml-1.5 text-body-sm text-muted">
                                   {l.amount > 0
                                     ? `${((part.amount / l.amount) * 100).toFixed(1)}%`
                                     : ""}
@@ -318,7 +320,7 @@ export function BudgetBreakdownPanel({
                               </span>
                             </div>
                             {part.note && (
-                              <p className="mt-0.5 text-[11px] leading-snug text-muted">
+                              <p className="mt-0.5 text-body-sm leading-snug text-muted">
                                 {part.note}
                               </p>
                             )}
@@ -342,7 +344,7 @@ export function BudgetBreakdownPanel({
                         {l.laws.map((law, lawIdx) => (
                           <span
                             key={`${law.title}-${lawIdx}`}
-                            className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-card px-2 py-1 text-[11px]"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-card px-2 py-1 text-body-sm"
                           >
                             <span className="text-foreground">{law.title}</span>
                             {law.cost && <span className="text-gold">{law.cost}</span>}
@@ -361,7 +363,7 @@ export function BudgetBreakdownPanel({
                       <div className="space-y-1">
                         {l.grants.slice(0, 4).map((g) => (
                           <div key={g.id} className="flex items-center gap-2">
-                            <span className="w-28 shrink-0 truncate text-[11px] text-muted">
+                            <span className="w-28 shrink-0 truncate text-body-sm text-muted">
                               {g.name}
                             </span>
                             <div className="flex-1">
@@ -371,7 +373,7 @@ export function BudgetBreakdownPanel({
                                 height={5}
                               />
                             </div>
-                            <span className="w-14 shrink-0 text-right font-mono text-[11px] tabular-nums text-foreground">
+                            <span className="w-14 shrink-0 text-right font-mono text-body-sm tabular-nums text-foreground">
                               {money(g.amount)}
                             </span>
                           </div>

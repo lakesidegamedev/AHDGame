@@ -51,8 +51,8 @@ export function YourPositionCard({
   if (units <= 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
-        <h2 className="text-[13px] font-semibold">Your position</h2>
-        <p className="mt-2 text-xs text-muted">
+        <h2 className="text-body-sm font-semibold">Your position</h2>
+        <p className="mt-2 text-body-sm text-muted">
           You don&apos;t hold any units yet. Use the panel below to subscribe.
         </p>
       </div>
@@ -62,9 +62,9 @@ export function YourPositionCard({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold">Your position</h2>
+        <h2 className="text-body-sm font-semibold">Your position</h2>
         <span
-          className="inline-flex items-center rounded-full px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold"
+          className="inline-flex items-center rounded-full px-2 py-0.5 font-mono tabular-nums text-body-sm font-bold"
           style={{
             color: plUp ? "var(--success)" : "var(--error)",
             background: `color-mix(in srgb, ${plUp ? "var(--success)" : "var(--error)"} 10%, transparent)`,
@@ -75,11 +75,11 @@ export function YourPositionCard({
         </span>
       </div>
       <div className="mt-2.5 flex items-baseline gap-2">
-        <span className="font-mono tabular-nums text-[26px] font-bold leading-none">
+        <span className="font-mono tabular-nums text-display font-bold leading-none">
           {formatAmount(value, ccy)}
         </span>
         <span
-          className="font-mono tabular-nums text-xs font-semibold"
+          className="font-mono tabular-nums text-body-sm font-semibold"
           style={{ color: plUp ? "var(--success)" : "var(--error)" }}
         >
           {plUp ? "+" : ""}
@@ -89,19 +89,19 @@ export function YourPositionCard({
       <div className="mt-3 grid grid-cols-3 gap-6 border-t border-card-border pt-3">
         <div>
           <div className="text-body-sm font-medium text-muted">Units</div>
-          <div className="mt-0.5 font-mono tabular-nums text-[13px] font-semibold">
+          <div className="mt-0.5 font-mono tabular-nums text-body-sm font-semibold">
             {units.toLocaleString("en-US")}
           </div>
         </div>
         <div>
           <div className="text-body-sm font-medium text-muted">Avg NAV paid</div>
-          <div className="mt-0.5 font-mono tabular-nums text-[13px] font-semibold">
+          <div className="mt-0.5 font-mono tabular-nums text-body-sm font-semibold">
             {formatPrice(avgNavDisplay, ccy)}
           </div>
         </div>
         <div>
           <div className="text-body-sm font-medium text-muted">Cost basis</div>
-          <div className="mt-0.5 font-mono tabular-nums text-[13px] font-semibold">
+          <div className="mt-0.5 font-mono tabular-nums text-body-sm font-semibold">
             {formatAmount(costBasis, ccy)}
           </div>
         </div>

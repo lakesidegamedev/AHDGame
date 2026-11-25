@@ -16,9 +16,9 @@ export default function DemandDriverBanner({ demandDriver, unit }: DemandDriverB
       <div className="flex items-center gap-2 mb-1">
         <span className="text-body-sm font-medium text-primary">{demandDriver.label}</span>
       </div>
-      <p className="text-sm text-muted">{demandDriver.description}</p>
+      <p className="text-body text-muted">{demandDriver.description}</p>
       {demandDriver.sourceUnits != null && demandDriver.sourceUnits > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm">
           <span className="font-semibold text-foreground">{demandDriver.sourceLabel}:</span>
           <span className="font-bold text-primary">
             {formatUnits(demandDriver.sourceUnits, unit)} per turn

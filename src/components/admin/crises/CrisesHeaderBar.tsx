@@ -27,10 +27,10 @@ export function CrisesHeaderBar({
 }: CrisesHeaderBarProps) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-lg font-bold">Crises</h2>
+      <h2 className="text-heading font-bold">Crises</h2>
       <div className="flex gap-2">
         <button
-          className={`rounded border px-3 py-1 text-sm transition-colors ${
+          className={`rounded border px-3 py-1 text-body transition-colors ${
             autoDisastersEnabled
               ? "border-green-500 bg-green-500/10 text-green-400 hover:bg-green-500/20"
               : "border-border bg-card text-muted hover:bg-accent"
@@ -43,7 +43,7 @@ export function CrisesHeaderBar({
           {autoDisastersEnabled === null ? "…" : autoDisastersEnabled ? "On" : "Off"}
         </button>
         <button
-          className={`rounded border px-3 py-1 text-sm transition-colors ${
+          className={`rounded border px-3 py-1 text-body transition-colors ${
             autoCrisisPaused
               ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
               : "border-border bg-card text-muted hover:bg-accent"
@@ -55,7 +55,7 @@ export function CrisesHeaderBar({
           Spawning: {autoCrisisPaused === null ? "…" : autoCrisisPaused ? "Paused" : "Active"}
         </button>
         <button
-          className="rounded border border-border bg-card px-3 py-1 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+          className="rounded border border-border bg-card px-3 py-1 text-body hover:bg-accent transition-colors disabled:opacity-50"
           onClick={onReseedImages}
           disabled={reseeding}
           title="Backfill hero images from templates (matched by crisis name)"
@@ -63,13 +63,13 @@ export function CrisesHeaderBar({
           {reseeding ? "Reseeding…" : "Reseed images"}
         </button>
         <button
-          className="rounded border border-border bg-card px-3 py-1 text-sm hover:bg-accent transition-colors"
+          className="rounded border border-border bg-card px-3 py-1 text-body hover:bg-accent transition-colors"
           onClick={onOpenTemplateModal}
         >
           Create from template
         </button>
         <button
-          className="rounded border border-primary bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90 transition-opacity"
+          className="rounded border border-primary bg-primary px-3 py-1 text-body text-primary-foreground hover:opacity-90 transition-opacity"
           onClick={onOpenCreateModal}
         >
           Create crisis

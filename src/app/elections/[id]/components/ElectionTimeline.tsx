@@ -54,12 +54,12 @@ export function ElectionTimeline({
               <>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-muted shrink-0" />
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     Primary opens
                     {opensYear ? <span className="text-muted/50"> · {opensYear}</span> : null}
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-blue-400 tabular-nums">
+                <span className="text-body font-semibold text-blue-400 tabular-nums">
                   {primaryOpensTimer.text}
                 </span>
               </>
@@ -68,14 +68,14 @@ export function ElectionTimeline({
               <>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-card-border shrink-0" />
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     Primary ends
                     {primaryEndYear ? (
                       <span className="text-muted/50"> · {primaryEndYear}</span>
                     ) : null}
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-muted/60 tabular-nums">
+                <span className="text-body font-semibold text-muted/60 tabular-nums">
                   {primaryTimer.text}
                 </span>
               </>
@@ -84,13 +84,13 @@ export function ElectionTimeline({
               <>
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-card-border shrink-0" />
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     Closes
                     {closesYear ? <span className="text-muted/50"> · {closesYear}</span> : null}
                   </span>
                 </div>
                 <span
-                  className={`text-sm font-semibold tabular-nums ${getTimerUrgencyStyle(electionTimer.urgency)}`}
+                  className={`text-body font-semibold tabular-nums ${getTimerUrgencyStyle(electionTimer.urgency)}`}
                 >
                   {electionTimer.text}
                 </span>
@@ -105,7 +105,9 @@ export function ElectionTimeline({
                   <span
                     className={`h-1.5 w-1.5 rounded-full shrink-0 ${localInPrimary ? "bg-muted" : "bg-card-border"}`}
                   />
-                  <span className={`text-xs ${localInPrimary ? "text-muted" : "text-muted/40"}`}>
+                  <span
+                    className={`text-body-sm ${localInPrimary ? "text-muted" : "text-muted/40"}`}
+                  >
                     {localInPrimary ? "Primary ends" : "Primary closed"}
                     {primaryEndYear ? (
                       <span className="text-muted/40"> · {primaryEndYear}</span>
@@ -113,7 +115,7 @@ export function ElectionTimeline({
                   </span>
                 </div>
                 <span
-                  className={`text-sm font-semibold tabular-nums ${
+                  className={`text-body font-semibold tabular-nums ${
                     localInPrimary
                       ? primaryTimer.urgency === "critical"
                         ? "text-error"
@@ -131,13 +133,13 @@ export function ElectionTimeline({
                   <span
                     className={`h-1.5 w-1.5 rounded-full shrink-0 ${!localInPrimary && !localIsEnded ? "bg-muted" : "bg-card-border"}`}
                   />
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     {localIsEnded ? "Closed" : "Closes"}
                     {closesYear ? <span className="text-muted/50"> · {closesYear}</span> : null}
                   </span>
                 </div>
                 <span
-                  className={`text-sm font-semibold tabular-nums ${getTimerUrgencyStyle(electionTimer.urgency)}`}
+                  className={`text-body font-semibold tabular-nums ${getTimerUrgencyStyle(electionTimer.urgency)}`}
                 >
                   {electionTimer.text}
                 </span>

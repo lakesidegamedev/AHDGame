@@ -80,16 +80,16 @@ export function LawProvisionComparison({
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_1fr]">
         <div className="rounded-lg border border-card-border bg-card/60 p-2.5">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          <div className="font-mono text-body-sm uppercase tracking-widest text-muted">
             Current law
           </div>
           <div
-            className="mt-0.5 truncate text-xs font-semibold text-foreground"
+            className="mt-0.5 truncate text-body-sm font-semibold text-foreground"
             title={currentName}
           >
             {currentName}
           </div>
-          <div className="mt-1.5 flex items-baseline justify-between gap-2 text-[11px]">
+          <div className="mt-1.5 flex items-baseline justify-between gap-2 text-body-sm">
             <span className="text-muted">{currentLine.label}</span>
             <span className="font-mono font-bold tabular-nums text-foreground">
               {currentLine.value}
@@ -104,18 +104,18 @@ export function LawProvisionComparison({
             hasProposed ? "border-primary/40 bg-primary/5" : "border-card-border bg-card/60"
           }`}
         >
-          <div className="font-mono text-[10px] uppercase tracking-widest text-primary">
+          <div className="font-mono text-body-sm uppercase tracking-widest text-primary">
             Proposed
           </div>
           {hasProposed && proposedLine ? (
             <>
               <div
-                className="mt-0.5 truncate text-xs font-semibold text-foreground"
+                className="mt-0.5 truncate text-body-sm font-semibold text-foreground"
                 title={proposedName}
               >
                 {proposedName}
               </div>
-              <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-[11px]">
+              <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-body-sm">
                 <span className="text-muted">{proposedLine.label}</span>
                 <span className="font-mono font-bold tabular-nums text-foreground">
                   {proposedLine.value}
@@ -138,13 +138,13 @@ export function LawProvisionComparison({
               </div>
             </>
           ) : (
-            <div className="mt-0.5 text-xs italic text-muted">Select a policy option…</div>
+            <div className="mt-0.5 text-body-sm italic text-muted">Select a policy option…</div>
           )}
         </div>
       </div>
       {targets.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="w-full font-mono text-[10px] uppercase tracking-widest text-muted/70">
+          <span className="w-full font-mono text-body-sm uppercase tracking-widest text-muted/70">
             Affected metrics vs current law
           </span>
           {targets.map((t) => {
@@ -157,7 +157,7 @@ export function LawProvisionComparison({
             return (
               <span
                 key={t.metricId}
-                className={`inline-flex items-center gap-0.5 text-xs ${
+                className={`inline-flex items-center gap-0.5 text-body-sm ${
                   up ? "text-success" : "text-error"
                 }`}
                 title={major ? "Primary target" : "Secondary target"}
@@ -210,8 +210,8 @@ export function BillFiscalImpactStrip({
 
   const cell = (label: string, value: string, extra?: React.ReactNode) => (
     <div className="flex-1 px-3 py-2">
-      <div className="font-mono text-[10px] uppercase tracking-widest text-muted">{label}</div>
-      <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">
+      <div className="font-mono text-body-sm uppercase tracking-widest text-muted">{label}</div>
+      <div className="mt-0.5 font-mono text-body font-bold tabular-nums text-foreground">
         {value}
         {extra}
       </div>
@@ -220,7 +220,7 @@ export function BillFiscalImpactStrip({
 
   return (
     <div className="overflow-hidden rounded-lg border border-card-border bg-card/60">
-      <div className="border-b border-card-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted">
+      <div className="border-b border-card-border px-3 py-1.5 font-mono text-body-sm uppercase tracking-widest text-muted">
         Fiscal impact — estimated
       </div>
       <div className="flex flex-col divide-y divide-card-border sm:flex-row sm:divide-x sm:divide-y-0">
@@ -230,7 +230,7 @@ export function BillFiscalImpactStrip({
           "Net change in cost",
           `${netChange >= 0 ? "+" : "−"}${formatCurrencyCompactChip(Math.abs(netChange), prefix)}/yr`,
           netChange !== 0 && netPctGdp != null && netPctGdp >= 0.05 ? (
-            <div className={`text-[11px] ${netChange > 0 ? "text-error" : "text-success"}`}>
+            <div className={`text-body-sm ${netChange > 0 ? "text-error" : "text-success"}`}>
               {netChange > 0 ? "+" : "−"}
               {netPctGdp.toFixed(1)}% GDP
             </div>

@@ -98,20 +98,20 @@ export function BulkStateOrgControl({ countryCode, partyId, onApplied }: BulkSta
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Bulk state settings</h2>
-        <span className="text-xs text-muted">Applies to every state chapter</span>
+        <h2 className="text-heading font-semibold">Bulk state settings</h2>
+        <span className="text-body-sm text-muted">Applies to every state chapter</span>
       </div>
 
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         Set one state-party org setting to the same value across all of this party&apos;s state
         chapters at once, instead of editing each state individually. State chairs can still
         override any state afterward.
       </p>
 
-      {msg && <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(msg)}`}>{msg}</div>}
+      {msg && <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(msg)}`}>{msg}</div>}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex-1 text-xs font-semibold text-muted">
+        <label className="flex-1 text-body-sm font-semibold text-muted">
           Setting
           <select
             value={settingKey}
@@ -119,7 +119,7 @@ export function BulkStateOrgControl({ countryCode, partyId, onApplied }: BulkSta
               setSettingKey(e.target.value as SettingKey);
               setMsg("");
             }}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-normal normal-case text-foreground"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-normal normal-case text-foreground"
           >
             {SETTING_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>
@@ -129,7 +129,7 @@ export function BulkStateOrgControl({ countryCode, partyId, onApplied }: BulkSta
           </select>
         </label>
 
-        <label className="text-xs font-semibold text-muted">
+        <label className="text-body-sm font-semibold text-muted">
           Value (%)
           <input
             type="number"
@@ -139,20 +139,20 @@ export function BulkStateOrgControl({ countryCode, partyId, onApplied }: BulkSta
             step={1}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-normal sm:w-28"
+            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body font-normal sm:w-28"
           />
         </label>
 
         <button
           onClick={handleApply}
           disabled={submitting || !valueValid}
-          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
         >
           {submitting ? "Applying…" : "Apply to all states"}
         </button>
       </div>
 
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         {option.help}. Allowed range 0–{option.max}%.
       </p>
     </div>

@@ -31,15 +31,15 @@ export function GotvDriveCard({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-body text-muted">GOTV drive</h3>
+      <h3 className="text-body-lg text-muted">GOTV drive</h3>
       <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-heading-lg font-semibold tabular-nums">
+        <span className="text-heading font-semibold tabular-nums">
           {budgetPercent != null ? `${budgetPercent.toFixed(1)}%` : "—"}
         </span>
         <span className="text-body-sm text-muted">of hourly revenue</span>
       </div>
       {hasBudget && targetCategory && (
-        <p className="mt-1 text-xs">
+        <p className="mt-1 text-body-sm">
           Targeting{" "}
           <span className="font-semibold">
             {targetGroup ? `${targetGroup} (${targetCategory})` : targetCategory}
@@ -51,7 +51,7 @@ export function GotvDriveCard({
       )}
       <Link
         href={url}
-        className="mt-3 inline-block text-xs font-medium underline opacity-80 hover:opacity-100"
+        className="mt-3 inline-block text-body-sm font-medium underline opacity-80 hover:opacity-100"
       >
         Adjust on state party page →
       </Link>

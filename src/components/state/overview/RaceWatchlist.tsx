@@ -18,7 +18,7 @@ export function RaceWatchlist({ vm }: { vm: OverviewViewModel }) {
       aria-labelledby="overview-races-title"
       className="rounded-xl border border-card-border bg-card p-5 sm:p-6"
     >
-      <h2 id="overview-races-title" className="text-heading-sm font-semibold text-foreground">
+      <h2 id="overview-races-title" className="text-heading font-semibold text-foreground">
         Close races
       </h2>
       {vm.hotRaces.length === 0 ? (

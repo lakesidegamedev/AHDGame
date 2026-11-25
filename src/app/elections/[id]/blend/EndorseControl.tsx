@@ -98,7 +98,7 @@ export function EndorseControl({
         {busy ? "…" : endorsed ? "Endorsed" : "Endorse"}
       </button>
       {error ? (
-        <p role="alert" style={{ margin: "4px 0 0", fontSize: 11.5, color: BLEND.negative }}>
+        <p role="alert" style={{ margin: "4px 0 0", fontSize: 12, color: BLEND.negative }}>
           {error}
         </p>
       ) : null}

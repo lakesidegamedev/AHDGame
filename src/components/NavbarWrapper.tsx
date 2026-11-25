@@ -633,7 +633,7 @@ export function NavbarWrapper({
           />
           <Wordmark
             typed={typedWordmark}
-            className={`text-lg font-semibold tracking-tight ${typedWordmark ? "font-mono" : ""}`}
+            className={`text-heading font-semibold tracking-tight ${typedWordmark ? "font-mono" : ""}`}
           />
         </div>
         <div className="hidden md:block h-4 w-32 animate-pulse rounded bg-card-border" />

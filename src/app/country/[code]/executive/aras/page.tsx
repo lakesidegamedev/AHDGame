@@ -97,7 +97,7 @@ export default async function ArasPage({ params }: PageProps) {
               </Link>{" "}
               · Áras an Uachtaráin
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-foreground">Office of the uachtarán</h1>
+            <h1 className="mt-2 text-display font-bold text-foreground">Office of the uachtarán</h1>
             <p className="mt-1 text-body-sm text-muted">
               Head of state of Ireland — directly elected to a seven-year term, maximum two terms
               (Bunreacht na hÉireann, Article 12).
@@ -170,7 +170,7 @@ export default async function ArasPage({ params }: PageProps) {
               <span className="text-muted italic">not modeled</span>
             </li>
           </ul>
-          <p className="mt-4 text-xs text-muted italic">
+          <p className="mt-4 text-body-sm text-muted italic">
             Presidential nominees and former office-holders not modeled. Article 26 referral (bills
             referred to the Supreme Court for constitutional review) is a planned future feature
             gated on a cross-country judiciary subsystem.

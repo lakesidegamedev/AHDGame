@@ -265,12 +265,12 @@ export function CongressLeadershipTab({
   return (
     <div className="space-y-5">
       {message && (
-        <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-sm text-success">
+        <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-body text-success">
           {message}
         </div>
       )}
       {error && (
-        <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
+        <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-body text-error">
           {error}
         </div>
       )}
@@ -456,8 +456,8 @@ export function CongressLeadershipTab({
 
       {viewerParty && (
         <section className="mt-6 rounded-lg border border-card-border bg-card p-4">
-          <h3 className="text-sm font-semibold mb-1">Whip room</h3>
-          <p className="text-xs text-muted mb-3">
+          <h3 className="text-body-lg font-semibold mb-1">Whip room</h3>
+          <p className="text-body-sm text-muted mb-3">
             Whip your party on the leadership elections above without leaving this page.
           </p>
           <WhipTabs

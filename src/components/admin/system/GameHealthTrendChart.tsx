@@ -20,7 +20,7 @@ interface Props {
 
 export const GameHealthTrendChart = memo(function GameHealthTrendChart({ snapshots }: Props) {
   if (snapshots.length === 0) {
-    return <p className="text-sm text-muted">No trend data yet.</p>;
+    return <p className="text-body text-muted">No trend data yet.</p>;
   }
 
   const sorted = [...snapshots].sort((a, b) => a.turn - b.turn);
@@ -37,15 +37,15 @@ export const GameHealthTrendChart = memo(function GameHealthTrendChart({ snapsho
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Turn processing trend</h3>
+      <h3 className="mb-3 text-body-lg font-semibold text-foreground">Turn processing trend</h3>
       <ResponsiveContainer width="100%" height={250}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-          <XAxis dataKey="turn" tick={{ fontSize: 11 }} stroke="var(--color-muted)" />
+          <XAxis dataKey="turn" tick={{ fontSize: 12 }} stroke="var(--color-muted)" />
           <YAxis
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 12 }}
             stroke="var(--color-muted)"
-            label={{ value: "ms", position: "insideLeft", style: { fontSize: 11 } }}
+            label={{ value: "ms", position: "insideLeft", style: { fontSize: 12 } }}
           />
           <Tooltip
             contentStyle={{

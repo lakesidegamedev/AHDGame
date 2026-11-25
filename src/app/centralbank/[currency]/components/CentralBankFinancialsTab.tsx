@@ -347,7 +347,7 @@ function ReservePortfolioPanel({
               <select
                 value={effectiveFromCurrency}
                 onChange={(event) => setFromCurrency(event.target.value as CurrencyCode)}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-body text-foreground"
                 disabled={submitting}
               >
                 {fromOptions.map((entry) => (
@@ -370,7 +370,7 @@ function ReservePortfolioPanel({
               <select
                 value={effectiveToCurrency}
                 onChange={(event) => setToCurrency(event.target.value as CurrencyCode)}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-body text-foreground"
                 disabled={submitting}
               >
                 {FOREX_ACTIVE_CURRENCIES.filter(
@@ -390,7 +390,7 @@ function ReservePortfolioPanel({
                 step={1}
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-body text-foreground"
                 disabled={submitting}
               />
             </label>
@@ -649,7 +649,7 @@ export function CentralBankFinancialsTab({
                   onChange={(event) =>
                     setTransferDirection(event.target.value as "toLending" | "toForex")
                   }
-                  className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-sm text-foreground"
+                  className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-body text-foreground"
                   disabled={transferSubmitting || !transferReady}
                 >
                   <option value="toLending">
@@ -669,7 +669,7 @@ export function CentralBankFinancialsTab({
                   max={transferCap > 0 ? transferCap : undefined}
                   value={transferAmount}
                   onChange={(event) => setTransferAmount(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-sm text-foreground"
+                  className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-2 text-body text-foreground"
                   disabled={transferSubmitting || !transferReady || transferCap <= 0}
                 />
                 <span className="mt-1 block text-body-sm tabular-nums text-muted">

@@ -14,9 +14,9 @@ export default async function MailReportPage({ params }: Props) {
 
   return (
     <section className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-heading-sm font-semibold text-foreground">Reported conversation</h1>
+      <h1 className="text-heading font-semibold text-foreground">Reported conversation</h1>
       <Suspense
-        fallback={<p className="py-12 text-center text-sm text-muted">Loading conversation…</p>}
+        fallback={<p className="py-12 text-center text-body text-muted">Loading conversation…</p>}
       >
         <MailReportViewClient reportId={id} />
       </Suspense>

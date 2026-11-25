@@ -46,7 +46,7 @@ export function SwitchToCeoCharacterNotice({
           type="button"
           onClick={() => void switchCharacter()}
           disabled={switching}
-          className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
+          className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
         >
           {switching ? "Switching" : "Switch character"}
         </button>

@@ -25,7 +25,7 @@ function useActiveHeading(headings: WikiHeading[]): string | null {
 }
 
 function linkClass(level: number, active: boolean): string {
-  return `block py-[3px] text-[13px] leading-snug ${level === 3 ? "pl-3" : ""} ${
+  return `block py-[3px] text-body-sm leading-snug ${level === 3 ? "pl-3" : ""} ${
     active ? "font-semibold text-foreground" : "text-muted hover:text-foreground"
   }`;
 }
@@ -56,8 +56,8 @@ export function WikiContentsList({
 
   if (variant === "dropdown") {
     return (
-      <details ref={detailsRef} className="mb-5 text-[13px] xl:hidden">
-        <summary className="cursor-pointer select-none text-[13px] font-semibold text-foreground">
+      <details ref={detailsRef} className="mb-5 text-body-sm xl:hidden">
+        <summary className="cursor-pointer select-none text-body-sm font-semibold text-foreground">
           On this page
         </summary>
         <nav aria-label="On this page" className="mt-2">
@@ -69,7 +69,7 @@ export function WikiContentsList({
 
   return (
     <nav aria-label="On this page">
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+      <div className="mb-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
         On this page
       </div>
       {links}

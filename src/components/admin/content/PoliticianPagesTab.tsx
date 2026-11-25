@@ -155,7 +155,7 @@ export function PoliticianPagesTab() {
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Manage Wikipedia-style pages for player characters only (NPPs use
             /politicians/npp/[id]). Generate to backfill bios, election history, and leadership
             flags.
@@ -165,7 +165,7 @@ export function PoliticianPagesTab() {
           type="button"
           onClick={handleGenerate}
           disabled={generating}
-          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {generating ? "Generating…" : "Generate all pages"}
         </button>
@@ -186,22 +186,24 @@ export function PoliticianPagesTab() {
             Customize: {politicians.find((p) => p.id === editingId)?.name ?? editingId}
           </h3>
           <div>
-            <label className="mb-1 block text-sm font-medium">Custom Bio (overrides default)</label>
+            <label className="mb-1 block text-body font-medium">
+              Custom Bio (overrides default)
+            </label>
             <textarea
               value={formBio}
               onChange={(e) => setFormBio(e.target.value)}
               rows={4}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               placeholder="Leave empty to use default bio"
             />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium">Custom sections</label>
+              <label className="text-body font-medium">Custom sections</label>
               <button
                 type="button"
                 onClick={addSection}
-                className="text-sm text-primary hover:underline"
+                className="text-body text-primary hover:underline"
               >
                 + Add section
               </button>
@@ -213,19 +215,19 @@ export function PoliticianPagesTab() {
                   value={s.title}
                   onChange={(e) => updateSection(i, "title", e.target.value)}
                   placeholder="Section title"
-                  className="mb-2 w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+                  className="mb-2 w-full rounded border border-card-border bg-background px-2 py-1 text-body"
                 />
                 <textarea
                   value={s.content}
                   onChange={(e) => updateSection(i, "content", e.target.value)}
                   placeholder="Section content"
                   rows={2}
-                  className="mb-2 w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+                  className="mb-2 w-full rounded border border-card-border bg-background px-2 py-1 text-body"
                 />
                 <button
                   type="button"
                   onClick={() => removeSection(i)}
-                  className="text-xs text-red-400 hover:underline"
+                  className="text-body-sm text-red-400 hover:underline"
                 >
                   Remove
                 </button>
@@ -236,14 +238,14 @@ export function PoliticianPagesTab() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {saving ? "Saving…" : "Save"}
             </button>
             <button
               type="button"
               onClick={() => setEditingId(null)}
-              className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card"
+              className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card"
             >
               Cancel
             </button>
@@ -253,7 +255,7 @@ export function PoliticianPagesTab() {
 
       <div className="rounded-xl border border-card-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead className="bg-card-elevated">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Politician</th>
@@ -321,7 +323,7 @@ export function PoliticianPagesTab() {
           </table>
         </div>
         {!loading && politicians.length > 50 && (
-          <p className="px-4 py-2 text-xs text-muted">
+          <p className="px-4 py-2 text-body-sm text-muted">
             Showing first 50. Use search to find others.
           </p>
         )}

@@ -74,10 +74,10 @@ export function PolicyShiftControl({
     <div className="rounded-xl border border-card-border bg-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold capitalize">{axis} Position</h3>
-          <p className="text-sm text-muted">Shift your stance on {axis} issues.</p>
+          <h3 className="text-body-lg font-semibold capitalize">{axis} Position</h3>
+          <p className="text-body text-muted">Shift your stance on {axis} issues.</p>
         </div>
-        <div className="text-xs font-medium px-2 py-1 rounded-full bg-secondary/10 text-secondary">
+        <div className="text-body-sm font-medium px-2 py-1 rounded-full bg-secondary/10 text-secondary">
           {useVoucher ? "Cost: 1 Voucher" : `Cost: ${POLICY_SHIFT_ACTION_COST} Actions`}
         </div>
       </div>
@@ -101,7 +101,7 @@ export function PolicyShiftControl({
 
         {/* Visual Indicator */}
         <div className="flex-1 text-center">
-          <div className={`text-lg font-bold ${getColorClass(value)}`}>
+          <div className={`text-heading font-bold ${getColorClass(value)}`}>
             {getPositionLabel(value)} ({value > 0 ? "+" + value : value})
           </div>
 
@@ -149,19 +149,19 @@ export function PolicyShiftControl({
         title="Confirm policy shift"
         onClose={() => setShowConfirm(null)}
       >
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-4 text-body text-muted">
           Are you sure you want to shift your {axis} position{" "}
           {showConfirm?.direction === -1 ? "left" : "right"}?
         </p>
 
-        <div className="mb-6 space-y-2 rounded-lg bg-background p-4 text-sm">
+        <div className="mb-6 space-y-2 rounded-lg bg-background p-4 text-body">
           {useVoucher ? (
             <>
               <div className="flex justify-between">
                 <span className="text-muted">Voucher cost:</span>
                 <span className="font-medium text-primary">-1 Voucher</span>
               </div>
-              <p className="pt-1 text-xs text-muted">
+              <p className="pt-1 text-body-sm text-muted">
                 No actions, infamy, influence, or cooldown will be applied.
               </p>
             </>
@@ -192,14 +192,14 @@ export function PolicyShiftControl({
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setShowConfirm(null)}
-            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary/10"
+            className="rounded-lg border border-card-border px-4 py-2 text-body font-medium transition-colors hover:bg-secondary/10"
             disabled={loading || disabled}
           >
             Cancel
           </button>
           <button
             onClick={confirmShift}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             disabled={loading || disabled}
           >
             {loading ? "Shifting..." : "Confirm shift"}

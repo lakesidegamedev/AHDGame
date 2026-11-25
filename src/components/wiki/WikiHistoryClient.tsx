@@ -106,11 +106,11 @@ export function WikiHistoryClient({ slug }: { slug: string }) {
     }
   };
 
-  if (error && !rows) return <p className="text-sm text-muted">{error}</p>;
-  if (!rows) return <p className="text-sm text-muted">Loading history...</p>;
+  if (error && !rows) return <p className="text-body text-muted">{error}</p>;
+  if (!rows) return <p className="text-body text-muted">Loading history...</p>;
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         No versions are stored yet. The first approved change will start the history.
       </p>
     );
@@ -121,7 +121,7 @@ export function WikiHistoryClient({ slug }: { slug: string }) {
       {error && (
         <p
           role="alert"
-          className="rounded-md border border-card-border bg-card p-3 text-sm text-red-500"
+          className="rounded-md border border-card-border bg-card p-3 text-body text-red-500"
         >
           {error}
         </p>
@@ -129,7 +129,7 @@ export function WikiHistoryClient({ slug }: { slug: string }) {
 
       <ul className="divide-y divide-card-border rounded-lg border border-card-border bg-card">
         {rows.map((row) => (
-          <li key={row.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+          <li key={row.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-body">
             <label className="flex items-center gap-1 text-muted">
               <input
                 type="radio"
@@ -179,15 +179,15 @@ export function WikiHistoryClient({ slug }: { slug: string }) {
 
       {diff && bodies && (
         <section aria-label="Changes between the chosen versions">
-          <h2 className="mb-2 text-lg font-semibold text-foreground">
+          <h2 className="mb-2 text-heading font-semibold text-foreground">
             Changes ({diff.stats.added} added, {diff.stats.removed} removed)
           </h2>
           {bodies.from.title !== bodies.to.title && (
-            <p className="mb-2 text-sm text-muted">
+            <p className="mb-2 text-body text-muted">
               Title: {bodies.from.title} to {bodies.to.title}
             </p>
           )}
-          <pre className="max-h-[600px] overflow-auto whitespace-pre-wrap rounded-lg border border-card-border bg-card p-3 font-mono text-xs">
+          <pre className="max-h-[600px] overflow-auto whitespace-pre-wrap rounded-lg border border-card-border bg-card p-3 font-mono text-body-sm">
             {diff.lines.map((line, i) => (
               <div
                 key={i}

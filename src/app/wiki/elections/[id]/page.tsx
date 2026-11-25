@@ -57,7 +57,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         </div>
         <Link
           href="/wiki/elections"
-          className="mt-4 block text-sm text-muted hover:text-foreground"
+          className="mt-4 block text-body text-muted hover:text-foreground"
         >
           ← Back to elections
         </Link>
@@ -88,10 +88,10 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
       <article className="prose prose-invert max-w-none">
         {/* Header with title */}
         <header className="mb-8 border-b border-card-border pb-6">
-          <h1 className="mb-3 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          <h1 className="mb-3 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
             {election.label}
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             {election.year} · Completed {formatDate(election.endTime)}
             {election.totalSeats && election.electionType === "house" && (
               <>
@@ -104,7 +104,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
         {/* Overview section - Lead paragraph */}
         <section className="mb-8">
-          <p className="text-lg leading-relaxed text-foreground/90">
+          <p className="text-heading leading-relaxed text-foreground/90">
             {generateOverview(election, totalVotes)}
           </p>
         </section>
@@ -121,7 +121,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* Background & Context */}
         {backgroundNarrative && (
           <section className="mb-8">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Background
             </h2>
             <p className="mb-4 leading-relaxed text-muted">{backgroundNarrative}</p>
@@ -131,7 +131,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* Candidates section */}
         {candidates.length > 0 && (
           <section className="mb-8">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Candidates
             </h2>
             <p className="mb-6 leading-relaxed text-muted">
@@ -145,17 +145,19 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
                 <div key={idx} className="">
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-foreground mb-1">{candidate.name}</h3>
-                      <p className="text-sm font-medium text-primary">{candidate.party}</p>
+                      <h3 className="text-body-lg font-bold text-foreground mb-1">
+                        {candidate.name}
+                      </h3>
+                      <p className="text-body font-medium text-primary">{candidate.party}</p>
                     </div>
                     {candidate.placement === "winner" && (
-                      <span className="rounded-full bg-success/10 border border-success/25 px-3 py-1 text-xs font-semibold text-success shrink-0">
+                      <span className="rounded-full bg-success/10 border border-success/25 px-3 py-1 text-body-sm font-semibold text-success shrink-0">
                         WINNER
                       </span>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm leading-relaxed text-muted">
+                    <p className="text-body leading-relaxed text-muted">
                       {candidate.placement === "winner"
                         ? `${candidate.name} secured victory in this election, earning ${candidate.pct.toFixed(1)}% of the vote with ${candidate.votes.toLocaleString("en-US")} total votes. `
                         : candidate.placement === "runner-up"
@@ -174,7 +176,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
                         </span>
                       )}
                     </p>
-                    <p className="text-sm leading-relaxed text-muted">
+                    <p className="text-body leading-relaxed text-muted">
                       {candidate.placement === "winner"
                         ? `With this victory, the ${candidate.party} secured control of this office for the coming term. The win solidified the party's position and provided a mandate to pursue its policy agenda.`
                         : candidate.placement === "runner-up"
@@ -191,7 +193,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* Primary Elections section */}
         {primaryNarrative && (
           <section className="mb-8">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Primary elections
             </h2>
             <p className="mb-4 leading-relaxed text-muted">
@@ -201,7 +203,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
               performance factors.
             </p>
             <p className="mb-4 leading-relaxed text-muted">{primaryNarrative}</p>
-            <p className="text-sm italic text-muted/80">
+            <p className="text-body italic text-muted/80">
               Primary results reflected each candidate&apos;s ability to mobilize party support,
               build organizational strength, and articulate a compelling vision during the
               nomination phase of the election cycle.
@@ -212,7 +214,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* General Election Campaign section */}
         {campaignNarrative && (
           <section className="mb-8 clear-both">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Campaign
             </h2>
             <p className="mb-4 leading-relaxed text-muted">{campaignNarrative}</p>
@@ -233,7 +235,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* Results section */}
         {resultsNarrative && (
           <section className="mb-8">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Results
             </h2>
             <p className="mb-4 leading-relaxed text-muted">
@@ -241,7 +243,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
             </p>
             <p className="mb-4 leading-relaxed text-muted">{resultsNarrative}</p>
             {election.generalResults?.finalized && (
-              <p className="text-sm italic text-muted/80">
+              <p className="text-body italic text-muted/80">
                 These results were officially certified and finalized, marking the conclusion of the{" "}
                 {election.year} election cycle for this office.
               </p>
@@ -261,7 +263,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
         {/* Historical Significance */}
         {election.generalResults && (
           <section className="mb-8">
-            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+            <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
               Historical significance
             </h2>
             <p className="mb-4 leading-relaxed text-muted">
@@ -288,7 +290,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
         {/* Detailed Results heading */}
         <section className="mb-6 mt-12">
-          <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+          <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
             Detailed results and data
           </h2>
           <p className="mb-3 leading-relaxed text-muted">
@@ -297,7 +299,7 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
             These figures represent the official tabulated results as recorded at the conclusion of
             the election process.
           </p>
-          <p className="mb-6 text-sm text-muted">
+          <p className="mb-6 text-body text-muted">
             Note: All percentages are calculated from total votes cast.{" "}
             {election.electionType === "president" &&
               "Electoral vote allocations follow each state's designated method (winner-take-all or proportional by district)."}
@@ -330,14 +332,14 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
       {!election.generalResults && election.primaryResults.length === 0 && (
         <div className=" text-center">
-          <div className="mb-4 text-4xl opacity-30">📊</div>
-          <p className="text-base text-foreground mb-2 font-medium">Election data pending</p>
-          <p className="text-sm text-muted">
+          <div className="mb-4 text-display opacity-30">📊</div>
+          <p className="text-body-lg text-foreground mb-2 font-medium">Election data pending</p>
+          <p className="text-body text-muted">
             Detailed results for this election are not yet available. Complete vote tallies,
             candidate information, and analysis will be added once the election concludes and
             results are certified.
           </p>
-          <p className="mt-4 text-sm text-muted/80">
+          <p className="mt-4 text-body text-muted/80">
             Check back after the election date for comprehensive results and historical context.
           </p>
         </div>

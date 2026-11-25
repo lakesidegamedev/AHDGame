@@ -11,7 +11,7 @@ const btn = (on: boolean): React.CSSProperties => ({
   cursor: "pointer",
   font: "inherit",
   fontFamily: FONT.mono,
-  fontSize: 10.5,
+  fontSize: 12,
   letterSpacing: ".06em",
   textTransform: "uppercase",
   border: `1px solid ${on ? BLEND.ink : BLEND.hairlineStrong}`,
@@ -34,7 +34,7 @@ export function ReplayStart({ weeks, onStart }: { weeks: number; onStart: () => 
       <button type="button" onClick={onStart} style={btn(false)}>
         &#9654; Replay the campaign
       </button>
-      <span style={{ fontSize: 12.5, color: BLEND.muted }}>
+      <span style={{ fontSize: 12, color: BLEND.muted }}>
         {weeks} weeks, state by state and county by county
       </span>
     </div>
@@ -96,7 +96,7 @@ export function ReplayControls({
         style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 220px", minWidth: 180 }}
       >
         <span
-          style={{ fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted, whiteSpace: "nowrap" }}
+          style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted, whiteSpace: "nowrap" }}
         >
           WEEK {frame.week} / {frame.weeks}
         </span>

@@ -56,13 +56,13 @@ export function InfoDot({
           setOpen(true);
         }}
         onBlur={() => setOpen(false)}
-        className="relative select-none rounded-full text-[12px] leading-none text-muted/60 after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="relative select-none rounded-full text-body-sm leading-none text-muted/60 after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         ⓘ
       </button>
       <span
         role="tooltip"
-        className={`pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-40 w-[230px] -translate-x-1/2 rounded-[10px] border border-card-border bg-card-elevated px-3 py-2.5 text-left text-[11px] leading-relaxed text-muted shadow-xl transition-opacity group-hover:opacity-100 ${open ? "opacity-100" : "opacity-0"}`}
+        className={`pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-40 w-[230px] -translate-x-1/2 rounded-[10px] border border-card-border bg-card-elevated px-3 py-2.5 text-left text-body-sm leading-relaxed text-muted shadow-xl transition-opacity group-hover:opacity-100 ${open ? "opacity-100" : "opacity-0"}`}
       >
         {children}
       </span>

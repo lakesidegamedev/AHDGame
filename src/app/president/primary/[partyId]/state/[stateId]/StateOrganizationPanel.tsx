@@ -68,15 +68,15 @@ export function StateOrganizationPanel({ stateId }: { stateId: string }) {
   return (
     <section className="mb-6 rounded-xl border border-card-border bg-card p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">Organization in {stateId}</h3>
+        <h3 className="text-body-lg font-semibold">Organization in {stateId}</h3>
         <Link
           href="/political-operations"
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-body-sm font-medium text-primary hover:underline"
         >
           Full organization map →
         </Link>
       </div>
-      <p className="mb-2 text-xs text-muted">
+      <p className="mb-2 text-body-sm text-muted">
         Per-candidate ground game investment. Each level multiplies the candidate&apos;s vote weight
         in this state in the primary <strong>and</strong> in the general election (+
         {Math.round(MAX_STATE_ORG_BONUS_PRIMARY * 100)}% primary, +
@@ -85,9 +85,9 @@ export function StateOrganizationPanel({ stateId }: { stateId: string }) {
         your own here, or open the map to invest across states.
       </p>
       {candidates.length === 0 ? (
-        <p className="mb-3 text-sm text-muted">Nobody has invested here yet.</p>
+        <p className="mb-3 text-body text-muted">Nobody has invested here yet.</p>
       ) : (
-        <ul className="mb-3 space-y-1 text-sm">
+        <ul className="mb-3 space-y-1 text-body">
           {candidates.map((c) => {
             const filled = "▓".repeat(c.level);
             const empty = "░".repeat(STATE_ORG_MAX_LEVEL - c.level);
@@ -97,7 +97,7 @@ export function StateOrganizationPanel({ stateId }: { stateId: string }) {
             return (
               <li key={c.characterId} className="flex items-center justify-between">
                 <span className="text-foreground">{c.characterName}</span>
-                <span className="font-mono text-xs text-muted">
+                <span className="font-mono text-body-sm text-muted">
                   {filled}
                   {empty} Lv {c.level} · +{pct}%
                 </span>
@@ -106,12 +106,12 @@ export function StateOrganizationPanel({ stateId }: { stateId: string }) {
           })}
         </ul>
       )}
-      <InlineError error={error} className="mb-2 text-xs text-danger" />
+      <InlineError error={error} className="mb-2 text-body-sm text-danger" />
       <button
         type="button"
         disabled={busy}
         onClick={build}
-        className="w-full rounded border border-primary/60 px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded border border-primary/60 px-3 py-2 text-body text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy
           ? "Building..."

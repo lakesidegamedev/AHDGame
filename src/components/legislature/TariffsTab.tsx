@@ -48,7 +48,7 @@ export function TariffsTab({ countryId }: { countryId: string }) {
 
   if (tariffs.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-card/60 p-6 text-center text-body text-muted-foreground">
         No active tariffs.
       </div>
     );
@@ -62,8 +62,8 @@ export function TariffsTab({ countryId }: { countryId: string }) {
           className={`flex items-center justify-between rounded-lg border border-border bg-card/60 px-4 py-3 ${t.rate === 0 ? "opacity-50" : ""}`}
         >
           <div className="space-y-0.5">
-            <p className="text-sm font-medium">{SCOPE_LABELS[t.scopeType] ?? t.scopeType}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body font-medium">{SCOPE_LABELS[t.scopeType] ?? t.scopeType}</p>
+            <p className="text-body-sm text-muted-foreground">
               {t.targetSectorType
                 ? `Sector: ${OPERATING_SECTOR_TYPE_LABELS[t.targetSectorType as OperatingSectorType] ?? t.targetSectorType}`
                 : t.targetOriginCountryId
@@ -75,11 +75,11 @@ export function TariffsTab({ countryId }: { countryId: string }) {
           </div>
           <div className="text-right">
             <p
-              className={`text-sm font-semibold ${t.rate === 0 ? "text-muted-foreground" : "text-amber-400"}`}
+              className={`text-body font-semibold ${t.rate === 0 ? "text-muted-foreground" : "text-amber-400"}`}
             >
               {t.rate === 0 ? "Nullified" : `${t.rate}%`}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body-sm text-muted-foreground">
               <GameMonthTime value={t.updatedAt} />
             </p>
           </div>

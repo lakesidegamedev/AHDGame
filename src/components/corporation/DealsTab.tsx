@@ -205,7 +205,7 @@ export default function DealsTab({
   }
 
   if (!isCeo) return null;
-  if (loading) return <p className="text-xs text-muted">Loading deals.</p>;
+  if (loading) return <p className="text-body-sm text-muted">Loading deals.</p>;
   if (!data?.enabled) return null;
 
   return (
@@ -214,7 +214,7 @@ export default function DealsTab({
 
       <DenseSection title="Offers to acquire this corporation">
         {!data || data.incoming.length === 0 ? (
-          <p className="py-2 text-xs text-muted">No incoming offers.</p>
+          <p className="py-2 text-body-sm text-muted">No incoming offers.</p>
         ) : (
           <TableScroll>
             <table className="w-full border-collapse">
@@ -282,7 +282,7 @@ export default function DealsTab({
 
       <DenseSection title="Your outgoing offers">
         {!data || data.outgoing.length === 0 ? (
-          <p className="py-2 text-xs text-muted">No outgoing offers.</p>
+          <p className="py-2 text-body-sm text-muted">No outgoing offers.</p>
         ) : (
           <TableScroll>
             <table className="w-full border-collapse">
@@ -326,7 +326,7 @@ export default function DealsTab({
 
       <DenseSection title="Make an acquisition offer">
         <div className="space-y-2 py-1">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Buy another corporation outright. If a player CEO accepts, its shareholders are paid the
             offer price and the deal settles one of two ways. Merge folds its sectors and cash into
             yours, and then the target must have no outstanding bonds and hold no shares in other
@@ -337,15 +337,15 @@ export default function DealsTab({
           </p>
           <form onSubmit={propose} className="flex flex-wrap items-center gap-1.5">
             {selectedTarget ? (
-              <span className="inline-flex h-7 items-center gap-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-[13px] text-foreground">
+              <span className="inline-flex h-7 items-center gap-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-body-sm text-foreground">
                 {selectedTarget.name}
                 {selectedTarget.ticker ? (
-                  <span className="text-xs text-muted">{selectedTarget.ticker}</span>
+                  <span className="text-body-sm text-muted">{selectedTarget.ticker}</span>
                 ) : null}
                 <button
                   type="button"
                   onClick={() => setSelectedTarget(null)}
-                  className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+                  className="text-body-sm text-muted underline underline-offset-2 hover:text-foreground"
                 >
                   Change
                 </button>
@@ -358,7 +358,7 @@ export default function DealsTab({
                   onChange={(e) => setTargetQuery(e.target.value)}
                   placeholder="Search corporations"
                   aria-label="Target corporation"
-                  className="h-7 w-full max-w-64 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+                  className="h-7 w-full max-w-64 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
                 />
                 {targetResults.length > 0 && (
                   <ul className="absolute left-0 top-8 z-20 max-h-56 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card shadow-lg">
@@ -370,15 +370,15 @@ export default function DealsTab({
                             setSelectedTarget(r);
                             setTargetResults([]);
                           }}
-                          className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-card-elevated"
+                          className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-body-sm text-foreground hover:bg-card-elevated"
                         >
                           <span className="truncate">
                             {r.name}
                             {r.nppRun ? (
-                              <span className="ml-1 text-xs text-muted">AI-run</span>
+                              <span className="ml-1 text-body-sm text-muted">AI-run</span>
                             ) : null}
                           </span>
-                          <span className="shrink-0 text-xs text-muted">
+                          <span className="shrink-0 text-body-sm text-muted">
                             {[r.countryId, r.ticker].filter(Boolean).join(" ")}
                           </span>
                         </button>
@@ -388,7 +388,7 @@ export default function DealsTab({
                 )}
               </span>
             )}
-            <label className="flex items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5 text-body-sm text-muted">
               {money.code ? `Offer, ${money.code}` : "Offer"}
               <input
                 value={price}
@@ -396,12 +396,12 @@ export default function DealsTab({
                 type="number"
                 min="1"
                 aria-label="Offer price"
-                className="h-7 w-36 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-36 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 required
               />
             </label>
             <fieldset
-              className="flex items-center gap-3 text-xs text-muted"
+              className="flex items-center gap-3 text-body-sm text-muted"
               aria-label="Acquisition outcome"
             >
               <label className="flex items-center gap-1">
@@ -431,7 +431,7 @@ export default function DealsTab({
             !targetSearching &&
             targetQuery.trim().length >= 2 &&
             targetResults.length === 0 && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 No eligible corporations found. Only player-run and AI-run private companies can be
                 targets.
               </p>

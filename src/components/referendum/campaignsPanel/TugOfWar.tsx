@@ -18,7 +18,7 @@ export function TugOfWar({
   const yes = Math.max(0, Math.min(100, yesShare));
   const no = 100 - Math.round(yes);
   const barH = size === "hero" ? "h-6" : "h-3";
-  const numCls = size === "hero" ? "text-3xl font-black" : "text-xs font-bold";
+  const numCls = size === "hero" ? "text-display font-black" : "text-body-sm font-bold";
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between">

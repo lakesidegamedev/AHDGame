@@ -48,4 +48,4 @@ export const AREA_STYLES: Record<DevArea, { label: string; classes: string }> = 
 };
 
 export const TAG_CHIP_CLASSES =
-  "rounded-full border border-card-border bg-background px-2 py-0.5 text-xs font-medium text-muted";
+  "rounded-full border border-card-border bg-background px-2 py-0.5 text-body-sm font-medium text-muted";

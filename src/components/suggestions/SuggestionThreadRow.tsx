@@ -51,7 +51,7 @@ export function SuggestionThreadRow({ item, selectMode, selected, onToggleSelect
       <span className="font-semibold text-foreground">{item.commentCount}</span>
       <span className="text-muted md:hidden">{item.commentCount === 1 ? "reply" : "replies"}</span>
       {unread > 0 && (
-        <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+        <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-body-sm font-semibold text-primary">
           {unread} new
         </span>
       )}
@@ -105,9 +105,9 @@ export function SuggestionThreadRow({ item, selectMode, selected, onToggleSelect
           )}
         </div>
         {item.descriptionPreview && (
-          <p className="mt-0.5 line-clamp-1 text-sm text-muted">{item.descriptionPreview}</p>
+          <p className="mt-0.5 line-clamp-1 text-body text-muted">{item.descriptionPreview}</p>
         )}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
           <span className="font-mono">S#{item.issueNumber}</span>
           <CategoryBadge
             category={item.category as "feature_request"}
@@ -134,7 +134,7 @@ export function SuggestionThreadRow({ item, selectMode, selected, onToggleSelect
       </div>
 
       {/* Stats: a row under the text on narrow screens, their own columns from md up */}
-      <div className="col-start-2 mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs md:contents">
+      <div className="col-start-2 mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm md:contents">
         <div className="relative z-10 md:flex md:justify-center">
           <SuggestionVotes
             issueNumber={item.issueNumber}
@@ -142,7 +142,7 @@ export function SuggestionThreadRow({ item, selectMode, selected, onToggleSelect
             userReaction={item.userReaction}
           />
         </div>
-        <div className="md:flex md:justify-center md:text-sm">{replies}</div>
+        <div className="md:flex md:justify-center md:text-body">{replies}</div>
         <div className="md:flex md:justify-end">
           <StatusBadge status={item.status} />
         </div>

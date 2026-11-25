@@ -118,8 +118,8 @@ export function ExperimentalUserMenu({
           </div>
         </div>
         <div className="px-4 pb-3 pt-10">
-          <p className="truncate text-sm font-semibold text-foreground">{profileDisplayName}</p>
-          <p className="truncate text-xs text-muted">@{user.username}</p>
+          <p className="truncate text-body font-semibold text-foreground">{profileDisplayName}</p>
+          <p className="truncate text-body-sm text-muted">@{user.username}</p>
         </div>
       </div>
 
@@ -161,10 +161,10 @@ export function ExperimentalUserMenu({
                 char.isActive && !isImperialMode ? (
                   <div
                     key={char.id}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground"
+                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-body-sm text-foreground"
                   >
                     <span>{char.name}</span>
-                    <span className="text-[10px] text-primary font-medium">
+                    <span className="text-body-sm text-primary font-medium">
                       {t("common.active")}
                     </span>
                   </div>
@@ -177,10 +177,10 @@ export function ExperimentalUserMenu({
                       void handleSwitchImperial("character");
                     }}
                     disabled={switchingImperial}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
                   >
                     <span>{char.name}</span>
-                    <span className="text-[10px] text-muted/60">{char.countryId}</span>
+                    <span className="text-body-sm text-muted/60">{char.countryId}</span>
                   </button>
                 ) : (
                   <button
@@ -191,10 +191,10 @@ export function ExperimentalUserMenu({
                       void handleSwitchCharacter(char.id);
                     }}
                     disabled={switchingCharacter}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
                   >
                     <span>{char.name}</span>
-                    <span className="text-[10px] text-muted/60">{char.countryId}</span>
+                    <span className="text-body-sm text-muted/60">{char.countryId}</span>
                   </button>
                 )
               )}
@@ -205,10 +205,10 @@ export function ExperimentalUserMenu({
                     <Link
                       href={`/imperial/${imperialCharacter.id}`}
                       onClick={closeAll}
-                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] text-foreground transition-colors hover:bg-white/5"
+                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-body-sm text-foreground transition-colors hover:bg-white/5"
                     >
                       <span>{imperialCharacter.name}</span>
-                      <span className="text-[10px] text-primary font-medium">
+                      <span className="text-body-sm text-primary font-medium">
                         {t("common.active")}
                       </span>
                     </Link>
@@ -220,10 +220,10 @@ export function ExperimentalUserMenu({
                         void handleSwitchImperial("imperial");
                       }}
                       disabled={switchingImperial}
-                      className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+                      className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
                     >
                       <span>{imperialCharacter.name}</span>
-                      <span className="text-[10px] text-amber-400/70">{t("common.imperial")}</span>
+                      <span className="text-body-sm text-amber-400/70">{t("common.imperial")}</span>
                     </button>
                   )}
                 </>
@@ -247,7 +247,7 @@ export function ExperimentalUserMenu({
                 href={url}
                 target="_self"
                 onClick={closeAll}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
               >
                 {isSandbox ? t("userMenu.switchToMainSite") : t("userMenu.switchToSandbox")}
               </a>
@@ -261,7 +261,7 @@ export function ExperimentalUserMenu({
               closeAll();
               handleSignOut();
             }}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-error transition-colors hover:bg-white/5"
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-body-sm text-error transition-colors hover:bg-white/5"
           >
             {t("common.signOut")}
           </button>
@@ -270,7 +270,7 @@ export function ExperimentalUserMenu({
       <Link
         href="/changelog"
         onClick={closeAll}
-        className="block border-t border-card-border px-4 py-2 text-center text-[11px] text-muted transition-colors hover:text-foreground"
+        className="block border-t border-card-border px-4 py-2 text-center text-body-sm text-muted transition-colors hover:text-foreground"
       >
         v{process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"} ·{" "}
         {process.env.NEXT_PUBLIC_GIT_COMMIT ?? "dev"}

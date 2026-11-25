@@ -19,7 +19,7 @@ export function CandidateTotalsPanel({
 }: CandidateTotalsPanelProps) {
   if (candidates.length === 0) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-5 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-5 text-center text-body text-muted">
         No candidates registered.
       </div>
     );
@@ -27,12 +27,12 @@ export function CandidateTotalsPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="mb-3 text-sm font-semibold">Candidates</h3>
+      <h3 className="mb-3 text-body-lg font-semibold">Candidates</h3>
       <div className="space-y-3">
         {candidates.map((c) => (
           <div key={c.id}>
             <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <span className="inline-flex items-center gap-2 text-sm font-medium">
+              <span className="inline-flex items-center gap-2 text-body font-medium">
                 <span
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: c.partyColor }}
@@ -44,12 +44,12 @@ export function CandidateTotalsPanel({
                   </span>
                 )}
                 {projectedWinner === c.id && (
-                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-success">
+                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-success">
                     ✓ Projected winner
                   </span>
                 )}
               </span>
-              <span className="text-xs text-muted tabular-nums">
+              <span className="text-body-sm text-muted tabular-nums">
                 {mode === "ev" && (
                   <>
                     <span className="font-semibold text-foreground">
@@ -78,7 +78,7 @@ export function CandidateTotalsPanel({
                 style={{ width: `${c.voteSharePct}%`, backgroundColor: c.partyColor }}
               />
             </div>
-            <div className="mt-0.5 text-[11px] text-muted">{c.partyName}</div>
+            <div className="mt-0.5 text-body-sm text-muted">{c.partyName}</div>
           </div>
         ))}
       </div>

@@ -42,13 +42,13 @@ function SectionHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-heading-sm font-semibold text-foreground">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">{description}</p>
+        <h2 className="text-heading font-semibold text-foreground">{title}</h2>
+        <p className="mt-1 max-w-3xl text-body leading-relaxed text-muted">{description}</p>
       </div>
       {link ? (
         <Link
           href={link.href}
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-card-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-card-border bg-card px-3.5 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
         >
           {link.label}
         </Link>
@@ -79,7 +79,7 @@ function SummaryMetric({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <p className="text-body-sm text-muted">{label}</p>
-      <p className={`mt-2 text-heading-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
+      <p className={`mt-2 text-heading font-bold tabular-nums ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -97,10 +97,10 @@ function MetricList({
 }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
       <div className="mt-4 space-y-3">
         {items.length === 0 ? (
-          <p className="text-sm text-muted">{empty}</p>
+          <p className="text-body text-muted">{empty}</p>
         ) : (
           items.map((item, index) => <div key={index}>{render(item)}</div>)
         )}
@@ -128,7 +128,7 @@ function StateMetricRow({ item }: { item: PartyAnalyticsStateMetric }) {
       className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted/50 px-3 py-2 transition-colors hover:border-primary/40 hover:bg-card-muted"
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{item.stateName}</p>
+        <p className="truncate text-body font-medium text-foreground">{item.stateName}</p>
         <p className="text-body-sm text-muted">{item.organization.toFixed(1)} org</p>
       </div>
       <div className="text-right">
@@ -146,7 +146,7 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+          <p className="truncate text-body font-medium text-foreground">{item.name}</p>
           <Badge color={getRiskBadgeColor(item.riskLabel)}>{item.riskLabel}</Badge>
         </div>
         <p className="text-body-sm text-muted">
@@ -172,7 +172,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.nppName}</p>
+          <p className="truncate text-body font-medium text-foreground">{item.nppName}</p>
           <Badge color={getRiskBadgeColor(item.exitRiskLabel)}>{item.exitRiskLabel}</Badge>
         </div>
         <p className="text-body-sm text-muted">
@@ -181,7 +181,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
         </p>
       </div>
       <div className="text-right">
-        <p className="text-sm font-semibold text-warning tabular-nums">
+        <p className="text-body font-semibold text-warning tabular-nums">
           Rel {item.relationshipWithChair.toFixed(1)}
         </p>
         <p className="text-body-sm text-muted">Exit in {item.gapFromExit.toFixed(1)}</p>
@@ -197,7 +197,7 @@ function SlateItemRow({ item }: { item: PartyAnalyticsSlateItem }) {
       className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted/50 px-3 py-2 transition-colors hover:border-primary/40 hover:bg-card-muted"
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{item.electionLabel}</p>
+        <p className="truncate text-body font-medium text-foreground">{item.electionLabel}</p>
         <p className="text-body-sm text-muted">{displayCanadianRegionCode(item.state)}</p>
       </div>
       <Badge color={item.statusLabel.startsWith("No") ? "warning" : "error"}>
@@ -215,7 +215,7 @@ function SlateCoverageRow({ item }: { item: PartyAnalyticsSlateCoverageItem }) {
       className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted/50 px-3 py-2 transition-colors hover:border-primary/40 hover:bg-card-muted"
     >
       <div>
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-body font-medium text-foreground">
           {displayCanadianRegionCode(item.state)}
         </p>
         <p className="text-body-sm text-muted">
@@ -265,13 +265,13 @@ function CaucusHealthRow({
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.caucusName}</p>
+          <p className="truncate text-body font-medium text-foreground">{item.caucusName}</p>
           <Badge color={getCaucusStatusBadgeColor(item.statusLabel)}>{item.statusLabel}</Badge>
         </div>
         <p className="truncate text-body-sm text-muted">{item.statusReason}</p>
       </div>
       <div className="text-right">
-        <p className="text-sm font-semibold text-foreground tabular-nums">
+        <p className="text-body font-semibold text-foreground tabular-nums">
           {item.memberCounts.total} members
         </p>
         <p className="text-body-sm text-muted">{formatChurnCount(item, recentWindowTurns)}</p>
@@ -331,7 +331,7 @@ export function PartyAnalyticsTab({
   if (loading) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <p className="text-sm text-muted animate-pulse">Loading analytics...</p>
+        <p className="text-body text-muted animate-pulse">Loading analytics...</p>
       </div>
     );
   }
@@ -339,8 +339,8 @@ export function PartyAnalyticsTab({
   if (error || !data) {
     return (
       <div className="rounded-xl border border-error/30 bg-error/10 p-6">
-        <p className="text-sm font-medium text-error">Analytics unavailable</p>
-        <p className="mt-2 text-sm text-muted">{error ?? "No analytics payload returned."}</p>
+        <p className="text-body font-medium text-error">Analytics unavailable</p>
+        <p className="mt-2 text-body text-muted">{error ?? "No analytics payload returned."}</p>
       </div>
     );
   }
@@ -381,13 +381,13 @@ export function PartyAnalyticsTab({
             empty="No state organization data on file."
           />
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Growth watch</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Growth watch</h3>
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div>
                 <p className="text-body-sm font-medium text-success">Growing</p>
                 <div className="mt-3 space-y-3">
                   {data.org.positiveGrowth.length === 0 ? (
-                    <p className="text-sm text-muted">No states are growing right now.</p>
+                    <p className="text-body text-muted">No states are growing right now.</p>
                   ) : (
                     data.org.positiveGrowth.map((item) => (
                       <StateMetricRow key={`rise-${item.stateId}`} item={item} />
@@ -399,7 +399,7 @@ export function PartyAnalyticsTab({
                 <p className="text-body-sm font-medium text-warning">Shrinking</p>
                 <div className="mt-3 space-y-3">
                   {data.org.negativeGrowth.length === 0 ? (
-                    <p className="text-sm text-muted">No states are shrinking right now.</p>
+                    <p className="text-body text-muted">No states are shrinking right now.</p>
                   ) : (
                     data.org.negativeGrowth.map((item) => (
                       <StateMetricRow key={`slide-${item.stateId}`} item={item} />
@@ -460,7 +460,7 @@ export function PartyAnalyticsTab({
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
             >
               {link.label}
             </Link>
@@ -593,7 +593,7 @@ export function PartyAnalyticsTab({
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
             >
               {link.label}
             </Link>

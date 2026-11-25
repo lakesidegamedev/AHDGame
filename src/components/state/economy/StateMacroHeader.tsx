@@ -50,29 +50,29 @@ export function StateMacroHeader({
         <div className="text-body-sm font-medium text-muted">
           {regionLabel} Economy · {stateName}
         </div>
-        <div className="mt-0.5 font-mono text-2xl font-bold leading-tight tabular-nums text-foreground">
+        <div className="mt-0.5 font-mono text-heading font-bold leading-tight tabular-nums text-foreground">
           {gdpDisplay}
         </div>
-        <div className="text-[11px] text-muted">
+        <div className="text-body-sm text-muted">
           Gross {regionLabel.toLowerCase()} product · local currency
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {stateGdpGrowth != null && (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-body-sm font-bold tabular-nums ${
               stateGdpGrowth >= 0
                 ? "border-success/30 bg-success/10 text-success"
                 : "border-error/30 bg-error/10 text-error"
             }`}
           >
             {signed(stateGdpGrowth)}% {stateGdpGrowth >= 0 ? "▲" : "▼"}
-            <span className="font-sans text-[11px] font-medium opacity-75">growth /yr</span>
+            <span className="font-sans text-body-sm font-medium opacity-75">growth /yr</span>
           </span>
         )}
         {vsNational != null && (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-body-sm font-bold tabular-nums ${
               vsNational >= 0
                 ? "border-success/30 bg-success/10 text-success"
                 : "border-error/30 bg-error/10 text-error"
@@ -80,18 +80,18 @@ export function StateMacroHeader({
             title={`This ${regionLabel.toLowerCase()}'s GDP growth vs. the population-weighted national average`}
           >
             {signed(vsNational)}pp {vsNational >= 0 ? "▲" : "▼"}
-            <span className="font-sans text-[11px] font-medium opacity-75">vs national</span>
+            <span className="font-sans text-body-sm font-medium opacity-75">vs national</span>
           </span>
         )}
         {topSectorLabel && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-xs text-muted">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-body-sm text-muted">
             Top sector <strong className="font-semibold text-foreground">{topSectorLabel}</strong>
           </span>
         )}
       </div>
       <Link
         href={economyUrl(countryId)}
-        className="ml-auto whitespace-nowrap text-xs font-semibold text-primary hover:underline"
+        className="ml-auto whitespace-nowrap text-body-sm font-semibold text-primary hover:underline"
       >
         National economic outlook &rarr;
       </Link>

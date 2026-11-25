@@ -71,7 +71,7 @@ export default function HungarianElectoralDecisionPanel({
   if (!decision && !error) return null;
   return (
     <section className="mx-auto max-w-3xl space-y-4 rounded-lg border border-border bg-card p-5 text-foreground">
-      <h2 className="text-xl font-semibold">{t("title")}</h2>
+      <h2 className="text-heading font-semibold">{t("title")}</h2>
       <p>{t("help")}</p>
       <p>{t("threshold")}</p>
       {error && <p role="alert">{error}</p>}

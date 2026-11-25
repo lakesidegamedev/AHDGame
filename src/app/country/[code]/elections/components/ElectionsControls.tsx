@@ -103,7 +103,7 @@ export function ElectionsControls({
             onClick={() => (v === "list" || mapAvailable) && onView(v)}
             disabled={!mapAvailable && v === "map"}
             title={!mapAvailable && v === "map" ? "Pick a single office to see the map" : undefined}
-            className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
+            className={`px-4 py-2 text-body font-medium capitalize transition-colors ${
               view === v
                 ? "bg-primary text-primary-foreground"
                 : "bg-card text-muted hover:text-foreground"
@@ -115,7 +115,7 @@ export function ElectionsControls({
       </div>
       {!mapAvailable && (
         // The reason the Map view is off, on the page and not only on hover.
-        <span className="text-xs text-muted">Pick one office for the map</span>
+        <span className="text-body-sm text-muted">Pick one office for the map</span>
       )}
 
       <MobileSelect
@@ -203,7 +203,7 @@ function ToggleButton({
       onClick={onClick}
       title={title}
       aria-pressed={active}
-      className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+      className={`rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
         active ? activeClass : "border-card-border bg-card text-muted hover:text-foreground"
       }`}
     >

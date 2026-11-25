@@ -42,7 +42,7 @@ describe("Masthead", () => {
   it("leads with the overall condition as a figure, its outlined status tag and its meaning", () => {
     renderMasthead();
     const figure = screen.getByText("58");
-    expect(figure.className).toContain("text-5xl");
+    expect(figure.className).toContain("text-display");
     expect(screen.getByText("/100")).toBeTruthy();
     const tag = screen.getByText("STABLE");
     expect(tag.className).toContain("border");

@@ -231,7 +231,7 @@ export function BuildOrgPanel({
   const buttons = (
     <div className="space-y-2">
       <fieldset disabled={busy} className="flex gap-2">
-        <legend className="text-xs text-muted">Builds per click</legend>
+        <legend className="text-body-sm text-muted">Builds per click</legend>
         {[1, 5, 10].map((value) => (
           <button
             key={value}
@@ -245,7 +245,7 @@ export function BuildOrgPanel({
         ))}
       </fieldset>
       {count > 1 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {batchQuotes.map((quote) => (
             <span key={quote.scope} className="block">
               Estimated {quote.scope === "state" ? "state" : "national"} batch: {quote.psCost} PS
@@ -339,14 +339,14 @@ export function BuildOrgPanel({
     />
   ) : preview && !preview.ok ? (
     <div className="rounded-lg border border-card-border/40 bg-background/30 px-4 py-3">
-      <div className="text-[11px] italic text-muted">{preview.message}</div>
+      <div className="text-body-sm italic text-muted">{preview.message}</div>
     </div>
   ) : (
     <div className="rounded-lg border border-card-border/40 bg-background/30 px-4 py-3">
       {previewLoading ? (
-        <div className="text-[11px] italic text-muted">Loading projection…</div>
+        <div className="text-body-sm italic text-muted">Loading projection…</div>
       ) : (
-        <div className="text-[11px] italic text-muted">
+        <div className="text-body-sm italic text-muted">
           Each successful click adds one unit to this party&apos;s Organization in this state.
         </div>
       )}
@@ -374,7 +374,7 @@ export function BuildOrgPanel({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <h2 className={compact ? "text-sm font-semibold" : "font-semibold"}>
+            <h2 className={compact ? "text-body font-semibold" : "font-semibold"}>
               Build organization
             </h2>
             <Tooltip
@@ -383,7 +383,7 @@ export function BuildOrgPanel({
             />
           </div>
           {compact ? null : (
-            <p className="text-xs text-muted/70 leading-relaxed max-w-lg">
+            <p className="text-body-sm text-muted/70 leading-relaxed max-w-lg">
               Build lasting organization in this state one unit at a time. Every click adds the same
               amount, but the PS cost rises if you build here several times in a row.
             </p>
@@ -396,12 +396,12 @@ export function BuildOrgPanel({
           </div>
           <div
             key={`ps-${bumpKey}`}
-            className={`font-bold tabular-nums ${compact ? "text-lg" : "text-2xl"} ${counterAnim}`}
+            className={`font-bold tabular-nums ${compact ? "text-heading" : "text-heading"} ${counterAnim}`}
             style={{ color: partyColor, "--ps-bloom-color": partyColor } as React.CSSProperties}
           >
             {headerPs.toFixed(0)}
             {headerCapLabel ? (
-              <span className="text-xs text-muted ml-1">/ {headerCapLabel}</span>
+              <span className="text-body-sm text-muted ml-1">/ {headerCapLabel}</span>
             ) : null}
           </div>
         </div>
@@ -409,15 +409,15 @@ export function BuildOrgPanel({
 
       <div className={`space-y-3 ${compact ? "px-4 py-3" : "px-6 py-4"}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm min-w-0">
-            <div className="flex items-center text-muted text-xs">
+          <div className="text-body min-w-0">
+            <div className="flex items-center text-muted text-body-sm">
               Spend political strength
               <Tooltip
                 label="About the pressure ladder"
                 content={`Each Build Org click costs a base of ${BUILD_ORG_BASE_PS_COST} PS, plus escalation from how often you've built in this state recently (the pressure ladder).`}
               />
             </div>
-            <div className="text-[11px] text-muted/80 leading-snug">
+            <div className="text-body-sm text-muted/80 leading-snug">
               Costs {BUILD_ORG_BASE_PS_COST} PS, more if you have built here recently
             </div>
           </div>
@@ -455,11 +455,11 @@ function DilutionLines({ dilutions }: { dilutions: DilutionLine[] }) {
           const secondary =
             p.abbreviation && p.partyName && p.abbreviation !== p.partyName ? p.partyName : null;
           return (
-            <li key={p.partyId} className="flex items-baseline justify-between gap-3 text-xs">
+            <li key={p.partyId} className="flex items-baseline justify-between gap-3 text-body-sm">
               <span className="min-w-0 truncate text-foreground">
                 {label}
                 {secondary ? (
-                  <span className="ml-1.5 text-[10px] text-muted">{secondary}</span>
+                  <span className="ml-1.5 text-body-sm text-muted">{secondary}</span>
                 ) : null}
               </span>
               <span className="shrink-0 font-medium tabular-nums text-error">

@@ -71,8 +71,8 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Directives</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Directives</h3>
+          <p className="text-body-sm text-muted">
             A bloc-wide policy that shifts one metric across every member while in force. Passes by
             a majority of the members that hold a vote.
           </p>
@@ -90,16 +90,16 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
 
       {showForm && proposerIsMember && proposer && canTable && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Table a directive</h4>
+          <h4 className="text-body font-semibold text-foreground">Table a directive</h4>
           <div className="mt-3 max-w-md">
-            <label className="text-xs font-medium text-muted" htmlFor="directive-key">
+            <label className="text-body-sm font-medium text-muted" htmlFor="directive-key">
               Directive
             </label>
             <select
               id="directive-key"
               value={directiveKey}
               onChange={(e) => setDirectiveKey(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">Select…</option>
               {directivesForOrganization(org.id).map((d) => (
@@ -108,9 +108,9 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
                 </option>
               ))}
             </select>
-            {selectedDef && <p className="mt-2 text-xs text-muted">{selectedDef.blurb}</p>}
+            {selectedDef && <p className="mt-2 text-body-sm text-muted">{selectedDef.blurb}</p>}
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for a vote
@@ -138,8 +138,10 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-success/30 bg-success/5 p-5"
               >
                 <div>
-                  <h5 className="text-sm font-semibold text-foreground">{def?.label ?? l.title}</h5>
-                  <p className="mt-1 text-xs text-muted">
+                  <h5 className="text-body font-semibold text-foreground">
+                    {def?.label ?? l.title}
+                  </h5>
+                  <p className="mt-1 text-body-sm text-muted">
                     {def?.blurb ?? "Active bloc directive."}
                     {turnsLeft != null && (
                       <>
@@ -149,7 +151,7 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
                     )}
                   </p>
                 </div>
-                <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success">
                   In force
                 </span>
               </div>
@@ -163,7 +165,7 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
         <h4 className="text-body-sm font-medium text-muted">Awaiting a vote</h4>
         {pending.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending directives.</p>
+            <p className="text-body text-muted">No pending directives.</p>
           </div>
         ) : (
           pending.map((l) => {
@@ -180,8 +182,8 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
                 votingWindowTurns={votingWindowTurns}
                 onVote={vote}
               >
-                <h5 className="text-sm font-semibold text-foreground">{def?.label ?? l.title}</h5>
-                <p className="mt-0.5 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{def?.label ?? l.title}</h5>
+                <p className="mt-0.5 text-body-sm text-muted">
                   {def?.blurb ?? ""} · tabled by {l.proposedByCharacterName} · closes in {turnsLeft}{" "}
                   turn{turnsLeft === 1 ? "" : "s"}
                 </p>

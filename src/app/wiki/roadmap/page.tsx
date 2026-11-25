@@ -40,7 +40,7 @@ function ItemRow({ item }: { item: RoadmapItem }) {
   return (
     <li className="flex items-start gap-3">
       <span
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-body-sm ${
           item.status === "completed"
             ? "bg-green-500/20 text-green-400"
             : item.status === "in-progress"
@@ -53,19 +53,19 @@ function ItemRow({ item }: { item: RoadmapItem }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span
-            className={`text-sm font-medium ${
+            className={`text-body font-medium ${
               item.status === "completed" ? "text-muted line-through" : "text-foreground"
             }`}
           >
             {item.title}
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}>
+          <span className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${badge.className}`}>
             {badge.label}
           </span>
         </div>
-        {item.description && <p className="mt-0.5 text-xs text-muted">{item.description}</p>}
+        {item.description && <p className="mt-0.5 text-body-sm text-muted">{item.description}</p>}
         {item.completedAt && (
-          <p className="mt-0.5 text-xs text-green-400/70">
+          <p className="mt-0.5 text-body-sm text-green-400/70">
             Completed <LocalTime value={item.completedAt} options={{ dateStyle: "medium" }} />
           </p>
         )}
@@ -86,7 +86,7 @@ function MiniProgressBar({ items }: { items: RoadmapItem[] }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs text-muted">
+      <span className="text-body-sm text-muted">
         {completed}/{total}
       </span>
     </div>
@@ -115,7 +115,7 @@ export default function WikiRoadmapPage() {
 
   return (
     <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
         </Link>
@@ -124,10 +124,10 @@ export default function WikiRoadmapPage() {
       </nav>
 
       <header className="mb-10">
-        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           Product roadmap
         </h1>
-        <p className="text-lg text-muted">
+        <p className="text-heading text-muted">
           Track what&apos;s planned, in progress, and completed across each release phase.
         </p>
       </header>
@@ -158,11 +158,11 @@ export default function WikiRoadmapPage() {
             return (
               <section key={phase.id} className="">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+                  <h2 className="text-heading font-extrabold tracking-[-0.03em] text-foreground">
                     {phase.label}{" "}
-                    <span className="text-sm font-normal text-muted">({phase.version})</span>
+                    <span className="text-body font-normal text-muted">({phase.version})</span>
                   </h2>
-                  <span className="text-sm text-muted">
+                  <span className="text-body text-muted">
                     {completed}/{total} ({pct}%)
                   </span>
                 </div>
@@ -175,7 +175,7 @@ export default function WikiRoadmapPage() {
                 </div>
 
                 {total === 0 ? (
-                  <p className="text-sm text-muted">No items yet for this phase.</p>
+                  <p className="text-body text-muted">No items yet for this phase.</p>
                 ) : (
                   <div className="space-y-6">
                     {categorized.map(({ cat, items: catItems }) => {
@@ -200,14 +200,16 @@ export default function WikiRoadmapPage() {
                       return (
                         <div key={cat._id}>
                           <div className="mb-2 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-foreground">{cat.name}</h3>
+                            <h3 className="text-body-lg font-semibold text-foreground">
+                              {cat.name}
+                            </h3>
                             <MiniProgressBar items={catItems} />
                           </div>
                           <div className="space-y-3">
                             {subcatGroups.map((group) => (
                               <div key={group.label ?? "__none"}>
                                 {group.label && (
-                                  <p className="mb-1 ml-2 text-xs font-medium text-muted">
+                                  <p className="mb-1 ml-2 text-body-sm font-medium text-muted">
                                     {group.label}
                                   </p>
                                 )}
@@ -227,7 +229,7 @@ export default function WikiRoadmapPage() {
                       <div>
                         {categorized.length > 0 && (
                           <div className="mb-2 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-foreground">General</h3>
+                            <h3 className="text-body-lg font-semibold text-foreground">General</h3>
                             <MiniProgressBar items={uncategorized} />
                           </div>
                         )}

@@ -45,7 +45,7 @@ interface WorldLink {
   href: string;
 }
 
-const MAIN_HEADING = "text-heading-lg font-semibold tracking-tight text-foreground";
+const MAIN_HEADING = "text-heading font-semibold tracking-tight text-foreground";
 const ASIDE_HEADING = "text-body-lg font-semibold text-foreground";
 
 export default function WorldClient({
@@ -105,7 +105,7 @@ export default function WorldClient({
       <div className="min-h-screen bg-background pb-20">
         <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <header className="max-w-2xl">
-            <h1 className="text-display font-bold tracking-tight text-foreground sm:text-[2.25rem] sm:leading-tight">
+            <h1 className="text-display font-bold tracking-tight text-foreground sm:text-display sm:leading-tight">
               World
             </h1>
             <p className="mt-2 text-body-lg text-muted">

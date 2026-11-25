@@ -43,7 +43,7 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
     <div className="space-y-4">
       <div>
         <h3 className="font-medium">Metric effects</h3>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Effects apply uniformly to all 50 states. National metrics are derived from state
           averages.
         </p>
@@ -56,7 +56,7 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-medium mb-1">Category</label>
+              <label className="block text-body-sm font-medium mb-1">Category</label>
               <select
                 value={effect.metricCategoryId}
                 onChange={(e) =>
@@ -65,7 +65,7 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
                       .value as LegislationEffectTargetV2["metricCategoryId"],
                   })
                 }
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               >
                 {Object.keys(METRIC_OPTIONS).map((cat) => (
                   <option key={cat} value={cat}>
@@ -76,11 +76,11 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Metric</label>
+              <label className="block text-body-sm font-medium mb-1">Metric</label>
               <select
                 value={effect.metricId}
                 onChange={(e) => updateEffect(index, { metricId: e.target.value })}
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               >
                 {METRIC_OPTIONS[effect.metricCategoryId]?.map((m) => (
                   <option key={m} value={m}>
@@ -91,10 +91,10 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Strength</label>
+              <label className="block text-body-sm font-medium mb-1">Strength</label>
               <div className="flex gap-2">
                 {(["weak", "moderate", "strong"] as const).map((s) => (
-                  <label key={s} className="flex items-center gap-1 text-xs cursor-pointer">
+                  <label key={s} className="flex items-center gap-1 text-body-sm cursor-pointer">
                     <input
                       type="radio"
                       checked={effect.strength === s}
@@ -109,7 +109,7 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
 
           <button
             onClick={() => removeEffect(index)}
-            className="text-xs text-red-400 hover:text-red-300"
+            className="text-body-sm text-red-400 hover:text-red-300"
           >
             Remove
           </button>
@@ -118,7 +118,7 @@ export function Step2MetricEffects({ effectTargets, onChange }: Step2MetricEffec
 
       <button
         onClick={addEffect}
-        className="w-full rounded-lg border border-dashed border-card-border py-3 text-sm text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+        className="w-full rounded-lg border border-dashed border-card-border py-3 text-body text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
       >
         + Add metric effect
       </button>

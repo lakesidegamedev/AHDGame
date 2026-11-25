@@ -25,7 +25,7 @@ export function OfficialsList({ officials, getOfficialLabel, onAppoint }: Offici
 
   return (
     <div className="mb-4 max-h-96 overflow-y-auto rounded-lg border border-card-border">
-      <table className="w-full text-sm">
+      <table className="w-full text-body">
         <thead className="sticky top-0 bg-card">
           <tr className="border-b border-card-border">
             <th className="px-4 py-2 text-left">Position</th>
@@ -44,7 +44,7 @@ export function OfficialsList({ officials, getOfficialLabel, onAppoint }: Offici
               <td className="px-4 py-2">
                 {official.party && (
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-xs ${getPartyColor(official.party)}`}
+                    className={`rounded-full border px-2 py-0.5 text-body-sm ${getPartyColor(official.party)}`}
                   >
                     {official.party.charAt(0).toUpperCase() + official.party.slice(1)}
                   </span>
@@ -53,7 +53,7 @@ export function OfficialsList({ officials, getOfficialLabel, onAppoint }: Offici
               <td className="px-4 py-2 text-right">
                 <button
                   onClick={() => onAppoint(official)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs text-primary hover:bg-primary/30"
+                  className="rounded bg-primary/20 px-2 py-1 text-body-sm text-primary hover:bg-primary/30"
                 >
                   {official.characterId ? "Change" : "Appoint"}
                 </button>

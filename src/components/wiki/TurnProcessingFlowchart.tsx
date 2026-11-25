@@ -20,16 +20,16 @@ const STEPS = [
 export function TurnProcessingFlowchart() {
   return (
     <div className="my-6 overflow-x-auto rounded-lg border border-card-border bg-card/40 p-4">
-      <h4 className="mb-4 text-sm font-semibold text-foreground">
+      <h4 className="mb-4 text-body font-semibold text-foreground">
         Each turn runs these steps in order:
       </h4>
       <div className="flex flex-col gap-2">
         {STEPS.map((step, i) => (
           <div key={step} className="flex items-center gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-body-sm font-bold text-primary">
               {i + 1}
             </span>
-            <span className="text-sm text-muted">{step}</span>
+            <span className="text-body text-muted">{step}</span>
             {i < STEPS.length - 1 && (
               <svg
                 className="h-4 w-4 shrink-0 text-muted"

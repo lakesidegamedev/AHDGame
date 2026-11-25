@@ -81,7 +81,7 @@ export function NppEconomyPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading NPP economy stats...</span>
+          <span className="text-body text-muted">Loading NPP economy stats...</span>
         </div>
       </div>
     );
@@ -93,9 +93,9 @@ export function NppEconomyPanel() {
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">NPP action economy</h3>
+        <h3 className="font-semibold text-body-lg">NPP action economy</h3>
         <span
-          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+          className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
           style={{
             background: isEnabled ? "rgba(34, 197, 94, 0.15)" : "rgba(107, 107, 122, 0.15)",
             color: isEnabled ? "var(--success)" : "var(--muted)",
@@ -110,21 +110,21 @@ export function NppEconomyPanel() {
         <button
           onClick={() => handleToggle(false)}
           disabled={toggling || !isEnabled}
-          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
+          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
         >
           {toggling && !isEnabled ? "Updating..." : "Disable"}
         </button>
         <button
           onClick={() => handleToggle(true)}
           disabled={toggling || isEnabled}
-          className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-xs font-medium text-success transition-colors hover:bg-success/20 disabled:opacity-40"
+          className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-body-sm font-medium text-success transition-colors hover:bg-success/20 disabled:opacity-40"
         >
           {toggling && isEnabled ? "Updating..." : "Enable"}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-body-sm text-error">
           {error}
         </div>
       )}
@@ -135,38 +135,38 @@ export function NppEconomyPanel() {
           <p className="text-body-sm font-medium text-muted">Key stats</p>
           <div className="rounded-lg border border-card-border bg-background divide-y divide-card-border/50">
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">Total NPPs</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">Total NPPs</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 {data.stats.totalNpps.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">NPPs with funds</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">NPPs with funds</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 {data.stats.nppsWithFunds.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">Total NPP funds</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">Total NPP funds</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 {formatFunds(data.stats.totalFunds)}
               </span>
             </div>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">Action points pooled</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">Action points pooled</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 {data.stats.totalActionPoints.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">Avg donor base level</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">Avg donor base level</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 {data.stats.avgDonorBaseLevel.toFixed(1)}
               </span>
             </div>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs text-muted">Next action processing</span>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm text-muted">Next action processing</span>
+              <span className="text-body-sm font-medium tabular-nums">
                 Turn {data.nextProcessingTurn}
               </span>
             </div>

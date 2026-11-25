@@ -62,11 +62,11 @@ function StatTile({
 }) {
   return (
     <div className="min-w-0 rounded-lg border border-card-border/70 bg-background/60 px-3 py-2.5">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</div>
-      <div className={`mt-0.5 truncate text-xl font-semibold tabular-nums ${tone ?? ""}`}>
+      <div className="text-body-sm font-semibold uppercase tracking-wide text-muted">{label}</div>
+      <div className={`mt-0.5 truncate text-heading font-semibold tabular-nums ${tone ?? ""}`}>
         {value}
       </div>
-      {sub && <div className="truncate text-[11px] text-muted">{sub}</div>}
+      {sub && <div className="truncate text-body-sm text-muted">{sub}</div>}
     </div>
   );
 }
@@ -106,35 +106,35 @@ export function BillHero({
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={bill.status} />
           {filibustered && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-error/40 bg-error/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-error">
+            <span className="inline-flex items-center gap-1 rounded-full border border-error/40 bg-error/15 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-error">
               ⚑ Filibustered
             </span>
           )}
-          <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] text-muted capitalize">
+          <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted capitalize">
             {chamberLabel(bill.originChamber)} Bill
           </span>
           <BillProposalChip adminProposed={bill.adminProposed} category={bill.category} />
           {bill.category && (
-            <span className="text-[10px] text-muted/60 capitalize">{bill.category}</span>
+            <span className="text-body-sm text-muted/60 capitalize">{bill.category}</span>
           )}
-          {typeNames && <span className="text-[10px] text-cyan-400/90">{typeNames}</span>}
+          {typeNames && <span className="text-body-sm text-cyan-400/90">{typeNames}</span>}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0 space-y-3">
             <div className="flex items-start gap-3">
-              <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+              <h1 className="text-heading font-semibold leading-tight tracking-tight sm:text-display lg:text-display">
                 {bill.title}
               </h1>
               <WikiHelpLink screen="bill" className="mt-2" />
             </div>
             {bill.summary && (
-              <p className="max-w-3xl whitespace-pre-wrap break-words text-sm leading-relaxed text-muted sm:text-base">
+              <p className="max-w-3xl whitespace-pre-wrap break-words text-body leading-relaxed text-muted sm:text-body-lg">
                 {bill.summary}
               </p>
             )}
             {/* Byline */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-muted">
               <span>
                 Sponsored by{" "}
                 {bill.sponsorId ? (
@@ -175,7 +175,7 @@ export function BillHero({
                 <button
                   type="button"
                   onClick={() => onAction("cosponsor")}
-                  className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                  className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-body-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
                 >
                   + Co-sponsor
                 </button>
@@ -184,7 +184,7 @@ export function BillHero({
                 <button
                   type="button"
                   onClick={() => onAction("uncosponsor")}
-                  className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                  className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
                 >
                   Remove co-sponsorship
                 </button>
@@ -193,7 +193,7 @@ export function BillHero({
                 <button
                   type="button"
                   onClick={() => onAction("filibuster")}
-                  className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
+                  className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-body-sm font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
                 >
                   Invoke filibuster
                 </button>
@@ -202,7 +202,7 @@ export function BillHero({
                 <button
                   type="button"
                   onClick={() => onAction("withdraw")}
-                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-body-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
                 >
                   Withdraw bill
                 </button>
@@ -218,11 +218,11 @@ export function BillHero({
               label={chamberLabel(bill.currentChamber)}
               value={
                 liveDeadline ? (
-                  <span className="text-base">
+                  <span className="text-body-lg">
                     <DeadlineCountdown deadline={liveDeadline} deadlineTurn={liveDeadlineTurn} />
                   </span>
                 ) : (
-                  <span className="text-base">{cast > 0 ? "Vote closed" : "Not voting"}</span>
+                  <span className="text-body-lg">{cast > 0 ? "Vote closed" : "Not voting"}</span>
                 )
               }
               sub={myVoteLabel ? `You voted ${myVoteLabel}` : `${eligible} seats`}
@@ -245,13 +245,15 @@ export function BillHero({
 
         {bill.vetoMessage && (
           <div className="rounded-lg border border-error/40 bg-error/5 px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">President&apos;s veto message</h2>
-            <p className="mt-1 text-sm italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
+            <h2 className="text-body font-semibold text-foreground">
+              President&apos;s veto message
+            </h2>
+            <p className="mt-1 text-body italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
           </div>
         )}
 
         {supermajority && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-body-sm text-amber-300">
             This bill transfers state ownership, so it requires a{" "}
             <span className="font-semibold">two-thirds supermajority</span> of votes cast in each
             chamber to pass.

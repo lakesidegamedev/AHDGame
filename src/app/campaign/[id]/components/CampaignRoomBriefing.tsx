@@ -36,7 +36,7 @@ export function CampaignRoomBriefing({ campaign }: CampaignRoomBriefingProps) {
           marginBottom: 12,
         }}
       >
-        <h3 style={{ margin: 0, fontFamily: FONT.sans, fontSize: 17, fontWeight: 600 }}>
+        <h3 style={{ margin: 0, fontFamily: FONT.sans, fontSize: 16, fontWeight: 600 }}>
           Campaign room
         </h3>
         <span style={BLEND_LABEL}>Manager briefing</span>
@@ -80,7 +80,7 @@ export function ParticipationPlanCard({ plan }: { plan: CampaignBriefing["partic
           style={{
             margin: "0 0 10px",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             color: BLEND.mutedDim,
           }}
         >
@@ -96,7 +96,7 @@ export function ParticipationPlanCard({ plan }: { plan: CampaignBriefing["partic
                 style={{ padding: "7px 0", borderBottom: "1px solid rgba(34,34,47,.7)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                  <strong style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>
+                  <strong style={{ fontFamily: FONT.sans, fontSize: 14 }}>
                     {prettyBucket(target.bucket)}
                   </strong>
                   <span style={{ ...BLEND_LABEL, color: BLEND.positive }}>
@@ -107,7 +107,7 @@ export function ParticipationPlanCard({ plan }: { plan: CampaignBriefing["partic
                   style={{
                     margin: "3px 0 0",
                     fontFamily: FONT.sans,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     color: BLEND.muted,
                   }}
                 >
@@ -141,9 +141,7 @@ function CardShell({ title, children }: { title: string; children: React.ReactNo
 
 function Muted({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{ margin: 0, fontFamily: FONT.sans, fontSize: 13.5, color: BLEND.muted }}>
-      {children}
-    </p>
+    <p style={{ margin: 0, fontFamily: FONT.sans, fontSize: 14, color: BLEND.muted }}>{children}</p>
   );
 }
 
@@ -178,7 +176,7 @@ function Row({ label, value }: { label: string; value: string }) {
       <span
         style={{
           fontFamily: FONT.sans,
-          fontSize: 13.5,
+          fontSize: 14,
           minWidth: 0,
           overflowWrap: "break-word",
         }}
@@ -202,7 +200,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const BIG: React.CSSProperties = {
   fontFamily: FONT.mono,
-  fontSize: 26,
+  fontSize: 30,
   fontWeight: 500,
   letterSpacing: "-0.02em",
   fontVariantNumeric: "tabular-nums",
@@ -223,7 +221,7 @@ export function PathToVictoryCard({ path }: { path: CampaignBriefing["path"] }) 
       <CardShell title="Path to victory: delegates">
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={BIG}>{path.won.toLocaleString("en-US")}</span>
-          <span style={{ fontFamily: FONT.sans, fontSize: 13.5, color: BLEND.muted }}>
+          <span style={{ fontFamily: FONT.sans, fontSize: 14, color: BLEND.muted }}>
             of {path.needed.toLocaleString("en-US")} needed
           </span>
         </div>
@@ -232,7 +230,7 @@ export function PathToVictoryCard({ path }: { path: CampaignBriefing["path"] }) 
           style={{
             margin: "7px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 13,
+            fontSize: 12,
             color: path.remaining > 0 ? BLEND.muted : BLEND.positive,
           }}
         >
@@ -256,7 +254,7 @@ export function PathToVictoryCard({ path }: { path: CampaignBriefing["path"] }) 
     <CardShell title="Path to victory: electoral votes">
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <span style={BIG}>{path.evHave.toLocaleString("en-US")}</span>
-        <span style={{ fontFamily: FONT.sans, fontSize: 13.5, color: BLEND.muted }}>
+        <span style={{ fontFamily: FONT.sans, fontSize: 14, color: BLEND.muted }}>
           of {path.evNeeded.toLocaleString("en-US")} to win
         </span>
       </div>
@@ -297,7 +295,7 @@ export function CoalitionWeaknessCard({ buckets }: { buckets: BriefingCoalitionB
             style={{
               margin: "0 0 8px",
               fontFamily: FONT.sans,
-              fontSize: 12.5,
+              fontSize: 12,
               color: BLEND.mutedDim,
             }}
           >

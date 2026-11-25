@@ -84,8 +84,8 @@ export function HealCorporationTimers() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal corporation timers</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal corporation timers</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Diagnoses and clears stale type-switch cooldown timers on corporations. Expired timers are
           safe to clear. Force-clear removes active cooldowns too (use only to fix corrupt state).
         </p>
@@ -95,28 +95,28 @@ export function HealCorporationTimers() {
         <button
           onClick={runDiagnostic}
           disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
         >
           {loading ? "Loading…" : "Diagnose"}
         </button>
         <button
           onClick={() => runHeal(false)}
           disabled={loading}
-          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
         >
           {loading ? "Clearing…" : "Clear expired"}
         </button>
         <button
           onClick={() => runHeal(true)}
           disabled={loading}
-          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
         >
           {loading ? "Clearing…" : "Force clear all"}
         </button>
       </div>
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs max-h-56 overflow-y-auto">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm max-h-56 overflow-y-auto">
           <p className="font-medium text-muted mb-1">
             {diagnostic.total} corporation(s) with timer fields — current turn:{" "}
             {diagnostic.currentTurn}

@@ -73,9 +73,9 @@ function MetricCard({
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md border border-card-border bg-card-elevated text-primary">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
-      <div className="text-2xl font-semibold leading-none text-foreground">{value}</div>
+      <div className="text-heading font-semibold leading-none text-foreground">{value}</div>
       <div className="mt-2 text-body-sm font-medium text-muted">{label}</div>
-      <p className="mt-2 text-sm leading-relaxed text-muted">{detail}</p>
+      <p className="mt-2 text-body leading-relaxed text-muted">{detail}</p>
     </div>
   );
 }
@@ -84,8 +84,8 @@ function MiniMetric({ label, value, detail }: { label: string; value: string; de
   return (
     <div className="rounded-md border border-card-border bg-card-elevated/55 p-3">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-lg font-semibold leading-tight text-foreground">{value}</div>
-      {detail && <p className="mt-1 text-xs leading-relaxed text-muted">{detail}</p>}
+      <div className="mt-1 text-heading font-semibold leading-tight text-foreground">{value}</div>
+      {detail && <p className="mt-1 text-body-sm leading-relaxed text-muted">{detail}</p>}
     </div>
   );
 }
@@ -97,13 +97,13 @@ function StartingMetricsMatrix({ countries }: { countries: CountryStartingStateC
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-body-sm font-medium text-primary">Macro snapshot</p>
-          <h3 className="mt-1 text-xl font-semibold text-foreground">
+          <h3 className="mt-1 text-body-lg font-semibold text-foreground">
             Economy, debt, and resource posture
           </h3>
         </div>
         <a
           href="#country-index"
-          className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+          className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
         >
           Country index
         </a>
@@ -124,14 +124,14 @@ function StartingMetricsMatrix({ countries }: { countries: CountryStartingStateC
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+                  <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-body-sm font-semibold text-primary">
                     {country.shortName}
                   </span>
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-body font-semibold text-foreground">
                     {resolveCountryName(country.id)}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="text-body-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
                   View details
                 </span>
               </div>
@@ -168,7 +168,7 @@ function StartingMetricsMatrix({ countries }: { countries: CountryStartingStateC
               <SectorSpecialtySummaryChips countryId={country.id} />
 
               {topRegion && (
-                <p className="mt-3 text-xs leading-relaxed text-muted">
+                <p className="mt-3 text-body-sm leading-relaxed text-muted">
                   Largest region economy:{" "}
                   <span className="font-medium text-foreground">{topRegion.name}</span> at{" "}
                   {formatCompactCurrency(topRegion.gdp * 1_000_000, economy.currencyCode)}.
@@ -187,8 +187,8 @@ function IdeologyPlot({ parties }: { parties: readonly PartySeed[] }) {
     <div className="rounded-lg border border-card-border bg-card/45 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-foreground">Ideology map</h4>
-          <p className="mt-1 text-xs text-muted">
+          <h4 className="text-body font-semibold text-foreground">Ideology map</h4>
+          <p className="mt-1 text-body-sm text-muted">
             Economic left/right and social stance, -5 to +5.
           </p>
         </div>
@@ -236,14 +236,14 @@ function PartyCard({ party, maxTreasury }: { party: PartySeed; maxTreasury: numb
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="break-words text-sm font-semibold leading-snug text-foreground">
+            <h4 className="break-words text-body font-semibold leading-snug text-foreground">
               {party.name}
             </h4>
-            <span className="rounded bg-card-elevated px-2 py-0.5 font-mono text-[11px] font-semibold text-muted">
+            <span className="rounded bg-card-elevated px-2 py-0.5 font-mono text-body-sm font-semibold text-muted">
               {party.abbreviation}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-body-sm sm:grid-cols-3">
             <div>
               <div className="text-muted">Economic</div>
               <div className="font-medium text-foreground">
@@ -297,11 +297,11 @@ function StartingEconomyPanel({ countryId }: { countryId: StartingCountryId }) {
             <Activity className="h-3.5 w-3.5" aria-hidden="true" />
             Starting metrics
           </div>
-          <h4 className="mt-1 text-lg font-semibold text-foreground">
+          <h4 className="mt-1 text-heading font-semibold text-foreground">
             Economy and fiscal position
           </h4>
         </div>
-        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted">
           FY {economy.fiscalYear}
         </span>
       </div>
@@ -341,7 +341,7 @@ function StartingEconomyPanel({ countryId }: { countryId: StartingCountryId }) {
           <MapPinned className="h-3.5 w-3.5" aria-hidden="true" />
           Regional baseline
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           {regions.length} {COUNTRY_CLIENT_CONFIGS[countryId].regionLabelPlural.toLowerCase()} seed
           local GDP and population.{" "}
           {topRegion && (
@@ -372,9 +372,9 @@ function ResourceCapacityPanel({ countryId }: { countryId: StartingCountryId }) 
             <Pickaxe className="h-3.5 w-3.5" aria-hidden="true" />
             Starting resource capacity
           </div>
-          <h4 className="mt-1 text-lg font-semibold text-foreground">Extraction ceiling</h4>
+          <h4 className="mt-1 text-heading font-semibold text-foreground">Extraction ceiling</h4>
         </div>
-        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted">
           {summary.resourceTypeCount} resource types
         </span>
       </div>
@@ -397,7 +397,7 @@ function ResourceCapacityPanel({ countryId }: { countryId: StartingCountryId }) 
           const width = Math.max(8, (entry.value / maxCapacity) * 100);
           return (
             <div key={entry.resource}>
-              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+              <div className="mb-1 flex items-center justify-between gap-3 text-body-sm">
                 <span className="font-medium text-foreground">
                   {COMMODITY_LABELS[entry.resource]}
                 </span>
@@ -414,7 +414,7 @@ function ResourceCapacityPanel({ countryId }: { countryId: StartingCountryId }) 
       </div>
 
       {summary.resources.length > summary.topResources.length && (
-        <p className="mt-3 text-xs leading-relaxed text-muted">
+        <p className="mt-3 text-body-sm leading-relaxed text-muted">
           Also seeded:{" "}
           {summary.resources
             .slice(summary.topResources.length)
@@ -443,26 +443,26 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+            <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-body-sm font-semibold text-primary">
               {country.shortName}
             </span>
-            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
               {getGovernmentOpening(country.id)}
             </span>
-            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
               {parties.length} default parties
             </span>
-            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
               {formatCompactCurrency(economy.gdp, economy.currencyCode)} GDP
             </span>
-            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+            <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
               {formatPercent(getDebtToGdp(country.id), 0)} debt/GDP
             </span>
           </div>
-          <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
+          <h3 className="mt-3 text-body-lg font-semibold tracking-tight text-foreground">
             {config.name}
           </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">{country.posture}</p>
+          <p className="mt-2 max-w-3xl text-body leading-relaxed text-muted">{country.posture}</p>
 
           <nav
             aria-label={`${config.name} starting-state sections`}
@@ -470,25 +470,25 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
           >
             <a
               href={`#starting-state-${country.id.toLowerCase()}-metrics`}
-              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
             >
               Metrics
             </a>
             <a
               href={`#starting-state-${country.id.toLowerCase()}-resources`}
-              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
             >
               Resources
             </a>
             <a
               href={`#starting-state-${country.id.toLowerCase()}-specialties`}
-              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
             >
               Specialties
             </a>
             <a
               href={`#starting-state-${country.id.toLowerCase()}-parties`}
-              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+              className="rounded-md border border-card-border bg-card/45 px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
             >
               Parties
             </a>
@@ -500,21 +500,23 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
                 <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
                 System
               </div>
-              <p className="mt-1 text-sm leading-relaxed text-foreground">{country.system}</p>
+              <p className="mt-1 text-body leading-relaxed text-foreground">{country.system}</p>
             </div>
             <div>
               <div className="flex items-center gap-2 text-body-sm font-medium text-muted">
                 <Vote className="h-3.5 w-3.5" aria-hidden="true" />
                 Legislature
               </div>
-              <p className="mt-1 text-sm leading-relaxed text-foreground">{country.legislature}</p>
+              <p className="mt-1 text-body leading-relaxed text-foreground">
+                {country.legislature}
+              </p>
             </div>
             <div>
               <div className="flex items-center gap-2 text-body-sm font-medium text-muted">
                 <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
                 Party entry
               </div>
-              <p className="mt-1 text-sm leading-relaxed text-foreground">
+              <p className="mt-1 text-body leading-relaxed text-foreground">
                 {formatPartyCreationRule(country.id)} to found a new party.
               </p>
             </div>
@@ -539,9 +541,9 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
             id={`starting-state-${country.id.toLowerCase()}-parties`}
             className="scroll-mt-24 rounded-lg border border-card-border bg-card/35 p-4"
           >
-            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold uppercase tracking-[0.1em] text-muted marker:text-primary">
+            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-body font-semibold uppercase tracking-[0.1em] text-muted marker:text-primary">
               <span>Starting parties</span>
-              <span className="text-xs font-medium normal-case tracking-normal text-muted">
+              <span className="text-body-sm font-medium normal-case tracking-normal text-muted">
                 {formatMoney(totalTreasury)} treasury; {majorPartyCount} major-party IDs
               </span>
             </summary>
@@ -559,13 +561,13 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
               <Users className="h-3.5 w-3.5" aria-hidden="true" />
               Starting NPPs
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-foreground">{country.nppSummary}</p>
+            <p className="mt-2 text-body leading-relaxed text-foreground">{country.nppSummary}</p>
             {country.nppDetails && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {country.nppDetails.map((detail) => (
                   <span
                     key={`${detail.label}-${detail.value}`}
-                    className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs text-muted"
+                    className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm text-muted"
                   >
                     <span className="font-semibold text-foreground">{detail.label}:</span>{" "}
                     {detail.value}
@@ -582,7 +584,7 @@ function CountrySection({ country }: { country: CountryStartingStateCopy }) {
             </div>
             <ul className="mt-3 space-y-2">
               {country.highlights.map((highlight) => (
-                <li key={highlight} className="flex gap-2 text-sm leading-relaxed text-muted">
+                <li key={highlight} className="flex gap-2 text-body leading-relaxed text-muted">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                   <span>{highlight}</span>
                 </li>
@@ -630,7 +632,7 @@ function ScenarioToggle({
                 role="tab"
                 aria-selected={active}
                 onClick={() => onChange(option.value)}
-                className={`rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
+                className={`rounded px-3 py-1.5 text-body font-semibold transition-colors ${
                   active
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted hover:text-foreground"
@@ -642,7 +644,7 @@ function ScenarioToggle({
           })}
         </div>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-muted">
+      <p className="mt-3 text-body leading-relaxed text-muted">
         {scenario === "2019"
           ? "Canonical opening. Default party rosters, treasuries, macro numbers, and regional seeds drive this start."
           : "Early-90s opening. Displays seeded historical seat composition for US, UK, JP, DE, CN, BR, and IE. Macro data and 1991-era party rosters are still being reworked."}
@@ -657,8 +659,8 @@ function ChamberBar({ chamber }: { chamber: ScenarioChamber }) {
   return (
     <div className="rounded-md border border-card-border bg-card-elevated/55 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h5 className="text-sm font-semibold text-foreground">{chamber.label}</h5>
-        <span className="text-xs text-muted">{chamber.totalSeats} seats</span>
+        <h5 className="text-body font-semibold text-foreground">{chamber.label}</h5>
+        <span className="text-body-sm text-muted">{chamber.totalSeats} seats</span>
       </div>
 
       <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-card">
@@ -676,7 +678,7 @@ function ChamberBar({ chamber }: { chamber: ScenarioChamber }) {
         })}
       </div>
 
-      <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted">
+      <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-body-sm text-muted">
         {chamber.parties.map((party) => (
           <li
             key={`${chamber.shortLabel}-${party.partySlug}-legend`}
@@ -706,15 +708,17 @@ function ScenarioCountrySection({ scenario }: { scenario: ScenarioCountry }) {
       className="scroll-mt-24 border-t border-card-border/80 py-7"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-body-sm font-semibold text-primary">
           {scenario.countryId}
         </span>
-        <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
           {scenario.contextLabel}
         </span>
       </div>
-      <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{config.name}</h3>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">{scenario.posture}</p>
+      <h3 className="mt-3 text-body-lg font-semibold tracking-tight text-foreground">
+        {config.name}
+      </h3>
+      <p className="mt-2 max-w-3xl text-body leading-relaxed text-muted">{scenario.posture}</p>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {scenario.chambers.map((chamber) => (
@@ -746,15 +750,17 @@ function UnseededCountrySection({
       className="scroll-mt-24 border-t border-card-border/80 py-7"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+        <span className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 font-mono text-body-sm font-semibold text-primary">
           {countryId}
         </span>
-        <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-md border border-card-border bg-card/45 px-2.5 py-1 text-body-sm font-medium text-muted">
           No 1991 seat data
         </span>
       </div>
-      <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{config.name}</h3>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+      <h3 className="mt-3 text-body-lg font-semibold tracking-tight text-foreground">
+        {config.name}
+      </h3>
+      <p className="mt-2 max-w-3xl text-body leading-relaxed text-muted">
         No 1991 seat composition is seeded for {config.name}. 1991 scenario data is not available
         for this country.
       </p>
@@ -766,11 +772,11 @@ function StartingStateDashboard1991() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm font-semibold text-muted">1991 starting audit</p>
-        <h2 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+        <p className="text-body font-semibold text-muted">1991 starting audit</p>
+        <h2 className="mt-1 text-display font-semibold tracking-tight text-foreground">
           The early-90s opening board
         </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
+        <p className="mt-3 max-w-3xl text-body leading-relaxed text-muted">
           Seeded historical seat composition for seven countries. The underlying preset is wired
           into admin reset as &ldquo;1991 Start Date - Default Parties&rdquo;. Macro economics,
           treasuries, regional sector specialties, and resource capacity for 1991 are not yet
@@ -796,11 +802,11 @@ function StartingStateDashboard1991() {
               <a
                 key={country.countryId}
                 href={`#starting-state-1991-${country.countryId.toLowerCase()}`}
-                className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-sm text-muted transition-colors hover:border-primary/50 hover:text-primary"
+                className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-body text-muted transition-colors hover:border-primary/50 hover:text-primary"
               >
                 <span className="font-mono font-semibold text-foreground">{country.countryId}</span>
                 <span className="ml-2">{country.chambers.length} chambers</span>
-                <span className="ml-2 text-xs">{totalSeats} seats</span>
+                <span className="ml-2 text-body-sm">{totalSeats} seats</span>
               </a>
             );
           })}
@@ -808,10 +814,10 @@ function StartingStateDashboard1991() {
             <a
               key={countryId}
               href={`#starting-state-1991-${countryId.toLowerCase()}`}
-              className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-sm text-muted transition-colors hover:border-primary/50 hover:text-primary"
+              className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-body text-muted transition-colors hover:border-primary/50 hover:text-primary"
             >
               <span className="font-mono font-semibold text-foreground">{countryId}</span>
-              <span className="ml-2 text-xs opacity-60">2019 baseline</span>
+              <span className="ml-2 text-body-sm opacity-60">2019 baseline</span>
             </a>
           ))}
         </div>
@@ -852,11 +858,11 @@ function StartingStateDashboard2019() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm font-semibold text-muted">Starting audit</p>
-        <h2 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+        <p className="text-body font-semibold text-muted">Starting audit</p>
+        <h2 className="mt-1 text-display font-semibold tracking-tight text-foreground">
           The opening board at a glance
         </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
+        <p className="mt-3 max-w-3xl text-body leading-relaxed text-muted">
           Every new world begins with protected default parties, empty legislatures, generated
           non-player politicians, and unowned sector markets. This view turns the seed data into
           scan-friendly country cards without changing the underlying starting facts.
@@ -895,21 +901,21 @@ function StartingStateDashboard2019() {
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border border-card-border bg-card/45 p-4">
           <div className="text-body-sm font-medium text-muted">Government at Turn 0</div>
-          <p className="mt-2 text-sm leading-relaxed text-foreground">
+          <p className="mt-2 text-body leading-relaxed text-foreground">
             Parliamentary countries start pending government formation. Presidential countries open
             on fixed executive cycles.
           </p>
         </div>
         <div className="rounded-lg border border-card-border bg-card/45 p-4">
           <div className="text-body-sm font-medium text-muted">NPP seeding</div>
-          <p className="mt-2 text-sm leading-relaxed text-foreground">
+          <p className="mt-2 text-body leading-relaxed text-foreground">
             Most NPPs are generated dynamically. Germany is the exception, opening with a large
             named NPP pool.
           </p>
         </div>
         <div className="rounded-lg border border-card-border bg-card/45 p-4">
           <div className="text-body-sm font-medium text-muted">Political systems</div>
-          <p className="mt-2 text-sm leading-relaxed text-foreground">
+          <p className="mt-2 text-body leading-relaxed text-foreground">
             {parliamentaryCount} parliamentary systems, {presidentialCount} presidential systems,
             and {onePartyDominantCount} one-party-dominant opening are documented here.
           </p>
@@ -928,7 +934,7 @@ function StartingStateDashboard2019() {
           </div>
           <a
             href="#starting-metrics"
-            className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
+            className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:border-primary/50 hover:text-primary"
           >
             Compare metrics
           </a>
@@ -941,11 +947,11 @@ function StartingStateDashboard2019() {
               <a
                 key={country.id}
                 href={`#starting-state-${country.id.toLowerCase()}`}
-                className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-sm text-muted transition-colors hover:border-primary/50 hover:text-primary"
+                className="rounded-md border border-card-border bg-card/45 px-3 py-2 text-body text-muted transition-colors hover:border-primary/50 hover:text-primary"
               >
                 <span className="font-mono font-semibold text-foreground">{country.shortName}</span>
                 <span className="ml-2">{parties.length} parties</span>
-                <span className="ml-2 text-xs">
+                <span className="ml-2 text-body-sm">
                   {formatCompactCurrency(economy.gdp, economy.currencyCode)}
                 </span>
               </a>

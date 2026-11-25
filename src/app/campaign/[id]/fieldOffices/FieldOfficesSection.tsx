@@ -32,7 +32,7 @@ const BUTTON: React.CSSProperties = {
   background: "transparent",
   padding: "7px 13px",
   fontFamily: FONT.mono,
-  fontSize: 10.5,
+  fontSize: 12,
   letterSpacing: ".08em",
   fontWeight: 700,
   textTransform: "uppercase",
@@ -141,7 +141,7 @@ export function FieldOfficesSection({
   if (!view) {
     return (
       <Shell mobile={mobile}>
-        <p style={{ color: BLEND.mutedDim, fontFamily: FONT.mono, fontSize: 11 }}>Loading...</p>
+        <p style={{ color: BLEND.mutedDim, fontFamily: FONT.mono, fontSize: 12 }}>Loading...</p>
       </Shell>
     );
   }
@@ -198,7 +198,7 @@ export function FieldOfficesSection({
         style={{
           margin: "0 0 18px",
           fontFamily: FONT.sans,
-          fontSize: 14.5,
+          fontSize: 14,
           lineHeight: 1.55,
           color: BLEND.muted,
           maxWidth: 680,
@@ -263,7 +263,7 @@ export function FieldOfficesSection({
           style={{
             marginTop: 14,
             fontFamily: FONT.mono,
-            fontSize: 11,
+            fontSize: 12,
             color: message.ok ? BLEND.positive : BLEND.negative,
           }}
         >
@@ -312,7 +312,7 @@ function RegionPicker({
           border: `1px solid ${BLEND.chipBorder}`,
           padding: "6px 10px",
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
         }}
       >
         {regions.map((r) => (
@@ -330,7 +330,7 @@ function RegionPicker({
           style={{
             ...BUTTON,
             padding: "4px 9px",
-            fontSize: 9.5,
+            fontSize: 12,
             borderColor: r.id === value ? BLEND.hairlineStrong : BLEND.chipBorder,
             background: r.id === value ? BLEND.inset : "transparent",
           }}
@@ -368,7 +368,7 @@ function MapPointer({
         style={{
           margin: 0,
           fontFamily: FONT.sans,
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.5,
           color: BLEND.muted,
         }}
@@ -439,7 +439,7 @@ function OfficeList({
                 padding: 0,
                 color: BLEND.ink,
                 fontFamily: FONT.sans,
-                fontSize: 13.5,
+                fontSize: 14,
                 cursor: "pointer",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -447,7 +447,7 @@ function OfficeList({
               }}
             >
               {o.label}
-              <span style={{ color: BLEND.mutedDim, fontFamily: FONT.mono, fontSize: 11 }}>
+              <span style={{ color: BLEND.mutedDim, fontFamily: FONT.mono, fontSize: 12 }}>
                 {" "}
                 {displayCanadianRegionCode(o.regionId)}
               </span>
@@ -459,7 +459,7 @@ function OfficeList({
                 onClick={() => onClose(o.id, o.label)}
                 disabled={busy !== null}
                 aria-label={`Close the ${o.label} office`}
-                style={{ ...BUTTON, padding: "3px 8px", fontSize: 9.5, color: BLEND.mutedDim }}
+                style={{ ...BUTTON, padding: "3px 8px", fontSize: 12, color: BLEND.mutedDim }}
               >
                 {busy === `close:${o.id}` ? "..." : "Close"}
               </button>

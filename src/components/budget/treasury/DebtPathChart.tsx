@@ -104,8 +104,8 @@ export function DebtPathChart({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-sm font-semibold text-foreground">Debt path</div>
-        <div className="text-[11px] tabular-nums text-muted">
+        <div className="text-body font-semibold text-foreground">Debt path</div>
+        <div className="text-body-sm tabular-nums text-muted">
           {(debtToGdp * 100).toFixed(1)}% now → {(last.debtToGdp * 100).toFixed(1)}% in {YEARS}{" "}
           years
         </div>
@@ -151,7 +151,7 @@ export function DebtPathChart({
         />
       </svg>
 
-      <div className="mt-1 flex items-baseline justify-between gap-3 text-[10px] text-muted">
+      <div className="mt-1 flex items-baseline justify-between gap-3 text-body-sm text-muted">
         <span>today {(debtToGdp * 100).toFixed(0)}%</span>
         <span>
           FY+{YEARS} {(last.debtToGdp * 100).toFixed(0)}%
@@ -166,7 +166,7 @@ export function DebtPathChart({
           {ceilingNote.text}
         </p>
       )}
-      <p className="mt-0.5 text-[11px] text-muted tabular-nums">
+      <p className="mt-0.5 text-body-sm text-muted tabular-nums">
         Inputs held for all {YEARS} years: primary balance (before interest){" "}
         {(inputs.primaryBalanceToGdp * 100).toFixed(1)}% of GDP, nominal growth{" "}
         {nominalGrowthPct.toFixed(1)}% a year (real {realGrowthPct.toFixed(1)}% plus inflation{" "}
@@ -176,7 +176,7 @@ export function DebtPathChart({
           ? " A growth reading this high rarely lasts five years, so read the far end as a ceiling on the improvement."
           : ""}
       </p>
-      <p className="mt-0.5 text-[11px] text-muted">
+      <p className="mt-0.5 text-body-sm text-muted">
         Priced at the {basisPct.toFixed(2)}% ladder rate before premiums, the same basis the
         year-end rollover uses, with today&apos;s primary balance and nominal growth held constant.
       </p>

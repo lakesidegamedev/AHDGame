@@ -81,14 +81,14 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
               <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <p className="mb-2 text-body-sm font-medium text-primary">A House Divided</p>
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
+                  <h1 className="text-display font-bold tracking-tight text-foreground md:text-display">
                     {t("page.title")}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted md:text-base">
+                  <p className="mt-2 max-w-2xl text-body leading-6 text-muted md:text-body-lg">
                     {t("page.subtitle")}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-xs text-muted">
+                <div className="flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-body-sm text-muted">
                   <span className="h-2 w-2 rounded-full bg-success" />
                   {t("page.savesInline")}
                 </div>
@@ -107,7 +107,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                   onChange={(event) => setSearchQuery(event.currentTarget.value)}
                   placeholder={t("page.searchPlaceholder")}
                   aria-label={t("page.searchAria")}
-                  className="min-h-12 w-full rounded-xl border border-card-border bg-background pl-10 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/25"
+                  className="min-h-12 w-full rounded-xl border border-card-border bg-background pl-10 pr-11 text-body text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/25"
                 />
                 {searchQuery && (
                   <button
@@ -132,7 +132,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                     key={bucket.id}
                     href={`#settings-${bucket.id}`}
                     onClick={() => setSearchQuery("")}
-                    className="group flex min-h-11 shrink-0 items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:border-card-border hover:bg-card hover:text-foreground lg:mb-1 lg:w-full"
+                    className="group flex min-h-11 shrink-0 items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-body font-medium text-muted transition-colors hover:border-card-border hover:bg-card hover:text-foreground lg:mb-1 lg:w-full"
                   >
                     <span className="text-primary">
                       <BucketIcon id={bucket.id} />
@@ -146,14 +146,14 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                 {!hasSearchResults && (
                   <div className="rounded-2xl border border-dashed border-card-border bg-card px-6 py-12 text-center">
                     <Search className="mx-auto h-6 w-6 text-muted" />
-                    <h2 className="mt-3 text-base font-semibold text-foreground">
+                    <h2 className="mt-3 text-body-lg font-semibold text-foreground">
                       {t("page.noResultsTitle")}
                     </h2>
-                    <p className="mt-1 text-sm text-muted">{t("page.noResultsHint")}</p>
+                    <p className="mt-1 text-body text-muted">{t("page.noResultsHint")}</p>
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="mt-4 min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                      className="mt-4 min-h-11 rounded-xl bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
                     >
                       {t("page.clearSearch")}
                     </button>
@@ -204,10 +204,10 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                             <p className="text-body-sm font-medium text-muted">
                               {t(bucket.eyebrowKey)}
                             </p>
-                            <h2 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
+                            <h2 className="mt-0.5 text-heading font-bold tracking-tight text-foreground">
                               {t(bucket.labelKey)}
                             </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted">
+                            <p className="mt-1 text-body leading-6 text-muted">
                               {t(bucket.summaryKey)}
                             </p>
                           </div>
@@ -221,10 +221,10 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                           <div className="rounded-2xl border border-card-border bg-gradient-to-br from-background/70 to-card-elevated/50 p-4 md:p-5">
                             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div>
-                                <p className="text-sm font-semibold text-foreground">
+                                <p className="text-body font-semibold text-foreground">
                                   {t("page.publicProfileMedia")}
                                 </p>
-                                <p className="mt-0.5 text-xs text-muted">
+                                <p className="mt-0.5 text-body-sm text-muted">
                                   {t("page.publicProfileMediaHint")}
                                 </p>
                               </div>
@@ -249,7 +249,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                                     )
                                   }
                                 />
-                                <p className="mt-2 text-center text-[11px] text-muted">
+                                <p className="mt-2 text-center text-body-sm text-muted">
                                   {t("page.portrait")}
                                 </p>
                               </div>
@@ -264,7 +264,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                                     )
                                   }
                                 />
-                                <p className="mt-2 text-[11px] text-muted">
+                                <p className="mt-2 text-body-sm text-muted">
                                   {t("page.profileHeader")}
                                 </p>
                               </div>
@@ -277,18 +277,18 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                           (!normalizedSearch ||
                             "character create new".includes(normalizedSearch)) && (
                             <div className="rounded-2xl border border-dashed border-card-border bg-card-muted p-6 text-center">
-                              <p className="text-sm text-muted">{t("page.noCharacter")}</p>
+                              <p className="text-body text-muted">{t("page.noCharacter")}</p>
                               <div className="mt-4 flex flex-wrap justify-center gap-2">
                                 <Link
                                   href="/create-character"
-                                  className="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                                  className="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                                 >
                                   {t("page.createCharacter")}
                                 </Link>
                                 {userData?.isAdmin && (
                                   <Link
                                     href="/create-imperial-character"
-                                    className="inline-flex min-h-11 items-center rounded-xl border border-card-border bg-background px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-card-elevated"
+                                    className="inline-flex min-h-11 items-center rounded-xl border border-card-border bg-background px-5 py-2.5 text-body font-medium text-primary transition-colors hover:border-primary/40 hover:bg-card-elevated"
                                   >
                                     {t("page.createImperialCharacter")}
                                   </Link>
@@ -305,7 +305,9 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                               <p className="text-body-sm font-medium text-muted">
                                 {t("page.advancedTitle")}
                               </p>
-                              <p className="mt-1 text-xs text-muted">{t("page.advancedHint")}</p>
+                              <p className="mt-1 text-body-sm text-muted">
+                                {t("page.advancedHint")}
+                              </p>
                             </div>
                             {renderSectionCards(advancedSections)}
                           </div>
@@ -319,7 +321,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                                 <button
                                   type="button"
                                   onClick={handleSwitchCharacterType}
-                                  className="min-h-11 rounded-xl border border-card-border bg-background px-4 py-2 text-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-card-elevated"
+                                  className="min-h-11 rounded-xl border border-card-border bg-background px-4 py-2 text-body font-medium text-primary transition-colors hover:border-primary/40 hover:bg-card-elevated"
                                 >
                                   {isImperial
                                     ? t("page.switchToRegular")
@@ -330,13 +332,13 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                                 <>
                                   <Link
                                     href="/create-character"
-                                    className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-sm font-medium text-primary hover:bg-background"
+                                    className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-body font-medium text-primary hover:bg-background"
                                   >
                                     {t("page.createAnotherCharacter")}
                                   </Link>
                                   <Link
                                     href="/create-imperial-character"
-                                    className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-sm font-medium text-primary/75 hover:bg-background hover:text-primary"
+                                    className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-body font-medium text-primary/75 hover:bg-background hover:text-primary"
                                   >
                                     {t("page.createImperialCharacterPlus")}
                                   </Link>
@@ -375,10 +377,10 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                                   <SectionIcon id={activeSection} />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold text-foreground">
+                                  <p className="text-body font-semibold text-foreground">
                                     {activeDefinition && t(activeDefinition.labelKey)}
                                   </p>
-                                  <p className="text-xs text-muted">
+                                  <p className="text-body-sm text-muted">
                                     {activeDefinition && t(activeDefinition.summaryKey)}
                                   </p>
                                 </div>
@@ -410,7 +412,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
             <div className="mt-12">
               <Link
                 href="/dashboard"
-                className="text-sm text-muted hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+                className="text-body text-muted hover:text-foreground transition-colors inline-flex items-center gap-1.5"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path

@@ -280,7 +280,7 @@ export function PlayerWhipPanel({
       return (
         <div
           key={`${whip.attemptNumber}-${whip.createdAt}-${index}`}
-          className="text-xs text-muted"
+          className="text-body-sm text-muted"
         >
           <span className="text-primary font-medium">Player Whip issued</span>
           {summaryBits.length > 0 ? ` - ${summaryBits.join(" - ")}` : ""}
@@ -291,7 +291,7 @@ export function PlayerWhipPanel({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-card-border bg-card px-4 py-3">
-        <p className="text-sm text-muted">{t("playerWhipExplanation")}</p>
+        <p className="text-body text-muted">{t("playerWhipExplanation")}</p>
       </div>
       <WhipTabsLayout
         countryId={effectiveCountryId}
@@ -304,7 +304,7 @@ export function PlayerWhipPanel({
           return (
             <div className="space-y-3">
               {bills.length === 0 ? (
-                <p className="text-sm text-muted italic">
+                <p className="text-body text-muted italic">
                   No active bills to Player-Whip in this chamber.
                 </p>
               ) : (
@@ -322,7 +322,7 @@ export function PlayerWhipPanel({
                         <>
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <h4 className="font-medium text-sm">
+                              <h4 className="font-medium text-body">
                                 <Link
                                   href={`${legislatureUrl(effectiveCountryId)}?highlight=${item.bill.id}`}
                                   className="hover:text-primary transition-colors"
@@ -331,7 +331,7 @@ export function PlayerWhipPanel({
                                 </Link>
                               </h4>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-muted capitalize">
+                                <span className="text-body-sm text-muted capitalize">
                                   {item.bill.status}
                                 </span>
                               </div>
@@ -345,7 +345,7 @@ export function PlayerWhipPanel({
                                 }
                                 disabled={modeAlreadyUsed || whippingId === item.bill.id}
                                 title={disabledTitle}
-                                className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 text-body-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{
                                   backgroundColor: !modeAlreadyUsed ? `${partyColor}20` : undefined,
                                   color: !modeAlreadyUsed ? partyColor : undefined,
@@ -364,7 +364,7 @@ export function PlayerWhipPanel({
                                 }
                                 disabled={modeAlreadyUsed || whippingId === item.bill.id}
                                 title={disabledTitle}
-                                className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {whippingId === item.bill.id ? "Issuing..." : "Whip AGAINST"}
                               </button>
@@ -381,7 +381,7 @@ export function PlayerWhipPanel({
         }}
         renderLeadership={() => {
           if (leadershipItems.length === 0) {
-            return <p className="text-sm text-muted italic">No active leadership elections.</p>;
+            return <p className="text-body text-muted italic">No active leadership elections.</p>;
           }
           return (
             <div className="space-y-3">
@@ -442,7 +442,7 @@ export function PlayerWhipPanel({
                     key={election.id}
                     className="rounded-lg border border-card-border bg-card p-4"
                   >
-                    <h4 className="font-medium text-sm mb-3">{headerLabel}</h4>
+                    <h4 className="font-medium text-body mb-3">{headerLabel}</h4>
                     {whip.existingWhips.length > 0 && (
                       <div className="mb-2">
                         {renderPlayerWhipMetadata(whip.existingWhips, election.candidacies)}
@@ -461,7 +461,7 @@ export function PlayerWhipPanel({
                           }
                           disabled={modeAlreadyUsed || whippingId === `cv_${election.id}_for`}
                           title={disabledTitle}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{
                             backgroundColor: !modeAlreadyUsed ? `${partyColor}20` : undefined,
                             color: !modeAlreadyUsed ? partyColor : undefined,
@@ -480,7 +480,7 @@ export function PlayerWhipPanel({
                           }
                           disabled={modeAlreadyUsed || whippingId === `cv_${election.id}_against`}
                           title={disabledTitle}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {whippingId === `cv_${election.id}_against`
                             ? "Issuing..."
@@ -506,7 +506,7 @@ export function PlayerWhipPanel({
                                     ? "Already whipped for this candidate"
                                     : undefined
                               }
-                              className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1.5 text-body-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               style={{
                                 backgroundColor:
                                   !modeAlreadyUsed && !isWhipped ? `${partyColor}20` : undefined,
@@ -531,7 +531,7 @@ export function PlayerWhipPanel({
         }}
         renderCabinet={() => {
           if (cabinetItems.length === 0) {
-            return <p className="text-sm text-muted italic">{t("noActiveNominations")}</p>;
+            return <p className="text-body text-muted italic">{t("noActiveNominations")}</p>;
           }
           return (
             <div className="space-y-3">
@@ -541,7 +541,7 @@ export function PlayerWhipPanel({
                 const disabledTitle = getPlayerWhipDisabledTitle(whip.existingWhips);
                 return (
                   <div key={item.id} className="rounded-lg border border-card-border bg-card p-4">
-                    <h4 className="font-medium text-sm mb-3">
+                    <h4 className="font-medium text-body mb-3">
                       <Link
                         href={
                           item.targetType === "scotusNomination"
@@ -561,7 +561,7 @@ export function PlayerWhipPanel({
                         onClick={() => handleCabinetWhip(item, "for")}
                         disabled={modeAlreadyUsed || whippingId === `cab_${item.id}_for`}
                         title={disabledTitle}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-body-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
                           backgroundColor: !modeAlreadyUsed ? `${partyColor}20` : undefined,
                           color: !modeAlreadyUsed ? partyColor : undefined,
@@ -573,7 +573,7 @@ export function PlayerWhipPanel({
                         onClick={() => handleCabinetWhip(item, "against")}
                         disabled={modeAlreadyUsed || whippingId === `cab_${item.id}_against`}
                         title={disabledTitle}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-muted/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {whippingId === `cab_${item.id}_against` ? "Issuing..." : "Whip AGAINST"}
                       </button>

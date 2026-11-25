@@ -190,7 +190,7 @@ export function RingGraph({
                 <div className="absolute left-1/2 top-full mt-1 w-24 -translate-x-1/2 text-center">
                   <SuspectNameButton
                     member={member}
-                    className="text-[11px] font-semibold text-primary hover:underline"
+                    className="text-body-sm font-semibold text-primary hover:underline"
                   />
                 </div>
               </div>
@@ -199,7 +199,7 @@ export function RingGraph({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-body-sm text-muted">
         <LegendSwatch color={ROLE_HEX.operator} label="Operator" />
         <LegendSwatch color={ROLE_HEX.burner} label="Burner" />
         <LegendSwatch color={ROLE_HEX.associate} label="Associate" />

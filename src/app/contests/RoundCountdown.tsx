@@ -40,13 +40,13 @@ export function RoundCountdown({
 
   return (
     <div className="w-full">
-      <div className="flex items-baseline justify-between gap-3 text-sm">
+      <div className="flex items-baseline justify-between gap-3 text-body">
         <span className="text-muted">{t("countdown", { round })}</span>
         <span className="font-semibold tabular-nums text-foreground">
           {left > 0 ? t("timeLeft", { days, hours, minutes }) : t("settling")}
         </span>
       </div>
-      <div className="mt-1 text-right text-xs text-muted">
+      <div className="mt-1 text-right text-body-sm text-muted">
         {t("settlesTurn", { turn: endTurn })}
       </div>
       <div

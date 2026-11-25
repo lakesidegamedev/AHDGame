@@ -111,19 +111,19 @@ export function OrdersTab(props: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted">
+        <div className="text-body text-muted">
           <div>
             {slotsUsed}/{EXEC_ORDER_SLOT_CAP} active · Office AP {props.gubernatorialActions}/
             {GUBERNATORIAL_ACTION_CAP}
           </div>
-          <div className="text-xs text-muted/70 mt-0.5">
+          <div className="text-body-sm text-muted/70 mt-0.5">
             Regenerates by 1 every {GUBERNATORIAL_ACTION_REGEN_INTERVAL} turns
           </div>
         </div>
         <button
           onClick={() => setModalMode("normal")}
           disabled={!canIssue}
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           title={issueDisabledReason}
         >
           + Issue order
@@ -132,15 +132,15 @@ export function OrdersTab(props: Props) {
       {props.viewerIsAdmin && (
         <section className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Admin — issue {orderNameLower}</div>
-            <div className="text-xs text-muted">
+            <div className="text-body font-semibold">Admin — issue {orderNameLower}</div>
+            <div className="text-body-sm text-muted">
               Bypasses the office-holder check and the AP cost.
             </div>
           </div>
           <button
             onClick={() => setModalMode("admin")}
             disabled={props.activeOrders.length >= EXEC_ORDER_SLOT_CAP}
-            className="self-end rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/80 disabled:opacity-50 sm:self-auto"
+            className="self-end rounded-lg bg-error px-3 py-1.5 text-body font-medium text-white hover:bg-error/80 disabled:opacity-50 sm:self-auto"
             title={
               props.activeOrders.length >= EXEC_ORDER_SLOT_CAP
                 ? "Both slots in use — rescind one to issue a new order."
@@ -151,9 +151,9 @@ export function OrdersTab(props: Props) {
           </button>
         </section>
       )}
-      <InlineError error={error} className="text-sm text-error" />
+      <InlineError error={error} className="text-body text-error" />
       {props.activeOrders.length === 0 ? (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-sm text-muted text-center">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-body text-muted text-center">
           No active {orderNamePluralLower}.
         </div>
       ) : (
@@ -165,7 +165,7 @@ export function OrdersTab(props: Props) {
             >
               <div className="min-w-0">
                 <div className="font-medium">{o.legislationTypeName}</div>
-                <div className="text-xs text-muted">
+                <div className="text-body-sm text-muted">
                   {o.policyOptionNameBefore && o.policyOptionNameAfter ? (
                     <>
                       <span>{o.policyOptionNameBefore}</span>
@@ -185,7 +185,7 @@ export function OrdersTab(props: Props) {
               <button
                 onClick={() => rescind(o._id)}
                 disabled={!props.viewerCanManage || rescindingId === o._id}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted hover:bg-background/60 disabled:opacity-50"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm text-muted hover:bg-background/60 disabled:opacity-50"
               >
                 {rescindingId === o._id ? "Rescinding…" : "Rescind"}
               </button>
@@ -209,8 +209,8 @@ export function OrdersTab(props: Props) {
 
       {props.orderHistory.length > 0 && (
         <section className="pt-2">
-          <h3 className="text-sm text-muted mb-2">Recent orders</h3>
-          <p className="text-xs text-muted mb-2">
+          <h3 className="text-body-lg text-muted mb-2">Recent orders</h3>
+          <p className="text-body-sm text-muted mb-2">
             When a party holds this office through a non-player official, its State or National
             Party Chair or Vice-Chair signs orders in the office&apos;s name. The name shown is the
             signer, not the office-holder.
@@ -219,10 +219,10 @@ export function OrdersTab(props: Props) {
             {props.orderHistory.map((o) => (
               <li
                 key={o._id}
-                className="rounded-lg border border-card-border bg-card/40 px-3 py-2 text-xs flex items-start justify-between gap-3"
+                className="rounded-lg border border-card-border bg-card/40 px-3 py-2 text-body-sm flex items-start justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm">
+                  <div className="text-body">
                     <span className="font-medium">{o.legislationTypeName}</span>
                     {o.policyOptionNameBefore && o.policyOptionNameAfter && (
                       <span className="text-muted">
@@ -260,7 +260,7 @@ function HistoryStatusBadge({ status }: { status: OrderHistoryEntry["status"] })
         : "bg-info/15 text-info";
   return (
     <span
-      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cls}`}
+      className={`shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${cls}`}
     >
       {status}
     </span>

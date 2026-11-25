@@ -8,8 +8,8 @@ export function DiscordDiscussLink({ href, compact }: { href: string; compact?: 
       title="Discuss on Discord"
       className={
         compact
-          ? "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-[#8b94f7] transition-colors hover:bg-[#5865F2]/15 hover:text-[#aab1ff]"
-          : "inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#5865F2] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#4752c4]"
+          ? "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-body-sm font-medium text-[#8b94f7] transition-colors hover:bg-[#5865F2]/15 hover:text-[#aab1ff]"
+          : "inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#5865F2] px-3.5 py-2 text-body font-semibold text-white shadow-sm transition-colors hover:bg-[#4752c4]"
       }
     >
       <svg

@@ -25,8 +25,8 @@ export function GameHealthPopulationEconomy({ snapshot }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-foreground">Population</h3>
-        <div className="space-y-1 text-sm">
+        <h3 className="mb-3 text-body-lg font-semibold text-foreground">Population</h3>
+        <div className="space-y-1 text-body">
           <Row label="Active players" value={population.activePlayers} />
           <Row label="Characters" value={population.totalCharacters} />
           <Row label="NPPs" value={population.totalNPPs.toLocaleString("en-US")} />
@@ -41,11 +41,11 @@ export function GameHealthPopulationEconomy({ snapshot }: Props) {
         </div>
         {Object.entries(population.byCountry).length > 0 && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-muted">By country</summary>
+            <summary className="cursor-pointer text-body-sm text-muted">By country</summary>
             <div className="mt-2 space-y-2">
               {Object.entries(population.byCountry).map(([id, stats]) =>
                 stats ? (
-                  <div key={id} className="text-xs">
+                  <div key={id} className="text-body-sm">
                     <span className="font-medium">{id}:</span> {stats.players} players, {stats.npps}{" "}
                     NPPs, {stats.emptySeats} empty, {stats.parties} parties
                   </div>
@@ -57,8 +57,8 @@ export function GameHealthPopulationEconomy({ snapshot }: Props) {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-1 text-sm font-semibold text-foreground">Economy</h3>
-        <p className="mb-3 text-xs text-muted">
+        <h3 className="mb-1 text-body-lg font-semibold text-foreground">Economy</h3>
+        <p className="mb-3 text-body-sm text-muted">
           Currency-denominated figures are each country&rsquo;s own LOCAL currency (code shown per
           row) — GDP levels are not comparable across countries.
         </p>
@@ -73,9 +73,9 @@ export function GameHealthPopulationEconomy({ snapshot }: Props) {
             const sym = CURRENCY_SYMBOLS[currencyCode] ?? "";
             const money = (n: number) => `${sym}${Math.round(n).toLocaleString("en-US")}`;
             return (
-              <div key={id} className="space-y-1 text-sm">
+              <div key={id} className="space-y-1 text-body">
                 <p className="font-medium">{id}</p>
-                <div className="ml-2 space-y-0.5 text-xs">
+                <div className="ml-2 space-y-0.5 text-body-sm">
                   {/* RATE (%/yr), not a level. Snapshots written before v0.2.6
                       have no gdpGrowth and their `gdp` field IS the rate, so
                       neither row can render a pre-migration doc's numbers under
@@ -120,7 +120,7 @@ export function GameHealthPopulationEconomy({ snapshot }: Props) {
             );
           })}
           {Object.keys(economy.byCountry).length === 0 && (
-            <p className="text-xs text-muted">No economic data available.</p>
+            <p className="text-body-sm text-muted">No economic data available.</p>
           )}
         </div>
       </div>

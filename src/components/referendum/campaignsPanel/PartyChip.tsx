@@ -10,7 +10,7 @@ export function PartyChip({ party }: { party: PartyLite }) {
   return (
     <span
       title={party.name}
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-bold text-white"
+      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-body-sm font-bold text-white"
       style={{ background: party.color }}
     >
       {party.abbreviation}

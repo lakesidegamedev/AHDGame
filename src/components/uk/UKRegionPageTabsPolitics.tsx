@@ -63,7 +63,7 @@ function MPCard({ mp, isVacant }: { mp: SerializedMP; isVacant: boolean }) {
           className={isVacant ? "opacity-50 grayscale" : ""}
         />
         {mp.isNPP && !isVacant && (
-          <span className="absolute -bottom-1 -right-1 rounded-full border border-purple-500/60 bg-card px-1 py-px text-[8px] font-bold leading-none text-purple-400">
+          <span className="absolute -bottom-1 -right-1 rounded-full border border-purple-500/60 bg-card px-1 py-px text-body-sm font-bold leading-none text-purple-400">
             <NppAbbr />
           </span>
         )}
@@ -74,29 +74,29 @@ function MPCard({ mp, isVacant }: { mp: SerializedMP; isVacant: boolean }) {
         {profileLink ? (
           <Link
             href={profileLink}
-            className="line-clamp-2 block text-sm font-semibold leading-tight text-foreground hover:text-primary"
+            className="line-clamp-2 block text-body font-semibold leading-tight text-foreground hover:text-primary"
           >
             {displayName}
           </Link>
         ) : (
-          <span className="line-clamp-2 block text-sm font-semibold leading-tight text-muted">
+          <span className="line-clamp-2 block text-body font-semibold leading-tight text-muted">
             {displayName}
           </span>
         )}
         <p className="mt-0.5 text-body-sm font-medium text-muted">MP</p>
-        <p className="text-[10px] text-muted/60">
+        <p className="text-body-sm text-muted/60">
           {seatsHeld} {seatsHeld === 1 ? "seat" : "seats"}
         </p>
 
         {/* Party badge */}
         <div className="mt-2.5 flex justify-center">
           {isVacant ? (
-            <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-[10px] text-muted">
+            <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-body-sm text-muted">
               —
             </span>
           ) : partyColor ? (
             <span
-              className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+              className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-semibold"
               style={{
                 borderColor: partyColor + "60",
                 backgroundColor: partyColor + "18",
@@ -112,7 +112,7 @@ function MPCard({ mp, isVacant }: { mp: SerializedMP; isVacant: boolean }) {
               <span className="truncate">{partyLabel}</span>
             </span>
           ) : (
-            <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-[10px] text-muted">
+            <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-0.5 text-body-sm text-muted">
               {partyLabel}
             </span>
           )}
@@ -146,8 +146,8 @@ export function UKRegionPageTabsPolitics({
       {commonsOfficials.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Members of parliament</h2>
-            <span className="text-sm text-muted">
+            <h2 className="text-heading font-semibold">Members of parliament</h2>
+            <span className="text-body text-muted">
               {commonsOfficials.length} MP{commonsOfficials.length !== 1 ? "s" : ""} ·{" "}
               {region.constituencies} constituencies
             </span>
@@ -163,8 +163,8 @@ export function UKRegionPageTabsPolitics({
       {rcOfficials.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">{getUKCouncilName(region.id)}</h2>
-            <span className="text-sm text-muted">
+            <h2 className="text-heading font-semibold">{getUKCouncilName(region.id)}</h2>
+            <span className="text-body text-muted">
               {rcOfficials.length} councillor{rcOfficials.length !== 1 ? "s" : ""} · {totalRCSeats}{" "}
               seats
             </span>
@@ -196,7 +196,7 @@ export function UKRegionPageTabsPolitics({
           const socThumbColor = soc < -0.1 ? "#2dd4bf" : soc > 0.1 ? "#f59e0b" : "#a1a1aa";
           return (
             <div className="rounded-xl border border-card-border bg-card p-5">
-              <h2 className="mb-4 text-sm font-semibold text-muted">Political lean</h2>
+              <h2 className="mb-4 text-body font-semibold text-muted">Political lean</h2>
               <div className="grid grid-cols-2 gap-5">
                 {/* Economic axis */}
                 <div className="space-y-3">
@@ -206,9 +206,9 @@ export function UKRegionPageTabsPolitics({
                       value={econ}
                       axis="economic"
                       countryId="UK"
-                      className="text-xs font-semibold"
+                      className="text-body-sm font-semibold"
                     />
-                    <p className="text-[11px] font-mono text-muted">
+                    <p className="text-body-sm font-mono text-muted">
                       {econ >= 0 ? `+${econ.toFixed(2)}` : econ.toFixed(2)}
                     </p>
                   </div>
@@ -235,7 +235,7 @@ export function UKRegionPageTabsPolitics({
                         }}
                       />
                     </div>
-                    <div className="flex justify-between text-[9px] text-muted mt-1">
+                    <div className="flex justify-between text-body-sm text-muted mt-1">
                       <span>Left</span>
                       <span>Right</span>
                     </div>
@@ -246,8 +246,12 @@ export function UKRegionPageTabsPolitics({
                 <div className="space-y-3">
                   <div>
                     <p className="text-body-sm font-medium text-muted mb-1">Social</p>
-                    <PositionLabel value={soc} axis="social" className="text-xs font-semibold" />
-                    <p className="text-[11px] font-mono text-muted">
+                    <PositionLabel
+                      value={soc}
+                      axis="social"
+                      className="text-body-sm font-semibold"
+                    />
+                    <p className="text-body-sm font-mono text-muted">
                       {soc >= 0 ? `+${soc.toFixed(2)}` : soc.toFixed(2)}
                     </p>
                   </div>
@@ -274,7 +278,7 @@ export function UKRegionPageTabsPolitics({
                         }}
                       />
                     </div>
-                    <div className="flex justify-between text-[9px] text-muted mt-1">
+                    <div className="flex justify-between text-body-sm text-muted mt-1">
                       <span>Liberal</span>
                       <span>Trad</span>
                     </div>
@@ -302,10 +306,10 @@ export function UKRegionPageTabsPolitics({
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                   />
                 </svg>
-                <h2 className="text-lg font-semibold">Party organization</h2>
+                <h2 className="text-heading font-semibold">Party organization</h2>
               </div>
             </div>
-            <p className="text-[11px] text-muted/60 mb-4 leading-relaxed">
+            <p className="text-body-sm text-muted/60 mb-4 leading-relaxed">
               Each party&apos;s slice of the regional Org pool. Spend Political Strength on Build
               Org to grow it; organization can decay if the party becomes inactive here.
             </p>
@@ -397,13 +401,15 @@ export function UKRegionPageTabsPolitics({
                                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                                 style={{ backgroundColor: po.partyColor }}
                               />
-                              <span className="text-sm font-medium truncate">{po.partyName}</span>
+                              <span className="text-body font-medium truncate">{po.partyName}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-sm font-bold tabular-nums ${orgLabel.color}`}>
+                              <span
+                                className={`text-body font-bold tabular-nums ${orgLabel.color}`}
+                              >
                                 {po.organization.toFixed(1)}%
                               </span>
-                              <span className={`text-[10px] font-medium ${orgLabel.color}`}>
+                              <span className={`text-body-sm font-medium ${orgLabel.color}`}>
                                 {orgLabel.label}
                               </span>
                             </div>
@@ -430,7 +436,7 @@ export function UKRegionPageTabsPolitics({
 
       {active.length === 0 && (
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <p className="text-sm text-muted text-center">
+          <p className="text-body text-muted text-center">
             No party organizations in this region yet. Party data will appear when the UK simulation
             is fully active.
           </p>

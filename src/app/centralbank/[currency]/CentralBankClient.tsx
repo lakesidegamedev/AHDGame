@@ -104,7 +104,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-1.5 text-sm font-medium ${pillClass(active)}`}
+      className={`px-3 py-1.5 text-body font-medium ${pillClass(active)}`}
     >
       {label}
     </button>

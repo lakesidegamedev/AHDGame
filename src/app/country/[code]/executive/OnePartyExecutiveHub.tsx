@@ -582,7 +582,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
 
       <section className="mb-2">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-muted">Executive leadership</h2>
+          <h2 className="text-body font-semibold text-muted">Executive leadership</h2>
         </div>
       </section>
 
@@ -708,7 +708,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
 
               <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
-                  <div className="text-3xl font-bold tabular-nums text-foreground">
+                  <div className="text-display font-bold tabular-nums text-foreground">
                     {confidencePanel.confidence}
                     <span className="ml-1 text-body-sm font-normal text-muted">
                       / {MAX_CONFIDENCE}
@@ -716,7 +716,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
                   </div>
                 </div>
                 <span
-                  className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${confidenceBandBadgeClasses(confidencePanel.band)}`}
+                  className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-body-sm font-semibold uppercase tracking-wide ${confidenceBandBadgeClasses(confidencePanel.band)}`}
                 >
                   {confidencePanel.band}
                 </span>

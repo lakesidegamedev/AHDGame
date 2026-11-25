@@ -59,16 +59,16 @@ export function AppointSubsidiaryCeoModal({
       {...dialogProps}
     >
       <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-5 space-y-4">
-        <h2 id={titleId} className="text-base font-bold text-foreground">
+        <h2 id={titleId} className="text-body-lg font-bold text-foreground">
           Appoint CEO: {corporationName}
         </h2>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           A subsidiary must be operated by a different player than the parent, or by an NPP
           caretaker.
         </p>
 
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-body">
             <input
               type="radio"
               name="ceoType"
@@ -77,7 +77,7 @@ export function AppointSubsidiaryCeoModal({
             />
             NPP caretaker (auto-selected)
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-body">
             <input
               type="radio"
               name="ceoType"
@@ -98,20 +98,20 @@ export function AppointSubsidiaryCeoModal({
               }}
             />
             {selected && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Selected: <span className="font-semibold text-foreground">{selected.name}</span>
               </p>
             )}
           </div>
         )}
 
-        {err && <p className="text-xs text-error">{err}</p>}
+        {err && <p className="text-body-sm text-error">{err}</p>}
 
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold"
+            className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold"
           >
             Cancel
           </button>
@@ -119,7 +119,7 @@ export function AppointSubsidiaryCeoModal({
             type="button"
             onClick={handleSubmit}
             disabled={busy || (ceoType === "character" && !selected)}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? "Working…" : "Appoint CEO"}
           </button>

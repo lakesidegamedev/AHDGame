@@ -556,14 +556,14 @@ export function FundTradePanel({
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm space-y-4">
       <OperatingReserveConfirmDialog state={reserveConfirm} />
       {pendingOrder && (
-        <p role="status" className="text-xs text-muted">
+        <p role="status" className="text-body-sm text-muted">
           Order {pendingOrder} is unconfirmed. Cash or units may already have moved. Retry this same
           order to check its status. Do not place a replacement order; contact support with this ID
           if it stays pending.
         </p>
       )}
       {nextTurnSubscriptions && mode === "subscribe" && (
-        <p className="text-sm">
+        <p className="text-body">
           Your cash is reserved now. The final unit count is set next turn. You can cancel before it
           settles.
         </p>
@@ -574,7 +574,7 @@ export function FundTradePanel({
             type="button"
             onClick={() => setMode("subscribe")}
             disabled={!!pendingOrder}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-body-sm font-semibold transition-colors ${
               mode === "subscribe"
                 ? "bg-primary/15 text-primary border border-primary/30"
                 : "text-muted hover:text-foreground border border-transparent"
@@ -588,7 +588,7 @@ export function FundTradePanel({
             type="button"
             onClick={() => setMode("redeem")}
             disabled={!!pendingOrder}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors disabled:opacity-40 ${
+            className={`px-3 py-1.5 rounded-md text-body-sm font-semibold transition-colors disabled:opacity-40 ${
               mode === "redeem"
                 ? "bg-secondary/15 text-secondary border border-secondary/30"
                 : "text-muted hover:text-foreground border border-transparent"
@@ -602,7 +602,7 @@ export function FundTradePanel({
       {showPaymentControls && (
         <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted">Pay with</span>
+            <span className="text-body-sm text-muted">Pay with</span>
             <div className="relative">
               <button
                 type="button"
@@ -611,7 +611,7 @@ export function FundTradePanel({
                   e.stopPropagation();
                   setCurrencyDropdownOpen((o) => !o);
                 }}
-                className="flex items-center gap-1 tabular-nums text-xs text-primary/80 hover:text-primary"
+                className="flex items-center gap-1 tabular-nums text-body-sm text-primary/80 hover:text-primary"
               >
                 <span>
                   {formatCurrencyFaceAmount(
@@ -626,9 +626,9 @@ export function FundTradePanel({
               {currencyDropdownOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-card-border bg-card shadow-xl py-1">
                   {loadingRates ? (
-                    <div className="px-3 py-2 text-xs text-muted">Loading rates…</div>
+                    <div className="px-3 py-2 text-body-sm text-muted">Loading rates…</div>
                   ) : getAffordableCurrencies(totalCostNative).length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-muted">No sufficient balance</div>
+                    <div className="px-3 py-2 text-body-sm text-muted">No sufficient balance</div>
                   ) : (
                     getAffordableCurrencies(totalCostNative).map((code) => (
                       <button
@@ -639,7 +639,7 @@ export function FundTradePanel({
                           setSelectedPayCurrency(code);
                           setCurrencyDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-card-elevated transition-colors ${
+                        className={`w-full flex items-center justify-between px-3 py-2 text-body-sm hover:bg-card-elevated transition-colors ${
                           code === selectedPayCurrency
                             ? "text-primary font-medium"
                             : "text-foreground"
@@ -657,7 +657,7 @@ export function FundTradePanel({
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted">Auto-convert shortfall</span>
+            <span className="text-body-sm text-muted">Auto-convert shortfall</span>
             <button
               type="button"
               role="switch"
@@ -690,10 +690,10 @@ export function FundTradePanel({
           value={units}
           disabled={!!pendingOrder}
           onChange={(e) => setUnits(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-mono tabular-nums focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
+          className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-mono tabular-nums focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
         />
         {mode === "redeem" && myUnits > 0 && (
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             You hold {myUnits.toLocaleString("en-US")} units.
             <button
               type="button"
@@ -707,7 +707,7 @@ export function FundTradePanel({
         )}
       </div>
 
-      <div className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-sm space-y-1">
+      <div className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-body space-y-1">
         <div className="flex justify-between gap-2">
           <span className="text-muted">Value per unit</span>
           <span className="font-mono font-semibold tabular-nums">
@@ -755,10 +755,10 @@ export function FundTradePanel({
               </div>
             )}
             {ratesNeededButMissing && (
-              <p className="text-[10px] text-muted pt-1">Loading market rates…</p>
+              <p className="text-body-sm text-muted pt-1">Loading market rates…</p>
             )}
             {fundsShort && !ratesNeededButMissing && (
-              <p className="text-xs text-error pt-1">Insufficient funds</p>
+              <p className="text-body-sm text-error pt-1">Insufficient funds</p>
             )}
           </>
         )}
@@ -778,14 +778,14 @@ export function FundTradePanel({
               </span>
             </div>
             {redeemEstimate.legacyRedeemed > 0 && redeemEstimate.rate !== 1 && (
-              <p className="text-[10px] text-muted pt-1">
+              <p className="text-body-sm text-muted pt-1">
                 {redeemEstimate.legacyRedeemed.toLocaleString("en-US")} of these unit
                 {redeemEstimate.legacyRedeemed === 1 ? "" : "s"} are grandfathered from before the
                 pricing fix and pay out at NAV without the currency conversion applied to newer
                 units.
               </p>
             )}
-            <p className="text-[10px] text-muted pt-1">
+            <p className="text-body-sm text-muted pt-1">
               Withdrawals use the cash available. If more cash is needed, the rest waits for a later
               turn.
             </p>
@@ -794,12 +794,12 @@ export function FundTradePanel({
       </div>
 
       {error && (
-        <p className="text-xs text-error" role="alert">
+        <p className="text-body-sm text-error" role="alert">
           {error}
         </p>
       )}
       {message && (
-        <p className="text-xs text-success" role="status">
+        <p className="text-body-sm text-success" role="status">
           {message}
         </p>
       )}
@@ -808,7 +808,7 @@ export function FundTradePanel({
         type="button"
         onClick={handleSubmit}
         disabled={submitDisabled}
-        className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+        className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-bold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
       >
         {loading ? "Processing…" : mode === "subscribe" ? "Subscribe" : "Withdraw"}
       </button>

@@ -74,11 +74,11 @@ export function UnionFundTreasuryPanel({
   return (
     <div className="space-y-3 border-t border-card-border pt-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Treasury</h3>
-        <span className="text-xs text-muted tabular-nums">{money(treasury)}</span>
+        <h3 className="text-body-lg font-semibold text-foreground">Treasury</h3>
+        <span className="text-body-sm text-muted tabular-nums">{money(treasury)}</span>
       </div>
 
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         The treasury is the union&apos;s own money. It comes in from dues every turn, and it pays
         for services, organizing drives and bargaining campaigns. A union with an empty treasury
         cannot act, so the president can back it out of their campaign funds to get it started.
@@ -100,19 +100,19 @@ export function UnionFundTreasuryPanel({
               onChange={(e) => setAmountDraft(e.target.value)}
               disabled={pending || suspended}
               placeholder="Amount"
-              className="w-32 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm tabular-nums disabled:opacity-50"
+              className="w-32 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body tabular-nums disabled:opacity-50"
             />
             <button
               type="button"
               disabled={pending || suspended || !amountValid}
               onClick={handleFund}
-              className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="w-fit rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {pending ? "Sending…" : "Fund treasury"}
             </button>
           </div>
           {amountDraft !== "" && !amountValid && (
-            <p className="text-[11px] text-muted">Enter a whole amount of at least 1.</p>
+            <p className="text-body-sm text-muted">Enter a whole amount of at least 1.</p>
           )}
         </>
       )}
@@ -120,7 +120,7 @@ export function UnionFundTreasuryPanel({
       {result && (
         <p
           role={result.ok ? "status" : "alert"}
-          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-body font-medium ${
             result.ok
               ? "border-success/30 bg-success/10 text-success"
               : "border-error/30 bg-error/10 text-error"

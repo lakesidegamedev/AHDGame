@@ -26,8 +26,8 @@ export function EconomicSystemReformEditor({
 }) {
   return (
     <div className="rounded-lg border border-dashed border-emerald-500/35 bg-emerald-500/5 p-3 space-y-3">
-      <p className="text-xs font-medium text-muted">Economic system (optional)</p>
-      <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+      <p className="text-body-sm font-medium text-muted">Economic system (optional)</p>
+      <label className="flex cursor-pointer items-center gap-2 text-body-sm text-muted">
         <input
           type="checkbox"
           checked={include}
@@ -36,7 +36,7 @@ export function EconomicSystemReformEditor({
         />
         Change how the economy is run
       </label>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-3 text-body-sm text-muted">
         {ECONOMIC_SYSTEM_TARGETS.map((option) => (
           <label key={option} className="flex cursor-pointer items-center gap-1.5">
             <input
@@ -50,7 +50,7 @@ export function EconomicSystemReformEditor({
           </label>
         ))}
       </div>
-      <p className="text-[11px] italic text-muted/60">
+      <p className="text-body-sm italic text-muted/60">
         {include
           ? `${ECONOMIC_SYSTEM_TARGET_DESCRIPTION[target]} The change phases in over the turns after enactment.`
           : "No economic system provision will be included in this bill."}

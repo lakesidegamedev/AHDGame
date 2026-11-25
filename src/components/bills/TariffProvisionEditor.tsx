@@ -53,10 +53,10 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
   return (
     <div className="space-y-3 rounded-xl border border-dashed border-purple-500/35 bg-purple-500/5 p-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-200/80">
+        <h4 className="text-body-sm font-semibold uppercase tracking-wider text-purple-200/80">
           Tariff provisions
         </h4>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {rows.length} / {MAX_PROVISIONS}
         </span>
       </div>
@@ -77,7 +77,10 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`scope-${i}`}>
+            <label
+              className="mb-1 block text-body-sm font-medium text-muted"
+              htmlFor={`scope-${i}`}
+            >
               Scope
             </label>
             <select
@@ -86,7 +89,7 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
               onChange={(e) =>
                 onScopeChange(i, e.target.value as TariffProvisionInput["scopeType"])
               }
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
             >
               <option value="economy_wide">Economy-wide (all foreign corps)</option>
               <option value="sector">Sector (target one industry)</option>
@@ -98,7 +101,10 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
 
           {row.scopeType === "sector" && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`sector-${i}`}>
+              <label
+                className="mb-1 block text-body-sm font-medium text-muted"
+                htmlFor={`sector-${i}`}
+              >
                 Target sector
               </label>
               <select
@@ -110,7 +116,7 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
                       OperatingSectorType | undefined,
                   })
                 }
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               >
                 <option value="">Select…</option>
                 {OPERATING_SECTOR_TYPES.map((s) => (
@@ -124,7 +130,10 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
 
           {row.scopeType === "origin_country" && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`origin-${i}`}>
+              <label
+                className="mb-1 block text-body-sm font-medium text-muted"
+                htmlFor={`origin-${i}`}
+              >
                 Origin country
               </label>
               <select
@@ -135,7 +144,7 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
                     targetOriginCountryId: (e.target.value || undefined) as CountryId | undefined,
                   })
                 }
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               >
                 <option value="">Select…</option>
                 {originOptions.map((id) => (
@@ -144,14 +153,14 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[11px] italic text-muted/60">
+              <p className="mt-1 text-body-sm italic text-muted/60">
                 Only enabled countries other than your own are listed.
               </p>
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`rate-${i}`}>
+            <label className="mb-1 block text-body-sm font-medium text-muted" htmlFor={`rate-${i}`}>
               Rate
             </label>
             <div className="flex items-center gap-2">
@@ -167,11 +176,11 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
                 }
                 className="flex-1 accent-purple-500"
               />
-              <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-xs">
+              <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-body-sm">
                 {row.rate}%
               </span>
             </div>
-            <p className="mt-1 text-[11px] italic text-muted/60">
+            <p className="mt-1 text-body-sm italic text-muted/60">
               {row.rate === 0
                 ? "Rate 0 → nullifies any existing tariff at this scope."
                 : `${row.rate}% margin penalty on foreign imports in this scope.`}
@@ -184,7 +193,7 @@ export function TariffProvisionEditor({ value, onChange, countryId, enabledCount
         type="button"
         onClick={addRow}
         disabled={rows.length >= MAX_PROVISIONS}
-        className="w-full rounded-lg border border-dashed border-purple-500/40 bg-purple-500/10 px-3 py-2 text-xs font-medium text-purple-200 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-lg border border-dashed border-purple-500/40 bg-purple-500/10 px-3 py-2 text-body-sm font-medium text-purple-200 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
       >
         + Add another tariff provision
       </button>

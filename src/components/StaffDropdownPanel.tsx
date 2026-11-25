@@ -20,7 +20,7 @@ export function StaffDropdownPanel({
   const visible = visibleStaffNavItems({ isAdmin, isModerator, isJuniorDev, isSingleplayerOwner });
 
   const itemClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60";
+    "flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60";
 
   return (
     <div className="py-1">

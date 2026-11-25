@@ -20,12 +20,12 @@ export function CategoryBadge({ category, gameSystem }: CategoryBadgeProps) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span
-        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight ${catColor}`}
+        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-body-sm font-medium leading-tight ${catColor}`}
       >
         {catLabel}
       </span>
       <span
-        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-tight ${sysColor}`}
+        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-body-sm font-medium leading-tight ${sysColor}`}
       >
         {sysLabel}
       </span>

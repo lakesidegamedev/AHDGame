@@ -21,10 +21,10 @@ export function ResultsProgressBar({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-semibold tabular-nums">
+        <span className="text-body font-semibold tabular-nums">
           {unitsReporting} of {totalUnits} {unitLabel} reporting
         </span>
-        <span className="text-xs text-muted tabular-nums">
+        <span className="text-body-sm text-muted tabular-nums">
           {unitsCalled} called{tooClose > 0 ? ` · ${tooClose} too close` : ""}
         </span>
       </div>

@@ -29,7 +29,7 @@ export default function DetailsDisclosure({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-body-xs font-semibold uppercase tracking-wider text-muted transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+        className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-muted transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
       >
         {label}
         <ChevronDown

@@ -67,7 +67,7 @@ export function BudgetOverviewAdminPanel() {
                 setActiveCountry(c.id);
                 setSelectedFY(null);
               }}
-              className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`rounded-lg px-4 py-2.5 text-body font-medium transition-colors ${
                 activeCountry === c.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted hover:text-foreground"
@@ -85,7 +85,7 @@ export function BudgetOverviewAdminPanel() {
               const val = e.target.value;
               setSelectedFY(val === "current" ? null : parseInt(val, 10));
             }}
-            className="rounded border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="rounded border border-card-border bg-background px-3 py-1.5 text-body"
           >
             <option value="current">Current (live)</option>
             {availableFiscalYears.map((fy) => (

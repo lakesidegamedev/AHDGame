@@ -266,7 +266,7 @@ export default function FeedbackDetailPage() {
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
-        className="flex flex-wrap items-center gap-1.5 text-xs text-muted"
+        className="flex flex-wrap items-center gap-1.5 text-body-sm text-muted"
       >
         <Link href="/feedback" className="font-medium hover:text-foreground">
           Suggestions
@@ -296,7 +296,7 @@ export default function FeedbackDetailPage() {
                 gameSystem={detail.gameSystem as "elections"}
               />
             </div>
-            <h1 className="mt-2.5 text-2xl font-bold leading-tight text-foreground sm:text-[1.75rem]">
+            <h1 className="mt-2.5 text-heading font-bold leading-tight text-foreground sm:text-display">
               {detail.title}
             </h1>
           </div>
@@ -304,22 +304,22 @@ export default function FeedbackDetailPage() {
         </div>
         <dl className="grid grid-cols-3 divide-x divide-card-border border-t border-card-border bg-card-muted/60 text-center">
           <div className="px-3 py-2.5">
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Votes</dt>
-            <dd className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+            <dt className="text-body-sm font-medium uppercase tracking-wide text-muted">Votes</dt>
+            <dd className="mt-0.5 text-body font-semibold tabular-nums text-foreground">
               <span className="text-success">{detail.reactions.like}</span>
               <span className="mx-1 text-muted">/</span>
               <span className="text-error">{detail.reactions.dislike}</span>
             </dd>
           </div>
           <div className="px-3 py-2.5">
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Replies</dt>
-            <dd className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+            <dt className="text-body-sm font-medium uppercase tracking-wide text-muted">Replies</dt>
+            <dd className="mt-0.5 text-body font-semibold tabular-nums text-foreground">
               {commentsTotal}
             </dd>
           </div>
           <div className="px-3 py-2.5">
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Posted</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-foreground">
+            <dt className="text-body-sm font-medium uppercase tracking-wide text-muted">Posted</dt>
+            <dd className="mt-0.5 text-body font-semibold text-foreground">
               <LocalTime
                 value={detail.createdAt}
                 options={{ month: "short", day: "numeric", year: "numeric" }}
@@ -330,7 +330,7 @@ export default function FeedbackDetailPage() {
       </header>
 
       {detail.mergedIntoLink && (
-        <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+        <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-body text-foreground">
           Merged into{" "}
           <Link
             href={`/feedback/${detail.mergedIntoLink.issueNumber}`}
@@ -344,12 +344,12 @@ export default function FeedbackDetailPage() {
 
       {detail.mergedFromLinks.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-3">
-          <span className="text-xs font-medium text-muted">Merged from</span>
+          <span className="text-body-sm font-medium text-muted">Merged from</span>
           {detail.mergedFromLinks.map((link) => (
             <Link
               key={link.issueNumber}
               href={`/feedback/${link.issueNumber}`}
-              className="rounded-md border border-card-border bg-card-elevated px-2 py-0.5 text-xs text-primary hover:underline"
+              className="rounded-md border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm text-primary hover:underline"
             >
               S#{link.issueNumber}: {link.title}
             </Link>
@@ -385,7 +385,7 @@ export default function FeedbackDetailPage() {
                     href={detail.githubIssueUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg px-2 py-1 text-xs font-medium text-muted hover:bg-card-elevated hover:text-foreground"
+                    className="rounded-lg px-2 py-1 text-body-sm font-medium text-muted hover:bg-card-elevated hover:text-foreground"
                   >
                     GitHub issue
                   </a>
@@ -401,7 +401,7 @@ export default function FeedbackDetailPage() {
             </>
           }
         >
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">
+          <p className="whitespace-pre-wrap text-body leading-relaxed text-foreground">
             {detail.description}
           </p>
           {detail.screenshotUrl && (
@@ -418,15 +418,17 @@ export default function FeedbackDetailPage() {
             <div className="mt-4 space-y-2 rounded-lg border border-card-border bg-card-muted px-4 py-3">
               {detail.impact && (
                 <div>
-                  <p className="text-xs font-semibold text-muted">Expected impact</p>
-                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">
+                  <p className="text-body-sm font-semibold text-muted">Expected impact</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-body text-foreground">
                     {detail.impact}
                   </p>
                 </div>
               )}
               {detail.priority != null && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-muted">Priority to the poster</span>
+                  <span className="text-body-sm font-semibold text-muted">
+                    Priority to the poster
+                  </span>
                   <span
                     className="flex items-center gap-0.5"
                     aria-label={`${detail.priority} of 5`}
@@ -488,7 +490,7 @@ export default function FeedbackDetailPage() {
                         onClick={() => {
                           if (window.confirm("Delete this reply?")) void deleteComment(c._id);
                         }}
-                        className="rounded-lg px-2 py-1 text-xs font-medium text-muted hover:bg-error/10 hover:text-error"
+                        className="rounded-lg px-2 py-1 text-body-sm font-medium text-muted hover:bg-error/10 hover:text-error"
                       >
                         Delete
                       </button>
@@ -499,7 +501,7 @@ export default function FeedbackDetailPage() {
                   </div>
                 }
               >
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap text-body leading-relaxed text-foreground">
                   {c.body}
                 </p>
               </ForumPost>
@@ -516,7 +518,7 @@ export default function FeedbackDetailPage() {
                 setCommentsPage(nextPage);
                 void loadComments(nextPage, true);
               }}
-              className="px-3 py-1.5 text-sm"
+              className="px-3 py-1.5 text-body"
             >
               Load more replies
             </Button>
@@ -524,7 +526,7 @@ export default function FeedbackDetailPage() {
         )}
 
         {commentsTotal === 0 && (
-          <p className="rounded-xl border border-dashed border-card-border px-4 py-6 text-center text-sm text-muted">
+          <p className="rounded-xl border border-dashed border-card-border px-4 py-6 text-center text-body text-muted">
             No replies yet.
           </p>
         )}
@@ -535,14 +537,14 @@ export default function FeedbackDetailPage() {
             {viewer === undefined ? (
               <Skeleton className="h-24 w-full rounded-lg" />
             ) : viewer === null ? (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 <Link href="/login" className="font-semibold text-primary hover:underline">
                   Log in
                 </Link>{" "}
                 to vote and reply.
               </p>
             ) : !viewer.hasCharacter ? (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 Replies are posted as your character.{" "}
                 <Link
                   href="/create-character"
@@ -559,7 +561,7 @@ export default function FeedbackDetailPage() {
                   onChange={(e) => setCommentBody(e.target.value.slice(0, 2000))}
                   rows={4}
                   maxLength={2000}
-                  className="w-full rounded-lg border border-card-border bg-card-muted px-3 py-2 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Add to the discussion"
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -569,18 +571,20 @@ export default function FeedbackDetailPage() {
                       variant="primary"
                       isLoading={posting}
                       disabled={!commentBody.trim()}
-                      className="px-4 py-1.5 text-sm"
+                      className="px-4 py-1.5 text-body"
                     >
                       Post reply
                     </Button>
-                    <InlineError error={postError} className="text-sm text-error" />
+                    <InlineError error={postError} className="text-body text-error" />
                   </div>
-                  <span className="text-xs tabular-nums text-muted">{commentBody.length}/2000</span>
+                  <span className="text-body-sm tabular-nums text-muted">
+                    {commentBody.length}/2000
+                  </span>
                 </div>
               </form>
             )}
             {detail.discordUrl && (
-              <p className="mt-3 border-t border-card-border pt-3 text-xs text-muted">
+              <p className="mt-3 border-t border-card-border pt-3 text-body-sm text-muted">
                 This suggestion is also posted in the Discord suggestions channel.{" "}
                 <a
                   href={detail.discordUrl}

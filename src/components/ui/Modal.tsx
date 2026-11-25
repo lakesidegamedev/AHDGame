@@ -105,7 +105,7 @@ export function Modal({
           className={`flex shrink-0 items-start justify-between gap-3 px-5 pt-5 pb-4 ${variant === "panel" ? "border-b border-card-border" : ""}`}
         >
           {typeof title === "string" ? (
-            <h2 id={titleId} className="flex-1 min-w-0 text-lg font-semibold text-foreground">
+            <h2 id={titleId} className="flex-1 min-w-0 text-heading font-semibold text-foreground">
               {title}
             </h2>
           ) : (

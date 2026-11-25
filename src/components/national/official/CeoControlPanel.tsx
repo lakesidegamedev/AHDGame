@@ -80,8 +80,8 @@ export function CeoControlPanel({
   return (
     <div className="rounded-xl border border-gold/30 bg-gold/5 p-5 lg:col-span-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-body-sm font-semibold text-gold">Chief executive</h3>
-        <span className="text-body-xs text-muted">
+        <h3 className="text-body-lg font-semibold text-gold">Chief executive</h3>
+        <span className="text-body-sm text-muted">
           {ceo.vacant
             ? ceo.pendingName
               ? `Offer pending: ${ceo.pendingName}`
@@ -97,7 +97,7 @@ export function CeoControlPanel({
             placeholder="Search for a CEO nominee…"
             onSelect={(c) => setNomineeId(c.id)}
           />
-          <p className="mt-1 text-body-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             The nominee must accept before taking the seat.
           </p>
         </div>

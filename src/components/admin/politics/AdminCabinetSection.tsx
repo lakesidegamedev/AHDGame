@@ -85,17 +85,17 @@ export function AdminCabinetSection({ countryId }: AdminCabinetSectionProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Cabinet nominations</h2>
+      <h2 className="text-heading font-semibold">Cabinet nominations</h2>
       {message && (
         <div
-          className={`rounded-lg border px-4 py-2 text-sm ${message.startsWith("Error") ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-green-500/30 bg-green-500/10 text-green-400"}`}
+          className={`rounded-lg border px-4 py-2 text-body ${message.startsWith("Error") ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-green-500/30 bg-green-500/10 text-green-400"}`}
         >
           {message}
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-card-border bg-card p-6 text-center text-muted text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-6 text-center text-muted text-body">
           Loading cabinet nominations…
         </div>
       ) : nominations.length === 0 ? (
@@ -115,21 +115,21 @@ export function AdminCabinetSection({ countryId }: AdminCabinetSectionProps) {
               <div className="flex items-start gap-3 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{nom.positionName}</span>
+                    <span className="font-semibold text-body">{nom.positionName}</span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${NOMINATION_STATUS_COLORS[nom.status] ?? "bg-muted/20 text-muted"}`}
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${NOMINATION_STATUS_COLORS[nom.status] ?? "bg-muted/20 text-muted"}`}
                     >
                       {nom.status}
                     </span>
                   </div>
-                  <p className="text-xs text-muted mt-1">
+                  <p className="text-body-sm text-muted mt-1">
                     Nominee: <span className="text-foreground">{nom.nomineeCharacterName}</span>
                     {nom.nomineeParty && ` (${nom.nomineeParty})`}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Proposed by {nom.proposedByPresidentName} · <LocalTime value={nom.proposedAt} />
                   </p>
-                  <div className="text-xs text-muted mt-1 flex gap-4 flex-wrap">
+                  <div className="text-body-sm text-muted mt-1 flex gap-4 flex-wrap">
                     <span>
                       Votes: ✓{nom.votesFor} ✗{nom.votesAgainst} –{nom.votesAbstain}
                     </span>
@@ -146,13 +146,13 @@ export function AdminCabinetSection({ countryId }: AdminCabinetSectionProps) {
                     <>
                       <button
                         onClick={() => runAction(nom.id, "force_confirm")}
-                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                       >
                         Force confirm
                       </button>
                       <button
                         onClick={() => runAction(nom.id, "force_reject")}
-                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
                       >
                         Force reject
                       </button>
@@ -161,7 +161,7 @@ export function AdminCabinetSection({ countryId }: AdminCabinetSectionProps) {
                   {!["withdrawn"].includes(nom.status) && (
                     <button
                       onClick={() => runAction(nom.id, "withdraw")}
-                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-xs font-medium text-muted hover:bg-muted/20 transition-colors"
+                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-body-sm font-medium text-muted hover:bg-muted/20 transition-colors"
                     >
                       Withdraw
                     </button>

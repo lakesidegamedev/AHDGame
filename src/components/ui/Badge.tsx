@@ -95,17 +95,17 @@ export function Badge({
   let containerClass = "";
 
   if (variant === "solid") {
-    containerClass = `${c.solid} text-white border border-transparent rounded-full px-2.5 py-1 text-[11px]`;
+    containerClass = `${c.solid} text-white border border-transparent rounded-full px-2.5 py-1 text-body-sm`;
   } else if (variant === "tag") {
     containerStyle = { background: c.bg, borderColor: c.border };
-    containerClass = `${c.text} border rounded px-1.5 py-0.5 text-[10px] font-mono tracking-wide`;
+    containerClass = `${c.text} border rounded px-1.5 py-0.5 text-body-sm font-mono tracking-wide`;
   } else if (variant === "outline") {
     containerStyle = { borderColor: c.border };
-    containerClass = `bg-transparent ${c.text} border rounded-full px-2.5 py-1 text-[11px]`;
+    containerClass = `bg-transparent ${c.text} border rounded-full px-2.5 py-1 text-body-sm`;
   } else {
     // subtle (default)
     containerStyle = { background: c.bg, borderColor: c.border };
-    containerClass = `${c.text} border rounded-full px-2.5 py-1 text-[11px]`;
+    containerClass = `${c.text} border rounded-full px-2.5 py-1 text-body-sm`;
   }
 
   return (
@@ -152,7 +152,7 @@ export function BadgeCount({ count, color = "primary", className = "" }: BadgeCo
   if (color === "primary") {
     return (
       <span
-        className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-[10px] font-bold tabular-nums text-primary-foreground bg-primary ${className}`}
+        className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-body-sm font-bold tabular-nums text-primary-foreground bg-primary ${className}`}
       >
         {count}
       </span>
@@ -161,7 +161,7 @@ export function BadgeCount({ count, color = "primary", className = "" }: BadgeCo
 
   return (
     <span
-      className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-[10px] font-bold tabular-nums border ${c.text} ${className}`}
+      className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-body-sm font-bold tabular-nums border ${c.text} ${className}`}
       style={{ background: c.bg, borderColor: c.border }}
     >
       {count}
@@ -182,7 +182,7 @@ interface TallyBadgeProps {
 export function TallyBadge({ yea, nay, abstain, className = "" }: TallyBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center border border-card-border rounded-full overflow-hidden font-mono text-[10px] font-bold ${className}`}
+      className={`inline-flex items-center border border-card-border rounded-full overflow-hidden font-mono text-body-sm font-bold ${className}`}
     >
       <span className="px-2 py-0.5 bg-success/15 text-green-400">Y {yea}</span>
       <span className="px-2 py-0.5 bg-error/15 text-red-400">N {nay}</span>

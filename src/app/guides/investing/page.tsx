@@ -47,7 +47,7 @@ export default function InvestingGuidePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -57,8 +57,8 @@ export default function InvestingGuidePage() {
 
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Investing</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Investing</h1>
+          <p className="mt-2 text-body text-muted">
             Stocks, currency exchange, sovereign bonds, and how interest rates connect them all
           </p>
         </div>
@@ -69,7 +69,7 @@ export default function InvestingGuidePage() {
           {/* ── 1. Overview ── */}
           <section className="space-y-4">
             <SectionHeader id="overview">1. How markets work</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A House Divided has three investable asset classes: corporate{" "}
               <strong className="text-foreground">stocks</strong>, foreign{" "}
               <strong className="text-foreground">currency</strong>, and government{" "}
@@ -96,8 +96,8 @@ export default function InvestingGuidePage() {
                   key={title}
                   className="rounded-xl border border-card-border bg-card p-4 space-y-1.5"
                 >
-                  <p className="text-sm font-semibold text-foreground">{title}</p>
-                  <p className="text-sm text-muted leading-relaxed">{body}</p>
+                  <p className="text-body font-semibold text-foreground">{title}</p>
+                  <p className="text-body text-muted leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>
@@ -112,14 +112,14 @@ export default function InvestingGuidePage() {
           {/* ── 2. Stocks ── */}
           <section className="space-y-4">
             <SectionHeader id="stocks">2. Stocks & shares</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Corporations are founded by players and traded on the stock market. Each corporation
               has a CEO who controls salary, dividend payout rate, sector focus, and expansion. As
               an outside investor, you profit through dividends and share price appreciation. But
               you are always at the CEO&apos;s mercy for operational decisions.
             </p>
             <SubHeader>What to look for before buying</SubHeader>
-            <ul className="space-y-2 text-sm text-muted">
+            <ul className="space-y-2 text-body text-muted">
               <li className="flex gap-2">
                 <span className="text-primary font-bold shrink-0">→</span>
                 <span>
@@ -160,7 +160,7 @@ export default function InvestingGuidePage() {
           {/* ── 3. Share Price ── */}
           <section className="space-y-4">
             <SectionHeader id="share-price">3. How share price is calculated</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Share pricing starts with what the corporation owns after debt and adds value for its
               earnings and expected growth. If a corporation relies heavily on bond interest for
               earnings, the game reduces the earnings and growth contributions.
@@ -169,7 +169,7 @@ export default function InvestingGuidePage() {
     1.0 × tangible book per share
   + (0.5 × risk-adjusted earnings power per share
      + 0.15 × growth premium per share) × bond reliance multiplier`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Tangible book includes cash, sector value and other assets, less issued bond debt.
               Sector value includes{" "}
               <strong className="text-foreground">net present value (NPV)</strong>, which expresses
@@ -177,12 +177,12 @@ export default function InvestingGuidePage() {
               risk-adjusted earnings and the cost of capital, while the growth premium reflects
               expected sector growth.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The game adjusts this valuation for factors such as the number of subsidiaries, how
               much of the company the CEO owns and index fund ownership. It generally limits the
               change from the prior price and uses a separate smoothing rule after stock splits.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               In multiplayer, the hourly turn updates earnings and records the formula price in
               company history. Between turns, quarter-hour market ticks use earnings from the last
               completed turn and refresh the live price with changes such as cash balances and
@@ -194,15 +194,15 @@ export default function InvestingGuidePage() {
           {/* ── 4. Dividends ── */}
           <section className="space-y-4">
             <SectionHeader id="dividends">4. Dividends & income</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Dividends are paid every turn to all shareholders. The amount depends on the
               corporation&apos;s after-tax income and the CEO&apos;s chosen payout rate (0-25%). The
               CEO can change this rate with a 24-hour cooldown between adjustments.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Income play (high payout)</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Income play (high payout)</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Steady dividend income each turn</li>
                   <li>• Share price grows more slowly</li>
                   <li>• Good for passive cash generation</li>
@@ -210,8 +210,8 @@ export default function InvestingGuidePage() {
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Growth play (low payout)</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Growth play (low payout)</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Little current income</li>
                   <li>• Retained earnings compound into equity</li>
                   <li>• Share price appreciates faster</li>
@@ -229,13 +229,13 @@ export default function InvestingGuidePage() {
           {/* ── 5. Forex ── */}
           <section className="space-y-4">
             <SectionHeader id="forex">5. Currency exchange (forex)</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Each country has its own floating currency. Exchange rates move based on macroeconomic
               fundamentals, player trading volume, and a small random noise component. You can
               speculate directly on rate movements or use the forex market simply to manage currency
               exposure from international investments.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Access the market on the{" "}
               <Link href="/market" className="text-primary hover:underline">
                 stock market
@@ -247,7 +247,7 @@ export default function InvestingGuidePage() {
           {/* ── 6. What Moves Rates ── */}
           <section className="space-y-4">
             <SectionHeader id="forex-rates">6. What moves exchange rates</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Rates update every turn through three components:
             </p>
             <FormulaBlock>{`Macro target = baseRate × (
@@ -260,13 +260,13 @@ export default function InvestingGuidePage() {
 New rate = currentRate + (macroTarget - currentRate) × 0.05  // 5% drift per turn
 Volume pressure: net buy/sell from last 24 turns → ±1% effective maximum swing (raw pressure capped at 5%, applied at 20% weight)
 Noise: ±0.1-0.3% per turn`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The 5% drift speed is the key insight: major macro shocks take roughly a game year
               (~48 turns) to fully propagate. This creates persistent, exploitable trends, not
               random noise.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Event</th>
@@ -323,11 +323,11 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
           {/* ── 7. Forex Trading Tiers ── */}
           <section className="space-y-4">
             <SectionHeader id="forex-trading">7. Forex trading tiers</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Three execution methods are available, each with a different spread (cost):
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Tier</th>
@@ -379,7 +379,7 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
           {/* ── 8. Bonds ── */}
           <section className="space-y-4">
             <SectionHeader id="bonds">8. Sovereign bonds</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Governments issue bonds automatically every 12 turns (quarterly) when running a
               deficit. Each bond pays a fixed coupon, equal to the central bank&apos;s prime rate at
               issuance, every turn until maturity at turn 48. Face value is $1,000 per unit.
@@ -387,7 +387,7 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
             <SubHeader>
               The core dynamic: bonds and interest rates move opposite each other
             </SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               When rates rise, existing bonds paying the old, lower coupon become less attractive
               and their market price falls; when rates fall, existing bonds become more attractive
               and their price rises. At maturity, price always returns to $1,000 face value
@@ -399,8 +399,8 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Income strategy</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Income strategy</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Hold to maturity for coupon income every turn</li>
                   <li>• Sovereign debt cannot default. Principal is guaranteed</li>
                   <li>• Coupons paid in the issuing country&apos;s currency</li>
@@ -408,8 +408,8 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Capital gain strategy</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Capital gain strategy</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Buy when prime rates are high (bonds are cheap)</li>
                   <li>• Sell when rates fall (price appreciates)</li>
                   <li>• Watch central bank policy signals</li>
@@ -418,14 +418,14 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
               </div>
             </div>
             <SubHeader>Credit ratings and coupon rates</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A country&apos;s debt-to-GDP ratio determines its credit rating, which in turn
               determines the base interest rate the government pays. Higher debt means costlier
               borrowing. And bonds issued when the credit rating is poor lock in higher coupons for
               their full 48-turn life.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Debt-to-GDP</th>
@@ -463,7 +463,7 @@ Noise: ±0.1-0.3% per turn`}</FormulaBlock>
           {/* ── 9. Interest Rates ── */}
           <section className="space-y-4">
             <SectionHeader id="interest-rates">9. Interest rates</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The central bank&apos;s prime rate is the single variable that connects all three
               asset classes. Understanding its direction is the foundation of any cross-asset
               strategy.
@@ -479,7 +479,7 @@ When prime rate FALLS:
   Currency    → weakens
   Stocks      → growth costs fall, expansion cheaper, equities benefit
   Inflation   → rises over ~12 turns`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The 12-turn inflation lag is important: rate changes don&apos;t immediately fix
               inflation. A central bank chair raising rates will not see inflation results for 12
               turns, meaning they may over-correct, creating trading opportunities when policy
@@ -487,7 +487,7 @@ When prime rate FALLS:
             </p>
             <SubHeader>Baseline rates by country</SubHeader>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Country</th>
@@ -514,7 +514,7 @@ When prime rate FALLS:
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Rates above neutral are contractionary (slowing the economy, strengthening currency).
               Rates below neutral are expansionary (stimulating growth, weakening currency). The
               neutral rate is the equilibrium point. Deviations create the macro trends that drive
@@ -525,12 +525,12 @@ When prime rate FALLS:
           {/* ── 10. Strategy ── */}
           <section className="space-y-4">
             <SectionHeader id="strategy">10. Putting it together</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The most profitable positions are cross-asset plays that exploit the same macro signal
               from multiple angles simultaneously.
             </p>
             <SubHeader>Scenario: Central bank raises rates</SubHeader>
-            <ul className="space-y-2 text-sm text-muted">
+            <ul className="space-y-2 text-body text-muted">
               {[
                 [
                   "Sell bonds immediately.",
@@ -561,7 +561,7 @@ When prime rate FALLS:
               ))}
             </ul>
             <SubHeader>Scenario: Deficit spending spikes</SubHeader>
-            <ul className="space-y-2 text-sm text-muted">
+            <ul className="space-y-2 text-body text-muted">
               {[
                 [
                   "Watch the bond issuance schedule.",

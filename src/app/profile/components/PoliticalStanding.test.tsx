@@ -83,7 +83,7 @@ describe("PoliticalStanding table", () => {
     expect(headers).toEqual(["Measure", "Value", "Per turn", "Notes"]);
     const heading = screen.getByRole("heading", { name: "Political standing" });
     // A primary block: the large main heading, with no rule under it.
-    expect(heading.className).toContain("text-heading-lg");
+    expect(heading.className).toContain("text-heading");
     expect(heading.parentElement?.className).not.toContain("border-b");
   });
 

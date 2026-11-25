@@ -38,7 +38,7 @@ export function EmbeddedParliamentaryResults({
   if (state.kind === "disabled") return null;
   if (state.kind === "error") {
     return (
-      <div className="mb-6 rounded-xl border border-card-border bg-card p-4 text-center text-sm text-muted">
+      <div className="mb-6 rounded-xl border border-card-border bg-card p-4 text-center text-body text-muted">
         {state.message}{" "}
         <button type="button" className="underline" onClick={reload}>
           {t("embeddedResults.retry")}
@@ -75,10 +75,10 @@ function EmbeddedParliamentaryResultsReady({
   return (
     <div className="mb-6 space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold text-muted">{title}</h2>
+        <h2 className="text-body font-semibold text-muted">{title}</h2>
         <Link
           href={`/elections/${electionId}/results`}
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-body-sm font-medium text-primary hover:underline"
         >
           {t("embeddedResults.fullElectionNight")}
         </Link>

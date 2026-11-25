@@ -194,7 +194,7 @@ export function AskDrawer() {
             aria-label="Open Ask Keir"
             title="Ask Keir about this page"
             data-feedback-ignore="true"
-            className={`fixed top-1/2 z-[44] hidden -translate-y-1/2 flex-col items-center gap-1 border border-primary/30 bg-card/95 px-1 pb-2.5 pt-1.5 text-xs font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex ${left ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
+            className={`fixed top-1/2 z-[44] hidden -translate-y-1/2 flex-col items-center gap-1 border border-primary/30 bg-card/95 px-1 pb-2.5 pt-1.5 text-body-sm font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex ${left ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
           >
             <KeirSprite mood="idle" />
             <span className="[writing-mode:vertical-rl]">Ask</span>

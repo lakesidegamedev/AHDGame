@@ -121,25 +121,25 @@ export function PlayerAdsModTab() {
   }
 
   if (error) {
-    return <p className="text-sm text-error py-4">{error}</p>;
+    return <p className="text-body text-error py-4">{error}</p>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Player banner ads</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Player banner ads</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             {ads.length} ad{ads.length !== 1 ? "s" : ""} total ·{" "}
             {ads.filter((a) => a.isActive).length} active
           </p>
         </div>
       </div>
 
-      <InlineError error={actionError} className="text-sm text-error" />
+      <InlineError error={actionError} className="text-body text-error" />
 
       {ads.length === 0 ? (
-        <p className="text-sm text-muted py-4">No player ads have been submitted yet.</p>
+        <p className="text-body text-muted py-4">No player ads have been submitted yet.</p>
       ) : (
         <>
           <div className="space-y-3">
@@ -172,36 +172,36 @@ export function PlayerAdsModTab() {
                   {/* Meta */}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-foreground">{ad.characterName}</p>
-                      <span className="text-xs text-muted">({ad.countryId})</span>
+                      <p className="text-body font-medium text-foreground">{ad.characterName}</p>
+                      <span className="text-body-sm text-muted">({ad.countryId})</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                        className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${
                           ad.isActive ? "bg-success/15 text-success" : "bg-muted/15 text-muted"
                         }`}
                       >
                         {ad.isActive ? "Active" : "Paused"}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
                       <span>{ad.viewCount.toLocaleString("en-US")} views</span>
                       <span>Cost paid: {fmt(ad.costPaid, ad.currencyCode)}</span>
                       <span>Submitted {relativeDate(ad.createdAt)}</span>
                     </div>
                     {ad.linkUrl && (
                       <div className="mt-2 pt-2 border-t border-card-border">
-                        <p className="text-xs text-muted mb-1">Link:</p>
+                        <p className="text-body-sm text-muted mb-1">Link:</p>
                         <a
                           href={ad.linkUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline break-all"
+                          className="text-body-sm text-primary hover:underline break-all"
                         >
                           <code className="bg-background/50 px-2 py-1 rounded">{ad.linkUrl}</code>
                         </a>
                       </div>
                     )}
                     {ad.altText && (
-                      <p className="text-xs text-muted truncate mt-1">Alt: {ad.altText}</p>
+                      <p className="text-body-sm text-muted truncate mt-1">Alt: {ad.altText}</p>
                     )}
                   </div>
 
@@ -211,7 +211,7 @@ export function PlayerAdsModTab() {
                       type="button"
                       onClick={() => void toggleAdActive(ad._id, ad.isActive)}
                       disabled={toggling === ad._id}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                         ad.isActive
                           ? "border-warning/30 text-warning hover:bg-warning/10 disabled:opacity-50"
                           : "border-success/30 text-success hover:bg-success/10 disabled:opacity-50"
@@ -222,7 +222,7 @@ export function PlayerAdsModTab() {
                     <button
                       type="button"
                       onClick={() => void removeAd(ad._id)}
-                      className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10"
+                      className="rounded-lg border border-error/30 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/10"
                     >
                       Remove
                     </button>
@@ -236,7 +236,7 @@ export function PlayerAdsModTab() {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="w-full rounded-xl border border-card-border bg-card py-3 text-sm text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
+              className="w-full rounded-xl border border-card-border bg-card py-3 text-body text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
             >
               {loadingMore ? "Loading…" : "Load more"}
             </button>

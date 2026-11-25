@@ -199,27 +199,27 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
               type="button"
               onClick={() => setDepth(d)}
               aria-pressed={depth === d}
-              className={`px-2.5 py-1 text-[11px] motion-reduce:transition-none ${pillClass(depth === d)}`}
+              className={`px-2.5 py-1 text-body-sm motion-reduce:transition-none ${pillClass(depth === d)}`}
             >
               {d} hop{d > 1 ? "s" : ""}
             </button>
           ))}
         </div>
         {data && (
-          <span className="text-[11px] tabular-nums text-muted">
+          <span className="text-body-sm tabular-nums text-muted">
             {data.nodes.length} accounts · {data.edges.length} flows · turns ≥ {data.turnMin}
           </span>
         )}
         {data?.truncated && (
           <span
-            className="rounded-md border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400"
+            className="rounded-md border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-amber-400"
             title="The server hit its node/edge/row cap — some flows are not shown."
           >
             Truncated
           </span>
         )}
         {layout && layout.hiddenCount > 0 && (
-          <span className="text-[11px] text-muted">
+          <span className="text-body-sm text-muted">
             +{layout.hiddenCount} low-flow account{layout.hiddenCount === 1 ? "" : "s"} hidden
           </span>
         )}
@@ -231,24 +231,24 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
           aria-hidden
         />
       ) : noCharacter ? (
-        <div className="rounded-lg border border-card-border/70 bg-card-muted/40 px-4 py-10 text-center text-sm text-muted">
+        <div className="rounded-lg border border-card-border/70 bg-card-muted/40 px-4 py-10 text-center text-body text-muted">
           No character yet.
         </div>
       ) : error ? (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-body text-red-400">
           {error}
           <div>
             <button
               type="button"
               onClick={() => setReloadNonce((n) => n + 1)}
-              className="mt-3 inline-flex h-8 items-center rounded-lg border border-card-border px-3 text-xs text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
+              className="mt-3 inline-flex h-8 items-center rounded-lg border border-card-border px-3 text-body-sm text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
             >
               Retry
             </button>
           </div>
         </div>
       ) : !layout || layout.edges.length === 0 ? (
-        <div className="rounded-lg border border-card-border/70 bg-card-muted/40 px-4 py-10 text-center text-sm text-muted">
+        <div className="rounded-lg border border-card-border/70 bg-card-muted/40 px-4 py-10 text-center text-body text-muted">
           No money flow recorded in the retention window.
         </div>
       ) : (
@@ -341,7 +341,7 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
           )}
 
           {/* Legend — identity is never color-alone. */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-body-sm text-muted">
             <LegendDot color={CENTER_HEX} label="This account" />
             <LegendDot color={ACCOUNT_HEX} label="Counterparty" />
             <span className="inline-flex items-center gap-1.5">
@@ -582,7 +582,7 @@ function SelectedEdgeCaption({
   const from = placed.get(edge.from);
   const to = placed.get(edge.to);
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-card-border/70 bg-card-elevated/50 px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-card-border/70 bg-card-elevated/50 px-3 py-2 text-body-sm">
       <span className="min-w-0 truncate font-medium">
         {accountLabel(from?.node.name ?? null, edge.from)}
         <span aria-hidden className="mx-1.5 text-sky-400">

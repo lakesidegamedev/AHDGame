@@ -121,8 +121,8 @@ export function HealBudgets() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal budgets</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal budgets</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Recalculates national and regional budget revenue from tax bases and rates, then
           recalculates spending from currently enacted laws. Fixes drift from stale values without
           resetting to seed defaults.
@@ -139,7 +139,7 @@ export function HealBudgets() {
       />
 
       {diagnostics && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-4 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-4 text-body-sm">
           <p className={totalNeedsFix > 0 ? "text-error" : "text-success"}>
             {totalNeedsFix > 0
               ? `${totalNeedsFix} budget(s) need fixing`

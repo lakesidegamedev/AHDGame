@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<ExtractionContractStatus, string> = {
 export function ContractStatusBadge({ status }: { status: ExtractionContractStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-medium ${STATUS_STYLES[status]}`}
     >
       {STATUS_LABELS[status]}
     </span>

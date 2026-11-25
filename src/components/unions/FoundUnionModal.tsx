@@ -98,7 +98,7 @@ export function FoundUnionModal({
     <Modal open={open} onClose={handleClose} title="Found a Union" maxWidthClass="max-w-sm">
       <div className="flex flex-col">
         <div>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-4 text-body text-muted">
             Starts a new union in {countryName} with no sectors and no treasury. Organize (or raid)
             your way into representation from there.
           </p>
@@ -106,7 +106,7 @@ export function FoundUnionModal({
           {/* Both costs are quoted from the server so the figure here is the one
               that will actually be charged. */}
           {foundingActionCost != null && (
-            <p className="mb-4 rounded-lg border border-card-border bg-background px-3 py-2 text-xs text-muted">
+            <p className="mb-4 rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm text-muted">
               Costs{" "}
               <span className="font-semibold text-foreground tabular-nums">
                 {foundingActionCost} action points
@@ -128,7 +128,7 @@ export function FoundUnionModal({
           {error && (
             <div
               role="alert"
-              className="mb-4 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
+              className="mb-4 rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error"
             >
               {error}
             </div>
@@ -150,9 +150,9 @@ export function FoundUnionModal({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Independent Steelworkers Alliance"
                 maxLength={MAX_UNION_NAME_LENGTH}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
               />
-              <InlineError error={nameError} className="mt-1.5 text-xs text-error" />
+              <InlineError error={nameError} className="mt-1.5 text-body-sm text-error" />
             </div>
 
             <div>
@@ -166,7 +166,7 @@ export function FoundUnionModal({
                 id="found-union-industry"
                 value={sectorType}
                 onChange={(e) => setSectorType(e.target.value as OperatingSectorType | "")}
-                className="w-full cursor-pointer rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+                className="w-full cursor-pointer rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
               >
                 <option value="" disabled>
                   Select industry…
@@ -185,7 +185,7 @@ export function FoundUnionModal({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            className="rounded-lg border border-card-border px-4 py-2 text-body font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
           >
             Cancel
           </button>
@@ -193,7 +193,7 @@ export function FoundUnionModal({
             type="button"
             onClick={handleFound}
             disabled={disabled}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {founding ? "Founding…" : "Found Union"}
           </button>

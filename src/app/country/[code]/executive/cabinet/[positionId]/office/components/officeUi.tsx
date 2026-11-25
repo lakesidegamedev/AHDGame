@@ -23,8 +23,8 @@ export function Stat({
             : "text-foreground";
   return (
     <div>
-      <div className="dossier-label !text-[9px] text-muted">{label}</div>
-      <div className={`tabular mt-0.5 text-[14px] font-bold ${toneClass}`}>{value}</div>
+      <div className="dossier-label !text-body-sm text-muted">{label}</div>
+      <div className={`tabular mt-0.5 text-body font-bold ${toneClass}`}>{value}</div>
     </div>
   );
 }
@@ -54,18 +54,18 @@ export function ConfirmDialog({
         className="w-full max-w-md rounded-xl border border-card-border bg-card p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
-        <div className="mt-2 text-[13px] leading-relaxed text-muted">{body}</div>
+        <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
+        <div className="mt-2 text-body-sm leading-relaxed text-muted">{body}</div>
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-card-border px-4 py-2 text-[13px] font-medium text-muted hover:text-foreground"
+            className="rounded-lg border border-card-border px-4 py-2 text-body-sm font-medium text-muted hover:text-foreground"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-[13px] font-semibold text-error hover:bg-error/20"
+            className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-body-sm font-semibold text-error hover:bg-error/20"
           >
             {confirmLabel}
           </button>

@@ -75,14 +75,14 @@ export function CaucusMembershipShareCard({
     <div className="rounded-lg border border-card-border bg-card p-4">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-heading-sm font-semibold text-foreground">Caucus membership share</h3>
-          <p className="mt-1 text-sm text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Caucus membership share</h3>
+          <p className="mt-1 text-body text-muted">
             Share of all caucus-aligned members across the party&apos;s active caucuses.
           </p>
         </div>
         <div className="rounded-md border border-card-border bg-card-muted px-2.5 py-1.5 text-right">
           <div className="text-body-sm font-semibold text-muted">Caucused members</div>
-          <div className="mt-0.5 text-base font-bold tabular-nums text-foreground">
+          <div className="mt-0.5 text-body-lg font-bold tabular-nums text-foreground">
             {totalMembers}
           </div>
         </div>
@@ -114,7 +114,7 @@ export function CaucusMembershipShareCard({
                         y={slice.labelY}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-background text-[10px] font-semibold"
+                        className="fill-background text-body-sm font-semibold"
                       >
                         {slice.percentage}
                       </text>
@@ -148,7 +148,7 @@ export function CaucusMembershipShareCard({
                     style={{ backgroundColor: slice.color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-foreground">
+                    <div className="truncate text-body font-semibold text-foreground">
                       {slice.name}
                     </div>
                     <div className="text-body-sm text-muted">
@@ -157,7 +157,7 @@ export function CaucusMembershipShareCard({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold tabular-nums text-foreground">
+                    <div className="text-body font-bold tabular-nums text-foreground">
                       {slice.percentage}
                     </div>
                     <div className="text-body-sm text-muted">

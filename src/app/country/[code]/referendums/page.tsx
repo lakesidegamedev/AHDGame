@@ -95,13 +95,13 @@ export default async function ReferendumsIndexPage({
           <HubCards countryId={countryId} campaigns={campaigns} />
         )
       ) : (
-        <div className="rounded-2xl border border-card-border bg-card px-6 py-10 text-center text-sm text-muted">
+        <div className="rounded-2xl border border-card-border bg-card px-6 py-10 text-center text-body text-muted">
           No referendum campaigns are under way.
         </div>
       )}
 
       <section className="mt-10">
-        <h2 className="mb-3 text-sm font-bold text-muted">Past referendums</h2>
+        <h2 className="mb-3 text-body font-bold text-muted">Past referendums</h2>
         {past.length > 0 ? (
           <ul className="space-y-2">
             {past
@@ -113,9 +113,9 @@ export default async function ReferendumsIndexPage({
                     href={referendumDetailUrl(countryId, r.regionId, r.cycle)}
                     className="flex items-center justify-between rounded-xl border border-card-border bg-card px-4 py-3 hover:border-primary/50"
                   >
-                    <span className="text-sm font-medium">
+                    <span className="text-body font-medium">
                       {regionName(r.regionId)} — {referendumKindLabel(r.kind)}{" "}
-                      <span className="text-xs text-muted">· cycle {r.cycle}</span>
+                      <span className="text-body-sm text-muted">· cycle {r.cycle}</span>
                     </span>
                     <CampaignStatusPill status={r.status} />
                   </Link>
@@ -123,7 +123,7 @@ export default async function ReferendumsIndexPage({
               ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted">No past referendums.</p>
+          <p className="text-body text-muted">No past referendums.</p>
         )}
       </section>
     </div>

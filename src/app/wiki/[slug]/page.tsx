@@ -163,13 +163,13 @@ export default async function WikiPage({ params }: WikiPageProps) {
         <div className="mb-4 flex justify-end gap-2">
           <Link
             href={`/wiki/${slug}/history`}
-            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
+            className="rounded-md bg-card px-3 py-1.5 text-body-sm text-muted transition-colors hover:text-foreground"
           >
             History
           </Link>
           <Link
             href={`/wiki/${slug}/edit`}
-            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
+            className="rounded-md bg-card px-3 py-1.5 text-body-sm text-muted transition-colors hover:text-foreground"
           >
             Edit page
           </Link>
@@ -236,7 +236,7 @@ function GeneratedOfficeWikiPage({
         <div className="mb-4 flex justify-end">
           <Link
             href={`/wiki/${slug}/edit`}
-            className="rounded-md bg-card px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
+            className="rounded-md bg-card px-3 py-1.5 text-body-sm text-muted transition-colors hover:text-foreground"
           >
             Edit article text
           </Link>
@@ -244,13 +244,13 @@ function GeneratedOfficeWikiPage({
       )}
 
       <header className="mb-5">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+        <p className="mb-2 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
           Generated office page
         </p>
-        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {page.definition.title}
         </h1>
-        <p className="mt-3 max-w-[62ch] text-base leading-[1.6] text-foreground">
+        <p className="mt-3 max-w-[62ch] text-body-lg leading-[1.6] text-foreground">
           {page.definition.description}
         </p>
       </header>
@@ -267,7 +267,7 @@ function GeneratedOfficeWikiPage({
       </article>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+        <h2 className="mb-3 text-heading font-extrabold tracking-[-0.03em] text-foreground">
           Current holder
         </h2>
         {current ? (
@@ -285,16 +285,18 @@ function GeneratedOfficeWikiPage({
                   <span className="font-semibold text-foreground">{current.name}</span>
                 )}
                 {current.partyLabel && (
-                  <span className="ml-2 text-sm text-muted">({current.partyLabel})</span>
+                  <span className="ml-2 text-body text-muted">({current.partyLabel})</span>
                 )}
               </div>
-              <div className="font-mono text-xs text-muted">{tenureRangeWeekYear(current)}</div>
+              <div className="font-mono text-body-sm text-muted">
+                {tenureRangeWeekYear(current)}
+              </div>
             </div>
           </div>
         ) : (
           <div className="py-2">
             <p className="font-medium text-foreground">Vacant or not yet recorded</p>
-            <p className="mt-1 text-[13px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               The live history table will populate when the office is filled or when transition
               records are written.
             </p>
@@ -303,20 +305,20 @@ function GeneratedOfficeWikiPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+        <h2 className="mb-3 text-heading font-extrabold tracking-[-0.03em] text-foreground">
           Office holder history
         </h2>
         <div className="space-y-8">
           {page.tenureGroups.map((group) => (
             <div key={`${group.iteration.type}-${group.iteration.number}`}>
-              <h3 className="mb-2 text-[15px] font-bold tracking-[-0.01em] text-foreground">
+              <h3 className="mb-2 text-body-lg font-bold tracking-[-0.01em] text-foreground">
                 {group.label}
               </h3>
               {group.entries.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-sm">
+                  <table className="w-full min-w-[680px] text-body">
                     <thead>
-                      <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      <tr className="text-left text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                         <th className="border-b border-card-border py-1.5 pr-4 font-semibold">
                           Holder
                         </th>
@@ -347,7 +349,7 @@ function GeneratedOfficeWikiPage({
                               entry.name
                             )}
                             {entry.isCurrent && (
-                              <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--wiki-link)]">
+                              <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-semibold text-[var(--wiki-link)]">
                                 Incumbent
                               </span>
                             )}
@@ -355,10 +357,10 @@ function GeneratedOfficeWikiPage({
                           <td className="py-2 pr-4 text-muted">
                             {entry.partyLabel ?? entry.party ?? "-"}
                           </td>
-                          <td className="py-2 pr-4 font-mono text-xs text-muted">
+                          <td className="py-2 pr-4 font-mono text-body-sm text-muted">
                             {tenureRangeWeekYear(entry)}
                           </td>
-                          <td className="py-2 pr-4 text-xs text-muted">
+                          <td className="py-2 pr-4 text-body-sm text-muted">
                             {realLifeDateRange(entry)}
                           </td>
                           <td className="py-2 text-muted">{entry.source.replace(/-/g, " ")}</td>
@@ -368,7 +370,7 @@ function GeneratedOfficeWikiPage({
                   </table>
                 </div>
               ) : (
-                <p className="py-2 text-[13px] text-muted">No recorded holders yet.</p>
+                <p className="py-2 text-body-sm text-muted">No recorded holders yet.</p>
               )}
               {isAdmin && (
                 <OfficeHistoryAdmin
@@ -448,7 +450,7 @@ async function RelatedPagesFooter({
 
   return (
     <footer className="mt-10 border-t border-card-border pt-5">
-      <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+      <h3 className="mb-2 text-body-lg font-semibold uppercase tracking-[0.06em] text-muted">
         Related pages
       </h3>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -456,7 +458,7 @@ async function RelatedPagesFooter({
           <Link
             key={slug}
             href={`/wiki/${slug}`}
-            className="text-[13px] text-[var(--wiki-link)] hover:underline"
+            className="text-body-sm text-[var(--wiki-link)] hover:underline"
           >
             {title}
           </Link>

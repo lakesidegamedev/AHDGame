@@ -86,13 +86,13 @@ export async function postBillProposalWithElectionConfirmation({
 export function BillAutoFailWarningBanner({ warning }: { warning: BillProposalAutoFailWarning }) {
   return (
     <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-3">
-      <p className="text-sm font-semibold text-error">Election timing warning</p>
-      <p className="mt-1 text-sm text-foreground">
+      <p className="text-body font-semibold text-error">Election timing warning</p>
+      <p className="mt-1 text-body text-foreground">
         The next {warning.electionName} is expected to finalize on{" "}
         <span className="font-medium">{formatWarningDate(warning.electionEndsAt)}</span>. Bills
         still in the {warning.lowerChamberName} at that time automatically fail.
       </p>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         This proposal would likely be in the {warning.lowerChamberName} from{" "}
         {formatWarningDate(warning.lowerChamberExposureStartsAt)} to{" "}
         {formatWarningDate(warning.lowerChamberExposureEndsAt)}.

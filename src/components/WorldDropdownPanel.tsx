@@ -38,9 +38,9 @@ export function WorldDropdownPanel({
   const main = items.filter((i) => i.section === "main");
 
   const linkClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60";
+    "flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60";
   const primaryLinkClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-background/60";
+    "flex items-center gap-2 px-4 py-2.5 text-body text-primary transition-colors hover:bg-background/60";
 
   return (
     <div className="py-1">
@@ -69,7 +69,7 @@ export function WorldDropdownPanel({
             <p className="text-body-sm font-medium text-muted">
               {t("menus.world.headers.leaderboard")}
             </p>
-            <span className="rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-warning">
+            <span className="rounded-full bg-warning/15 px-1.5 py-px text-body-sm font-semibold uppercase tracking-wide text-warning">
               Beta
             </span>
           </div>

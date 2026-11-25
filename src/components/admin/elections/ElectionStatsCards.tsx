@@ -71,8 +71,8 @@ export function ElectionStatsCards({ elections, currentTurn }: ElectionStatsCard
       {cards.map((c) => (
         <div key={c.label} className="rounded-lg border border-card-border bg-card p-3">
           <div className="text-body-sm font-medium text-muted">{c.label}</div>
-          <div className={`mt-1 text-xl font-bold tabular-nums ${c.color}`}>{c.value}</div>
-          <div className="mt-0.5 text-[10px] text-muted">{c.sub}</div>
+          <div className={`mt-1 text-heading font-bold tabular-nums ${c.color}`}>{c.value}</div>
+          <div className="mt-0.5 text-body-sm text-muted">{c.sub}</div>
         </div>
       ))}
     </div>

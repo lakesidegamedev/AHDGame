@@ -42,8 +42,8 @@ const UNIT_PROFIT = 100 - 34 - 28 - 14;
 export function CapitalLoopDiagram() {
   return (
     <div className="my-6 overflow-x-auto rounded-lg border border-card-border bg-card/40 p-4">
-      <h4 className="mb-1 text-sm font-semibold text-foreground">The capital loop</h4>
-      <p className="mb-4 text-xs text-muted">
+      <h4 className="mb-1 text-body font-semibold text-foreground">The capital loop</h4>
+      <p className="mb-4 text-body-sm text-muted">
         Reinvested earnings become capacity you own. Keep investing and capacity grows; stop and
         depreciation slowly erodes it. Your output is gated by the capacity you can support.
       </p>
@@ -53,11 +53,11 @@ export function CapitalLoopDiagram() {
           <div key={s.label} className="flex items-stretch gap-2">
             <div className="flex w-40 flex-col rounded-lg border border-card-border bg-card/60 p-2">
               <span
-                className={`mb-1 inline-block self-start rounded px-1.5 py-0.5 text-[11px] font-semibold ${s.color}`}
+                className={`mb-1 inline-block self-start rounded px-1.5 py-0.5 text-body-sm font-semibold ${s.color}`}
               >
                 {s.label}
               </span>
-              <span className="text-[11px] leading-snug text-muted">{s.detail}</span>
+              <span className="text-body-sm leading-snug text-muted">{s.detail}</span>
             </div>
             {i < LOOP_STEPS.length - 1 && (
               <span className="flex items-center text-muted" aria-hidden>
@@ -68,14 +68,14 @@ export function CapitalLoopDiagram() {
         ))}
       </div>
 
-      <p className="mb-4 text-[11px] text-muted">
+      <p className="mb-4 text-body-sm text-muted">
         <span className="font-semibold text-error">Depreciation</span> pulls on the capacity box
         every turn, if investment stops, capacity (and therefore output) drifts down.
       </p>
 
       <div className="rounded-lg border border-card-border bg-card/60 p-3">
-        <h5 className="mb-2 text-xs font-semibold text-foreground">Unit economics</h5>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <h5 className="mb-2 text-body-sm font-semibold text-foreground">Unit economics</h5>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm">
           {UNIT.map((u) => (
             <span
               key={u.label}
@@ -89,7 +89,7 @@ export function CapitalLoopDiagram() {
             ₳{UNIT_PROFIT} unit profit
           </span>
         </div>
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           The sector page shows this breakdown so you can see the true economics of every unit, the
           capital charge is the cost of the capacity that unit was produced on.
         </p>

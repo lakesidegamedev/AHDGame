@@ -37,7 +37,7 @@ export function ChamberFloorBody({
             <Link
               href={`/congress/bills/${bill.id}`}
               onClick={onNavigate}
-              className="flex items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+              className="flex items-center gap-2 rounded px-1 py-1 text-body-sm hover:bg-white/5"
             >
               <span className="min-w-0 flex-1 truncate text-foreground">{bill.title}</span>
               {bill.turnsLeft !== null && (
@@ -54,7 +54,7 @@ export function ChamberFloorBody({
           </li>
         ))}
       </ul>
-      {more > 0 && <p className="px-1 text-[11px] text-muted">{t("more", { count: more })}</p>}
+      {more > 0 && <p className="px-1 text-body-sm text-muted">{t("more", { count: more })}</p>}
     </div>
   );
 }

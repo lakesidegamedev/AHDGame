@@ -100,8 +100,8 @@ export function SovereignDebtWatchPanel() {
   if (error) {
     return (
       <section className="rounded-lg border border-card-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Sovereign debt watch</h2>
-        <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{error}</p>
+        <h2 className="text-body font-semibold">Sovereign debt watch</h2>
+        <p className="mt-2 text-body-sm text-rose-600 dark:text-rose-400">{error}</p>
       </section>
     );
   }
@@ -109,7 +109,7 @@ export function SovereignDebtWatchPanel() {
     return (
       <section className="rounded-lg border border-card-border bg-card p-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold">Sovereign debt watch</h2>
+          <h2 className="text-body font-semibold">Sovereign debt watch</h2>
           <Skeleton className="h-3 w-14" />
         </div>
         <Skeleton className="mt-2 h-3 w-4/5" />
@@ -137,15 +137,15 @@ export function SovereignDebtWatchPanel() {
   return (
     <section className="rounded-lg border border-card-border bg-card p-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold">Sovereign debt watch</h2>
-        <span className="text-xs text-muted">Turn {data.currentTurn}</span>
+        <h2 className="text-body font-semibold">Sovereign debt watch</h2>
+        <span className="text-body-sm text-muted">Turn {data.currentTurn}</span>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Forward-looking sustainability indicators across every country. Sustainability index
         combines D/GDP, primary balance, FX depreciation, and real GDP growth.
       </p>
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-body-sm">
           <thead className="border-b border-card-border text-left text-muted">
             <tr>
               <th className="py-1">Country</th>
@@ -163,7 +163,8 @@ export function SovereignDebtWatchPanel() {
                 className={`border-t border-card-border/40 ${rowAccent(row)}`}
               >
                 <td className="py-1 font-medium">
-                  {row.countryName} <span className="text-xs text-muted">({row.countryCode})</span>
+                  {row.countryName}{" "}
+                  <span className="text-body-sm text-muted">({row.countryCode})</span>
                 </td>
                 <td className="py-1 text-muted">{crisisStateLabel(row.crisisState)}</td>
                 <td

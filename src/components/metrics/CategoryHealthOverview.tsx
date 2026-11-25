@@ -40,12 +40,12 @@ export function CategoryHealthOverview({
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-card">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Category health overview</h2>
-          <p className="text-[11px] text-muted">
+          <h2 className="text-body font-semibold text-foreground">Category health overview</h2>
+          <p className="text-body-sm text-muted">
             {scopeNote} across all {categories.length} categories · click to open
           </p>
         </div>
-        <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-[11px] font-semibold text-muted">
+        <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-body-sm font-semibold text-muted">
           {categories.length} categories
         </span>
       </div>
@@ -75,11 +75,11 @@ export function CategoryHealthOverview({
               <div className="min-w-0">
                 <div className="flex items-center justify-center gap-1 text-muted">
                   {catIcon(CATEGORY_ICON[cat.id] ?? "currency", "h-3 w-3")}
-                  <span className="truncate text-[11px] font-semibold text-foreground">
+                  <span className="truncate text-body-sm font-semibold text-foreground">
                     {cat.name}
                   </span>
                 </div>
-                <div className="mt-0.5 text-[10px] text-muted">
+                <div className="mt-0.5 text-body-sm text-muted">
                   <span className="text-success">{rollup.strong}↑</span> ·{" "}
                   <span className="text-error">{rollup.weak}↓</span> · {rollup.count}
                 </div>

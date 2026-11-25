@@ -63,20 +63,22 @@ export function SeedControls() {
           />
         </svg>
       </div>
-      <h3 className="mb-1 text-lg font-semibold">Seed database</h3>
-      <p className="mb-4 text-sm text-muted">
+      <h3 className="mb-1 text-body-lg font-semibold">Seed database</h3>
+      <p className="mb-4 text-body text-muted">
         Runs the legacy API-key seed route backed by <code>scripts/seed/seed.ts</code>. This is
         reference-data seeding only, not the full runtime bootstrap/reset flow.
       </p>
 
       <div className="mb-4">
-        <label className="mb-1 block text-xs text-muted">SEED_SECRET (from Vercel env vars)</label>
+        <label className="mb-1 block text-body-sm text-muted">
+          SEED_SECRET (from Vercel env vars)
+        </label>
         <input
           type="password"
           value={seedSecret}
           onChange={(e) => setSeedSecret(e.target.value)}
           placeholder="Enter SEED_SECRET..."
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
@@ -84,14 +86,14 @@ export function SeedControls() {
         <button
           onClick={() => handleSeed(false)}
           disabled={loading}
-          className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-50"
         >
           {loading ? "Seeding..." : "Seed (skip if exists)"}
         </button>
         <button
           onClick={() => handleSeed(true)}
           disabled={loading}
-          className="min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
         >
           Force Re-seed (legacy reset)
         </button>
@@ -99,7 +101,7 @@ export function SeedControls() {
 
       {result && (
         <div
-          className={`mt-4 rounded-lg border p-3 text-sm ${
+          className={`mt-4 rounded-lg border p-3 text-body ${
             result.ok
               ? "border-green-500/30 bg-green-500/10 text-green-400"
               : "border-red-500/30 bg-red-500/10 text-red-400"
@@ -107,7 +109,7 @@ export function SeedControls() {
         >
           <p className="font-medium">{result.message}</p>
           {result.logs && result.logs.length > 0 && (
-            <ul className="mt-2 space-y-0.5 text-xs opacity-80">
+            <ul className="mt-2 space-y-0.5 text-body-sm opacity-80">
               {result.logs.map((line, index) => (
                 <li key={index}>{line}</li>
               ))}

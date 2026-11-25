@@ -28,7 +28,7 @@ export function PeaceBanner({
       : "border-info/30 bg-info/10 text-info";
 
   return (
-    <div className={`border-b px-4 py-2 text-center text-sm ${palette}`}>
+    <div className={`border-b px-4 py-2 text-center text-body ${palette}`}>
       <span>{sentence} </span>
       <Link href={href} className="font-semibold underline underline-offset-2 hover:opacity-80">
         {label}

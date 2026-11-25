@@ -99,11 +99,11 @@ export default async function CharterDetailPage({ params }: PageParams) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6">
-        <Link href="/charters" className="text-xs text-muted hover:underline">
+        <Link href="/charters" className="text-body-sm text-muted hover:underline">
           ← All charters
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-heading font-bold">
             {charter.proposedName}{" "}
             <span className="font-normal text-muted">({charter.proposedAbbr})</span>
           </h1>
@@ -111,7 +111,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
             {charter.status}
           </Badge>
         </div>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           {/* wall-clock by design: charter.createdAt is an immutable history timestamp */}
           {charter.countryId} · created {charter.createdAt.toLocaleString()}
           {charter.expiresAt
@@ -129,23 +129,23 @@ export default async function CharterDetailPage({ params }: PageParams) {
 
       {isBannedAtCreation && (
         <section className="mb-6 rounded-lg border border-rose-500/40 bg-rose-500/10 p-5">
-          <h2 className="mb-2 text-sm font-bold text-rose-300">
+          <h2 className="mb-2 text-body font-bold text-rose-300">
             Party created — but banned in {countryName}
           </h2>
-          <p className="mb-3 text-sm text-foreground">
+          <p className="mb-3 text-body text-foreground">
             <strong>{charter.proposedName}</strong> was successfully ratified, but {countryName} is
             a one-party state. New parties are automatically banned at creation by the regime.
           </p>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-rose-300">
+          <p className="mb-2 text-body-sm font-semibold uppercase tracking-wide text-rose-300">
             What this means
           </p>
-          <ul className="mb-3 list-disc space-y-1 pl-5 text-sm text-foreground">
+          <ul className="mb-3 list-disc space-y-1 pl-5 text-body text-foreground">
             <li>Your party cannot field election candidates.</li>
             <li>Members of your party cannot propose or vote on legislation.</li>
             <li>The party cannot accept donations or hold cabinet positions.</li>
             <li>Members holding seats lost them when the ban was recorded.</li>
           </ul>
-          <p className="text-sm text-foreground">
+          <p className="text-body text-foreground">
             <strong>What to do:</strong> Reach out to a game administrator if you believe your party
             should be approved by the regime. Once promoted to <em>Approved</em>, the party regains
             full legislative participation (but still cannot form government — only the ruling party
@@ -155,13 +155,13 @@ export default async function CharterDetailPage({ params }: PageParams) {
       )}
 
       <section className="mb-6 rounded-lg border border-card-border bg-card p-5">
-        <h2 className="mb-4 text-sm font-semibold">Platform</h2>
+        <h2 className="mb-4 text-body font-semibold">Platform</h2>
         <PlatformSliders value={charter.platform} readOnly />
       </section>
 
       <section className="mb-6 rounded-lg border border-card-border bg-card p-5">
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-body font-semibold">
             Founders ({signedCount}/{requiredCount} signed)
           </h2>
           {charter.pendingFounderSlots > 0 && (
@@ -171,7 +171,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
             </Badge>
           )}
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           On ratification the founder (Founder 1) becomes the party&apos;s first{" "}
           <strong>chair</strong>, so the party can set its color and logo right away. Vice chair and
           treasurer start vacant and are decided by leadership elections that open immediately on
@@ -225,7 +225,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
 
       {canAct && (
         <section className="rounded-lg border border-card-border bg-card p-5">
-          <h2 className="mb-3 text-sm font-semibold">Your decision</h2>
+          <h2 className="mb-3 text-body font-semibold">Your decision</h2>
           <CharterActions
             charterId={charter._id.toString()}
             alreadySigned={Boolean(myActiveSig?.signedAt)}

@@ -189,7 +189,7 @@ export function CurrencyTradeModal({
       <div className="relative w-full max-w-md rounded-xl border border-card-border bg-card shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-card-border">
-          <h2 id={titleId} className="text-base font-bold text-foreground">
+          <h2 id={titleId} className="text-body-lg font-bold text-foreground">
             Exchange currency
           </h2>
           <button
@@ -207,7 +207,7 @@ export function CurrencyTradeModal({
             <button
               key={m}
               onClick={() => setMethod(m)}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+              className={`flex-1 py-2.5 text-body-sm font-medium transition-colors ${
                 method === m
                   ? "border-b-2 border-primary text-primary"
                   : "text-muted hover:text-foreground"
@@ -219,7 +219,7 @@ export function CurrencyTradeModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <p className="text-xs text-muted">{METHOD_DESC[method]}</p>
+          <p className="text-body-sm text-muted">{METHOD_DESC[method]}</p>
 
           {/* Currency pair */}
           <div className="flex items-center gap-2">
@@ -234,7 +234,7 @@ export function CurrencyTradeModal({
                   if (newFrom === to) setTo(from);
                   setFrom(newFrom);
                 }}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm font-medium text-foreground focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body font-medium text-foreground focus:border-primary focus:outline-none"
               >
                 {available.map((c) => (
                   <option key={c} value={c}>
@@ -242,7 +242,7 @@ export function CurrencyTradeModal({
                   </option>
                 ))}
               </select>
-              <div className="mt-1 text-[10px] text-muted">
+              <div className="mt-1 text-body-sm text-muted">
                 Balance: {formatCurrencyFaceAmount(personalBalance ?? 0, from)}
               </div>
             </div>
@@ -250,7 +250,7 @@ export function CurrencyTradeModal({
             <button
               type="button"
               onClick={swap}
-              className="mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-card-border bg-card-elevated text-muted hover:text-foreground transition-colors text-sm"
+              className="mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-card-border bg-card-elevated text-muted hover:text-foreground transition-colors text-body"
               title="Swap currencies"
             >
               ⇄
@@ -261,7 +261,7 @@ export function CurrencyTradeModal({
               <select
                 value={to}
                 onChange={(e) => setTo(e.target.value as CurrencyCode)}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm font-medium text-foreground focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body font-medium text-foreground focus:border-primary focus:outline-none"
               >
                 {available
                   .filter((c) => c !== from)
@@ -271,7 +271,7 @@ export function CurrencyTradeModal({
                     </option>
                   ))}
               </select>
-              <div className="mt-1 text-[10px] text-muted">
+              <div className="mt-1 text-body-sm text-muted">
                 Rate: {crossRate >= 10 ? crossRate.toFixed(2) : crossRate.toFixed(4)} {to}/{from}
               </div>
             </div>
@@ -286,7 +286,7 @@ export function CurrencyTradeModal({
               >
                 Amount ({from})
               </label>
-              <span className="text-xs font-medium tabular-nums">
+              <span className="text-body-sm font-medium tabular-nums">
                 {formatCurrencyFaceAmount(amt, from)}
               </span>
             </div>
@@ -301,11 +301,11 @@ export function CurrencyTradeModal({
               className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-card-border accent-primary"
             />
             <div className="flex justify-between mt-1">
-              <span className="text-[10px] text-muted">0</span>
+              <span className="text-body-sm text-muted">0</span>
               <button
                 type="button"
                 onClick={() => setAmount(String(personalBalance))}
-                className="text-[10px] text-primary hover:underline"
+                className="text-body-sm text-primary hover:underline"
               >
                 Max: {formatCurrencyFaceAmount(personalBalance, from)}
               </button>
@@ -329,9 +329,9 @@ export function CurrencyTradeModal({
                 min="0.000001"
                 step="any"
                 placeholder={crossRate >= 10 ? crossRate.toFixed(2) : crossRate.toFixed(4)}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
               />
-              <p className="mt-1 text-[10px] text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 Order fills when rate reaches this level.
               </p>
             </div>
@@ -339,7 +339,7 @@ export function CurrencyTradeModal({
 
           {/* Preview */}
           {amt > 0 && (
-            <div className="rounded-lg border border-card-border bg-card-elevated px-4 py-3 space-y-1 text-xs">
+            <div className="rounded-lg border border-card-border bg-card-elevated px-4 py-3 space-y-1 text-body-sm">
               <div className="flex justify-between">
                 <span className="text-muted">You send</span>
                 <span className="font-medium tabular-nums">
@@ -380,13 +380,13 @@ export function CurrencyTradeModal({
             </div>
           )}
 
-          <InlineError error={error} className="text-xs text-error" />
-          {success && <p className="text-xs text-success">Trade executed!</p>}
+          <InlineError error={error} className="text-body-sm text-error" />
+          {success && <p className="text-body-sm text-success">Trade executed!</p>}
 
           <button
             type="submit"
             disabled={submitting || !amt || amt <= 0}
-            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Processing…" : method === "market" ? "Exchange now" : "Place order"}
           </button>

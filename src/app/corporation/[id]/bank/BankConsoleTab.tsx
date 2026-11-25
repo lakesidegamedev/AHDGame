@@ -68,7 +68,7 @@ export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, count
 
   if (error || !data) {
     return (
-      <p role="alert" className="py-2 text-xs text-error">
+      <p role="alert" className="py-2 text-body-sm text-error">
         Bank console unavailable{error ? `: ${error}` : "."}
       </p>
     );
@@ -97,8 +97,8 @@ export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, count
           {data.primaryUnderwritingEnabled && (
             <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
               <div>
-                <h3 className="text-sm font-semibold">Funded underwriting receipts</h3>
-                <p className="mt-1 text-xs text-muted">
+                <h3 className="text-body-lg font-semibold">Funded underwriting receipts</h3>
+                <p className="mt-1 text-body-sm text-muted">
                   Fees are recorded only after the market pays for equity or corporate bond units.
                 </p>
               </div>
@@ -107,7 +107,7 @@ export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, count
                   {[...data.underwritingReceipts].reverse().map((receipt) => (
                     <li
                       key={receipt.key}
-                      className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2 text-xs"
+                      className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2 text-body-sm"
                     >
                       <span>
                         {receipt.issuerName} ·{" "}
@@ -123,7 +123,7 @@ export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, count
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-muted">No funded placements yet.</p>
+                <p className="text-body-sm text-muted">No funded placements yet.</p>
               )}
             </section>
           )}

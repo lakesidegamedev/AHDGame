@@ -463,7 +463,7 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <BackButton iconOnly fallbackLabel="Back" />
           <div className="mt-8 rounded-xl border border-card-border bg-card p-12 text-center shadow-sm">
-            <p className="text-muted text-sm">
+            <p className="text-muted text-body">
               Couldn&apos;t load your portfolio. Please try again.
             </p>
             <button
@@ -478,7 +478,7 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
                   })
                   .finally(() => setLoading(false));
               }}
-              className="mt-4 rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background"
+              className="mt-4 rounded-lg border border-card-border px-4 py-2 text-body hover:bg-background"
             >
               Retry
             </button>
@@ -799,7 +799,7 @@ function OverviewPane({
         />
       </div>
       {isGarnished && (
-        <div className="flex items-start gap-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm">
+        <div className="flex items-start gap-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-body">
           <span className="mt-0.5 shrink-0 text-error">&#9888;</span>
           <div>
             <span className="font-semibold text-error">Bond income is being garnished</span>
@@ -815,8 +815,8 @@ function OverviewPane({
         <div className="rounded-xl border border-card-border bg-card p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Portfolio value over time</h2>
-              <p className="text-xs text-muted">
+              <h2 className="text-body font-semibold text-foreground">Portfolio value over time</h2>
+              <p className="text-body-sm text-muted">
                 {chartView === "total"
                   ? seriesView === "total"
                     ? "Total net worth history"

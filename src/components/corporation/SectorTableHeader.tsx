@@ -151,7 +151,7 @@ export function SectorTableHeader({
   return (
     <div
       role="row"
-      className={`hidden lg:grid ${sectorTableGrid(plantsMode)} items-end gap-x-3 border-b border-card-border px-2 py-1.5 text-[11px] font-medium text-muted`}
+      className={`hidden lg:grid ${sectorTableGrid(plantsMode)} items-end gap-x-3 border-b border-card-border px-2 py-1.5 text-body-sm font-medium text-muted`}
     >
       {columns.map((col) => {
         const active = col.sortKey != null && col.sortKey === sortKey;
@@ -173,7 +173,7 @@ export function SectorTableHeader({
                 } ${active ? "text-foreground" : ""}`}
               >
                 <span>{col.label}</span>
-                <span aria-hidden className="w-2 text-[9px]">
+                <span aria-hidden className="w-2 text-body-sm">
                   {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
                 </span>
               </button>

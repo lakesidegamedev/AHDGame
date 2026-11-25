@@ -46,14 +46,14 @@ export default function CrisisAdminActions({
         <button
           onClick={resolve}
           disabled={busy}
-          className="rounded border border-amber-500 bg-amber-500/10 px-3 py-1 text-sm text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+          className="rounded border border-amber-500 bg-amber-500/10 px-3 py-1 text-body text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
         >
           {busy ? "Resolving…" : "Resolve crisis"}
         </button>
       ) : (
-        <span className="text-sm text-muted">Crisis already resolved.</span>
+        <span className="text-body text-muted">Crisis already resolved.</span>
       )}
-      {msg && <span className="text-sm text-muted">{msg}</span>}
+      {msg && <span className="text-body text-muted">{msg}</span>}
     </div>
   );
 }

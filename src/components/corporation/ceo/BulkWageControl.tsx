@@ -50,7 +50,7 @@ export function BulkWageControl({
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5" title={t("hint")}>
-        <label className="flex items-center gap-1.5 text-xs text-muted">
+        <label className="flex items-center gap-1.5 text-body-sm text-muted">
           {t("label")}
           <input
             aria-label={t("label")}
@@ -64,7 +64,7 @@ export function BulkWageControl({
               setWage(Number(e.target.value));
               setPreview(null);
             }}
-            className="h-7 w-20 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 w-20 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
           />
         </label>
         <SmallButton
@@ -77,7 +77,7 @@ export function BulkWageControl({
         </SmallButton>
       </div>
       {preview?.wages && (
-        <div className="space-y-1 text-xs" role="status">
+        <div className="space-y-1 text-body-sm" role="status">
           <p className="text-foreground">
             {t("cost", {
               count: preview.matchedCount ?? 0,
@@ -99,7 +99,7 @@ export function BulkWageControl({
         </div>
       )}
       {message && (
-        <p role="status" className="text-xs text-muted">
+        <p role="status" className="text-body-sm text-muted">
           {message}
         </p>
       )}

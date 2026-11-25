@@ -197,7 +197,7 @@ export function JapanMapPaths({
 
   if (mergedRegions.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-sm">
+      <div className="w-full h-full flex items-center justify-center text-muted text-body">
         Loading map…
       </div>
     );
@@ -253,7 +253,7 @@ export function JapanMapPaths({
       {/* Tooltip */}
       {tooltipPos && tooltipContent.length > 0 && (
         <div
-          className="pointer-events-none absolute z-50 rounded-lg border border-card-border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute z-50 rounded-lg border border-card-border bg-background/95 px-3 py-2 text-body-sm shadow-lg backdrop-blur-sm"
           style={{
             left: tooltipPos.x + 12,
             top: tooltipPos.y + (flipTooltip ? -12 : -8),

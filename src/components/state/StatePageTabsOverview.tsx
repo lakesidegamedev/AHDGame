@@ -99,10 +99,7 @@ export function OverviewTab({
           aria-labelledby="overview-strength-title"
           className="rounded-xl border border-card-border bg-card p-5 sm:p-6"
         >
-          <h2
-            id="overview-strength-title"
-            className="text-heading-lg font-semibold text-foreground"
-          >
+          <h2 id="overview-strength-title" className="text-heading font-semibold text-foreground">
             Party strength
           </h2>
           <p className="mt-1 text-body text-muted">

@@ -64,7 +64,7 @@ async function start(host: HTMLElement, cfg: GlobeConfig) {
     chip.className = "pointer-events-none absolute left-0 top-0 hidden sm:block";
     chip.style.display = "none";
     chip.innerHTML =
-      '<div class="rounded-lg border border-white/15 bg-black/55 px-2.5 py-1 text-center text-[11px] leading-tight text-white/90"></div>';
+      '<div class="rounded-lg border border-white/15 bg-black/55 px-2.5 py-1 text-center text-body-sm leading-tight text-white/90"></div>';
     const inner = chip.firstElementChild as HTMLElement;
     const name = document.createElement("div");
     name.className = "font-semibold uppercase tracking-wide";

@@ -53,7 +53,7 @@ export function SeatProjectionBanner({ national, isLive }: SeatProjectionBannerP
       </div>
       <div className="mt-0.5 flex items-center gap-2.5">
         <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-        <span className="text-lg font-bold sm:text-xl">{headline}</span>
+        <span className="text-heading font-bold sm:text-heading">{headline}</span>
       </div>
     </div>
   );

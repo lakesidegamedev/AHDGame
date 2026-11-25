@@ -63,13 +63,13 @@ export function CreateColdWarConflictForm() {
     placeholder?: string
   ) => (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs text-muted">
+      <label htmlFor={id} className="text-body-sm text-muted">
         {label}
       </label>
       <input
         id={id}
         type="text"
-        className="rounded-lg border border-card-border bg-card px-2 py-1 text-sm text-foreground"
+        className="rounded-lg border border-card-border bg-card px-2 py-1 text-body text-foreground"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
@@ -79,8 +79,8 @@ export function CreateColdWarConflictForm() {
 
   return (
     <section className="mt-6 rounded-xl border border-card-border bg-card p-4 shadow-card">
-      <h3 className="text-lg text-foreground">Create Cold War conflict</h3>
-      <p className="mt-0.5 max-w-xl text-sm text-muted">
+      <h3 className="text-body-lg text-foreground">Create Cold War conflict</h3>
+      <p className="mt-0.5 max-w-xl text-body text-muted">
         A proxy war fought on third-party soil. Both sides are factions backed by a bloc; host
         entities are the countries that change bloc when it resolves.
       </p>
@@ -100,14 +100,14 @@ export function CreateColdWarConflictForm() {
         type="button"
         disabled={busy}
         onClick={submit}
-        className="mt-4 inline-flex items-center justify-center rounded-lg border border-card-border px-4 py-2 text-sm font-semibold text-foreground transition-colors disabled:opacity-50"
+        className="mt-4 inline-flex items-center justify-center rounded-lg border border-card-border px-4 py-2 text-body font-semibold text-foreground transition-colors disabled:opacity-50"
       >
         {busy ? "Creating…" : "Create conflict"}
       </button>
 
-      <InlineError error={error} className="mt-3 text-sm text-error" />
+      <InlineError error={error} className="mt-3 text-body text-error" />
       {created != null && (
-        <p className="mt-3 text-sm text-success">
+        <p className="mt-3 text-body text-success">
           Created conflict #{created}. View it at /world/conflicts/{created}.
         </p>
       )}

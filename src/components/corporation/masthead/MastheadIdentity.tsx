@@ -11,10 +11,10 @@ import type { CEO, CorporationDetail } from "../CorporationPageTypes";
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5 border-r border-card-border py-2.5 pr-5 last:border-r-0 last:pr-0">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+      <span className="text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </span>
-      <span className="flex min-h-6 min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
+      <span className="flex min-h-6 min-w-0 items-center gap-2 text-body font-semibold text-foreground">
         {children}
       </span>
     </div>
@@ -53,7 +53,7 @@ export function MastheadIdentity({
 
   return (
     <div className="flex min-w-0 flex-col justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
         <span className="rounded-[3px] border border-primary px-2 py-1 text-foreground">
           {/* Private once only: the ticker badge carries just the symbol and the
               status word is skipped when the legal form already says private. */}
@@ -101,13 +101,13 @@ export function MastheadIdentity({
           <span
             aria-hidden
             data-logo-tile
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-[calc(var(--corp-rad,6px)+2px)] bg-primary text-sm font-bold text-background lg:h-16 lg:w-16 lg:text-lg"
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-[calc(var(--corp-rad,6px)+2px)] bg-primary text-body font-bold text-background lg:h-16 lg:w-16 lg:text-heading"
           >
             {ticker.slice(0, 4)}
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="truncate text-3xl font-semibold leading-tight tracking-tight text-foreground lg:text-[44px]">
+          <h1 className="truncate text-display font-semibold leading-tight tracking-tight text-foreground lg:text-display">
             {corporation.name}
           </h1>
         </div>
@@ -162,7 +162,7 @@ export function MastheadIdentity({
             >
               {corporation.parentCorporation.name}
             </Link>
-            <span className="font-mono text-xs font-medium tabular-nums text-muted">
+            <span className="font-mono text-body-sm font-medium tabular-nums text-muted">
               {corporation.parentCorporation.ownershipPct.toFixed(1)}%
             </span>
           </Fact>

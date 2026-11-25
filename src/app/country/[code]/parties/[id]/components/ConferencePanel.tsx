@@ -143,7 +143,7 @@ export function ConferencePanel({
 
   if (error && !data) {
     return (
-      <div className="rounded-md border border-error/40 bg-error/10 px-4 py-3 text-sm">
+      <div className="rounded-md border border-error/40 bg-error/10 px-4 py-3 text-body">
         <p>{error}</p>
         <button
           type="button"
@@ -167,7 +167,7 @@ export function ConferencePanel({
       </div>
 
       <section aria-label="Party conference" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">
+        <h3 className="text-body-lg font-bold">
           {data.partyName} conference {data.year}: {STATUS_LABEL[data.status]}
         </h3>
         {data.isNpp ? (
@@ -209,7 +209,7 @@ export function ConferencePanel({
           aria-label="Standing platform"
           className="rounded-lg border border-card-border p-4"
         >
-          <h3 className="text-heading-sm font-bold">Standing platform</h3>
+          <h3 className="text-body-lg font-bold">Standing platform</h3>
           <p className="mt-1 text-body-sm text-muted">
             Ratified at the {data.platform.ratifiedYear} conference (turn{" "}
             {data.platform.ratifiedAtTurn}).
@@ -223,7 +223,7 @@ export function ConferencePanel({
       )}
 
       <section aria-label="Platform proposal" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">Platform proposal</h3>
+        <h3 className="text-body-lg font-bold">Platform proposal</h3>
         {data.proposal ? (
           <div className="mt-2 text-body-sm">
             <p className="text-muted">
@@ -340,7 +340,7 @@ export function ConferencePanel({
       </section>
 
       <section aria-label="Committee motions" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">Committee motions</h3>
+        <h3 className="text-body-lg font-bold">Committee motions</h3>
         <p className="mt-1 text-body-sm text-muted">
           Leadership-ruleset amendments under committee authority. A motion that passes its vote
           still voids when the amendment cooldown fired since it was proposed.
@@ -400,7 +400,7 @@ export function ConferencePanel({
       </section>
 
       <section aria-label="Conference history" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">History</h3>
+        <h3 className="text-body-lg font-bold">History</h3>
         {data.history.length === 0 ? (
           <p className="mt-2 text-body-sm text-muted">No conference events yet.</p>
         ) : (

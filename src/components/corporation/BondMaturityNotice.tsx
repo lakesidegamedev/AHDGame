@@ -181,7 +181,7 @@ export default function BondMaturityNotice({
           on Finance &gt; Credit.
         </p>
       )}
-      <details className="mt-1 text-xs text-muted">
+      <details className="mt-1 text-body-sm text-muted">
         <summary className="cursor-pointer hover:text-foreground">Why this matters</summary>
         <p className="mt-0.5">
           {corporationName} repays the face value out of liquid capital in one payment; coupons are

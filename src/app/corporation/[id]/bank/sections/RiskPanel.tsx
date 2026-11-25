@@ -58,7 +58,7 @@ function ReserveGauge({
           title="Reserve requirement"
         />
       </div>
-      <div className="flex flex-wrap justify-between gap-x-4 text-[11px] text-muted">
+      <div className="flex flex-wrap justify-between gap-x-4 text-body-sm text-muted">
         <span>
           cash <span className="font-mono text-foreground">{formatBankMoney(cash, currency)}</span>
         </span>
@@ -91,13 +91,13 @@ export function RiskPanel({
       kind="monitor"
       title="Run risk"
       actions={
-        <span className={`font-mono text-xs font-medium ${BAND_TONE[risk.band]}`}>
+        <span className={`font-mono text-body-sm font-medium ${BAND_TONE[risk.band]}`}>
           {risk.band}, {risk.confidence.toFixed(2)}
         </span>
       }
     >
       <div className="space-y-2 py-1.5">
-        <p className={`text-xs ${danger ? "font-medium text-error" : "text-muted"}`}>
+        <p className={`text-body-sm ${danger ? "font-medium text-error" : "text-muted"}`}>
           {risk.verdict}
         </p>
 
@@ -107,7 +107,7 @@ export function RiskPanel({
           failAt={risk.runFailureThreshold}
           currency={currency}
         />
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           Denominators count household cash only
           {pointerDeposits != null && pointerDeposits > 0
             ? `: ${formatBankMoney(pointerDeposits, currency)} of player savings pointed here never arrived as cash, so it sits outside reserves, equity, and the run line`

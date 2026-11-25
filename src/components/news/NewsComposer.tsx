@@ -126,14 +126,14 @@ export function NewsComposer({
       className="rounded-xl border border-card-border bg-card p-4 overflow-hidden"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="text-body font-semibold text-foreground">
           {isAd ? "Place sponsored post" : "Write a news post"}
         </h2>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-muted hover:text-foreground"
+            className="text-body-sm text-muted hover:text-foreground"
           >
             Close
           </button>
@@ -155,7 +155,7 @@ export function NewsComposer({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title (optional)"
             maxLength={100}
-            className="mb-2 w-full max-w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-semibold text-foreground placeholder:text-muted placeholder:font-normal focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="mb-2 w-full max-w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-semibold text-foreground placeholder:text-muted placeholder:font-normal focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
           />
           <textarea
             value={content}
@@ -167,7 +167,7 @@ export function NewsComposer({
             }
             maxLength={1000}
             rows={3}
-            className="w-full max-w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="w-full max-w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
           />
 
           <input
@@ -194,7 +194,7 @@ export function NewsComposer({
               <button
                 type="button"
                 onClick={() => setImageUrl(null)}
-                className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white hover:bg-black/80"
+                className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 text-body-sm font-medium text-white hover:bg-black/80"
               >
                 Remove image
               </button>
@@ -205,16 +205,16 @@ export function NewsComposer({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={imageUploading}
-                className="text-xs font-medium text-muted hover:text-primary transition-colors disabled:opacity-50"
+                className="text-body-sm font-medium text-muted hover:text-primary transition-colors disabled:opacity-50"
               >
                 {imageUploading ? "Uploading image…" : "+ Add image (optional)"}
               </button>
-              <p className="mt-0.5 text-[10px] text-muted/80">PNG, JPEG, or WebP · max 8 MB</p>
+              <p className="mt-0.5 text-body-sm text-muted/80">PNG, JPEG, or WebP · max 8 MB</p>
             </div>
           )}
 
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span className={`text-xs ${remaining < 100 ? "text-amber-500" : "text-muted"}`}>
+            <span className={`text-body-sm ${remaining < 100 ? "text-amber-500" : "text-muted"}`}>
               {remaining} characters remaining
             </span>
             <button
@@ -222,15 +222,15 @@ export function NewsComposer({
               disabled={!content.trim() || submitting}
               className="flex flex-col items-center rounded-lg bg-primary px-4 py-1.5 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
-              <span className="text-sm font-medium">{submitting ? "Posting…" : "Post"}</span>
-              <span className="text-[10px] opacity-75">
+              <span className="text-body font-medium">{submitting ? "Posting…" : "Post"}</span>
+              <span className="text-body-sm opacity-75">
                 {isAd
                   ? "5 actions · $100,000 personal cash · 30 min cooldown"
                   : "Free · 12 hour cooldown"}
               </span>
             </button>
           </div>
-          <InlineError error={error} className="mt-1 text-xs text-error" />
+          <InlineError error={error} className="mt-1 text-body-sm text-error" />
         </div>
       </div>
     </form>

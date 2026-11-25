@@ -54,7 +54,7 @@ function SectionCard({
         </div>
         <div className="min-w-0">
           <div className="truncate text-body-sm font-semibold text-foreground">{title}</div>
-          {sub && <div className="truncate text-body-xs text-muted">{sub}</div>}
+          {sub && <div className="truncate text-body-sm text-muted">{sub}</div>}
         </div>
       </div>
       {children}
@@ -141,7 +141,7 @@ function BudgetFlowStrip({
         </div>
         <div className="text-body-sm font-semibold text-foreground">
           Budget flow{" "}
-          <span className="text-body-xs font-normal text-muted">
+          <span className="text-body-sm font-normal text-muted">
             · per turn, into the people&apos;s budget
           </span>
         </div>
@@ -156,7 +156,7 @@ function BudgetFlowStrip({
               >
                 {money(n.value, currency)}/t
               </div>
-              <div className="text-body-xs text-muted">{n.sub}</div>
+              <div className="text-body-sm text-muted">{n.sub}</div>
             </div>
             {i < nodes.length - 1 && (
               <ArrowRight className="hidden h-4 w-4 shrink-0 text-muted sm:block" aria-hidden />
@@ -259,7 +259,7 @@ export function NatOverviewTab({
             label="Gross revenue / turn"
             value={`${money(stats.grossRevenuePerTurn, currency)}/turn`}
           />
-          <p className="mt-2.5 rounded-lg bg-card-muted px-3 py-2 text-body-xs text-muted">
+          <p className="mt-2.5 rounded-lg bg-card-muted px-3 py-2 text-body-sm text-muted">
             Treasury-backed: the National Corporation cannot go bankrupt. Negative balances are
             covered by the national budget, not a default.
           </p>
@@ -284,7 +284,7 @@ export function NatOverviewTab({
               />
             ))
           )}
-          <div className="mt-2 text-right text-body-xs text-muted">
+          <div className="mt-2 text-right text-body-sm text-muted">
             Composite public-value index{" "}
             <span className="font-semibold text-gold">{stats.publicValueIndex}</span>
           </div>
@@ -338,12 +338,12 @@ export function NatOverviewTab({
           icon={<Activity className="h-4 w-4" />}
         >
           <div className="flex items-end justify-between">
-            <div className={`text-heading-lg font-bold tabular-nums ${TONE[confTone]}`}>
+            <div className={`text-heading font-bold tabular-nums ${TONE[confTone]}`}>
               {Math.round(stats.investorConfidence)}
               <span className="text-body-lg text-muted">/100</span>
             </div>
             {stats.confidenceTrendPerTurn > 0 && (
-              <span className="mb-1 text-body-xs text-success">
+              <span className="mb-1 text-body-sm text-success">
                 +{stats.confidenceTrendPerTurn}/turn
               </span>
             )}
@@ -380,7 +380,7 @@ export function NatOverviewTab({
               />
             ))
           )}
-          <div className="mt-2 text-right text-body-xs text-muted">
+          <div className="mt-2 text-right text-body-sm text-muted">
             See full register → <span className="text-gold">Register tab</span>
           </div>
         </SectionCard>

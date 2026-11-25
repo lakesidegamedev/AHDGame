@@ -10,13 +10,13 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 const THUMBNAIL_CLASSES = {
   hero: {
     frame:
-      "rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 font-bold ring-2 ring-card-border shadow-xl h-24 w-24 text-4xl sm:h-36 sm:w-36 sm:text-6xl md:h-40 md:w-40 md:text-7xl lg:h-44 lg:w-44",
+      "rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 font-bold ring-2 ring-card-border shadow-xl h-24 w-24 text-display sm:h-36 sm:w-36 sm:text-display md:h-40 md:w-40 md:text-display lg:h-44 lg:w-44",
     sizes: "(max-width: 640px) 96px, (max-width: 768px) 144px, 176px",
   },
   /** Profile identity block: neutral placeholder, hairline ring, no shadow. */
   header: {
     frame:
-      "rounded-lg bg-card-elevated font-bold text-muted ring-1 ring-card-border h-18 w-18 text-3xl sm:h-24 sm:w-24 sm:text-4xl",
+      "rounded-lg bg-card-elevated font-bold text-muted ring-1 ring-card-border h-18 w-18 text-display sm:h-24 sm:w-24 sm:text-display",
     sizes: "(max-width: 640px) 72px, 96px",
   },
 } as const;
@@ -149,7 +149,7 @@ export function ProfilePictureLightbox({
 
             {/* Large avatar */}
             <ProfileBorder borderKey={borderKey} tintColor={tintColor}>
-              <div className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 text-8xl font-bold h-72 w-72 sm:h-96 sm:w-96">
+              <div className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 text-display font-bold h-72 w-72 sm:h-96 sm:w-96">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -167,12 +167,12 @@ export function ProfilePictureLightbox({
 
             {/* Character name + download */}
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-white">{characterName}</span>
+              <span className="text-heading font-semibold text-white">{characterName}</span>
               {avatarUrl && (
                 <button
                   type="button"
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-body font-medium text-white hover:bg-white/20 transition-colors"
                   title={t("saveImageTitle")}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

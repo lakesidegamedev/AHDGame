@@ -142,7 +142,7 @@ export function CreateCrisisModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Create crisis</h3>
+          <h3 className="text-body-lg font-bold">Create crisis</h3>
           <button
             type="button"
             aria-label="Close"
@@ -155,9 +155,9 @@ export function CreateCrisisModal({
 
         {/* Name */}
         <div>
-          <label className="block text-sm text-muted mb-1">Name</label>
+          <label className="block text-body text-muted mb-1">Name</label>
           <input
-            className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-background px-2 py-1 text-body"
             value={form.name}
             onChange={(e) =>
               setForm((f) => ({
@@ -171,9 +171,9 @@ export function CreateCrisisModal({
 
         {/* Description */}
         <div>
-          <label className="block text-sm text-muted mb-1">Description</label>
+          <label className="block text-body text-muted mb-1">Description</label>
           <textarea
-            className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-background px-2 py-1 text-body"
             rows={3}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -182,10 +182,10 @@ export function CreateCrisisModal({
 
         {/* Scope */}
         <div>
-          <label className="block text-sm text-muted mb-1">Scope</label>
+          <label className="block text-body text-muted mb-1">Scope</label>
           <div className="flex gap-4">
             {(["global", "country", "region"] as const).map((s) => (
-              <label key={s} className="flex items-center gap-1.5 text-sm">
+              <label key={s} className="flex items-center gap-1.5 text-body">
                 <input
                   type="radio"
                   checked={form.scope === s}
@@ -202,10 +202,10 @@ export function CreateCrisisModal({
         {/* Country selector */}
         {(form.scope === "country" || form.scope === "region") && (
           <div>
-            <label className="block text-sm text-muted mb-1">Target countries</label>
+            <label className="block text-body text-muted mb-1">Target countries</label>
             <div className="flex flex-wrap gap-3">
               {registered.map((countryId) => (
-                <label key={countryId} className="flex items-center gap-1.5 text-sm">
+                <label key={countryId} className="flex items-center gap-1.5 text-body">
                   <input
                     type="checkbox"
                     checked={form.countryIds.includes(countryId)}
@@ -228,11 +228,11 @@ export function CreateCrisisModal({
         {/* Region IDs */}
         {form.scope === "region" && (
           <div>
-            <label className="block text-sm text-muted mb-1">
+            <label className="block text-body text-muted mb-1">
               Region IDs (comma-separated state slugs, e.g. CA, TX, London)
             </label>
             <input
-              className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              className="w-full rounded border border-border bg-background px-2 py-1 text-body"
               value={form.regionIds.join(", ")}
               onChange={(e) =>
                 setForm((f) => ({
@@ -249,9 +249,9 @@ export function CreateCrisisModal({
 
         {/* Duration */}
         <div>
-          <label className="block text-sm text-muted mb-1">Duration</label>
+          <label className="block text-body text-muted mb-1">Duration</label>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-sm">
+            <label className="flex items-center gap-1.5 text-body">
               <input
                 type="radio"
                 checked={!form.durationFixed}
@@ -259,7 +259,7 @@ export function CreateCrisisModal({
               />
               Indefinite
             </label>
-            <label className="flex items-center gap-1.5 text-sm">
+            <label className="flex items-center gap-1.5 text-body">
               <input
                 type="radio"
                 checked={form.durationFixed}
@@ -270,28 +270,28 @@ export function CreateCrisisModal({
             <input
               type="number"
               min={1}
-              className="w-20 rounded border border-border bg-background px-2 py-1 text-sm disabled:opacity-40"
+              className="w-20 rounded border border-border bg-background px-2 py-1 text-body disabled:opacity-40"
               value={form.durationTurns}
               disabled={!form.durationFixed}
               onChange={(e) => setForm((f) => ({ ...f, durationTurns: e.target.value }))}
             />
-            <span className="text-sm text-muted">turns</span>
+            <span className="text-body text-muted">turns</span>
           </div>
         </div>
 
         {/* Wire messages */}
         <div>
-          <label className="block text-sm text-muted mb-1">Wire message (start)</label>
+          <label className="block text-body text-muted mb-1">Wire message (start)</label>
           <input
-            className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-background px-2 py-1 text-body"
             value={form.wireMessageOnStart}
             onChange={(e) => setForm((f) => ({ ...f, wireMessageOnStart: e.target.value }))}
           />
         </div>
         <div>
-          <label className="block text-sm text-muted mb-1">Wire message (end, optional)</label>
+          <label className="block text-body text-muted mb-1">Wire message (end, optional)</label>
           <input
-            className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-background px-2 py-1 text-body"
             value={form.wireMessageOnEnd}
             onChange={(e) => setForm((f) => ({ ...f, wireMessageOnEnd: e.target.value }))}
           />
@@ -299,16 +299,16 @@ export function CreateCrisisModal({
 
         {/* Effects builder */}
         <div>
-          <label className="block text-sm text-muted mb-2">Effects</label>
+          <label className="block text-body text-muted mb-2">Effects</label>
           <div className="space-y-3">
             {form.effects.map((effect, i) => (
               <div key={i} className="border border-border/50 rounded p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted font-medium">Effect {i + 1}</span>
+                  <span className="text-body-sm text-muted font-medium">Effect {i + 1}</span>
                   {form.effects.length > 1 && (
                     <button
                       onClick={() => removeEffect(i)}
-                      className="text-red-400 text-xs hover:underline"
+                      className="text-red-400 text-body-sm hover:underline"
                     >
                       Remove
                     </button>
@@ -317,9 +317,9 @@ export function CreateCrisisModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-muted mb-1">Effect type</label>
+                    <label className="block text-body-sm text-muted mb-1">Effect type</label>
                     <select
-                      className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                      className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                       value={effect.effectType}
                       onChange={(e) =>
                         updateEffect(i, {
@@ -332,9 +332,9 @@ export function CreateCrisisModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-muted mb-1">Target</label>
+                    <label className="block text-body-sm text-muted mb-1">Target</label>
                     <select
-                      className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                      className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                       value={effect.targetType}
                       onChange={(e) =>
                         updateEffect(i, {
@@ -357,9 +357,9 @@ export function CreateCrisisModal({
                 {effect.targetType === "metric" && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-muted mb-1">Category</label>
+                      <label className="block text-body-sm text-muted mb-1">Category</label>
                       <select
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                        className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                         value={effect.metricCategory ?? "economic"}
                         onChange={(e) =>
                           updateEffect(i, {
@@ -376,9 +376,9 @@ export function CreateCrisisModal({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-muted mb-1">Field</label>
+                      <label className="block text-body-sm text-muted mb-1">Field</label>
                       <select
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                        className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                         value={effect.metricField ?? ""}
                         onChange={(e) => updateEffect(i, { metricField: e.target.value })}
                       >
@@ -399,9 +399,11 @@ export function CreateCrisisModal({
                 {effect.targetType === "profitMargin" && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-muted mb-1">Sector (optional)</label>
+                      <label className="block text-body-sm text-muted mb-1">
+                        Sector (optional)
+                      </label>
                       <select
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                        className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                         value={effect.sectorType ?? ""}
                         onChange={(e) =>
                           updateEffect(i, {
@@ -424,9 +426,11 @@ export function CreateCrisisModal({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-muted mb-1">Strategy (optional)</label>
+                      <label className="block text-body-sm text-muted mb-1">
+                        Strategy (optional)
+                      </label>
                       <select
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-sm disabled:opacity-40"
+                        className="w-full rounded border border-border bg-background px-2 py-1 text-body disabled:opacity-40"
                         value={effect.strategyId ?? ""}
                         disabled={!effect.sectorType}
                         onChange={(e) => updateEffect(i, { strategyId: e.target.value || null })}
@@ -447,21 +451,21 @@ export function CreateCrisisModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-muted mb-1">
+                    <label className="block text-body-sm text-muted mb-1">
                       Value{effect.targetType === "profitMargin" ? " (% pts)" : ""}
                     </label>
                     <input
                       type="text"
                       inputMode="decimal"
-                      className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                      className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                       value={effect.value}
                       onChange={(e) => updateEffect(i, { value: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-muted mb-1">Label</label>
+                    <label className="block text-body-sm text-muted mb-1">Label</label>
                     <input
-                      className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                      className="w-full rounded border border-border bg-background px-2 py-1 text-body"
                       value={effect.label}
                       onChange={(e) => updateEffect(i, { label: e.target.value })}
                     />
@@ -469,7 +473,7 @@ export function CreateCrisisModal({
                 </div>
               </div>
             ))}
-            <button onClick={addEffect} className="text-sm text-primary hover:underline">
+            <button onClick={addEffect} className="text-body text-primary hover:underline">
               + Add effect
             </button>
           </div>
@@ -478,14 +482,14 @@ export function CreateCrisisModal({
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
           <button
             onClick={onClose}
-            className="rounded border border-border px-4 py-1.5 text-sm hover:border-foreground/40"
+            className="rounded border border-border px-4 py-1.5 text-body hover:border-foreground/40"
           >
             Cancel
           </button>
           <button
             onClick={onSubmit}
             disabled={submitting}
-            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
+            className="rounded border border-primary bg-primary px-4 py-1.5 text-body text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {submitting ? "Creating..." : "Create crisis"}
           </button>

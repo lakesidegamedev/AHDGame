@@ -110,7 +110,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
   if (error || !data) {
     return (
       <div className="my-4 rounded-xl border border-card-border bg-card/40 p-6">
-        <p className="text-sm text-muted">{error ?? "No history available"}</p>
+        <p className="text-body text-muted">{error ?? "No history available"}</p>
       </div>
     );
   }
@@ -126,7 +126,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
           {data.countryName}, {data.headOfGovernmentTitle} timeline
         </h3>
         {data.currentLeader && (
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             Incumbent:{" "}
             <span className="font-medium text-foreground">{data.currentLeader.name}</span>
             {data.currentLeader.party && (
@@ -137,12 +137,12 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
       </header>
 
       <section>
-        <h4 className="mb-2 text-sm font-semibold text-foreground">Leaders over time</h4>
+        <h4 className="mb-2 text-body font-semibold text-foreground">Leaders over time</h4>
         {hasLeaderHistory ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
-                <tr className="border-b border-card-border/60 text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border/60 text-body font-semibold text-foreground">
                   <th className="py-2 pr-3 text-left font-semibold">Name</th>
                   <th className="py-2 px-3 text-left font-semibold">Party</th>
                   <th className="py-2 px-3 text-right font-semibold">From</th>
@@ -160,7 +160,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
                       <td className="py-2 pr-3 font-medium text-foreground">
                         {entry.characterName}
                         {isCurrent && (
-                          <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-primary">
                             Incumbent
                           </span>
                         )}
@@ -192,7 +192,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             No recorded {data.headOfGovernmentTitle} transitions yet. History starts accumulating
             from the first leader change after deployment.
           </p>
@@ -200,22 +200,22 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
       </section>
 
       <section>
-        <h4 className="mb-2 text-sm font-semibold text-foreground">Recent events</h4>
+        <h4 className="mb-2 text-body font-semibold text-foreground">Recent events</h4>
         {hasEvents ? (
           <ul className="space-y-1">
             {data.recentEvents.map((e) => (
               <li
                 key={e.id}
-                className="flex items-start gap-3 rounded bg-card-elevated/60 px-3 py-2 text-sm"
+                className="flex items-start gap-3 rounded bg-card-elevated/60 px-3 py-2 text-body"
               >
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${EVENT_BADGE[e.eventType] ?? EVENT_BADGE.other}`}
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${EVENT_BADGE[e.eventType] ?? EVENT_BADGE.other}`}
                 >
                   {EVENT_LABEL[e.eventType] ?? EVENT_LABEL.other}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-foreground">{e.title}</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Turn {e.turn} · <LocalTime value={e.date} options={DATE_LABEL_OPTIONS} />
                     {e.party ? ` · ${e.party}` : ""}
                   </p>
@@ -224,7 +224,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted">No events recorded for this country yet.</p>
+          <p className="text-body text-muted">No events recorded for this country yet.</p>
         )}
       </section>
     </div>

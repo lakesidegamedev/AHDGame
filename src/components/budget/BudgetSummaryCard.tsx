@@ -43,10 +43,10 @@ export function BudgetSummaryCard({
 
   return (
     <div className={`rounded-xl border p-4 ${variantStyles[variant]}`}>
-      <p className="text-sm text-muted mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${valueStyles[variant]}`}>{formatMoney(value)}</p>
+      <p className="text-body text-muted mb-1">{label}</p>
+      <p className={`text-heading font-bold ${valueStyles[variant]}`}>{formatMoney(value)}</p>
       {trend !== undefined && (
-        <p className={`text-xs mt-1 ${trend >= 0 ? "text-success" : "text-error"}`}>
+        <p className={`text-body-sm mt-1 ${trend >= 0 ? "text-success" : "text-error"}`}>
           {trend >= 0 ? "▲" : "▼"} {Math.abs(trend).toFixed(1)}%
         </p>
       )}

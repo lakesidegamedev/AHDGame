@@ -863,7 +863,7 @@ export default function CommodityWorldMapView({
           />
         </div>
 
-        <span className="absolute bottom-3 right-3 z-10 hidden text-[10px] text-muted sm:inline pointer-events-none">
+        <span className="absolute bottom-3 right-3 z-10 hidden text-body-sm text-muted sm:inline pointer-events-none">
           Ctrl + scroll to zoom
         </span>
 
@@ -875,7 +875,7 @@ export default function CommodityWorldMapView({
 
         {!isLoaded && (
           <div
-            className="w-full flex items-center justify-center text-muted text-sm"
+            className="w-full flex items-center justify-center text-muted text-body"
             style={{ aspectRatio: `${SVG_W}/${SVG_H}` }}
           >
             Loading map...
@@ -976,7 +976,7 @@ export default function CommodityWorldMapView({
 
         {hoveredCountry && hoverPos && !selectedCountry && !isDragging && (
           <div
-            className="pointer-events-none absolute z-20 rounded-lg border border-card-border bg-card px-3 py-2 text-xs shadow-lg"
+            className="pointer-events-none absolute z-20 rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm shadow-lg"
             style={{ left: hoverPos.x + 14, top: hoverPos.y + 14 }}
           >
             <div className="font-semibold text-foreground">

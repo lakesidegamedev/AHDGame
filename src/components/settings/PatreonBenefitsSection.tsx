@@ -81,13 +81,13 @@ function FrostedOverlay({
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-background/50 backdrop-blur-[4px]">
       <div className="pointer-events-auto mx-4 max-w-[15rem] rounded-2xl border border-white/15 bg-background/78 px-4 py-3 text-center shadow-xl">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="mt-1 text-xs text-muted">{description}</p>
+        <p className="text-body font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-body-sm text-muted">{description}</p>
         <Link
           href={PATREON_SUBSCRIBE_URL}
           target="_blank"
           rel="noreferrer"
-          className="store-purchase-cta mt-3 inline-flex items-center justify-center rounded-lg border border-primary/35 bg-primary/12 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/18"
+          className="store-purchase-cta mt-3 inline-flex items-center justify-center rounded-lg border border-primary/35 bg-primary/12 px-3 py-1.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/18"
         >
           {buttonLabel}
         </Link>
@@ -119,21 +119,21 @@ function TierPreviewCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-foreground">{name}</p>
-          <p className="mt-1 text-sm text-muted">{price}</p>
+          <p className="text-heading font-semibold text-foreground">{name}</p>
+          <p className="mt-1 text-body text-muted">{price}</p>
         </div>
         {highlighted && (
-          <div className="rounded-full border border-primary/30 bg-primary/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+          <div className="rounded-full border border-primary/30 bg-primary/12 px-3 py-1 text-body-sm font-semibold uppercase tracking-[0.18em] text-primary">
             Highlighted
           </div>
         )}
       </div>
-      <p className="mt-4 text-sm leading-relaxed text-muted">{description}</p>
+      <p className="mt-4 text-body leading-relaxed text-muted">{description}</p>
       <div className="mt-4">
         <p className="text-body-sm font-medium text-muted">What&apos;s included</p>
         <div className="mt-3 space-y-2">
           {benefits.map((benefit) => (
-            <div key={benefit} className="flex items-start gap-2 text-sm text-foreground">
+            <div key={benefit} className="flex items-start gap-2 text-body text-foreground">
               <span className="mt-[2px] text-primary">•</span>
               <span>{benefit}</span>
             </div>
@@ -280,8 +280,8 @@ export function PatreonBenefitsSection() {
       {(accessLevel === "guest" || accessLevel === "signed-out") && (
         <div className={`store-purchase-cta ${SURFACE_CLASS} p-5 md:p-6`}>
           <div className="mb-4">
-            <h5 className="text-lg font-semibold text-foreground">Membership tiers</h5>
-            <p className="mt-1 text-sm text-muted">
+            <h5 className="text-heading font-semibold text-foreground">Membership tiers</h5>
+            <p className="mt-1 text-body text-muted">
               Pick a tier before unlocking the settings below.
             </p>
           </div>
@@ -325,14 +325,14 @@ export function PatreonBenefitsSection() {
         />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+            <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-body-sm font-semibold uppercase tracking-[0.22em] text-primary">
               Membership
             </div>
             <div>
-              <h4 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+              <h4 className="text-heading font-semibold tracking-tight text-foreground md:text-heading">
                 {membershipHeading}
               </h4>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-body text-muted">
                 Supporter status: <span className="font-medium text-foreground">{tierLabel}</span>.
               </p>
             </div>
@@ -341,7 +341,7 @@ export function PatreonBenefitsSection() {
             href={manageUrl}
             target="_blank"
             rel="noreferrer"
-            className="store-purchase-cta inline-flex items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/16"
+            className="store-purchase-cta inline-flex items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/16"
           >
             {manageLabel}
           </Link>
@@ -349,14 +349,14 @@ export function PatreonBenefitsSection() {
         <div className="relative mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-card-border/70 bg-background/45 px-4 py-3">
             <p className="text-body-sm font-medium text-muted">Access</p>
-            <p className="mt-1 text-sm text-foreground">
+            <p className="mt-1 text-body text-foreground">
               Supporter gets tint color, ad controls, and static borders. Supporter+ adds animated
               borders and frames.
             </p>
           </div>
           <div className="rounded-2xl border border-card-border/70 bg-background/45 px-4 py-3">
             <p className="text-body-sm font-medium text-muted">Status</p>
-            <p className="mt-1 text-sm text-foreground">
+            <p className="mt-1 text-body text-foreground">
               {state?.patreonExpiresAt ? (
                 // wall-clock by design: patreon subscription billing runs on real time
                 <>
@@ -376,8 +376,8 @@ export function PatreonBenefitsSection() {
       <div className={SURFACE_CLASS}>
         <div className={`${lockedOverlay ? "opacity-60" : ""} space-y-4 p-5`}>
           <div>
-            <p className="text-base font-semibold text-foreground">Ad preference</p>
-            <p className="mt-1 max-w-2xl text-sm text-muted">
+            <p className="text-body-lg font-semibold text-foreground">Ad preference</p>
+            <p className="mt-1 max-w-2xl text-body text-muted">
               Supporters default to ad-free and can decide what third-party and player ads appear
               for them.
             </p>
@@ -416,8 +416,8 @@ export function PatreonBenefitsSection() {
                       : "border-card-border/80 bg-background/55 hover:border-primary/30"
                   } ${!state?.isPatronActive ? "cursor-default" : ""}`}
                 >
-                  <p className="text-sm font-medium text-foreground">{option.label}</p>
-                  <p className="mt-1 text-xs text-muted">{option.description}</p>
+                  <p className="text-body font-medium text-foreground">{option.label}</p>
+                  <p className="mt-1 text-body-sm text-muted">{option.description}</p>
                 </button>
               );
             })}
@@ -429,8 +429,10 @@ export function PatreonBenefitsSection() {
       <div className={SURFACE_CLASS}>
         <div className={`${lockedOverlay ? "opacity-60" : ""} space-y-3 p-5`}>
           <div>
-            <label className="block text-base font-semibold text-foreground">Highlight color</label>
-            <p className="mt-1 text-sm text-muted">
+            <label className="block text-body-lg font-semibold text-foreground">
+              Highlight color
+            </label>
+            <p className="mt-1 text-body text-muted">
               Used for supporter accents and all tint-aware profile borders.
             </p>
           </div>
@@ -443,12 +445,12 @@ export function PatreonBenefitsSection() {
               className="h-10 w-14 cursor-pointer rounded border border-card-border bg-transparent disabled:cursor-default"
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">Custom highlight tint</p>
-              <p className="text-xs text-muted">
+              <p className="text-body font-medium text-foreground">Custom highlight tint</p>
+              <p className="text-body-sm text-muted">
                 Applies anywhere the profile uses supporter tint.
               </p>
             </div>
-            <code className="ml-auto rounded-lg bg-card px-2.5 py-1.5 text-xs text-muted">
+            <code className="ml-auto rounded-lg bg-card px-2.5 py-1.5 text-body-sm text-muted">
               {tintColor}
             </code>
           </div>
@@ -458,8 +460,8 @@ export function PatreonBenefitsSection() {
 
       <div className={`${SURFACE_CLASS} p-5`}>
         <div>
-          <label className="block text-lg font-semibold text-foreground">Profile border</label>
-          <p className="mt-1 text-sm text-muted">
+          <label className="block text-heading font-semibold text-foreground">Profile border</label>
+          <p className="mt-1 text-body text-muted">
             Supporter unlocks default and tinted static borders. Supporter+ unlocks animated borders
             and frame styles.
           </p>
@@ -496,13 +498,13 @@ export function PatreonBenefitsSection() {
                       >
                         <div className="mb-3 flex items-center justify-center rounded-2xl bg-background/45 py-4">
                           <ProfileBorder borderKey={option.key} tintColor={tintColor}>
-                            <div className="flex h-16 w-16 items-center justify-center rounded-[1.1rem] bg-card text-lg font-bold text-foreground">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-[1.1rem] bg-card text-heading font-bold text-foreground">
                               A
                             </div>
                           </ProfileBorder>
                         </div>
-                        <p className="text-sm font-medium text-foreground">{option.label}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted">
+                        <p className="text-body font-medium text-foreground">{option.label}</p>
+                        <p className="mt-1 text-body-sm leading-relaxed text-muted">
                           {option.tintable
                             ? "Uses your selected tint color."
                             : "Fixed theme style."}
@@ -511,7 +513,7 @@ export function PatreonBenefitsSection() {
 
                       {showLock && (
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-background/38 backdrop-blur-[2px]">
-                          <div className="rounded-full border border-white/10 bg-background/70 px-3 py-1 text-[11px] font-medium text-foreground shadow">
+                          <div className="rounded-full border border-white/10 bg-background/70 px-3 py-1 text-body-sm font-medium text-foreground shadow">
                             {accessLevel === "supporter"
                               ? "Supporter+ only"
                               : group.id === "animated"
@@ -532,7 +534,7 @@ export function PatreonBenefitsSection() {
       </div>
 
       {(error || saved) && state?.isPatronActive && (
-        <p className={`text-sm ${error ? "text-error" : "text-success"}`}>
+        <p className={`text-body ${error ? "text-error" : "text-success"}`}>
           {error || saved}
           {saving ? " Saving..." : ""}
         </p>
@@ -540,8 +542,10 @@ export function PatreonBenefitsSection() {
 
       <div className={`${SURFACE_CLASS} p-5 md:p-6`}>
         <div className="mb-4">
-          <h5 className="text-base font-semibold text-foreground">Claiming benefits & support</h5>
-          <p className="mt-1 text-sm text-muted">
+          <h5 className="text-body-lg font-semibold text-foreground">
+            Claiming benefits & support
+          </h5>
+          <p className="mt-1 text-body text-muted">
             If you have a Patreon membership and your in-game benefits are missing or incorrect,
             open a support ticket or contact the team here.
           </p>
@@ -555,8 +559,8 @@ export function PatreonBenefitsSection() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">Submit a Discord ticket</p>
-                <p className="mt-1 text-xs text-muted">
+                <p className="text-body font-medium text-foreground">Submit a Discord ticket</p>
+                <p className="mt-1 text-body-sm text-muted">
                   Join our Discord server and open a support ticket in the{" "}
                   <span className="font-medium text-foreground">#patreon-support</span> channel to
                   claim or fix your benefits.
@@ -565,7 +569,7 @@ export function PatreonBenefitsSection() {
                   href={DISCORD_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/16"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/16"
                 >
                   Open Discord
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -598,14 +602,14 @@ export function PatreonBenefitsSection() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">Report an issue</p>
-                <p className="mt-1 text-xs text-muted">
+                <p className="text-body font-medium text-foreground">Report an issue</p>
+                <p className="mt-1 text-body-sm text-muted">
                   Use the in-game feedback tool or contact page to report a Patreon benefit issue
                   directly to the team.
                 </p>
                 <Link
                   href="/contact"
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-card-border/80 bg-background/55 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-card-border/80 bg-background/55 px-3 py-1.5 text-body-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5"
                 >
                   Contact page
                 </Link>

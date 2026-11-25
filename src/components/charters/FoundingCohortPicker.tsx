@@ -87,13 +87,13 @@ export function FoundingCohortPicker({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         Your party starts with 3 founding NPPs. The first always spawns in your home state with the
         charter platform&apos;s positions. Place the other two anywhere your home state borders —
         picking the same state twice concentrates both there.
       </p>
 
-      <div className="rounded-md border border-card-border bg-card/40 p-3 text-xs">
+      <div className="rounded-md border border-card-border bg-card/40 p-3 text-body-sm">
         <span className="font-semibold">Fixed:</span>{" "}
         <span>NPP 1 — {stateNames[chairHomeState] ?? chairHomeState}</span>
         <span className="ml-2 text-muted">(your home, platform positions)</span>
@@ -107,14 +107,14 @@ export function FoundingCohortPicker({
         return (
           <div key={slot} className="rounded-md border border-card-border bg-card/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor={`cohort-state-${slot}`} className="text-xs w-16 shrink-0">
+              <Label htmlFor={`cohort-state-${slot}`} className="text-body-sm w-16 shrink-0">
                 NPP {npcNumber}
               </Label>
               <select
                 id={`cohort-state-${slot}`}
                 value={pick.stateId}
                 onChange={(e) => updateSlot(slot, { stateId: e.target.value })}
-                className="flex-1 rounded-md border border-card-border bg-background px-2 py-1 text-sm"
+                className="flex-1 rounded-md border border-card-border bg-background px-2 py-1 text-body"
               >
                 {dropdownOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -126,7 +126,7 @@ export function FoundingCohortPicker({
               <button
                 type="button"
                 onClick={() => setOpenSlots((p) => ({ ...p, [slot]: !p[slot] }))}
-                className="text-xs text-muted underline hover:text-foreground"
+                className="text-body-sm text-muted underline hover:text-foreground"
                 aria-expanded={isOpen}
               >
                 {isOpen ? "Hide positions" : "Edit positions"}
@@ -136,7 +136,7 @@ export function FoundingCohortPicker({
             {isOpen && (
               <div className="space-y-2 pl-16">
                 <div>
-                  <Label htmlFor={`cohort-econ-${slot}`} className="text-xs">
+                  <Label htmlFor={`cohort-econ-${slot}`} className="text-body-sm">
                     Economic: {pick.economicPosition.toFixed(1)}
                   </Label>
                   <Slider
@@ -151,7 +151,7 @@ export function FoundingCohortPicker({
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`cohort-soc-${slot}`} className="text-xs">
+                  <Label htmlFor={`cohort-soc-${slot}`} className="text-body-sm">
                     Social: {pick.socialPosition.toFixed(1)}
                   </Label>
                   <Slider
@@ -173,7 +173,7 @@ export function FoundingCohortPicker({
                       socialPosition: axisToPartyPosition(platformSocial),
                     })
                   }
-                  className="text-[11px] text-muted underline hover:text-foreground"
+                  className="text-body-sm text-muted underline hover:text-foreground"
                 >
                   Reset to platform
                 </button>

@@ -44,7 +44,7 @@ export function EvBar({
               color: "#fff",
               fontFamily: FONT.mono,
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12,
             }}
           />
         ))}
@@ -67,7 +67,7 @@ export function EvBar({
           display: "flex",
           justifyContent: "space-between",
           fontFamily: FONT.mono,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: ".1em",
           color: BLEND.mutedDimmer,
         }}
@@ -83,7 +83,7 @@ export function EvBar({
         style={{
           marginTop: 7,
           fontFamily: FONT.sans,
-          fontSize: 12.5,
+          fontSize: 12,
           color: BLEND.mutedDim,
         }}
       >
@@ -94,7 +94,7 @@ export function EvBar({
           style={{
             marginTop: 6,
             fontFamily: FONT.sans,
-            fontSize: 13,
+            fontSize: 12,
             color: BLEND.negative,
           }}
         >
@@ -144,7 +144,7 @@ function DriverRows({ rows }: { rows: DriverRowVM[] }) {
               gap: 10,
             }}
           >
-            <span style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>
+            <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>
               <Tip hint={d.hint}>{d.label}</Tip>
             </span>
             <span style={{ fontFamily: FONT.mono, fontSize: 12, color: d.color }}>
@@ -195,7 +195,7 @@ export function YourTicketBlock({
   if (!vm.yourTicket) return null;
   return (
     <>
-      <div style={{ marginTop: 9, fontFamily: FONT.sans, fontSize: 17, fontWeight: 600 }}>
+      <div style={{ marginTop: 9, fontFamily: FONT.sans, fontSize: 16, fontWeight: 600 }}>
         {vm.yourTicket.name}
       </div>
       <div style={{ ...BLEND_LABEL, marginTop: 9 }}>Current projection</div>
@@ -203,7 +203,7 @@ export function YourTicketBlock({
         <span
           style={{
             fontFamily: FONT.mono,
-            fontSize: 34,
+            fontSize: 30,
             fontWeight: 500,
             letterSpacing: "-0.03em",
           }}
@@ -251,7 +251,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
         style={{
           margin: "9px 0 0",
           fontFamily: FONT.sans,
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.5,
           color: BLEND.muted,
         }}
@@ -262,7 +262,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
         style={{
           margin: "9px 0 0",
           fontFamily: FONT.sans,
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.5,
           color: BLEND.muted,
         }}
@@ -291,7 +291,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
                 borderBottom: "1px solid rgba(34,34,47,.7)",
               }}
             >
-              <span style={{ fontFamily: FONT.sans, fontSize: 13.5 }}>
+              <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>
                 <Tip hint={c.hint}>{c.label}</Tip>
               </span>
               <span
@@ -312,7 +312,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
           style={{
             margin: "8px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             lineHeight: 1.45,
             color: BLEND.mutedDim,
           }}
@@ -325,7 +325,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
           style={{
             margin: "8px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             lineHeight: 1.45,
             color: BLEND.mutedDim,
           }}
@@ -337,7 +337,7 @@ export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
         style={{
           margin: "8px 0 0",
           fontFamily: FONT.sans,
-          fontSize: 12.5,
+          fontSize: 12,
           lineHeight: 1.45,
           color: BLEND.mutedDim,
         }}
@@ -360,7 +360,7 @@ export function WhyItMovedBlock({ vm }: { vm: GeneralBlendVM }) {
           style={{
             margin: "10px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             lineHeight: 1.45,
             color: BLEND.mutedDim,
           }}

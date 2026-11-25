@@ -48,11 +48,13 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
   return (
     <PanelState loading={!ready || loading} error={error}>
       {data && !data.enabled ? (
-        <p className="py-6 text-sm text-muted">Supply agreements are not enabled in this world.</p>
+        <p className="py-6 text-body text-muted">
+          Supply agreements are not enabled in this world.
+        </p>
       ) : (
         <section className="rounded-xl border border-card-border bg-card p-4 shadow-card sm:p-5">
           <SupplyFilterBar filters={view} onChange={change} showCommodity={!single} />
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             {offerCountLabel(total, totalAll)}.
             {!single && " Taking one starts a binding agreement at the listed terms."}
           </p>
@@ -61,7 +63,7 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
             <SupplyOfferHeader />
           </div>
           {offers.length === 0 ? (
-            <div className="flex flex-wrap items-center gap-3 py-4 text-sm text-muted">
+            <div className="flex flex-wrap items-center gap-3 py-4 text-body text-muted">
               <p>
                 {totalAll > 0 && narrowed
                   ? "No offers match these filters."
@@ -78,7 +80,7 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
                       commodity: single ? view.commodity : "",
                     })
                   }
-                  className="h-7 rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+                  className="h-7 rounded-md border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated"
                 >
                   Show all offers
                 </button>
@@ -99,7 +101,7 @@ export function SupplyDealsPanel({ commodity }: { commodity?: CommodityType } = 
             </ul>
           )}
           {(page > 1 || data?.hasMore) && (
-            <div className="mt-3 flex items-center justify-between text-xs text-muted">
+            <div className="mt-3 flex items-center justify-between text-body-sm text-muted">
               <button
                 type="button"
                 disabled={page <= 1}

@@ -71,7 +71,7 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <h1 className="text-2xl font-bold text-foreground">Bond not found</h1>
+          <h1 className="text-heading font-bold text-foreground">Bond not found</h1>
           <p className="text-muted">{error || "This bond does not exist."}</p>
           <BackButton />
         </div>
@@ -95,7 +95,7 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 space-y-6">
         {/* ─── Breadcrumb ──────────────────────────────────────────────── */}
-        <nav className="flex items-center gap-1.5 text-sm text-muted" aria-label="Breadcrumb">
+        <nav className="flex items-center gap-1.5 text-body text-muted" aria-label="Breadcrumb">
           <Link
             href={`/stockmarket/${exchange}?tab=bonds`}
             className="hover:text-foreground transition-colors"
@@ -141,9 +141,9 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* ─── Price Chart ─────────────────────────────────────────────── */}
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="text-lg font-bold text-foreground mb-4">Price history</h2>
+          <h2 className="text-heading font-bold text-foreground mb-4">Price history</h2>
           {history.length < 2 ? (
-            <div className="flex items-center justify-center h-[180px] text-muted text-sm border border-dashed border-card-border rounded-lg bg-card-elevated/30">
+            <div className="flex items-center justify-center h-[180px] text-muted text-body border border-dashed border-card-border rounded-lg bg-card-elevated/30">
               Not enough price history yet.
             </div>
           ) : (
@@ -163,8 +163,8 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* ─── Bond Details ────────────────────────────────────────────── */}
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-muted mb-4">Bond details</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+          <h2 className="text-body font-semibold text-muted mb-4">Bond details</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-body">
             {[
               // Bond money fields (totalIssued, perTurnCoupon, totalInterestPaid)
               // denominate in `bond.currencyCode` post-v0.2.6. Normalize to ₳ + pass
@@ -212,7 +212,7 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
               })(),
             ].map(({ label, value }) => (
               <div key={label} className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted">{label}</span>
+                <span className="text-body-sm text-muted">{label}</span>
                 <span className="font-medium tabular-nums text-foreground">{value}</span>
               </div>
             ))}

@@ -230,10 +230,10 @@ function ElectionPanel({
     return (
       <div className="rounded-xl border border-card-border bg-card p-5">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{POSITION_ICON[position]}</span>
+          <span className="text-heading">{POSITION_ICON[position]}</span>
           <span className="font-semibold">{positionLabel}</span>
         </div>
-        <p className="text-xs text-muted">No active election for this position.</p>
+        <p className="text-body-sm text-muted">No active election for this position.</p>
       </div>
     );
   }
@@ -249,16 +249,16 @@ function ElectionPanel({
         style={{ backgroundColor: `${partyColor}15`, borderBottom: `2px solid ${partyColor}` }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-lg">{POSITION_ICON[position]}</span>
+          <span className="text-heading">{POSITION_ICON[position]}</span>
           <div>
-            <div className="font-semibold text-sm">{positionLabel} Election</div>
-            <div className="text-xs text-muted">{partyName}</div>
+            <div className="font-semibold text-body">{positionLabel} Election</div>
+            <div className="text-body-sm text-muted">{partyName}</div>
           </div>
         </div>
         <div className="text-right shrink-0">
           {isVoting ? (
             <>
-              <div className="text-xs text-muted">Closes</div>
+              <div className="text-body-sm text-muted">Closes</div>
               <TurnsRemaining
                 endTurn={election.endTurn}
                 currentTurn={currentTurn}
@@ -267,7 +267,7 @@ function ElectionPanel({
             </>
           ) : (
             <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${
+              className={`text-body-sm font-medium px-2 py-1 rounded-full ${
                 isCompleted ? "bg-success/20 text-success" : "bg-card-elevated text-muted/80"
               }`}
             >
@@ -279,12 +279,12 @@ function ElectionPanel({
 
       <div className="p-5 space-y-4">
         {/* Role description */}
-        <p className="text-xs text-muted/70 italic">{positionDescriptions[position]}</p>
+        <p className="text-body-sm text-muted/70 italic">{positionDescriptions[position]}</p>
 
         {/* Winner banner */}
         {isCompleted && election.winnerName && (
           <div
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-body font-medium"
             style={{ backgroundColor: `${partyColor}20`, color: partyColor }}
           >
             <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -296,12 +296,16 @@ function ElectionPanel({
 
         {/* No winner */}
         {isCompleted && !election.winnerName && (
-          <div className="text-xs text-muted italic">No candidates ran — position unchanged.</div>
+          <div className="text-body-sm text-muted italic">
+            No candidates ran — position unchanged.
+          </div>
         )}
 
         {/* Message */}
         {message && (
-          <div className={`rounded-lg p-2.5 text-xs ${getMessageStyle(message)}`}>{message}</div>
+          <div className={`rounded-lg p-2.5 text-body-sm ${getMessageStyle(message)}`}>
+            {message}
+          </div>
         )}
 
         {/* Actions */}
@@ -314,7 +318,7 @@ function ElectionPanel({
                 title={
                   isCandidateElsewhere ? "Withdraw from your other candidacy first" : undefined
                 }
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: partyColor }}
               >
                 {actionLoading ? "…" : `Run for ${positionLabel}`}
@@ -324,7 +328,7 @@ function ElectionPanel({
               <button
                 onClick={handleWithdraw}
                 disabled={actionLoading}
-                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/20 disabled:opacity-40"
+                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-40"
               >
                 {actionLoading ? "…" : "Withdraw"}
               </button>
@@ -334,7 +338,7 @@ function ElectionPanel({
 
         {/* Candidate list */}
         {election.candidates.length === 0 ? (
-          <p className="text-xs text-muted italic">No candidates yet.</p>
+          <p className="text-body-sm text-muted italic">No candidates yet.</p>
         ) : (
           <div className="space-y-2">
             {election.candidates.map((cand) => {
@@ -354,28 +358,28 @@ function ElectionPanel({
                     <div className="flex items-center gap-2 min-w-0">
                       <Link
                         href={`/character/${cand.sequentialId ?? cand.characterId}`}
-                        className="text-sm font-medium hover:text-primary transition-colors truncate"
+                        className="text-body font-medium hover:text-primary transition-colors truncate"
                       >
                         {cand.characterName}
                       </Link>
                       {cand.isCurrentHolder && (
                         <span
-                          className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                          className="shrink-0 text-body-sm font-medium px-1.5 py-0.5 rounded-full"
                           style={{ backgroundColor: `${partyColor}20`, color: partyColor }}
                         >
                           Incumbent
                         </span>
                       )}
                       {isMyVote && (
-                        <span className="shrink-0 text-[10px] text-success font-medium">
+                        <span className="shrink-0 text-body-sm text-success font-medium">
                           Your vote
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="text-right">
-                        <div className="text-sm font-bold tabular-nums">{cand.voteCount}</div>
-                        <div className="text-[10px] text-muted">
+                        <div className="text-body font-bold tabular-nums">{cand.voteCount}</div>
+                        <div className="text-body-sm text-muted">
                           {election.totalVotes > 0 ? `${pct}%` : "—"}
                         </div>
                       </div>
@@ -383,7 +387,7 @@ function ElectionPanel({
                         <button
                           onClick={() => handleVote(cand.characterId)}
                           disabled={actionLoading}
-                          className={`rounded-lg border border-card-border bg-background px-2.5 py-1 text-xs disabled:opacity-40 ${
+                          className={`rounded-lg border border-card-border bg-background px-2.5 py-1 text-body-sm disabled:opacity-40 ${
                             isMyVote
                               ? "text-muted hover:border-error hover:text-error"
                               : "hover:border-primary hover:text-primary"
@@ -412,7 +416,7 @@ function ElectionPanel({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-[10px] text-muted pt-1 border-t border-card-border">
+        <div className="flex items-center justify-between text-body-sm text-muted pt-1 border-t border-card-border">
           <span>Total votes: {election.totalVotes}</span>
           {isVoting && (
             <span>
@@ -422,7 +426,7 @@ function ElectionPanel({
         </div>
 
         {!canVote && isVoting && (
-          <p className="text-[10px] text-muted bg-background rounded px-2 py-1.5">
+          <p className="text-body-sm text-muted bg-background rounded px-2 py-1.5">
             {ineligibilityNote({
               canVoteReason,
               turnsUntilEligible,
@@ -470,7 +474,7 @@ export function StatePartyLeadershipElections({
   if (loading) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <div className="text-muted text-sm">Loading leadership elections…</div>
+        <div className="text-muted text-body">Loading leadership elections…</div>
       </div>
     );
   }
@@ -478,7 +482,7 @@ export function StatePartyLeadershipElections({
   if (!data) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <div className="text-muted text-sm">Could not load election data.</div>
+        <div className="text-muted text-body">Could not load election data.</div>
       </div>
     );
   }
@@ -489,8 +493,8 @@ export function StatePartyLeadershipElections({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Leadership elections</h2>
-        <span className="text-xs text-muted">Current turn: {currentTurn}</span>
+        <h2 className="text-heading font-semibold">Leadership elections</h2>
+        <span className="text-body-sm text-muted">Current turn: {currentTurn}</span>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -519,7 +523,7 @@ export function StatePartyLeadershipElections({
         ))}
       </div>
 
-      <p className="text-[10px] text-muted/60 italic">
+      <p className="text-body-sm text-muted/60 italic">
         Elections run on a shared 72-turn cycle (an election opened mid-cycle ends with the rest).
         Members may vote and change their vote at any time before the election closes. Ties are
         broken by earliest declaration date.

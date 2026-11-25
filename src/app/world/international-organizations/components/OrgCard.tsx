@@ -43,18 +43,18 @@ export function OrgCard({
       <div className="flex items-center gap-3">
         <Seal identity={org.identity} size={40} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-foreground">{org.def.name}</div>
-          <div className="truncate text-[11px] text-muted">{org.def.shortName}</div>
+          <div className="truncate text-body font-semibold text-foreground">{org.def.name}</div>
+          <div className="truncate text-body-sm text-muted">{org.def.shortName}</div>
         </div>
         {meta && (
           <span
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.cls}`}
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-body-sm font-medium ${meta.cls}`}
           >
             {meta.label}
           </span>
         )}
       </div>
-      <div className="mt-3 flex gap-3 text-[11px] text-muted">
+      <div className="mt-3 flex gap-3 text-body-sm text-muted">
         <span>
           <span className="font-bold tabular-nums text-foreground">{org.members.length}</span>{" "}
           members

@@ -128,7 +128,7 @@ export function OrderOfBattlePanel({ view }: { view: OrderOfBattleView }) {
                   {turnsToFull != null && (
                     <>
                       <br />
-                      <span style={{ color: MIL_COLOR.green, fontSize: 9 }}>
+                      <span style={{ color: MIL_COLOR.green, fontSize: 12 }}>
                         +{READINESS_DRIFT_STEP}%/turn · full in {turnsToFull}
                       </span>
                     </>

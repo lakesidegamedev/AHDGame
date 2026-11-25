@@ -139,7 +139,7 @@ export function SharePurchaseOrderbookView({
         />
       )}
       {orderbookCount === 0 ? (
-        <p className="py-4 text-center text-sm text-muted">No open orders from other players.</p>
+        <p className="py-4 text-center text-body text-muted">No open orders from other players.</p>
       ) : (
         <>
           {/* Sell orders (asks) — you can buy from these */}
@@ -147,8 +147,8 @@ export function SharePurchaseOrderbookView({
             <div>
               {myCorporation && (
                 <div className="mb-3">
-                  <label className="mb-1.5 block text-xs text-muted">Buy using</label>
-                  <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+                  <label className="mb-1.5 block text-body-sm text-muted">Buy using</label>
+                  <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
                     <button
                       type="button"
                       onClick={() => setFillOrderbookAsCorp(false)}
@@ -190,10 +190,10 @@ export function SharePurchaseOrderbookView({
                   <div key={order._id} className="bg-card-elevated/30 px-4 py-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-sm font-medium text-foreground">
+                        <span className="text-body font-medium text-foreground">
                           {order.sharesRemaining.toLocaleString("en-US")} shares
                         </span>
-                        <span className="text-sm text-muted ml-2">
+                        <span className="text-body text-muted ml-2">
                           @{" "}
                           {formatPriceOrder(
                             corpCurrencyCode
@@ -203,7 +203,7 @@ export function SharePurchaseOrderbookView({
                           )}
                         </span>
                       </div>
-                      <span className="text-xs text-muted">{order.characterName}</span>
+                      <span className="text-body-sm text-muted">{order.characterName}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -218,24 +218,24 @@ export function SharePurchaseOrderbookView({
                         }}
                         aria-invalid={!!localFillDrafts[order._id] && !localFillAmounts[order._id]}
                         placeholder="Qty"
-                        className="w-20 rounded border border-card-border bg-background px-2 py-1 text-xs focus:border-primary/60 focus:outline-none"
+                        className="w-20 rounded border border-card-border bg-background px-2 py-1 text-body-sm focus:border-primary/60 focus:outline-none"
                       />
                       <button
                         onClick={() =>
                           handleFillLocal(order._id, "sell", localFillAmounts[order._id])
                         }
                         disabled={fillingId === order._id || !localFillAmounts[order._id]}
-                        className="rounded bg-success/80 px-3 py-1 text-xs font-medium text-white hover:bg-success transition-colors disabled:opacity-50"
+                        className="rounded bg-success/80 px-3 py-1 text-body-sm font-medium text-white hover:bg-success transition-colors disabled:opacity-50"
                       >
                         {fillingId === order._id ? "Buying…" : "Buy"}
                       </button>
                       {localFillDrafts[order._id] && !localFillAmounts[order._id] && (
-                        <span className="text-xs text-error" role="alert">
+                        <span className="text-body-sm text-error" role="alert">
                           Enter 1 to {order.sharesRemaining.toLocaleString("en-US")} whole shares.
                         </span>
                       )}
                       {(localFillAmounts[order._id] ?? 0) > 0 && (
-                        <span className="text-xs text-muted">
+                        <span className="text-body-sm text-muted">
                           ={" "}
                           {formatAmount(
                             Math.round(
@@ -259,7 +259,7 @@ export function SharePurchaseOrderbookView({
           {/* Buy orders (bids) — you can sell to these */}
           {orderbookBids.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-error">
+              <p className="mb-2 text-body-sm font-semibold uppercase tracking-wider text-error">
                 Wanted: you can sell
               </p>
               <div className="divide-y divide-card-border/50 overflow-hidden rounded-lg border border-card-border">
@@ -267,10 +267,10 @@ export function SharePurchaseOrderbookView({
                   <div key={order._id} className="bg-card-elevated/30 px-4 py-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-sm font-medium text-foreground">
+                        <span className="text-body font-medium text-foreground">
                           {order.sharesRemaining.toLocaleString("en-US")} shares
                         </span>
-                        <span className="text-sm text-muted ml-2">
+                        <span className="text-body text-muted ml-2">
                           @{" "}
                           {formatPriceOrder(
                             corpCurrencyCode
@@ -280,7 +280,7 @@ export function SharePurchaseOrderbookView({
                           )}
                         </span>
                       </div>
-                      <span className="text-xs text-muted">{order.characterName}</span>
+                      <span className="text-body-sm text-muted">{order.characterName}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -295,24 +295,24 @@ export function SharePurchaseOrderbookView({
                         }}
                         aria-invalid={!!localFillDrafts[order._id] && !localFillAmounts[order._id]}
                         placeholder="Qty"
-                        className="w-20 rounded border border-card-border bg-background px-2 py-1 text-xs focus:border-primary/60 focus:outline-none"
+                        className="w-20 rounded border border-card-border bg-background px-2 py-1 text-body-sm focus:border-primary/60 focus:outline-none"
                       />
                       <button
                         onClick={() =>
                           handleFillLocal(order._id, "buy", localFillAmounts[order._id])
                         }
                         disabled={fillingId === order._id || !localFillAmounts[order._id]}
-                        className="rounded bg-error/80 px-3 py-1 text-xs font-medium text-white hover:bg-error transition-colors disabled:opacity-50"
+                        className="rounded bg-error/80 px-3 py-1 text-body-sm font-medium text-white hover:bg-error transition-colors disabled:opacity-50"
                       >
                         {fillingId === order._id ? "Selling…" : "Sell"}
                       </button>
                       {localFillDrafts[order._id] && !localFillAmounts[order._id] && (
-                        <span className="text-xs text-error" role="alert">
+                        <span className="text-body-sm text-error" role="alert">
                           Enter 1 to {order.sharesRemaining.toLocaleString("en-US")} whole shares.
                         </span>
                       )}
                       {(localFillAmounts[order._id] ?? 0) > 0 && (
-                        <span className="text-xs text-muted">
+                        <span className="text-body-sm text-muted">
                           ={" "}
                           {formatAmount(
                             Math.round(
@@ -335,11 +335,11 @@ export function SharePurchaseOrderbookView({
         </>
       )}
       {successMsg && (
-        <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-xs text-success">
+        <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-body-sm text-success">
           {successMsg}
         </div>
       )}
-      <InlineError error={error} className="text-xs text-error" />
+      <InlineError error={error} className="text-body-sm text-error" />
     </div>
   );
 }

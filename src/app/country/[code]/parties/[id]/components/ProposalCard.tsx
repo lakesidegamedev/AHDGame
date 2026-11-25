@@ -20,7 +20,7 @@ function VoteBar({
   yesNeeded: number;
 }) {
   const total = yes + no + notVoted;
-  if (total === 0) return <span className="text-xs text-muted">No votes yet</span>;
+  if (total === 0) return <span className="text-body-sm text-muted">No votes yet</span>;
   const yPct = Math.round((yes / total) * 100);
   const nPct = Math.round((no / total) * 100);
   return (
@@ -29,12 +29,12 @@ function VoteBar({
         <div className="bg-green-500" style={{ width: `${yPct}%` }} />
         <div className="bg-red-500" style={{ width: `${nPct}%` }} />
       </div>
-      <div className="flex gap-3 text-xs text-muted">
+      <div className="flex gap-3 text-body-sm text-muted">
         <span className="text-green-400">{yes} yes</span>
         <span className="text-red-400">{no} no</span>
         <span>{notVoted} not voted</span>
       </div>
-      <div className="text-xs text-muted">
+      <div className="text-body-sm text-muted">
         {`${yesNeeded} yes ${yesNeeded === 1 ? "vote" : "votes"} needed to pass (${Math.round(REQUIRED_YES_FRACTION * 100)}% of ${total} seats).`}{" "}
         Only votes from current committee members and officers count. Seats that have not voted when
         the window closes count as no.
@@ -150,13 +150,13 @@ function MinimumOpenNote({
 }) {
   if (canPassNow) {
     return (
-      <div className="text-xs text-muted">
+      <div className="text-body-sm text-muted">
         The 24 hour minimum is over. This vote passes as soon as enough members vote yes.
       </div>
     );
   }
   return (
-    <div className="text-xs text-muted">
+    <div className="text-body-sm text-muted">
       Committee proposals stay open at least 24 hours. This one cannot pass before{" "}
       <LocalTime value={earliestPassAt} options={{ dateStyle: "medium", timeStyle: "short" }} />,
       even if enough members vote yes sooner.
@@ -227,17 +227,17 @@ export function ProposalCard({
   return (
     <div className="rounded-lg border border-card-border bg-background p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-medium">
+        <div className="text-body font-medium">
           <ProposalTitle proposal={proposal} />
         </div>
         <span
-          className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLES[proposal.status]}`}
+          className={`text-body-sm px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLES[proposal.status]}`}
         >
           {proposal.status}
         </span>
       </div>
 
-      <div className="text-xs text-muted">
+      <div className="text-body-sm text-muted">
         Proposed by {proposal.proposedByName} · Turn {proposal.createdAtTurn}
         {isOpen && ` · expires turn ${proposal.expiresAtTurn}`}
         {!isOpen && proposal.resolvedAtTurn && ` · resolved turn ${proposal.resolvedAtTurn}`}
@@ -254,14 +254,14 @@ export function ProposalCard({
 
       {/* Vote summaries */}
       <div className="space-y-2">
-        <div className="text-xs text-muted">
+        <div className="text-body-sm text-muted">
           {proposal.type === "merge" ? "Proposing committee" : "Committee vote"}
         </div>
         <VoteBar {...proposal.proposingVoteSummary} />
 
         {proposal.type === "merge" && proposal.targetVoteSummary && (
           <div className="pt-1">
-            <div className="text-xs text-muted mb-1">Target committee</div>
+            <div className="text-body-sm text-muted mb-1">Target committee</div>
             <VoteBar {...proposal.targetVoteSummary} />
           </div>
         )}
@@ -273,7 +273,7 @@ export function ProposalCard({
           <button
             onClick={() => handleVote("yes")}
             disabled={loading}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-body-sm font-medium transition-colors ${
               myVote === "yes"
                 ? "bg-green-600 text-white"
                 : "bg-card border border-card-border text-muted hover:text-foreground hover:border-green-500"
@@ -284,7 +284,7 @@ export function ProposalCard({
           <button
             onClick={() => handleVote("no")}
             disabled={loading}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-body-sm font-medium transition-colors ${
               myVote === "no"
                 ? "bg-red-600 text-white"
                 : "bg-card border border-card-border text-muted hover:text-foreground hover:border-red-500"
@@ -294,17 +294,17 @@ export function ProposalCard({
           </button>
           {myVote && (
             <>
-              <span className="text-xs text-muted">Your vote: {myVote}</span>
+              <span className="text-body-sm text-muted">Your vote: {myVote}</span>
               <button
                 onClick={() => handleVote("withdraw")}
                 disabled={loading}
-                className="px-3 py-1 rounded text-xs font-medium bg-card border border-card-border text-muted hover:text-foreground"
+                className="px-3 py-1 rounded text-body-sm font-medium bg-card border border-card-border text-muted hover:text-foreground"
               >
                 Withdraw vote
               </button>
             </>
           )}
-          {msg && <span className="text-xs text-red-400">{msg}</span>}
+          {msg && <span className="text-body-sm text-red-400">{msg}</span>}
         </div>
       )}
     </div>

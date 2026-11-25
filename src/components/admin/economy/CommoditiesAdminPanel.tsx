@@ -371,13 +371,13 @@ export function CommoditiesAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold">Commodities</h2>
+        <h2 className="text-heading font-semibold">Commodities</h2>
       </div>
 
       {/* Active pegs banner */}
       {summary && (summary.globalPegCount > 0 || summary.totalStatePegs > 0) && (
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-2">
-          <p className="text-sm font-semibold text-warning">
+          <p className="text-body font-semibold text-warning">
             {summary.globalPegCount > 0 &&
               `${summary.globalPegCount} global peg${summary.globalPegCount !== 1 ? "s" : ""}`}
             {summary.globalPegCount > 0 && summary.totalStatePegs > 0 && ", "}
@@ -392,7 +392,7 @@ export function CommoditiesAdminPanel() {
                 .map((r) => (
                   <span
                     key={r.commodity}
-                    className="inline-flex items-center gap-1 text-xs bg-warning/10 text-warning px-2 py-1 rounded"
+                    className="inline-flex items-center gap-1 text-body-sm bg-warning/10 text-warning px-2 py-1 rounded"
                   >
                     <span>{commodityLabel(r.commodity)}</span>
                     <span className="text-warning/70">@ ₳{r.hardPeg?.toFixed(2)}</span>
@@ -415,7 +415,7 @@ export function CommoditiesAdminPanel() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-body font-medium border-b-2 transition-colors ${
               activeTab === tab
                 ? "border-primary text-primary"
                 : "border-transparent text-muted hover:text-foreground"
@@ -451,7 +451,7 @@ export function CommoditiesAdminPanel() {
             >
               <p className="text-body-sm font-medium text-muted">{card.label}</p>
               <p
-                className={`text-lg font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
+                className={`text-heading font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
               >
                 {card.value}
               </p>
@@ -461,14 +461,17 @@ export function CommoditiesAdminPanel() {
       )}
 
       {summary && summary.nudgeCount > 0 && activeTab === "global" && (
-        <p className="text-xs text-warning bg-warning/10 rounded-lg px-4 py-2">
+        <p className="text-body-sm text-warning bg-warning/10 rounded-lg px-4 py-2">
           {summary.nudgeCount} price override{summary.nudgeCount !== 1 ? "s" : ""} active this turn
         </p>
       )}
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
       {actionError && (
-        <p className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
+        <p className="text-body text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
       )}
 
       {/* ── Global tab ── */}
@@ -477,18 +480,18 @@ export function CommoditiesAdminPanel() {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <button
               onClick={() => setSortAlpha((v) => !v)}
-              className="text-xs px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
+              className="text-body-sm px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
             >
               {sortAlpha ? "Sort: Alphabetical" : "Sort: Worst shortage first"}
             </button>
           </div>
 
           {loading ? (
-            <div className="text-muted text-sm py-8 text-center">Loading…</div>
+            <div className="text-muted text-body py-8 text-center">Loading…</div>
           ) : (
             <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead className="bg-background/50">
                     <tr>
                       {[
@@ -522,7 +525,7 @@ export function CommoditiesAdminPanel() {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{commodityLabel(row.commodity)}</span>
                                 {row.nudgeActive && (
-                                  <span className="text-[10px] font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded">
+                                  <span className="text-body-sm font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                                     Override
                                   </span>
                                 )}
@@ -533,7 +536,7 @@ export function CommoditiesAdminPanel() {
                               <div className="flex items-center gap-2">
                                 <span>₳{(row.globalPrice ?? 0).toFixed(2)}</span>
                                 {row.hardPeg != null && (
-                                  <span className="text-[10px] font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
+                                  <span className="text-body-sm font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                                     Pegged
                                   </span>
                                 )}
@@ -564,7 +567,7 @@ export function CommoditiesAdminPanel() {
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className={`text-xs font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
+                                className={`text-body-sm font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
                                 title="Raw demand/supply ratio. Prices and margin effects use a softened effective pressure above 3x."
                               >
                                 {row.dsRatio.toFixed(2)}
@@ -574,7 +577,7 @@ export function CommoditiesAdminPanel() {
                               <div className="flex gap-1">
                                 <button
                                   onClick={() => openNudge(row.commodity)}
-                                  className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                                  className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                                 >
                                   {ns ? "Close" : "Nudge"}
                                 </button>
@@ -582,14 +585,14 @@ export function CommoditiesAdminPanel() {
                                   <button
                                     onClick={() => handleUnpeg(row.commodity)}
                                     disabled={actionLoading === row.commodity}
-                                    className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                                    className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
                                   >
                                     Unpeg
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => openPeg(row.commodity)}
-                                    className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                                    className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                                   >
                                     {ps ? "Close" : "Peg"}
                                   </button>
@@ -607,7 +610,7 @@ export function CommoditiesAdminPanel() {
                               >
                                 {ns.step === "input" ? (
                                   <div className="flex items-center gap-3 flex-wrap">
-                                    <span className="text-xs text-muted">
+                                    <span className="text-body-sm text-muted">
                                       Nudge global price to:
                                     </span>
                                     <input
@@ -625,7 +628,7 @@ export function CommoditiesAdminPanel() {
                                         }))
                                       }
                                       placeholder={(row.globalPrice ?? 0).toFixed(2)}
-                                      className="w-32 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                                      className="w-32 rounded border border-card-border bg-background px-2 py-1 text-body"
                                     />
                                     <button
                                       onClick={() =>
@@ -638,25 +641,25 @@ export function CommoditiesAdminPanel() {
                                         }))
                                       }
                                       disabled={!ns.price}
-                                      className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
+                                      className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
                                     >
                                       Review
                                     </button>
                                     <button
                                       onClick={() => openNudge(row.commodity)}
-                                      className="text-xs text-muted hover:text-foreground"
+                                      className="text-body-sm text-muted hover:text-foreground"
                                     >
                                       Cancel
                                     </button>
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <p className="text-xs text-warning">
+                                    <p className="text-body-sm text-warning">
                                       Nudge sets the price once. Subsequent turns drift gradually
                                       back toward supply/demand equilibrium (~48 turns to converge).
                                     </p>
                                     <div className="flex items-center gap-3">
-                                      <span className="text-sm">
+                                      <span className="text-body">
                                         Nudge <strong>{commodityLabel(row.commodity)}</strong> to{" "}
                                         <strong>₳{ns.price}</strong>?
                                       </span>
@@ -665,7 +668,7 @@ export function CommoditiesAdminPanel() {
                                           handleNudgeConfirm(row.commodity, parseFloat(ns.price))
                                         }
                                         disabled={actionLoading === row.commodity}
-                                        className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                                        className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                                       >
                                         Confirm
                                       </button>
@@ -679,7 +682,7 @@ export function CommoditiesAdminPanel() {
                                             },
                                           }))
                                         }
-                                        className="text-xs text-muted hover:text-foreground"
+                                        className="text-body-sm text-muted hover:text-foreground"
                                       >
                                         Back
                                       </button>
@@ -699,7 +702,9 @@ export function CommoditiesAdminPanel() {
                               >
                                 {ps.step === "input" ? (
                                   <div className="flex items-center gap-3 flex-wrap">
-                                    <span className="text-xs text-muted">Peg global price at:</span>
+                                    <span className="text-body-sm text-muted">
+                                      Peg global price at:
+                                    </span>
                                     <input
                                       type="number"
                                       step="0.01"
@@ -715,7 +720,7 @@ export function CommoditiesAdminPanel() {
                                         }))
                                       }
                                       placeholder={(row.globalPrice ?? 0).toFixed(2)}
-                                      className="w-32 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                                      className="w-32 rounded border border-card-border bg-background px-2 py-1 text-body"
                                     />
                                     <button
                                       onClick={() =>
@@ -728,26 +733,26 @@ export function CommoditiesAdminPanel() {
                                         }))
                                       }
                                       disabled={!ps.price}
-                                      className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
+                                      className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
                                     >
                                       Review
                                     </button>
                                     <button
                                       onClick={() => openPeg(row.commodity)}
-                                      className="text-xs text-muted hover:text-foreground"
+                                      className="text-body-sm text-muted hover:text-foreground"
                                     >
                                       Cancel
                                     </button>
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <p className="text-xs text-warning">
+                                    <p className="text-body-sm text-warning">
                                       Hard peg locks the price permanently until removed.
                                       Supply/demand drift is completely bypassed. When removed, the
                                       price drifts gradually back toward equilibrium (~48 turns).
                                     </p>
                                     <div className="flex items-center gap-3">
-                                      <span className="text-sm">
+                                      <span className="text-body">
                                         Peg <strong>{commodityLabel(row.commodity)}</strong> at{" "}
                                         <strong>₳{ps.price}</strong>?
                                       </span>
@@ -756,7 +761,7 @@ export function CommoditiesAdminPanel() {
                                           handlePegConfirm(row.commodity, parseFloat(ps.price))
                                         }
                                         disabled={actionLoading === row.commodity}
-                                        className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                                        className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                                       >
                                         Confirm peg
                                       </button>
@@ -770,7 +775,7 @@ export function CommoditiesAdminPanel() {
                                             },
                                           }))
                                         }
-                                        className="text-xs text-muted hover:text-foreground"
+                                        className="text-body-sm text-muted hover:text-foreground"
                                       >
                                         Back
                                       </button>
@@ -803,7 +808,7 @@ export function CommoditiesAdminPanel() {
         <>
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs text-muted mb-1">Country</label>
+              <label className="block text-body-sm text-muted mb-1">Country</label>
               <select
                 value={regionCountry}
                 onChange={(e) => {
@@ -815,7 +820,7 @@ export function CommoditiesAdminPanel() {
                   fetchStatesForCountry(c);
                   if (c) fetchRegionalData(c);
                 }}
-                className="rounded border border-card-border bg-background px-3 py-1.5 text-sm"
+                className="rounded border border-card-border bg-background px-3 py-1.5 text-body"
               >
                 <option value="">Select country</option>
                 {registered.map((c) => (
@@ -826,7 +831,7 @@ export function CommoditiesAdminPanel() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">State / Region</label>
+              <label className="block text-body-sm text-muted mb-1">State / Region</label>
               <select
                 value={regionState}
                 onChange={(e) => {
@@ -838,7 +843,7 @@ export function CommoditiesAdminPanel() {
                   }
                 }}
                 disabled={!regionCountry}
-                className="rounded border border-card-border bg-background px-3 py-1.5 text-sm disabled:opacity-40"
+                className="rounded border border-card-border bg-background px-3 py-1.5 text-body disabled:opacity-40"
               >
                 <option value="">Select state</option>
                 {sortByRegionLabel(regionStates, (s) => s.name).map((s) => (
@@ -856,17 +861,17 @@ export function CommoditiesAdminPanel() {
               {!countryPeg ? (
                 <button
                   onClick={() => setCountryPeg({ commodity: "", price: "", step: "input" })}
-                  className="text-xs px-3 py-1.5 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
+                  className="text-body-sm px-3 py-1.5 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
                 >
                   Peg all in {regionCountry}
                 </button>
               ) : countryPeg.step === "input" ? (
                 <div className="flex items-center gap-3 flex-wrap rounded-lg bg-warning/5 border border-warning/20 px-4 py-3">
-                  <span className="text-xs text-muted">Commodity:</span>
+                  <span className="text-body-sm text-muted">Commodity:</span>
                   <select
                     value={countryPeg.commodity}
                     onChange={(e) => setCountryPeg({ ...countryPeg, commodity: e.target.value })}
-                    className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+                    className="rounded border border-card-border bg-background px-2 py-1 text-body"
                   >
                     <option value="">Select</option>
                     {(regionalData.length > 0 ? regionalData : commodities).map((r) => (
@@ -875,7 +880,7 @@ export function CommoditiesAdminPanel() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-xs text-muted">Price:</span>
+                  <span className="text-body-sm text-muted">Price:</span>
                   <input
                     type="number"
                     step="0.01"
@@ -883,25 +888,25 @@ export function CommoditiesAdminPanel() {
                     value={countryPeg.price}
                     onChange={(e) => setCountryPeg({ ...countryPeg, price: e.target.value })}
                     placeholder="e.g. 500"
-                    className="w-28 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                    className="w-28 rounded border border-card-border bg-background px-2 py-1 text-body"
                   />
                   <button
                     onClick={() => setCountryPeg({ ...countryPeg, step: "confirm" })}
                     disabled={!countryPeg.commodity || !countryPeg.price}
-                    className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
+                    className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
                   >
                     Review
                   </button>
                   <button
                     onClick={() => setCountryPeg(null)}
-                    className="text-xs text-muted hover:text-foreground"
+                    className="text-body-sm text-muted hover:text-foreground"
                   >
                     Cancel
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 flex-wrap rounded-lg bg-warning/5 border border-warning/20 px-4 py-3">
-                  <span className="text-sm">
+                  <span className="text-body">
                     Peg <strong>{commodityLabel(countryPeg.commodity)}</strong> at{" "}
                     <strong>₳{countryPeg.price}</strong> for all states in{" "}
                     <strong>{regionCountry}</strong>? This locks every state&apos;s price until
@@ -912,13 +917,13 @@ export function CommoditiesAdminPanel() {
                       handleCountryPeg(countryPeg.commodity, parseFloat(countryPeg.price))
                     }
                     disabled={actionLoading === countryPeg.commodity}
-                    className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                    className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                   >
                     Confirm
                   </button>
                   <button
                     onClick={() => setCountryPeg({ ...countryPeg, step: "input" })}
-                    className="text-xs text-muted hover:text-foreground"
+                    className="text-body-sm text-muted hover:text-foreground"
                   >
                     Back
                   </button>
@@ -927,20 +932,20 @@ export function CommoditiesAdminPanel() {
             </div>
           )}
 
-          {regionalLoading && <div className="text-muted text-sm py-8 text-center">Loading…</div>}
+          {regionalLoading && <div className="text-muted text-body py-8 text-center">Loading…</div>}
 
           {!regionalLoading && regionalData.length > 0 && (
             <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
               {regionalMode === "country" && (
                 <div className="px-5 py-2.5 border-b border-card-border bg-background/30">
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Showing averages across all regions in <strong>{regionCountry}</strong>. Select
                     a state for per-region detail.
                   </p>
                 </div>
               )}
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead className="bg-background/50">
                     <tr>
                       {[
@@ -1007,7 +1012,7 @@ export function CommoditiesAdminPanel() {
                           <td className="px-4 py-3">{row.demand.toLocaleString("en-US")}</td>
                           <td className="px-4 py-3">
                             <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
+                              className={`text-body-sm font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
                               title="Raw demand/supply ratio. Prices and margin effects use a softened effective pressure above 3x."
                             >
                               {row.dsRatio.toFixed(2)}
@@ -1023,13 +1028,13 @@ export function CommoditiesAdminPanel() {
           )}
 
           {!regionalLoading && regionalData.length === 0 && regionCountry && (
-            <div className="text-muted text-sm py-8 text-center">
+            <div className="text-muted text-body py-8 text-center">
               No commodity data for this selection.
             </div>
           )}
 
           {!regionCountry && (
-            <div className="text-muted text-sm py-8 text-center">
+            <div className="text-muted text-body py-8 text-center">
               Select a country to view regional commodity prices.
             </div>
           )}
@@ -1071,12 +1076,12 @@ function RegionalCommodityRow({
           <div className="flex items-center gap-2">
             <span>₳{row.price.toFixed(2)}</span>
             {isPegged && (
-              <span className="text-[10px] font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
+              <span className="text-body-sm font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                 Pegged
               </span>
             )}
             {!isPegged && hasGlobalPeg && (
-              <span className="text-[10px] font-semibold uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+              <span className="text-body-sm font-semibold uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded">
                 Global peg
               </span>
             )}
@@ -1104,7 +1109,7 @@ function RegionalCommodityRow({
         <td className="px-4 py-3">{row.demand.toLocaleString("en-US")}</td>
         <td className="px-4 py-3">
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
+            className={`text-body-sm font-semibold px-2 py-0.5 rounded ${dsPillClass(row.dsRatio)}`}
             title="Raw demand/supply ratio. Prices and margin effects use a softened effective pressure above 3x."
           >
             {row.dsRatio.toFixed(2)}
@@ -1118,7 +1123,7 @@ function RegionalCommodityRow({
                 setStep("input");
                 setInputPrice("");
               }}
-              className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+              className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
             >
               Nudge
             </button>
@@ -1126,7 +1131,7 @@ function RegionalCommodityRow({
               <button
                 onClick={onUnpeg}
                 disabled={actionLoading === row.commodity}
-                className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
               >
                 Unpeg
               </button>
@@ -1137,7 +1142,7 @@ function RegionalCommodityRow({
                   setStep("input");
                   setInputPrice("");
                 }}
-                className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
               >
                 Peg
               </button>
@@ -1151,7 +1156,7 @@ function RegionalCommodityRow({
         <tr>
           <td colSpan={9} className="px-4 py-3 bg-warning/5 border-t border-warning/20">
             {hasGlobalPeg && panel === "peg" && (
-              <p className="text-xs text-warning mb-2">
+              <p className="text-body-sm text-warning mb-2">
                 A global peg is active for {commodityLabel(row.commodity)} at ₳
                 {row.globalPegPrice?.toFixed(2)}. Setting a state peg will override it for this
                 state.
@@ -1159,7 +1164,7 @@ function RegionalCommodityRow({
             )}
             {step === "input" ? (
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {panel === "nudge" ? "Nudge state price to:" : "Peg state price at:"}
                 </span>
                 <input
@@ -1169,25 +1174,25 @@ function RegionalCommodityRow({
                   value={inputPrice}
                   onChange={(e) => setInputPrice(e.target.value)}
                   placeholder={row.price.toFixed(2)}
-                  className="w-32 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                  className="w-32 rounded border border-card-border bg-background px-2 py-1 text-body"
                 />
                 <button
                   onClick={() => setStep("confirm")}
                   disabled={!inputPrice}
-                  className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
+                  className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 disabled:opacity-40"
                 >
                   Review
                 </button>
                 <button
                   onClick={() => setPanel(null)}
-                  className="text-xs text-muted hover:text-foreground"
+                  className="text-body-sm text-muted hover:text-foreground"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-sm">
+                <span className="text-body">
                   {panel === "nudge" ? "Nudge" : "Peg"}{" "}
                   <strong>{commodityLabel(row.commodity)}</strong> in this state to{" "}
                   <strong>₳{inputPrice}</strong>?{panel === "nudge" && " Drift resumes next turn."}
@@ -1201,13 +1206,13 @@ function RegionalCommodityRow({
                     setPanel(null);
                   }}
                   disabled={actionLoading === row.commodity}
-                  className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                  className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                 >
                   Confirm
                 </button>
                 <button
                   onClick={() => setStep("input")}
-                  className="text-xs text-muted hover:text-foreground"
+                  className="text-body-sm text-muted hover:text-foreground"
                 >
                   Back
                 </button>

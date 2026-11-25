@@ -189,7 +189,7 @@ export function PlayerSelector({
                 />
               ) : (
                 <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center border border-card-border">
-                  <span className="text-lg font-bold text-primary">
+                  <span className="text-heading font-bold text-primary">
                     {result.name[0].toUpperCase()}
                   </span>
                 </div>
@@ -197,12 +197,12 @@ export function PlayerSelector({
 
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-foreground truncate">{result.name}</div>
-                <div className="text-xs text-muted flex items-center gap-2">
+                <div className="text-body-sm text-muted flex items-center gap-2">
                   <span>{result.party}</span>
                   <span>•</span>
                   <span>{displayCanadianRegionCode(result.homeState)}</span>
                 </div>
-                <div className="text-[10px] text-muted/60 flex items-center gap-2 mt-0.5">
+                <div className="text-body-sm text-muted/60 flex items-center gap-2 mt-0.5">
                   {result.username && <span>@{result.username}</span>}
                   {result.discordUsername && (
                     <>
@@ -214,7 +214,7 @@ export function PlayerSelector({
               </div>
 
               {result.currentOffice && (
-                <div className="text-xs px-2 py-1 rounded bg-card-elevated text-muted border border-card-border">
+                <div className="text-body-sm px-2 py-1 rounded bg-card-elevated text-muted border border-card-border">
                   {result.currentOffice}
                 </div>
               )}
@@ -224,7 +224,7 @@ export function PlayerSelector({
       )}
 
       {isOpen && results.length === 0 && query.length >= 2 && !isLoading && (
-        <div className="absolute z-50 w-full mt-2 rounded-lg border border-card-border bg-card shadow-modal p-4 text-center text-muted text-sm">
+        <div className="absolute z-50 w-full mt-2 rounded-lg border border-card-border bg-card shadow-modal p-4 text-center text-muted text-body">
           No players found matching &quot;{query}&quot;
         </div>
       )}

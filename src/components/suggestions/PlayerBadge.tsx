@@ -21,7 +21,7 @@ export function PlayerBadge({ partyAbbrev, stateCode, countryId, size = "sm" }: 
   const preset = useActivePreset();
   if (!partyAbbrev && !stateCode) return null;
 
-  const textSize = size === "sm" ? "text-[10px]" : "text-xs";
+  const textSize = size === "sm" ? "text-body-sm" : "text-body-sm";
   const flagH = size === "sm" ? "h-3 max-h-3" : "h-3.5 max-h-3.5";
 
   const cfg = countryId ? getCountryClientConfig(countryId) : null;

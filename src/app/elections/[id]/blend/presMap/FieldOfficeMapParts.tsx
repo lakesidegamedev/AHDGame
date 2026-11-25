@@ -94,7 +94,7 @@ export function FieldOfficeTip({
         background: BLEND.page,
         border: `1px solid ${BLEND.hairlineStrong}`,
         boxShadow: "0 6px 18px rgba(0,0,0,.5)",
-        fontSize: 12.5,
+        fontSize: 12,
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontWeight: 600 }}>
@@ -103,12 +103,12 @@ export function FieldOfficeTip({
           {stateId}
         </span>
       </div>
-      <div style={{ marginTop: 4, fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}>
+      <div style={{ marginTop: 4, fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
         {leanLabel(info.livePvi)}
         {info.officeId ? " · office open" : ""}
       </div>
       {info.marginalPct != null && !info.officeId ? (
-        <div style={{ marginTop: 2, fontFamily: FONT.mono, fontSize: 11, color: BLEND.positive }}>
+        <div style={{ marginTop: 2, fontFamily: FONT.mono, fontSize: 12, color: BLEND.positive }}>
           New office {formatPct(info.marginalPct)} turnout
         </div>
       ) : null}
@@ -137,7 +137,7 @@ export function FieldOfficeKey({
         alignItems: "center",
         gap: "6px 12px",
         fontFamily: FONT.mono,
-        fontSize: 10,
+        fontSize: 12,
         color: BLEND.mutedDim,
       }}
     >

@@ -93,7 +93,7 @@ function LoanApprovalToggle({
         />
       }
     >
-      <p className="py-1.5 text-xs text-muted">
+      <p className="py-1.5 text-body-sm text-muted">
         {requireApproval
           ? "New loan requests wait for you to approve or decline them in the loan book."
           : "Loan requests are granted automatically when the borrower qualifies."}
@@ -233,7 +233,7 @@ function EarningsBreakdown({
         </tbody>
       </table>
       {onTreasury && (
-        <p className="pt-1.5 text-xs text-muted">
+        <p className="pt-1.5 text-body-sm text-muted">
           {t("tooltips.takeProfits")}{" "}
           <button
             type="button"
@@ -267,15 +267,15 @@ function EarningsRow({
 }) {
   return (
     <tr className={strong ? "font-medium" : undefined}>
-      <td className="border-b border-card-border/60 py-1.5 pr-2 text-[13px] text-foreground">
+      <td className="border-b border-card-border/60 py-1.5 pr-2 text-body-sm text-foreground">
         {label}
         <Tooltip content={tooltip} label={aboutLabel} />
       </td>
-      <td className="hidden border-b border-card-border/60 px-2 py-1.5 text-xs text-muted md:table-cell">
+      <td className="hidden border-b border-card-border/60 px-2 py-1.5 text-body-sm text-muted md:table-cell">
         {detail}
       </td>
       <td
-        className={`whitespace-nowrap border-b border-card-border/60 py-1.5 pl-2 text-right font-mono text-[13px] tabular-nums ${tone ?? "text-foreground"}`}
+        className={`whitespace-nowrap border-b border-card-border/60 py-1.5 pl-2 text-right font-mono text-body-sm tabular-nums ${tone ?? "text-foreground"}`}
       >
         {value}
       </td>
@@ -353,16 +353,16 @@ export function ActiveCharterPanel({
     return (
       <div className="space-y-4">
         {!data.privateBankingEnabled ? (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Banking is paused, so this bank cannot accept new deposits or loans.
           </p>
         ) : (
           <>
             {capitalStanding !== "adequate" && (
-              <p className="text-xs text-muted">This bank has a capital shortfall.</p>
+              <p className="text-body-sm text-muted">This bank has a capital shortfall.</p>
             )}
             {data.rates && depositTaking && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 This bank pays {formatRatePercent(data.rates.depositRatePercent)} on deposits and
                 charges {formatRatePercent(data.rates.lendingRatePercent)} on loans.
               </p>
@@ -436,11 +436,11 @@ export function ActiveCharterPanel({
             onClick={() => setTab(tabItem.id)}
             aria-current={tab === tabItem.id ? "page" : undefined}
             title={tabItem.hint}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-[13px] ${pillClass(tab === tabItem.id)}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-body-sm ${pillClass(tab === tabItem.id)}`}
           >
             {tabItem.label}
             {tabItem.badge != null && (
-              <span className="font-mono text-[11px] tabular-nums text-warning">
+              <span className="font-mono text-body-sm tabular-nums text-warning">
                 {tabItem.badge}
               </span>
             )}
@@ -678,7 +678,7 @@ export function ActiveCharterPanel({
       {tab === "charter" && (
         <div className="space-y-6">
           <BankPanel kind="reference" title="Charter">
-            <p className="py-1.5 text-xs text-muted">
+            <p className="py-1.5 text-body-sm text-muted">
               {charterLabel(charter.type)} charter in {charter.currency}, granted on turn{" "}
               {charter.charteredTurn}. Posted capital{" "}
               <span className="font-mono text-foreground">

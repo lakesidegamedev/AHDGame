@@ -110,7 +110,7 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
   }
   if (!data) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-8 text-sm text-muted text-center">
+      <div className="rounded-xl border border-card-border bg-card p-8 text-body text-muted text-center">
         Unable to load endorsements.
       </div>
     );
@@ -122,21 +122,21 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-card-border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted">
+        <div className="text-body text-muted">
           Office AP{" "}
           <span className="font-semibold text-foreground">{data.gubernatorialActions}</span>/
           {GUBERNATORIAL_ACTION_CAP} · Cost{" "}
           <span className="font-semibold text-foreground">{data.actionCost}</span> per endorsement
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="exec-endorse-state" className="text-xs text-muted">
+          <label htmlFor="exec-endorse-state" className="text-body-sm text-muted">
             Filter by state
           </label>
           <select
             id="exec-endorse-state"
             value={selectedState}
             onChange={(e) => setSelectedState(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
           >
             {data.states.length === 0 && <option value="">— No states —</option>}
             {data.states.map((s) => (
@@ -149,15 +149,15 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold mb-1">Active candidate endorsements</h2>
-        <p className="mb-2 text-xs text-muted">
+        <h2 className="text-body font-semibold mb-1">Active candidate endorsements</h2>
+        <p className="mb-2 text-body-sm text-muted">
           Endorsements you have given to election candidates. Endorsements an international
           organisation gives your country are joint statements, listed on that organisation&apos;s
           page.
         </p>
-        <InlineError error={error} className="text-sm text-error mb-2" />
+        <InlineError error={error} className="text-body text-error mb-2" />
         {data.activeEndorsements.length === 0 ? (
-          <p className="text-sm text-muted">You have not endorsed any candidates.</p>
+          <p className="text-body text-muted">You have not endorsed any candidates.</p>
         ) : (
           <ul className="space-y-2">
             {data.activeEndorsements.map((e) => (
@@ -167,12 +167,12 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
               >
                 <div className="min-w-0">
                   <div className="font-medium">{e.candidateName}</div>
-                  <div className="text-xs text-muted">State: {e.targetStateId}</div>
+                  <div className="text-body-sm text-muted">State: {e.targetStateId}</div>
                 </div>
                 <button
                   onClick={() => withdraw(e._id)}
                   disabled={!data.viewerIsLeader || withdrawingId === e._id}
-                  className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted hover:bg-background/60 disabled:opacity-50"
+                  className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm text-muted hover:bg-background/60 disabled:opacity-50"
                 >
                   {withdrawingId === e._id ? "Withdrawing…" : "Withdraw"}
                 </button>
@@ -183,11 +183,11 @@ export function WhiteHouseEndorsementsTab({ countryId }: Props) {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold mb-2">
+        <h2 className="text-body font-semibold mb-2">
           Eligible races{data.selectedState ? ` in ${data.selectedState}` : ""}
         </h2>
         {!canEndorse && data.viewerIsLeader && (
-          <p className="mb-2 text-xs text-warning">
+          <p className="mb-2 text-body-sm text-warning">
             Insufficient office AP — endorsements require {data.actionCost} AP.
           </p>
         )}

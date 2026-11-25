@@ -120,9 +120,9 @@ export default function FederationDecisionPanel({
   return (
     <Container className={embedded ? undefined : "min-h-screen bg-background p-6 text-foreground"}>
       <div className="mx-auto max-w-3xl space-y-5">
-        {!embedded && <h1 className="text-2xl font-bold">{legislatureName}</h1>}
+        {!embedded && <h1 className="text-heading font-bold">{legislatureName}</h1>}
         <section className="rounded-lg border border-border bg-card p-5 space-y-4">
-          <h2 className="text-xl font-semibold">Federation settlement</h2>
+          <h2 className="text-heading font-semibold">Federation settlement</h2>
           {!decision && !error && <p>Loading the decision…</p>}
           {decision?.reason && <p>{decision.reason}</p>}
           {decision && !decision.available && decision.availableFromYear && (
@@ -144,7 +144,7 @@ export default function FederationDecisionPanel({
               const basis = key === "assets" ? terms.assetBasis : terms.debtBasis;
               const shares = key === "assets" ? terms.assetSharesBps : terms.debtSharesBps;
               return (
-                <div key={key} className="text-sm">
+                <div key={key} className="text-body">
                   <p className="font-semibold">{t(key)}</p>
                   {basis === "population" ? (
                     <p>{t("population")}</p>
@@ -167,7 +167,7 @@ export default function FederationDecisionPanel({
               );
             })}
           {decision?.proposal?.consents?.map((consent) => (
-            <div key={consent.entityId} className="rounded border border-border p-3 text-sm">
+            <div key={consent.entityId} className="rounded border border-border p-3 text-body">
               <p className="font-semibold">
                 {t("consentStatus", {
                   entity: consent.entityId,
@@ -198,7 +198,7 @@ export default function FederationDecisionPanel({
                   </select>
                   {mode === "negotiated" && (
                     <>
-                      <p className="text-sm text-muted">{t("totalRequired")}</p>
+                      <p className="text-body text-muted">{t("totalRequired")}</p>
                       {(decision.participants ?? []).map((entityId) => (
                         <label key={entityId} className="flex items-center justify-between gap-3">
                           <span>{t("percentLabel", { entity: entityId })}</span>
@@ -227,7 +227,7 @@ export default function FederationDecisionPanel({
               ))}
               {(decision.sharedAssets ?? []).map((asset, index) => (
                 <label key={asset.assetId} className="block space-y-1">
-                  <span className="block text-sm">
+                  <span className="block text-body">
                     {t("custodian", {
                       asset: t(`assetKinds.${asset.kind}`),
                       number: index + 1,

@@ -53,9 +53,9 @@ export function CabinetVoteRow({
     <tr className="border-t border-card-border/50 first:border-t-0">
       <td className="px-4 py-2.5">
         <p className="font-medium text-foreground">{nomination.nomineeCharacterName}</p>
-        <p className="text-[11px] text-muted">{positionName}</p>
+        <p className="text-body-sm text-muted">{positionName}</p>
       </td>
-      <td className="px-3 py-2.5 text-xs text-muted tabular-nums">
+      <td className="px-3 py-2.5 text-body-sm text-muted tabular-nums">
         {nomination.votesFor} for · {nomination.votesAgainst} against · {nomination.votesAbstain}{" "}
         abstain
         {nomination.votingEndsAt && <span className="ml-1.5 font-mono">{countdown}</span>}
@@ -68,7 +68,7 @@ export function CabinetVoteRow({
               key={v}
               onClick={() => onVote(nomination.id, v)}
               disabled={votingId !== null}
-              className={`min-h-[36px] min-w-[64px] touch-manipulation rounded-md border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+              className={`min-h-[36px] min-w-[64px] touch-manipulation rounded-md border px-3 py-1 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                 nomination.myVote === v
                   ? v === "for"
                     ? "border-success/50 bg-success/20 text-success"

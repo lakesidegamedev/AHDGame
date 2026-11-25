@@ -203,7 +203,7 @@ export function ManagePrivateShareholdersPanel({
                       setInvitedCharacterId("");
                       setInvitedCharacterName("");
                     }}
-                    className="text-body-xs text-muted-foreground hover:text-foreground"
+                    className="text-body-sm text-muted-foreground hover:text-foreground"
                   >
                     Change
                   </button>
@@ -253,7 +253,7 @@ export function ManagePrivateShareholdersPanel({
       )}
 
       <div className="space-y-2">
-        <h3 className="text-body-sm font-medium text-muted-foreground">
+        <h3 className="text-body-lg font-medium text-muted-foreground">
           {isCeo ? "Pending invitations" : "Your pending invitations"}
         </h3>
         {loading ? (
@@ -297,7 +297,7 @@ export function ManagePrivateShareholdersPanel({
                       </>
                     )}
                   </p>
-                  <p className="text-body-xs text-muted-foreground">
+                  <p className="text-body-sm text-muted-foreground">
                     Issued by {inv.issuedByCharacterName} · expires{" "}
                     {/* wall-clock by design: private share invites have real-time validity */}
                     <LocalTime value={inv.expiresAt} />
@@ -309,7 +309,7 @@ export function ManagePrivateShareholdersPanel({
                       type="button"
                       onClick={() => inviteAction(inv.id, "cancel")}
                       disabled={submitting}
-                      className="rounded-md border border-border px-2 py-1 text-body-xs hover:bg-muted disabled:opacity-50"
+                      className="rounded-md border border-border px-2 py-1 text-body-sm hover:bg-muted disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -319,7 +319,7 @@ export function ManagePrivateShareholdersPanel({
                         type="button"
                         onClick={() => inviteAction(inv.id, "accept")}
                         disabled={submitting}
-                        className="rounded-md bg-primary px-3 py-1 text-body-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                        className="rounded-md bg-primary px-3 py-1 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         Accept & pay
                       </button>
@@ -327,7 +327,7 @@ export function ManagePrivateShareholdersPanel({
                         type="button"
                         onClick={() => inviteAction(inv.id, "decline")}
                         disabled={submitting}
-                        className="rounded-md border border-border px-2 py-1 text-body-xs hover:bg-muted disabled:opacity-50"
+                        className="rounded-md border border-border px-2 py-1 text-body-sm hover:bg-muted disabled:opacity-50"
                       >
                         Decline
                       </button>

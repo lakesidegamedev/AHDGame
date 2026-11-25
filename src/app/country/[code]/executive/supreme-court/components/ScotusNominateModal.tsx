@@ -67,19 +67,19 @@ export function ScotusNominateModal({
 
   return (
     <Modal open={open} title="Nominate a justice" onClose={onCancel}>
-      <p className="text-sm text-muted mb-4">
+      <p className="text-body text-muted mb-4">
         Nominees require Senate confirmation. Nominate an existing player character, or request a
         generated NPP &quot;legal scholar&quot; of a party you choose.
       </p>
 
-      <label htmlFor="scotus-seat" className="block text-sm font-medium mb-2">
+      <label htmlFor="scotus-seat" className="block text-body font-medium mb-2">
         Seat
       </label>
       <select
         id="scotus-seat"
         value={selectedSeatNumber ?? ""}
         onChange={(e) => onSeatChange(Number(e.target.value))}
-        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
       >
         <option value="">Select vacant seat</option>
         {vacantSeats.map((s) => (
@@ -96,13 +96,13 @@ export function ScotusNominateModal({
       </select>
 
       <fieldset className="mb-4">
-        <legend className="block text-sm font-medium mb-2">Nominee</legend>
+        <legend className="block text-body font-medium mb-2">Nominee</legend>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => onModeChange("character")}
             aria-pressed={mode === "character"}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
               mode === "character"
                 ? "border-primary/50 bg-primary/10 text-primary"
                 : "border-card-border bg-card text-muted hover:bg-card-elevated"
@@ -114,7 +114,7 @@ export function ScotusNominateModal({
             type="button"
             onClick={() => onModeChange("npp")}
             aria-pressed={mode === "npp"}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg border px-3 py-2 text-body font-medium transition-colors ${
               mode === "npp"
                 ? "border-primary/50 bg-primary/10 text-primary"
                 : "border-card-border bg-card text-muted hover:bg-card-elevated"
@@ -127,14 +127,14 @@ export function ScotusNominateModal({
 
       {mode === "character" ? (
         <>
-          <label htmlFor="scotus-nominee-char" className="block text-sm font-medium mb-2">
+          <label htmlFor="scotus-nominee-char" className="block text-body font-medium mb-2">
             Character
           </label>
           <select
             id="scotus-nominee-char"
             value={selectedCharId}
             onChange={(e) => onCharChange(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
           >
             <option value="">Select character</option>
             {characters.map((c) => (
@@ -146,14 +146,14 @@ export function ScotusNominateModal({
         </>
       ) : (
         <>
-          <label htmlFor="scotus-nominee-party" className="block text-sm font-medium mb-2">
+          <label htmlFor="scotus-nominee-party" className="block text-body font-medium mb-2">
             Party affiliation
           </label>
           <select
             id="scotus-nominee-party"
             value={selectedPartyId}
             onChange={(e) => onPartyChange(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
           >
             <option value="">Select party</option>
             {parties.map((p) => (
@@ -162,7 +162,7 @@ export function ScotusNominateModal({
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted mb-4">
+          <p className="text-body-sm text-muted mb-4">
             The generated candidate&apos;s personal positions come from this party&apos;s platform
             plus normal random variance, the same NPP-generation machinery used elsewhere. Their
             ideology is computed from their own generated positions, not yours.
@@ -173,7 +173,7 @@ export function ScotusNominateModal({
       {message && (
         <p
           role="alert"
-          className={`text-sm mb-4 ${message.startsWith("✓") ? "text-success" : "text-error"}`}
+          className={`text-body mb-4 ${message.startsWith("✓") ? "text-success" : "text-error"}`}
         >
           {message}
         </p>
@@ -181,14 +181,14 @@ export function ScotusNominateModal({
       <div className="flex justify-end gap-3">
         <button
           onClick={onCancel}
-          className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated"
+          className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated"
         >
           Cancel
         </button>
         <button
           onClick={onSubmit}
           disabled={submitting || !canSubmit}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {submitting ? "Nominating…" : "Nominate"}
         </button>

@@ -33,7 +33,7 @@ export function PolicyDisplay({
     <div>
       <div className="mb-2 flex items-center justify-between">
         <span className="font-medium">{label}</span>
-        <PositionLabel value={value} axis={axis ?? "economic"} className="text-sm font-medium" />
+        <PositionLabel value={value} axis={axis ?? "economic"} className="text-body font-medium" />
       </div>
       <div
         className={`relative ${trackHeight} rounded-full ${
@@ -62,7 +62,7 @@ export function PolicyDisplay({
           }}
         />
       </div>
-      <div className="mt-1 flex justify-between text-xs text-muted">
+      <div className="mt-1 flex justify-between text-body-sm text-muted">
         <span className={isSocial ? "text-teal-400/90" : "text-blue-400/90"}>{ticks.negative}</span>
         {showCenterLabel ? <span className="text-muted/80">{ticks.center}</span> : null}
         <span className={isSocial ? "text-amber-400/90" : "text-red-400/90"}>{ticks.positive}</span>

@@ -80,7 +80,7 @@ export function CountryStatement({
           title="Gross revenue less the costs and tax of this country's own plants."
         />
       </StatementTable>
-      <p className="pt-2 text-xs text-muted">
+      <p className="pt-2 text-body-sm text-muted">
         Corporation-wide costs (marketing, logistics, R&amp;D, CEO pay, pensions and bond interest)
         belong to no one country, so they appear only under All.
       </p>

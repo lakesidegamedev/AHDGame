@@ -191,13 +191,13 @@ export function IpBansTab() {
   };
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading...</p>;
+    return <p className="text-body text-muted">Loading...</p>;
   }
 
   return (
     <div className="space-y-6">
       {/* Read-only collision check status + link */}
-      <div className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm">
+      <div className="rounded-lg border border-card-border bg-card px-4 py-2 text-body">
         IP collision check:{" "}
         <span
           className="font-semibold"
@@ -213,62 +213,62 @@ export function IpBansTab() {
       {/* Forms */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-card-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold">Add IP ban</h3>
+          <h3 className="mb-3 text-body-lg font-semibold">Add IP ban</h3>
           <input
             type="text"
             placeholder="IP address"
             value={banIp}
             onChange={(e) => setBanIp(e.target.value)}
-            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-sm"
+            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-body"
           />
           <textarea
             placeholder="Note (admin-facing)"
             value={banNote}
             onChange={(e) => setBanNote(e.target.value)}
-            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-sm"
+            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-body"
             rows={2}
           />
           <button
             type="button"
             onClick={submitBan}
             disabled={banPosting || !banIp || !banNote}
-            className="rounded bg-error px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded bg-error px-3 py-1 text-body font-medium text-white disabled:opacity-50"
           >
             {banPosting ? "Adding..." : "Ban IP"}
           </button>
         </div>
 
         <div className="rounded-xl border border-card-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold">Add IP allowance</h3>
+          <h3 className="mb-3 text-body-lg font-semibold">Add IP allowance</h3>
           <input
             type="text"
             placeholder="IP address"
             value={allowIp}
             onChange={(e) => setAllowIp(e.target.value)}
-            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-sm"
+            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-body"
           />
           <textarea
             placeholder="Reason (admin-facing)"
             value={allowNote}
             onChange={(e) => setAllowNote(e.target.value)}
-            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-sm"
+            className="mb-2 w-full rounded border border-card-border bg-card px-2 py-1 text-body"
             rows={2}
           />
-          <label className="mb-2 block text-xs text-muted">
+          <label className="mb-2 block text-body-sm text-muted">
             Max accounts
             <input
               type="number"
               min={1}
               value={allowMax}
               onChange={(e) => setAllowMax(parseInt(e.target.value, 10) || 1)}
-              className="ml-2 w-20 rounded border border-card-border bg-card px-2 py-1 text-sm"
+              className="ml-2 w-20 rounded border border-card-border bg-card px-2 py-1 text-body"
             />
           </label>
           <button
             type="button"
             onClick={submitAllowance}
             disabled={allowPosting || !allowIp || !allowNote || allowMax < 1}
-            className="rounded bg-success px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded bg-success px-3 py-1 text-body font-medium text-white disabled:opacity-50"
           >
             {allowPosting ? "Adding..." : "Allow IP"}
           </button>
@@ -277,15 +277,15 @@ export function IpBansTab() {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-2 text-body-sm text-error">
           {error}
         </div>
       )}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/5 text-xs uppercase tracking-wide text-muted">
+        <table className="w-full text-body">
+          <thead className="bg-muted/5 text-body-sm uppercase tracking-wide text-muted">
             <tr>
               <th className="px-3 py-2 text-left">IP</th>
               <th className="px-3 py-2 text-left">Mode</th>
@@ -314,7 +314,7 @@ export function IpBansTab() {
                   <td className="px-3 py-2 font-mono break-all">{row.ip}</td>
                   <td className="px-3 py-2">
                     <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                      className="rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase"
                       style={{
                         background: isAllowance
                           ? "rgba(34, 197, 94, 0.15)"
@@ -330,7 +330,7 @@ export function IpBansTab() {
                   </td>
                   <td className="px-3 py-2">{row.note}</td>
                   <td className="px-3 py-2">{row.bannedByAdminUsername}</td>
-                  <td className="px-3 py-2 text-xs text-muted">
+                  <td className="px-3 py-2 text-body-sm text-muted">
                     <LocalTime value={row.bannedAt} />
                   </td>
                   <td className="px-3 py-2">
@@ -339,7 +339,7 @@ export function IpBansTab() {
                         <button
                           type="button"
                           onClick={() => convertToAllowance(row)}
-                          className="rounded border border-card-border px-2 py-0.5 text-xs"
+                          className="rounded border border-card-border px-2 py-0.5 text-body-sm"
                         >
                           Convert to allowance
                         </button>
@@ -349,14 +349,14 @@ export function IpBansTab() {
                           <button
                             type="button"
                             onClick={() => editCap(row)}
-                            className="rounded border border-card-border px-2 py-0.5 text-xs"
+                            className="rounded border border-card-border px-2 py-0.5 text-body-sm"
                           >
                             Edit cap
                           </button>
                           <button
                             type="button"
                             onClick={() => revokeAllowance(row)}
-                            className="rounded border border-card-border px-2 py-0.5 text-xs"
+                            className="rounded border border-card-border px-2 py-0.5 text-body-sm"
                           >
                             Revoke allowance
                           </button>
@@ -365,7 +365,7 @@ export function IpBansTab() {
                       <button
                         type="button"
                         onClick={() => remove(row)}
-                        className="rounded border border-error/50 px-2 py-0.5 text-xs text-error"
+                        className="rounded border border-error/50 px-2 py-0.5 text-body-sm text-error"
                       >
                         Delete
                       </button>

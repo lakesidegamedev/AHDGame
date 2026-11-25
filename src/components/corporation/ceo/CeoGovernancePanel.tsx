@@ -37,7 +37,7 @@ import { sortByRegionLabel } from "@/lib/regionOptions";
 const ADDRESS_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
 const selectClass =
-  "h-7 min-w-0 rounded-md border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
+  "h-7 min-w-0 rounded-md border border-card-border bg-background px-1.5 text-body-sm text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
 
 interface CeoGovernancePanelProps {
   corporation: CorporationDetail;
@@ -477,7 +477,7 @@ export default function CeoGovernancePanel({
             </SmallButton>
           </div>
           {chosenStructure && (
-            <p className="max-w-md text-xs text-muted">{chosenStructure.description}</p>
+            <p className="max-w-md text-body-sm text-muted">{chosenStructure.description}</p>
           )}
           {chosenStructure && (
             <dl className="max-w-md">
@@ -509,7 +509,7 @@ export default function CeoGovernancePanel({
         actionLabel={pendingHeadquartersId ? "Choose headquarters" : "Relocate"}
       >
         <div className="space-y-1.5">
-          <p className="text-xs text-warning">
+          <p className="text-body-sm text-warning">
             You stay CEO only if your character already lives in the destination region.
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -581,7 +581,7 @@ export default function CeoGovernancePanel({
           )}
           {relocateTarget &&
             (showRelocateConfirm ? (
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-body-sm">
                 <span className="text-foreground">
                   {pendingHeadquartersId
                     ? `Choose ${destinationName} as headquarters?`
@@ -646,7 +646,7 @@ export default function CeoGovernancePanel({
       >
         <h3
           id="ceo-leave-or-close"
-          className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-error"
+          className="pb-1 text-body-lg font-semibold uppercase tracking-[0.1em] text-error"
         >
           Leave or close
         </h3>
@@ -659,7 +659,7 @@ export default function CeoGovernancePanel({
           <div className="flex flex-wrap items-center gap-1.5">
             {showResignConfirm ? (
               <>
-                <span className="text-xs text-foreground">Step down now?</span>
+                <span className="text-body-sm text-foreground">Step down now?</span>
                 <SmallButton tone="danger" onClick={handleResign} disabled={resignLoading}>
                   {resignLoading ? "Resigning" : "Yes, resign"}
                 </SmallButton>
@@ -693,7 +693,7 @@ export default function CeoGovernancePanel({
           tone="danger"
         >
           <div className="space-y-2">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Sectors are wound down, held bonds are sold to the bond market and holdings in other
               corporations are sold at market. The proceeds go to every shareholder by share count:
               corporate holders to their treasury, the public float to the central bank reserve,
@@ -709,7 +709,7 @@ export default function CeoGovernancePanel({
             ) : (
               <div className="space-y-2">
                 {dissolvePreviewLoading && (
-                  <p className="text-xs text-muted">Loading the payout and market preview.</p>
+                  <p className="text-body-sm text-muted">Loading the payout and market preview.</p>
                 )}
                 <InlineStatus message={dissolvePreviewError} tone="error" />
                 {dissolvePreview && !dissolvePreviewLoading && (
@@ -723,7 +723,7 @@ export default function CeoGovernancePanel({
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs text-foreground">
+                  <span className="text-body-sm text-foreground">
                     {corporation.isPrivate
                       ? settlesBonds
                         ? `Pay off the bondholders and permanently dissolve ${corporation.name}? This cannot be undone.`
@@ -750,7 +750,9 @@ export default function CeoGovernancePanel({
                     Cancel
                   </SmallButton>
                 </div>
-                {dissolveBlockReason && <p className="text-xs text-error">{dissolveBlockReason}</p>}
+                {dissolveBlockReason && (
+                  <p className="text-body-sm text-error">{dissolveBlockReason}</p>
+                )}
               </div>
             )}
             <InlineStatus message={actionError} tone="error" />
@@ -803,7 +805,7 @@ function DissolvePreview({
     <div className="space-y-2">
       {bonds && (
         <div className="max-w-md space-y-1 rounded-md border border-warning/40 bg-warning/5 p-2">
-          <p className="text-xs font-semibold text-foreground">
+          <p className="text-body-sm font-semibold text-foreground">
             {bonds.bondCount} bond{bonds.bondCount === 1 ? " is" : "s are"} outstanding. Bondholders
             are paid first.
           </p>
@@ -820,7 +822,7 @@ function DissolvePreview({
               hint="what is left after the bondholders"
             />
           </dl>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             The bonds are paid off from the same pool as below, each bondholder in proportion to
             what they are owed, up to the full amount. Dissolving cannot be undone.
           </p>
@@ -846,7 +848,7 @@ function DissolvePreview({
         )}
       </dl>
       {parts && (
-        <p className="max-w-md text-xs text-muted">
+        <p className="max-w-md text-body-sm text-muted">
           The pool is not the book value. It is cash ({formatFull(parts.cash, corpCode)}), held
           bonds sold to the bond market ({formatFull(parts.heldBonds, corpCode)}) and{" "}
           {Math.round(preview.sectorSalvageFraction * 100)}% of the sectors&apos; book value (
@@ -911,12 +913,12 @@ function DissolvePreview({
         </div>
       )}
       <div>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Commodity prices if supply and demand cleared at once (the next turn also applies drift,
           regional blending, pegs and budgets):
         </p>
         {preview.commodityGlobalDeltas.length === 0 ? (
-          <p className="text-xs text-muted">No meaningful effect on global prices.</p>
+          <p className="text-body-sm text-muted">No meaningful effect on global prices.</p>
         ) : (
           <div className="max-h-40 max-w-sm overflow-y-auto">
             <table className="w-full border-collapse">

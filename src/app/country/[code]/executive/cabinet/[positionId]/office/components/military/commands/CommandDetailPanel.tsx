@@ -110,7 +110,7 @@ export function CommandDetailPanel({
       sub={COMMAND_TYPES[c.type].label}
       right={<Badge tone="gov">{COMMAND_TYPES[c.type].short}</Badge>}
     >
-      <p className="mb-2 text-[12px] italic leading-relaxed text-muted">{c.role}</p>
+      <p className="mb-2 text-body-sm italic leading-relaxed text-muted">{c.role}</p>
       <TypeBonuses type={c.type} className="mb-3" />
 
       {/* overview */}
@@ -118,7 +118,7 @@ export function CommandDetailPanel({
         {overview.map((o) => (
           <div key={o.label}>
             <div className="dossier-label text-muted">{o.label}</div>
-            <div className={`text-[13px] font-semibold ${o.cls ?? "text-foreground"}`}>
+            <div className={`text-body-sm font-semibold ${o.cls ?? "text-foreground"}`}>
               {o.value}
             </div>
           </div>
@@ -140,7 +140,7 @@ export function CommandDetailPanel({
                 posture: e.target.value as CommandPosture,
               })
             }
-            className="mb-1.5 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-[13px] text-foreground"
+            className="mb-1.5 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground"
           >
             {POSTURES.map((p) => (
               <option key={p} value={p}>
@@ -170,7 +170,7 @@ export function CommandDetailPanel({
             return (
               <div key={id} className="rounded-lg border border-card-border bg-card p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-body-sm font-semibold text-foreground">
                     {cm.name}
                   </span>
                   {c.commandingGeneralId === id ? (
@@ -181,7 +181,7 @@ export function CommandDetailPanel({
                           a CG reading this panel is one click from their work. */}
                       <a
                         href={`/country/${countryCode}/general/commands`}
-                        className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted underline decoration-dotted underline-offset-2 hover:text-gov-soft"
+                        className="shrink-0 text-body-sm font-semibold uppercase tracking-wider text-muted underline decoration-dotted underline-offset-2 hover:text-gov-soft"
                         title={`${cm.name}'s command page — post generals to conflicts`}
                       >
                         Command page →
@@ -212,14 +212,16 @@ export function CommandDetailPanel({
                         }
                         aria-label={`Make ${cm.name} commanding general`}
                         title="Make commanding general"
-                        className="shrink-0 rounded-md border border-card-border px-1.5 py-0.5 text-[10px] font-semibold text-muted hover:text-foreground"
+                        className="shrink-0 rounded-md border border-card-border px-1.5 py-0.5 text-body-sm font-semibold text-muted hover:text-foreground"
                       >
                         MAKE CG
                       </button>
                     ))
                   )}
                   <span className="dossier-label text-muted">fit</span>
-                  <span className={`tabular text-base font-bold ${INTENT_TEXT[effIntent(cm.fit)]}`}>
+                  <span
+                    className={`tabular text-body-lg font-bold ${INTENT_TEXT[effIntent(cm.fit)]}`}
+                  >
                     {cm.fit}
                   </span>
                   {canWrite && (
@@ -252,7 +254,7 @@ export function CommandDetailPanel({
                       aria-label={`Post ${cm.name} to a conflict`}
                       value={postingOf(id)?.theaterId ?? ""}
                       onChange={(e) => onSetPosting(id, e.target.value || null)}
-                      className="min-w-0 flex-1 rounded-lg border border-card-border bg-card px-2 py-1.5 text-[12px] text-foreground"
+                      className="min-w-0 flex-1 rounded-lg border border-card-border bg-card px-2 py-1.5 text-body-sm text-foreground"
                     >
                       <option value="">Not posted to a conflict</option>
                       {conflicts.map((cf) => (
@@ -267,7 +269,7 @@ export function CommandDetailPanel({
                         onClick={() => onSetInCharge(id)}
                         aria-label={`Put ${cm.name} in charge of ${theaterName(postingOf(id)!.theaterId)}`}
                         title="Theater Commander — the only officer who may declare offensives at this conflict, including instead of you"
-                        className="shrink-0 rounded-md border border-card-border px-2 py-1 text-[10px] font-semibold text-muted hover:text-foreground"
+                        className="shrink-0 rounded-md border border-card-border px-2 py-1 text-body-sm font-semibold text-muted hover:text-foreground"
                       >
                         MAKE TC
                       </button>
@@ -286,7 +288,7 @@ export function CommandDetailPanel({
               dispatch({ type: "ADD_COMMANDER", commandId: c.id, commanderId: e.target.value })
             }
             aria-label="Add commander"
-            className="mt-2 w-full rounded-lg border border-dashed border-card-border bg-card px-3 py-2 text-[12px] text-muted"
+            className="mt-2 w-full rounded-lg border border-dashed border-card-border bg-card px-3 py-2 text-body-sm text-muted"
           >
             <option value="">＋ Add commander…</option>
             {addOptions.map((co) => (
@@ -297,7 +299,7 @@ export function CommandDetailPanel({
           </select>
         )}
         {canWrite && commanders.length === 0 && (
-          <p className="mt-2 text-[11px] text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             No commissioned generals in this country yet — characters commission a general from
             their profile.
           </p>
@@ -312,7 +314,7 @@ export function CommandDetailPanel({
             <button
               type="button"
               onClick={onAssignRegions}
-              className="rounded-md border border-card-border px-2.5 py-1 text-[10px] font-semibold text-muted hover:text-foreground"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm font-semibold text-muted hover:text-foreground"
             >
               ASSIGN
             </button>
@@ -329,7 +331,7 @@ export function CommandDetailPanel({
                 key={rid}
                 className="flex items-center gap-2 rounded-md border border-card-border bg-card px-2.5 py-1.5"
               >
-                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                <span className="min-w-0 flex-1 truncate text-body-sm text-foreground">
                   {r.name}
                 </span>
                 <span className="dossier-label hidden shrink-0 text-muted sm:inline">
@@ -355,7 +357,7 @@ export function CommandDetailPanel({
             );
           })}
           {c.regionIds.length === 0 && (
-            <div className="rounded-md border border-dashed border-card-border px-2.5 py-2 text-center text-[11px] text-muted">
+            <div className="rounded-md border border-dashed border-card-border px-2.5 py-2 text-center text-body-sm text-muted">
               Global scope · no map regions
             </div>
           )}
@@ -366,7 +368,7 @@ export function CommandDetailPanel({
           which meant the create dialog was the one place it could ever be read.
         */}
         {needsLogisticsPairing(c.type, c.regionIds) && (
-          <p className="mt-1.5 text-[11px] text-warning">⚠ {LOGISTICS_PAIRING_ADVICE}</p>
+          <p className="mt-1.5 text-body-sm text-warning">⚠ {LOGISTICS_PAIRING_ADVICE}</p>
         )}
       </div>
 
@@ -375,7 +377,7 @@ export function CommandDetailPanel({
         <div className="mb-1.5 flex items-center justify-between">
           <span className="dossier-label text-muted">Assigned forces</span>
           <span
-            className={`tabular text-[11px] font-semibold ${over ? "text-warning" : "text-muted"}`}
+            className={`tabular text-body-sm font-semibold ${over ? "text-warning" : "text-muted"}`}
           >
             load {load}/{c.cap}
           </span>
@@ -392,7 +394,7 @@ export function CommandDetailPanel({
             const u = unitsById[uid];
             if (!u) return null;
             return (
-              <div key={uid} className="flex items-center gap-2 text-[12px]">
+              <div key={uid} className="flex items-center gap-2 text-body-sm">
                 <span className="min-w-0 flex-1 truncate text-foreground">{u.name}</span>
                 <span className="dossier-label shrink-0 text-muted">load {unitLoad(u)}</span>
                 {canWrite && (
@@ -411,7 +413,7 @@ export function CommandDetailPanel({
             );
           })}
           {c.unitIds.length === 0 && (
-            <div className="text-[11px] text-muted">No units assigned</div>
+            <div className="text-body-sm text-muted">No units assigned</div>
           )}
         </div>
         {canWrite && pool.length > 0 && (
@@ -422,7 +424,7 @@ export function CommandDetailPanel({
               dispatch({ type: "ASSIGN_UNIT", commandId: c.id, unitId: e.target.value })
             }
             aria-label="Assign unit"
-            className="mt-2 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-[12px] text-foreground"
+            className="mt-2 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground"
           >
             <option value="">＋ Assign unit…</option>
             {pool.map((u) => (
@@ -435,7 +437,7 @@ export function CommandDetailPanel({
         {over && (
           <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-2.5">
             <div className="dossier-label mb-1 text-warning">⚠ Over-capacity penalties</div>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-warning">
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm text-warning">
               {overCapacityPenalties(c, unitsById).map((p) => (
                 <span key={p}>{p}</span>
               ))}

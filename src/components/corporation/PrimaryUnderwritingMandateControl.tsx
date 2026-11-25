@@ -68,15 +68,15 @@ export function PrimaryUnderwritingMandateControl({ corpId }: { corpId: string }
       className="rounded-lg border border-border bg-surface p-4"
       aria-label="Primary underwriting"
     >
-      <div className="mb-2 text-sm font-semibold">Primary market underwriting</div>
-      <p className="mb-3 text-xs text-muted">
+      <div className="mb-2 text-body font-semibold">Primary market underwriting</div>
+      <p className="mb-3 text-body-sm text-muted">
         Select a same-currency investment bank for future share and bond placements. The bank fee
         applies only to proceeds the market actually funds.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <select
           aria-label="Underwriting bank"
-          className="min-h-9 min-w-56 rounded-md border border-border bg-background px-2 text-sm"
+          className="min-h-9 min-w-56 rounded-md border border-border bg-background px-2 text-body"
           value={selected}
           disabled={payload.banks.length === 0 && !payload.selectedBankId}
           onChange={(event) => setSelected(event.target.value)}
@@ -90,20 +90,20 @@ export function PrimaryUnderwritingMandateControl({ corpId }: { corpId: string }
         </select>
         <button
           type="button"
-          className="min-h-9 rounded-md border border-border px-3 text-sm disabled:opacity-50"
+          className="min-h-9 rounded-md border border-border px-3 text-body disabled:opacity-50"
           disabled={busy || selected === (payload.selectedBankId ?? "")}
           onClick={() => void save()}
         >
           {busy ? "Saving" : "Save mandate"}
         </button>
         {message && (
-          <span role="status" className="text-xs text-muted">
+          <span role="status" className="text-body-sm text-muted">
             {message}
           </span>
         )}
       </div>
       {payload.banks.length === 0 && (
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           No investment or universal bank is chartered in this currency yet. Retail banks do not
           underwrite placements, and shares and bonds still sell to the market without a mandate.
           For a corporate loan, use private bank credit on the{" "}

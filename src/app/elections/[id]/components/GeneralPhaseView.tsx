@@ -284,14 +284,14 @@ export function GeneralPhaseView({
             rather than left heading a section with no tally under it. */}
         {showCollegeSummary && (
           <div>
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-heading font-semibold">
               {localIsEnded
                 ? "Final election results"
                 : isProjectedGeneral
                   ? "General election — Live projection"
                   : "General election — Live tally"}
             </h2>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               {isProjectedGeneral
                 ? "Seats projected by demographic reach and regional support each turn."
                 : "Votes allocated by demographic reach each turn. Final 4 turns = 25%; earlier turns = 75%."}

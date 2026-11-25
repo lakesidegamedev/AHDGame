@@ -25,21 +25,21 @@ export function FeedbackSuccess({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <p className="text-lg font-medium text-foreground">Thank you!</p>
-      <p className="mt-1 text-sm text-muted">
+      <p className="text-heading font-medium text-foreground">Thank you!</p>
+      <p className="mt-1 text-body text-muted">
         {variant === "bug"
           ? "Your bug report has been submitted. Bug reports are private to the team and have no public list; we message you if we need more detail."
           : "Your suggestion has been submitted."}
       </p>
       {issueNumber != null && (
         <>
-          <p className="mt-3 font-mono text-sm text-primary">
+          <p className="mt-3 font-mono text-body text-primary">
             {variant === "bug" ? `#${issueNumber}` : `S#${issueNumber}`}
           </p>
           {variant === "suggestion" ? (
             <Link
               href={`/feedback/${issueNumber}`}
-              className="mt-3 text-sm font-medium text-primary hover:underline"
+              className="mt-3 text-body font-medium text-primary hover:underline"
             >
               View on the suggestions board
             </Link>
@@ -51,7 +51,7 @@ export function FeedbackSuccess({
           href={githubUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+          className="mt-2 inline-flex items-center gap-1 text-body text-primary hover:underline"
         >
           View on GitHub
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

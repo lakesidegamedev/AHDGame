@@ -226,7 +226,7 @@ export function MetricsMap({
                 }}
               >
                 <span className="font-medium">{d.name}</span>
-                <span className="text-body-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {m(`category.${d.category}`)} · {sourceLabel(d)}
                 </span>
               </button>
@@ -293,9 +293,9 @@ export function MetricsMap({
       <div className={styles.workspace}>
         <Card padding="none">
           <div className="border-b border-card-border p-4">
-            <h2 className="text-heading-sm font-semibold">{definition.name}</h2>
+            <h2 className="text-heading font-semibold">{definition.name}</h2>
             <p className="mt-1 text-body-sm text-muted">{definition.description}</p>
-            <p className="mt-2 text-body-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               {definition.source === "score" ? m("scoreNote") : m("measuredNote")}
             </p>
           </div>
@@ -368,9 +368,9 @@ export function MetricsMap({
                       <div className={styles.tooltip}>
                         <p className="font-semibold">{row?.name ?? id}</p>
                         <p className="mt-2 text-body-sm text-muted">{definition.name}</p>
-                        <p className="font-mono text-heading-sm">{format(row?.value)}</p>
+                        <p className="font-mono text-heading">{format(row?.value)}</p>
                         {row?.value != null && (
-                          <p className="mt-2 text-body-xs text-muted">
+                          <p className="mt-2 text-body-sm text-muted">
                             {m("rank", { rank: rank(row.value), count: measured.length })}
                           </p>
                         )}
@@ -429,12 +429,12 @@ export function MetricsMap({
                   background: `linear-gradient(to right, ${metricColor(extent.min, extent.min, extent.max)}, ${metricColor(extent.max, extent.min, extent.max)})`,
                 }}
               />
-              <div className="mt-2 flex justify-between gap-2 text-body-xs font-mono">
+              <div className="mt-2 flex justify-between gap-2 text-body-sm font-mono">
                 <span>{format(extent.min, true)}</span>
                 <span className="text-muted">{m("magnitude")}</span>
                 <span>{format(extent.max, true)}</span>
               </div>
-              <p className="mt-2 text-body-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 {m("coverage", { count: measured.length, total: roster.length })} ·{" "}
                 {m("missingLegend")}
               </p>
@@ -447,11 +447,11 @@ export function MetricsMap({
             {selectedRow ? (
               <>
                 <p className="mt-2 text-body-sm text-muted">{definition.name}</p>
-                <p className="mt-1 break-words font-mono text-heading-sm">
+                <p className="mt-1 break-words font-mono text-heading">
                   {format(selectedRow.value)}
                 </p>
                 {selectedRow.value != null && (
-                  <p className="mt-2 text-body-xs text-muted">
+                  <p className="mt-2 text-body-sm text-muted">
                     {m("rank", { rank: rank(selectedRow.value), count: measured.length })}
                   </p>
                 )}
@@ -481,7 +481,7 @@ export function MetricsMap({
                   <div className="mt-3 space-y-3">
                     {[selectedRow, comparedRow].map((r) => (
                       <div key={r.id}>
-                        <div className="flex justify-between gap-2 text-body-xs">
+                        <div className="flex justify-between gap-2 text-body-sm">
                           <span>{r.name}</span>
                           <span className="font-mono">{format(r.value, true)}</span>
                         </div>
@@ -512,7 +512,7 @@ export function MetricsMap({
               <div className="mt-4 flex h-24 items-end gap-2" aria-label={m("distribution")}>
                 {bins.map((count, i) => (
                   <div key={i} className="flex h-full flex-1 flex-col justify-end text-center">
-                    <span className="text-body-xs text-muted">{count}</span>
+                    <span className="text-body-sm text-muted">{count}</span>
                     <div
                       className="mt-1 rounded-t"
                       style={{
@@ -529,7 +529,7 @@ export function MetricsMap({
                   </div>
                 ))}
               </div>
-              <div className="mt-2 flex justify-between text-body-xs text-muted">
+              <div className="mt-2 flex justify-between text-body-sm text-muted">
                 <span>{format(extent.min, true)}</span>
                 <span>{format(extent.max, true)}</span>
               </div>
@@ -547,7 +547,7 @@ export function MetricsMap({
                     key={r.id}
                     onClick={() => setSelected(r.id)}
                   >
-                    <span className="flex justify-between gap-2 text-body-xs">
+                    <span className="flex justify-between gap-2 text-body-sm">
                       <span>{r.name}</span>
                       <span className="font-mono">{format(r.value, true)}</span>
                     </span>

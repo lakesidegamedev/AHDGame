@@ -20,7 +20,7 @@ export function BillsList({
   if (bills.length === 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-10 text-center shadow-card">
-        <p className="text-sm text-muted">{emptyText}</p>
+        <p className="text-body text-muted">{emptyText}</p>
       </div>
     );
   }

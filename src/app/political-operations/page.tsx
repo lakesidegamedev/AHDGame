@@ -55,7 +55,7 @@ export default function PoliticalOperationsPage() {
   if (forbidden || !data) {
     return (
       <div className="mx-auto max-w-6xl p-6">
-        <h1 className="text-2xl font-semibold">Political operations</h1>
+        <h1 className="text-heading font-semibold">Political operations</h1>
         <p className="mt-4 text-muted">
           Political Operations is currently available only to US characters.
         </p>
@@ -66,8 +66,8 @@ export default function PoliticalOperationsPage() {
   return (
     <div className="mx-auto max-w-6xl p-6">
       <header className="mb-4">
-        <h1 className="text-2xl font-semibold">Political operations</h1>
-        <p className="text-sm text-muted">{data.character.name}</p>
+        <h1 className="text-heading font-semibold">Political operations</h1>
+        <p className="text-body text-muted">{data.character.name}</p>
       </header>
       <PoliticalOperationsTabs activeTab={activeTab} onChange={setActiveTab} />
       <main className="mt-6">
@@ -78,11 +78,11 @@ export default function PoliticalOperationsPage() {
               footprint grow across cycles.
             </p>
             {data.activePresidentialCandidacy ? (
-              <p className="mt-3 text-sm text-foreground">
+              <p className="mt-3 text-body text-foreground">
                 You are an active candidate in a presidential election.
               </p>
             ) : (
-              <p className="mt-3 text-sm text-muted">
+              <p className="mt-3 text-body text-muted">
                 You are not currently a candidate in any eligible election.
               </p>
             )}

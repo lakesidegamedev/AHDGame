@@ -105,21 +105,21 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
       !!draft.ownFirstAcrossStates !== !!view.policy.ownFirstAcrossStates);
   return (
     <DenseSection id="ceo-internal-supply" title={t("title")} meta={t("timing")}>
-      <p className="py-2 text-sm text-muted">{t(funded ? "fundedIntro" : "intro")}</p>
+      <p className="py-2 text-body text-muted">{t(funded ? "fundedIntro" : "intro")}</p>
       {!view && !error && (
-        <p className="text-sm text-muted" role="status">
+        <p className="text-body text-muted" role="status">
           {t("loading")}
         </p>
       )}
       {view && (
         <>
           {!view.available && (
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               {t(view.groupCoordinationActive ? "groupCoordinationActive" : "unavailable")}
             </p>
           )}
           {view.inherited && (
-            <p className="mb-2 text-sm text-muted">
+            <p className="mb-2 text-body text-muted">
               {t("inherited")}{" "}
               <Link className="underline" href={`/corporation/${view.parentId}?tab=ceo`}>
                 {t("parent")}
@@ -129,7 +129,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
           <div
             className={`grid gap-3 py-2 sm:items-end ${funded && pricing === "market" ? "sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"}`}
           >
-            <label className="grid gap-1 text-sm">
+            <label className="grid gap-1 text-body">
               {t("priority")}
               <select
                 className="min-w-0 border border-card-border bg-background px-2 py-2"
@@ -159,7 +159,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
               </select>
             </label>
             {funded && (
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-body">
                 {t("transferPricing")}
                 <select
                   className="border border-card-border bg-background px-2 py-2"
@@ -181,7 +181,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
               </label>
             )}
             {(!funded || pricing === "market") && (
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-body">
                 {t("discount")}
                 <select
                   className="border border-card-border bg-background px-2 py-2"
@@ -204,7 +204,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
               </label>
             )}
             <button
-              className="border border-card-border px-3 py-2 text-sm font-medium disabled:opacity-40"
+              className="border border-card-border px-3 py-2 text-body font-medium disabled:opacity-40"
               disabled={disabled || !changed}
               onClick={save}
             >
@@ -212,7 +212,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             </button>
           </div>
           {!funded && (
-            <label className="flex items-center gap-2 py-2 text-sm">
+            <label className="flex items-center gap-2 py-2 text-body">
               <input
                 type="checkbox"
                 disabled={disabled || draft.priority === "market"}
@@ -226,17 +226,17 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             </label>
           )}
           {funded && (
-            <p className="pb-2 text-sm text-muted">
+            <p className="pb-2 text-body text-muted">
               {t(pricing === "free" ? "freeTransfer" : "pricedTransfer")}
             </p>
           )}
           {funded ? (
-            <p className="pb-2 text-sm text-muted">{t("fundedPriorityNote")}</p>
+            <p className="pb-2 text-body text-muted">{t("fundedPriorityNote")}</p>
           ) : (
-            <p className="pb-2 text-xs text-muted">{t("ownFirstFreightWarning")}</p>
+            <p className="pb-2 text-body-sm text-muted">{t("ownFirstFreightWarning")}</p>
           )}
           {view.ownHauls && view.ownHauls.length > 0 && (
-            <div className="border-t border-card-border py-2 text-xs text-muted">
+            <div className="border-t border-card-border py-2 text-body-sm text-muted">
               <p>{t("ownHaulTurn", { turn: view.ownHaulTurn ?? 0 })}</p>
               {view.ownHauls.map((haul, i) => (
                 <p key={i}>
@@ -254,11 +254,11 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             </div>
           )}
           {saved && (
-            <p className="text-sm text-muted" role="status">
+            <p className="text-body text-muted" role="status">
               {t("saved")}
             </p>
           )}
-          <details className="border-t border-card-border py-2 text-sm text-muted">
+          <details className="border-t border-card-border py-2 text-body text-muted">
             <summary className="cursor-pointer">{t("how")}</summary>
             <div className="mt-2 space-y-2">
               <p>{t(funded ? "fundedScope" : "scope")}</p>
@@ -268,13 +268,13 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
           </details>
           <div className="border-t border-card-border py-2">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-sm font-medium">
+              <p className="text-body font-medium">
                 {view.lastTurn
                   ? t(funded ? "ownSitesTurn" : "lastTurn", { turn: view.lastTurn })
                   : t("waiting")}
               </p>
               <button
-                className="text-xs underline"
+                className="text-body-sm underline"
                 disabled={busy}
                 onClick={() => setReload((n) => n + 1)}
               >
@@ -285,10 +285,10 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             {!funded && view.lastTurn && (
               <>
                 {Object.keys(view.received).length || Object.keys(view.reserved).length ? (
-                  <table className="mt-2 w-full text-sm">
+                  <table className="mt-2 w-full text-body">
                     <caption className="sr-only">{t("deliveries")}</caption>
                     <thead>
-                      <tr className="border-b border-card-border text-left text-xs text-muted">
+                      <tr className="border-b border-card-border text-left text-body-sm text-muted">
                         <th className="py-1 font-normal">{t("commodity")}</th>
                         <th className="text-right font-normal">{t("received")}</th>
                         <th className="text-right font-normal">{t("reserved")}</th>
@@ -317,11 +317,11 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                     </tbody>
                   </table>
                 ) : (
-                  <p className="mt-1 text-xs text-muted">{t("noDeliveries")}</p>
+                  <p className="mt-1 text-body-sm text-muted">{t("noDeliveries")}</p>
                 )}
-                <p className="mt-2 text-xs text-muted">{t("unitsNote")}</p>
+                <p className="mt-2 text-body-sm text-muted">{t("unitsNote")}</p>
                 {!funded && view.discountCostAnchor !== 0 && (
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     {t(view.discountCostAnchor < 0 ? "netCredit" : "netCharge", {
                       amount: Math.abs(view.discountCostAnchor).toLocaleString(undefined, {
                         maximumFractionDigits: 2,
@@ -335,7 +335,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
         </>
       )}
       {error && (
-        <p role="alert" className="py-2 text-sm text-red-400">
+        <p role="alert" className="py-2 text-body text-red-400">
           {error}{" "}
           {!view && (
             <button className="underline" onClick={() => setReload((n) => n + 1)}>
@@ -354,13 +354,14 @@ const units = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits
 function OwnSitesTable({ rows }: { rows: NonNullable<PolicyView["ownSites"]>["rows"] }) {
   const t = useTranslations("corporations.internalSupply");
   const sent = rows.filter((r) => r.ownSiteUnits > 0);
-  if (sent.length === 0) return <p className="mt-1 text-xs text-muted">{t("noOwnSiteUnits")}</p>;
+  if (sent.length === 0)
+    return <p className="mt-1 text-body-sm text-muted">{t("noOwnSiteUnits")}</p>;
   return (
     <>
-      <table className="mt-2 w-full text-sm">
+      <table className="mt-2 w-full text-body">
         <caption className="sr-only">{t("deliveries")}</caption>
         <thead>
-          <tr className="border-b border-card-border text-left text-xs text-muted">
+          <tr className="border-b border-card-border text-left text-body-sm text-muted">
             <th className="py-1 font-normal">{t("commodity")}</th>
             <th className="text-right font-normal">{t("made")}</th>
             <th className="text-right font-normal">{t("toOwnSites")}</th>
@@ -378,7 +379,7 @@ function OwnSitesTable({ rows }: { rows: NonNullable<PolicyView["ownSites"]>["ro
           ))}
         </tbody>
       </table>
-      <p className="mt-2 text-xs text-muted">{t("ownSitesNote")}</p>
+      <p className="mt-2 text-body-sm text-muted">{t("ownSitesNote")}</p>
     </>
   );
 }

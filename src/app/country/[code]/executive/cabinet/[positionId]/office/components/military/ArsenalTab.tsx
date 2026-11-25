@@ -117,8 +117,8 @@ export function ArsenalTab({
 
       <div className="rounded-xl border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-2.5">
-          <h3 className="text-sm font-semibold text-foreground">National arsenal</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">National arsenal</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Materiel your industry has delivered, by the arm of service it equips. New units draw
             from here; anything short is issued hollow and filled in later turns.
           </p>
@@ -129,15 +129,15 @@ export function ArsenalTab({
             return (
               <div key={r.id} className="flex items-center gap-3 px-4 py-2.5">
                 <MilIcon name={domainIcon(r.id as UnitDomain)} className="h-4 w-4 text-gov-soft" />
-                <span className="w-20 text-[12px] font-medium text-foreground">{r.label}</span>
-                <span className="tabular w-24 text-right text-[13px] font-semibold text-foreground">
+                <span className="w-20 text-body-sm font-medium text-foreground">{r.label}</span>
+                <span className="tabular w-24 text-right text-body-sm font-semibold text-foreground">
                   {r.stock.toLocaleString("en-US")}
                 </span>
-                <span className="w-28 text-[11px] text-muted">
+                <span className="w-28 text-body-sm text-muted">
                   {r.grade > 0 ? GRADE_LABEL[Math.round(r.grade)] : "—"}
                 </span>
                 <span
-                  className={`tabular flex-1 text-right text-[11px] ${
+                  className={`tabular flex-1 text-right text-body-sm ${
                     short ? "text-[var(--error)]" : "text-muted"
                   }`}
                 >
@@ -156,9 +156,9 @@ export function ArsenalTab({
       </div>
 
       <div className="rounded-xl border border-card-border bg-card p-4">
-        <p className="text-sm text-muted">{translateContracts("defenceOffice")}</p>
+        <p className="text-body text-muted">{translateContracts("defenceOffice")}</p>
         <Link
-          className="mt-3 inline-block text-sm font-semibold text-primary"
+          className="mt-3 inline-block text-body font-semibold text-primary"
           href={"/country/" + countryId.toLowerCase() + "/government-contracts?type=defence"}
         >
           {translateContracts("openBoard")}
@@ -166,15 +166,15 @@ export function ArsenalTab({
       </div>
       <div className="rounded-xl border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-2.5">
-          <h3 className="text-sm font-semibold text-foreground">Procurement contracts</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Procurement contracts</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Standing orders with your own defence industry. Each pays per lot delivered, out of the
             defence appropriation. Winning bids activate after award. Existing orders keep their
             signed terms.
           </p>
         </div>
         {active.length === 0 ? (
-          <div className="px-4 py-6 text-center text-[13px] text-muted">
+          <div className="px-4 py-6 text-center text-body-sm text-muted">
             No active contracts. Without one, the arsenal never fills and new units are raised
             hollow.
           </div>
@@ -186,10 +186,10 @@ export function ArsenalTab({
                 <div key={c._id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-[13px] font-medium text-foreground">
+                      <div className="truncate text-body-sm font-medium text-foreground">
                         {c.supplierName}
                       </div>
-                      <div className="text-[11px] text-muted">
+                      <div className="text-body-sm text-muted">
                         {c.component} · {fmtMoneyAbs(currencySymbol, c.pricePerLot)} per lot
                         {c.gradeCeiling != null &&
                           ` · ${GRADE_LABEL[Math.max(0, Math.min(3, c.gradeCeiling))]} grade`}
@@ -199,7 +199,7 @@ export function ArsenalTab({
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted">
+                      <div className="text-body-sm text-muted">
                         paid {fmtMoneyAbs(currencySymbol, c.amountPaid ?? 0)} ·{" "}
                         {fmtMoneyAbs(currencySymbol, c.encumberedAmount ?? 0)} still committed
                         {(c.lotsBuiltNotDelivered ?? 0) > 0 &&
@@ -209,11 +209,11 @@ export function ArsenalTab({
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="tabular text-[12px] text-foreground">
+                      <div className="tabular text-body-sm text-foreground">
                         {c.lotsDelivered.toLocaleString("en-US")} /{" "}
                         {c.lotsOrdered.toLocaleString("en-US")}
                       </div>
-                      <div className="text-[11px] text-muted">{Math.round(pct)}% delivered</div>
+                      <div className="text-body-sm text-muted">{Math.round(pct)}% delivered</div>
                     </div>
                     {canAct &&
                       (confirming === c._id ? (
@@ -223,7 +223,7 @@ export function ArsenalTab({
                             setConfirming(null);
                             onCancelContract(c._id);
                           }}
-                          className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--error)] disabled:opacity-50"
+                          className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-2.5 py-1 text-body-sm font-semibold text-[var(--error)] disabled:opacity-50"
                         >
                           {(c.terminationFee ?? 0) > 0
                             ? `Pay ${fmtMoneyAbs(currencySymbol, c.terminationFee ?? 0)}`
@@ -233,7 +233,7 @@ export function ArsenalTab({
                         <button
                           disabled={busy}
                           onClick={() => setConfirming(c._id)}
-                          className="rounded-lg border border-card-border px-2.5 py-1 text-[11px] text-muted hover:text-foreground disabled:opacity-50"
+                          className="rounded-lg border border-card-border px-2.5 py-1 text-body-sm text-muted hover:text-foreground disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -246,10 +246,10 @@ export function ArsenalTab({
                     />
                   </div>
                   {c.carryReasonText && (
-                    <p className="mt-1.5 text-[11px] text-[var(--warning)]">{c.carryReasonText}</p>
+                    <p className="mt-1.5 text-body-sm text-[var(--warning)]">{c.carryReasonText}</p>
                   )}
                   {c.selfDealing && (
-                    <p className="mt-1.5 text-[11px] text-[var(--error)]">
+                    <p className="mt-1.5 text-body-sm text-[var(--error)]">
                       Declared interest: {c.selfDealing.ministerName ?? "the awarding minister"}{" "}
                       {c.selfDealing.basis === "owner"
                         ? "owns this supplier"
@@ -261,7 +261,7 @@ export function ArsenalTab({
                       row it would be noise; on the row they are about to tear up it is the
                       one thing they need. */}
                   {confirming === c._id && (
-                    <p className="mt-1.5 text-[11px] text-[var(--warning)]">
+                    <p className="mt-1.5 text-body-sm text-[var(--warning)]">
                       {c.terminationBasis === "withdrawal"
                         ? "The supplier has not accepted yet, so withdrawing costs nothing."
                         : c.terminationBasis === "cause"

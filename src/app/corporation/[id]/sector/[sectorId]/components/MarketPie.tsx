@@ -113,12 +113,12 @@ export default function MarketPie({ myShare, myColor, competitors, size = 120 }:
         x={cx}
         y={cy - 4}
         textAnchor="middle"
-        className="fill-foreground text-sm font-bold"
+        className="fill-foreground text-body font-bold"
         fontSize="14"
       >
         {myShare.toFixed(1)}%
       </text>
-      <text x={cx} y={cy + 10} textAnchor="middle" className="fill-muted text-[9px]" fontSize="9">
+      <text x={cx} y={cy + 10} textAnchor="middle" className="fill-muted text-body-sm" fontSize="9">
         your share
       </text>
     </svg>

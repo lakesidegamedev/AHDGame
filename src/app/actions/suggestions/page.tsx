@@ -221,7 +221,7 @@ export default function SuggestedActionsPage() {
             <div className="absolute top-4 left-4 sm:top-5 sm:left-5">
               <Link
                 href="/actions"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white text-sm font-medium transition-colors border border-white/20"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white text-body font-medium transition-colors border border-white/20"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -238,7 +238,7 @@ export default function SuggestedActionsPage() {
             <div className="absolute top-4 right-4 sm:top-5 sm:right-5">
               <button
                 onClick={() => setSettingsOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white text-sm font-medium transition-colors border border-white/20"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white text-body font-medium transition-colors border border-white/20"
                 title="Manage muted suggestion types"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,17 +257,17 @@ export default function SuggestedActionsPage() {
                 </svg>
                 Filter
                 {mutedCount > 0 && (
-                  <span className="ml-0.5 w-4 h-4 flex items-center justify-center text-[10px] rounded-full bg-warning/80 text-black font-bold">
+                  <span className="ml-0.5 w-4 h-4 flex items-center justify-center text-body-sm rounded-full bg-warning/80 text-black font-bold">
                     {mutedCount}
                   </span>
                 )}
               </button>
             </div>
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-end px-6 pb-5 sm:px-8 sm:pb-7">
-              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+              <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                 Action suggestions
               </h1>
-              <p className="mt-1.5 text-sm text-white/80 drop-shadow max-w-xl">
+              <p className="mt-1.5 text-body text-white/80 drop-shadow max-w-xl">
                 Personalized recommendations based on your stats and opportunities.
               </p>
             </div>
@@ -279,14 +279,14 @@ export default function SuggestedActionsPage() {
               <>
                 <div className="flex flex-col px-5 py-3 min-w-max">
                   <span className="text-body-sm font-medium text-muted">Actions</span>
-                  <span className="text-base font-bold tabular-nums text-foreground">
+                  <span className="text-body-lg font-bold tabular-nums text-foreground">
                     {character.actions}
-                    <span className="text-xs font-normal text-muted ml-1">AP</span>
+                    <span className="text-body-sm font-normal text-muted ml-1">AP</span>
                   </span>
                 </div>
                 <div className="flex flex-col px-5 py-3 min-w-max">
                   <span className="text-body-sm font-medium text-muted">Funds</span>
-                  <span className="text-base font-bold tabular-nums text-success">
+                  <span className="text-body-lg font-bold tabular-nums text-success">
                     {formatCurrencyFaceAmount(
                       character.currencyBalances?.campaign ?? character.funds ?? 0,
                       getHomeCurrency(character)
@@ -295,14 +295,14 @@ export default function SuggestedActionsPage() {
                 </div>
                 <div className="flex flex-col px-5 py-3 min-w-max">
                   <span className="text-body-sm font-medium text-muted">Influence</span>
-                  <span className="text-base font-bold tabular-nums text-foreground">
+                  <span className="text-body-lg font-bold tabular-nums text-foreground">
                     {formatPercent(character.politicalInfluence ?? 0)}
                   </span>
                 </div>
                 <div className="flex flex-col px-5 py-3 min-w-max">
                   <span className="text-body-sm font-medium text-muted">Favorability</span>
                   <span
-                    className={`text-base font-bold tabular-nums ${(character.favorability ?? 0) < 40 ? "text-error" : (character.favorability ?? 0) < 60 ? "text-warning" : "text-success"}`}
+                    className={`text-body-lg font-bold tabular-nums ${(character.favorability ?? 0) < 40 ? "text-error" : (character.favorability ?? 0) < 60 ? "text-warning" : "text-success"}`}
                   >
                     {formatPercent(character.favorability ?? 0)}
                   </span>
@@ -311,19 +311,19 @@ export default function SuggestedActionsPage() {
             )}
             <div className="flex items-center gap-3 px-5 py-3 ml-auto">
               {criticalCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-error">
+                <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-error">
                   <span className="w-2 h-2 rounded-full bg-error inline-block" />
                   {criticalCount} Critical
                 </span>
               )}
               {highCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning">
+                <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-warning">
                   <span className="w-2 h-2 rounded-full bg-warning inline-block" />
                   {highCount} High
                 </span>
               )}
               {visible.length === 0 && (
-                <span className="text-xs font-semibold text-success">All clear</span>
+                <span className="text-body-sm font-semibold text-success">All clear</span>
               )}
             </div>
           </HeroStatsStrip>
@@ -334,12 +334,12 @@ export default function SuggestedActionsPage() {
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6 space-y-6">
         {/* Feedback messages */}
         {executeSuccess && (
-          <div className="p-3 rounded-lg bg-success/10 border border-success/30 text-success text-sm font-medium">
+          <div className="p-3 rounded-lg bg-success/10 border border-success/30 text-success text-body font-medium">
             ✓ {executeSuccess}
           </div>
         )}
         {executeError && (
-          <div className="p-3 rounded-lg bg-error/10 border border-error/30 text-error text-sm font-medium">
+          <div className="p-3 rounded-lg bg-error/10 border border-error/30 text-error text-body font-medium">
             ✗ {executeError}
           </div>
         )}
@@ -362,13 +362,13 @@ export default function SuggestedActionsPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-foreground">All clear</h2>
-            <p className="text-muted mt-2 max-w-sm mx-auto text-sm">
+            <h2 className="text-heading font-semibold text-foreground">All clear</h2>
+            <p className="text-muted mt-2 max-w-sm mx-auto text-body">
               No recommendations right now. Check back after taking actions or as conditions change.
             </p>
             <Link
               href="/actions"
-              className="inline-block mt-6 text-sm font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-block mt-6 text-body font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Go to actions
             </Link>
@@ -378,7 +378,7 @@ export default function SuggestedActionsPage() {
         {/* Top 5 */}
         {topFive.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-foreground mb-3">Top priorities</h2>
+            <h2 className="text-body font-semibold text-foreground mb-3">Top priorities</h2>
             <div className="space-y-2.5">
               {topFive.map((rec) => (
                 <RecommendationCard
@@ -398,7 +398,7 @@ export default function SuggestedActionsPage() {
         {grouped.length > 0 && (
           <section className="space-y-2">
             {topFive.length > 0 && (
-              <h2 className="text-sm font-semibold text-foreground mb-1">More suggestions</h2>
+              <h2 className="text-body font-semibold text-foreground mb-1">More suggestions</h2>
             )}
             {grouped.map(({ category, label, items }) => {
               const isOpen = openCategories.has(category);
@@ -412,8 +412,8 @@ export default function SuggestedActionsPage() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-card-elevated transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{label}</span>
-                      <span className="text-xs text-muted">({items.length})</span>
+                      <span className="text-body font-semibold text-foreground">{label}</span>
+                      <span className="text-body-sm text-muted">({items.length})</span>
                     </div>
                     <svg
                       className={`w-4 h-4 text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}

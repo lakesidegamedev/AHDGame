@@ -131,8 +131,10 @@ export function BondProfilePanel({
       <ActingLockNote reason={actingLockReason} />
 
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">Sovereign bond maturity profile</h2>
-        <p className="text-sm text-muted mt-1">
+        <h2 className="text-heading font-semibold text-foreground">
+          Sovereign bond maturity profile
+        </h2>
+        <p className="text-body text-muted mt-1">
           Set the split of quarterly sovereign debt issuance across maturities. Values must sum to
           100%.
         </p>
@@ -140,7 +142,7 @@ export function BondProfilePanel({
 
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-4">
         {maturityOptions.map((opt) => (
-          <label key={opt.turns} className="flex flex-col text-sm">
+          <label key={opt.turns} className="flex flex-col text-body">
             <span className="text-muted mb-1">
               {opt.label} ({opt.turns} turns)
             </span>
@@ -153,7 +155,7 @@ export function BondProfilePanel({
                 value={values[opt.turns]}
                 onChange={(e) => setValues((prev) => ({ ...prev, [opt.turns]: e.target.value }))}
                 disabled={!canAct || saving}
-                className="w-24 rounded border border-card-border bg-card-elevated px-2 py-1 font-mono text-sm"
+                className="w-24 rounded border border-card-border bg-card-elevated px-2 py-1 font-mono text-body"
               />
               <span className="text-muted">%</span>
             </div>
@@ -161,33 +163,33 @@ export function BondProfilePanel({
         ))}
       </div>
 
-      <div className="flex items-center gap-2 text-sm mb-4">
+      <div className="flex items-center gap-2 text-body mb-4">
         <span className="text-muted">Total:</span>
         <span className={`font-mono font-semibold ${isValid ? "text-success" : "text-error"}`}>
           {parsed.total.toFixed(1)}%
         </span>
-        {!isValid && <span className="text-error text-xs">Must sum to 100%</span>}
+        {!isValid && <span className="text-error text-body-sm">Must sum to 100%</span>}
       </div>
 
       <div className="rounded-lg border border-card-border bg-background/60 p-4 mb-4">
         <div className="text-body-sm font-medium text-muted mb-2">Debt coverage</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-body">
           <div>
-            <div className="text-[11px] text-muted mb-0.5">National debt principal</div>
+            <div className="text-body-sm text-muted mb-0.5">National debt principal</div>
             <div className="font-semibold tabular-nums text-foreground">
               {sym}
               {Math.round(debtPrincipal).toLocaleString("en-US")}
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted mb-0.5">Covered by bonds</div>
+            <div className="text-body-sm text-muted mb-0.5">Covered by bonds</div>
             <div className="font-semibold tabular-nums text-foreground">
               {sym}
               {Math.round(sovereignBondsOutstanding).toLocaleString("en-US")}
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted mb-0.5">Uncovered gap</div>
+            <div className="text-body-sm text-muted mb-0.5">Uncovered gap</div>
             <div
               className={`font-semibold tabular-nums ${gap > 0 ? "text-warning" : "text-success"}`}
             >
@@ -209,7 +211,7 @@ export function BondProfilePanel({
         </Button>
         {feedback && (
           <span
-            className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+            className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
           >
             {feedback.message}
           </span>

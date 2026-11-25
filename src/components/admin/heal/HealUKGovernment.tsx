@@ -124,9 +124,9 @@ export function HealUKGovernment() {
   return (
     <div className="space-y-4 rounded-xl border border-card-border bg-card p-5">
       <div>
-        <h3 className="text-sm font-semibold">UK government heal</h3>
-        <p className="mt-1 text-xs text-muted">
-          Inspect <code className="text-xs">UK</code>, active PM confidence votes, and Commons
+        <h3 className="text-body-lg font-semibold">UK government heal</h3>
+        <p className="mt-1 text-body-sm text-muted">
+          Inspect <code className="text-body-sm">UK</code>, active PM confidence votes, and Commons
           seats. Retrigger minority/majority formation bookkeeping or force-appoint a player MP as
           PM when the simulation is stuck.
         </p>
@@ -137,7 +137,7 @@ export function HealUKGovernment() {
           type="button"
           onClick={refresh}
           disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
         >
           {loading ? "Working…" : "Refresh diagnostic"}
         </button>
@@ -145,20 +145,20 @@ export function HealUKGovernment() {
           type="button"
           onClick={retriggerFormation}
           disabled={loading}
-          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
         >
           Retrigger formation
         </button>
       </div>
 
       {message && (
-        <p className={`text-xs ${message.ok ? "text-success" : "text-error"}`} role="status">
+        <p className={`text-body-sm ${message.ok ? "text-success" : "text-error"}`} role="status">
           {message.text}
         </p>
       )}
 
       {diagnostic && (
-        <div className="space-y-3 rounded-lg border border-card-border bg-card-elevated/50 p-3 text-xs">
+        <div className="space-y-3 rounded-lg border border-card-border bg-card-elevated/50 p-3 text-body-sm">
           <div>
             <span className="font-medium text-foreground">parliamentaryGovernments (UK)</span>
             {diagnostic.government ? (
@@ -232,7 +232,7 @@ export function HealUKGovernment() {
               <select
                 value={selectedCandidateId}
                 onChange={(e) => setSelectedCandidateId(e.target.value)}
-                className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-xs text-foreground"
+                className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-body-sm text-foreground"
               >
                 <option value="">Select character…</option>
                 {diagnostic.candidates.map((c) => (
@@ -245,7 +245,7 @@ export function HealUKGovernment() {
                 type="button"
                 onClick={appointPm}
                 disabled={loading || !selectedCandidateId}
-                className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-body-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
               >
                 Appoint PM
               </button>

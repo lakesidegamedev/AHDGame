@@ -227,14 +227,14 @@ function LegacyJPCabinetProposeBillModal({
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">Propose legislation</h2>
+              <h2 className="text-heading font-semibold text-foreground">Propose legislation</h2>
               {adminOverride ? (
-                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-body-sm font-medium text-warning">
                   Admin
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Originating in the Cabinet. Costs {BILL_PROPOSE_ACTION_COST} action points and{" "}
               {npiCost} national influence.
             </p>
@@ -252,15 +252,15 @@ function LegacyJPCabinetProposeBillModal({
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {proposalWarning ? <BillAutoFailWarningBanner warning={proposalWarning} /> : null}
           {(hasActiveBill || !canSubmit) && !adminOverride ? (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-warning">
               {t("activeBillProposalBlocked")}
             </div>
           ) : null}
 
           <div>
-            <label className="mb-1 block text-xs text-muted">Bill title</label>
+            <label className="mb-1 block text-body-sm text-muted">Bill title</label>
             <input
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               maxLength={200}
@@ -270,9 +270,9 @@ function LegacyJPCabinetProposeBillModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-muted">Summary</label>
+            <label className="mb-1 block text-body-sm text-muted">Summary</label>
             <textarea
-              className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
               value={summary}
               onChange={(event) => setSummary(event.target.value)}
               rows={3}
@@ -284,9 +284,9 @@ function LegacyJPCabinetProposeBillModal({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-muted">Category</label>
+              <label className="mb-1 block text-body-sm text-muted">Category</label>
               <select
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm capitalize focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body capitalize focus:outline-none focus:ring-1 focus:ring-primary"
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value as BillCategory);
@@ -305,11 +305,11 @@ function LegacyJPCabinetProposeBillModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-muted">Originating chamber</label>
+              <label className="mb-1 block text-body-sm text-muted">Originating chamber</label>
               <select
                 disabled
                 value="cabinet"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground/80"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground/80"
               >
                 <option value="cabinet">Cabinet</option>
               </select>
@@ -324,10 +324,10 @@ function LegacyJPCabinetProposeBillModal({
             />
           ) : (
             <div className="space-y-3">
-              <label className="block text-xs text-muted">Provision (1/1)</label>
+              <label className="block text-body-sm text-muted">Provision (1/1)</label>
               <div className="space-y-2 rounded-lg border border-card-border bg-background/40 p-3">
                 <select
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
                   value={legislationTypeId}
                   onChange={(event) => resetPolicySelection(event.target.value)}
                   disabled={filteredTypes.length === 0}
@@ -342,7 +342,7 @@ function LegacyJPCabinetProposeBillModal({
                 </select>
 
                 {filteredTypes.length === 0 ? (
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     No legislation types in the{" "}
                     <span className="font-medium capitalize">{category}</span> category are
                     available for your cabinet portfolio.
@@ -350,7 +350,7 @@ function LegacyJPCabinetProposeBillModal({
                 ) : null}
 
                 <select
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
                   value={policyOptionId}
                   onChange={(event) => {
                     const option = selectedLegislationType?.policyOptions?.find(
@@ -386,7 +386,7 @@ function LegacyJPCabinetProposeBillModal({
                 {selectedLegislationType ? (
                   <div className="space-y-1 rounded-lg border border-card-border bg-background/50 p-3">
                     {selectedPolicyOption?.explanation || selectedLegislationType.explanation ? (
-                      <p className="text-xs italic text-muted/80">
+                      <p className="text-body-sm italic text-muted/80">
                         {selectedPolicyOption?.explanation ??
                           selectedLegislationType.explanation ??
                           selectedLegislationType.description}
@@ -418,7 +418,7 @@ function LegacyJPCabinetProposeBillModal({
             </div>
           )}
 
-          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted">
+          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted">
             {adminOverride ? (
               <span>Cost waived (admin).</span>
             ) : (
@@ -432,14 +432,14 @@ function LegacyJPCabinetProposeBillModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitDisabled}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="flex-1 rounded-lg bg-primary py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting ? "Proposing..." : "Propose bill"}
             </button>

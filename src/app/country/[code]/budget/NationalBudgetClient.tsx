@@ -575,7 +575,7 @@ export function NationalBudgetClient() {
           }
         />
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body text-muted-foreground">
           <Link href="/frontier-races" className="underline">
             Frontier programme races
           </Link>

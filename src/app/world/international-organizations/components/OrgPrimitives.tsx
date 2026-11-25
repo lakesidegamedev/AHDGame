@@ -167,12 +167,12 @@ export function MetricTile({
       <span className="whitespace-nowrap text-body-sm font-medium text-muted">{label}</span>
       <div className="flex flex-col">
         <span
-          className="text-lg font-bold leading-tight tabular-nums"
+          className="text-heading font-bold leading-tight tabular-nums"
           style={accent ? { color: "var(--org-soft)" } : undefined}
         >
           {value}
         </span>
-        {sub && <span className="text-[11px] text-muted">{sub}</span>}
+        {sub && <span className="text-body-sm text-muted">{sub}</span>}
       </div>
     </div>
   );

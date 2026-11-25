@@ -550,7 +550,7 @@ export function ConflictRecord({ conflict: c }: { conflict: ConflictRecordView }
             <div
               style={{
                 fontFamily: headingFont,
-                fontSize: 23,
+                fontSize: 20,
                 fontWeight: 600,
                 color: MIL_COLOR.textStrong,
                 lineHeight: 1.24,

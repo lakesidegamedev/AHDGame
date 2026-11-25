@@ -109,23 +109,23 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         {/* Total Market — sum across all sectors */}
         <div className="flex min-w-max flex-1 flex-col justify-center px-4 py-2.5">
           <Tooltip content={marketCurrencyNote}>
-            <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+            <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-body font-semibold text-foreground">
               Total market
             </span>
           </Tooltip>
-          <span className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
+          <span className="mt-0.5 text-body font-bold text-foreground tabular-nums">
             {fmtMarketChip(data.sectors.reduce((sum, s) => sum + s.totalMarket, 0))}
-            <span className="text-[10px] font-normal text-muted">/day</span>
+            <span className="text-body-sm font-normal text-muted">/day</span>
           </span>
         </div>
         {/* Top Sector — label + market size */}
         <div className="flex min-w-max flex-1 flex-col justify-center px-4 py-2.5">
           <span className="block text-body-sm font-medium text-muted">Top sector</span>
-          <span className="mt-0.5 truncate text-sm font-bold text-primary">
+          <span className="mt-0.5 truncate text-body font-bold text-primary">
             {topSector?.label ?? "—"}
           </span>
           {topSector && (
-            <span className="block text-[10px] font-medium text-muted tabular-nums">
+            <span className="block text-body-sm font-medium text-muted tabular-nums">
               {fmtMarketChip(topSector.totalMarket)}/day
             </span>
           )}
@@ -133,7 +133,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         {/* Corporations — count of all player-owned corps across all sectors */}
         <div className="flex min-w-max flex-1 flex-col justify-center px-4 py-2.5">
           <span className="block text-body-sm font-medium text-muted">Corporations</span>
-          <span className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
+          <span className="mt-0.5 text-body font-bold text-foreground tabular-nums">
             {data.sectors.reduce(
               (count, s) => count + s.owners.filter((o) => !o.isNpp && !o.isNatcorp).length,
               0
@@ -145,9 +145,9 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             mean much. */}
         <div className="flex min-w-max flex-1 flex-col justify-center px-4 py-2.5">
           <span className="block text-body-sm font-medium text-muted">Active sectors</span>
-          <span className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
+          <span className="mt-0.5 text-body font-bold text-foreground tabular-nums">
             {data.sectors.filter((s) => s.owners.length > 0).length}
-            <span className="text-[10px] font-normal text-muted"> of {data.sectors.length}</span>
+            <span className="text-body-sm font-normal text-muted"> of {data.sectors.length}</span>
           </span>
         </div>
       </div>
@@ -162,7 +162,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             aria-label="Select sector"
             value={selectedType}
             onChange={(e) => selectSector(e.target.value as OperatingSectorType)}
-            className="w-full cursor-pointer rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-medium focus:border-primary/60 focus:outline-none"
+            className="w-full cursor-pointer rounded-lg border border-card-border bg-background px-3 py-2 text-body font-medium focus:border-primary/60 focus:outline-none"
           >
             {[...data.sectors]
               .sort((a, b) => b.totalMarket - a.totalMarket)
@@ -175,7 +175,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         </div>
         <Link
           href={stockmarketUrl(countryId, "commodities")}
-          className="pb-2 text-xs text-primary hover:underline"
+          className="pb-2 text-body-sm text-primary hover:underline"
         >
           View commodity prices &rarr;
         </Link>
@@ -183,10 +183,10 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
 
       {/* Selected sector detail header */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <h3 className="text-lg font-bold text-foreground">{sector.label}</h3>
+        <h3 className="text-body-lg font-bold text-foreground">{sector.label}</h3>
         {specializationBonus > 0 && (
           <span
-            className="inline-flex items-center gap-1 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-gold"
+            className="inline-flex items-center gap-1 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-0.5 text-body-sm font-semibold text-gold"
             title={`${OPERATING_SECTOR_TYPE_LABELS[selectedType]} sectors in ${data.stateName} receive a +${specializationBonus}pp regional profit margin bonus`}
           >
             ★ {data.sectorSpecializations?.primary === selectedType ? "Primary" : "Secondary"}{" "}
@@ -201,7 +201,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         if (nationalTotal == null || nationalTotal <= 0 || sector.totalMarket <= 0) return null;
         const share = Math.min(100, (sector.totalMarket / nationalTotal) * 100);
         return (
-          <div className="-mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] text-muted">
+          <div className="-mt-3 flex flex-wrap items-center gap-1.5 text-body-sm text-muted">
             <span>
               {data.stateName} holds{" "}
               <strong className="font-mono font-bold text-foreground">≈{share.toFixed(1)}%</strong>{" "}
@@ -237,7 +237,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             {supplies.map((s) => (
               <span
                 key={`s-${s.commodity}`}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${COMMODITY_COLORS[s.commodity]}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium ${COMMODITY_COLORS[s.commodity]}`}
                 title={`Supplies ${COMMODITY_LABELS[s.commodity]} (${Math.round(s.rate * 100)}% of revenue)`}
               >
                 <span className="font-bold">{COMMODITY_ICONS[s.commodity]}</span>
@@ -247,7 +247,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             {demands.map((d) => (
               <span
                 key={`d-${d.commodity}`}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${COMMODITY_COLORS[d.commodity]}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium ${COMMODITY_COLORS[d.commodity]}`}
                 title={`Demands ${COMMODITY_LABELS[d.commodity]} (${Math.round(d.rate * 100)}% of revenue)`}
               >
                 <span className="font-bold">{COMMODITY_ICONS[d.commodity]}</span>
@@ -261,7 +261,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
       {/* Resource availability chips — extraction only */}
       {selectedType === "extraction" && data.stateResources != null && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted font-medium">Resource deposits in this state:</p>
+          <p className="text-body-sm text-muted font-medium">Resource deposits in this state:</p>
           <div className="flex flex-wrap gap-2">
             {EXTRACTABLE_RESOURCES.map((resource) => {
               const capacity = data.stateResources![resource] ?? 0;
@@ -270,7 +270,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
               return (
                 <span
                   key={resource}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium ${
                     available
                       ? (COMMODITY_COLORS[resource] ?? "bg-card border-card-border text-foreground")
                       : "border-card-border bg-card text-muted opacity-50"
@@ -302,7 +302,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
           <div className="shrink-0">
             <MarketSharePie owners={pieOwners} />
           </div>
-          <div className="flex-1 space-y-1.5 text-xs w-full">
+          <div className="flex-1 space-y-1.5 text-body-sm w-full">
             <div className="flex justify-between text-muted">
               <Tooltip content={marketCurrencyNote}>
                 <span className="cursor-help border-b border-dashed border-card-border/70">
@@ -345,23 +345,23 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <Tooltip content={marketCurrencyNote}>
-              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-body font-semibold text-foreground">
                 Owned revenue
               </span>
             </Tooltip>
-            <span className="text-sm font-bold text-success tabular-nums">
+            <span className="text-body font-bold text-success tabular-nums">
               {fmtMarket(sector.ownedRevenue)}
-              <span className="text-[10px] font-normal text-muted">/day</span>
+              <span className="text-body-sm font-normal text-muted">/day</span>
             </span>
           </div>
           <div>
             <Tooltip content={roomToBuildNote(sector.roomToBuildScope)}>
-              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-body font-semibold text-foreground">
                 Room to build
               </span>
             </Tooltip>
             <span
-              className="text-sm font-bold text-foreground tabular-nums"
+              className="text-body font-bold text-foreground tabular-nums"
               title={`${formatUnits(sector.roomToBuildUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
             >
               {roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })}
@@ -369,11 +369,11 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
           </div>
           <div>
             <span className="block text-body-sm font-medium text-muted">Corporations</span>
-            <span className="text-sm font-bold text-foreground">{playerOwners.length}</span>
+            <span className="text-body font-bold text-foreground">{playerOwners.length}</span>
           </div>
           <div>
             <span className="block text-body-sm font-medium text-muted">Largest share</span>
-            <span className="text-sm font-bold text-primary tabular-nums">
+            <span className="text-body font-bold text-primary tabular-nums">
               {ownedPercent === null ? "Empty" : `${ownedPercent.toFixed(1)}%`}
             </span>
           </div>
@@ -382,30 +382,30 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
 
       {/* Attack feedback */}
       {attackError && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error">
           {attackError}
         </div>
       )}
       {attackMsg && (
-        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
+        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-body text-success">
           {attackMsg}
         </div>
       )}
       {/* Growth adjust feedback */}
       {adjustError && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error">
           {adjustError}
         </div>
       )}
       {adjustMsg && (
-        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
+        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-body text-success">
           {adjustMsg}
         </div>
       )}
 
       {/* Sector cards */}
       <div className="space-y-3">
-        <h4 className="text-sm font-bold text-foreground">Market participants</h4>
+        <h4 className="text-body font-bold text-foreground">Market participants</h4>
 
         {/* Owned sector cards — NPP corps hidden (aggregated into the pie, t834) */}
         {(() => {
@@ -451,18 +451,18 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link
                               href={`/corporation/${owner.corporationSequentialId ?? owner.corporationId}/sector/${owner.sectorId}`}
-                              className="font-semibold text-foreground hover:text-primary text-sm leading-tight transition-colors"
+                              className="font-semibold text-foreground hover:text-primary text-body leading-tight transition-colors"
                             >
                               {owner.displayName ?? owner.corporationName}
                             </Link>
                             {owner.isNatcorp && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-[9px] tracking-wide font-semibold">
+                              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 uppercase text-body-sm tracking-wide font-semibold">
                                 State-Owned
                               </span>
                             )}
                             {owner.forSale && (
                               <span
-                                className="inline-flex items-center rounded-md border border-success/40 bg-success/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success"
+                                className="inline-flex items-center rounded-md border border-success/40 bg-success/10 px-1.5 py-0.5 text-body-sm font-bold uppercase tracking-wider text-success"
                                 title={`For sale at ${formatAmount(owner.forSale.priceAnchor)}`}
                               >
                                 For sale · {formatAmount(owner.forSale.priceAnchor)}
@@ -471,7 +471,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             {owner.displayName && (
-                              <span className="text-[11px] text-muted">
+                              <span className="text-body-sm text-muted">
                                 {owner.corporationName}
                                 {owner.sectorLabel && owner.sectorLabel !== sector.label
                                   ? ` · ${owner.sectorLabel}`
@@ -480,7 +480,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                             )}
                             <Link
                               href={`/corporation/${owner.corporationSequentialId ?? owner.corporationId}/sector/${owner.sectorId}`}
-                              className="text-[11px] text-muted hover:text-primary transition-colors"
+                              className="text-body-sm text-muted hover:text-primary transition-colors"
                             >
                               Details &rarr;
                             </Link>
@@ -488,7 +488,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <div className="text-xl font-bold tabular-nums leading-none text-foreground">
+                        <div className="text-heading font-bold tabular-nums leading-none text-foreground">
                           {owner.marketShare}%
                         </div>
                         <div className="text-body-sm font-medium text-muted mt-0.5">share</div>
@@ -513,7 +513,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                           )}
                           <Link
                             href={`/character/${owner.ceoSequentialId}`}
-                            className="text-xs text-primary hover:underline leading-tight"
+                            className="text-body-sm text-primary hover:underline leading-tight"
                           >
                             {owner.ceoName}
                           </Link>
@@ -521,7 +521,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                       </div>
                       <div className="flex flex-col px-4 py-2.5">
                         <span className="text-body-sm font-medium text-muted mb-1">Revenue</span>
-                        <span className="text-xs font-semibold text-success tabular-nums leading-tight">
+                        <span className="text-body-sm font-semibold text-success tabular-nums leading-tight">
                           {revenueDisclosed ? `${fmtMarket(revenue)}/day` : "Not disclosed"}
                         </span>
                       </div>
@@ -530,7 +530,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         title={`Growth targets revenue change over ${GROWTH_RATE_TURNS_PER_YEAR} turns (one game year)`}
                       >
                         <span className="text-body-sm font-medium text-muted mb-1">Growth</span>
-                        <span className="text-xs font-medium leading-tight">
+                        <span className="text-body-sm font-medium leading-tight">
                           <span className="text-foreground">{owner.targetGrowthRate}%</span>
                           <span className="text-muted"> /yr</span>
                         </span>
@@ -544,7 +544,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         </span>
                         <span className="inline-flex items-center gap-1.5 leading-tight">
                           <span
-                            className={`text-xs font-medium tabular-nums ${
+                            className={`text-body-sm font-medium tabular-nums ${
                               productionTone(owner.productionLevel ?? 0) === "error"
                                 ? "text-error"
                                 : productionTone(owner.productionLevel ?? 0) === "success"
@@ -587,7 +587,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                       <div className="flex items-center justify-end border-t border-card-border/50 px-4 py-2">
                         <Link
                           href={`/corporation/${owner.corporationSequentialId ?? owner.corporationId}/sector/${owner.sectorId}?build=1`}
-                          className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                          className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-body-sm font-semibold text-primary transition-colors hover:bg-primary/20"
                         >
                           Build capacity
                         </Link>
@@ -600,13 +600,13 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         growth lever, via Build Capacity on the sector page. */}
                     {isOwn && !data.plantsMode && (
                       <div className="flex items-center justify-end gap-2 border-t border-card-border/50 px-4 py-2">
-                        <span className="text-[10px] text-muted mr-auto">
+                        <span className="text-body-sm text-muted mr-auto">
                           Adjust growth: {formatAmount(adjustCost)}/1%
                         </span>
                         <button
                           onClick={() => handleAdjustGrowth(owner.sectorId, "downsize")}
                           disabled={!canDownsize || adjustingId === owner.sectorId}
-                          className="rounded border border-card-border px-2 py-0.5 text-xs font-medium text-muted hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-40"
+                          className="rounded border border-card-border px-2 py-0.5 text-body-sm font-medium text-muted hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-40"
                           title={
                             canDownsize
                               ? `Downsize -1% (returns ${formatAmount(adjustCost)})`
@@ -618,7 +618,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         <button
                           onClick={() => handleAdjustGrowth(owner.sectorId, "expand")}
                           disabled={!canExpand || adjustingId === owner.sectorId}
-                          className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
+                          className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
                           title={
                             canExpand
                               ? `Expand +1% (costs ${formatAmount(adjustCost)})`
@@ -638,7 +638,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                       (data.plantsMode ? (
                         owner.plantSplitQuote && owner.plantCount != null ? (
                           <div className="flex items-center justify-between gap-4 border-t border-card-border/50 px-4 py-2">
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                            <div className="flex flex-wrap items-center gap-3 text-body-sm text-muted">
                               <span>
                                 Automatic split:{" "}
                                 <span className="font-medium text-foreground">
@@ -663,7 +663,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                                 setAttackMsg("");
                                 setPlannedSplitTarget(owner);
                               }}
-                              className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20"
+                              className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/20"
                             >
                               Plan split
                             </button>
@@ -671,7 +671,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         ) : null
                       ) : owner.attackCost != null && owner.attackCost > 0 ? (
                         <div className="flex items-center justify-between gap-4 border-t border-card-border/50 px-4 py-2">
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                          <div className="flex flex-wrap items-center gap-3 text-body-sm text-muted">
                             <span>
                               Cost:{" "}
                               <span className="font-medium text-foreground">
@@ -698,7 +698,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                               attackingId === owner.sectorId ||
                               data.userMarketingStrength < (data.attackMsCost ?? 0)
                             }
-                            className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
+                            className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
                             title={
                               data.userMarketingStrength < (data.attackMsCost ?? 0)
                                 ? `Need ${data.attackMsCost ?? 0} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
@@ -717,7 +717,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
               {showToggle && (
                 <button
                   onClick={() => setParticipantsExpanded((v) => !v)}
-                  className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+                  className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-body-sm font-medium text-primary hover:bg-primary/5 transition-colors"
                 >
                   {participantsExpanded
                     ? "Show top 3 only"
@@ -732,9 +732,9 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
           <div className="rounded-xl border border-card-border bg-card overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3">
-              <span className="font-semibold text-sm text-foreground">Room to build</span>
+              <span className="font-semibold text-body text-foreground">Room to build</span>
               <div className="text-right">
-                <div className="text-xl font-bold tabular-nums leading-none text-foreground">
+                <div className="text-heading font-bold tabular-nums leading-none text-foreground">
                   {plantsOfRoom(sector.roomToBuildUnits, { sectorType: sector.type }) >= 1
                     ? plantsOfRoom(sector.roomToBuildUnits, {
                         sectorType: sector.type,
@@ -751,7 +751,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             </div>
 
             {data.plantsMode && (
-              <p className="px-4 pb-3 text-xs leading-snug text-muted">
+              <p className="px-4 pb-3 text-body-sm leading-snug text-muted">
                 {sector.roomToBuildScope === "country"
                   ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
                   : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
@@ -765,7 +765,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
               <div className="border-t border-card-border/50 px-4 py-3">
                 <Link
                   href={`/corporation/${data.userCorporationId}?tab=sectors&expand=1&state=${encodeURIComponent(stateId)}&sectorType=${encodeURIComponent(selectedType)}`}
-                  className="block w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  className="block w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-center text-body font-semibold text-primary transition-colors hover:bg-primary/20"
                 >
                   Build here
                 </Link>
@@ -784,14 +784,14 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
             <div className="rounded-xl border border-card-border bg-card px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground">No untapped demand</h4>
-                  <p className="mt-1 text-xs text-muted">
+                  <h4 className="text-body font-semibold text-foreground">No untapped demand</h4>
+                  <p className="mt-1 text-body-sm text-muted">
                     A new plant here would compete with current producers for sales.
                   </p>
                 </div>
                 <Link
                   href={`/corporation/${data.userCorporationId}?tab=sectors&expand=1&state=${encodeURIComponent(stateId)}&sectorType=${encodeURIComponent(selectedType)}`}
-                  className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-body font-semibold text-primary transition-colors hover:bg-primary/20"
                 >
                   Build here
                 </Link>
@@ -802,7 +802,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
         {/* All visible (player) owners hidden because the sector is entirely
             NPP-run — note it rather than showing a blank table (t834). */}
         {playerOwners.length === 0 && sector.owners.length > 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-4 text-center text-xs text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-4 text-center text-body-sm text-muted">
             {sector.owners.length} NPP-run corporation{sector.owners.length === 1 ? "" : "s"} —
             grouped in the chart above.
           </div>
@@ -810,7 +810,7 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
 
         {/* Empty state */}
         {sector.owners.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
             No market activity in this sector.
           </div>
         )}

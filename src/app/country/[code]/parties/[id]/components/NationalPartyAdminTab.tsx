@@ -75,21 +75,23 @@ function AdminAppointmentPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 space-y-4">
       <h3 className="font-semibold">Leadership appointment</h3>
-      <p className="text-xs text-muted/70">
+      <p className="text-body-sm text-muted/70">
         Directly appoint or vacate any leadership position. Active elections for the affected
         position will be cancelled automatically.
       </p>
       {message && (
-        <div className={`rounded-lg p-2.5 text-xs ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-2.5 text-body-sm ${getMessageStyle(message)}`}>{message}</div>
       )}
       <div className="space-y-2">
         {(["chair", "viceChair", "treasurer"] as Position[]).map((position) => (
           <div key={position} className="flex flex-wrap items-center gap-3">
-            <span className="text-xs text-muted w-24 shrink-0">{positionLabels[position]}:</span>
+            <span className="text-body-sm text-muted w-24 shrink-0">
+              {positionLabels[position]}:
+            </span>
             <select
               value={selections[position]}
               onChange={(e) => setSelections((prev) => ({ ...prev, [position]: e.target.value }))}
-              className="flex-1 min-w-40 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm transition-colors duration-150 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 min-w-40 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body transition-colors duration-150 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">(Vacant)</option>
               {[...members]
@@ -103,7 +105,7 @@ function AdminAppointmentPanel({
             <button
               onClick={() => appoint(position)}
               disabled={loading !== null}
-              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-40"
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary hover:bg-primary/20 disabled:opacity-40"
             >
               {loading === position ? "…" : "Appoint"}
             </button>
@@ -182,7 +184,7 @@ export function NationalPartyAdminTab({ party, onUpdate }: NationalPartyAdminTab
           </svg>
           <div>
             <h3 className="font-semibold text-red-400">Admin controls</h3>
-            <p className="text-sm text-red-300/80 mt-1">
+            <p className="text-body text-red-300/80 mt-1">
               These controls allow direct manipulation of the national party. Changes take effect
               immediately.
             </p>
@@ -191,7 +193,7 @@ export function NationalPartyAdminTab({ party, onUpdate }: NationalPartyAdminTab
       </div>
 
       {message && (
-        <div className={`rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-3 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
 
       {/* Leadership Appointment */}
@@ -228,8 +230,8 @@ export function NationalPartyAdminTab({ party, onUpdate }: NationalPartyAdminTab
         <div className="rounded-lg border border-red-500/30 bg-background p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="font-medium text-sm">Delete party</div>
-              <div className="text-xs text-muted mt-1">
+              <div className="font-medium text-body">Delete party</div>
+              <div className="text-body-sm text-muted mt-1">
                 Permanently delete the {party.name} party and ALL associated state party
                 organizations. This action cannot be undone.
                 {party.isDefault && (
@@ -243,7 +245,7 @@ export function NationalPartyAdminTab({ party, onUpdate }: NationalPartyAdminTab
             <button
               onClick={handleDeleteParty}
               disabled={deleting || party.isDefault}
-              className="shrink-0 rounded-lg border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+              className="shrink-0 rounded-lg border border-red-500 bg-red-500/10 px-4 py-2 text-body font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
             >
               {deleting ? "Deleting..." : "Delete"}
             </button>

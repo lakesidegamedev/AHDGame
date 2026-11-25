@@ -37,7 +37,7 @@ export function ErrorRef({ error, code, label = "Ref" }: ErrorRefProps) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-card-muted/50 px-2 py-1 font-mono text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
+      className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-card-muted/50 px-2 py-1 font-mono text-body-sm text-muted transition-colors hover:bg-card-muted hover:text-foreground"
       title={`Click to copy: ${ref}`}
     >
       <span className="opacity-60">{label}:</span>

@@ -154,7 +154,7 @@ export function FlagshipRouter({
             <button
               key={id}
               onClick={() => setDual(id)}
-              className={`rounded-md px-3 py-1.5 text-[12px] font-semibold ${
+              className={`rounded-md px-3 py-1.5 text-body-sm font-semibold ${
                 dual === id
                   ? "bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] text-gov-soft"
                   : "text-muted hover:text-foreground"

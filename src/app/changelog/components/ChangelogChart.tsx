@@ -184,7 +184,7 @@ export function ChangelogChart({ spec }: { spec: ChartSpec }) {
     <figure className="my-6 not-prose">
       <div className="rounded-xl border border-card-border bg-card p-4">
         {spec.title && (
-          <h4 id={titleId} className="mb-1 text-sm font-semibold text-foreground">
+          <h4 id={titleId} className="mb-1 text-body font-semibold text-foreground">
             {spec.title}
           </h4>
         )}
@@ -194,7 +194,7 @@ export function ChangelogChart({ spec }: { spec: ChartSpec }) {
         {multi && (
           <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
             {spec.series.map((s, i) => (
-              <span key={s.label} className="flex items-center gap-1.5 text-xs text-muted">
+              <span key={s.label} className="flex items-center gap-1.5 text-body-sm text-muted">
                 <span
                   aria-hidden
                   className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
@@ -377,7 +377,7 @@ export function ChangelogChart({ spec }: { spec: ChartSpec }) {
         <button
           type="button"
           onClick={() => setShowTable((v) => !v)}
-          className="mt-2 text-xs font-medium text-primary hover:underline"
+          className="mt-2 text-body-sm font-medium text-primary hover:underline"
           aria-expanded={showTable}
         >
           {showTable ? "Hide values" : "Show values as a table"}
@@ -385,7 +385,7 @@ export function ChangelogChart({ spec }: { spec: ChartSpec }) {
 
         {showTable && (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full border-collapse text-xs">
+            <table className="w-full border-collapse text-body-sm">
               <thead>
                 <tr className="border-b border-card-border text-left text-muted">
                   <th className="py-1 pr-3 font-semibold">Series</th>
@@ -423,7 +423,9 @@ export function ChangelogChart({ spec }: { spec: ChartSpec }) {
       </div>
 
       {spec.caption && (
-        <figcaption className="mt-2 text-xs leading-relaxed text-muted">{spec.caption}</figcaption>
+        <figcaption className="mt-2 text-body-sm leading-relaxed text-muted">
+          {spec.caption}
+        </figcaption>
       )}
     </figure>
   );

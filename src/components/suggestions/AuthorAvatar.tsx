@@ -4,9 +4,9 @@ import Image from "next/image";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 
 const SIZES = {
-  sm: { box: "h-8 w-8 text-xs", px: 32 },
-  md: { box: "h-10 w-10 text-sm", px: 40 },
-  lg: { box: "h-16 w-16 text-xl", px: 64 },
+  sm: { box: "h-8 w-8 text-body-sm", px: 32 },
+  md: { box: "h-10 w-10 text-body", px: 40 },
+  lg: { box: "h-16 w-16 text-heading", px: 64 },
 } as const;
 
 /** Round portrait with an initial fallback, used across the suggestion forum. */

@@ -162,8 +162,10 @@ export default function SectorsPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Sectors</h1>
-        <p className="mt-1 text-sm text-muted">Browse all economic sectors across every nation.</p>
+        <h1 className="text-heading font-bold text-foreground">Sectors</h1>
+        <p className="mt-1 text-body text-muted">
+          Browse all economic sectors across every nation.
+        </p>
         <AnchorUnitNote className="mt-1" />
       </div>
 
@@ -177,7 +179,7 @@ export default function SectorsPage() {
               key={tab.key}
               type="button"
               onClick={() => handleViewChange(tab.key)}
-              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
                 isActive
                   ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-card-border bg-card text-muted hover:bg-card/80 hover:text-foreground"
@@ -185,7 +187,7 @@ export default function SectorsPage() {
             >
               {tab.label}
               {count !== undefined && (
-                <span className="rounded-full bg-card-border/50 px-2 py-0.5 text-[10px] font-semibold tabular-nums">
+                <span className="rounded-full bg-card-border/50 px-2 py-0.5 text-body-sm font-semibold tabular-nums">
                   {count.toLocaleString("en-US")}
                 </span>
               )}
@@ -199,7 +201,7 @@ export default function SectorsPage() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+          className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
         >
           <option value="">All sector types</option>
           {data?.filters.sectorTypes.map((t) => (
@@ -212,7 +214,7 @@ export default function SectorsPage() {
         <select
           value={countryFilter}
           onChange={(e) => setCountryFilter(e.target.value)}
-          className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+          className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
         >
           <option value="">All countries</option>
           {data?.filters.countries.map((c) => (
@@ -226,7 +228,7 @@ export default function SectorsPage() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SectorSort)}
-            className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+            className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -237,7 +239,7 @@ export default function SectorsPage() {
           <button
             type="button"
             onClick={() => setDir(dir === "asc" ? "desc" : "asc")}
-            className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-muted transition-colors hover:text-foreground"
+            className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-muted transition-colors hover:text-foreground"
             title={dir === "asc" ? "Ascending" : "Descending"}
           >
             {dir === "asc" ? "↑" : "↓"}
@@ -247,7 +249,7 @@ export default function SectorsPage() {
 
       {/* Content */}
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-4 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-4 text-body text-error">
           {error}
         </div>
       )}
@@ -261,7 +263,7 @@ export default function SectorsPage() {
       )}
 
       {data && data.sectors.length === 0 && (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
           No sectors found with the current filters.
         </div>
       )}
@@ -278,7 +280,7 @@ export default function SectorsPage() {
           {/* Pagination */}
           {data.totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between">
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Showing {(data.page - 1) * 50 + 1}–{Math.min(data.page * 50, data.totalItems)} of{" "}
                 {data.totalItems.toLocaleString("en-US")} sectors
               </p>
@@ -287,18 +289,18 @@ export default function SectorsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={data.page <= 1}
-                  className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm disabled:opacity-40"
+                  className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body disabled:opacity-40"
                 >
                   ← Prev
                 </button>
-                <span className="flex items-center px-2 text-xs text-muted">
+                <span className="flex items-center px-2 text-body-sm text-muted">
                   {data.page} / {data.totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                   disabled={data.page >= data.totalPages}
-                  className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm disabled:opacity-40"
+                  className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body disabled:opacity-40"
                 >
                   Next →
                 </button>
@@ -322,10 +324,10 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
       <Link href={sectorHref} className="block px-4 pt-4 pb-3">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
-            <span className="font-semibold text-foreground text-sm leading-tight">
+            <span className="font-semibold text-foreground text-body leading-tight">
               {sector.sectorTypeLabel}
             </span>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
+            <div className="mt-1 flex items-center gap-1.5 text-body-sm text-muted">
               <span>{sector.stateName}</span>
               <span>·</span>
               <span className="flex items-center gap-1">
@@ -334,7 +336,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
             </div>
           </div>
           <div className="text-right shrink-0 ml-3">
-            <div className="text-lg font-bold tabular-nums leading-none text-foreground">
+            <div className="text-heading font-bold tabular-nums leading-none text-foreground">
               <AnchorAmount>₳{formatNumber(sector.revenueAnchor)}</AnchorAmount>
             </div>
             <div className="text-body-sm font-medium text-muted mt-0.5">/day</div>
@@ -356,7 +358,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
               />
               <Link
                 href={`/corporation/${sector.corporationSequentialId ?? sector.corporationId}`}
-                className="text-xs text-primary hover:underline leading-tight truncate"
+                className="text-body-sm text-primary hover:underline leading-tight truncate"
               >
                 {sector.corporationName}
               </Link>
@@ -366,7 +368,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
         {sector.margin != null && (
           <div className="flex flex-col px-4 py-2.5">
             <span className="text-body-sm font-medium text-muted mb-1">Margin</span>
-            <span className="text-xs font-semibold text-success tabular-nums leading-tight">
+            <span className="text-body-sm font-semibold text-success tabular-nums leading-tight">
               {sector.margin.toFixed(1)}%
             </span>
           </div>
@@ -374,7 +376,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
         {sector.growthRate != null && (
           <div className="flex flex-col px-4 py-2.5">
             <span className="text-body-sm font-medium text-muted mb-1">Growth</span>
-            <span className="text-xs font-medium leading-tight">
+            <span className="text-body-sm font-medium leading-tight">
               <span className={sector.growthRate >= 0 ? "text-success" : "text-error"}>
                 {sector.growthRate >= 0 ? "+" : ""}
                 {sector.growthRate.toFixed(1)}%
@@ -386,7 +388,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
         {view === "forSale" && sector.forSalePrice != null && (
           <div className="flex flex-col px-4 py-2.5">
             <span className="text-body-sm font-medium text-muted mb-1">Price</span>
-            <span className="text-xs font-semibold text-success tabular-nums leading-tight">
+            <span className="text-body-sm font-semibold text-success tabular-nums leading-tight">
               <AnchorAmount>₳{formatNumber(sector.forSalePrice)}</AnchorAmount>
             </span>
           </div>
@@ -398,7 +400,7 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
         <div className="border-t border-card-border/50 px-4 py-2">
           <Link
             href={`/corporation/${sector.corporationSequentialId ?? sector.corporationId}/sector/${sector.id}`}
-            className="text-[11px] text-muted hover:text-primary transition-colors"
+            className="text-body-sm text-muted hover:text-primary transition-colors"
           >
             View sector →
           </Link>

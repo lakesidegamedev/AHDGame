@@ -47,7 +47,7 @@ export function RaceNotes({
   if (!season && !incumbent && !byElection && !jp) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12 }}>
       {season ? (
         <p
           role="status"

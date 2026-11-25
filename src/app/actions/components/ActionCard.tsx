@@ -55,7 +55,7 @@ function ActionCardHeading({
       )}
       <div className={`absolute inset-0 bg-gradient-to-t ${CARD_PHOTO_SCRIM}`} />
       <div className="absolute inset-0 flex flex-col justify-end p-4">
-        <h3 className="text-heading font-semibold leading-tight text-white">{card.label}</h3>
+        <h3 className="text-body-lg font-semibold leading-tight text-white">{card.label}</h3>
         <p className="mt-0.5 text-body-sm text-white/85">
           {CATEGORY_LABELS[card.category]} · {card.tagline}
         </p>
@@ -88,7 +88,7 @@ function LoadingDetails({ card }: Pick<LoadingActionCardProps, "card">) {
       <button
         disabled
         type="button"
-        className="mt-auto w-full cursor-not-allowed rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold opacity-50"
+        className="mt-auto w-full cursor-not-allowed rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold opacity-50"
       >
         {card.label}
       </button>
@@ -331,14 +331,14 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
             <button
               type="button"
               onClick={() => onOpenCampaignAction(card.type as "canvass" | "targetedAds")}
-              className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold transition-colors hover:bg-card-muted"
+              className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold transition-colors hover:bg-card-muted"
             >
               {card.label}
             </button>
           ) : card.href ? (
             <Link
               href={card.href}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-card-muted"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold text-foreground transition-colors hover:bg-card-muted"
             >
               {/* Two poll cards share one page; name which poll each opens. */}
               {card.href === "/actions/poll"
@@ -361,7 +361,7 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                 <button
                   onClick={() => onFlipflopStepChange("axis")}
                   disabled={blocked || !!executing}
-                  className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-card-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold text-foreground transition-colors hover:bg-card-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Start flip-flop
                 </button>
@@ -426,7 +426,7 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                     <button
                       onClick={() => onFlipflop(flipflopAxis, flipflopDir)}
                       disabled={!!executing}
-                      className="w-full rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error-muted disabled:opacity-50"
+                      className="w-full rounded-lg bg-error px-4 py-2 text-body font-semibold text-white transition-colors hover:bg-error-muted disabled:opacity-50"
                     >
                       {executing === "flipflop" ? "Shifting..." : "Confirm shift"}
                     </button>
@@ -447,7 +447,7 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                 <button
                   onClick={() => onConvertCashOpenChange(true)}
                   disabled={blocked || !!executing}
-                  className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-card-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold text-foreground transition-colors hover:bg-card-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Start donation
                 </button>
@@ -531,7 +531,7 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                         <button
                           onClick={() => setConvertConfirming(true)}
                           disabled={!!executing}
-                          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                          className="w-full rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                         >
                           {executing === "convertCash" ? "Converting..." : "Confirm donation"}
                         </button>

@@ -254,7 +254,7 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
               height={36}
               className="object-contain shrink-0"
             />
-            <span className="hidden sm:inline text-base font-semibold tracking-tight">
+            <span className="hidden sm:inline text-body-lg font-semibold tracking-tight">
               A House Divided
             </span>
           </Link>

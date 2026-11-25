@@ -63,14 +63,16 @@ export function RailItem({ item, selected, compact, onSelect, onArchive }: RailI
             {/* Type + time row */}
             <div className="flex items-center gap-2">
               <span
-                className={`truncate text-[10px] font-bold uppercase tracking-[0.14em] ${category.text}`}
+                className={`truncate text-body-sm font-bold uppercase tracking-[0.14em] ${category.text}`}
               >
                 {eyebrow}
               </span>
               {item.kind === "mail" && item.counterpartName && (
-                <span className="truncate text-[10px] text-muted">from {item.counterpartName}</span>
+                <span className="truncate text-body-sm text-muted">
+                  from {item.counterpartName}
+                </span>
               )}
-              <span className="ml-auto shrink-0 font-mono text-[10px] text-muted tabular-nums">
+              <span className="ml-auto shrink-0 font-mono text-body-sm text-muted tabular-nums">
                 {item.turn ? `Turn ${item.turn} · ` : ""}
                 {item.time}
               </span>
@@ -86,7 +88,7 @@ export function RailItem({ item, selected, compact, onSelect, onArchive }: RailI
               )}
               <p
                 className={[
-                  "line-clamp-2 text-sm leading-snug",
+                  "line-clamp-2 text-body leading-snug",
                   item.unread ? "font-semibold text-foreground" : "font-normal text-muted",
                 ].join(" ")}
               >
@@ -97,17 +99,17 @@ export function RailItem({ item, selected, compact, onSelect, onArchive }: RailI
             {/* Preview and signal */}
             {!compact && (
               <div className="mt-2 space-y-2">
-                <p className="line-clamp-2 text-xs leading-relaxed text-muted">
+                <p className="line-clamp-2 text-body-sm leading-relaxed text-muted">
                   {previewSentence(item.body)}
                 </p>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${item.action ? URGENCY_VISUALS[item.urgency].wash : urgency.wash} ${item.action ? URGENCY_VISUALS[item.urgency].border : urgency.border} ${item.action ? URGENCY_VISUALS[item.urgency].text : urgency.text}`}
+                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${item.action ? URGENCY_VISUALS[item.urgency].wash : urgency.wash} ${item.action ? URGENCY_VISUALS[item.urgency].border : urgency.border} ${item.action ? URGENCY_VISUALS[item.urgency].text : urgency.text}`}
                   >
                     {item.action ? "Needs you" : urgency.label}
                   </span>
                   {item.meta?.[0] && (
-                    <span className="truncate text-[10px] text-muted">
+                    <span className="truncate text-body-sm text-muted">
                       <span className="font-medium text-foreground/70">{item.meta[0][0]}:</span>{" "}
                       {item.meta[0][1]}
                     </span>

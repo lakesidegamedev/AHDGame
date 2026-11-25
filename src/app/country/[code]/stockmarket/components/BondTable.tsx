@@ -112,7 +112,7 @@ export function BondTable({
               setTypeFilter("corporate");
               setPage(1);
             }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-body-sm font-semibold rounded-md transition-colors ${
               typeFilter === "corporate"
                 ? "bg-primary/15 text-primary border border-primary/30"
                 : "text-muted hover:text-foreground border border-transparent"
@@ -125,7 +125,7 @@ export function BondTable({
               setTypeFilter("sovereign");
               setPage(1);
             }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-body-sm font-semibold rounded-md transition-colors ${
               typeFilter === "sovereign"
                 ? "bg-secondary/15 text-secondary border border-secondary/30"
                 : "text-muted hover:text-foreground border border-transparent"
@@ -142,7 +142,7 @@ export function BondTable({
             }}
             aria-pressed={availableOnly}
             title="Show only bonds with units currently available to buy"
-            className={`shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+            className={`shrink-0 px-3 py-1.5 text-body-sm font-semibold rounded-md border transition-colors ${
               availableOnly
                 ? "bg-primary/15 text-primary border-primary/30"
                 : "text-muted hover:text-foreground border-card-border"
@@ -159,7 +159,7 @@ export function BondTable({
                 setFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
             />
             <svg
               className="absolute left-3 top-2.5 h-4 w-4 text-muted"
@@ -179,7 +179,7 @@ export function BondTable({
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <p className="text-xs text-muted tabular-nums">
+        <p className="text-body-sm text-muted tabular-nums">
           {bonds.length} issue{bonds.length === 1 ? "" : "s"}
           {totalOutstanding != null && totalOutstanding > 0
             ? ` · ${formatAmount(totalOutstanding)} outstanding`
@@ -192,7 +192,7 @@ export function BondTable({
               key={opt.field}
               type="button"
               onClick={() => handleSort(opt.field)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                 sortField === opt.field
                   ? "bg-primary/10 text-primary border border-primary/20"
                   : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
@@ -206,7 +206,7 @@ export function BondTable({
 
       <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-4 py-3 text-muted text-body-sm font-medium w-[40%]">Issuer</th>
@@ -276,9 +276,9 @@ export function BondTable({
                           <span className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
                             {bond.corporationName}
                           </span>
-                          <div className="flex items-center gap-2 text-xs text-muted">
+                          <div className="flex items-center gap-2 text-body-sm text-muted">
                             {bond.defaulted && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-error/10 border border-error/20 text-error uppercase text-[9px] tracking-wide font-bold">
+                              <span className="px-1.5 py-0.5 rounded-md bg-error/10 border border-error/20 text-error uppercase text-body-sm tracking-wide font-bold">
                                 Defaulted
                               </span>
                             )}
@@ -288,7 +288,7 @@ export function BondTable({
                             )}
                             {(ownedUnits?.get(bond._id) ?? 0) > 0 && (
                               <span
-                                className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary/15 border border-primary/30 text-primary uppercase text-[9px] tracking-wide font-semibold whitespace-nowrap"
+                                className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary/15 border border-primary/30 text-primary uppercase text-body-sm tracking-wide font-semibold whitespace-nowrap"
                                 title="Units you hold. See Portfolio for the full position."
                               >
                                 You: {(ownedUnits?.get(bond._id) ?? 0).toLocaleString("en-US")}
@@ -363,7 +363,7 @@ export function BondTable({
 
         {totalPages > 1 && (
           <div className="flex flex-col gap-3 border-t border-card-border bg-card-elevated/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted tabular-nums">
+            <p className="text-body-sm text-muted tabular-nums">
               Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, totalCount)}{" "}
               of {totalCount}
             </p>
@@ -372,18 +372,18 @@ export function BondTable({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs font-medium text-muted tabular-nums px-1">
+              <span className="text-body-sm font-medium text-muted tabular-nums px-1">
                 Page {safePage} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Next
               </button>

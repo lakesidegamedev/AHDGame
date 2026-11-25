@@ -32,7 +32,7 @@ type PendingAction =
   { kind: "status"; status: AltClusterStatus } | { kind: "ban" } | { kind: "note" };
 
 const BTN =
-  "inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
+  "inline-flex h-9 items-center rounded-lg border px-3 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
 
 export function ModeratorActions({
   cluster,
@@ -259,13 +259,13 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
 }
 
 const FIELD_CLS =
-  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted/70 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
+  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body transition-colors placeholder:text-muted/70 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
 
 const DIALOG_CANCEL_CLS =
-  "inline-flex h-10 items-center rounded-lg border border-card-border px-4 text-sm transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none";
+  "inline-flex h-10 items-center rounded-lg border border-card-border px-4 text-body transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none";
 
 function dialogConfirmCls(destructive?: boolean): string {
-  return `inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50 motion-reduce:transition-none ${
+  return `inline-flex h-10 items-center rounded-lg px-4 text-body font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50 motion-reduce:transition-none ${
     destructive
       ? "bg-red-600 hover:bg-red-500 focus-visible:ring-red-500/60"
       : "bg-primary hover:bg-primary-dark focus-visible:ring-primary/60"
@@ -298,10 +298,10 @@ function ConfirmDialog({
   const [note, setNote] = useState("");
   return (
     <Overlay onClose={onCancel}>
-      <h3 className={`mb-1 text-base font-semibold ${destructive ? "text-red-400" : ""}`}>
+      <h3 className={`mb-1 text-body-lg font-semibold ${destructive ? "text-red-400" : ""}`}>
         {title}
       </h3>
-      <p className="mb-4 text-sm leading-relaxed text-muted">{body}</p>
+      <p className="mb-4 text-body leading-relaxed text-muted">{body}</p>
       {withNote && (
         <textarea
           value={note}
@@ -357,7 +357,7 @@ function MemberActionDialog({
 
   return (
     <Overlay onClose={onCancel}>
-      <h3 className={`mb-4 text-base font-semibold ${destructive ? "text-red-400" : ""}`}>
+      <h3 className={`mb-4 text-body-lg font-semibold ${destructive ? "text-red-400" : ""}`}>
         {title}
       </h3>
       <label className="mb-1.5 block text-body-sm font-medium text-muted">Member</label>

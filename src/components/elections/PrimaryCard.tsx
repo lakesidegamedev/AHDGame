@@ -49,10 +49,10 @@ function PrimaryCard({
             countryId={countryId}
             size="h-4 w-4"
           />
-          <span className="text-xs font-semibold truncate">{partyName}</span>
+          <span className="text-body-sm font-semibold truncate">{partyName}</span>
         </div>
         {isUncontested && (
-          <span className="text-[10px] text-muted italic shrink-0">
+          <span className="text-body-sm text-muted italic shrink-0">
             {t("primaryCard.uncontested")}
           </span>
         )}
@@ -77,21 +77,21 @@ function PrimaryCard({
                   {href ? (
                     <Link
                       href={href}
-                      className="text-sm font-medium truncate hover:text-primary transition-colors"
+                      className="text-body font-medium truncate hover:text-primary transition-colors"
                     >
                       {candidate.name}
                     </Link>
                   ) : (
-                    <span className="text-sm font-medium truncate">{candidate.name}</span>
+                    <span className="text-body font-medium truncate">{candidate.name}</span>
                   )}
                   {candidate.isNPP && (
-                    <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-[9px] text-purple-400 shrink-0">
+                    <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-body-sm text-purple-400 shrink-0">
                       <NppAbbr />
                     </span>
                   )}
                 </div>
                 <span
-                  className={`tabular-nums text-xs shrink-0 ${
+                  className={`tabular-nums text-body-sm shrink-0 ${
                     candidate.isLeader && !isUncontested ? "font-bold" : "font-medium text-muted"
                   }`}
                 >

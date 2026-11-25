@@ -114,8 +114,8 @@ export function StatAllocationGate() {
       />
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-card-border bg-card shadow-2xl">
         <div className="relative px-5 pt-5 pb-4">
-          <h2 className="text-lg font-semibold text-foreground">Allocate your stats</h2>
-          <p className="mt-1 text-xs text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Allocate your stats</h2>
+          <p className="mt-1 text-body-sm text-muted">
             Your politician has earned a stat sheet. We&apos;ve suggested a build from your career —
             rearrange it however you like, then lock it in. This is a one-time choice.
           </p>
@@ -131,7 +131,7 @@ export function StatAllocationGate() {
               <StatPointAllocator value={stats} onChange={setStats} />
 
               {error && (
-                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-xs text-error">
+                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-body-sm text-error">
                   {error}
                 </p>
               )}
@@ -141,7 +141,7 @@ export function StatAllocationGate() {
                   type="button"
                   onClick={dismiss}
                   disabled={dismissing || submitting}
-                  className="text-xs text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                  className="text-body-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   {dismissing ? "Dismissing…" : "Maybe later"}
                 </button>

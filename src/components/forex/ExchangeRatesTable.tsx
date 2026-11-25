@@ -62,13 +62,13 @@ function RateRow({
           <div>
             <div className="flex items-center gap-1.5">
               <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold"
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-body-sm font-bold"
                 style={{ backgroundColor: color + "1a", color }}
               >
                 {CURRENCY_SYMBOLS[code] ?? code} {code}
               </span>
             </div>
-            <div className="text-xs text-muted mt-0.5">{name}</div>
+            <div className="text-body-sm text-muted mt-0.5">{name}</div>
           </div>
         </Link>
       </td>
@@ -76,10 +76,10 @@ function RateRow({
       <td className="px-4 py-3 text-right">
         <div className="font-mono font-medium tabular-nums text-foreground">
           {rate.rate >= 10 ? rate.rate.toFixed(2) : rate.rate.toFixed(4)}
-          <span className="text-muted text-[10px] ml-1">{CURRENCY_SYMBOLS[code] ?? code}/₳</span>
+          <span className="text-muted text-body-sm ml-1">{CURRENCY_SYMBOLS[code] ?? code}/₳</span>
         </div>
         {rate.rate > 0 && (
-          <div className="text-[10px] text-muted/60 font-mono tabular-nums mt-0.5">
+          <div className="text-body-sm text-muted/60 font-mono tabular-nums mt-0.5">
             1 {code} = {(1 / rate.rate).toFixed(4)} ₳
           </div>
         )}
@@ -87,7 +87,7 @@ function RateRow({
 
       <td className="px-4 py-3 text-right">
         <span
-          className={`tabular-nums font-medium text-xs ${
+          className={`tabular-nums font-medium text-body-sm ${
             change > 0 ? "text-success" : change < 0 ? "text-error" : "text-muted"
           }`}
         >
@@ -96,7 +96,7 @@ function RateRow({
         </span>
       </td>
 
-      <td className="px-4 py-3 text-right text-muted font-mono text-xs hidden sm:table-cell">
+      <td className="px-4 py-3 text-right text-muted font-mono text-body-sm hidden sm:table-cell">
         {buyVol > 0 ? (
           <span title={`${formatCurrencyFaceAmount(buyNative, code)} (24 turns)`}>
             {formatCurrencyFaceAmount(buyNative, code)}
@@ -106,7 +106,7 @@ function RateRow({
         )}
       </td>
 
-      <td className="px-4 py-3 text-right text-muted font-mono text-xs hidden sm:table-cell">
+      <td className="px-4 py-3 text-right text-muted font-mono text-body-sm hidden sm:table-cell">
         {sellVol > 0 ? (
           <span title={`${formatCurrencyFaceAmount(sellNative, code)} (24 turns)`}>
             {formatCurrencyFaceAmount(sellNative, code)}
@@ -122,7 +122,7 @@ function RateRow({
             e.preventDefault();
             onOpenTradeForCurrency?.(code);
           }}
-          className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+          className="rounded-md bg-primary/10 px-3 py-1 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors"
         >
           Trade
         </button>
@@ -142,19 +142,19 @@ function RatesTableBody({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-body">
         <thead>
           <tr className="border-b border-card-border bg-card-elevated">
             <th className="px-4 py-3 text-left text-body-sm font-medium text-muted">Currency</th>
             <th className="px-4 py-3 text-right text-body-sm font-medium text-muted">
               <span>Rate</span>
-              <span className="block text-[9px] font-normal normal-case text-muted/60">
+              <span className="block text-body-sm font-normal normal-case text-muted/60">
                 per 1 ₳
               </span>
             </th>
             <th className="px-4 py-3 text-right text-body-sm font-medium text-muted">
               <span>Strength vs. Base</span>
-              <span className="block text-[9px] font-normal normal-case text-muted/60">
+              <span className="block text-body-sm font-normal normal-case text-muted/60">
                 Positive = currency stronger
               </span>
             </th>
@@ -206,8 +206,8 @@ export function ExchangeRatesTable({
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-card-border">
-          <h2 className="text-sm font-bold text-foreground">Currencies</h2>
-          <p className="text-xs text-muted mt-0.5">
+          <h2 className="text-body font-bold text-foreground">Currencies</h2>
+          <p className="text-body-sm text-muted mt-0.5">
             {accordionRates.length > 0 ? "Player-enabled nations. " : null}
             Each rate is how many units of that currency you get for 1 ₳.{" "}
             <span className="font-medium text-foreground/70">
@@ -235,17 +235,17 @@ export function ExchangeRatesTable({
                 >
                   ▸
                 </span>
-                <h2 className="text-sm font-bold text-foreground">Other currencies</h2>
-                <span className="rounded-full bg-card-elevated px-2 py-0.5 text-[10px] font-semibold text-muted tabular-nums">
+                <h2 className="text-body font-bold text-foreground">Other currencies</h2>
+                <span className="rounded-full bg-card-elevated px-2 py-0.5 text-body-sm font-semibold text-muted tabular-nums">
                   {accordionRates.length}
                 </span>
               </div>
-              <p className="text-xs text-muted mt-1 pl-5">
+              <p className="text-body-sm text-muted mt-1 pl-5">
                 Econ-only and other market nations — westernized first, then planned economies.
               </p>
             </div>
-            <span className="text-xs text-muted shrink-0 group-open:hidden">Show</span>
-            <span className="text-xs text-muted shrink-0 hidden group-open:inline">Hide</span>
+            <span className="text-body-sm text-muted shrink-0 group-open:hidden">Show</span>
+            <span className="text-body-sm text-muted shrink-0 hidden group-open:inline">Hide</span>
           </summary>
           <RatesTableBody
             rates={accordionRates}

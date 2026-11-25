@@ -99,7 +99,7 @@ export function CaucusChairElectionPanel({
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-card-border bg-card p-5 text-sm text-muted">
+      <div className="rounded-lg border border-card-border bg-card p-5 text-body text-muted">
         Loading caucus election...
       </div>
     );
@@ -107,7 +107,7 @@ export function CaucusChairElectionPanel({
 
   if (!data) {
     return (
-      <div className="rounded-lg border border-card-border bg-card p-5 text-sm text-muted">
+      <div className="rounded-lg border border-card-border bg-card p-5 text-body text-muted">
         Could not load caucus election data.
       </div>
     );
@@ -126,12 +126,12 @@ export function CaucusChairElectionPanel({
       <div className="rounded-lg border border-card-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold">Caucus chair election</h3>
-            <p className="mt-1 text-sm text-muted">
+            <h3 className="text-body-lg font-semibold">Caucus chair election</h3>
+            <p className="mt-1 text-body text-muted">
               {`${caucusName} runs its chair election on the same 96-turn cadence as the parent party's national leadership cycle.`}
             </p>
           </div>
-          <div className="text-right text-sm">
+          <div className="text-right text-body">
             {election?.status === "voting" ? (
               <>
                 <div className="text-body-sm text-muted">Closes in</div>
@@ -159,7 +159,7 @@ export function CaucusChairElectionPanel({
         </div>
 
         {message && (
-          <div className={`mt-4 rounded-lg p-2.5 text-xs ${getMessageStyle(message)}`}>
+          <div className={`mt-4 rounded-lg p-2.5 text-body-sm ${getMessageStyle(message)}`}>
             {message}
           </div>
         )}
@@ -171,7 +171,7 @@ export function CaucusChairElectionPanel({
                 type="button"
                 onClick={() => void postAction("enter", {})}
                 disabled={actionLoading}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-40"
+                className="rounded-lg px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-40"
                 style={{ backgroundColor: caucusColor }}
               >
                 {actionLoading ? "..." : "Run for chair"}
@@ -182,7 +182,7 @@ export function CaucusChairElectionPanel({
                 type="button"
                 onClick={() => void postAction("enter", { withdraw: true })}
                 disabled={actionLoading}
-                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/20 disabled:opacity-40"
+                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-40"
               >
                 {actionLoading ? "..." : "Withdraw"}
               </button>
@@ -192,7 +192,7 @@ export function CaucusChairElectionPanel({
                 type="button"
                 onClick={handleWithdrawVote}
                 disabled={actionLoading}
-                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/20 disabled:opacity-40"
+                className="rounded-lg border border-error/40 bg-error/10 px-3 py-1.5 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-40"
               >
                 {actionLoading ? "..." : "Withdraw vote"}
               </button>
@@ -202,11 +202,11 @@ export function CaucusChairElectionPanel({
       </div>
 
       {!election ? (
-        <div className="rounded-lg border border-card-border bg-card p-5 text-sm italic text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-5 text-body italic text-muted">
           No caucus chair election has opened yet for this caucus.
         </div>
       ) : election.candidates.length === 0 ? (
-        <div className="rounded-lg border border-card-border bg-card p-5 text-sm italic text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-5 text-body italic text-muted">
           No candidates have declared yet.
         </div>
       ) : (
@@ -229,7 +229,7 @@ export function CaucusChairElectionPanel({
                     <div className="flex min-w-0 items-center gap-2">
                       <Link
                         href={`/character/${candidate.sequentialId ?? candidate.characterId}`}
-                        className="truncate text-sm font-medium hover:text-primary"
+                        className="truncate text-body font-medium hover:text-primary"
                       >
                         {candidate.characterName}
                       </Link>
@@ -249,7 +249,9 @@ export function CaucusChairElectionPanel({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <div className="text-right">
-                        <div className="text-sm font-bold tabular-nums">{candidate.voteCount}</div>
+                        <div className="text-body font-bold tabular-nums">
+                          {candidate.voteCount}
+                        </div>
                         <div className="text-body-sm text-muted">
                           {election.totalVotes > 0 ? `${pct}%` : "—"}
                         </div>
@@ -261,7 +263,7 @@ export function CaucusChairElectionPanel({
                             void postAction("vote", { candidateId: candidate.characterId })
                           }
                           disabled={actionLoading}
-                          className="rounded-lg border border-card-border bg-background px-2.5 py-1 text-xs hover:border-primary hover:text-primary disabled:opacity-40"
+                          className="rounded-lg border border-card-border bg-background px-2.5 py-1 text-body-sm hover:border-primary hover:text-primary disabled:opacity-40"
                         >
                           Vote
                         </button>

@@ -36,10 +36,10 @@ export function NoticeStrip({
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={`flex flex-wrap items-start gap-x-3.5 gap-y-2 rounded-[var(--corp-rad,6px)] border px-3 py-2.5 text-[13px] leading-relaxed ${FRAME[tone]}`}
+      className={`flex flex-wrap items-start gap-x-3.5 gap-y-2 rounded-[var(--corp-rad,6px)] border px-3 py-2.5 text-body-sm leading-relaxed ${FRAME[tone]}`}
     >
       <span
-        className={`mt-0.5 shrink-0 rounded-[3px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${TAG[tone]}`}
+        className={`mt-0.5 shrink-0 rounded-[3px] px-2 py-0.5 text-body-sm font-bold uppercase tracking-[0.12em] ${TAG[tone]}`}
       >
         {tag}
       </span>
@@ -52,7 +52,7 @@ export function NoticeStrip({
               type="button"
               onClick={onDismiss}
               aria-label={dismissLabel}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] px-2 text-xs text-muted hover:bg-card-elevated hover:text-foreground"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] px-2 text-body-sm text-muted hover:bg-card-elevated hover:text-foreground"
             >
               ✕
             </button>
