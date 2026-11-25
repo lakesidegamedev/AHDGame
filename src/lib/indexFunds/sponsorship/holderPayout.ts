@@ -18,7 +18,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
-import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/characterFunds";
+import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { loadFundPayoutFxRate } from "@/lib/indexFunds/dividendPassThrough";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -162,13 +162,9 @@ export async function payFundHoldersCash(
   if (!pay.length) return { paid: [], unpaid: [], distributedAnchor: 0 };
 
   const forexEnabled = await isForexEnabled();
-  let fundFxRate = await loadFundPayoutFxRate(db, fund.anchorCurrencyCode, forexEnabled);
-  if (forexEnabled && fund.seedAccounting === "paid_units") {
-    const quote = await loadCharacterFxRate(db, fund.anchorCurrencyCode);
-    if (!quote.ok || !Number.isFinite(quote.rate) || quote.rate <= 0)
-      throw new Error("Fund payout exchange rate unavailable");
-    fundFxRate = quote.rate;
-  }
+  const fundFxRate = await loadFundPayoutFxRate(db, fund.anchorCurrencyCode, forexEnabled);
+  if (fundFxRate == null)
+    throw new Error("Fund payout exchange rate unavailable; wind-up remains pending");
 
   const byCollection = new Map<HolderCollection, HolderCreditGroup[]>();
   const unpaid: IndexFundPosition[] = [];
@@ -232,7 +228,8 @@ export async function payFundHolderCash(
     const forexEnabled = await isForexEnabled();
     const rates = forexEnabled ? await loadFxRatesRecord(db) : {};
     const rate = forexEnabled && currency ? rates[currency] : 1;
-    if (!rate || rate <= 0) throw new Error("Corporate payout exchange rate unavailable");
+    if (!rate || !Number.isFinite(rate) || rate <= 0)
+      throw new Error("Corporate payout exchange rate unavailable");
     const credited = await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {

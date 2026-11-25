@@ -15,7 +15,7 @@ vi.mock("@/lib/currency/corporationCapital", () => ({
   anchorToCorpCapital: (a: number) => a,
   anchorToCorpLiquidCapital: (a: number) => a,
   corpCapitalToAnchor: (a: number) => a,
-  loadFxRatesRecord: vi.fn().mockResolvedValue({}),
+  loadFxRatesRecord: vi.fn().mockResolvedValue({ USD: 1 }),
   getCorpFxRate: vi.fn().mockResolvedValue(1),
   resolveCorpLiquidCurrencyCode: () => "USD",
 }));
@@ -491,7 +491,7 @@ describe("advanceWindDowns", () => {
       fund,
       Number.POSITIVE_INFINITY,
       expect.any(Date),
-      { turn: 200 }
+      { turn: 200, operationKey: "wind-up:200" }
     );
     expect(r.fundsCompleted).toBe(1);
     expect(r.errors).toEqual([]);
@@ -615,5 +615,22 @@ describe("#4219 wind-up clears settlement blockers", () => {
     const { db } = makeDb({ windingDown: [fund], positions: [], openFundOrders: [] });
     const r = await advanceWindDowns(db, 356, { forexEnabled: true });
     expect(r.errors).not.toContain("NIT: Fund settlement must finish before wind-up");
+  });
+  it("keeps a wind-up pending rather than erasing residual cash without an FX quote", async () => {
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10000 });
+    const { db, fundUpdate, centralBanksUpdate } = makeDb({
+      windingDown: [fund],
+      fund,
+      positions: [],
+      corporations: [],
+      sponsorExists: false,
+    });
+    const { loadFxRatesRecord } = await import("@/lib/currency/corporationCapital");
+    vi.mocked(loadFxRatesRecord).mockResolvedValueOnce({});
+    const result = await advanceWindDowns(db, 200);
+    expect(result.fundsCompleted).toBe(0);
+    expect(result.errors.join(" ")).toContain("exchange rate unavailable");
+    expect(centralBanksUpdate).not.toHaveBeenCalled();
+    expect(fundUpdate).not.toHaveBeenCalled();
   });
 });

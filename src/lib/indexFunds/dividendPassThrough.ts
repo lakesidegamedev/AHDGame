@@ -47,17 +47,16 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
- * Returns 1 with forex off (balances are ₳ directly) and on a missing rate,
- * which is the same fail-soft the rest of the personal-wealth paths use.
+ * Without a live quote the payout remains in fund backing. Forex-off balances use anchor.
  */
 export async function loadFundPayoutFxRate(
   db: Db,
   fundCurrency: CurrencyCode,
   forexEnabled: boolean
-): Promise<number> {
+): Promise<number | null> {
   if (!forexEnabled) return 1;
   const { rate, ok } = await loadCharacterFxRate(db, fundCurrency);
-  return ok ? rate : 1;
+  return ok && Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
 export type DividendPassThroughResult = {
@@ -214,6 +213,7 @@ export async function processIndexFundDividend(
   }[] = [];
 
   for (const position of positions) {
+    if (fundFxRate == null) continue;
     if (position.holderKind === "fund_reserve") continue;
     if (position.units <= 0) continue;
 
@@ -293,7 +293,7 @@ export async function processIndexFundDividend(
       if (!corp) continue;
       const currency = resolveCorpLiquidCurrencyCode(corp);
       const rate = forexEnabled && currency ? corpRates[currency] : 1;
-      if (!rate || rate <= 0) continue;
+      if (!rate || !Number.isFinite(rate) || rate <= 0) continue;
       const native = anchorToCorpLiquidCapital(holderDividend, corp, rate);
       corpOps.push({
         updateOne: {
@@ -464,8 +464,8 @@ export async function processIndexFundDividendsBatch(
   const forexEnabled = await isForexEnabled();
   // One rate lookup per distinct fund currency, reused across every accrual in
   // the batch. Same ₳ → native conversion as the single-dividend path.
-  const fxRateByCurrency = new Map<string, number>();
-  const fundFxRateFor = async (currency: CurrencyCode): Promise<number> => {
+  const fxRateByCurrency = new Map<string, number | null>();
+  const fundFxRateFor = async (currency: CurrencyCode): Promise<number | null> => {
     const cached = fxRateByCurrency.get(currency);
     if (cached !== undefined) return cached;
     const rate = await loadFundPayoutFxRate(db, currency, forexEnabled);
@@ -597,6 +597,7 @@ export async function processIndexFundDividendsBatch(
     let distributedAnchor = 0;
 
     for (const position of positions) {
+      if (fundFxRate == null) continue;
       if (position.holderKind === "fund_reserve" || position.units <= 0) continue;
       const holderDividend = Math.floor(position.units * perUnitDividend * 100) / 100;
       if (holderDividend <= 0) continue;
@@ -664,7 +665,7 @@ export async function processIndexFundDividendsBatch(
         if (!corp) continue;
         const currency = resolveCorpLiquidCurrencyCode(corp);
         const rate = forexEnabled && currency ? corpRatesBatch[currency] : 1;
-        if (!rate || rate <= 0) continue;
+        if (!rate || !Number.isFinite(rate) || rate <= 0) continue;
         const native = anchorToCorpLiquidCapital(holderDividend, corp, rate);
         addInc(corporateInc, corp._id, { liquidCapital: native });
         holderTxEntries.push(

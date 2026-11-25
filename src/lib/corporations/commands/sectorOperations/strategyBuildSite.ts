@@ -17,11 +17,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
-import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
-import {
-  RequiredTransactionCleanupError,
-  runRequiredTransaction,
-} from "@/lib/db/runRequiredTransaction";
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 
 export function strategyBuildSiteIdentity(corporationId: ObjectId, requestId: string) {
   const nationalizationSiteKey = STRATEGY_BUILD_SITE_PREFIX + requestId;
@@ -127,34 +123,44 @@ export async function placeStrategyBuildSite(
   db: Db,
   site: CorporateSector,
   order: SectorBuildOrder,
-  chargedLocal: number
+  chargedLocal: number,
+  record?: (transactionDb: Db) => Promise<void>,
+  quotedCorporation?: Corporation
 ): Promise<SiteBuildResult> {
-  const { _id, corporationId, nationalizationSiteKey, updatedAt } = site;
-  try {
-    return await runRequiredTransaction(async (session): Promise<SiteBuildResult> => {
-      const existing = await corporateSectorsCollection(db).findOne(
+  {
+    const tx = db;
+    const { _id, corporationId, nationalizationSiteKey } = site;
+    const existing = await corporateSectorsCollection(tx).findOne(
+      { _id, corporationId, nationalizationSiteKey },
+      { projection: { _id: 1 } }
+    );
+    if (existing) return "existing";
+    const corporation =
+      quotedCorporation ?? (await corporationsCollection(tx).findOne({ _id: corporationId }));
+    if (!corporation) return "insufficient_cash";
+    let paid: boolean;
+    try {
+      paid = await commitSiteCashMutation(tx, {
+        corporation,
+        chargeLocal: chargedLocal,
+        now: site.updatedAt,
+        site: { insert: { ...site, buildQueue: [order] } },
+        record,
+      });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      const landed = await corporateSectorsCollection(db).findOne(
         { _id, corporationId, nationalizationSiteKey },
-        { session, projection: { _id: 1 } }
+        { projection: { _id: 1 } }
       );
-      if (existing) return "existing";
-
-      const debit = await corporationsCollection(db).updateOne(
-        {
-          _id: corporationId,
-          liquidCapital: { $gte: chargedLocal },
-          ...corporateDiscretionaryCashGuard(),
-        },
-        { $inc: { liquidCapital: -chargedLocal }, $set: { updatedAt } },
-        { session }
-      );
-      if (debit.matchedCount !== 1) return "insufficient_cash";
-      await corporateSectorsCollection(db).insertOne({ ...site, buildQueue: [order] }, { session });
-      return "created";
-    });
-  } catch (error) {
-    if (error instanceof RequiredTransactionCleanupError) {
-      return error.committedResult as SiteBuildResult;
+      if (!landed) throw error;
+      return "existing";
     }
-    throw error;
+    if (paid) return "created";
+    const landed = await corporateSectorsCollection(db).findOne(
+      { _id, corporationId, nationalizationSiteKey },
+      { projection: { _id: 1 } }
+    );
+    return landed ? "existing" : "insufficient_cash";
   }
 }

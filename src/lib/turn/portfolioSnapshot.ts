@@ -1,3 +1,5 @@
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { fundPositionValue } from "@/lib/indexFunds/rules/portfolioValue";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import {
@@ -337,7 +339,6 @@ export async function snapshotPortfolioValues(
   }
 
   if (portfolioMap.size === 0) return 0;
-
   // Freeze the FX rate map at snapshot time so the portfolio chart can convert
   // each historical anchor value back to local currency at the rate that was
   // actually in effect — re-applying current rates produces phantom volatility
@@ -407,7 +408,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
 
   // Every corp gets a snapshot so cash-only corps (no stocks/bonds) still have Net
   // Worth history.
-  const [allCorps, bonds, fxByCurrency, reserved, fundPositions] = await Promise.all([
+  const [allCorps, bonds, fxByCurrency, reserved, fundPositions, loans] = await Promise.all([
     (await getCorporationsCollection(db))
       .find({})
       .project<Corporation>({
@@ -417,6 +418,10 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
         sharePrice: 1,
         liquidCurrencyCode: 1,
         countryId: 1,
+        bankLoanInterestPaidByTurn: 1,
+        bankLoanInterestCurrencyByTurn: 1,
+        operatingCashArrearsByCurrency: 1,
+        federalTaxArrearsAnchorByCountry: 1,
         imfBailoutActive: 1,
         imfBailoutImfCorporationId: 1,
         imfFacilityPrincipalOutstanding: 1,
@@ -442,7 +447,25 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
         { projection: { corporationId: 1, fundId: 1, units: 1 } }
       )
       .toArray(),
+    bankLoansCollection(db)
+      .find(
+        {
+          borrowerType: "corporation",
+          status: { $in: ["current", "arrears", "defaulted"] },
+          outstanding: { $gt: 0 },
+        },
+        { projection: { borrowerId: 1, outstanding: 1, currency: 1 } }
+      )
+      .toArray(),
   ]);
+  const loansByCorporation = new Map<string, typeof loans>();
+  for (const loan of loans) {
+    const id = loan.borrowerId?.toString();
+    if (!id) continue;
+    const entries = loansByCorporation.get(id) ?? [];
+    entries.push(loan);
+    loansByCorporation.set(id, entries);
+  }
 
   const funds = fundPositions.length
     ? await indexFundsCollection(db)
@@ -484,12 +507,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   const imfReceivableByLender = new Map<string, number>();
   for (const corp of allCorps) {
     if (!corp.imfBailoutActive || !corp.imfBailoutImfCorporationId) continue;
-    const fxRate = fxRateForCorpFromMap(corp, fxByCurrency);
-    const principalAnchor = corpLiquidCapitalToAnchor(
-      corp.imfFacilityPrincipalOutstanding ?? 0,
-      corp,
-      fxRate
-    );
+    const principalAnchor = corp.imfFacilityPrincipalOutstanding ?? 0;
     const lenderId = corp.imfBailoutImfCorporationId.toString();
     imfReceivableByLender.set(
       lenderId,
@@ -506,7 +524,8 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
     const liabilityAnchor = computeCorporationLiabilityValueAnchor(
       corp,
       issuedBondsByCorp.get(corp._id.toString()) ?? [],
-      fxByCurrency
+      fxByCurrency,
+      loansByCorporation.get(corp._id.toString()) ?? []
     );
     portfolioMap.set(corp._id.toString(), {
       totalValue: cashAnchor + imfReceivableAnchor,
@@ -602,6 +621,58 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   }
 
   if (portfolioMap.size === 0) return 0;
+  const historyRows = await corporationHistoryCollection(db)
+    .find(
+      { turn },
+      {
+        projection: { corporationId: 1, currencyCode: 1 },
+      }
+    )
+    .toArray();
+  const corpById = new Map(allCorps.map((corp) => [String(corp._id), corp]));
+  const loanCosts = historyRows.flatMap((row) => {
+    const corp = corpById.get(String(row.corporationId));
+    if (!corp) return [];
+    const recorded = corp.bankLoanInterestPaidByTurn?.[String(turn)];
+    if (recorded == null && loansByCorporation.has(String(corp._id))) return [];
+    const paid = recorded ?? 0;
+    const source = corp.bankLoanInterestCurrencyByTurn?.[String(turn)];
+    if (paid > 0 && source !== row.currencyCode) return [];
+    return [
+      {
+        updateOne: {
+          filter: { _id: row._id, turn },
+          update: { $set: { settledBankLoanInterestPaid: paid } },
+        },
+      },
+    ];
+  });
+  if (loanCosts.length)
+    await corporationHistoryCollection(db).bulkWrite(loanCosts, { ordered: false });
+  const prune = allCorps.flatMap((corp) => {
+    const old = Object.keys(corp.bankLoanInterestPaidByTurn ?? {}).filter(
+      (key) => Number(key) < turn - 64
+    );
+    return old.length
+      ? [
+          {
+            updateOne: {
+              filter: { _id: corp._id },
+              update: {
+                $unset: Object.fromEntries(
+                  old.flatMap((key) => [
+                    [`bankLoanInterestPaidByTurn.${key}`, "" as const],
+                    [`bankLoanInterestCurrencyByTurn.${key}`, "" as const],
+                  ])
+                ),
+              },
+            },
+          },
+        ]
+      : [];
+  });
+  if (prune.length)
+    await (await getCorporationsCollection(db)).bulkWrite(prune, { ordered: false });
 
   // See PortfolioHistory.exchangeRatesSnapshot — same purpose for the corp chart.
   const exchangeRatesSnapshot = fxMapToRecord(fxByCurrency);

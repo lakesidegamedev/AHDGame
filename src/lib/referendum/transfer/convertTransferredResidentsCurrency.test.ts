@@ -269,3 +269,25 @@ function applySetStage(stage: Doc, doc: Doc): Doc {
   }
   return out;
 }
+
+it("retains a debt-backed corporate denomination without stopping a strict region transfer", async () => {
+  const db = createMockDb();
+  db.collection("corporations").find.mockReturnValue(
+    cursorOf([
+      { _id: "borrower", liquidCurrencyCode: "GBP", countryId: "IE", headquartersState: "NIR" },
+    ])
+  );
+  vi.mocked(convertCorpCurrency).mockResolvedValueOnce({
+    ok: false,
+    debtCurrencyRetained: true,
+    retainedCurrency: "GBP",
+    error: "Repay outstanding bank debt",
+  });
+  await expect(
+    convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE", true)
+  ).resolves.toBeUndefined();
+  expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
+    { _id: "borrower" },
+    { $set: { liquidCurrencyCode: "GBP" } }
+  );
+});

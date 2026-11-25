@@ -360,7 +360,11 @@ export async function processQueuedRedemptions(
         fundState,
         entryObligation - availableCash,
         new Date(),
-        { turn: currentTurn, thresholds: bondSaleThresholds }
+        {
+          turn: currentTurn,
+          thresholds: bondSaleThresholds,
+          operationKey: `redemption:${entry._id}:${currentTurn}`,
+        }
       );
       if (bondSale.proceedsAnchor > 0) {
         fundState = (await getFundById(db, fund._id)) ?? fundState;

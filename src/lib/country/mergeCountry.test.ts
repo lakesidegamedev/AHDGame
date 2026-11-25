@@ -790,4 +790,37 @@ describe("mergeCountry", () => {
     });
     expect(prime(db, "intelligenceOpLog").deleteMany).not.toHaveBeenCalled();
   });
+  it("keeps an indebted NatCorp and its productive assets instead of orphaning its loans", async () => {
+    const corps = prime(db, "corporations");
+    corps.findOne.mockResolvedValue({
+      _id: "survivor",
+      name: "Survivor",
+      liquidCapital: 100,
+      liquidCurrencyCode: "DDM",
+    });
+    corps.find.mockReturnValue(
+      cursor([{ _id: "shell", name: "Borrower", liquidCapital: 0, liquidCurrencyCode: "DDM" }])
+    );
+    prime(db, "bankLoans").find.mockReturnValue(
+      cursor([{ borrowerId: "shell", outstanding: 100 }])
+    );
+    const { mergeCountry } = await import("./mergeCountry");
+    await mergeCountry(db as unknown as Db, {
+      fromCountryId: "DE",
+      toCountryId: "DD",
+      currentTurn: 412,
+    });
+    expect(corps.deleteOne.mock.calls.some((call) => call[0]._id === "shell")).toBe(false);
+    expect(corps.updateOne).toHaveBeenCalledWith(
+      { _id: "shell" },
+      expect.objectContaining({
+        $set: expect.objectContaining({ isPrimaryNationalCorporation: false }),
+      })
+    );
+    expect(
+      prime(db, "corporateSectors").updateOne.mock.calls.some(
+        (call) => call[1]?.$set?.corporationId === "survivor"
+      )
+    ).toBe(false);
+  });
 });

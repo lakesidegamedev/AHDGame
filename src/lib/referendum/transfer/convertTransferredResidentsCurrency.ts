@@ -89,7 +89,14 @@ export async function convertTransferredResidentsCurrency(
     // Forex is enabled by construction here — a "convert" pair only exists
     // with the feature on.
     const result = await convertCorpCurrency(db, corp, newCurrency, fxByCurrency, now, true);
-    if (strict && result && !result.ok) throw new Error(result.error);
+    if (result && !result.ok && result.debtCurrencyRetained && result.retainedCurrency) {
+      await corporationsCollection(db).updateOne(
+        { _id: corp._id },
+        { $set: { liquidCurrencyCode: result.retainedCurrency } }
+      );
+    }
+    if (strict && result && !result.ok && !result.debtCurrencyRetained)
+      throw new Error(result.error);
   }
 
   // Region party organisations that CARRIED with a dissolving source (the

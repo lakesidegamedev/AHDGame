@@ -1,4 +1,4 @@
-import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -10,8 +10,6 @@ import {
   resolveCorporation,
   requireCeoOrDirectingParent,
 } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
-import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 
 import {
   SECTOR_STRATEGIES,
@@ -48,7 +46,7 @@ import {
   shortageRetoolDecision,
   SHORTAGE_RETOOL_TRANSITION_HEADSTART,
 } from "@/lib/corporations/shortageRetool";
-import type { CommodityPrice } from "@/lib/db/types";
+
 import type { CommodityType } from "@/lib/constants/commodities";
 import { getStrategyAvailability, sunsetRetoolCostMultiplier } from "@/lib/constants/techTree";
 import {
@@ -67,7 +65,7 @@ import {
   methodBuildDelayTurns,
   methodTransitionStartTurn,
 } from "@/lib/corporations/rules/methodAdoption";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -380,38 +378,48 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     });
 
     // Apply changes atomically
-    const debit = await corporationsCollection(db).updateOne(
-      {
-        _id: corporation._id,
-        liquidCapital: { $gte: retoolCostInCorpCapital },
-        ...corporateDiscretionaryCashGuard(),
+    const changed = await commitSiteCashMutation(db, {
+      corporation,
+      chargeLocal: retoolCostInCorpCapital,
+      now: new Date(),
+      record: async (tx) => {
+        await emitSectorRetoolTx(
+          tx,
+          {
+            corporationId: corporation._id,
+            corporationName: corporation.name ?? "Corporation",
+            corporationSequentialId: corporation.sequentialId,
+            amountLocal: retoolCostInCorpCapital,
+            currencyCode: (liquidCode ?? "USD") as CurrencyCode,
+            turn: currentTurn,
+            createdAt: new Date(),
+            action: "retool",
+            sectorId: sector._id,
+            sectorType: sector.sectorType,
+            fromStrategyId: currentStrategyId,
+            toStrategyId: strategyId,
+          },
+          { atomic: true }
+        );
       },
-      { $inc: { liquidCapital: -retoolCostInCorpCapital }, $set: { updatedAt: new Date() } }
-    );
-    if (debit.matchedCount !== 1)
-      return errorResponse(
-        409,
-        "Insufficient spendable corporate funds, or outstanding taxes and payables."
-      );
-    // The debit committed: record it in the corporation's finance history.
-    await emitSectorRetoolTx(db, {
-      corporationId: corporation._id,
-      corporationName: corporation.name ?? "Corporation",
-      corporationSequentialId: corporation.sequentialId,
-      amountLocal: retoolCostInCorpCapital,
-      currencyCode: (liquidCode ?? "USD") as CurrencyCode,
-      turn: currentTurn,
-      createdAt: new Date(),
-      action: "retool",
-      sectorId: sector._id,
-      sectorType: sector.sectorType,
-      fromStrategyId: currentStrategyId,
-      toStrategyId: strategyId,
-    });
-    await Promise.all([
-      corporateSectorsCollection(db).updateOne(
-        { _id: sector._id },
-        {
+      site: {
+        filter: {
+          _id: sector._id,
+          corporationId: sector.corporationId,
+          strategyId: Object.hasOwn(sector, "strategyId") ? sector.strategyId : { $exists: false },
+          transitionFromStrategyId: Object.hasOwn(sector, "transitionFromStrategyId")
+            ? sector.transitionFromStrategyId
+            : { $exists: false },
+          capitalStock: Object.hasOwn(sector, "capitalStock")
+            ? sector.capitalStock
+            : { $exists: false },
+          buildQueue: Object.hasOwn(sector, "buildQueue") ? sector.buildQueue : { $exists: false },
+          constructionPropertyTransition: { $exists: false },
+          producerCapacity: Object.hasOwn(sector, "producerCapacity")
+            ? sector.producerCapacity
+            : { $exists: false },
+        },
+        update: {
           $set: {
             strategyId,
             transitionFromStrategyId: currentStrategyId,
@@ -443,9 +451,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
               : {}),
             updatedAt: new Date(),
           },
-        }
-      ),
-    ]);
+        },
+      },
+    });
+    if (!changed) return errorResponse(409, "The sector or treasury changed. Get a new quote.");
 
     // Route the foreign-sector FX spread (already added to the debit) to the CB
     // system — reserve → the sector-country CB; revenue → the corp's CB.

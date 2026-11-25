@@ -1,3 +1,4 @@
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 /**
  * Absorb one country into another.
  *
@@ -23,9 +24,8 @@
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import type { CorporationExitSnapshot } from "@/lib/corporations/exits/rules";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BillStatus } from "@/lib/db/types/legislation";
-import type { CountryGameState } from "@/lib/db/types/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { officeRemapFor } from "@/lib/country/dissolvingOfficeRemap";
 import { transferRegion } from "@/lib/referendum/transfer/transferRegion";
@@ -523,8 +523,22 @@ async function mergeNationalCorporations(
   const survivor = await corps.findOne({ _id: survivorId });
   if (!survivor) return;
   const absorbed = await corps.find({ _id: { $in: absorbedIds } }).toArray();
+  const indebted = await bankLoansCollection(db)
+    .find(
+      {
+        borrowerType: "corporation",
+        borrowerId: { $in: absorbedIds },
+        status: { $in: ["pending", "current", "arrears", "defaulted"] },
+        outstanding: { $gt: 0 },
+      },
+      { projection: { borrowerId: 1 } }
+    )
+    .toArray();
+  const debtIds = new Set(indebted.map((loan) => String(loan.borrowerId)));
+  const foldIds = absorbedIds.filter((id) => !debtIds.has(String(id)));
+
   const absorbedSectors = await corporateSectorsCollection(db)
-    .find({ corporationId: { $in: absorbedIds } })
+    .find({ corporationId: { $in: foldIds } })
     .toArray();
   const transitionKeys = await reserveSectorsForTransition(
     db,
@@ -544,6 +558,13 @@ async function mergeNationalCorporations(
 
   for (const shell of absorbed) {
     if (String(shell._id) === String(survivor._id)) continue;
+    if (debtIds.has(String(shell._id))) {
+      await corps.updateOne(
+        { _id: shell._id },
+        { $set: { isPrimaryNationalCorporation: false, updatedAt: now } }
+      );
+      continue;
+    }
 
     for (const sector of absorbedSectors.filter(
       (row) => row.corporationId.toString() === shell._id.toString()

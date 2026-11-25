@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  boundSession: () => undefined,
+  withSessionDb: async (
+    db: import("mongodb").Db,
+    work: (tx: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -127,7 +134,8 @@ describe("paid retool ledger row", () => {
         amountLocal: -debit.$inc.liquidCapital,
         currencyCode: "USD",
         turn: CURRENT_TURN,
-      })
+      }),
+      { atomic: true }
     );
   });
 });
