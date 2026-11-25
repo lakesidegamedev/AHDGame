@@ -185,6 +185,28 @@ function ContestRow({
           </span>
         </div>
 
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+          <span className={viewer ? "font-medium text-foreground" : "text-muted"}>
+            {viewer
+              ? viewer.rank === 1 && leading
+                ? t("youLead")
+                : gap !== null
+                  ? `${t("yourStanding", { rank: viewer.rank, count: contest.entrants })} · ${gap > 0 ? t("gapBehind", { gap: formatGap(t, locale, contest.kind, gap) }) : t("tiedLead")}`
+                  : t("yourStanding", { rank: viewer.rank, count: contest.entrants })
+              : signedIn
+                ? t("notEntered")
+                : t("signInToTrack")}
+          </span>
+          <span className="text-muted">
+            {t("entrants", { count: contest.entrants })}
+            {contest.refreshedAt ? (
+              <>
+                {" "}
+                · {t("updatedAt")} <LocalTime value={contest.refreshedAt} options={DATE_OPTIONS} />
+              </>
+            ) : null}
+          </span>
+        </div>
         {placed.length > 0 ? (
           <ol className="mt-4 space-y-1.5">
             {placed.map((s) => {
@@ -243,29 +265,6 @@ function ContestRow({
             })}
           </ol>
         )}
-
-        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs">
-          <span className={viewer ? "font-medium text-foreground" : "text-muted"}>
-            {viewer
-              ? viewer.rank === 1 && leading
-                ? t("youLead")
-                : gap !== null
-                  ? `${t("yourStanding", { rank: viewer.rank, count: contest.entrants })} · ${gap > 0 ? t("gapBehind", { gap: formatGap(t, locale, contest.kind, gap) }) : t("tiedLead")}`
-                  : t("yourStanding", { rank: viewer.rank, count: contest.entrants })
-              : signedIn
-                ? t("notEntered")
-                : t("signInToTrack")}
-          </span>
-          <span className="text-muted">
-            {t("entrants", { count: contest.entrants })}
-            {contest.refreshedAt ? (
-              <>
-                {" "}
-                · {t("updatedAt")} <LocalTime value={contest.refreshedAt} options={DATE_OPTIONS} />
-              </>
-            ) : null}
-          </span>
-        </div>
       </div>
     </details>
   );
@@ -286,9 +285,7 @@ function YourStandings({
     .sort((a, b) => a.viewer!.rank - b.viewer!.rank || a.kind.localeCompare(b.kind));
   return (
     <section className="mb-8">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-        {t("yours.title")}
-      </h2>
+      <h2 className="mb-3 text-xl font-semibold text-foreground">{t("yours.title")}</h2>
       {entered.length === 0 ? (
         <p className="text-sm text-muted">{t("yours.none")}</p>
       ) : (
@@ -761,10 +758,23 @@ export default async function ContestsPage({
           </div>
           {round && view !== "rankings" && (
             <div className="w-full md:w-80">
-              <div className="text-sm text-muted">{t("poolLabel")}</div>
-              <div className="text-4xl font-bold tabular-nums text-gold">
-                {formatAnchor(locale, pool)}
-              </div>
+              {auth ? (
+                // Signed-in players see their own standings first; the pool stays
+                // a compact line so it does not outrank them.
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-muted">{t("poolLabel")}</span>
+                  <span className="text-lg font-semibold tabular-nums text-gold">
+                    {formatAnchor(locale, pool)}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm text-muted">{t("poolLabel")}</div>
+                  <div className="text-4xl font-bold tabular-nums text-gold">
+                    {formatAnchor(locale, pool)}
+                  </div>
+                </>
+              )}
               <div className="mt-4">
                 <RoundCountdown
                   startedAt={round.startedAt}

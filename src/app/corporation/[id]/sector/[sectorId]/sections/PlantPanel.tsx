@@ -544,7 +544,7 @@ export default function PlantPanel({
       {/* Actions ───────────────────────────────────────────────────────────*/}
       {isCeo && (
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-card-border pt-4">
-          <Button variant="primary" onClick={onOpenBuild} disabled={busy}>
+          <Button variant="secondary" onClick={onOpenBuild} disabled={busy}>
             <Hammer className="mr-1.5 h-4 w-4" aria-hidden /> {capitalizeFacility(vocab.buildVerb)}{" "}
             more {sites}
           </Button>

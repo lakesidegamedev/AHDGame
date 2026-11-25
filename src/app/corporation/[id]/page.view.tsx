@@ -584,20 +584,26 @@ export function renderCorporationDetailPageView(
 
                   {tab === "sectors" && (
                     <div className="space-y-6">
-                      {isCeo && (
-                        <LegacyProductProjects
-                          corporationId={id}
-                          currencyCode={corporation.liquidCurrencyCode}
-                        />
-                      )}
-                      <ProductStudio corporationId={id} onUpdate={fetchCorporation} />
-                      {isCeo && corporation.mediaOperatingModelsEnabled === true && (
-                        <AdvertisingAgreementsPanel
-                          corpId={id}
-                          ownsMediaSector={sectors.some((sector) => sector.sectorType === "media")}
-                        />
-                      )}
                       <SectorsTab
+                        leadPanels={
+                          <>
+                            {isCeo && (
+                              <LegacyProductProjects
+                                corporationId={id}
+                                currencyCode={corporation.liquidCurrencyCode}
+                              />
+                            )}
+                            <ProductStudio corporationId={id} onUpdate={fetchCorporation} />
+                            {isCeo && corporation.mediaOperatingModelsEnabled === true && (
+                              <AdvertisingAgreementsPanel
+                                corpId={id}
+                                ownsMediaSector={sectors.some(
+                                  (sector) => sector.sectorType === "media"
+                                )}
+                              />
+                            )}
+                          </>
+                        }
                         sectors={sectors}
                         isCeo={isCeo}
                         corpId={id}
