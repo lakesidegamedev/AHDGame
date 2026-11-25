@@ -56,6 +56,9 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   inputDemandRealPhaseStartTurn: "",
   // Trade-registers-in-full ramp start (operator-set turn on the old world).
   tradeConvergenceFullStartTurn: "",
+  // Household spending power phase-in start, stamped by the corporation turn.
+  // A new world restamps it on its first economy turn.
+  householdSpendingPowerStartTurn: "",
   marketGuardReferenceFundamentalMcap: "",
   marketGuardReferenceTurn: "",
   marketGuardTrippedAt: "",
@@ -104,6 +107,7 @@ export const TURN_ANCHORED_GAME_CONFIG_KEPT: Readonly<Record<string, string>> = 
   marketGovernorRampTurns: "admin tuning knob (a duration, not an anchor)",
   marketGuardGraceTurns: "admin tuning knob (a duration, not an anchor)",
   marketGovernorGlideTurns: "admin tuning knob (a duration, not an anchor)",
+  householdSpendingPowerRampTurns: "admin tuning knob (a duration, not an anchor)",
   producerCreditRunTurns: "admin tuning knob (a duration, not an anchor)",
   producerCreditStuckTurns: "admin tuning knob (a duration, not an anchor)",
   capacityBuildReserveTurns:
