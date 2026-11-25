@@ -20,6 +20,8 @@ import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
 import { bulkMarkRead } from "./bulkMarkRead";
 import { defaultInboxSegment } from "@/lib/inbox/badgeLabel";
 import { Skeleton, ListRowSkeleton } from "@/components/ui";
+import type { InboxCategory } from "@/lib/inbox/categories";
+import { CATEGORY_VISUALS } from "./inboxVisuals";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -209,9 +211,12 @@ export function InboxClient() {
   const [mobileReader, setMobileReader] = useState(false);
   const [markAllError, setMarkAllError] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
+  // Narrow the list by category and by text, on top of the segment tabs.
+  const [categoryFilter, setCategoryFilter] = useState<InboxCategory | "all">("all");
+  const [query, setQuery] = useState("");
 
-  // Derive visible items for the active segment, hiding archived
-  const visibleItems = useMemo(() => {
+  // Derive the items for the active segment, hiding archived
+  const segmentItems = useMemo(() => {
     const base = items.filter((i) => !state.archivedIds.has(i.id) && !state.snoozedIds.has(i.id));
     if (state.seg === "notifs") return base.filter((i) => i.kind === "notif");
     if (state.seg === "mail") return base.filter((i) => i.kind === "mail");
@@ -224,6 +229,20 @@ export function InboxClient() {
     }
     return base;
   }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds, state.selId]);
+
+  // Categories present in the current segment, for the filter chips.
+  const presentCategories = useMemo(
+    () => [...new Set(segmentItems.map((i) => i.category))],
+    [segmentItems]
+  );
+  const visibleItems = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return segmentItems.filter(
+      (i) =>
+        (categoryFilter === "all" || i.category === categoryFilter) &&
+        (!needle || `${i.label} ${i.title} ${i.body ?? ""}`.toLowerCase().includes(needle))
+    );
+  }, [segmentItems, categoryFilter, query]);
 
   const counts = useMemo(() => {
     const activeItems = items.filter(
@@ -531,6 +550,39 @@ export function InboxClient() {
         })}
       </div>
 
+      {!loading && items.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your inbox"
+            aria-label="Search your inbox"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-foreground placeholder:text-muted sm:w-64"
+          />
+          <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-1.5">
+            {(["all", ...presentCategories] as const).map((cat) => {
+              const active = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-card-border bg-card text-muted hover:text-foreground"
+                  }`}
+                >
+                  {cat === "all" ? "All categories" : CATEGORY_VISUALS[cat].label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {!loading && <PriorityLane onResolved={refetch} />}
 
       {loading && (
@@ -565,6 +617,7 @@ export function InboxClient() {
           <div
             className={`min-h-0 overflow-y-auto rounded-xl border border-card-border bg-card lg:block ${mobileReader ? "hidden" : "block"}`}
           >
+            <h2 className="sr-only">Messages</h2>
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-card-border bg-card/95 px-4 py-3 backdrop-blur">
               <div className="min-w-0">
                 <p className="text-body-sm font-medium text-muted">
@@ -631,6 +684,7 @@ export function InboxClient() {
           <div
             className={`min-h-[480px] overflow-hidden rounded-xl border border-card-border bg-card lg:block ${mobileReader ? "block" : "hidden"}`}
           >
+            <h2 className="sr-only">Open message</h2>
             {/* Mobile back-to-list */}
             <button
               type="button"

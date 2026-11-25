@@ -23,7 +23,7 @@ function Row({ label, at, locale }: { label: string; at: string; locale: string 
   return (
     // Phones: label and clock on one line, the time under them. Wider: one row.
     <div className="flex flex-wrap items-baseline gap-x-5">
-      <dt className="text-[#ff4d5e] sm:w-[6.25rem]">{label}</dt>
+      <dt className="text-[var(--landing-accent)] sm:w-[6.25rem]">{label}</dt>
       <dd className="order-3 basis-full text-white/60 sm:order-2 sm:basis-auto">
         <time dateTime={at}>{t("landing.world2027.easternTime", { time: when })}</time>
       </dd>
