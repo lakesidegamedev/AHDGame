@@ -30,11 +30,14 @@ export async function CountryCrisisNotice({
   if (crises.length === 0) return null;
 
   return (
-    <section
+    // A notice above the page title, not a page section: a labelled aside with
+    // a plain title, so the page's own H1 stays first in the heading outline.
+    <aside
+      aria-label="Active crises"
       className={`rounded-xl border border-card-border bg-card px-4 py-3 ${className ?? ""}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-body font-semibold text-foreground">Active crises</h2>
+        <p className="text-body font-semibold text-foreground">Active crises</p>
         <Link className="text-body text-primary hover:underline" href="/world/crises">
           Crisis board
         </Link>
@@ -51,6 +54,6 @@ export async function CountryCrisisNotice({
           </li>
         ))}
       </ul>
-    </section>
+    </aside>
   );
 }
