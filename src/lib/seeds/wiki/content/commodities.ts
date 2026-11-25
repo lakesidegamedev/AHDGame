@@ -317,7 +317,7 @@ The point for a player is simple: a commodity that stores well can be held throu
 | Real Estate Services | Real Estate | Manufacturing, Technology, Financial, Healthcare, Logistics |
 | Software & IT Services | Technology, Telecommunications | Financial, Healthcare, Media, Logistics, Defense |
 | Financial Services | Financial | Real Estate, Construction |
-| Advertising & Media | Media | Retail |
+| Advertising & media | Media | Retail |
 | Vehicles & Machinery | Manufacturing, Defense | Energy, Agriculture, Logistics, Extraction, Construction |
 | Consumer Goods | Retail | (end consumer demand) |
 | Freight & Transportation | Logistics | Manufacturing, Agriculture, Chemical Industries, Extraction |

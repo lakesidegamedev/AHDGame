@@ -27,6 +27,7 @@ export interface DemandElasticity {
 export const DEMAND_ELASTICITY: Partial<Record<CommodityType, DemandElasticity>> = {
   food: { price: 0.25, income: 0.5 },
   energy: { price: 0.3, income: 0.6 },
+  natural_gas: { price: 0.3, income: 0.6 },
   pharmaceuticals: { price: 0.3, income: 0.9 },
   healthcare_services: { price: 0.35, income: 1.1 },
   real_estate_services: { price: 0.4, income: 0.9 },
@@ -38,6 +39,8 @@ export const DEMAND_ELASTICITY: Partial<Record<CommodityType, DemandElasticity>>
   building_materials: { price: 0.8, income: 1.2 },
   financial_services: { price: 0.9, income: 1.4 },
   software: { price: 1.0, income: 1.3 },
+  advertising: { price: 0.8, income: 1.2 },
+  construction_services: { price: 0.8, income: 1.1 },
   electronics: { price: 1.2, income: 1.4 },
   consulting_services: { price: 1.2, income: 1.5 },
   vehicles: { price: 1.3, income: 1.5 },

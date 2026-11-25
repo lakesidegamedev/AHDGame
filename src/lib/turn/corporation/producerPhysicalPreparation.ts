@@ -136,6 +136,13 @@ export type ProducerPhysicalEnv = Pick<
   wideEconomyStage?: number;
   /** gameConfig.wideEconomySurplusStage: >= 1 (absent = 1) the buyer grows on oversupplied lanes. */
   wideEconomySurplusStage?: number;
+  /** gameConfig.newHouseholdIncomeStage: >= 1 (absent = 1) households get new income by real growth. */
+  newHouseholdIncomeStage?: number;
+  /** gameConfig.householdSpendingPowerStage: >= 1 (absent = 1) households are topped up toward population times wage. */
+  householdSpendingPowerStage?: number;
+  householdSpendingPowerShare?: number;
+  householdSpendingPowerRampTurns?: number;
+  householdSpendingPowerStartTurn?: number;
   /** gameConfig.wideEconomyPricingStage: >= 1 (absent = 1) the price counts wider-economy sales as supply. */
   wideEconomyPricingStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
@@ -795,6 +802,7 @@ export function prepareProducerPhysicalSector(input: {
     payroll,
     policyLevel,
     staffingFactor: labour.staffingFactor,
+    techLaborCostMultiplier: tech.laborCostMultiplier,
     suspended,
   };
 }

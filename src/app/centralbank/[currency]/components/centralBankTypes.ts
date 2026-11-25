@@ -126,6 +126,11 @@ export interface MoneySupplyView {
   /** QE-created money still parked in the bond pool; the only pool cash inside M2. */
   observedBondPoolCash?: number;
   netMoneyCreatedLifetime: number;
+  /** New household income minted on the snapshot's turn and in total; absent on older rows. */
+  newHouseholdIncomeTurn?: number;
+  newHouseholdIncomeLifetime?: number;
+  householdSpendingPowerTurn?: number;
+  householdSpendingPowerLifetime?: number;
   lastOperationTurn: number | null;
   lastPolicyEvaluation: {
     accountingVersion?: number;

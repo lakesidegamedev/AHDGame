@@ -50,7 +50,6 @@ describe("computeHouseholdConsumption — basket coverage", () => {
       "oil",
       "coal",
       "iron",
-      "natural_gas",
       "timber",
       "rare_earth",
       "ordnance",
@@ -64,10 +63,10 @@ describe("computeHouseholdConsumption — basket coverage", () => {
     expect(stateTotal(r, "S1")).toBeGreaterThan(0);
   });
 
-  it("does not treat advertising inventory as household consumption", () => {
+  it("treats advertising and media as household consumption", () => {
     const result = run([mkState()]);
-    expect(HOUSEHOLD_CONSUMER_BASKET).not.toHaveProperty("advertising");
-    expect(gd(result, "advertising")).toBe(0);
+    expect(HOUSEHOLD_CONSUMER_BASKET).toHaveProperty("advertising");
+    expect(gd(result, "advertising")).toBeGreaterThan(0);
   });
 
   it("conserves: global demand equals the sum of per-state contributions", () => {
