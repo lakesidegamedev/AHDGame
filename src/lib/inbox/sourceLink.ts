@@ -199,6 +199,17 @@ export function resolveSourceLink(
     }
   }
 
+  if (type === "rd_breakthrough") {
+    const corporationId = asString(m.corporationId);
+    const sectorId = asString(m.sectorId);
+    if (corporationId && sectorId) {
+      return {
+        label: "View improved site",
+        href: `/corporation/${encodeURIComponent(corporationId)}/sector/${encodeURIComponent(sectorId)}`,
+      };
+    }
+  }
+
   if (type === "corp_autopilot_advisory") {
     const corporationId = asString(m.corporationId);
     if (corporationId) {
