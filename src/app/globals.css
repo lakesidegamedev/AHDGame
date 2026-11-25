@@ -494,7 +494,6 @@
   --shadow-lg:
     inset 0 1px 0 rgb(184 255 173 / 0.06), inset 0 0 28px rgb(0 0 0 / 0.45),
     0 12px 34px rgb(0 0 0 / 0.88);
-  --glow-primary-sm: 0 0 5px rgb(57 255 20 / 0.34);
   --track: #102c14;
   --overlay: rgba(0, 8, 2, 0.34);
   --modal-backdrop: rgba(0, 3, 0, 0.82);
@@ -696,7 +695,6 @@ body {
 [data-theme="command-1953"] :is(button, a, input, select, textarea):focus-visible {
   outline: 1px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: var(--glow-primary-sm);
 }
 
 [data-theme="command-1953"] :is(button, a):not(:disabled) {
@@ -709,7 +707,6 @@ body {
 
 [data-theme="command-1953"] :is(button, a):not(:disabled):hover {
   border-color: color-mix(in srgb, var(--primary) 55%, var(--card-border));
-  text-shadow: 0 0 6px rgb(57 255 20 / 0.32);
 }
 
 [data-theme="command-1953"] :is(table, [role="table"]) {
