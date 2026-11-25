@@ -20,7 +20,7 @@ import {
   corpLiquidCapitalToAnchor,
   fxRateForSectorHostFromMap,
   getCorpFxRate,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -250,7 +250,7 @@ export async function buildRegionEconomyResponse({
   // Sector economic fields are stored in the HOST market's currency, not
   // the owner's home currency. Normalize host -> ₳ before aggregating mixed
   // domestic/foreign ownership in this regional market.
-  const fxByCurrency = await loadFxRatesByCurrency(db);
+  const fxByCurrency = await loadValuationFxRates(db);
   const sectorRevenueAnchorById = new Map<string, number>();
   for (const s of sectors) {
     const owner = corpMap.get(s.corporationId.toString());

@@ -25,7 +25,7 @@ import {
   getSectorHostFxRate,
   resolveSectorHostCurrencyCode,
   resolveCorpLiquidCurrencyCode,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
@@ -453,7 +453,7 @@ export async function loadSectorDetailContext({
           })
           .toArray()
       : Promise.resolve([] as SiblingCorpProjection[]),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
   ]);
   const corpByIdForLookup = new Map(corpsForLookup.map((c) => [c._id.toString(), c]));
   return {
