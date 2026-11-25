@@ -33,7 +33,7 @@ export function BroadcastHeadline({
   const written = String(year);
   const at = text.lastIndexOf(written);
   return (
-    <h1 className="ahd-bc-headline text-balance text-[2.35rem] font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-[2.75rem] lg:text-[2.95rem]">
+    <h1 className="ahd-bc-headline text-balance text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-5xl">
       {at < 0 ? (
         text
       ) : (
@@ -68,7 +68,7 @@ export function YearOdometer({ from, to }: { from: number; to: number }) {
   }, [from, to]);
 
   return (
-    <span className="ahd-bc-odometer text-[#ff4d5e]">
+    <span className="ahd-bc-odometer text-[var(--landing-accent)]">
       <span className="sr-only">{to}</span>
       <span aria-hidden="true" className="inline-flex">
         {String(shown)

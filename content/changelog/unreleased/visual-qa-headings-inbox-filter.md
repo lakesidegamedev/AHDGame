@@ -16,3 +16,4 @@ areas: [frontend]
 - Economy, News, World Trade, Elections, Executive, Legislature and Inbox pages have a proper heading order, so screen readers and page outlines list their sections correctly. The Legislature bills section reads "Senate bills".
 - The login page names the current in-game year, matching the front page.
 - Selected options in company views (per turn, daily, annual and the like) use the same purple highlight as filters elsewhere.
+- The front page headline uses the standard type sizes, and its red year counter uses a named theme colour.
