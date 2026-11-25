@@ -11,7 +11,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
-import { producerTrades } from "@/lib/market/producerMarket/rules";
+import { producerTradeFlows } from "@/lib/market/producerMarket/rules";
 import type {
   EconomyResult,
   SettlementCloseTransfer,
@@ -91,7 +91,7 @@ export function tariffsAtClose(input: {
   closingCash: Map<string, number>;
 }): TariffClose {
   const result = fundedTariffs({
-    trades: producerTrades(input.market.tradeReceipt),
+    trades: producerTradeFlows(input.market.tradeReceipt),
     table: input.table,
     collectorOf: input.collectorOf,
     cashOf: (id) => input.closingCash.get(id) ?? 0,
@@ -163,7 +163,7 @@ export function collectionsAtClose(input: {
     : { transfers: [], paidByAccount: new Map<string, number>(), meta: emptyTariffMeta() };
   if (!input.levyByPlant.size) return tariffs;
   const close = automationLevyTransfers({
-    trades: producerTrades(input.market.tradeReceipt),
+    trades: producerTradeFlows(input.market.tradeReceipt),
     levyByPlant: input.levyByPlant,
     collectorOf,
     cashOf: (id) => input.closingCash.get(id) ?? 0,

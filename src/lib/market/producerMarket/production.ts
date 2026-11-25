@@ -524,21 +524,38 @@ export function advanceProducerEconomy(
   const wideBoostOffers = wideEconomyFallbackOffers(input.residualBoostOffers ?? [], skipWide);
   const wideExportTo = new Set(input.residualExportBuyers ?? []);
   // Plant inputs fall back on the base share only; final buyers and exports
-  // may also take a short lane's extra units.
+  // may also take a short lane's extra units. Input order ids are fixed for
+  // the turn, and a final buyer's fallback depends only on the order, so both
+  // are worked out once rather than every trial.
+  let inputIds: Set<string> | undefined;
+  const finalBuyerFallback = new WeakMap<PurchaseOrder, PurchaseOrder>();
   const withWideFallback = (orders: readonly PurchaseOrder[]) => {
     if (wideOffers.length + wideBoostOffers.length === 0) return [...orders];
-    const inputIds = new Set(inputOrders().map((o) => o.id));
-    const plantInputs = orders.filter((o) => inputIds.has(o.id));
-    const others = orders.filter((o) => !inputIds.has(o.id));
+    inputIds ??= new Set(inputOrders().map((o) => o.id));
+    const plantInputs = orders.filter((o) => inputIds!.has(o.id));
+    const others = orders.filter((o) => !inputIds!.has(o.id));
+    const unseen = others.filter((o) => !finalBuyerFallback.has(o));
+    withWideEconomyFallback(
+      unseen,
+      [...wideOffers, ...wideBoostOffers],
+      laneKeyOf,
+      wideExportTo
+    ).forEach((o, i) =>
+      finalBuyerFallback.set(unseen[i], o.fallbackOfferIds ? { ...o, fallbackCashOnly: true } : o)
+    );
     return [
-      ...withWideEconomyFallback(
-        others,
-        [...wideOffers, ...wideBoostOffers],
-        laneKeyOf,
-        wideExportTo
-      ).map((o) => (o.fallbackOfferIds ? { ...o, fallbackCashOnly: true } : o)),
+      ...others.map((o) => finalBuyerFallback.get(o)!),
       ...withWideEconomyFallback(plantInputs, wideOffers, laneKeyOf),
     ];
+  };
+  // The landed-price gate depends only on the order, so a final buyer's
+  // gated order is reused across trials.
+  const gated = new WeakMap<PurchaseOrder, PurchaseOrder>();
+  const gateOrders = (orders: readonly PurchaseOrder[]) => {
+    if (!landedGate) return [...orders];
+    const unseen = orders.filter((o) => !gated.has(o));
+    landedGate(unseen).forEach((o, i) => gated.set(unseen[i], o));
+    return orders.map((o) => gated.get(o)!);
   };
   const trial = (track = false) => {
     trialRuns++;
@@ -564,13 +581,7 @@ export function advanceProducerEconomy(
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
-      orders: withWideFallback(
-        buying(
-          landedGate
-            ? landedGate([...consumerOrders, ...inputOrders()])
-            : [...consumerOrders, ...inputOrders()]
-        )
-      ),
+      orders: withWideFallback(buying(gateOrders([...consumerOrders, ...inputOrders()]))),
       ...(track ? { trackCountryBooks: true } : {}),
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
@@ -870,6 +881,7 @@ export function advanceProducerEconomy(
   );
   for (const offer of market.offers) cashChanges.add(sellerAccounts.get(offer.id)!, offer.revenue);
   for (const order of market.orders) cashChanges.add(buyerAccounts.get(order.id)!, -order.cost);
+  clock.lap("attributionMs");
   const { closingAccounts } = buildProducerOperatingResults({
     market,
     input,
@@ -906,6 +918,7 @@ export function advanceProducerEconomy(
     cashChanges.transfer(plan.accountId, plan.operatingRecipientAccountId, paid.operating);
   }
   const movements = cashChanges.rows();
+  clock.lap("resultsMs");
   return {
     accounts: closingProducerCash(input.accounts, movements, closingAccounts),
     cashChanges: movements,

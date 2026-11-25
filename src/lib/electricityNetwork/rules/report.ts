@@ -1,6 +1,6 @@
 /** Human-readable electricity comparisons use the same frozen market inputs and common-value money. */
 import type { ProducerEconomyResult } from "@/lib/market/producerMarket/productionTypes";
-import { producerTrades } from "@/lib/market/producerMarket/producerQuotes";
+import { producerTradeFlows } from "@/lib/market/producerMarket/producerQuotes";
 import { createGridLedger } from "./paths";
 import type { ElectricityNetwork, ElectricityNetworkMode } from "./types";
 export interface GridFigures {
@@ -98,7 +98,7 @@ function energy(result: ProducerEconomyResult) {
   let sold = 0;
   const byOrder = new Map(orders.map((o) => [o.id, o]));
   const byOffer = new Map(energyReceipt.offers.map((o) => [o.id, o]));
-  for (const t of producerTrades(energyReceipt)) {
+  for (const t of producerTradeFlows(energyReceipt)) {
     figures.delivered += t.units;
     figures.dispatched += t.dispatchedUnits ?? t.units;
     figures.tradeValue += t.amount;
