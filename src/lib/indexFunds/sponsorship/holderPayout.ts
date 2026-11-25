@@ -162,7 +162,13 @@ export async function payFundHoldersCash(
   if (!pay.length) return { paid: [], unpaid: [], distributedAnchor: 0 };
 
   const forexEnabled = await isForexEnabled();
-  const fundFxRate = await loadFundPayoutFxRate(db, fund.anchorCurrencyCode, forexEnabled);
+  const hasNativeHolders = pay.some(
+    ({ position }) =>
+      position.holderKind === "character" || position.holderKind === "imperial_character"
+  );
+  const fundFxRate = hasNativeHolders
+    ? await loadFundPayoutFxRate(db, fund.anchorCurrencyCode, forexEnabled)
+    : 1;
   if (fundFxRate == null)
     throw new Error("Fund payout exchange rate unavailable; wind-up remains pending");
 

@@ -57,6 +57,7 @@ describe("fund cash buffer restoration", () => {
     const result = await restoreFundCashBuffer(db as never, fund, 9600, { USD: 1 }, 74);
     expect(sellFundBondHoldingsForCash).toHaveBeenCalledWith(db, fund, 100, expect.any(Date), {
       turn: 74,
+      operationKey: "cash-buffer:74",
     });
     expect(result.bondPrincipalAnchor).toBe(9480);
     expect(updateFundNav).toHaveBeenCalledWith(db, fund._id, {

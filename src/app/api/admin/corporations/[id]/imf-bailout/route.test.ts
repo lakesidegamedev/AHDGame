@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (
+    db: import("mongodb").Db,
+    work: (tx: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+  afterCommit: async (_db: import("mongodb").Db, effect: () => Promise<unknown>) => effect(),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

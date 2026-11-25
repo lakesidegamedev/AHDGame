@@ -213,7 +213,6 @@ export async function processIndexFundDividend(
   }[] = [];
 
   for (const position of positions) {
-    if (fundFxRate == null) continue;
     if (position.holderKind === "fund_reserve") continue;
     if (position.units <= 0) continue;
 
@@ -221,6 +220,7 @@ export async function processIndexFundDividend(
     if (holderDividend <= 0) continue;
 
     if (position.holderKind === "character" && position.characterId) {
+      if (fundFxRate == null) continue;
       const holderName = characterNameById.get(position.characterId.toString());
       if (!holderName) continue;
 
@@ -255,6 +255,7 @@ export async function processIndexFundDividend(
       holdersPaid++;
       distributedAnchor += holderDividend;
     } else if (position.holderKind === "imperial_character" && position.imperialCharacterId) {
+      if (fundFxRate == null) continue;
       const holderName = imperialNameById.get(position.imperialCharacterId.toString());
       if (!holderName) continue;
 
@@ -597,12 +598,12 @@ export async function processIndexFundDividendsBatch(
     let distributedAnchor = 0;
 
     for (const position of positions) {
-      if (fundFxRate == null) continue;
       if (position.holderKind === "fund_reserve" || position.units <= 0) continue;
       const holderDividend = Math.floor(position.units * perUnitDividend * 100) / 100;
       if (holderDividend <= 0) continue;
 
       if (position.holderKind === "character" && position.characterId) {
+        if (fundFxRate == null) continue;
         const holderName = charNameById.get(position.characterId.toString());
         if (!holderName) continue;
         addInc(
@@ -630,6 +631,7 @@ export async function processIndexFundDividendsBatch(
         holdersPaid++;
         distributedAnchor += holderDividend;
       } else if (position.holderKind === "imperial_character" && position.imperialCharacterId) {
+        if (fundFxRate == null) continue;
         const holderName = impNameById.get(position.imperialCharacterId.toString());
         if (!holderName) continue;
         addInc(
