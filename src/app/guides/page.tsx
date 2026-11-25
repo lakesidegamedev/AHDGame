@@ -5,7 +5,7 @@ import { publicPageMetadata } from "@/lib/siteMetadata";
 export const metadata: Metadata = publicPageMetadata({
   title: "Guides | A House Divided",
   description:
-    "Strategy guides for A House Divided: run corporations, win elections in the US, UK, Soviet Union, and East Germany, invest in stocks, bonds, and forex, and navigate legislation and parties in a persistent hourly simulation.",
+    "Strategy guides for A House Divided: run corporations, win elections, invest in stocks, bonds, and forex, and navigate legislation and parties in a persistent hourly simulation.",
   pathname: "/guides",
 });
 

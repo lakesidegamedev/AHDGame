@@ -72,9 +72,8 @@ export default async function AboutPage() {
                     </Link>
                   </span>
                 ))}
-                . Another {world.registeredCountryCount - world.playable.length} nations run their
-                own economies and political machinery in the same world, and you can browse every
-                one of them.
+                . The world tracks {world.presentCountryCount} countries in total, including
+                background nations.
               </p>
             </div>
           </section>
@@ -195,7 +194,10 @@ export default async function AboutPage() {
                   </a>
                   , distributed under the SIL Open Font License.
                 </li>
-                <li>Built with Next.js, React, Tailwind CSS, and MongoDB. Hosted on Vercel.</li>
+                <li>
+                  Built with Next.js, React, Tailwind CSS, and MongoDB. Self-hosted by Lakeside
+                  Games.
+                </li>
               </ul>
               <p>
                 If you believe an asset on this site is used incorrectly, please{" "}

@@ -137,10 +137,9 @@ export function NewsPageClient({
           <div className="border-t border-card-border bg-card px-5 py-4 sm:px-6">
             <p className="text-sm text-muted leading-relaxed">
               The in-character news wire for A House Divided. Read player-written headlines,
-              campaign updates, policy editorials, and election coverage from the United States,
-              United Kingdom, Soviet Union, and East Germany simulations. Posts refresh as the
-              hourly game clock advances — one real hour equals one simulated political week.
-              Registered players can publish free news articles or place sponsored political ads.
+              campaign updates, policy editorials, and election coverage from across the world.
+              Posts refresh as the hourly game clock advances. Registered players can publish free
+              news articles or place sponsored political ads.
             </p>
           </div>
         </header>
