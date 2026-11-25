@@ -48,7 +48,10 @@ import {
   fundedInputThroughput,
 } from "@/lib/market/producerMarket/fundedSectorRules";
 
-import { fundedLedgerRows } from "@/lib/market/producerMarket/fundedLedgerRules";
+import {
+  fundedLedgerRows,
+  wideEconomyPricingOn,
+} from "@/lib/market/producerMarket/fundedLedgerRules";
 
 import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBookRules";
 
@@ -485,6 +488,17 @@ export async function publishFundedProducerTurn(
         offeredUnits: o.units,
         ...(o.countryId ? { countryId: o.countryId } : {}),
       })),
+      // What the wider economy sold is supply the price sees, as the country
+      // books and the market screens count it (wideEconomyPricingStage).
+      ...(wideEconomyPricingOn(context.input.env)
+        ? (settled.result.wideEconomySales ?? []).map((s) => ({
+            producerId: s.accountId,
+            commodity: s.commodity,
+            book: s.book,
+            offeredUnits: s.units,
+            countryId: s.countryId,
+          }))
+        : []),
     ],
     stateOfAccount: (id) => {
       const wallet = stateOfWallet(id);

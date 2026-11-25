@@ -62,6 +62,13 @@ const okJson = (body: unknown): ResponseLike => ({
   json: async () => body,
 });
 
+it("keeps the inbox heading and tab row in place while the data loads", () => {
+  mockUseInboxData.mockReturnValue({ ...hookResult([], vi.fn()), loading: true });
+  render(<InboxClient />);
+  expect(screen.getByRole("heading", { name: "Inbox" })).toBeTruthy();
+  expect(screen.getByRole("tablist", { name: "Inbox segment" })).toBeTruthy();
+});
+
 describe("InboxClient handleMarkAllRead", () => {
   beforeEach(() => {
     vi.clearAllMocks();

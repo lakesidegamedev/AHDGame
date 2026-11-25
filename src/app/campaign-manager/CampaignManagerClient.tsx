@@ -43,9 +43,19 @@ import { useActionsController } from "@/app/actions/useActionsController";
 import { raceTitle } from "./raceLabels";
 import { useElementWidth } from "./useElementWidth";
 import { CampaignMap } from "./map/CampaignMap";
-import { BottomSheet, MobileRaceStrip, MobileTabs } from "./components/MobileCampaignManager";
+import {
+  BottomSheet,
+  MobileRaceStrip,
+  MobileRaceStripLoading,
+  MobileTabs,
+} from "./components/MobileCampaignManager";
 import { useIsDesktop } from "./useIsDesktop";
-import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
+
+const CampaignActionModal = dynamic(() =>
+  import("@/app/actions/components/CampaignActionModal").then(
+    (module) => module.CampaignActionModal
+  )
+);
 
 const RaceAdmin = dynamic(() =>
   import("./components/RaceAdmin").then((module) => module.RaceAdmin)
@@ -466,17 +476,25 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               </button>
             </div>
           ) : null}
-          {!isDesktop && mobileTab === "races" && filter ? (
-            <MobileRaceStrip
-              countryId={props.countryId}
-              races={races}
-              filter={filter}
-              onFilter={updateFilter}
-              selectedKey={selected?.key ?? null}
-              onSelect={selectRace}
-              watched={watched}
-              countryPicker={<CountryPicker countryId={props.countryId} />}
-            />
+          {mobileTab === "races" && (loading || (!isDesktop && filter)) ? (
+            <div className="lg:hidden">
+              {loading ? (
+                <MobileRaceStripLoading
+                  countryPicker={<CountryPicker countryId={props.countryId} />}
+                />
+              ) : filter ? (
+                <MobileRaceStrip
+                  countryId={props.countryId}
+                  races={races}
+                  filter={filter}
+                  onFilter={updateFilter}
+                  selectedKey={selected?.key ?? null}
+                  onSelect={selectRace}
+                  watched={watched}
+                  countryPicker={<CountryPicker countryId={props.countryId} />}
+                />
+              ) : null}
+            </div>
           ) : null}
           {!isDesktop && mobileTab === "self" && !props.characterId ? readOnlyNotice : null}
           {!isDesktop && mobileTab === "self" && props.characterId ? (
@@ -622,7 +640,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
         </BottomSheet>
       ) : null}
       {confirmNode}
-      {actions.character ? (
+      {actions.campaignAction && actions.character ? (
         <CampaignActionModal
           action={actions.campaignAction}
           character={actions.character}

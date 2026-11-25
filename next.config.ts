@@ -407,6 +407,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "cdn.ahousedividedgame.com",
+        pathname: "/static/actions/**",
+        search: "",
+      },
+      {
+        protocol: "https",
         hostname: "*.public.blob.vercel-storage.com",
       },
       {

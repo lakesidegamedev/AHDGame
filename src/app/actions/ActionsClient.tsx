@@ -2,8 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { CampaignActionModal } from "./components/CampaignActionModal";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -14,7 +13,7 @@ import { CARDS } from "./actionsConstants";
 import type { ActionsViewMode } from "./actionsTypes";
 import ActionCard from "./components/ActionCard";
 import ActionCardCompact from "./components/ActionCardCompact";
-import ActionsHero, { ActionsHeroBanner } from "./components/ActionsHero";
+import ActionsHero, { ActionsHeroLoading } from "./components/ActionsHero";
 import { EventsPanel } from "./components/EventsPanel";
 import { useActionsController } from "./useActionsController";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
@@ -38,11 +37,15 @@ const CrisisActionCard = dynamic(() => import("./components/CrisisActionCard"), 
 const EndorsePresidentCard = dynamic(() => import("./components/EndorsePresidentCard"), {
   loading: NullFallback,
 });
+const CampaignActionModal = dynamic(() =>
+  import("./components/CampaignActionModal").then((module) => module.CampaignActionModal)
+);
 import CategoryFilter from "./components/CategoryFilter";
 import ViewToggle from "./components/ViewToggle";
 import CategoryHeading from "./components/CategoryHeading";
 
 const CATEGORIES = ["all", "influence", "money", "research"];
+const PAGE_CONTENT = "mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8 overflow-x-hidden";
 
 export interface InitialActionsHero {
   imageUrl: string;
@@ -51,12 +54,6 @@ export interface InitialActionsHero {
 
 export default function ActionsClient({ initialHero }: { initialHero: InitialActionsHero | null }) {
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [portfolioData, setPortfolioData] = useState<{
-    totalValue: number;
-    totalBondValue: number;
-    totalBondIncomePerTurn: number;
-    cashOnHand: number;
-  } | null>(null);
   const [viewMode, setViewMode] = useState<ActionsViewMode>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("actionsViewMode") as ActionsViewMode) || "cards";
@@ -85,29 +82,6 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
     }).catch(() => {});
   }, []);
 
-  // Fetch portfolio data on mount
-  useEffect(() => {
-    const fetchPortfolio = async () => {
-      try {
-        // Four scalar totals are all this page renders; `summary=1` skips the
-        // 500-row history chart (and its per-row FX snapshots).
-        const res = await fetch("/api/character/portfolio?summary=1");
-        if (res.ok) {
-          const data = await res.json();
-          setPortfolioData({
-            totalValue: data.totalValue ?? 0,
-            totalBondValue: data.totalBondValue ?? 0,
-            totalBondIncomePerTurn: data.totalBondIncomePerTurn ?? 0,
-            cashOnHand: data.liquidCashWealth ?? data.cashOnHand ?? 0,
-          });
-        }
-      } catch {
-        // Silent fail - portfolio data is optional
-      }
-    };
-    fetchPortfolio();
-  }, []);
-
   const visible = useMemo(
     () =>
       activeCategory === "all"
@@ -131,55 +105,43 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
   const influence = character?.politicalInfluence ?? 0;
   const infamy = character?.infamy ?? 0;
   const influenceDecay = calculatePoliticalInfluenceDecay(influence).toFixed(2);
+  const controlsDisabled = !controller.ready || !character || !actionCosts;
+  const controls = (
+    <div className="flex items-center justify-between gap-4">
+      <CategoryFilter
+        categories={CATEGORIES}
+        counts={categoryCounts}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        disabled={controlsDisabled}
+      />
+      <ViewToggle
+        viewMode={controlsDisabled ? "cards" : viewMode}
+        onViewModeChange={handleViewModeChange}
+        disabled={controlsDisabled}
+      />
+    </div>
+  );
+  const operationInfo = (
+    <p className="text-body-sm text-muted">
+      This page lists campaign operations. Post news and Sponsored news are on the{" "}
+      <Link href="/news" className="text-primary hover:underline">
+        News page
+      </Link>
+      , and Support, Attack and Barnstorm are on other characters&apos; profiles. Rest does nothing
+      and costs nothing, so it has no button.
+    </p>
+  );
 
   // Wait on world flags too: resolving art before the era is known would paint
   // the 2019 fallback set for a frame and then swap it for the 1953 set.
   if (!controller.ready || !character || !actionCosts) {
     return (
       <div className="min-h-screen bg-background pb-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
-          {/* Hero skeleton: image area and figures */}
-          <div className="relative overflow-hidden rounded-xl border border-card-border bg-card">
-            {initialHero ? (
-              <ActionsHeroBanner {...initialHero} />
-            ) : (
-              <Skeleton className="h-[175px] sm:h-[220px] w-full rounded-none" />
-            )}
-            <div className="flex flex-wrap gap-x-10 gap-y-4 border-t border-card-border px-5 py-4 sm:px-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="min-w-[80px] space-y-1.5">
-                  <Skeleton className="h-3 w-14" />
-                  <Skeleton className="h-6 w-20" />
-                </div>
-              ))}
-              <div className="flex-1 min-w-[160px] space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <Skeleton className="h-2.5 w-16" />
-                    <Skeleton className="h-2.5 w-10" />
-                  </div>
-                  <Skeleton className="h-2 w-full rounded-full" />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <Skeleton className="h-2.5 w-20" />
-                    <Skeleton className="h-2.5 w-10" />
-                  </div>
-                  <Skeleton className="h-2 w-full rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Filter tabs + view toggle */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-8 w-20 rounded-full" />
-              ))}
-            </div>
-            <Skeleton className="h-8 w-20 rounded-lg" />
-          </div>
+        <main className={PAGE_CONTENT}>
+          <ActionsHeroLoading hero={initialHero} />
+          {controls}
+          {operationInfo}
 
           {/* First category heading and its cards */}
           <div className="space-y-2 border-b border-card-border pb-4">
@@ -202,7 +164,7 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
               </div>
             ))}
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -227,7 +189,7 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8 overflow-x-hidden">
+      <main className={PAGE_CONTENT}>
         {/* Hero Section */}
         <ActionsHero
           character={character}
@@ -238,7 +200,6 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
           influence={influence}
           infamy={infamy}
           influenceDecay={influenceDecay}
-          portfolioData={portfolioData}
         />
 
         {/* Random events, debates and crises share one panel. It hides itself
@@ -266,25 +227,8 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
           </p>
         )}
 
-        {/* Filter Tabs + View Toggle */}
-        <div className="flex items-center justify-between gap-4">
-          <CategoryFilter
-            categories={CATEGORIES}
-            counts={categoryCounts}
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-          />
-          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-        </div>
-
-        <p className="text-body-sm text-muted">
-          This page lists campaign operations. Post news and Sponsored news are on the{" "}
-          <Link href="/news" className="text-primary hover:underline">
-            News page
-          </Link>
-          , and Support, Attack and Barnstorm are on other characters&apos; profiles. Rest does
-          nothing and costs nothing, so it has no button.
-        </p>
+        {controls}
+        {operationInfo}
 
         {/* Action cards: grouped under category headings on "All operations" */}
         {activeCategory === "all" ? (
@@ -314,12 +258,14 @@ export default function ActionsClient({ initialHero }: { initialHero: InitialAct
           </section>
         )}
       </main>
-      <CampaignActionModal
-        action={controller.campaignAction}
-        character={character}
-        onClose={() => controller.setCampaignAction(null)}
-        onResourcesSpent={controller.fetchCharacter}
-      />
+      {controller.campaignAction && (
+        <CampaignActionModal
+          action={controller.campaignAction}
+          character={character}
+          onClose={() => controller.setCampaignAction(null)}
+          onResourcesSpent={controller.fetchCharacter}
+        />
+      )}
     </div>
   );
 }

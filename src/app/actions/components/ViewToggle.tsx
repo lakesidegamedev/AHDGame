@@ -5,14 +5,16 @@ import type { ActionsViewMode } from "../actionsTypes";
 interface ViewToggleProps {
   viewMode: ActionsViewMode;
   onViewModeChange: (mode: ActionsViewMode) => void;
+  disabled?: boolean;
 }
 
-export default function ViewToggle({ viewMode, onViewModeChange }: ViewToggleProps) {
+export default function ViewToggle({ viewMode, onViewModeChange, disabled }: ViewToggleProps) {
   return (
-    <div className="flex items-center rounded-lg border border-card-border bg-card p-0.5">
+    <div className="flex shrink-0 items-center rounded-lg border border-card-border bg-card p-0.5">
       <button
         onClick={() => onViewModeChange("cards")}
         aria-pressed={viewMode === "cards"}
+        disabled={disabled}
         className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
           viewMode === "cards"
             ? "border border-card-border bg-card-elevated text-foreground"
@@ -39,6 +41,7 @@ export default function ViewToggle({ viewMode, onViewModeChange }: ViewTogglePro
       <button
         onClick={() => onViewModeChange("compact")}
         aria-pressed={viewMode === "compact"}
+        disabled={disabled}
         className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
           viewMode === "compact"
             ? "border border-card-border bg-card-elevated text-foreground"

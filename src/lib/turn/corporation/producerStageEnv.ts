@@ -85,6 +85,7 @@ export function producerStageEnv(
         producerWageShareSurplusCap?: number;
         wholePlantsStage?: number;
         wideEconomyStage?: number;
+        wideEconomyPricingStage?: number;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -125,6 +126,8 @@ export function producerStageEnv(
     fiscalScaleStage: config?.fiscalScaleStage,
     // Ships on: absent means stage 1; set 0 to switch it off.
     wideEconomyStage: config?.wideEconomyStage ?? 1,
+    // Ships on as well: the price counts what the wider economy sold.
+    wideEconomyPricingStage: config?.wideEconomyPricingStage ?? 1,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
