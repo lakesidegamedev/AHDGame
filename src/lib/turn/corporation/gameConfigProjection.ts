@@ -71,6 +71,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerIdleRetireStage: 1,
   wholePlantsStage: 1,
   wideEconomyStage: 1,
+  wideEconomyPricingStage: 1,
   producerTransitionPackageEnabled: 1,
   producerShortageBuildFactor: 1,
   producerWageShareStage: 1,

@@ -282,6 +282,13 @@ export interface GameConfig extends ProducerGameConfig {
   wideEconomyStage?: number;
 
   /**
+   * >= 1: the commodity price counts what the wider economy's seller sold as
+   * supply, as the country books and market screens do. Absent = 1 (on);
+   * 0 = off (the price reads plant and background-country offers only).
+   */
+  wideEconomyPricingStage?: number;
+
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

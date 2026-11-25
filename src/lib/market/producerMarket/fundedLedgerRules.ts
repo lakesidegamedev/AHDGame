@@ -94,6 +94,15 @@ export function fundedLedgerRows(input: {
   );
 }
 
+/**
+ * gameConfig.wideEconomyPricingStage >= 1 (absent = 1, on): the price phase
+ * counts what the wider economy sold as supply in its own country (or state,
+ * for a state book). 0 leaves it out, as before.
+ */
+export function wideEconomyPricingOn(env: { wideEconomyPricingStage?: number }): boolean {
+  return (env.wideEconomyPricingStage ?? 1) >= 1;
+}
+
 /** World and per-state balances for the price phase. */
 export function fundedLedgers(rows: readonly FundedLedgerRow[]): {
   global: Map<string, { supply: number; demand: number }>;

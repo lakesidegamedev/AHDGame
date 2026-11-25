@@ -134,6 +134,8 @@ export type ProducerPhysicalEnv = Pick<
   publicCarryRelease?: boolean;
   /** gameConfig.wideEconomyStage >= 1: every plant-country state gets a wider-economy buyer. */
   wideEconomyStage?: number;
+  /** gameConfig.wideEconomyPricingStage: >= 1 (absent = 1) the price counts wider-economy sales as supply. */
+  wideEconomyPricingStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
   fiscalScaleStage?: number;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */

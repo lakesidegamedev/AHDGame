@@ -190,4 +190,18 @@ export type ProducerEconomyResult = {
   countryBookAttribution?: import("./marketAttributionRules").CountryBookAttribution[];
   /** Each company's part of `countryBooks`. */
   companyBooks?: import("./marketAttributionRules").CompanyBookRow[];
+  /**
+   * What the wider economy's seller sold, per offer lane: its country, good,
+   * book and units. Absent when it sold nothing. The price phase counts these
+   * as supply (wideEconomyPricingStage).
+   */
+  wideEconomySales?: WideEconomySale[];
 };
+
+export interface WideEconomySale {
+  accountId: string;
+  countryId: string;
+  commodity: string;
+  book: string;
+  units: number;
+}
