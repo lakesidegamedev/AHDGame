@@ -1,4 +1,5 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import {
   resolveShortageGrowthFinanceConfig,
   sectorBookPressure,
@@ -98,7 +99,10 @@ import {
   loadNppProductProjectsV2,
 } from "@/lib/turn/npp/manufacturingProducts";
 
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import {
+  loadValuationFxRates,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
 import type { CapacityDecisionObservation } from "@/lib/corporations/capacityDecisionTelemetry/rules";
 import { type NppOperatorObservation } from "@/lib/corporations/nppOperatorTelemetry/rules";
 import {
@@ -200,7 +204,6 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
-import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
@@ -641,6 +644,9 @@ export async function processNppCorporationDecisions(
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
   }
+  // Sector valuation also needs the authored era rates: cross-border sectors
+  // are stored in a host's era-blind currency (FRF, ITL) with no live row.
+  const valuationFx = await loadValuationFxRates(db);
   const { retailExpansionPaused, ledgerShadow, bankingPolicy } = await loadNppBehaviorConfig(
     db,
     turn
@@ -1000,7 +1006,7 @@ export async function processNppCorporationDecisions(
         dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
           plantsEnabled,
           eraUnitScale: plants?.eraUnitScale ?? 1,
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          fxByCurrency: valuationFx,
         }),
         techCashFloorLocal: corpTechCashFloorLocal(corp, {
           eraUnitScale: plants?.eraUnitScale ?? 1,
