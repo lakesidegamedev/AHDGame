@@ -20,6 +20,7 @@ import {
 export {
   ownTierOf,
   producerTrades,
+  producerTradeFlows,
   ASK_BUYER_TIE_PROFIT_SHARE,
   quoteProducer,
 } from "@/lib/market/producerMarket/producerQuotes";
