@@ -5,6 +5,9 @@ import {
   WIDE_ECONOMY_MAX_SHARE,
   wideEconomyLaneShortage,
   wideEconomyShortageBoost,
+  wideEconomySurplusBoost,
+  wideEconomyLaneSurplus,
+  wideEconomyBoostedOrders,
   wideEconomyBoostOffers,
   WIDE_ECONOMY_SELLER_MARKUP,
   WIDE_ECONOMY_SUPPLY_HEADROOM,
@@ -276,5 +279,76 @@ describe("real lane shortage", () => {
     });
     // 100 asked, 90 received, 20 of it from the wider economy: real unmet 30%.
     expect(shortage["advertising|world"]).toBeCloseTo(0.3, 9);
+  });
+});
+
+describe("the buyer on oversupplied lanes", () => {
+  const WIDE = "wide-us";
+  const lane = laneKeyOf("steel", "world");
+
+  it("reads only new output: sales and own-site deliveries count first, old stock never", () => {
+    const surplus = wideEconomyLaneSurplus({
+      products: [
+        // Made 100, sold 50 and handed 20 to its own sites; it also offered old stock.
+        {
+          commodity: "steel",
+          book: "world",
+          producedUnits: 100,
+          soldUnits: 50,
+          internalDeliveredUnits: 20,
+        },
+        // Sold all it made plus some stock: never more than fully taken.
+        { commodity: "oil", book: "world", producedUnits: 10, soldUnits: 15 },
+      ],
+      outcomes: [
+        // 10 of the steel sales went to the wider economy's own buyer: not real demand.
+        { accountId: WIDE, commodity: "steel", book: "world", deliveredUnits: 10 },
+        { accountId: "corp", commodity: "steel", book: "world", deliveredUnits: 40 },
+      ],
+      isWideAccount: (id) => id === WIDE,
+      laneKey: laneKeyOf,
+    });
+    expect(surplus[lane]).toBeCloseTo(0.4, 9);
+    expect(surplus[laneKeyOf("oil", "world")]).toBe(0);
+  });
+
+  it("grows only after three oversupplied turns, toward 10% unsold, capped at 2.5x", () => {
+    const turn = (u: number) => ({ [lane]: u });
+    expect(wideEconomySurplusBoost([turn(0.3), turn(0.3)]).size).toBe(0);
+    expect(wideEconomySurplusBoost([turn(0.3), turn(0.1), turn(0.3)]).size).toBe(0);
+    // Smallest of the three, 0.3, less the 10% target: a 20% buyer, twice the base.
+    expect(wideEconomySurplusBoost([turn(0.35), turn(0.3), turn(0.4)]).get(lane)).toBeCloseTo(2, 9);
+    expect(wideEconomySurplusBoost([turn(0.9), turn(0.9), turn(0.9)]).get(lane)).toBeCloseTo(
+      2.5,
+      9
+    );
+    // Just past the threshold: below the base share after the target, so no boost.
+    expect(wideEconomySurplusBoost([turn(0.16), turn(0.16), turn(0.16)]).size).toBe(0);
+  });
+
+  it("scales the boosted lane's units and spend, and leaves other lanes alone", () => {
+    const base = [
+      {
+        id: "a",
+        accountId: WIDE,
+        commodity: "steel",
+        book: "world",
+        units: 10,
+        maximumUnitPrice: 5,
+        maximumSpend: 50,
+      },
+      {
+        id: "b",
+        accountId: WIDE,
+        commodity: "oil",
+        book: "world",
+        units: 4,
+        maximumUnitPrice: 2,
+        maximumSpend: 8,
+      },
+    ];
+    const out = wideEconomyBoostedOrders(base, new Map([[lane, 2]]), laneKeyOf);
+    expect(out[0]).toMatchObject({ units: 20, maximumSpend: 100, maximumUnitPrice: 5 });
+    expect(out[1]).toBe(base[1]);
   });
 });
