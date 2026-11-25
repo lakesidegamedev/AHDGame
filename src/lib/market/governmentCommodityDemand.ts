@@ -91,7 +91,7 @@ export const GOVERNMENT_GOODS_MIXES: readonly GovernmentGoodsMix[] = [
     label: "Administration",
     categoryShare: 0.25,
     mix: {
-      consulting_services: 0.28,
+      consulting_services: 0.3,
       network_services: 0.15,
       software: 0.12,
       real_estate_services: 0.1,
