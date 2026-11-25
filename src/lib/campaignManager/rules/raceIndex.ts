@@ -1,5 +1,5 @@
-import type { ElectionResponse, FinishedPrimaryEntry } from "@/lib/elections/electionResponseTypes";
-import type { EnrichedCandidate } from "@/lib/elections/candidateEnrichment";
+import type { FinishedPrimaryEntry } from "@/lib/elections/electionResponseTypes";
+import type { RaceIndexCandidate, RaceIndexElection } from "../raceIndexResponse";
 import { primaryCandidateColor } from "./projection";
 
 /**
@@ -41,7 +41,7 @@ export interface CmCandidate {
   isYou: boolean;
   isNPP: boolean;
   /** Who has endorsed the candidate, as the elections API lists them. */
-  endorsements: EnrichedCandidate["endorsements"];
+  endorsements: RaceIndexCandidate["endorsements"];
 }
 
 export interface CmRace {
@@ -106,7 +106,7 @@ export function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
+function toCandidate(c: RaceIndexCandidate, share: number): CmCandidate {
   return {
     id: c.id,
     characterId: c.characterId,
@@ -140,7 +140,7 @@ const byShare = (a: CmCandidate, b: CmCandidate) => b.share - a.share;
  * districted House keys it by the winning candidates, so those fold into
  * their parties.
  */
-function partySeats(e: ElectionResponse): Record<string, number> | null {
+function partySeats(e: RaceIndexElection): Record<string, number> | null {
   if (!e.seatsEstimate) return null;
   const partyOf = new Map(
     [...(e.allCandidates ?? []), ...e.candidates].map((c) => [c.id, c.party])
@@ -154,7 +154,7 @@ function partySeats(e: ElectionResponse): Record<string, number> | null {
 }
 
 /** Final general shares: the count's last shares, else the counted votes. */
-function finalShares(e: ElectionResponse): Record<string, number> | null {
+function finalShares(e: RaceIndexElection): Record<string, number> | null {
   const polled = e.polling?.sharesPct;
   if (polled && Object.keys(polled).length > 0) return polled;
   const votes = e.generalVotes?.totalVotes;
@@ -170,7 +170,7 @@ function finalShares(e: ElectionResponse): Record<string, number> | null {
  * result, drawn in their party's colours.
  */
 function finishedPrimaryCandidates(
-  e: ElectionResponse,
+  e: RaceIndexElection,
   partyId: string,
   rows: FinishedPrimaryEntry[]
 ): CmCandidate[] {
@@ -205,7 +205,7 @@ function finishedPrimaryCandidates(
     .map((c, i) => ({ ...c, color: primaryCandidateColor(c.partyColor, i) }));
 }
 
-export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexContext): CmRace[] {
+export function buildRaceIndex(elections: RaceIndexElection[], ctx: RaceIndexContext): CmRace[] {
   const races: CmRace[] = [];
   for (const e of elections) {
     // The presidency has its own campaign screen.
@@ -355,7 +355,7 @@ type RaceBase = Pick<
  * history reached from their race (the past-races list, a link), never listed
  * on their own: `filterRaces` leaves them out of every stage.
  */
-function finishedPrimaryRows(e: ElectionResponse, base: RaceBase): CmRace[] {
+function finishedPrimaryRows(e: RaceIndexElection, base: RaceBase): CmRace[] {
   const out: CmRace[] = [];
   for (const [partyId, rows] of Object.entries(e.primaryResults ?? {})) {
     if (rows.length === 0) continue;

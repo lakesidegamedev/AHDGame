@@ -13,6 +13,7 @@ import { conditionalJson } from "@/lib/api/conditionalJson";
 import { withApiMetrics } from "@/lib/observability/apiMetrics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { raceIndexResponse } from "@/lib/campaignManager/raceIndexResponse";
 
 // GET /api/elections — Unified election data endpoint. Single mode (?id=X) or list mode (?country=X).
 // Auth: public (optional auth for user-specific fields)
@@ -154,6 +155,12 @@ async function handleGet(request: Request) {
       activeCharacterId,
     });
 
+    if (viewParam === "campaign") {
+      return NextResponse.json(
+        { elections: resolved.map(raceIndexResponse), total, page },
+        { headers: { "Cache-Control": "no-store, no-transform" } }
+      );
+    }
     return NextResponse.json({ elections: resolved, total, page });
   } catch (error) {
     return handleRouteError(error);
