@@ -50,6 +50,8 @@ export interface CorporationHistory {
   publicFloat?: number;
   marketCap: number;
   liquidCapital: number;
+  /** Actual bank loan interest paid, in this snapshot's currency. */
+  settledBankLoanInterestPaid?: number;
   /** Frozen observation boundary for post-bond cash; absent on older snapshots. */
   cashSnapshotAt?: Date;
   /**

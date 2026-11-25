@@ -500,6 +500,7 @@ export interface CorpHistoryPoint {
   bondCouponFxFees?: number;
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
+  settledBankLoanInterestPaid?: number;
   /** Gross bond coupon expense on issued bonds this turn (before natcorp subsidy). */
   perTurnBondInterestExpense?: number;
   /** Interest drag from issued bonds this turn. */
@@ -605,6 +606,7 @@ export interface Financials {
   /** Revenue and the costs of each country's own sectors, largest revenue first. */
   byCountry?: CountryStatement[];
   bondInterestCost: number;
+  bankLoanInterestCost?: number;
   bondCouponIncome: number;
   /**
    * Dividend income (daily display units, local ccy) received last turn

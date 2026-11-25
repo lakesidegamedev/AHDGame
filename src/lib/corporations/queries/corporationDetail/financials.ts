@@ -126,6 +126,7 @@ export function buildFinancials(inputs: FinancialsInputs) {
     /** One statement per country the corporation has sectors in, largest first. */
     byCountry: buildCountryStatements(totals.byCountry, inc.sectorTaxByCountry),
     bondInterestCost: Math.round(inc.dailyInterestLocal),
+    bankLoanInterestCost: Math.round(inc.dailyBankLoanInterestLocal ?? 0),
     bondCouponIncome: Math.round(inc.dailyCouponIncomeLocal),
     dividendIncomeReceived: portfolio.dividendIncomeReceivedDaily,
     governmentBondSubsidy: Math.round(inc.governmentBondSubsidyLocal),

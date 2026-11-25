@@ -195,6 +195,7 @@ export async function restoreFundCashBuffer(
     return { fund: workingFund, bondPrincipalAnchor };
   const sale = await sellFundBondHoldingsForCash(db, workingFund, shortfall, new Date(), {
     turn: currentTurn,
+    operationKey: `cash-buffer:${currentTurn}`,
   });
   if (sale.proceedsAnchor <= 0) return { fund: workingFund, bondPrincipalAnchor };
   const updatedBonds = await sumFundBondHoldingsValueAnchor(db, fund, exchangeRates);

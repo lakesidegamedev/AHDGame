@@ -1,6 +1,7 @@
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { boundSession } from "@/lib/db/sessionDb";
 import type { Db, AnyBulkWriteOperation, MongoServerError, ClientSession } from "mongodb";
-import type { Corporation, CorporateSector, ShareOrder, ShareListing } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import * as Sentry from "@sentry/nextjs";
@@ -18,6 +19,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+
+class TreasuryQuoteChanged extends Error {}
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -40,6 +43,8 @@ export interface ConvertCorpCurrencyError {
   ok: false;
   /** Set when the failure is recoverable by the caller with a 503-retry semantic. */
   rateUnavailable?: boolean;
+  debtCurrencyRetained?: boolean;
+  retainedCurrency?: CurrencyCode;
   error: string;
 }
 
@@ -135,7 +140,14 @@ export async function convertCorpCurrency(
   // balances — refuse rather than corrupt.
   const fromRate = fromCurrency ? fxByCurrency.get(fromCurrency) : 1;
   const toRate = fxByCurrency.get(toCurrencyCode);
-  if (fromRate === undefined || toRate === undefined) {
+  if (
+    fromRate === undefined ||
+    toRate === undefined ||
+    !Number.isFinite(fromRate) ||
+    !Number.isFinite(toRate) ||
+    fromRate <= 0 ||
+    toRate <= 0
+  ) {
     return {
       ok: false,
       rateUnavailable: true,
@@ -158,6 +170,22 @@ export async function convertCorpCurrency(
         "A site of this corporation carries a construction loan repaid from its cash in its current currency. Sell the site or wait until the loan is repaid before changing currency.",
     };
   }
+  const loan = await bankLoansCollection(db).findOne(
+    {
+      borrowerType: "corporation",
+      borrowerId: corp._id,
+      status: { $in: ["pending", "current", "arrears", "defaulted"] },
+      outstanding: { $gt: 0 },
+    },
+    { projection: { _id: 1 } }
+  );
+  if (loan)
+    return {
+      ok: false,
+      debtCurrencyRetained: true,
+      retainedCurrency: fromCurrency,
+      error: "Repay outstanding bank loans before changing the corporation's treasury currency.",
+    };
   const transitionKeys = await reserveSectorsForTransition(
     db,
     sectors,
@@ -238,6 +266,25 @@ export async function convertCorpCurrency(
     corpSet.ceoSalary = round2(corp.ceoSalary * scale);
   }
 
+  for (const field of ["rdBudget", "shareEscrowBalance", "escrowFundingPerTurn"] as const) {
+    if (corp[field] !== undefined) corpSet[field] = round2(corp[field]! * scale);
+  }
+  const sourceCashFields = Object.fromEntries(
+    (
+      [
+        "liquidCurrencyCode",
+        "liquidCapital",
+        "sharePrice",
+        "marketingBudget",
+        "logisticsBudget",
+        "ceoSalary",
+        "rdBudget",
+        "shareEscrowBalance",
+        "escrowFundingPerTurn",
+      ] as const
+    ).map((field) => [field, Object.hasOwn(corp, field) ? corp[field] : { $exists: false }])
+  );
+
   // Exact pre-write values, captured so a standalone-Mongo failure after the
   // corp write can be undone. `liquidCurrencyCode` was absent on pre-forex
   // corps (the write backfills it), so it is `$unset` again rather than set to
@@ -257,6 +304,10 @@ export async function convertCorpCurrency(
   }
   if (corp.ceoSalary !== undefined) {
     revertCorpSet.ceoSalary = corp.ceoSalary;
+  }
+
+  for (const field of ["rdBudget", "shareEscrowBalance", "escrowFundingPerTurn"] as const) {
+    if (corp[field] !== undefined) revertCorpSet[field] = corp[field];
   }
 
   // Fields an FX flip may and may not touch.
@@ -321,6 +372,7 @@ export async function convertCorpCurrency(
       const corpWrite = await corporationsCollection(db).updateOne(
         {
           _id: corp._id,
+          ...sourceCashFields,
           primaryUnderwritingIncomingFunding: { $exists: false },
           bankUnderwritingFunding: { $exists: false },
           headquartersRelocationBondFunding: { $exists: false },
@@ -329,7 +381,9 @@ export async function convertCorpCurrency(
         sessionOpts
       );
       if (corpWrite.matchedCount !== 1) {
-        throw new Error("Primary underwriting proceeds are settling; currency move must retry");
+        throw new TreasuryQuoteChanged(
+          "Treasury changed; retry the currency move with a fresh quote"
+        );
       }
       corpWriteApplied = true;
       if (sectorOps.length > 0) {
@@ -367,13 +421,15 @@ export async function convertCorpCurrency(
         }
       }
       try {
-        await corporationsCollection(db).updateOne(
-          { _id: corp._id },
+        const restored = await corporationsCollection(db).updateOne(
+          { _id: corp._id, ...corpSet },
           {
             $set: revertCorpSet,
             ...(Object.keys(revertCorpUnset).length > 0 ? { $unset: revertCorpUnset } : {}),
           }
         );
+        if (restored.matchedCount !== 1)
+          throw new Error("Treasury changed before currency rollback");
       } catch (revertError) {
         revertErrors.push(revertError);
         Sentry.captureException(revertError as Error);
@@ -411,12 +467,15 @@ export async function convertCorpCurrency(
         } catch (fallbackError) {
           if (!(fallbackError instanceof CorpCurrencyConversionUncertainError))
             await releaseTransitions();
+          if (fallbackError instanceof TreasuryQuoteChanged)
+            return { ok: false, error: fallbackError.message };
           throw fallbackError;
         }
       } else {
         if (!(err instanceof CorpCurrencyConversionUncertainError)) {
           await releaseTransitions();
         }
+        if (err instanceof TreasuryQuoteChanged) return { ok: false, error: err.message };
         throw err;
       }
     }

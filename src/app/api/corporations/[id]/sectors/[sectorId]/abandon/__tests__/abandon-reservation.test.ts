@@ -136,7 +136,7 @@ describe("abandonSector reservation", () => {
     expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
   });
 
-  it("releases a fresh reservation when the disposal throws, so the sector is not stuck", async () => {
+  it("retains the completed refund stage when disposal throws, so a retry cannot pay again", async () => {
     const sectorDoc = sector();
     db.collectionMocks["corporateSectors"]!.findOneAndUpdate.mockResolvedValue(sectorDoc);
     db.collectionMocks["corporateSectors"]!.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -151,6 +151,11 @@ describe("abandonSector reservation", () => {
     const unset = db.collectionMocks["corporateSectors"]!.updateOne.mock.calls.find(
       ([, update]) => update && "$unset" in update
     );
-    expect(unset).toBeTruthy();
+    expect(unset).toBeUndefined();
+    expect(db.collectionMocks.corporateSectors.updateOne.mock.calls).toEqual(
+      expect.arrayContaining([
+        [expect.anything(), { $set: { "constructionPropertyTransition.stage": "refunded" } }],
+      ])
+    );
   });
 });

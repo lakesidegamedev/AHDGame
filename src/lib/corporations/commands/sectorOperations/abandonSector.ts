@@ -1,3 +1,4 @@
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/abandon
@@ -10,7 +11,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector, GameState, SectorBuildOrder, State } from "@/lib/db/types";
+import type { SectorBuildOrder } from "@/lib/db/types";
 import { queueUndeliveredCost, undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import {
@@ -26,11 +27,9 @@ import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import {
   hasProtectedConstructionProperty,
-  releaseConstructionPropertyTransition,
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
 import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -156,7 +155,13 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
     const refundDone = resuming && (stage === undefined || stage === "refunded");
     const setStage = (next: "brandApplied" | "refunded") =>
       sectors.updateOne(
-        { _id: sector!._id, "constructionPropertyTransition.key": transitionKey },
+        {
+          _id: sector!._id,
+          "constructionPropertyTransition.key": transitionKey,
+          ...(next === "brandApplied"
+            ? { "constructionPropertyTransition.stage": "reserved" }
+            : {}),
+        },
         { $set: { "constructionPropertyTransition.stage": next } }
       );
 
@@ -171,7 +176,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
     const stateName = state?.name ?? sector.stateId;
     const now = new Date();
 
-    try {
+    {
       // Brand facility-loss (Boeing rule): the corp is voluntarily shedding this
       // sector, so dent its brand proportional to the sector's share of the corp's
       // revenue. Called while the corp still owns it (aggregate includes it). No-op
@@ -202,30 +207,47 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
             const refundLocal = Math.round(
               anchorToCorpLiquidCapital(refundableAnchor, corporation, corpFxRate)
             );
-            if (refundLocal > 0) {
-              await corporationsCollection(db).updateOne(
-                { _id: corporation._id },
-                { $inc: { liquidCapital: refundLocal }, $set: { updatedAt: now } }
-              );
-            }
-            // Best-effort ledger leg, same discipline as the cancel command: the
-            // cash has moved, so a log failure must not 500 the caller into a retry
-            // that would double-refund.
-            await emitBuildCapexTx(db, {
-              corporationId: corporation._id,
-              corporationName: corporation.name,
-              corporationSequentialId: corporation.sequentialId,
-              direction: "refund",
-              amountLocal: Math.abs(refundLocal),
-              currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
-              anchorAmount: refundableAnchor,
-              turn: currentTurn,
-              createdAt: now,
-              sectorId: sector._id,
-              sectorType: sector.sectorType,
-              units: queue.reduce((sum, o) => sum + undeliveredUnits(o, currentTurn), 0),
-              meta: { reason: "abandonSector" },
-            }).catch(() => {});
+            const refunded = await commitSiteCashMutation(db, {
+              corporation,
+              chargeLocal: -refundLocal,
+              now,
+              record: async (tx) => {
+                await emitBuildCapexTx(
+                  tx,
+                  {
+                    corporationId: corporation._id,
+                    corporationName: corporation.name,
+                    corporationSequentialId: corporation.sequentialId,
+                    direction: "refund",
+                    amountLocal: Math.abs(refundLocal),
+                    currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
+                    anchorAmount: refundableAnchor,
+                    turn: currentTurn,
+                    createdAt: now,
+                    sectorId: sector._id,
+                    sectorType: sector.sectorType,
+                    units: queue.reduce((sum, o) => sum + undeliveredUnits(o, currentTurn), 0),
+                    meta: { reason: "abandonSector" },
+                  },
+                  { atomic: true }
+                );
+              },
+              site: {
+                filter: {
+                  _id: sector._id,
+                  corporationId: corporation._id,
+                  "constructionPropertyTransition.key": transitionKey,
+                  "constructionPropertyTransition.stage": { $ne: "refunded" },
+                  buildQueue: sector.buildQueue,
+                  producerCapacity: Object.hasOwn(sector, "producerCapacity")
+                    ? sector.producerCapacity
+                    : { $exists: false },
+                },
+                update: { $set: { "constructionPropertyTransition.stage": "refunded" } },
+              },
+            });
+            if (!refunded)
+              return errorResponse(409, "The abandonment or treasury changed. Retry to resume it.");
           }
         }
         // Record the refund before disposal so a retry cannot pay it twice.
@@ -243,15 +265,6 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
             ? `Abandoned ${sectorLabel} sector in ${stateName}. An NPP operator took over most of its plants; the rest of the market reopens to builders.`
             : `Abandoned ${sectorLabel} sector in ${stateName}. Its market reopens to builders.`,
       });
-    } catch (error) {
-      // Nothing durable happened yet, so give the sector back and let the
-      // player retry from the start. Once a brand hit or a refund has landed,
-      // keep the marker: the next attempt resumes this operation instead of
-      // repeating a money movement.
-      if (!brandDone && !refundDone) {
-        await releaseConstructionPropertyTransition(db, sector._id, transitionKey);
-      }
-      throw error;
     }
   } catch (error) {
     return handleRouteError(error);

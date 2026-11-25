@@ -34,6 +34,7 @@ export interface RecordedTurnInput {
   bondCouponIncome?: number | null;
   /** Bond interest paid on the company's own bonds this turn, in the company's currency. */
   bondInterestPaid?: number | null;
+  bankLoanInterestPaid?: number | null;
   /** Tax on dividends received: inside `tax`, but already netted from the dividend credit. */
   dividendReceivedTax?: number | null;
   /** Conversion fee skimmed from foreign operating income before retained income. */
@@ -154,6 +155,7 @@ const LINE_GROUPS: Record<string, { key: string; label: string }> = {
   stock_self_issue: { key: "share_issue", label: "Share issue proceeds" },
   ipo_proceeds: { key: "share_issue", label: "Share issue proceeds" },
   bond_issuance: { key: "bond_issue", label: "Bond issue proceeds" },
+  bank_loan_repayment: { key: "bank_loan_repay", label: "Bank loan repayments" },
   bond_maturity: { key: "bond_repay", label: "Bond repayments" },
   bond_buyback: { key: "bond_repay", label: "Bond repayments" },
   bond_default: { key: "bond_repay", label: "Bond repayments" },
@@ -244,6 +246,11 @@ export function reconcileLastTurn(
       key: "bond_interest",
       label: "Interest paid on bonds issued",
       amount: -Math.max(0, recorded.bondInterestPaid ?? 0),
+    },
+    {
+      key: "bank_loan_interest",
+      label: "Interest paid on bank loans",
+      amount: -Math.max(0, recorded.bankLoanInterestPaid ?? 0),
     },
     {
       key: "bond_coupons",

@@ -939,6 +939,9 @@ export interface Corporation {
    * dividends, and CEO pay while active.
    */
   imfBailoutActive?: boolean;
+  /** Native interest evidence stamped with each loan debit and copied to turn history. */
+  bankLoanInterestPaidByTurn?: Record<string, number>;
+  bankLoanInterestCurrencyByTurn?: Record<string, CurrencyCode>;
   /** Canonical IMF institution corporation that receives equity and facility remittances. */
   imfBailoutImfCorporationId?: ObjectId;
   /** Target IMF fully diluted ownership % set at bailout (0, 100). */

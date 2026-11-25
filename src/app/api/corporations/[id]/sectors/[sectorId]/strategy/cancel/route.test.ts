@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  boundSession: () => undefined,
+  withSessionDb: async (
+    db: import("mongodb").Db,
+    work: (tx: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -203,6 +210,7 @@ describe("POST /strategy/cancel", () => {
       modifiedCount: 1,
     } as never);
     db.collectionMocks["corporateSectors"]!.updateOne.mockResolvedValue({
+      matchedCount: 1,
       modifiedCount: 1,
     } as never);
 
@@ -257,6 +265,7 @@ describe("POST /strategy/cancel", () => {
       modifiedCount: 1,
     } as never);
     db.collectionMocks["corporateSectors"]!.updateOne.mockResolvedValue({
+      matchedCount: 1,
       modifiedCount: 1,
     } as never);
 

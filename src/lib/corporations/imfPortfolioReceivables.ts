@@ -1,11 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import {
-  corpCapitalToAnchor,
-  fxRateForCorpFromMap,
-  loadFxRatesByCurrency,
-  resolveCorpLiquidCurrencyCode,
-} from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** IMF bailout loans owed to a lender corporation (anchor ₳ principal outstanding). */
@@ -22,18 +16,7 @@ export type ImfFacilityReceivableRow = {
   brandColor: string | null;
 };
 
-/**
- * Corporations in active IMF restructuring where this corporation is the IMF lender.
- * Principal is the carrying value of the loan asset (not tradable bonds).
- *
- * **Unit contract**: `principalOutstanding` and `totalPrincipal` are returned in
- * ₳ (anchor). Raw `corporation.imfFacilityPrincipalOutstanding` is stored in the
- * borrower's `liquidCurrencyCode` post-Task-18A; anchor-normalizing per-borrower
- * here lets callers sum across borrowers of different home currencies without
- * mixing denominations. Pre-A34 this helper returned the raw LOCAL value and
- * `totalPrincipal` as a mixed-currency sum while JSDoc + consumers treated it
- * as ₳ — off by the borrower's FX rate (up to ~100× for JP borrowers).
- */
+/** Carrying value is the recorded anchor principal, independent of borrower currency. */
 export async function findImfFacilityReceivablesForLender(
   db: Db,
   lenderCorporationId: ObjectId
@@ -73,12 +56,8 @@ export async function findImfFacilityReceivablesForLender(
     })
     .toArray();
 
-  const fxByCurrency = rows.length > 0 ? await loadFxRatesByCurrency(db) : new Map();
-
   const receivables: ImfFacilityReceivableRow[] = rows.map((c) => {
-    const code = resolveCorpLiquidCurrencyCode(c);
-    const rate = fxRateForCorpFromMap(c, fxByCurrency);
-    const principalAnchor = corpCapitalToAnchor(c.imfFacilityPrincipalOutstanding ?? 0, code, rate);
+    const principalAnchor = Math.max(0, c.imfFacilityPrincipalOutstanding ?? 0);
     return {
       borrowerCorporationId: c._id.toString(),
       borrowerName: c.name,

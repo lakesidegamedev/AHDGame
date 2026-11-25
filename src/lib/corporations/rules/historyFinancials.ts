@@ -3,6 +3,7 @@ import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 /** History stores operating costs separately from gross bond interest. */
 export function totalCostsPerTurnFromParts(parts: {
   totalCosts: number;
+  settledBankLoanInterestPaid?: number;
   settledBondInterestPaid?: number;
   perTurnBondInterestExpense?: number;
   perTurnBondDragOnNetIncome?: number;
@@ -12,7 +13,7 @@ export function totalCostsPerTurnFromParts(parts: {
     parts.perTurnBondInterestExpense ??
     parts.perTurnBondDragOnNetIncome ??
     0;
-  return parts.totalCosts + bondInterest;
+  return parts.totalCosts + bondInterest + (parts.settledBankLoanInterestPaid ?? 0);
 }
 
 export function historyTotalCostsPerTurn(history: CorporationHistory): number {
@@ -29,11 +30,13 @@ export function realizedNetIncomePerTurn(
     | "dividendIncomeReceived"
     | "bondCouponFxFees"
     | "settledBondCouponIncome"
+    | "settledBankLoanInterestPaid"
     | "settledBondInterestPaid"
   >
 ): number {
   return (
-    history.income +
+    history.income -
+    (history.settledBankLoanInterestPaid ?? 0) +
     (history.settledBondCouponIncome ??
       (history.perTurnBondCouponIncome ?? 0) - (history.bondCouponFxFees ?? 0)) -
     (history.settledBondInterestPaid ?? history.perTurnBondDragOnNetIncome ?? 0) +

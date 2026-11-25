@@ -1,3 +1,4 @@
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -62,17 +63,33 @@ export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
     corporationId: ObjectId;
     income?: number;
   }>(db)
-    .aggregate<{ _id: ObjectId; income: number }>([
+    .aggregate<{ _id: ObjectId; income: number; currencyCode?: string; fxRateAtWrite?: number }>([
       { $match: { corporationId: { $in: borrowerIds } } },
       // Sort on the group key first so the {corporationId, turn} index serves
       // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
       // instead of walking the whole history by turn (#2693).
       { $sort: { corporationId: 1, turn: -1 } },
-      { $group: { _id: "$corporationId", income: { $first: "$income" } } },
+      {
+        $group: {
+          _id: "$corporationId",
+          income: { $first: "$income" },
+          currencyCode: { $first: "$currencyCode" },
+          fxRateAtWrite: { $first: "$fxRateAtWrite" },
+        },
+      },
     ])
     .toArray();
+  const rates = await loadValuationFxRates(db);
   const incomeByBorrower = new Map(
-    incomeRows.map((r) => [r._id.toString(), typeof r.income === "number" ? r.income : 0])
+    incomeRows.map((r) => {
+      const rate = r.currencyCode ? (r.fxRateAtWrite ?? rates.get(r.currencyCode as never)) : 1;
+      return [
+        r._id.toString(),
+        rate && rate > 0 && Number.isFinite(rate) && typeof r.income === "number"
+          ? r.income / rate
+          : 0,
+      ];
+    })
   );
 
   let total = 0;

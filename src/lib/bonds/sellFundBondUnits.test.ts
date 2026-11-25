@@ -1,3 +1,9 @@
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (tx: Db) => Promise<unknown>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -19,7 +25,7 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
 }));
 
 import { loadBondQuote } from "@/lib/bonds/marketPool";
-import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
+
 import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { sellFundBondHoldingsForCash } from "./sellFundBondUnits";
 
@@ -29,10 +35,15 @@ const fund = { _id: fundId, name: "Bond Fund", quotedNav: 100, anchorCurrencyCod
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(isForexEnabled).mockResolvedValue(true);
+  vi.mocked(loadFxRatesRecord).mockResolvedValue({ USD: 1, GBP: 2 });
   db = createMockDb();
   db.collection("bonds");
   db.collection("bondMarketPools");
   db.collection("indexFunds");
+  db.collection("indexFundTransactions");
+  db.collectionMocks.bonds.findOne.mockResolvedValue({ _id: new ObjectId() });
+  db.collectionMocks.indexFunds.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 });
 
 describe("sellFundBondHoldingsForCash", () => {
@@ -83,7 +94,6 @@ describe("sellFundBondHoldingsForCash", () => {
     expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledWith(
       {
         _id: bond._id,
-        sovereignMaturityClaim: { $exists: false },
         holders: { $elemMatch: { fundId, units: { $gte: 5 } } },
       },
       expect.objectContaining({ $inc: { "holders.$.units": -5, publicFloat: 5 } })
@@ -92,8 +102,7 @@ describe("sellFundBondHoldingsForCash", () => {
       { _id: fundId },
       expect.objectContaining({ $inc: { cashAnchor: 2_475 } })
     );
-    expect(insertFundTransaction).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(db.collectionMocks.indexFundTransactions.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "bond_sale", amountAnchor: 2_475 })
     );
   });
@@ -148,7 +157,8 @@ describe("sellFundBondHoldingsForCash", () => {
         currencyCode: "USD",
         counterpartyType: "system",
       }),
-      { fund: {} }
+      { fund: {} },
+      expect.objectContaining({ _id: expect.any(ObjectId) })
     );
   });
 
@@ -170,7 +180,7 @@ describe("sellFundBondHoldingsForCash", () => {
     expect(emitTx).not.toHaveBeenCalled();
   });
 
-  it("refunds the pool when the holder release loses a race", async () => {
+  it("leaves the pool unchanged when the locked holding is no longer available", async () => {
     const bond = {
       _id: new ObjectId(),
       currencyCode: "USD",
@@ -180,13 +190,30 @@ describe("sellFundBondHoldingsForCash", () => {
     db.collectionMocks.bonds.find.mockReturnValue({ toArray: async () => [bond] });
     vi.mocked(loadBondQuote).mockResolvedValue({ bidPerUnit: 980, depthUnitsAtBid: 100 } as never);
     db.collectionMocks.bondMarketPools.findOneAndUpdate.mockResolvedValue({ cashLocal: 1 });
-    db.collectionMocks.bonds.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+    db.collectionMocks.bonds.findOne.mockResolvedValue(null);
 
     const result = await sellFundBondHoldingsForCash(db as unknown as Db, fund, 1_000);
     expect(result.unitsSold).toBe(0);
-    expect(db.collectionMocks.bondMarketPools.updateOne).toHaveBeenCalledWith(
-      { _id: "USD" },
-      expect.objectContaining({ $inc: { cashLocal: 1_960, "lifetime.salesOut": -1_960 } })
-    );
+    expect(db.collectionMocks.bondMarketPools.findOneAndUpdate).not.toHaveBeenCalled();
   });
+  it.each([undefined, 0, -1, NaN, Infinity])(
+    "retains a holding when its FX quote is invalid (%s)",
+    async (rate) => {
+      const bond = {
+        _id: new ObjectId(),
+        currencyCode: "GBP",
+        marketPrice: 1,
+        holders: [{ fundId, units: 100 }],
+      };
+      db.collectionMocks.bonds.find.mockReturnValue({ toArray: async () => [bond] });
+      vi.mocked(loadFxRatesRecord).mockResolvedValue(rate === undefined ? {} : { GBP: rate });
+      expect(await sellFundBondHoldingsForCash(db as unknown as Db, fund, 1000)).toEqual({
+        proceedsAnchor: 0,
+        unitsSold: 0,
+        bondsTouched: 0,
+      });
+      expect(db.collectionMocks.bondMarketPools.findOneAndUpdate).not.toHaveBeenCalled();
+      expect(db.collectionMocks.indexFunds.updateOne).not.toHaveBeenCalled();
+    }
+  );
 });

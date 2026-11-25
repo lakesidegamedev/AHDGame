@@ -116,6 +116,7 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
         }
       : {}),
     bondInterestCost: fog(financials.bondInterestCost, factor),
+    bankLoanInterestCost: fog(financials.bankLoanInterestCost ?? 0, factor),
     bondCouponIncome: fog(financials.bondCouponIncome, factor),
     governmentBondSubsidy: fog(financials.governmentBondSubsidy, factor),
     imfFacilityPaymentDaily: fog(financials.imfFacilityPaymentDaily, factor),

@@ -1,3 +1,4 @@
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { loadCorporationFundPortfolio } from "@/lib/indexFunds/corporationPortfolio";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -85,7 +86,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       });
     }
 
-    const [heldCorps, activeBonds, fxByCurrency, reservedPlaced, funds] = await Promise.all([
+    const [heldCorps, activeBonds, fxByCurrency, reservedPlaced, funds, loans] = await Promise.all([
       corporationsCollection(db)
         .find({ "shareholders.corporationId": corporation._id })
         .project({
@@ -109,6 +110,17 @@ export async function GET(request: Request, { params }: RouteParams) {
       loadValuationFxRates(db),
       loadReservedPositionsPlacedBy(db, corporation._id),
       loadCorporationFundPortfolio(db, corporation._id),
+      bankLoansCollection(db)
+        .find(
+          {
+            borrowerType: "corporation",
+            borrowerId: corporation._id,
+            status: { $in: ["current", "arrears", "defaulted"] },
+            outstanding: { $gt: 0 },
+          },
+          { projection: { outstanding: 1, currency: 1 } }
+        )
+        .toArray(),
     ]);
 
     let totalStockValueAnchor = 0;
@@ -316,7 +328,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const cashOnHand = Math.round(cashOnHandAnchor * 100) / 100;
     const totalLiabilityValue =
       Math.round(
-        computeCorporationLiabilityValueAnchor(corporation, issuedBonds, fxByCurrency) * 100
+        computeCorporationLiabilityValueAnchor(corporation, issuedBonds, fxByCurrency, loans) * 100
       ) / 100;
     const grossPortfolioValue =
       Math.round(

@@ -1,3 +1,5 @@
+import { corporateCashArrearsAnchor } from "@/lib/bonds/corporateCredit";
+import { corporateLiabilityTotal } from "./rules/liabilities";
 import type { Bond, Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -29,25 +31,37 @@ export function computeCorporationLiabilityValueAnchor(
     | "imfFacilityPrincipalOutstanding"
     | "liquidCurrencyCode"
     | "countryId"
+    | "operatingCashArrearsByCurrency"
+    | "federalTaxArrearsAnchorByCountry"
   >,
   issuedBonds: Array<
     Pick<Bond, "corporationId" | "matured" | "totalIssued" | "currencyCode" | "countryId">
   >,
-  fxByCurrency: Map<CurrencyCode, number>
+  fxByCurrency: Map<CurrencyCode, number>,
+  loans: readonly { outstanding: number; currency: CurrencyCode }[] = []
 ): number {
   const bondLiability = issuedBonds.reduce((sum, bond) => {
     if (!bond.corporationId?.equals(corporation._id) || bond.matured) return sum;
     return sum + computeBondPrincipalLiabilityAnchor(bond, fxByCurrency);
   }, 0);
 
-  const imfLiability =
-    corporation.imfBailoutActive === true
-      ? corpCapitalToAnchor(
-          corporation.imfFacilityPrincipalOutstanding ?? 0,
-          corporation.liquidCurrencyCode,
-          fxRateForCorpFromMap(corporation, fxByCurrency)
-        )
-      : 0;
-
-  return bondLiability + imfLiability;
+  return corporateLiabilityTotal({
+    bonds: bondLiability,
+    loans: loans.reduce(
+      (sum, loan) =>
+        sum +
+        corpCapitalToAnchor(
+          loan.outstanding,
+          loan.currency,
+          fxRateForCorpFromMap({ liquidCurrencyCode: loan.currency }, fxByCurrency)
+        ),
+      0
+    ),
+    arrears: corporateCashArrearsAnchor({
+      operatingByCurrency: corporation.operatingCashArrearsByCurrency,
+      federalTaxByCountryAnchor: corporation.federalTaxArrearsAnchorByCountry,
+      fxByCurrency,
+    }),
+    imf: corporation.imfBailoutActive ? (corporation.imfFacilityPrincipalOutstanding ?? 0) : 0,
+  });
 }

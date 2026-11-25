@@ -1,3 +1,5 @@
+import { namedLoanInstalment } from "@/lib/banking/rules/loans";
+import { corporateLiabilityTotal } from "@/lib/corporations/rules/liabilities";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { corporateCashArrearsAnchor } from "@/lib/bonds/corporateCredit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -41,6 +43,7 @@ export interface LatestCorpIncomeRow {
   bondCouponFxFees?: number;
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
+  settledBankLoanInterestPaid?: number;
   currencyCode?: string;
   fxRateAtWrite?: number;
   turn?: number;
@@ -88,6 +91,7 @@ export interface PortfolioHoldings {
   debtBreakdownAnchor?: Record<string, number>;
   annualInterestAnchor: number;
   dailyInterestAnchor: number;
+  dailyBankLoanInterestAnchor?: number;
   supplyAgreementSettlementDaily: number;
   supplyAgreementUnpaidAnchor: number;
 }
@@ -212,6 +216,7 @@ export async function loadPortfolioHoldings(
           bondCouponFxFees: 1,
           settledBondCouponIncome: 1,
           settledBondInterestPaid: 1,
+          settledBankLoanInterestPaid: 1,
           currencyCode: 1,
           fxRateAtWrite: 1,
           turn: 1,
@@ -243,6 +248,7 @@ export async function loadPortfolioHoldings(
           "bondCouponFxFees",
           "settledBondCouponIncome",
           "settledBondInterestPaid",
+          "settledBankLoanInterestPaid",
         ]
       )
     : null;
@@ -312,7 +318,16 @@ export async function loadPortfolioHoldings(
         status: { $in: ["current", "arrears", "defaulted"] },
         outstanding: { $gt: 0 },
       },
-      { projection: { outstanding: 1, currency: 1 } }
+      {
+        projection: {
+          outstanding: 1,
+          currency: 1,
+          ratePercent: 1,
+          status: 1,
+          originatedTurn: 1,
+          termTurns: 1,
+        },
+      }
     )
     .toArray();
   const loanDebtAnchor = loans.reduce(
@@ -331,11 +346,7 @@ export async function loadPortfolioHoldings(
     fxByCurrency,
   });
   const imfDebtAnchor = corporation.imfBailoutActive
-    ? corpCapitalToAnchor(
-        corporation.imfFacilityPrincipalOutstanding ?? 0,
-        resolveCorpLiquidCurrencyCode(corporation),
-        fxRateForCorpFromMap(corporation, fxByCurrency)
-      )
+    ? (corporation.imfFacilityPrincipalOutstanding ?? 0)
     : 0;
   const debtBreakdownAnchor = {
     bonds: bondDebtAnchor,
@@ -343,7 +354,7 @@ export async function loadPortfolioHoldings(
     arrears: arrearsAnchor,
     imf: imfDebtAnchor,
   };
-  const totalDebtAnchor = Object.values(debtBreakdownAnchor).reduce((sum, value) => sum + value, 0);
+  const totalDebtAnchor = corporateLiabilityTotal(debtBreakdownAnchor);
   const annualInterestAnchor = outstandingBonds.reduce((sum, b) => {
     const bondCcy = (b.currencyCode ??
       (b.countryId && b.countryId in COUNTRY_CURRENCY_MAP
@@ -355,6 +366,19 @@ export async function loadPortfolioHoldings(
     return sum + corpCapitalToAnchor((b.couponRate / 100) * b.totalIssued, bondCcy, bondFxRate);
   }, 0);
   const dailyInterestAnchor = annualInterestAnchor / GAME_DAYS_PER_YEAR_RATIO;
+  const dailyBankLoanInterestAnchor = loans.reduce((sum, loan) => {
+    if (!["current", "arrears"].includes(loan.status)) return sum;
+    const interest = namedLoanInstalment(loan, currentTurn + 1).interestDue;
+    return (
+      sum +
+      corpCapitalToAnchor(
+        interest,
+        loan.currency,
+        fxRateForCorpFromMap({ liquidCurrencyCode: loan.currency }, fxByCurrency)
+      ) *
+        TURNS_PER_DAY
+    );
+  }, 0);
 
   return {
     outstandingBonds,
@@ -377,6 +401,7 @@ export async function loadPortfolioHoldings(
     debtBreakdownAnchor,
     annualInterestAnchor,
     dailyInterestAnchor,
+    dailyBankLoanInterestAnchor,
     supplyAgreementSettlementDaily,
     supplyAgreementUnpaidAnchor,
   };
