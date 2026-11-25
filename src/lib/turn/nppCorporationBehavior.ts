@@ -820,275 +820,283 @@ export async function processNppCorporationDecisions(
       ? [...nppCorps].sort((a, b) => (a._id.toString() < b._id.toString() ? -1 : 1))
       : nppCorps;
   for (const corp of orderedCorps) {
-    const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
-    const autopilot = isAutopilotRun(corp);
-    const operator = operatorPermissionsFor(corp);
-    const borrowAllowed = operatorMay(operator, "borrow");
-    const archetype =
-      (corp.ceoId && archetypeByNppId.get(corp.ceoId.toString())) || DEFAULT_ARCHETYPE;
-    const corpCurrency = resolveCorpLiquidCurrencyCode(corp);
-    const corpFxRate = (corpCurrency && fxByCurrency.get(corpCurrency)) || 1;
-    const entryCohortEligible = glutStaggerEligible(corp._id.toString(), turn);
-    const criticalLogisticsEligible = criticalLogisticsStaggerEligible(corp._id.toString(), turn);
-    const decisionContext: NppCorpDecisionContext = {
-      corp,
-      groupDirection: groupMembership?.eligibleManagementRoots?.has(
-        groupMembership.rootByCorpId.get(corp._id.toString()) ?? ""
-      )
-        ? corp.groupDirection
-        : undefined,
-      groupRootId: groupMembership?.rootByCorpId.get(corp._id.toString()),
-      sectors,
-      turn,
-      now,
-      fxRate: corpFxRate,
-      competitorCountOf: makeCapacityCompetitorCounter(competitorsByBucket),
-      challengerBoostOf: (sectorType, ownCorporationId) =>
-        challengerBoost(concentrationBySector.get(sectorType), ownCorporationId),
-      fxByCurrency,
-      strategy: corp.nppStrategy,
-      strategyEligible: entryCohortEligible,
-      ordinaryEntryEligible: entryCohortEligible,
-      criticalLogisticsEntryEligible: criticalLogisticsEligible,
-      criticalLogisticsShortageEligible: criticalLogisticsEligible && borrowAllowed,
-      operator,
-      // An operator barred from borrowing (autopilot by default) never takes shortage-entry credit.
-      shortageEntryEligible: entryCohortEligible && borrowAllowed,
-      retailExpansionPaused,
-      caretakerMandate: corp.caretakerCeo?.mandate ?? "active",
-      strategyLoopEnabled,
-      debtServiceAnchor: netPerTurnDebtServiceAnchor({
-        issuerBonds: issuerBondsByCorpId.get(corp._id.toString()),
-        heldPositions: heldBondsByCorpId.get(corp._id.toString()),
-        fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-        // The government bond subsidy waives issuer interest for national
-        // enterprises, exactly as `perTurnBondDragOnNetIncome` does.
-        isNationalEnterprise: !!corp.countryOwnerId,
-      }),
-      modifiers: autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers(archetype),
-      currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
-      techTreesEnabled,
-      sectorResearchByLane,
-      techDiffusion,
-      frontierEntry: autopilot ? undefined : frontierEntryTurn,
-      engineSix: engineSixByCountry.get(corp.countryId) === true,
-      transitionFirstFundedTurn,
-      fundedRecipeWorld,
-      fundedWorldEpoch,
-      conversionBudgetOf:
-        conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
-      localShareOf,
-      fundedRestartPressureOf: recipePressureByKey
-        ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
-        : undefined,
-      ...(shortageGrowthFinance && !autopilot ? { shortageGrowthFinance } : {}),
-      ...(productFillStage >= 1 ? { productFillStage } : {}),
-    };
-    let decision = makeNppCorpDecision(
-      decisionContext,
-      candidatesByCountry,
-      stateControlled,
-      priceRatioOf,
-      plants,
-      placementSignals
-    );
-
-    decision = relocationCreditBatch
-      ? await relocationCreditBatch.resolve({
-          corporation: corp,
-          decision,
-          turn,
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-          corpFxRate,
-          retry: (creditLocal) =>
-            makeNppCorpDecision(
-              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-              candidatesByCountry,
-              stateControlled,
-              priceRatioOf,
-              plants,
-              placementSignals
-            ),
-        })
-      : await resolveNppMarketEntryCredit({
-          db,
-          corporation: corp,
-          decision,
-          turn,
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-          bankRates,
-          corpFxRate,
-          retry: (creditLocal) =>
-            makeNppCorpDecision(
-              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-              candidatesByCountry,
-              stateControlled,
-              priceRatioOf,
-              plants,
-              placementSignals
-            ),
-        });
-    // Charge the pacing allowance once, for the decision that is applied.
-    if (decision.conversionCharge)
-      chargeConversionBudget(
-        conversionBudgets.get(decision.conversionCharge.countryId),
-        decision.conversionCharge.cost
-      );
-    if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
-      // A short-lane growth request may put in cash below the floor, read from
-      // the cash left after this decision's own builds (rules/shortageGrowthFinance).
-      const cashAfterDecisionLocal = (corp.liquidCapital ?? 0) + decision.liquidCapitalDelta;
-      for (const intent of decision.constructionFinanceIntents ?? []) {
-        constructionFinanceCandidates.push({
-          ...intent,
-          ...(intent.shortageGrowth
-            ? {
-                cashContributionLimitLocal: shortageGrowthCashContributionLimit(
-                  cashAfterDecisionLocal,
-                  decision.cashFloorLocal ?? 0,
-                  plants?.holdExpansionAtCashFloor === true
-                ),
-              }
-            : {}),
-          corporation: corp,
-          currency: corpCurrency,
-          buildContext: {
-            destinationCurrency: currencyForCountry(intent.sector.countryId ?? corp.countryId),
-            eraUnitScale: plants?.eraUnitScale ?? 1,
-            growthUnits: intent.growthUnits,
-          },
-        });
-      }
-    }
-    markMarketsActive(placementSignals, decision.newSectors);
-    if (decision.entryDiagnostic) entryDiagnostics.push(decision.entryDiagnostic);
-    // Cohort telemetry aggregate (credit-rewrite included); see capacityDecisionTelemetry.
-    mergeCapacityObservations(
-      capacityObservations,
-      decision.capacityObservations,
-      decision.entryDiagnostic?.reason
-    );
-    if (decision.operatorObservation) operatorObservations.push(decision.operatorObservation);
-    const {
-      founded,
-      update: corpUpdateOp,
-      witness,
-    } = buildNppDecisionCashWrites({
-      decision,
-      corporation: corp,
-      capexRows,
-      claimDemandUnits: placementSignals.claimDemandUnits,
-      currencyCode: corpCurrency,
-      rate: corpFxRate,
-      shadowEnabled: ledgerShadow,
-      blocked,
-      turn,
-      now,
-    });
-    if (corpUpdateOp) {
-      corpUpdates.push(corpUpdateOp);
-      decisionCashOps.push(corpUpdateOp);
-    }
-    if (witness) foundingCashWitnesses.push(witness);
-
-    // Budget tech from post-decision cash and preserve the same safety floor.
-    // Autopilot computes the same pick into scratch arrays and leaves it to the
-    // owner: a tech lane commitment is permanent, so it is the owner's call.
-    const techScratch: TechUnlockLedgerInput[] = [];
-    const researchPermission = operator.actions.research;
-    if (
-      techTreesEnabled &&
-      decisionContext.caretakerMandate !== "passive" &&
-      researchPermission !== "never"
-    ) {
-      maybePushNppTechUnlock({
+    try {
+      const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
+      const autopilot = isAutopilotRun(corp);
+      const operator = operatorPermissionsFor(corp);
+      const borrowAllowed = operatorMay(operator, "borrow");
+      const archetype =
+        (corp.ceoId && archetypeByNppId.get(corp.ceoId.toString())) || DEFAULT_ARCHETYPE;
+      const corpCurrency = resolveCorpLiquidCurrencyCode(corp);
+      const corpFxRate = (corpCurrency && fxByCurrency.get(corpCurrency)) || 1;
+      const entryCohortEligible = glutStaggerEligible(corp._id.toString(), turn);
+      const criticalLogisticsEligible = criticalLogisticsStaggerEligible(corp._id.toString(), turn);
+      const decisionContext: NppCorpDecisionContext = {
         corp,
-        dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
-          plantsEnabled,
-          eraUnitScale: plants?.eraUnitScale ?? 1,
-          fxByCurrency: valuationFx,
-        }),
-        techCashFloorLocal: corpTechCashFloorLocal(corp, {
-          eraUnitScale: plants?.eraUnitScale ?? 1,
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-        }),
-        techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-        }),
-        techLegacy,
-        techCurrentYear,
+        groupDirection: groupMembership?.eligibleManagementRoots?.has(
+          groupMembership.rootByCorpId.get(corp._id.toString()) ?? ""
+        )
+          ? corp.groupDirection
+          : undefined,
+        groupRootId: groupMembership?.rootByCorpId.get(corp._id.toString()),
+        sectors,
         turn,
         now,
-        corpUpdates: researchPermission === "allow" ? corpUpdates : [],
-        liquidCapitalDelta: decision.liquidCapitalDelta,
-        cashReserve: decision.cashFloorLocal,
-        techLedger: researchPermission === "allow" ? techLedger : techScratch,
-      });
-    }
-
-    if (autopilot && corp.autopilot) {
-      const advisories = deriveAutopilotAdvisories(
-        {
-          chronicLowFill: decision.autopilotSignals?.chronicLowFill === true,
-          debtDominant: decision.autopilotSignals?.debtDominant === true,
-          losingSectors: decision.autopilotSignals?.losingSectors ?? 0,
-          distressed: distressAdvisoryActive({
-            flagged: corp.financialDistressSinceTurn != null,
-            liquidCapital: corp.liquidCapital,
-            hasDefaultedBond: (issuerBondsByCorpId.get(corp._id.toString()) ?? []).some(
-              (b) => b.defaulted === true && b.matured !== true
-            ),
-            hasStalledProducerBill: (corp.producerPayables?.claims ?? []).some(
-              (c) => c.amount > 0 && c.notShrinkingSince != null
-            ),
-          }),
-          affordableTech: techScratch[0]?.nodeName ?? null,
-        },
-        corp.autopilot.advisories,
-        turn
+        fxRate: corpFxRate,
+        competitorCountOf: makeCapacityCompetitorCounter(competitorsByBucket),
+        challengerBoostOf: (sectorType, ownCorporationId) =>
+          challengerBoost(concentrationBySector.get(sectorType), ownCorporationId),
+        fxByCurrency,
+        strategy: corp.nppStrategy,
+        strategyEligible: entryCohortEligible,
+        ordinaryEntryEligible: entryCohortEligible,
+        criticalLogisticsEntryEligible: criticalLogisticsEligible,
+        criticalLogisticsShortageEligible: criticalLogisticsEligible && borrowAllowed,
+        operator,
+        // An operator barred from borrowing (autopilot by default) never takes shortage-entry credit.
+        shortageEntryEligible: entryCohortEligible && borrowAllowed,
+        retailExpansionPaused,
+        caretakerMandate: corp.caretakerCeo?.mandate ?? "active",
+        strategyLoopEnabled,
+        debtServiceAnchor: netPerTurnDebtServiceAnchor({
+          issuerBonds: issuerBondsByCorpId.get(corp._id.toString()),
+          heldPositions: heldBondsByCorpId.get(corp._id.toString()),
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          // The government bond subsidy waives issuer interest for national
+          // enterprises, exactly as `perTurnBondDragOnNetIncome` does.
+          isNationalEnterprise: !!corp.countryOwnerId,
+        }),
+        modifiers: autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers(archetype),
+        currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
+        techTreesEnabled,
+        sectorResearchByLane,
+        techDiffusion,
+        frontierEntry: autopilot ? undefined : frontierEntryTurn,
+        engineSix: engineSixByCountry.get(corp.countryId) === true,
+        transitionFirstFundedTurn,
+        fundedRecipeWorld,
+        fundedWorldEpoch,
+        conversionBudgetOf:
+          conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
+        localShareOf,
+        fundedRestartPressureOf: recipePressureByKey
+          ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
+          : undefined,
+        ...(shortageGrowthFinance && !autopilot ? { shortageGrowthFinance } : {}),
+        ...(productFillStage >= 1 ? { productFillStage } : {}),
+      };
+      let decision = makeNppCorpDecision(
+        decisionContext,
+        candidatesByCountry,
+        stateControlled,
+        priceRatioOf,
+        plants,
+        placementSignals
       );
-      const budgetSet: Record<string, unknown> = {};
-      for (const [lever, change] of Object.entries(decision.autopilotBudgetChanges ?? {})) {
-        budgetSet[`autopilot.budgetChanges.${lever}`] = change;
+
+      decision = relocationCreditBatch
+        ? await relocationCreditBatch.resolve({
+            corporation: corp,
+            decision,
+            turn,
+            fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+            corpFxRate,
+            retry: (creditLocal) =>
+              makeNppCorpDecision(
+                { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+                candidatesByCountry,
+                stateControlled,
+                priceRatioOf,
+                plants,
+                placementSignals
+              ),
+          })
+        : await resolveNppMarketEntryCredit({
+            db,
+            corporation: corp,
+            decision,
+            turn,
+            fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+            bankRates,
+            corpFxRate,
+            retry: (creditLocal) =>
+              makeNppCorpDecision(
+                { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+                candidatesByCountry,
+                stateControlled,
+                priceRatioOf,
+                plants,
+                placementSignals
+              ),
+          });
+      // Charge the pacing allowance once, for the decision that is applied.
+      if (decision.conversionCharge)
+        chargeConversionBudget(
+          conversionBudgets.get(decision.conversionCharge.countryId),
+          decision.conversionCharge.cost
+        );
+      if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
+        // A short-lane growth request may put in cash below the floor, read from
+        // the cash left after this decision's own builds (rules/shortageGrowthFinance).
+        const cashAfterDecisionLocal = (corp.liquidCapital ?? 0) + decision.liquidCapitalDelta;
+        for (const intent of decision.constructionFinanceIntents ?? []) {
+          constructionFinanceCandidates.push({
+            ...intent,
+            ...(intent.shortageGrowth
+              ? {
+                  cashContributionLimitLocal: shortageGrowthCashContributionLimit(
+                    cashAfterDecisionLocal,
+                    decision.cashFloorLocal ?? 0,
+                    plants?.holdExpansionAtCashFloor === true
+                  ),
+                }
+              : {}),
+            corporation: corp,
+            currency: corpCurrency,
+            buildContext: {
+              destinationCurrency: currencyForCountry(intent.sector.countryId ?? corp.countryId),
+              eraUnitScale: plants?.eraUnitScale ?? 1,
+              growthUnits: intent.growthUnits,
+            },
+          });
+        }
       }
-      if (Object.keys(budgetSet).length > 0) {
-        corpUpdates.push({
-          filter: { _id: corp._id },
-          update: { $set: { ...budgetSet, updatedAt: now } },
+      markMarketsActive(placementSignals, decision.newSectors);
+      if (decision.entryDiagnostic) entryDiagnostics.push(decision.entryDiagnostic);
+      // Cohort telemetry aggregate (credit-rewrite included); see capacityDecisionTelemetry.
+      mergeCapacityObservations(
+        capacityObservations,
+        decision.capacityObservations,
+        decision.entryDiagnostic?.reason
+      );
+      if (decision.operatorObservation) operatorObservations.push(decision.operatorObservation);
+      const {
+        founded,
+        update: corpUpdateOp,
+        witness,
+      } = buildNppDecisionCashWrites({
+        decision,
+        corporation: corp,
+        capexRows,
+        claimDemandUnits: placementSignals.claimDemandUnits,
+        currencyCode: corpCurrency,
+        rate: corpFxRate,
+        shadowEnabled: ledgerShadow,
+        blocked,
+        turn,
+        now,
+      });
+      if (corpUpdateOp) {
+        corpUpdates.push(corpUpdateOp);
+        decisionCashOps.push(corpUpdateOp);
+      }
+      if (witness) foundingCashWitnesses.push(witness);
+
+      // Budget tech from post-decision cash and preserve the same safety floor.
+      // Autopilot computes the same pick into scratch arrays and leaves it to the
+      // owner: a tech lane commitment is permanent, so it is the owner's call.
+      const techScratch: TechUnlockLedgerInput[] = [];
+      const researchPermission = operator.actions.research;
+      if (
+        techTreesEnabled &&
+        decisionContext.caretakerMandate !== "passive" &&
+        researchPermission !== "never"
+      ) {
+        maybePushNppTechUnlock({
+          corp,
+          dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
+            plantsEnabled,
+            eraUnitScale: plants?.eraUnitScale ?? 1,
+            fxByCurrency: valuationFx,
+          }),
+          techCashFloorLocal: corpTechCashFloorLocal(corp, {
+            eraUnitScale: plants?.eraUnitScale ?? 1,
+            fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          }),
+          techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
+            fxByCurrency: valuationFx,
+          }),
+          techLegacy,
+          techCurrentYear,
+          turn,
+          now,
+          corpUpdates: researchPermission === "allow" ? corpUpdates : [],
+          liquidCapitalDelta: decision.liquidCapitalDelta,
+          cashReserve: decision.cashFloorLocal,
+          techLedger: researchPermission === "allow" ? techLedger : techScratch,
         });
       }
-      if (advisoriesChanged(corp.autopilot.advisories, advisories)) {
-        const notify = advisoriesToNotify(
+
+      if (autopilot && corp.autopilot) {
+        const advisories = deriveAutopilotAdvisories(
+          {
+            chronicLowFill: decision.autopilotSignals?.chronicLowFill === true,
+            debtDominant: decision.autopilotSignals?.debtDominant === true,
+            losingSectors: decision.autopilotSignals?.losingSectors ?? 0,
+            distressed: distressAdvisoryActive({
+              flagged: corp.financialDistressSinceTurn != null,
+              liquidCapital: corp.liquidCapital,
+              hasDefaultedBond: (issuerBondsByCorpId.get(corp._id.toString()) ?? []).some(
+                (b) => b.defaulted === true && b.matured !== true
+              ),
+              hasStalledProducerBill: (corp.producerPayables?.claims ?? []).some(
+                (c) => c.amount > 0 && c.notShrinkingSince != null
+              ),
+            }),
+            affordableTech: techScratch[0]?.nodeName ?? null,
+          },
           corp.autopilot.advisories,
-          advisories,
-          corp.autopilot.notifiedTurn,
           turn
         );
-        const $set: Record<string, unknown> = {
-          "autopilot.advisories": advisories,
-          updatedAt: now,
-        };
-        for (const a of notify) $set[`autopilot.notifiedTurn.${a.kind}`] = turn;
-        corpUpdates.push({ filter: { _id: corp._id }, update: { $set } });
-        if (notify.length > 0) autopilotAlerts.push({ corp, kinds: notify });
+        const budgetSet: Record<string, unknown> = {};
+        for (const [lever, change] of Object.entries(decision.autopilotBudgetChanges ?? {})) {
+          budgetSet[`autopilot.budgetChanges.${lever}`] = change;
+        }
+        if (Object.keys(budgetSet).length > 0) {
+          corpUpdates.push({
+            filter: { _id: corp._id },
+            update: { $set: { ...budgetSet, updatedAt: now } },
+          });
+        }
+        if (advisoriesChanged(corp.autopilot.advisories, advisories)) {
+          const notify = advisoriesToNotify(
+            corp.autopilot.advisories,
+            advisories,
+            corp.autopilot.notifiedTurn,
+            turn
+          );
+          const $set: Record<string, unknown> = {
+            "autopilot.advisories": advisories,
+            updatedAt: now,
+          };
+          for (const a of notify) $set[`autopilot.notifiedTurn.${a.kind}`] = turn;
+          corpUpdates.push({ filter: { _id: corp._id }, update: { $set } });
+          if (notify.length > 0) autopilotAlerts.push({ corp, kinds: notify });
+        }
       }
-    }
 
-    // Accrual (the score memory) happens every turn inside the decision, but the
-    // stored document only needs rewriting when its meaningful content changed.
-    if (decision.strategy && strategyStateNeedsPersist(corp.nppStrategy, decision.strategy)) {
-      corpUpdates.push({
-        filter: { _id: corp._id },
-        update: { $set: { nppStrategy: decision.strategy, updatedAt: now } },
-      });
-    }
+      // Accrual (the score memory) happens every turn inside the decision, but the
+      // stored document only needs rewriting when its meaningful content changed.
+      if (decision.strategy && strategyStateNeedsPersist(corp.nppStrategy, decision.strategy)) {
+        corpUpdates.push({
+          filter: { _id: corp._id },
+          update: { $set: { nppStrategy: decision.strategy, updatedAt: now } },
+        });
+      }
 
-    allSectorUpdates.push(...decision.sectorUpdates);
+      allSectorUpdates.push(...decision.sectorUpdates);
 
-    newSectors.push(...founded);
+      newSectors.push(...founded);
 
-    if (decision.divestedSectorIds) {
-      allDivestedSectorIds.push(...decision.divestedSectorIds);
+      if (decision.divestedSectorIds) {
+        allDivestedSectorIds.push(...decision.divestedSectorIds);
+      }
+    } catch (error) {
+      // A company whose sites need an exchange rate the world has no quote for
+      // skips its decisions this turn instead of stopping the whole turn.
+      if (!(error instanceof Error) || !error.message.startsWith("Exchange rate unavailable"))
+        throw error;
+      console.warn(`[NPP] ${String(corp._id)} skipped this turn: ${error.message}`);
     }
   }
 
