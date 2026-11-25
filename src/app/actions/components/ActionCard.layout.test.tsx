@@ -78,6 +78,25 @@ function renderCard(type: string, overrides: Partial<ActionCardProps> = {}) {
 }
 
 describe("ActionCard layout", () => {
+  it("keeps the card heading mounted as its live details arrive", () => {
+    const live = props("campaign");
+    const { rerender } = render(
+      <CurrencyProvider>
+        <ActionCard card={live.card} imageUrl={live.imageUrl} loading />
+      </CurrencyProvider>
+    );
+    const heading = screen.getByRole("heading", { name: live.card.label });
+    expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
+
+    rerender(
+      <CurrencyProvider>
+        <ActionCard {...live} />
+      </CurrencyProvider>
+    );
+    expect(screen.getByRole("heading", { name: live.card.label })).toBe(heading);
+    expect(screen.getByText("1 AP")).toBeTruthy();
+  });
+
   it("names the category in plain text beside the tagline instead of a pill", () => {
     renderCard("poll");
     const tagline = screen.getByText(/Quick read of your support/);

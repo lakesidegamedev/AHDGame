@@ -15,17 +15,23 @@ vi.mock("@/lib/db/repositories/gameState", () => ({
 }));
 vi.mock("./ActionsClient", () => ({
   default: ({ initialHero }: { initialHero: InitialActionsHero | null }) =>
-    initialHero && <a href={initialHero.imageUrl}>{initialHero.eraLabel}</a>,
+    initialHero && (
+      <a href={initialHero.imageUrl} data-era={initialHero.era} data-view={initialHero.viewMode}>
+        {initialHero.eraLabel}
+      </a>
+    ),
 }));
 
 beforeEach(() => {
-  getUser.mockResolvedValue({ character: { countryId: "US" } });
+  getUser.mockResolvedValue({ character: { countryId: "US" }, actionsViewMode: "compact" });
   findWorld.mockResolvedValue({ currentYear: 1983, preset: "1953-default" });
 });
 
 it("passes the active character's hero for the current world era to the first render", async () => {
   const html = renderToStaticMarkup(await ActionsPage());
   expect(html).toContain("/static/actions/1979/US/hero.webp");
+  expect(html).toContain('data-era="1979"');
+  expect(html).toContain('data-view="compact"');
   expect(html).toContain(">1983</a>");
 });
 
