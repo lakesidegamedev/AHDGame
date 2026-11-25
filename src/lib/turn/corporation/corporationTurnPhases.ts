@@ -490,7 +490,7 @@ export async function updateCorporateTaxBases(args: {
  */
 export async function emitCorporationTurnTx(args: {
   db: Db;
-  lookups: CorporationLookups;
+  lookups: Pick<CorporationLookups, "corpById" | "exchangeRatesByCurrency">;
   corpSnapshots: CorpSnapshot[];
   ceoSalaryPayments: Map<string, Map<CurrencyCode, number>>;
   dividendPayments: Map<string, Map<CurrencyCode, number>>;
@@ -746,7 +746,10 @@ export async function settleShareMarketTurn(args: {
   db: Db;
   now: Date;
   turn: number | undefined;
-  lookups: CorporationLookups;
+  lookups: Pick<
+    CorporationLookups,
+    "stockHoldingTaxStartTurn" | "corporations" | "corpById" | "exchangeRatesByCurrency"
+  >;
   corpSnapshots: CorpSnapshot[];
   dividendIncomeReceivedByCorpId: Map<string, number>;
   dividendTaxPaidByCountry: Map<string, Map<string, number>>;

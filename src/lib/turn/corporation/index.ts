@@ -76,7 +76,11 @@ import {
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { aggregateMediaProductSectorEffects } from "@/lib/products/rules/mediaProductRules";
 import { runCorporationTurnSideEffects } from "./corporationTurnSideEffects";
-import { settleCorporationTurnPayouts } from "./corporationTurnPayouts";
+import {
+  resumeFundedCorporationClosing,
+  settleCorporationTurnPayouts,
+} from "./corporationTurnPayouts";
+import { readFundedClosingState } from "./resume/fundedClosingPlan";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
@@ -126,6 +130,19 @@ export async function processCorporationTurn(
     turn: turn ?? gameState?.currentTurn ?? 0,
     worldEpoch: gameState?.worldEpochId,
   };
+  const worldEpoch = journal.worldEpoch;
+  const producerTurn = journal.turn;
+  if (worldEpoch) {
+    const scope = { worldEpoch, turn: producerTurn };
+    const closing = await readFundedClosingState(db, scope).catch((error: unknown) => {
+      throw new TurnMustStopError("corporationTurn", error);
+    });
+    if (closing.continuation) {
+      const result = await resumeFundedCorporationClosing(db, scope, closing.continuation, mark);
+      timer.finish(turn);
+      return result;
+    }
+  }
   if (marketGovernorConfig?.privateBankingEnabled === true) {
     await runJournaledStep(journal, "foundingUnderwriting", "refuse", () =>
       resumeFoundingUnderwritingPlans(db, now)
@@ -412,7 +429,6 @@ export async function processCorporationTurn(
   // The producer path is read here, before the clearing pre-pass, so a funded
   // turn can skip legacy-only clearing work. It is claimed below, before any
   // producer money moves.
-  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
   const producerPath = await loadProducerPath(db, {
     turn: producerTurn,
     worldEpoch: gameState?.worldEpochId,
@@ -841,6 +857,13 @@ export async function processCorporationTurn(
     strikeEvents,
   });
 
+  const result = {
+    corporationsProcessed: lookups.corporations.length,
+    sectorsProcessed,
+    totalRevenueGenerated: Math.round(totalRevenueGenerated),
+    totalIncomeGenerated: Math.round(totalIncomeGenerated),
+    turnWarnings: [...clearingInvariantBreaches, ...(funded?.turnWarnings ?? [])],
+  };
   // Notify player-owned extraction sectors that newly hit a capacity ceiling
   // this turn, their realized resource revenue is now being throttled by the
   // capacity haircut, so the CEO should acquire capacity, adopt a focused
@@ -849,7 +872,7 @@ export async function processCorporationTurn(
     await settleCorporationTurnPayouts({
       capacityBindingEvents,
       lookups,
-      turn,
+      turn: funded ? producerTurn : turn,
       nppNewSectors,
       db,
       profitMarginByCorpId,
@@ -894,18 +917,10 @@ export async function processCorporationTurn(
       passThroughTaxedDividendPayments,
       forexEnabled,
       resilienceStage: journal.stage,
+      fundedResult: funded ? result : undefined,
     });
 
   timer.finish(turn);
 
-  return {
-    corporationsProcessed: lookups.corporations.length,
-    sectorsProcessed,
-    totalRevenueGenerated: Math.round(totalRevenueGenerated),
-    totalIncomeGenerated: Math.round(totalIncomeGenerated),
-    currencyIncomeInternalByCharacterId,
-    currencyIncomeFaceByCharacterId,
-    // Market planning/ownership diagnostics join clearing invariant warnings.
-    turnWarnings: [...clearingInvariantBreaches, ...(funded?.turnWarnings ?? [])],
-  };
+  return { ...result, currencyIncomeInternalByCharacterId, currencyIncomeFaceByCharacterId };
 }

@@ -180,6 +180,7 @@ export function stepAction(
 
 const MAP_TAG = "$$map";
 const SET_TAG = "$$set";
+const UNDEFINED_TAG = "$$undefined";
 
 function isBsonScalar(value: object): boolean {
   const tag = (value as { _bsontype?: string })._bsontype;
@@ -218,15 +219,16 @@ export function isStorableOutput(value: unknown, depth = 0): boolean {
 }
 
 /** Turn Maps and Sets into tagged arrays so EJSON can store them. */
-export function encodeOutput(value: unknown): unknown {
-  if (value === undefined) return null;
+export function encodeOutput(value: unknown, preserveUndefined = false): unknown {
+  if (value === undefined) return preserveUndefined ? { [UNDEFINED_TAG]: true } : null;
+  const encode = (entry: unknown) => encodeOutput(entry, preserveUndefined);
   if (value === null || typeof value !== "object" || isBsonScalar(value)) return value;
   if (value instanceof Map)
-    return { [MAP_TAG]: [...value].map(([k, v]) => [encodeOutput(k), encodeOutput(v)]) };
-  if (value instanceof Set) return { [SET_TAG]: [...value].map(encodeOutput) };
-  if (Array.isArray(value)) return value.map(encodeOutput);
+    return { [MAP_TAG]: [...value].map(([k, v]) => [encode(k), encode(v)]) };
+  if (value instanceof Set) return { [SET_TAG]: [...value].map(encode) };
+  if (Array.isArray(value)) return value.map(encode);
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = encodeOutput(v);
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = encode(v);
   return out;
 }
 
@@ -234,6 +236,7 @@ export function decodeOutput(value: unknown): unknown {
   if (value === null || typeof value !== "object" || isBsonScalar(value)) return value;
   if (Array.isArray(value)) return value.map(decodeOutput);
   const record = value as Record<string, unknown>;
+  if (UNDEFINED_TAG in record) return undefined;
   if (MAP_TAG in record)
     return new Map(
       (record[MAP_TAG] as [unknown, unknown][]).map(([k, v]) => [decodeOutput(k), decodeOutput(v)])

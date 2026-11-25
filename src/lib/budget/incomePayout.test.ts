@@ -102,6 +102,56 @@ function fixture(
   return { memory, db: memory as unknown as Db, characterId, ownerCollection, currency, budgetId };
 }
 describe("source income settlement", () => {
+  it("returns the original funded reporting rate from the strict credit receipt", async () => {
+    const { db, memory, characterId } = fixture();
+    const credit = {
+      characterId,
+      ownerCollection: "characters" as const,
+      currency: "GBP" as const,
+      gross: 100,
+      income: 100,
+    };
+    const options = { recordReportingRates: true };
+    await expect(
+      creditIncomeAfterTax(db, "corporation", 2, now, [credit], options)
+    ).rejects.toThrow(/rate unavailable/i);
+    expect(memory.collection("playerIncomeTaxBatches").docs).toEqual([]);
+    memory.seed("exchangeRates", [{ _id: "GBP", currencyCode: "GBP", rate: 2 }]);
+    const [applied] = await creditIncomeAfterTax(db, "corporation", 2, now, [credit], options);
+    expect(applied).toMatchObject({ reportingRate: 2 });
+    await db.collection("exchangeRates").deleteMany({ currencyCode: "GBP" });
+    const [replayed] = await creditIncomeAfterTax(db, "corporation", 2, now, [credit], options);
+    expect(replayed).toEqual(applied);
+    await expect(
+      creditIncomeAfterTax(db, "corporation", 2, now, [{ ...credit, gross: 101 }], options)
+    ).rejects.toThrow("Accepted income payout changed");
+  });
+
+  it("keeps a valid unquoted payout without recording a synthetic reporting rate", async () => {
+    const { db, memory, characterId } = fixture();
+    await db
+      .collection("characters")
+      .updateOne({ _id: characterId }, { $unset: { incomeTaxStartTurn: "" } });
+    await db.collection("playerIncomeTaxAssessments").deleteMany({});
+    const credit = {
+      characterId,
+      ownerCollection: "characters" as const,
+      currency: "GBP" as const,
+      gross: 100,
+      income: 100,
+      destination: "currencyBalances.personal.GBP",
+    };
+    const options = { recordReportingRates: true };
+    const [applied] = await creditIncomeAfterTax(db, "corporation", 2, now, [credit], options);
+    expect(applied).toMatchObject({ net: 100 });
+    expect(applied).not.toHaveProperty("reportingRate");
+    memory.seed("exchangeRates", [{ _id: "GBP", currencyCode: "GBP", rate: 2 }]);
+    const [replayed] = await creditIncomeAfterTax(db, "corporation", 2, now, [credit], options);
+    expect(replayed).toEqual(applied);
+    const character = await db.collection("characters").findOne({ _id: characterId });
+    expect(character?.currencyBalances.personal.GBP).toBe(100);
+  });
+
   it.each([
     ["US", "USD", 1],
     ["UK", "GBP", 0.8],
