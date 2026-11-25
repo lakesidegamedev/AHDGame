@@ -326,6 +326,13 @@ function StateBillDetailContent() {
                     ? (bill.overrideVotingEndsAt ?? null)
                     : null
               }
+              votingEndsOnTurn={
+                isOriginStage
+                  ? (bill.votingEndsOnTurn ?? null)
+                  : isOverrideStage
+                    ? (bill.overrideVotingEndsOnTurn ?? null)
+                    : null
+              }
               variant="state"
               stateStatus={bill.status}
               stateExecutiveLabel={getRegionalBillAssentTitleForState(
@@ -360,6 +367,7 @@ function StateBillDetailContent() {
                 votesAgainst={bill.votesAgainst}
                 votesAbstain={bill.votesAbstain}
                 deadline={isOriginStage && !isOverrideStage ? (bill.votingEndsAt ?? null) : null}
+                deadlineTurn={isOriginStage && !isOverrideStage ? (bill.votingEndsOnTurn ?? null) : null}
                 myVote={bill.myVote}
                 canVote={bill.canVote && !voting && canCastOriginVote}
                 onVote={canCastOriginVote ? (v) => void handleChamberVote(v) : undefined}
@@ -381,6 +389,7 @@ function StateBillDetailContent() {
                       : undefined
                   }
                   deadline={bill.overrideVotingEndsAt ?? null}
+                  deadlineTurn={bill.overrideVotingEndsOnTurn ?? null}
                   myVote={
                     bill.myOverrideVote === "for"
                       ? "for"
